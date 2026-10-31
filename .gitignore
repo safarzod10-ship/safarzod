@@ -1,0 +1,39 @@
+# Godot
+.godot/
+*.translation
+export_credentials.cfg
+# Build outputs (APK/AAB/archives are delivered separately, never committed)
+builds/**
+!builds/.gdignore
+!builds/README.md
+*.apk
+*.aab
+*.idsig
+# Android signing material — NEVER commit
+*.keystore
+*.jks
+*.p12
+keystore.properties
+# Blender
+*.blend1
+*.blend2
+*.blend@
+# Python / Node helper tooling
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+# Secrets & local env
+.env
+.env.*
+*.pem
+*.key
+# OS / editor temp
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*~
+# Temporary renders (keep curated docs/screenshots only)
+renders/
+tmp/

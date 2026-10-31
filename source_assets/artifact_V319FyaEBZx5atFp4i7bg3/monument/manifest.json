@@ -1,0 +1,1 @@
+{"textures": {}, "chunks": ["monument/geoz00.txt"], "total": 1415916, "compressed": 606350, "gzip": true, "parts": {"position": {"offset": 0, "length": 355512, "count": 29626}, "normal": {"offset": 355512, "length": 355512, "count": 29626}, "index": {"offset": 711024, "length": 704892, "count": 176223}}}

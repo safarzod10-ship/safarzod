@@ -1,0 +1,1 @@
+{"textures": {}, "chunks": ["prado/geoz00.txt"], "total": 1248276, "compressed": 564017, "gzip": true, "parts": {"position": {"offset": 0, "length": 318708, "count": 26559}, "normal": {"offset": 318708, "length": 318708, "count": 26559}, "index": {"offset": 637416, "length": 610860, "count": 152715}}}

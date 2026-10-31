@@ -1,0 +1,204 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Памятник, Прадо и персонаж</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen viewer. Header bar with model switch, full-bleed 3D stage, bottom bar with status and view controls.
+   Deliberately single dark look: a dark stage shows textured models best, independent of host theme. */
+:root {
+  --bg: #16171a; --stage: #1d1f23; --panel: #23252a; --line: #34373e;
+  --fg: #ecebe7; --muted: #9a978f; --accent: #d9a35b; --accent-ink: #1a1408;
+  --sans: "Commissioner", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; display: flex; flex-direction: column; overflow: hidden; }
+header, footer { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px; background: var(--bg); }
+header { border-bottom: 1px solid var(--line); justify-content: space-between; }
+footer { border-top: 1px solid var(--line); justify-content: space-between; }
+h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .01em; text-wrap: balance; }
+.switch { display: inline-flex; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.switch button { font: inherit; font-weight: 500; color: var(--muted); background: transparent; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.switch button:focus-visible, .tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#stage { position: relative; flex: 1; min-height: 0; background: radial-gradient(ellipse at 50% 40%, #2a2d33 0%, var(--stage) 60%, var(--bg) 100%); }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.loader { display: grid; gap: 10px; width: min(320px, 80%); text-align: center; }
+.loader .label { color: var(--fg); font-weight: 500; }
+.loader .sub { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 0; }
+.stats b { color: var(--fg); font-weight: 500; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tools button { font: inherit; font-size: 13px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+.tools button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.hint { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 12px; color: var(--muted); font-size: 12px; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<header>
+  <h1>Памятник, Прадо и персонаж</h1>
+  <div class="switch" role="group" aria-label="Модель">
+    <button id="btn-monument" type="button" aria-pressed="true" data-key="monument">Памятник</button>
+    <button id="btn-prado" type="button" aria-pressed="false" data-key="prado">Прадо</button>
+    <button id="btn-character" type="button" aria-pressed="false" data-key="character">Персонаж</button>
+  </div>
+</header>
+<div id="stage">
+  <div id="overlay"><div class="loader" id="loader">
+    <div class="label" id="load-label">Загрузка модели</div>
+    <div class="bar"><i id="load-bar"></i></div>
+    <div class="sub" id="load-sub">Около 1 МБ</div>
+  </div></div>
+  <div class="hint">Вращение: перетаскивание · Масштаб: колесо или щипок · Сдвиг: правая кнопка или два пальца</div>
+</div>
+<footer>
+  <div class="stats" id="stats">—</div>
+  <div class="tools">
+    <button id="btn-rotate" type="button" aria-pressed="false">Автовращение</button>
+    <button id="btn-reset" type="button">Сбросить вид</button>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+const MODELS = {
+  monument:  { name: 'Памятник', tris: 58741 },
+  prado:     { name: 'Land Cruiser Prado', tris: 50905 },
+  character: { name: 'Персонаж', tris: 59987 },
+};
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+stage.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(2, 4, 3); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x303034, 0.35));
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.autoRotateSpeed = 1.2;
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+
+const ui = {
+  label: document.getElementById('load-label'), bar: document.getElementById('load-bar'),
+  sub: document.getElementById('load-sub'), loader: document.getElementById('loader'), stats: document.getElementById('stats'),
+};
+const cache = {};
+let current = null, active = null, home = null;
+
+function decodeInto(target, offset, b64) {
+  const s = atob(b64);
+  for (let i = 0; i < s.length; i++) target[offset + i] = s.charCodeAt(i);
+  return s.length;
+}
+async function unpack(packed, total) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('Браузер слишком старый для распаковки модели');
+  const stream = new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const out = new Uint8Array(total); let o = 0;
+  const reader = stream.getReader();
+  for (;;) { const { done, value } = await reader.read(); if (done) break; out.set(value, o); o += value.length; }
+  if (o !== total) throw new Error('Геометрия повреждена');
+  return out.buffer;
+}
+function loadTexture(url, srgb) {
+  return new Promise((res, rej) => new THREE.TextureLoader().load(url, t => {
+    t.flipY = false; if (srgb) t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy(); res(t);
+  }, undefined, () => rej(new Error('Не удалось загрузить текстуру ' + url))));
+}
+
+async function build(key) {
+  const m = await (await fetch(key + '/manifest.json')).json();
+  const packed = new Uint8Array(m.compressed);
+  const steps = m.chunks.length + (m.textures && m.textures.color ? 4 : 2); let done = 0;
+  const tick = (what) => { done++; ui.bar.style.width = (100 * done / steps).toFixed(1) + '%'; ui.sub.textContent = what; };
+  let off = 0;
+  for (const c of m.chunks) {
+    const r = await fetch(c); if (!r.ok) throw new Error('Часть геометрии недоступна: ' + c);
+    off += decodeInto(packed, off, (await r.text()).trim());
+    tick(`Геометрия: ${(off / 1e6).toFixed(1)} из ${(m.compressed / 1e6).toFixed(1)} МБ`);
+  }
+  const buf = await unpack(packed, m.total);
+  tick('Распаковка геометрии');
+  const P = m.parts;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, P.position.offset, P.position.count * 3), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(buf, P.normal.offset, P.normal.count * 3), 3));
+  if (P.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(buf, P.uv.offset, P.uv.count * 2), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(buf, P.index.offset, P.index.count), 1));
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  if (!P.normal) g.computeVertexNormals();
+  const T = m.textures || {}, hasTex = !!(T.color && P.uv);
+  let mat;
+  if (hasTex) {
+    const color = await loadTexture(T.color, true); tick('Текстура цвета');
+    const rm = T.rm ? await loadTexture(T.rm, false) : null; tick('Текстура металла и шероховатости');
+    const normal = T.normal ? await loadTexture(T.normal, false) : null; tick('Карта нормалей');
+    mat = new THREE.MeshStandardMaterial({ map: color, metalnessMap: rm, roughnessMap: rm, metalness: rm ? 1 : 0, roughness: rm ? 1 : 0.6,
+      normalMap: normal, normalScale: new THREE.Vector2(1, -1) });
+  } else {
+    mat = new THREE.MeshStandardMaterial({ color: 0xc9c6bf, roughness: 0.55, metalness: 0.05 });
+    tick('Материал');
+  }
+  const mesh = new THREE.Mesh(g, mat);
+  return { mesh, texSize: hasTex ? mat.map.image.width + '×' + mat.map.image.height : 'нет', verts: P.position.count, tris: P.index.count / 3 };
+}
+
+function frame(mesh) {
+  const s = mesh.geometry.boundingSphere, b = mesh.geometry.boundingBox;
+  const c = s.center.clone(); const r = s.radius;
+  const dist = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.05;
+  const dir = new THREE.Vector3(0.55, 0.3, 1).normalize();
+  camera.near = r / 100; camera.far = r * 100; camera.updateProjectionMatrix();
+  home = { pos: c.clone().addScaledVector(dir, dist), target: c };
+  controls.minDistance = r * 0.15; controls.maxDistance = r * 8;
+  resetView();
+}
+function resetView() { if (!home) return; camera.position.copy(home.pos); controls.target.copy(home.target); controls.update(); }
+
+async function show(key) {
+  active = key;
+  document.querySelectorAll('.switch button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.key === key)));
+  if (current) { scene.remove(current.mesh); current = null; }
+  ui.stats.textContent = '—';
+  if (!cache[key]) {
+    ui.loader.hidden = false; ui.bar.style.width = '0%';
+    ui.label.textContent = 'Загрузка: ' + MODELS[key].name; ui.sub.textContent = 'Около 1 МБ';
+    try { cache[key] = build(key); await cache[key]; }
+    catch (e) { delete cache[key]; if (active === key) { ui.label.textContent = 'Не удалось загрузить модель'; ui.sub.textContent = e.message + '. Обновите страницу, чтобы попробовать снова.'; } return; }
+  }
+  const model = await cache[key];
+  if (active !== key) return;
+  ui.loader.hidden = true;
+  current = model; scene.add(model.mesh); frame(model.mesh);
+  ui.stats.innerHTML = `<span><b>${model.tris.toLocaleString('ru-RU')}</b> треугольников</span>` +
+    `<span><b>${model.verts.toLocaleString('ru-RU')}</b> вершин</span><span>Текстуры <b>${model.texSize}</b></span>`;
+}
+
+document.querySelectorAll('.switch button').forEach(b => b.addEventListener('click', () => { if (b.dataset.key !== active) show(b.dataset.key); }));
+document.getElementById('btn-reset').addEventListener('click', resetView);
+const rot = document.getElementById('btn-rotate');
+rot.addEventListener('click', () => { controls.autoRotate = !controls.autoRotate; rot.setAttribute('aria-pressed', String(controls.autoRotate)); });
+show('monument');
+</script>
+
+</body></html>

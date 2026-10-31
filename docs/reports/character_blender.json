@@ -1,0 +1,176 @@
+{
+ "key": "character",
+ "blender": "4.5.15 LTS",
+ "source_analysis": {
+  "vertices": 36661,
+  "triangles": 59987,
+  "has_normals": true,
+  "has_uv": true,
+  "finite": true,
+  "index_in_range": true,
+  "bbox_min": [
+   -0.47749999165534973,
+   9.999999747378752e-05,
+   -0.1931000053882599
+  ],
+  "bbox_max": [
+   0.47760000824928284,
+   1.75,
+   0.1931000053882599
+  ],
+  "size_xyz_m": [
+   0.9552000164985657,
+   1.749899983406067,
+   0.3862000107765198
+  ],
+  "normal_len_min_max": [
+   1.0,
+   1.0
+  ],
+  "normals_bad_count": 0,
+  "uv_min": [
+   0.0003000000142492354,
+   0.00039999998989515007
+  ],
+  "uv_max": [
+   0.9994999766349792,
+   1.0
+  ],
+  "surface_area_m2": 3.091,
+  "degenerate_tris": 0,
+  "tris_facing_against_normals": 25,
+  "welded_vertices": 29990,
+  "duplicate_tris": 0,
+  "edges": 89982,
+  "boundary_edges": 3,
+  "non_manifold_edges": 0,
+  "connected_components": 2,
+  "largest_components": [
+   {
+    "id": 1,
+    "tris": 59986,
+    "min": [
+     -0.4779999852180481,
+     0.0,
+     -0.19300000369548798
+    ],
+    "max": [
+     0.4779999852180481,
+     1.75,
+     0.19300000369548798
+    ]
+   },
+   {
+    "id": 0,
+    "tris": 1,
+    "min": [
+     -0.012000000104308128,
+     1.5160000324249268,
+     -0.03799999877810478
+    ],
+    "max": [
+     -0.010999999940395355,
+     1.5169999599456787,
+     -0.03799999877810478
+    ]
+   }
+  ]
+ },
+ "fixes": [],
+ "scale_factor": 1.0,
+ "bmesh_checks": {
+  "MainCharacter_Mesh": {
+   "verts": 36661,
+   "faces": 59987,
+   "edges": 96249,
+   "non_manifold_edges": 12537,
+   "boundary_edges": 12537,
+   "loose_verts": 0,
+   "zero_area_faces": 0
+  }
+ },
+ "before_export": {
+  "objects_total": 2,
+  "mesh_objects": [
+   "MainCharacter_Mesh"
+  ],
+  "empties": [
+   "MainCharacter"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 59987,
+  "vertices": 36661,
+  "materials": [
+   "M_Character_PBR"
+  ],
+  "images": [
+   "color.jpg",
+   "normal.png",
+   "rm.jpg"
+  ],
+  "objects_with_uv": 1,
+  "bbox_min_zup": [
+   -0.4775,
+   -0.1931,
+   0.0001
+  ],
+  "bbox_max_zup": [
+   0.4776,
+   0.1931,
+   1.75
+  ],
+  "size_zup_m": [
+   0.9552,
+   0.3862,
+   1.7499
+  ]
+ },
+ "glb_bytes": 8471436,
+ "after_reimport": {
+  "objects_total": 2,
+  "mesh_objects": [
+   "MainCharacter_Mesh"
+  ],
+  "empties": [
+   "MainCharacter"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 59987,
+  "vertices": 36661,
+  "materials": [
+   "M_Character_PBR"
+  ],
+  "images": [
+   "color",
+   "normal",
+   "rm"
+  ],
+  "objects_with_uv": 1,
+  "bbox_min_zup": [
+   -0.4775,
+   -0.1931,
+   0.0001
+  ],
+  "bbox_max_zup": [
+   0.4776,
+   0.1931,
+   1.75
+  ],
+  "size_zup_m": [
+   0.9552,
+   0.3862,
+   1.7499
+  ]
+ },
+ "roundtrip": {
+  "triangles_equal": true,
+  "mesh_objects_equal": true,
+  "materials_equal": true,
+  "bbox_max_abs_diff_m": 0.0,
+  "uv_preserved": true,
+  "image_count": 3
+ },
+ "seconds": 1.61
+}

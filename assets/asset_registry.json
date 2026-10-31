@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "assets": {
+    "vehicle.prado": {
+      "name": "Toyota Land Cruiser Prado",
+      "path": "res://assets/vehicles/prado/prado.glb",
+      "category": "vehicle",
+      "source": "https://claude.ai/artifact/V319FyaEBZx5atFp4i7bg3 (prado/manifest.json, prado/geoz00.txt)",
+      "license": "Project-owned (created earlier for this game); third-party origin not documented — confirm before release",
+      "status": "prepared_stage1",
+      "expected": {"mesh_nodes": ["Body", "Wheel_FL", "Wheel_FR", "Wheel_RL", "Wheel_RR", "SteeringWheel"], "triangles": 50865, "materials": 1},
+      "scale_note": "Uniform x4.4747 so the measured wheelbase equals 2.79 m (J150). Resulting bbox 2.43 x 2.17 x 4.47 m (W x H x L): wider/taller than the real car (1.885 x 1.845 x 4.78-4.84 m).",
+      "forward_axis": "+Z (Godot MODEL_FRONT); left side = +X; left-hand drive"
+    },
+    "monument.ismoili_somoni": {
+      "name": "Ismoili Somoni monument",
+      "path": "res://assets/monuments/ismoili_somoni/ismoili_somoni.glb",
+      "category": "monument",
+      "source": "https://claude.ai/artifact/V319FyaEBZx5atFp4i7bg3 (monument/manifest.json, monument/geoz00.txt)",
+      "license": "Project-owned (created earlier for this game); third-party origin not documented — confirm before release",
+      "status": "prepared_stage1",
+      "expected": {"mesh_nodes": ["Monument_IsmoiliSomoni_Mesh"], "triangles": 58668, "materials": 1},
+      "scale_note": "Uniform x43: total height 43 m; statue part 0.30 of height = ~13 m, matching published figures.",
+      "forward_axis": "+Z"
+    },
+    "character.main": {
+      "name": "Main character",
+      "path": "res://assets/characters/main_character/main_character.glb",
+      "category": "character",
+      "source": "https://claude.ai/artifact/V319FyaEBZx5atFp4i7bg3 (character/*)",
+      "license": "Project-owned (created earlier for this game); third-party origin not documented — confirm before release",
+      "status": "prepared_stage1_static_no_skeleton",
+      "expected": {"mesh_nodes": ["MainCharacter_Mesh"], "triangles": 59987, "materials": 1},
+      "scale_note": "Already metric: height 1.75 m.",
+      "forward_axis": "+Z"
+    }
+  }
+}
