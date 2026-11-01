@@ -6,6 +6,7 @@ shader_type spatial;
 render_mode cull_disabled, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
 
 #include "res://assets/shaders/vegetation_common.gdshaderinc"
+global uniform float veg_unshadowed;   // 1 when tree shadow maps are off: fake crown self-shadowing
 
 group_uniforms textures;
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_disable;
@@ -68,13 +69,15 @@ void fragment() {
 	col = veg_variation(col, v_seed.x, v_seed.y, hue_variation, brightness_variation);
 	col *= 1.0 + (v_branch - 0.5) * 2.0 * branch_variation;
 	col *= mix(1.0, v_ao, ao_strength);
+	col *= mix(1.0, 0.58, veg_unshadowed);
 	ALBEDO = col;
 	vec3 vn = normalize(v_vnormal);
 	vec3 facing = FRONT_FACING ? vn : -vn;
-	NORMAL = normalize(mix(facing, vn, volume_normals));
+	// never normalise a zero vector (back face with volume_normals = 0.5 gave NaN -> white)
+	NORMAL = normalize(mix(facing, vn, volume_normals) + vn * 0.001);
 	NORMAL_MAP = texture(normal_tex, UV).rgb;
 	NORMAL_MAP_DEPTH = normal_strength;
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
-	BACKLIGHT = translucency_color.rgb * col * translucency;
+	BACKLIGHT = translucency_color.rgb * col * translucency * (1.0 - 0.6 * veg_unshadowed);
 }

@@ -16,6 +16,12 @@ var _worst := 0.0
 var _fps_val := 0.0
 var _avg_ms := 0.0
 var _max_ms := 0.0
+var _open_on_start := false:
+	set(v):
+		_open_on_start = v
+		if v and _panel:
+			_panel.visible = true
+			_refresh()
 
 
 func _ready() -> void:
@@ -170,7 +176,7 @@ func _update_text() -> void:
 	var info := AutoGraphics.device_info()
 	var lines := [
 		"FPS %.0f   кадр %.1f мс (макс %.1f)   лимит %d FPS" % [_fps_val, _avg_ms, _max_ms, Settings.fps_cap],
-		"GPU %.1f мс   CPU-скрипты %.1f мс   физика %.1f мс" % [Settings.gpu_time_ms(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0],
+		"GPU %.1f мс   CPU кадр (process) %.1f мс   физика %.1f мс" % [Settings.gpu_time_ms(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0],
 		"Draw calls %d   треугольники %.2f млн   объекты %d" % [rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME), rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1e6, rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)],
 		"VRAM %.0f МБ (текстуры %.0f, буферы %.0f)   RAM %.0f МБ" % [rs.get_rendering_info(rs.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0, rs.get_rendering_info(rs.RENDERING_INFO_TEXTURE_MEM_USED) / 1048576.0, rs.get_rendering_info(rs.RENDERING_INFO_BUFFER_MEM_USED) / 1048576.0, Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0],
 		"Пресет %s (%s)   3D %d%%   %s" % [Settings.quality_name(), Settings.mode, int(Settings.current_scale * 100), info["renderer"]],

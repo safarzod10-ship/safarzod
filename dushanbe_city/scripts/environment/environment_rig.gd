@@ -96,5 +96,6 @@ func apply_quality() -> void:
 	var env := world_env.environment
 	env.glow_enabled = Settings.get_value("glow")
 	env.sky.radiance_size = {32: Sky.RADIANCE_SIZE_32, 64: Sky.RADIANCE_SIZE_64, 128: Sky.RADIANCE_SIZE_128, 256: Sky.RADIANCE_SIZE_256}[int(Settings.get_value("sky_radiance"))]
+	RenderingServer.global_shader_parameter_set(&"veg_unshadowed", 0.0 if Settings.get_value("tree_shadows") else 1.0)
 	RenderingServer.global_shader_parameter_set(&"city_macro_detail", 1.0 if Settings.get_value("macro_detail") else 0.0)
 	tod.apply()

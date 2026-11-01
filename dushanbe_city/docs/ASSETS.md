@@ -8,7 +8,8 @@
 | Деревья, кусты, цветы, трава | собственные процедурные модели (`dushanbe_city_src/tools/vegetation/`), текстуры листьев из ambientCG CC0 | проект | `assets/models/vegetation/` |
 | Здания, дороги, фон | собственный генератор (`dushanbe_city_src/tools/city/`) | проект | `assets/city/` |
 | Атлас вывесок и окон | генерируется (`atlases.py`), шрифт DejaVu Sans | DejaVu Fonts License (свободная) | `assets/textures/signs_atlas.png`, `assets/fonts/` |
-| Персонаж | артефакт проекта (модель автора), риг и анимации добавлены | проект | `assets/characters/player/` |
+| Персонаж | артефакт проекта (модель автора), риг добавлен | проект | `assets/characters/player/` |
+| Анимации персонажа (idle, walk, jog, jump start/air/land, punch jab/cross) | Quaternius, Universal Animation Library [Standard], OpenGameArt, ретаргетинг в Godot 4 | CC0 1.0 | `assets/characters/animations/` (`UAL_LICENSE.txt`) |
 
 Исходники высокого качества хранятся вне игрового проекта, в `dushanbe_city_src/`: 2K-архивы ambientCG,
 сырые загрузки Poly Haven (скачиваются заново скриптами), `.blend` персонажа и мебели, все генераторы.

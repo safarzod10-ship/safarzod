@@ -10,6 +10,8 @@ const CITY_JSON := "res://data/city/city.json"
 const MAP_JSON := "res://data/city/category_map.json"
 const VEG_JSON := "res://data/vegetation_catalog.json"
 const PROPS_JSON := "res://data/props_catalog.json"
+const CELL := 50.0       ## LOD/culling cell for instanced trees (m)
+const PROP_CELL := 100.0 ## props: coarser cells = fewer draw calls (their LOD ranges are short anyway)
 
 var city: Dictionary
 var category_map: Dictionary
@@ -188,33 +190,56 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array) -> void:
 	if chain.is_empty():
 		_missing[key] = true
 		return
-	for lod in chain:
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_custom_data = true
-		mm.mesh = lod[0]
-		mm.instance_count = xfs.size()
-		for i in xfs.size():
-			mm.set_instance_transform(i, xfs[i])
-			var o: Vector3 = xfs[i].origin
-			mm.set_instance_custom_data(i, Color(fposmod(o.x * 0.37 + o.z * 0.11, 1.0), fposmod(o.z * 0.29, 1.0), 0, 0))
-		var mmi := MultiMeshInstance3D.new()
-		mmi.name = key.replace(":", "_")
-		mmi.multimesh = mm
-		mmi.set_meta(&"lod_kind", parts[0])
-		mmi.set_meta(&"lod_id", parts[1])
-		mmi.set_meta(&"lod_index", chain.find(lod))
-		mmi.visibility_range_begin = lod[1]
-		mmi.visibility_range_end = lod[2]
-		mmi.cast_shadow = _shadow_mode(parts[0], parts[1], chain.find(lod))
-		mmi.visibility_range_end_margin = 4.0
-		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
-		if parts[0] == "prop":
-			mmi.add_to_group(&"city_props")
-		else:
-			mmi.add_to_group(&"city_trees")
-		parent.add_child(mmi)
-		stats.multimeshes += 1
+	# LOD cells: instances are grouped into 50 m cells; each MultiMeshInstance sits at its cell
+	# centre with instance transforms relative to it and an explicit custom AABB. Visibility-range
+	# LOD and frustum culling are then evaluated per cell (not per 100 m chunk, and never against a
+	# stale/zero AABB at the world origin).
+	var cells := {}
+	var cell := CELL if parts[0] == "tree" else PROP_CELL
+	for xf in xfs:
+		var o: Vector3 = xf.origin
+		var ck := Vector2i(floori(o.x / cell), floori(o.z / cell))
+		if not cells.has(ck):
+			cells[ck] = []
+		cells[ck].append(xf)
+	for ck in cells:
+		var origin := Vector3((ck.x + 0.5) * cell, 0.0, (ck.y + 0.5) * cell)
+		var cxfs: Array = cells[ck]
+		for li in chain.size():
+			var lod: Array = chain[li]
+			var mesh: Mesh = lod[0]
+			var maabb := mesh.get_aabb()
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_custom_data = true
+			mm.mesh = mesh
+			mm.instance_count = cxfs.size()
+			var box := AABB()
+			for i in cxfs.size():
+				var w: Transform3D = cxfs[i]
+				var lx := Transform3D(w.basis, w.origin - origin)
+				mm.set_instance_transform(i, lx)
+				var o: Vector3 = w.origin
+				mm.set_instance_custom_data(i, Color(fposmod(o.x * 0.37 + o.z * 0.11, 1.0), fposmod(o.z * 0.29, 1.0), 0, 0))
+				var ib := lx * maabb
+				box = ib if i == 0 else box.merge(ib)
+			mm.custom_aabb = box
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "%s_%d_%d_lod%d" % [key.replace(":", "_"), ck.x, ck.y, li]
+			mmi.multimesh = mm
+			mmi.position = origin
+			mmi.set_meta(&"lod_kind", parts[0])
+			mmi.set_meta(&"lod_id", parts[1])
+			mmi.set_meta(&"lod_index", li)
+			mmi.visibility_range_begin = lod[1]
+			mmi.visibility_range_end = lod[2]
+			mmi.visibility_range_begin_margin = 3.0
+			mmi.visibility_range_end_margin = 3.0
+			mmi.cast_shadow = _shadow_mode(parts[0], parts[1], li)
+			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			mmi.add_to_group(&"city_props" if parts[0] == "prop" else &"city_trees")
+			parent.add_child(mmi)
+			stats.multimeshes += 1
 	if parts[0] == "prop":
 		var e: Dictionary = props.get(parts[1], {})
 		for lp in e.get("light_points", []):

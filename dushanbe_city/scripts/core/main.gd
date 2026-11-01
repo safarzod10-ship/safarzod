@@ -50,12 +50,20 @@ func _build() -> void:
 		if player.has_method("teleport"):
 			player.call("teleport", Vector3(sp[0], sp[1], sp[2]), sp[3])
 		if ResourceLoader.exists(TOUCH_SCENE):
-			add_child((load(TOUCH_SCENE) as PackedScene).instantiate())
+			var touch := (load(TOUCH_SCENE) as PackedScene).instantiate()
+			add_child(touch)
+			if OS.get_cmdline_user_args().has("touchui"):     # captures/testing on desktop
+				touch.call("set_shown", true)
 	else:
 		var cam := Camera3D.new()
 		cam.position = Vector3(sp[0], 1.7, sp[2])
 		add_child(cam)
-	add_child(preload("res://scripts/ui/game_menu.gd").new())
+	var menu: CanvasLayer = preload("res://scripts/ui/game_menu.gd").new()
+	add_child(menu)
+	if OS.get_cmdline_user_args().has("menu"):
+		menu.call_deferred("set", "_open_on_start", true)
+	if OS.get_cmdline_user_args().has("diag"):
+		Settings.show_diagnostics = true
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return

@@ -6,7 +6,7 @@ config_version=5
 
 config/name="DUSHANBE"
 config/description="DUSHANBE: 600x600 m city district (stage: city environment)."
-config/version="0.3.0-city"
+config/version="0.4.0-perf"
 run/main_scene="res://scenes/main/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 boot_splash/bg_color=Color(0.08, 0.08, 0.09, 1)
@@ -35,6 +35,10 @@ common/physics_ticks_per_second=60
 
 [shader_globals]
 
+veg_unshadowed={
+"type": "float",
+"value": 0.0
+}
 city_macro_detail={
 "type": "float",
 "value": 1.0
