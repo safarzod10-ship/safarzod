@@ -78,5 +78,45 @@
   "sha256": "47874a3a882a337a89fb5ebad890bf8f1449f39ccad5cd8056a48358d6568295",
   "bytes": 2828704,
   "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Granite006A": {
+  "purpose": "monument v3: granite_red",
+  "url": "https://ambientcg.com/view?id=Granite006A",
+  "archive": "Granite006A_2K-JPG.zip",
+  "sha256": "c15240b57a00db5630b4b562814a9a5d9fb45fa81cacf8299b8acd8fbfaffd77",
+  "bytes": 15344284,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Granite001B": {
+  "purpose": "monument v3: stone_arch",
+  "url": "https://ambientcg.com/view?id=Granite001B",
+  "archive": "Granite001B_2K-JPG.zip",
+  "sha256": "3d9722d889221e9ec828003df34d56294bef1563bed6b1f4e5da94c09d8c413f",
+  "bytes": 28658032,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Marble012": {
+  "purpose": "monument v3: stone_column",
+  "url": "https://ambientcg.com/view?id=Marble012",
+  "archive": "Marble012_2K-JPG.zip",
+  "sha256": "585c73d1e2dc8747074ef4fa4027795e3556fbe0fa43362c90c90b633f6956db",
+  "bytes": 14792073,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Metal042A": {
+  "purpose": "monument v3: gold_leaf",
+  "url": "https://ambientcg.com/view?id=Metal042A",
+  "archive": "Metal042A_2K-JPG.zip",
+  "sha256": "bc0b44566026271d4b162252186d051425f5ec3d5b04e61196788f99f6f90f2d",
+  "bytes": 9438650,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Metal013": {
+  "purpose": "monument v3: bronze_patina",
+  "url": "https://ambientcg.com/view?id=Metal013",
+  "archive": "Metal013_2K-JPG.zip",
+  "sha256": "7c7b9b0f7bf1fcec8aa9777492ac891f33f4af4f6f9fb916315d9475dac6379f",
+  "bytes": 30921368,
+  "license": "CC0 1.0 Universal (ambientCG)"
  }
 }

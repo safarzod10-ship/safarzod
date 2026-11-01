@@ -31,6 +31,9 @@ var _look_finger := -1
 
 
 func _ready() -> void:
+	# must keep receiving input while the tree is paused, otherwise the "pause" action can
+	# pause the game but never resume it
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_register_actions()
 	touch_mode = DisplayServer.is_touchscreen_available()
 

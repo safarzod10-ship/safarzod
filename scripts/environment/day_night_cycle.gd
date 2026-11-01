@@ -56,7 +56,9 @@ const MOON_ENERGY := 0.16
 @export_range(0.0, 24.0, 0.01) var time_of_day := 12.0:
 	set(v):
 		time_of_day = fposmod(v, 24.0)
-		_dirty = true
+		if not _advancing:   # external change -> apply at once; clock ticks use the APPLY_HZ throttle
+			_dirty = true
+var _advancing := false
 @export var day_of_year := 120
 ## Game seconds per real second (60 = one game minute per real second).
 @export var time_scale := 60.0
@@ -99,7 +101,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if not paused and time_scale != 0.0:
+		_advancing = true   # (bug fix) the setter marked every tick dirty -> apply_now() ran every frame
 		time_of_day += delta * time_scale / 3600.0
+		_advancing = false
 		time_changed.emit(time_of_day)
 	_cloud_offset += Vector2(0.0018, 0.0007) * delta * (1.0 + weather.get("wind", 0.0) * 2.0)
 	_accum += delta

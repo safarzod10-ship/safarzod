@@ -70,7 +70,14 @@ glTF-координаты (Y вверх, UV origin сверху). Формат �
 4. 858 неманифолдных рёбер, 3 395 граничных, 178 треугольников с обмоткой против
    нормалей (тонкие элементы) — оставлен двусторонний материал.
 
-## 2. Памятник Исмоили Сомони — `assets/monuments/ismoili_somoni/ismoili_somoni.glb`
+## 2. Памятник Исмоили Сомони — `assets/monuments/ismoili_somoni/ismoili_somoni.tscn` (v3)
+
+> **v3 (2026-11-01):** сцена `ismoili_somoni.tscn` (LOD-скрипт) → `ismoili_somoni_v3.glb`:
+> 14 элементов × LOD0/1/2 (187 903 / 59 462 / 22 302 треуг.), 7 материалов на шейдере
+> `monument_surface.gdshader`, 3 запечённых атласа + 5 сканов CC0, лежащие львы из старой
+> модели, коллизия LOD2. Подробно: `MONUMENT_REFERENCE_RESEARCH.md`, `MONUMENT_GEOMETRY_ANALYSIS.md`,
+> `MONUMENT_MATERIALS.md`, `MONUMENT_TEXTURE_TRANSFER.md`, `MONUMENT_LOD.md`, `MONUMENT_VISUAL_QA.md`.
+> v2 сохранён: `source_assets/monument_v2_backup/ismoili_somoni_v2.glb`. Ниже — история этапа 1.
 
 | | Источник | После подготовки |
 |---|---|---|

@@ -1,0 +1,29 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scenes/testing/monument_inspection.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/world/environment_rig.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://assets/monuments/ismoili_somoni/ismoili_somoni.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/tools/dev_camera.gd" id="4"]
+
+[sub_resource type="StandardMaterial3D" id="plaza"]
+albedo_color = Color(0.52, 0.5, 0.47, 1)
+roughness = 0.85
+
+[sub_resource type="PlaneMesh" id="plane"]
+material = SubResource("plaza")
+size = Vector2(600, 600)
+
+[node name="MonumentInspection" type="Node3D"]
+script = ExtResource("1")
+
+[node name="EnvironmentRig" parent="." instance=ExtResource("2")]
+
+[node name="Plaza" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0)
+mesh = SubResource("plane")
+
+[node name="Monument" parent="." instance=ExtResource("3")]
+
+[node name="DevCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 60)
+script = ExtResource("4")

@@ -125,6 +125,7 @@ func _run() -> void:
 		await _stage2_checks(get_tree().current_scene)
 	_check("s2_dynamic_checks_completed", _s2_dynamic_done, "a script error inside _stage2_checks aborts it -> FAIL")
 	_stage2_static_checks()
+	await _monument_v3_checks()
 	_check("no_boot_errors", GameManager.boot_errors.is_empty(), GameManager.boot_errors)
 
 
@@ -332,3 +333,70 @@ func _finish() -> void:
 	out.close()
 	print("TEST_SUMMARY passed=%d failed=%d" % [_results.size() - failed, failed])
 	get_tree().quit(1 if failed > 0 else 0)
+
+
+# ------------------------------------------------------------ monument v3
+const MONUMENT_V3_ELEMENTS := ["Base_Platform", "Statue_Pedestal", "Lion_Plinth_Caps", "Arch", "Arch_Pilasters",
+	"Colonnade_Columns", "Colonnade_Entablatures", "Statue", "Statue_Sceptre", "Statue_Details", "Crown",
+	"Crown_Base", "Lion_L", "Lion_R"]
+
+
+func _monument_v3_checks() -> void:
+	var inst := (load("res://assets/monuments/ismoili_somoni/ismoili_somoni.tscn") as PackedScene).instantiate() as MonumentLOD
+	add_child(inst)
+	await get_tree().process_frame
+	var missing := PackedStringArray()
+	for e: String in MONUMENT_V3_ELEMENTS:
+		for lvl in 3:
+			if inst.find_child("%s_LOD%d" % [e, lvl], true, false) == null:
+				missing.append("%s_LOD%d" % [e, lvl])
+	_check("v3_monument_lod_nodes", missing.is_empty(), missing)
+	# collision: invisible static trimesh built from LOD2 of the walkable / blocking parts
+	var shapes := inst.find_children("*", "CollisionShape3D", true, false)
+	var faces := 0
+	for cs: CollisionShape3D in shapes:
+		if cs.shape is ConcavePolygonShape3D:
+			faces += (cs.shape as ConcavePolygonShape3D).get_faces().size() / 3
+	_check("v3_monument_collision", shapes.size() >= 1 and faces > 1000, "shapes=%d faces=%d" % [shapes.size(), faces])
+	# materials: every surface uses the monument shader with all textures bound
+	var shader := load("res://assets/shaders/monument_surface.gdshader")
+	var names := {}
+	var bad := PackedStringArray()
+	for mi: MeshInstance3D in inst.find_children("*_LOD*", "MeshInstance3D", true, false):
+		for s in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(s) as ShaderMaterial
+			if m == null or m.shader != shader or not (m.get_shader_parameter("detail_albedo_rough") is Texture2D) \
+					or not (m.get_shader_parameter("bake_map") is Texture2D):
+				bad.append("%s/%d" % [mi.name, s])
+			elif m:
+				names[m.resource_name] = true
+	_check("v3_monument_materials", bad.is_empty() and names.size() == 7, "%s %s" % [names.keys(), bad])
+	# photo-checked material assignment and lion pose
+	var statue := inst.find_child("Statue_LOD0", true, false) as MeshInstance3D
+	var crown := inst.find_child("Crown_LOD0", true, false) as MeshInstance3D
+	_check("v3_statue_is_bronze_crown_is_gold", statue.get_active_material(0).resource_name == "M_Mon_Bronze"
+		and crown.get_active_material(0).resource_name == "M_Mon_Gold_Sculpt")
+	var lion := inst.find_child("Lion_L_LOD0", true, false) as MeshInstance3D
+	var la := lion.get_aabb()
+	_check("v3_lions_lying_pose", la.size.y < 4.0 and la.size.z > la.size.y * 1.3, la.size)
+	# LOD switching (measured ranges, Ultra = 1 px)
+	var applied := inst.apply(1.0, true)
+	var lod_ok := inst.visible_lod_at("Statue", 5.0) == 0 and inst.visible_lod_at("Statue", 50.0) == 1 \
+		and inst.visible_lod_at("Statue", 300.0) == 2 and inst.visible_lod_at("Arch", 30.0) == 0
+	for e: String in applied:
+		lod_ok = lod_ok and applied[e][0] >= MonumentLOD.MIN_LOD1_M and applied[e][1] >= MonumentLOD.MIN_LOD2_M
+	_check("v3_lod_switch_distances", lod_ok, applied)
+	var low := inst.apply(2.0, false, false)
+	_check("v3_low_preset_no_lod0", inst.visible_lod_at("Statue", 3.0) == 1 and inst.visible_lod_at("Arch", 100.0) == 2
+		and not (inst.find_child("Statue_LOD0", true, false) as MeshInstance3D).visible, low["Arch"])
+	inst.apply(1.0, true)
+	# triangle budget per LOD (measured in Blender: docs/reports/monument_v3_build.json)
+	var tri := [0, 0, 0]
+	for mi: MeshInstance3D in inst.find_children("*_LOD*", "MeshInstance3D", true, false):
+		var lvl := int(String(mi.name).right(1))
+		tri[lvl] += MeshStats.collect(mi)["triangles"]
+	_check("v3_triangle_budget", tri[0] <= 200000 and tri[1] <= 70000 and tri[2] <= 25000 and tri[0] > tri[1] and tri[1] > tri[2], tri)
+	_check("v3_originals_kept", FileAccess.file_exists("res://assets/monuments/old_monument/old_monument.glb")
+		and FileAccess.file_exists("res://source_assets/monument_v2_backup/ismoili_somoni_v2.glb")
+		and FileAccess.file_exists("res://source_assets/monument_v3/monument_v3_lod0_source.blend"))
+	inst.queue_free()

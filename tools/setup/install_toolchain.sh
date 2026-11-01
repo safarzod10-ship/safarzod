@@ -10,13 +10,14 @@ CMDLINE_TOOLS=commandlinetools-linux-16111833_latest.zip
 PREFIX=/opt
 DL=$PREFIX/dl
 SDK=$PREFIX/android-sdk
-USER_HOME=$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)
+USER_HOME=$(getent passwd "${SUDO_USER:-${USER:-$(id -un)}}" | cut -d: -f6)  # $USER is unset in some containers
 need_mb() { local avail; avail=$(df -Pm "$PREFIX" | awk 'NR==2{print $4}'); [ "$avail" -ge "$1" ] || { echo "Need ${1} MB free in $PREFIX, have ${avail}"; exit 1; }; }
 
 need_mb 6000   # downloads ~1.8 GB + installs ~2.5 GB + headroom
 apt-get update
 apt-get install -y --no-install-recommends openjdk-17-jdk-headless git unzip zip xz-utils curl wget jq tmux \
-  imagemagick python3 python3-venv time ca-certificates nodejs npm
+  imagemagick python3 python3-venv time ca-certificates nodejs npm \
+  mesa-vulkan-drivers libvulkan1 xvfb xauth   # lavapipe + Xvfb: real-renderer screenshots without a GPU
 mkdir -p "$DL"; cd "$DL"
 
 # --- Godot (official GitHub release, SHA-512 verified)
@@ -52,10 +53,10 @@ yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses >/
 
 # --- Python venv for helper tools (nothing installed globally)
 python3 -m venv $PREFIX/dushanbe-venv
-$PREFIX/dushanbe-venv/bin/pip install -q numpy pygltflib Pillow
+$PREFIX/dushanbe-venv/bin/pip install -q numpy pygltflib Pillow scipy   # scipy: KD-tree (monument model comparison)
 # --- glTF-Transform CLI (Khronos validator + inspection)
 npm install -g @gltf-transform/cli@4.5.1
 
-chown -R "${SUDO_USER:-$USER}" "$USER_HOME/.local/share/godot" || true
+chown -R "${SUDO_USER:-${USER:-$(id -un)}}" "$USER_HOME/.local/share/godot" || true
 echo "Installed. Next (as your normal user): tools/android/configure_godot_android.sh"
 godot --headless --version; blender -b --version | head -1; java -version 2>&1 | head -1

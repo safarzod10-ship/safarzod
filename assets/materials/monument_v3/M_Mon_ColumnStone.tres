@@ -1,0 +1,17 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/monument_surface.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument_v3/stone_column_albedo_rough.png" id="a"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument_v3/stone_column_normal.png" id="n"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument_v3/bake_arch.png" id="b"]
+
+[resource]
+resource_name = "M_Mon_ColumnStone"
+shader = ExtResource("s")
+shader_parameter/detail_albedo_rough = ExtResource("a")
+shader_parameter/detail_normal = ExtResource("n")
+shader_parameter/bake_map = ExtResource("b")
+shader_parameter/tile_m = 1
+shader_parameter/cavity_darkening = 0.4
+shader_parameter/roughness_in_cavity = 0.1
+shader_parameter/normal_strength = 0.5

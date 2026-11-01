@@ -1,0 +1,38 @@
+{
+ "statue": {
+  "current_height_m": 13.27,
+  "rotation_deg": 14.7,
+  "current_to_old_median_m": 0.174,
+  "current_to_old_p90_m": 0.501,
+  "old_to_current_median_m": 1.14,
+  "fraction_within_2cm": 0.021,
+  "fraction_within_2pct_of_height": 0.673
+ },
+ "lion_left": {
+  "current_height_m": 5.54,
+  "rotation_deg": 6.2,
+  "current_to_old_median_m": 0.102,
+  "current_to_old_p90_m": 0.339,
+  "old_to_current_median_m": 0.227,
+  "fraction_within_2cm": 0.043,
+  "fraction_within_2pct_of_height": 0.53
+ },
+ "lion_right": {
+  "current_height_m": 5.54,
+  "rotation_deg": 13.6,
+  "current_to_old_median_m": 0.296,
+  "current_to_old_p90_m": 0.867,
+  "old_to_current_median_m": 2.209,
+  "fraction_within_2cm": 0.004,
+  "fraction_within_2pct_of_height": 0.158
+ },
+ "crown": {
+  "current_height_m": 4.21,
+  "rotation_deg": 6.1,
+  "current_to_old_median_m": 0.219,
+  "current_to_old_p90_m": 0.636,
+  "old_to_current_median_m": 3.394,
+  "fraction_within_2cm": 0.003,
+  "fraction_within_2pct_of_height": 0.139
+ }
+}

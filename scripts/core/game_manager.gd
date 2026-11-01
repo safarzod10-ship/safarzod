@@ -16,6 +16,9 @@ func _ready() -> void:
 	InputManager.action_pressed.connect(_on_action)
 
 
+var _auto_paused := false
+
+
 func set_state(new_state: State) -> void:
 	if new_state == state:
 		return
@@ -48,6 +51,13 @@ func _notification(what: int) -> void:
 			SettingsManager.save()
 			if state == State.PLAYING:
 				set_state(State.PAUSED)
+				_auto_paused = true
+		NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN:
+			# Resume only a pause WE made on focus loss (a pause chosen by the player stays).
+			# Before this, nothing ever un-paused the tree: the game stayed frozen after app switch.
+			if _auto_paused and state == State.PAUSED:
+				set_state(State.PLAYING)
+			_auto_paused = false
 
 
 func _on_action(action: StringName) -> void:

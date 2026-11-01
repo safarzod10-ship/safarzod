@@ -27,7 +27,19 @@ run_bl() {  # script key out report
 }
 run_bl tools/blender/build_glb_from_artifact.py character assets/characters/main_character/main_character.glb docs/reports/character_blender.json
 run_bl tools/blender/asset_pipeline_v2.py prado assets/vehicles/prado/prado.glb docs/reports/prado_v2.json
-run_bl tools/blender/asset_pipeline_v2.py monument assets/monuments/ismoili_somoni/ismoili_somoni.glb docs/reports/monument_v2.json
+# monument: v3 pipeline (docs/MONUMENT_GEOMETRY_ANALYSIS.md). The v2 GLB is kept only as a backup in
+# source_assets/monument_v2_backup/ and is not regenerated here (asset_pipeline_v2.py monument = history only).
+step "3b. Monument v3 (elements -> lions from old model -> refine/UV/bake/LOD -> GLB), ~8 min CPU"
+MV3=source_assets/monument_v3; BK=builds/monument_bake; mkdir -p "$BK"
+$TIME blender -b --factory-startup --python tools/blender/monument_elements.py -- "$ART" $MV3/monument_elements.blend \
+  docs/reports/monument_v3_elements.json >"$LOG/monument_elements.log" 2>&1 && grep -h "ELEMENTS OK" "$LOG/monument_elements.log" || { echo FAIL; fail=1; }
+$TIME blender -b --factory-startup --python tools/blender/monument_lions_from_old.py -- "$ART" $MV3/monument_elements.blend \
+  $MV3/lions_from_old_hi.blend docs/reports/monument_v3_lions.json >"$LOG/monument_lions.log" 2>&1 || { echo FAIL lions; fail=1; }
+$TIME blender -b --factory-startup --python tools/blender/monument_v3_build.py -- $MV3/monument_elements.blend $MV3 \
+  assets/monuments/ismoili_somoni/ismoili_somoni_v3.glb "$BK" docs/reports/monument_v3_build.json 2048 64 \
+  >"$LOG/monument_v3.log" 2>&1 && grep -h "V3 DONE" "$LOG/monument_v3.log" || { echo FAIL v3; fail=1; }
+$PY -I tools/textures/convert_monument_bakes.py "$BK" && python3 -I tools/godot/monument_lod_ranges.py >/dev/null || fail=1
+$PY -I tools/textures/prepare_monument_textures.py >/dev/null && python3 -I tools/godot/make_monument_materials.py >/dev/null || fail=1
 
 step "4. Khronos glTF validator"
 for f in $(find assets -name "*.glb" | sort); do

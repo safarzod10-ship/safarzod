@@ -37,3 +37,5 @@ Thumbs.db
 # Temporary renders (keep curated docs/screenshots only)
 renders/
 tmp/
+# Monument v3: LOD0+LOD1+LOD2 working file, rebuilt by tools/blender/monument_v3_build.py (~8 min)
+source_assets/monument_v3/monument_v3_full.blend

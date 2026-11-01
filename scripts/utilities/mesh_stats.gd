@@ -18,7 +18,9 @@ static func collect(root: Node) -> Dictionary:
 			skeletons += 1
 		elif n is AnimationPlayer:
 			anim_players += 1
-		elif n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		elif n is MeshInstance3D and (n as MeshInstance3D).mesh \
+				and (n as MeshInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY:
+			# shadow-only proxies (e.g. monument LOD shadow casters) are not visible geometry
 			var mi := n as MeshInstance3D
 			names.append(mi.name)
 			var mesh := mi.mesh

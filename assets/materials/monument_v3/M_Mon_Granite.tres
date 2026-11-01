@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/monument_surface.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument_v3/granite_red_albedo_rough.png" id="a"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument_v3/granite_red_normal.png" id="n"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument_v3/bake_arch.png" id="b"]
+
+[resource]
+resource_name = "M_Mon_Granite"
+shader = ExtResource("s")
+shader_parameter/detail_albedo_rough = ExtResource("a")
+shader_parameter/detail_normal = ExtResource("n")
+shader_parameter/bake_map = ExtResource("b")
+shader_parameter/tile_m = 1
+shader_parameter/roughness_up = 0.14
+shader_parameter/joint_spacing = Vector2(1, 0)
+shader_parameter/joint_width = 0.004
+shader_parameter/joint_color = Color(0.23, 0.15, 0.12, 1)
+shader_parameter/panel_tone = 0.06
+shader_parameter/cavity_darkening = 0.35
+shader_parameter/roughness_in_cavity = 0.15
+shader_parameter/normal_strength = 0.5

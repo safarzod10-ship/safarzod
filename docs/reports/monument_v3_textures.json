@@ -1,0 +1,47 @@
+{
+ "granite_red": {
+  "source": "Granite006A",
+  "target_srgb": "#946A56",
+  "result_mean_srgb": "#946A56",
+  "source_mean_srgb": "#906144",
+  "roughness_mean": 0.3,
+  "size": 2048,
+  "normal_size": 1024
+ },
+ "stone_arch": {
+  "source": "Granite001B",
+  "target_srgb": "#D6CAB6",
+  "result_mean_srgb": "#D6CAB6",
+  "source_mean_srgb": "#AF9B8B",
+  "roughness_mean": 0.62,
+  "size": 2048,
+  "normal_size": 1024
+ },
+ "stone_column": {
+  "source": "Marble012",
+  "target_srgb": "#D8D5CE",
+  "result_mean_srgb": "#D8D5CE",
+  "source_mean_srgb": "#ADAEB7",
+  "roughness_mean": 0.42,
+  "size": 1024,
+  "normal_size": 1024
+ },
+ "gold_leaf": {
+  "source": "Metal042A",
+  "target_srgb": "#E0BC6C",
+  "result_mean_srgb": "#E0BC6C",
+  "source_mean_srgb": "#F3D691",
+  "roughness_mean": 0.3,
+  "size": 1024,
+  "normal_size": 1024
+ },
+ "bronze_patina": {
+  "source": "Metal013",
+  "target_srgb": "#5F5A52",
+  "result_mean_srgb": "#5F5A52",
+  "source_mean_srgb": "#786A5F",
+  "roughness_mean": 0.55,
+  "size": 2048,
+  "normal_size": 1024
+ }
+}

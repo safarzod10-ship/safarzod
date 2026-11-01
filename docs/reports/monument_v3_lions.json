@@ -1,0 +1,47 @@
+{
+ "plinth_top_old_units": 0.1205,
+ "lions": {
+  "Lion_L": {
+   "old_triangles": 86479,
+   "fragments_dropped_tris": 0,
+   "triangles": 86479,
+   "scale_old_units_to_m": 37.625,
+   "size_m_xyz": [
+    2.57,
+    5.372,
+    3.425
+   ],
+   "proportion_W_H_L": [
+    1.0,
+    1.33,
+    2.09
+   ],
+   "current_sitting_lion_size_m": [
+    3.933,
+    5.372,
+    5.544
+   ]
+  },
+  "Lion_R": {
+   "old_triangles": 85938,
+   "fragments_dropped_tris": 35,
+   "triangles": 85903,
+   "scale_old_units_to_m": 39.164,
+   "size_m_xyz": [
+    2.652,
+    5.372,
+    3.577
+   ],
+   "proportion_W_H_L": [
+    1.0,
+    1.35,
+    2.03
+   ],
+   "current_sitting_lion_size_m": [
+    3.933,
+    5.372,
+    5.544
+   ]
+  }
+ }
+}
