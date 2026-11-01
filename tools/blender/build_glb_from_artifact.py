@@ -289,4 +289,5 @@ def main():
     print("ROUNDTRIP", key, json.dumps(report["roundtrip"]))
 
 
-main()
+if __name__ == "__main__":
+    main()

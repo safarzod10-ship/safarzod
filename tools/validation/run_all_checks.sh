@@ -19,16 +19,18 @@ for k in prado monument character; do
 done; echo done
 
 step "3. Blender: decode -> GLB -> re-import -> compare"
-for spec in prado:assets/vehicles/prado/prado.glb monument:assets/monuments/ismoili_somoni/ismoili_somoni.glb character:assets/characters/main_character/main_character.glb; do
-  k=${spec%%:*}; out=${spec#*:}
-  $TIME blender -b --factory-startup --python tools/blender/build_glb_from_artifact.py -- "$ART" $k "$out" docs/reports/${k}_blender.json \
-    >"$LOG/blender_$k.log" 2>&1
-  grep -h ROUNDTRIP "$LOG/blender_$k.log" || { echo "FAIL $k"; fail=1; }
-  tail -1 "$LOG/blender_$k.log"
-done
+# character: stage-1 pipeline; prado + monument: stage-2 corrected pipeline (asset_pipeline_v2.py)
+run_bl() {  # script key out report
+  $TIME blender -b --factory-startup --python "$1" -- "$ART" $2 "$3" "$4" >"$LOG/blender_$2.log" 2>&1
+  grep -h ROUNDTRIP "$LOG/blender_$2.log" || { echo "FAIL $2"; fail=1; }
+  tail -1 "$LOG/blender_$2.log"
+}
+run_bl tools/blender/build_glb_from_artifact.py character assets/characters/main_character/main_character.glb docs/reports/character_blender.json
+run_bl tools/blender/asset_pipeline_v2.py prado assets/vehicles/prado/prado.glb docs/reports/prado_v2.json
+run_bl tools/blender/asset_pipeline_v2.py monument assets/monuments/ismoili_somoni/ismoili_somoni.glb docs/reports/monument_v2.json
 
 step "4. Khronos glTF validator"
-for f in assets/*/*/*.glb; do
+for f in $(find assets -name "*.glb" | sort); do
   gltf-transform validate "$f" >"$LOG/validate_$(basename $f).log" 2>&1
   grep -q "No errors found" "$LOG/validate_$(basename $f).log" && grep -q "No warnings found" "$LOG/validate_$(basename $f).log" \
     && echo "OK $f" || { echo "FAIL $f"; fail=1; }

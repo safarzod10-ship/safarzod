@@ -13,6 +13,15 @@ const NAMES := {Quality.LOW: "low", Quality.MEDIUM: "medium", Quality.ULTRA: "ul
 
 const PRESETS := {
 	Quality.LOW: {
+		"grass_density": 0.35,         # fraction of grass instances drawn (MultiMesh.visible_instance_count)
+		"grass_distance": 28.0,        # grass visibility range end, m
+		"shrub_distance": 60.0,
+		"tree_detail_distance": 70.0,  # full-detail tree LOD range end (then low-poly LOD)
+		"tree_distance": 260.0,        # trees hidden beyond
+		"terrain_far_lod": true,
+		"sky_radiance_size": Sky.RADIANCE_SIZE_64,
+		"rain_particles": 700,
+		"cloud_quality": 0,
 		"render_scale": 0.7,           # 3D internal resolution (UI stays native)
 		"scaling_mode": Viewport.SCALING_3D_MODE_BILINEAR,
 		"msaa_3d": Viewport.MSAA_DISABLED,
@@ -22,13 +31,22 @@ const PRESETS := {
 		"shadow_max_distance": 40.0,
 		"shadow_split_mode": DirectionalLight3D.SHADOW_ORTHOGONAL,
 		"soft_shadow_quality": RenderingServer.SHADOW_QUALITY_HARD,
-		"view_distance": 250.0,
+		"view_distance": 260.0,       # world objects (trees, chunks detail); mountains always visible
 		"lod_threshold_px": 4.0,       # higher = more aggressive mesh LOD
 		"glow": false,
 		"anisotropic": 0,
 		"fps_target": 30,
 	},
 	Quality.MEDIUM: {
+		"grass_density": 0.65,
+		"grass_distance": 45.0,
+		"shrub_distance": 100.0,
+		"tree_detail_distance": 120.0,
+		"tree_distance": 450.0,
+		"terrain_far_lod": true,
+		"sky_radiance_size": Sky.RADIANCE_SIZE_128,
+		"rain_particles": 1600,
+		"cloud_quality": 1,
 		"render_scale": 0.85,
 		"scaling_mode": Viewport.SCALING_3D_MODE_BILINEAR,
 		"msaa_3d": Viewport.MSAA_2X,
@@ -38,13 +56,22 @@ const PRESETS := {
 		"shadow_max_distance": 80.0,
 		"shadow_split_mode": DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS,
 		"soft_shadow_quality": RenderingServer.SHADOW_QUALITY_SOFT_LOW,
-		"view_distance": 500.0,
+		"view_distance": 450.0,
 		"lod_threshold_px": 2.0,
 		"glow": true,
 		"anisotropic": 2,
 		"fps_target": 30,
 	},
 	Quality.ULTRA: {
+		"grass_density": 1.0,
+		"grass_distance": 75.0,
+		"shrub_distance": 160.0,
+		"tree_detail_distance": 200.0,
+		"tree_distance": 900.0,
+		"terrain_far_lod": false,
+		"sky_radiance_size": Sky.RADIANCE_SIZE_256,
+		"rain_particles": 3500,
+		"cloud_quality": 2,
 		"render_scale": 1.0,
 		"scaling_mode": Viewport.SCALING_3D_MODE_BILINEAR,
 		"msaa_3d": Viewport.MSAA_4X,

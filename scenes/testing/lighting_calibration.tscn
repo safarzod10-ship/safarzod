@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/testing/lighting_calibration.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/world/environment_rig.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/utilities/orbit_camera.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/ui/diagnostics_overlay.gd" id="4"]
+
+[node name="LightingCalibration" type="Node3D"]
+script = ExtResource("1")
+
+[node name="EnvironmentRig" parent="." instance=ExtResource("2")]
+
+[node name="Camera" type="Camera3D" parent="."]
+current = true
+fov = 55.0
+far = 16000.0
+script = ExtResource("3")
+target = Vector3(0, 0, 2.5)
+distance = 13.0
+height = 6.0
+auto_speed_deg = 0.0
+yaw_deg = 90.0
+pitch_deg = 38.0
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+script = ExtResource("4")
+title = "DUSHANBE — калибровка освещения (тестовые патчи)"
+nav_target = "res://scenes/testing/diagnostics.tscn"
+nav_label = "← Диагностика"

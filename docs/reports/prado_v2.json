@@ -1,0 +1,220 @@
+{
+ "key": "prado",
+ "version": 2,
+ "blender": "4.5.15 LTS",
+ "fixes": [
+  "removed 40 zero-area triangles",
+  "replaced 1 zero-length normals"
+ ],
+ "measured": {
+  "scale_from_wheelbase": 4.4747,
+  "body_width_excl_mirrors_m": 2.218,
+  "height_m": 2.165,
+  "length_m": 4.473
+ },
+ "correction": {
+  "body_scale_xyz": [
+   0.851,
+   0.851,
+   1.0
+  ],
+  "wheel_uniform_scale": 0.8393
+ },
+ "body_material_triangles": {
+  "M_Prado_TrimBlack": 3523,
+  "M_Prado_TailLight": 2030,
+  "M_Prado_LightLens": 864,
+  "M_Prado_Interior": 4785,
+  "M_Prado_Chrome": 2096,
+  "M_Prado_Paint": 23454
+ },
+ "wheels": {
+  "Wheel_FR": {
+   "lug_nuts_used": 7,
+   "nut_plane_residual_m": 0.0016,
+   "toe_before_deg": 17.37,
+   "camber_deg": 0.01,
+   "toe_after_deg": 0.102,
+   "tyre_diameter_before_m": 0.934,
+   "tyre_diameter_after_m": 0.784,
+   "pivot_after_m": [
+    -0.7525,
+    0.3736,
+    1.3631
+   ],
+   "triangles": 3208
+  },
+  "Wheel_RR": {
+   "lug_nuts_used": 7,
+   "nut_plane_residual_m": 0.0024,
+   "toe_before_deg": 6.47,
+   "camber_deg": 0.42,
+   "toe_after_deg": -0.108,
+   "tyre_diameter_before_m": 0.919,
+   "tyre_diameter_after_m": 0.771,
+   "pivot_after_m": [
+    -0.77,
+    0.3709,
+    -1.431
+   ],
+   "triangles": 3158
+  },
+  "Wheel_FL": {
+   "lug_nuts_used": 8,
+   "nut_plane_residual_m": 0.0029,
+   "toe_before_deg": 16.75,
+   "camber_deg": 0.32,
+   "toe_after_deg": 0.052,
+   "tyre_diameter_before_m": 0.926,
+   "tyre_diameter_after_m": 0.777,
+   "pivot_after_m": [
+    0.7525,
+    0.3634,
+    1.3631
+   ],
+   "triangles": 3232
+  },
+  "Wheel_RL": {
+   "lug_nuts_used": 7,
+   "nut_plane_residual_m": 0.0023,
+   "toe_before_deg": -6.23,
+   "camber_deg": -0.73,
+   "toe_after_deg": -0.03,
+   "tyre_diameter_before_m": 0.92,
+   "tyre_diameter_after_m": 0.772,
+   "pivot_after_m": [
+    0.77,
+    0.3713,
+    -1.431
+   ],
+   "triangles": 3171
+  }
+ },
+ "after": {
+  "length_m": 4.473,
+  "width_body_excl_mirrors_m": 1.887,
+  "width_incl_mirrors_m": 2.066,
+  "height_m": 1.843,
+  "wheelbase_left_m": 2.794,
+  "track_front_m": 1.505,
+  "ground_min_y_m": 0.0,
+  "body_min_y_m": 0.151
+ },
+ "before": {
+  "bbox_min": [
+   -1.2139999866485596,
+   0.0,
+   -2.2360000610351562
+  ],
+  "bbox_max": [
+   1.2139999866485596,
+   2.1649999618530273,
+   2.2360000610351562
+  ]
+ },
+ "reference_J150_facelift": {
+  "wheelbase": 2.79,
+  "width": 1.885,
+  "height": 1.845,
+  "length": 4.84,
+  "tyre_diameter": 0.776
+ },
+ "before_export": {
+  "objects_total": 7,
+  "mesh_objects": [
+   "Body",
+   "SteeringWheel",
+   "Wheel_FL",
+   "Wheel_FR",
+   "Wheel_RL",
+   "Wheel_RR"
+  ],
+  "empties": [
+   "Prado"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 50865,
+  "vertices": 26559,
+  "materials": [
+   "M_Prado_Chrome",
+   "M_Prado_Interior",
+   "M_Prado_LightLens",
+   "M_Prado_Paint",
+   "M_Prado_Rim",
+   "M_Prado_TailLight",
+   "M_Prado_TrimBlack",
+   "M_Prado_Tyre"
+  ],
+  "images": [],
+  "objects_with_uv": 6,
+  "bbox_min_zup": [
+   -1.0329,
+   -2.2363,
+   0.0
+  ],
+  "bbox_max_zup": [
+   1.0329,
+   2.2363,
+   1.8426
+  ],
+  "size_zup_m": [
+   2.0658,
+   4.4726,
+   1.8426
+  ]
+ },
+ "glb_bytes": 1943128,
+ "after_reimport": {
+  "objects_total": 7,
+  "mesh_objects": [
+   "Body",
+   "SteeringWheel",
+   "Wheel_FL",
+   "Wheel_FR",
+   "Wheel_RL",
+   "Wheel_RR"
+  ],
+  "empties": [
+   "Prado"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 50865,
+  "vertices": 50743,
+  "materials": [
+   "M_Prado_Chrome",
+   "M_Prado_Interior",
+   "M_Prado_LightLens",
+   "M_Prado_Paint",
+   "M_Prado_Rim",
+   "M_Prado_TailLight",
+   "M_Prado_TrimBlack",
+   "M_Prado_Tyre"
+  ],
+  "images": [],
+  "objects_with_uv": 6,
+  "bbox_min_zup": [
+   -1.0329,
+   -2.2363,
+   0.0
+  ],
+  "bbox_max_zup": [
+   1.0329,
+   2.2363,
+   1.8426
+  ],
+  "size_zup_m": [
+   2.0658,
+   4.4726,
+   1.8426
+  ]
+ },
+ "roundtrip": {
+  "triangles_equal": true,
+  "mesh_objects_equal": true,
+  "materials_equal": true,
+  "uv_preserved": true
+ },
+ "seconds": 1.22
+}

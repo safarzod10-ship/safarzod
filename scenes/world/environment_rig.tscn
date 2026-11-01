@@ -1,0 +1,61 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/sky_dushanbe.gdshader" id="1"]
+[ext_resource type="Script" path="res://scripts/environment/day_night_cycle.gd" id="2"]
+
+[sub_resource type="FastNoiseLite" id="cloud_fnl"]
+noise_type = 3
+frequency = 0.012
+fractal_octaves = 5
+fractal_gain = 0.55
+
+[sub_resource type="NoiseTexture2D" id="cloud_tex"]
+width = 512
+height = 512
+seamless = true
+noise = SubResource("cloud_fnl")
+
+[sub_resource type="ShaderMaterial" id="sky_mat"]
+shader = ExtResource("1")
+shader_parameter/cloud_noise = SubResource("cloud_tex")
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+process_mode = 2
+radiance_size = 2
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_sky_contribution = 0.1
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_white = 6.0
+fog_enabled = true
+fog_mode = 0
+fog_light_color = Color(0.72, 0.79, 0.87, 1)
+fog_density = 0.00012
+fog_aerial_perspective = 0.6
+fog_sky_affect = 0.0
+adjustment_enabled = true
+adjustment_contrast = 1.12
+
+[node name="EnvironmentRig" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0, 50, 0)
+shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.5
+shadow_blur = 1.2
+directional_shadow_blend_splits = true
+
+[node name="DayNightCycle" type="Node" parent="." node_paths=PackedStringArray("sun", "world_environment")]
+script = ExtResource("2")
+time_scale = 0.0
+sun = NodePath("../Sun")
+world_environment = NodePath("../WorldEnvironment")

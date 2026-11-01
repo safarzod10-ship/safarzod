@@ -86,10 +86,15 @@ func _run() -> void:
 				_check("character_has_no_skeleton_documented", stats["skeletons"] == 0 and info["status"].contains("no_skeleton"))
 			"vehicle.prado":
 				var fl := inst.find_child("Wheel_FL") as Node3D
+				var fr := inst.find_child("Wheel_FR") as Node3D
 				var rl := inst.find_child("Wheel_RL") as Node3D
-				var wb := fl.position.z - rl.position.z if fl and rl else 0.0
-				# front wheels steered ~ in the source, so their pivot z differs slightly per side
-				_check("prado_wheel_pivots", fl != null and rl != null and absf(rl.position.y - 0.45) < 0.02 and wb > 2.6 and wb < 2.9, "wheelbase(FL-RL)=%.3f" % wb)
+				var ok := fl != null and fr != null and rl != null
+				var wb := fl.position.z - rl.position.z if ok else 0.0
+				_check("prado_wheel_pivots", ok and absf(rl.position.y - 0.38) < 0.03 and absf(wb - 2.79) < 0.02,
+					"wheelbase(FL-RL)=%.3f hub_y=%.3f" % [wb, rl.position.y if ok else 0.0])
+				_check("prado_front_wheels_symmetric", ok and absf(fl.position.x + fr.position.x) < 0.01 and absf(fl.position.z - fr.position.z) < 0.01)
+				_check("prado_dimensions_j150", absf(stats["aabb_size"][1] - 1.845) < 0.04 and absf(stats["aabb_size"][2] - 4.47) < 0.05 and stats["aabb_size"][0] < 2.1,
+					stats["aabb_size"])
 				_check("prado_left_is_plus_x", fl != null and fl.position.x > 0)
 		inst.queue_free()
 

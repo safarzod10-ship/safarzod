@@ -1,0 +1,58 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+TEST PASS autoload_SaveManager 
+TEST PASS autoload_SettingsManager 
+TEST PASS autoload_AssetRegistry 
+TEST PASS autoload_PerformanceMonitor 
+TEST PASS autoload_InputManager 
+TEST PASS autoload_SceneLoader 
+TEST PASS autoload_GameManager 
+TEST PASS engine_version_4_7 4.7.2-stable (official)
+TEST PASS save_slot_write 
+TEST PASS save_slot_roundtrip { "money": 120.0, "player": { "pos": [1.5, 0.0, -3.0] } }
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: parse_string (core/io/json.cpp:629)
+   GDScript backtrace (most recent call first):
+       [0] load_slot (res://scripts/managers/save_manager.gd:47)
+       [1] _run (res://tests/test_runner.gd:43)
+       [2] _ready (res://tests/test_runner.gd:20)
+WARNING: SaveManager: slot 98 is corrupt
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] load_slot (res://scripts/managers/save_manager.gd:49)
+         [1] _run (res://tests/test_runner.gd:43)
+         [2] _ready (res://tests/test_runner.gd:20)
+TEST PASS save_slot_corrupt_handled 
+TEST PASS save_no_tmp_left 
+TEST PASS preset_applied_low scale=0.69999998807907 msaa=0 lod=4.0
+TEST PASS preset_saved_low 
+TEST PASS preset_applied_ultra scale=1.0 msaa=2 lod=1.0
+TEST PASS preset_saved_ultra 
+TEST PASS preset_applied_medium scale=0.85000002384186 msaa=1 lod=2.0
+TEST PASS preset_saved_medium 
+TEST PASS preset_from_name 
+TEST PASS renderer_override_write 
+TEST PASS renderer_override_content 
+TEST PASS renderer_override_remove 
+CAPABILITIES {"adapter":"","adapter_vendor":"","api_version":"","cpu_count":4,"headless":true,"model":"GenericDevice","os":"Linux","rendering_device":false,"rendering_driver":"vulkan","rendering_method":"mobile","screen_size":"(0, 0)"}
+TEST PASS asset_path_vehicle.prado ok
+TEST PASS asset_path_monument.ismoili_somoni ok
+TEST PASS asset_path_character.main ok
+TEST PASS asset_geometry_vehicle.prado [] load=6.0ms {"aabb_size":[2.066,1.843,4.473],"animation_players":0,"materials":["M_Prado_Paint","M_Prado_Chrome","M_Prado_TrimBlack","M_Prado_Interior","M_Prado_LightLens","M_Prado_TailLight","M_Prado_Tyre","M_Prado_Rim"],"mesh_nodes":["Body","SteeringWheel","Wheel_FL","Wheel_FR","Wheel_RL","Wheel_RR"],"skeletons":0,"triangles":50865,"vertices":50743}
+TEST PASS prado_wheel_pivots wheelbase(FL-RL)=2.794 hub_y=0.371
+TEST PASS prado_front_wheels_symmetric 
+TEST PASS prado_dimensions_j150 [2.066, 1.843, 4.473]
+TEST PASS prado_left_is_plus_x 
+TEST PASS asset_geometry_monument.ismoili_somoni [] load=6.9ms {"aabb_size":[42.226,43.0,29.376],"animation_players":0,"materials":["M_Mon_GoldGilded","M_Mon_Sculpture","M_Mon_Decor","M_Mon_StoneLight","M_Mon_StoneDark"],"mesh_nodes":["Monument_IsmoiliSomoni_Mesh"],"skeletons":0,"triangles":58668,"vertices":72560}
+TEST PASS monument_height_43m [42.226, 43.0, 29.376]
+TEST PASS asset_geometry_character.main [] load=370.7ms {"aabb_size":[0.955,1.75,0.386],"animation_players":0,"materials":["M_Character_PBR"],"mesh_nodes":["MainCharacter_Mesh"],"skeletons":0,"triangles":59987,"vertices":36661}
+TEST PASS character_height_1_75m [0.955, 1.75, 0.386]
+TEST PASS character_has_no_skeleton_documented 
+TEST PASS perf_sample_keys { "fps": 1.0, "frame_ms_worst": 0.0, "process_ms": 0.0, "physics_ms": 0.0, "draw_calls": 0, "primitives": 0, "objects": 0, "video_mem_mb": 0.0, "static_mem_mb": 112.4, "nodes": 24, "time_msec": 529 }
+TEST PASS scene_loads_diagnostics.tscn 291 ms
+ASSET_VALIDATION {"character.main":{"id":"character.main","ok":true,"problems":[],"stats":{"aabb_size":[0.955,1.75,0.386],"animation_players":0,"materials":["M_Character_PBR"],"mesh_nodes":["MainCharacter_Mesh"],"skeletons":0,"triangles":59987,"vertices":36661}},"monument.ismoili_somoni":{"id":"monument.ismoili_somoni","ok":true,"problems":[],"stats":{"aabb_size":[42.226,43.0,29.376],"animation_players":0,"materials":["M_Mon_GoldGilded","M_Mon_Sculpture","M_Mon_Decor","M_Mon_StoneLight","M_Mon_StoneDark"],"mesh_nodes":["Monument_IsmoiliSomoni_Mesh"],"skeletons":0,"triangles":58668,"vertices":72560}},"vehicle.prado":{"id":"vehicle.prado","ok":true,"problems":[],"stats":{"aabb_size":[2.066,1.843,4.473],"animation_players":0,"materials":["M_Prado_Paint","M_Prado_Chrome","M_Prado_TrimBlack","M_Prado_Interior","M_Prado_LightLens","M_Prado_TailLight","M_Prado_Tyre","M_Prado_Rim"],"mesh_nodes":["Body","SteeringWheel","Wheel_FL","Wheel_FR","Wheel_RL","Wheel_RR"],"skeletons":0,"triangles":50865,"vertices":50743}}}
+TEST PASS scene_loads_asset_validation.tscn 614 ms
+TEST PASS asset_validation_scene_all_ok ["monument.ismoili_somoni", "vehicle.prado", "character.main"]
+TEST PASS no_boot_errors []
+TEST_SUMMARY passed=40 failed=0
+1.56_s_187528_KB

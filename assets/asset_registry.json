@@ -7,10 +7,22 @@
       "category": "vehicle",
       "source": "https://claude.ai/artifact/V319FyaEBZx5atFp4i7bg3 (prado/manifest.json, prado/geoz00.txt)",
       "license": "Project-owned (created earlier for this game); third-party origin not documented — confirm before release",
-      "status": "prepared_stage1",
-      "expected": {"mesh_nodes": ["Body", "Wheel_FL", "Wheel_FR", "Wheel_RL", "Wheel_RR", "SteeringWheel"], "triangles": 50865, "materials": 1},
-      "scale_note": "Uniform x4.4747 so the measured wheelbase equals 2.79 m (J150). Resulting bbox 2.43 x 2.17 x 4.47 m (W x H x L): wider/taller than the real car (1.885 x 1.845 x 4.78-4.84 m).",
-      "forward_axis": "+Z (Godot MODEL_FRONT); left side = +X; left-hand drive"
+      "status": "prepared_stage2_corrected",
+      "expected": {
+        "mesh_nodes": [
+          "Body",
+          "Wheel_FL",
+          "Wheel_FR",
+          "Wheel_RL",
+          "Wheel_RR",
+          "SteeringWheel"
+        ],
+        "triangles": 50865,
+        "materials": 8
+      },
+      "scale_note": "Stage 2 (tools/blender/asset_pipeline_v2.py, docs/reports/prado_v2.json): base scale x4.4747 (wheelbase 2.79 m); body/interior scaled (0.851, 0.851, 1.0) -> body width 1.887 m (excl. mirrors), height 1.843 m; wheels straightened (front toe 17.4/16.8 deg, rear +-6.3 deg -> |toe| < 0.11 deg) and scaled uniformly to 0.777 m (265/65 R17); front pair placed symmetrically. Length remains 4.47 m vs 4.78-4.84 m real (not corrected: would require non-uniform length scaling of wheel arches).",
+      "forward_axis": "+Z (Godot MODEL_FRONT); left side = +X; left-hand drive",
+      "source_stage1_glb": "source_assets/derived_stage1/prado_stage1.glb"
     },
     "monument.ismoili_somoni": {
       "name": "Ismoili Somoni monument",
@@ -18,10 +30,26 @@
       "category": "monument",
       "source": "https://claude.ai/artifact/V319FyaEBZx5atFp4i7bg3 (monument/manifest.json, monument/geoz00.txt)",
       "license": "Project-owned (created earlier for this game); third-party origin not documented — confirm before release",
-      "status": "prepared_stage1",
-      "expected": {"mesh_nodes": ["Monument_IsmoiliSomoni_Mesh"], "triangles": 58668, "materials": 1},
-      "scale_note": "Uniform x43: total height 43 m; statue part 0.30 of height = ~13 m, matching published figures.",
-      "forward_axis": "+Z"
+      "status": "prepared_stage2_materials",
+      "expected": {
+        "mesh_nodes": [
+          "Monument_IsmoiliSomoni_Mesh"
+        ],
+        "triangles": 58668,
+        "materials": 5
+      },
+      "scale_note": "Stage 2: unsupported 0.966 m gap under the crown closed (2 islands translated, no shape change); uniform scale re-derived so total height = 43.0 m (statue 13.3 m). 5 materials: gilded metal, sculpture, decor, light/dark stone; Smart-UV unwrap.",
+      "forward_axis": "+Z",
+      "source_stage1_glb": "source_assets/derived_stage1/ismoili_somoni_stage1.glb",
+      "world_placement": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation_y_deg": -90,
+        "note": "statue faces west (matched to OSM footprint way 1375034135)"
+      }
     },
     "character.main": {
       "name": "Main character",
@@ -30,7 +58,13 @@
       "source": "https://claude.ai/artifact/V319FyaEBZx5atFp4i7bg3 (character/*)",
       "license": "Project-owned (created earlier for this game); third-party origin not documented — confirm before release",
       "status": "prepared_stage1_static_no_skeleton",
-      "expected": {"mesh_nodes": ["MainCharacter_Mesh"], "triangles": 59987, "materials": 1},
+      "expected": {
+        "mesh_nodes": [
+          "MainCharacter_Mesh"
+        ],
+        "triangles": 59987,
+        "materials": 1
+      },
       "scale_note": "Already metric: height 1.75 m.",
       "forward_axis": "+Z"
     }

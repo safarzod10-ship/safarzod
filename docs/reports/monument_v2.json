@@ -1,0 +1,112 @@
+{
+ "key": "monument",
+ "version": 2,
+ "blender": "4.5.15 LTS",
+ "fixes": [
+  "removed 73 zero-area triangles",
+  "replaced 25 zero-length normals"
+ ],
+ "crown_gap_before_m": 0.966,
+ "islands_between_arch_and_crown": [],
+ "crown_fix": "islands [25, 26] translated by -0.966 m in Y (no shape change)",
+ "rescale_after_crown_fix": 1.02349,
+ "statue_height_m": 13.28,
+ "crown_gap_after_m": 0.0,
+ "material_triangles": {
+  "M_Mon_StoneDark": 181,
+  "M_Mon_Sculpture": 20724,
+  "M_Mon_StoneLight": 5663,
+  "M_Mon_GoldGilded": 29761,
+  "M_Mon_Decor": 2339
+ },
+ "after": {
+  "height_m": 43.0,
+  "size_m": [
+   42.22600173950195,
+   43.0,
+   29.375999450683594
+  ]
+ },
+ "before_export": {
+  "objects_total": 2,
+  "mesh_objects": [
+   "Monument_IsmoiliSomoni_Mesh"
+  ],
+  "empties": [
+   "Monument_IsmoiliSomoni"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 58668,
+  "vertices": 29626,
+  "materials": [
+   "M_Mon_Decor",
+   "M_Mon_GoldGilded",
+   "M_Mon_Sculpture",
+   "M_Mon_StoneDark",
+   "M_Mon_StoneLight"
+  ],
+  "images": [],
+  "objects_with_uv": 1,
+  "bbox_min_zup": [
+   -21.1132,
+   -14.6879,
+   0.0
+  ],
+  "bbox_max_zup": [
+   21.1132,
+   14.6879,
+   43.0
+  ],
+  "size_zup_m": [
+   42.2264,
+   29.3758,
+   43.0
+  ]
+ },
+ "glb_bytes": 2678984,
+ "after_reimport": {
+  "objects_total": 2,
+  "mesh_objects": [
+   "Monument_IsmoiliSomoni_Mesh"
+  ],
+  "empties": [
+   "Monument_IsmoiliSomoni"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 58668,
+  "vertices": 72560,
+  "materials": [
+   "M_Mon_Decor",
+   "M_Mon_GoldGilded",
+   "M_Mon_Sculpture",
+   "M_Mon_StoneDark",
+   "M_Mon_StoneLight"
+  ],
+  "images": [],
+  "objects_with_uv": 1,
+  "bbox_min_zup": [
+   -21.1132,
+   -14.6879,
+   0.0
+  ],
+  "bbox_max_zup": [
+   21.1132,
+   14.6879,
+   43.0
+  ],
+  "size_zup_m": [
+   42.2264,
+   29.3758,
+   43.0
+  ]
+ },
+ "roundtrip": {
+  "triangles_equal": true,
+  "mesh_objects_equal": true,
+  "materials_equal": true,
+  "uv_preserved": true
+ },
+ "seconds": 1.31
+}
