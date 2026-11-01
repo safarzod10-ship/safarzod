@@ -17,5 +17,5 @@ shader_parameter/uv_scale = Vector2(0.25000, 0.25000)
 shader_parameter/macro_strength = 0.25
 shader_parameter/macro_scale = 0.012
 shader_parameter/wet_receptive = 1.0
-shader_parameter/tint = Color(0.92, 0.91, 0.89, 1)
-shader_parameter/roughness_add = 0.12
+shader_parameter/tint = Color(0.95, 0.93, 0.9, 1)
+shader_parameter/roughness_add = 0.3

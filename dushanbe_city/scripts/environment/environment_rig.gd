@@ -29,8 +29,8 @@ func _ready() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_sky_contribution = 0.35
-	env.ambient_light_color = Color(0.62, 0.60, 0.56)
+	env.ambient_light_sky_contribution = 0.22
+	env.ambient_light_color = Color(0.66, 0.62, 0.55)
 	env.ambient_light_energy = 0.75
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
@@ -44,7 +44,7 @@ func _ready() -> void:
 	env.fog_aerial_perspective = 0.2
 	env.fog_sky_affect = 0.0
 	env.fog_height = 60.0
-	env.fog_height_density = 0.004
+	env.fog_height_density = 0.0
 	env.glow_enabled = true
 	env.glow_intensity = 0.35
 	env.glow_bloom = 0.02

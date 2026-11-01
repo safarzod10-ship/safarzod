@@ -9,19 +9,19 @@ enum Quality { LOW, MEDIUM, HIGH }
 const PRESETS := {
 	Quality.LOW: {
 		"render_scale": 0.7, "msaa": 0, "shadows": true, "shadow_distance": 60.0, "shadow_size": 1024,
-		"grass_radius": 14.0, "grass_density": 0.45, "tree_lod0_dist": 45.0, "tree_draw_dist": 260.0,
+		"grass_radius": 10.0, "grass_density": 0.5, "tree_lod0_dist": 45.0, "tree_draw_dist": 260.0,
 		"detail_dist": 50.0, "prop_dist": 70.0, "building_detail_dist": 70.0, "fog": true, "glow": false,
 		"fxaa": true, "sky_radiance": 64,
 	},
 	Quality.MEDIUM: {
 		"render_scale": 0.85, "msaa": 0, "shadows": true, "shadow_distance": 90.0, "shadow_size": 2048,
-		"grass_radius": 22.0, "grass_density": 0.7, "tree_lod0_dist": 70.0, "tree_draw_dist": 400.0,
+		"grass_radius": 16.0, "grass_density": 0.75, "tree_lod0_dist": 70.0, "tree_draw_dist": 400.0,
 		"detail_dist": 80.0, "prop_dist": 110.0, "building_detail_dist": 110.0, "fog": true, "glow": true,
 		"fxaa": true, "sky_radiance": 128,
 	},
 	Quality.HIGH: {
 		"render_scale": 1.0, "msaa": 2, "shadows": true, "shadow_distance": 140.0, "shadow_size": 4096,
-		"grass_radius": 32.0, "grass_density": 1.0, "tree_lod0_dist": 110.0, "tree_draw_dist": 700.0,
+		"grass_radius": 24.0, "grass_density": 1.0, "tree_lod0_dist": 110.0, "tree_draw_dist": 700.0,
 		"detail_dist": 130.0, "prop_dist": 170.0, "building_detail_dist": 170.0, "fog": true, "glow": true,
 		"fxaa": false, "sky_radiance": 256,
 	},

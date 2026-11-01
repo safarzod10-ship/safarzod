@@ -1,0 +1,8 @@
+PASS idle: lowest foot/toe joint height 0.033 m (0.0..0.12)
+PASS walk 1.40 m/s: stance foot slide 0.051 m/s (< 0.15)
+PASS walk: stance ankle height 0.090 m vs idle 0.091 (|diff| < 0.02 — no floating/sinking)
+PASS run 4.00 m/s: stance foot slide 0.110 m/s (< 0.3)
+PASS curb 0.15 m climbed: y=0.151, z=-15.47
+PASS step 0.30 m climbed: y=0.301
+PASS jump height 1.04 m (0.8..1.2)
+PASS landed on floor: y=0.000

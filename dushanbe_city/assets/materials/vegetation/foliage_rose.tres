@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/foliage.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/foliage_rose/albedo.png" id="t0"]
+[ext_resource type="Texture2D" path="res://assets/textures/foliage_rose/normal.png" id="t1"]
+
+[resource]
+resource_name = "foliage_rose"
+shader = ExtResource("s")
+shader_parameter/albedo_tex = ExtResource("t0")
+shader_parameter/normal_tex = ExtResource("t1")
+shader_parameter/sway_height = 1
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/use_instance_custom = true

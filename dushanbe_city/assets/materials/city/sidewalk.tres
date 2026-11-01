@@ -15,4 +15,5 @@ shader_parameter/orm_tex = ExtResource("4")
 shader_parameter/macro_tex = ExtResource("5")
 shader_parameter/uv_scale = Vector2(0.41667, 0.41667)
 shader_parameter/macro_strength = 0.22
+shader_parameter/roughness_add = 0.2
 shader_parameter/wet_receptive = 1.0

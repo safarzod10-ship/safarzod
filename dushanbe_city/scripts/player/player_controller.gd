@@ -27,8 +27,8 @@ signal stepped_up(height: float)
 @export var pitch_max_deg := 30.0
 
 ## Cycle data of the authored animations (see docs/PLAYER.md).
-const WALK_STRIDE := 1.4933333          # metres per walk cycle (1.0667 s at 1.40 m/s)
-const RUN_STRIDE := 2.6666667           # metres per run cycle (0.6667 s at 4.0 m/s)
+const WALK_STRIDE := 1.4545          # metres per walk cycle — measured in-engine (flat-foot ankle speed 1.3636 m/s × 1.0667 s)
+const RUN_STRIDE := 2.5699           # metres per run cycle — measured (3.8548 m/s × 0.6667 s)
 const IDLE_BLEND_SPEED := 0.5           # below this speed idle and walk are blended
 
 @onready var model: Node3D = $Model

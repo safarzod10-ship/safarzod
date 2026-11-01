@@ -38,6 +38,10 @@ func _ready() -> void:
 
 func _grass_mesh() -> Mesh:
 	var cat := CityWorld._load_json("res://data/vegetation_catalog.json")
+	var want := "grass_clump_lite" if Settings.quality == 0 else ("grass_clump_b" if Settings.quality == 1 else "grass_clump_a")
+	var p0 := "res://assets/models/vegetation/meshes/%s_lod0.res" % want
+	if ResourceLoader.exists(p0):
+		return load(p0)
 	for e in cat.get("assets", cat.get("species", [])):
 		if e.get("kind", "") == "grass":
 			var f: Dictionary = e.get("files", e.get("meshes", {}))
@@ -97,7 +101,7 @@ func _process(_d: float) -> void:
 func rebuild(center: Vector3) -> void:
 	var radius := float(Settings.get_value("grass_radius"))
 	var dens := float(Settings.get_value("grass_density"))
-	var step := 0.42 / sqrt(dens)
+	var step := 0.30 / sqrt(dens)
 	var xs: PackedFloat32Array = []
 	var cnt := 0
 	var r2 := radius * radius
@@ -109,8 +113,9 @@ func rebuild(center: Vector3) -> void:
 	for gz in range(gz0, gz1 + 1):
 		for gx in range(gx0, gx1 + 1):
 			var hsh := (gx * 73856093) ^ (gz * 19349663)
-			var jx := float(hsh & 1023) / 1023.0
-			var jz := float((hsh >> 10) & 1023) / 1023.0
+			var h2 := (hsh * 1103515245 + 12345) & 0x7fffffff
+			var jx := float(hsh & 1023) / 1023.0 * 1.6 - 0.3
+			var jz := float(h2 & 1023) / 1023.0 * 1.6 - 0.3
 			var x := (gx + jx) * step
 			var z := (gz + jz) * step
 			var dx := x - center.x
@@ -122,7 +127,7 @@ func rebuild(center: Vector3) -> void:
 			if mx < 0 or mz < 0 or mx >= W or mz >= W or mask[mz * W + mx] == 0:
 				continue
 			var rot := float((hsh >> 20) & 1023) / 1023.0 * TAU
-			var s := 0.75 + float((hsh >> 4) & 255) / 255.0 * 0.6
+			var s := 0.9 + float((h2 >> 12) & 255) / 255.0 * 0.7
 			var c := cos(rot) * s
 			var sn := sin(rot) * s
 			var o := cnt * 16
@@ -136,5 +141,9 @@ func rebuild(center: Vector3) -> void:
 	mm.instance_count = cnt
 	if cnt > 0:
 		mm.buffer = xs
+	var m := mm.mesh.surface_get_material(0) as ShaderMaterial
+	if m and m.shader and m.shader.resource_path.ends_with("grass.gdshader"):
+		m.set_shader_parameter("fade_start", radius * 0.65)
+		m.set_shader_parameter("fade_end", radius * 0.95)
 	RenderingServer.global_shader_parameter_set(&"grass_center", Vector3(center.x, 0, center.z))
 	RenderingServer.global_shader_parameter_set(&"grass_radius", radius)

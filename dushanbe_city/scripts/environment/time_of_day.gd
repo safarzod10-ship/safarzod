@@ -65,7 +65,7 @@ func apply() -> void:
 	night = 1.0 - smoothstep(-0.10, 0.02, e)
 	# warm low sun, neutral high sun
 	var warm := 1.0 - smoothstep(0.05, 0.45, e)
-	_sun.light_color = Color(1.0, 0.96, 0.90).lerp(Color(1.0, 0.68, 0.42), warm)
+	_sun.light_color = Color(1.0, 0.94, 0.85).lerp(Color(1.0, 0.68, 0.42), warm)
 	_sun.light_energy = 3.0 * day
 	_sun.visible = day > 0.001
 	_sun.shadow_enabled = day > 0.05 and Settings.get_value("shadows")
