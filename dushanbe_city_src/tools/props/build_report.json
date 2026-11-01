@@ -1,0 +1,2115 @@
+{
+ "bench_park_soviet": {
+  "group": "benches",
+  "tris": 544,
+  "min": [
+   -1.0,
+   -0.0019139522919431329,
+   -0.3442824184894562
+  ],
+  "max": [
+   1.0,
+   0.8659467101097107,
+   0.26499998569488525
+  ],
+  "materials": [
+   "paint_black",
+   "wood_painted_green"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bench_courtyard": {
+  "group": "benches",
+  "tris": 636,
+  "min": [
+   -0.8999999761581421,
+   0.0,
+   -0.2895560562610626
+  ],
+  "max": [
+   0.8999999761581421,
+   0.8241905570030212,
+   0.2199999988079071
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "wood_painted_brown"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bench_concrete_slats": {
+  "group": "benches",
+  "tris": 308,
+  "min": [
+   -1.0,
+   0.0,
+   -0.20999999344348907
+  ],
+  "max": [
+   1.0,
+   0.4399999976158142,
+   0.20999999344348907
+  ],
+  "materials": [
+   "concrete",
+   "wood"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bench_modern_metal": {
+  "group": "benches",
+  "tris": 972,
+  "min": [
+   -0.9667173624038696,
+   0.0,
+   -0.3395918309688568
+  ],
+  "max": [
+   0.9667173624038696,
+   0.8549319505691528,
+   0.27000001072883606
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "steel"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "urn_concrete_round": {
+  "group": "urns",
+  "tris": 348,
+  "min": [
+   -0.3100000023841858,
+   0.0,
+   -0.3100000023841858
+  ],
+  "max": [
+   0.3100000023841858,
+   0.6600000262260437,
+   0.3100000023841858
+  ],
+  "materials": [
+   "concrete_light",
+   "trash"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "urn_tilting": {
+  "group": "urns",
+  "tris": 422,
+  "min": [
+   -0.33000001311302185,
+   0.0,
+   -0.2096095085144043
+  ],
+  "max": [
+   0.33000001311302185,
+   0.8500000238418579,
+   0.2096095085144043
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "paint_green",
+   "trash"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bin_modern_steel": {
+  "group": "urns",
+  "tris": 294,
+  "min": [
+   -0.20000000298023224,
+   0.0,
+   -0.20000000298023224
+  ],
+  "max": [
+   0.20000000298023224,
+   0.8999999761581421,
+   0.20000000298023224
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "steel",
+   "plastic_black"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "container_trash_green": {
+  "group": "containers",
+  "tris": 252,
+  "min": [
+   -0.75,
+   0.0,
+   -0.48500001430511475
+  ],
+  "max": [
+   0.75,
+   1.0149999856948853,
+   0.48500001430511475
+  ],
+  "materials": [
+   "paint_green_dark",
+   "paint_grey_dark",
+   "plates",
+   "trash"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "container_trash_grey": {
+  "group": "containers",
+  "tris": 252,
+  "min": [
+   -0.75,
+   0.0,
+   -0.48500001430511475
+  ],
+  "max": [
+   0.75,
+   1.0149999856948853,
+   0.48500001430511475
+  ],
+  "materials": [
+   "paint_grey",
+   "paint_grey_dark",
+   "plates",
+   "trash"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "container_euro_wheeled": {
+  "group": "containers",
+  "tris": 488,
+  "min": [
+   -0.7200000286102295,
+   0.0,
+   -0.5799999833106995
+  ],
+  "max": [
+   0.7200000286102295,
+   1.1949999332427979,
+   0.5449999570846558
+  ],
+  "materials": [
+   "galv",
+   "plastic_dark_green",
+   "paint_grey_dark",
+   "rubber",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "container_site": {
+  "group": "containers",
+  "tris": 248,
+  "min": [
+   -2.0999999046325684,
+   0.0,
+   -1.100000023841858
+  ],
+  "max": [
+   2.0999999046325684,
+   1.8200000524520874,
+   1.100000023841858
+  ],
+  "materials": [
+   "concrete_worn",
+   "paint_grey_dark",
+   "roof_painted_green"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "light_avenue_double": {
+  "group": "lights",
+  "tris": 794,
+  "min": [
+   -2.3999998569488525,
+   0.0,
+   -0.25
+  ],
+  "max": [
+   2.3999998569488525,
+   10.0649995803833,
+   0.25
+  ],
+  "materials": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "markers": {
+   "light_point_0": [
+    -2.0899999141693115,
+    9.899999618530273,
+    -1.7484554915014883e-09
+   ],
+   "light_point_1": [
+    2.0899999141693115,
+    9.899999618530273,
+    3.019915872926049e-09
+   ]
+  },
+  "lod_of": null
+ },
+ "light_avenue_double_lod1": {
+  "group": "lights",
+  "tris": 258,
+  "min": [
+   -2.3999998569488525,
+   0.0,
+   -0.25
+  ],
+  "max": [
+   2.3999998569488525,
+   10.045000076293945,
+   0.25
+  ],
+  "materials": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "markers": {
+   "light_point_0": [
+    -2.0899999141693115,
+    9.899999618530273,
+    -1.7484554915014883e-09
+   ],
+   "light_point_1": [
+    2.0899999141693115,
+    9.899999618530273,
+    3.019915872926049e-09
+   ]
+  },
+  "lod_of": "light_avenue_double"
+ },
+ "light_street_single": {
+  "group": "lights",
+  "tris": 516,
+  "min": [
+   -0.25,
+   0.0,
+   -0.25
+  ],
+  "max": [
+   0.25,
+   9.114999771118164,
+   2.2699999809265137
+  ],
+  "materials": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "markers": {
+   "light_point_0": [
+    0.0,
+    8.949999809265137,
+    2.0
+   ]
+  },
+  "lod_of": null
+ },
+ "light_street_single_lod1": {
+  "group": "lights",
+  "tris": 168,
+  "min": [
+   -0.25,
+   0.0,
+   -0.25
+  ],
+  "max": [
+   0.25,
+   9.095000267028809,
+   2.2699999809265137
+  ],
+  "materials": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "markers": {
+   "light_point_0": [
+    0.0,
+    8.949999809265137,
+    2.0
+   ]
+  },
+  "lod_of": "light_street_single"
+ },
+ "light_park_4m": {
+  "group": "lights",
+  "tris": 504,
+  "min": [
+   -0.23635385930538177,
+   0.0,
+   -0.23635385930538177
+  ],
+  "max": [
+   0.23635385930538177,
+   4.119999885559082,
+   0.23635385930538177
+  ],
+  "materials": [
+   "paint_black",
+   "lamp_emissive"
+  ],
+  "markers": {
+   "light_point_0": [
+    0,
+    3.8,
+    0
+   ]
+  },
+  "lod_of": null
+ },
+ "light_park_4m_lod1": {
+  "group": "lights",
+  "tris": 204,
+  "min": [
+   -0.23908673226833344,
+   0.0,
+   -0.20705518126487732
+  ],
+  "max": [
+   0.23908673226833344,
+   4.119999885559082,
+   0.20705518126487732
+  ],
+  "materials": [
+   "paint_black",
+   "lamp_emissive"
+  ],
+  "markers": {
+   "light_point_0": [
+    0,
+    3.8,
+    0
+   ]
+  },
+  "lod_of": "light_park_4m"
+ },
+ "traffic_light_pole": {
+  "group": "traffic",
+  "tris": 338,
+  "min": [
+   -0.2800000011920929,
+   0.0,
+   -0.1141267791390419
+  ],
+  "max": [
+   0.2800000011920929,
+   3.630000114440918,
+   0.5
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "traffic_light_pole_lod1": {
+  "group": "traffic",
+  "tris": 130,
+  "min": [
+   -0.20999999344348907,
+   0.0,
+   -0.10392304509878159
+  ],
+  "max": [
+   0.20999999344348907,
+   3.5999999046325684,
+   0.28299999237060547
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "markers": {},
+  "lod_of": "traffic_light_pole"
+ },
+ "traffic_light_mast": {
+  "group": "traffic",
+  "tris": 868,
+  "min": [
+   -0.2800000011920929,
+   0.0,
+   -0.25
+  ],
+  "max": [
+   6.101169109344482,
+   6.820000171661377,
+   0.5300000309944153
+  ],
+  "materials": [
+   "concrete",
+   "galv",
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "traffic_light_mast_lod1": {
+  "group": "traffic",
+  "tris": 238,
+  "min": [
+   -0.25,
+   0.0,
+   -0.25
+  ],
+  "max": [
+   6.101229190826416,
+   6.820000171661377,
+   0.31299999356269836
+  ],
+  "materials": [
+   "concrete",
+   "galv",
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "markers": {},
+  "lod_of": "traffic_light_mast"
+ },
+ "traffic_light_ped": {
+  "group": "traffic",
+  "tris": 274,
+  "min": [
+   -0.1599999964237213,
+   0.0,
+   -0.10461621731519699
+  ],
+  "max": [
+   0.1599999964237213,
+   2.9000000953674316,
+   0.39000001549720764
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_ped_red",
+   "tl_ped_green",
+   "paint_yellow"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "traffic_light_ped_lod1": {
+  "group": "traffic",
+  "tris": 102,
+  "min": [
+   -0.1599999964237213,
+   0.0,
+   -0.0952627956867218
+  ],
+  "max": [
+   0.1599999964237213,
+   2.9000000953674316,
+   0.25050002336502075
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_ped_red",
+   "tl_ped_green",
+   "paint_yellow"
+  ],
+  "markers": {},
+  "lod_of": "traffic_light_ped"
+ },
+ "sign_5_19_1": {
+  "group": "signs",
+  "tris": 198,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_5_19_2": {
+  "group": "signs",
+  "tris": 198,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_5_16": {
+  "group": "signs",
+  "tris": 198,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_2_1": {
+  "group": "signs",
+  "tris": 198,
+  "min": [
+   -0.4949747323989868,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.4949747323989868,
+   3.1299495697021484,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_2_4": {
+  "group": "signs",
+  "tris": 194,
+  "min": [
+   -0.44999998807907104,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.44999998807907104,
+   2.9194228649139404,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_3_24_60": {
+  "group": "signs",
+  "tris": 294,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_3_27": {
+  "group": "signs",
+  "tris": 294,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_6_4": {
+  "group": "signs",
+  "tris": 198,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_3_1": {
+  "group": "signs",
+  "tris": 294,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_5_5": {
+  "group": "signs",
+  "tris": 198,
+  "min": [
+   -0.3499999940395355,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.3499999940395355,
+   2.8399999141693115,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "sign_1_23": {
+  "group": "signs",
+  "tris": 194,
+  "min": [
+   -0.44999998807907104,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   0.44999998807907104,
+   2.9194228649139404,
+   0.0819999948143959
+  ],
+  "materials": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bus_stop_shelter": {
+  "group": "busstop",
+  "tris": 608,
+  "min": [
+   -2.5399999618530273,
+   0.0,
+   -0.925000011920929
+  ],
+  "max": [
+   2.375,
+   2.6500000953674316,
+   0.824999988079071
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "paint_grey",
+   "plates",
+   "glass",
+   "ad_lightbox",
+   "wood"
+  ],
+  "markers": {
+   "light_point_0": [
+    0,
+    2.45,
+    -0.1
+   ]
+  },
+  "lod_of": null
+ },
+ "bus_stop_shelter_lod1": {
+  "group": "busstop",
+  "tris": 380,
+  "min": [
+   -2.5399999618530273,
+   0.0,
+   -0.925000011920929
+  ],
+  "max": [
+   2.375,
+   2.6500000953674316,
+   0.824999988079071
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "paint_grey",
+   "plates",
+   "glass",
+   "ad_lightbox",
+   "wood"
+  ],
+  "markers": {},
+  "lod_of": "bus_stop_shelter"
+ },
+ "utility_pole_concrete": {
+  "group": "poles",
+  "tris": 430,
+  "min": [
+   -0.8499999642372131,
+   -0.0,
+   -0.12999999523162842
+  ],
+  "max": [
+   0.8499999642372131,
+   9.71500015258789,
+   0.1670633852481842
+  ],
+  "materials": [
+   "concrete_light",
+   "galv",
+   "insulator",
+   "paint_white"
+  ],
+  "markers": {
+   "wire_0": [
+    -0.75,
+    9.129999999999999,
+    0.11
+   ],
+   "wire_1": [
+    0.75,
+    9.129999999999999,
+    0.11
+   ],
+   "wire_2": [
+    0.0,
+    9.7,
+    0.0
+   ]
+  },
+  "lod_of": null
+ },
+ "utility_pole_concrete_lod1": {
+  "group": "poles",
+  "tris": 166,
+  "min": [
+   -0.8499999642372131,
+   -0.0,
+   -0.12999999523162842
+  ],
+  "max": [
+   0.8499999642372131,
+   9.710000038146973,
+   0.15045085549354553
+  ],
+  "materials": [
+   "concrete_light",
+   "galv",
+   "insulator"
+  ],
+  "markers": {
+   "wire_0": [
+    -0.75,
+    9.129999999999999,
+    0.11
+   ],
+   "wire_1": [
+    0.75,
+    9.129999999999999,
+    0.11
+   ],
+   "wire_2": [
+    0.0,
+    9.7,
+    0.0
+   ]
+  },
+  "lod_of": "utility_pole_concrete"
+ },
+ "utility_pole_wood": {
+  "group": "poles",
+  "tris": 628,
+  "min": [
+   -0.800000011920929,
+   0.0,
+   -0.3199999928474426
+  ],
+  "max": [
+   0.800000011920929,
+   8.550000190734863,
+   0.18706338107585907
+  ],
+  "materials": [
+   "concrete_light",
+   "wood_pole",
+   "galv",
+   "insulator"
+  ],
+  "markers": {
+   "wire_0": [
+    -0.7,
+    8.344999999999999,
+    0.13
+   ],
+   "wire_1": [
+    -0.25,
+    8.344999999999999,
+    0.13
+   ],
+   "wire_2": [
+    0.25,
+    8.344999999999999,
+    0.13
+   ],
+   "wire_3": [
+    0.7,
+    8.344999999999999,
+    0.13
+   ]
+  },
+  "lod_of": null
+ },
+ "utility_pole_wood_lod1": {
+  "group": "poles",
+  "tris": 192,
+  "min": [
+   -0.800000011920929,
+   0.0,
+   -0.3199999928474426
+  ],
+  "max": [
+   0.800000011920929,
+   8.550000190734863,
+   0.1704508513212204
+  ],
+  "materials": [
+   "concrete_light",
+   "wood_pole",
+   "galv",
+   "insulator"
+  ],
+  "markers": {
+   "wire_0": [
+    -0.7,
+    8.344999999999999,
+    0.13
+   ],
+   "wire_1": [
+    -0.25,
+    8.344999999999999,
+    0.13
+   ],
+   "wire_2": [
+    0.25,
+    8.344999999999999,
+    0.13
+   ],
+   "wire_3": [
+    0.7,
+    8.344999999999999,
+    0.13
+   ]
+  },
+  "lod_of": "utility_pole_wood"
+ },
+ "fence_lawn_hoop_green": {
+  "group": "fences",
+  "tris": 652,
+  "min": [
+   -1.1069282293319702,
+   -0.11999999731779099,
+   -0.0081567307934165
+  ],
+  "max": [
+   1.1069282293319702,
+   0.4570639431476593,
+   0.0081567307934165
+  ],
+  "materials": [
+   "paint_green"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "fence_lawn_hoop_white": {
+  "group": "fences",
+  "tris": 652,
+  "min": [
+   -1.1069282293319702,
+   -0.11999999731779099,
+   -0.0081567307934165
+  ],
+  "max": [
+   1.1069282293319702,
+   0.4570639431476593,
+   0.0081567307934165
+  ],
+  "materials": [
+   "paint_white"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "fence_decorative_15": {
+  "group": "fences",
+  "tris": 860,
+  "min": [
+   -1.309999942779541,
+   0.0,
+   -0.05999999865889549
+  ],
+  "max": [
+   1.25,
+   1.7200000286102295,
+   0.05999999865889549
+  ],
+  "materials": [
+   "paint_black"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "barrier_pedestrian": {
+  "group": "fences",
+  "tris": 260,
+  "min": [
+   -1.034999966621399,
+   0.0,
+   -0.03500000014901161
+  ],
+  "max": [
+   1.0,
+   1.059999942779541,
+   0.03500000014901161
+  ],
+  "materials": [
+   "paint_white",
+   "paint_red"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "fence_school_brick": {
+  "group": "fences",
+  "tris": 444,
+  "min": [
+   -1.7300000190734863,
+   0.0,
+   -0.23000000417232513
+  ],
+  "max": [
+   1.5,
+   1.9800000190734863,
+   0.23000000417232513
+  ],
+  "materials": [
+   "brick_red",
+   "concrete_light",
+   "paint_green_dark"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "wall_havli": {
+  "group": "fences",
+  "tris": 40,
+  "min": [
+   -1.5,
+   0.0,
+   -0.20000000298023224
+  ],
+  "max": [
+   1.5,
+   2.180000066757202,
+   0.20000000298023224
+  ],
+  "materials": [
+   "plaster_cream",
+   "concrete_worn",
+   "concrete_light"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "wall_havli_end": {
+  "group": "fences",
+  "tris": 80,
+  "min": [
+   -0.2750000059604645,
+   0.0,
+   -0.2750000059604645
+  ],
+  "max": [
+   0.2750000059604645,
+   2.5,
+   0.2750000059604645
+  ],
+  "materials": [
+   "plaster_cream",
+   "concrete_light"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "gate_havli_blue": {
+  "group": "fences",
+  "tris": 1760,
+  "min": [
+   -2.25,
+   0.0,
+   -0.2750000059604645
+  ],
+  "max": [
+   2.25,
+   2.8399999141693115,
+   0.2750000059604645
+  ],
+  "materials": [
+   "plaster_cream",
+   "concrete_light",
+   "paint_blue",
+   "steel"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "gate_havli_green": {
+  "group": "fences",
+  "tris": 1760,
+  "min": [
+   -2.25,
+   0.0,
+   -0.2750000059604645
+  ],
+  "max": [
+   2.25,
+   2.8399999141693115,
+   0.2750000059604645
+  ],
+  "materials": [
+   "plaster_cream",
+   "concrete_light",
+   "paint_green",
+   "steel"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bollard_concrete": {
+  "group": "fences",
+  "tris": 128,
+  "min": [
+   -0.20000000298023224,
+   0.0,
+   -0.20000000298023224
+  ],
+  "max": [
+   0.20000000298023224,
+   0.5600000023841858,
+   0.20000000298023224
+  ],
+  "materials": [
+   "concrete_light"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "curb_wheel_stop": {
+  "group": "fences",
+  "tris": 30,
+  "min": [
+   -0.8999999761581421,
+   0.0,
+   -0.07999999821186066
+  ],
+  "max": [
+   0.8999999761581421,
+   0.11999999731779099,
+   0.08250000327825546
+  ],
+  "materials": [
+   "concrete_light",
+   "paint_yellow"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "bike_rack_5": {
+  "group": "misc",
+  "tris": 964,
+  "min": [
+   -1.0,
+   0.0,
+   -0.32500001788139343
+  ],
+  "max": [
+   1.0,
+   0.7720000147819519,
+   0.32500001788139343
+  ],
+  "materials": [
+   "galv"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "manhole_cover": {
+  "group": "misc",
+  "tris": 70,
+  "min": [
+   -0.41999998688697815,
+   -0.029999999329447746,
+   -0.41999998688697815
+  ],
+  "max": [
+   0.41999998688697815,
+   0.004999999888241291,
+   0.41999998688697815
+  ],
+  "materials": [
+   "manhole"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "storm_grate": {
+  "group": "misc",
+  "tris": 12,
+  "min": [
+   -0.4000000059604645,
+   -0.03399999812245369,
+   -0.25
+  ],
+  "max": [
+   0.4000000059604645,
+   0.004000000189989805,
+   0.25
+  ],
+  "materials": [
+   "grate",
+   "grate_frame"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "planter_vase_soviet": {
+  "group": "misc",
+  "tris": 480,
+  "min": [
+   -0.550000011920929,
+   0.0,
+   -0.550000011920929
+  ],
+  "max": [
+   0.550000011920929,
+   0.9800000190734863,
+   0.550000011920929
+  ],
+  "materials": [
+   "concrete_light",
+   "soil"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "planter_rect_concrete": {
+  "group": "misc",
+  "tris": 80,
+  "min": [
+   -0.75,
+   0.0,
+   -0.30000001192092896
+  ],
+  "max": [
+   0.75,
+   0.5,
+   0.30000001192092896
+  ],
+  "materials": [
+   "concrete_light",
+   "soil"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "satellite_dish_060": {
+  "group": "misc",
+  "tris": 616,
+  "min": [
+   -0.30000001192092896,
+   -0.20414237678050995,
+   0.0
+  ],
+  "max": [
+   0.30000001192092896,
+   0.34640419483184814,
+   0.8585820198059082
+  ],
+  "materials": [
+   "galv",
+   "paint_white",
+   "plastic_grey"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "satellite_dish_090": {
+  "group": "misc",
+  "tris": 616,
+  "min": [
+   -0.44999998807907104,
+   -0.32867783308029175,
+   0.0
+  ],
+  "max": [
+   0.44999998807907104,
+   0.4937610328197479,
+   1.0271552801132202
+  ],
+  "materials": [
+   "galv",
+   "paint_white",
+   "plastic_grey"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "street_plate_0": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.36000001430511475,
+   -0.09000000357627869,
+   0.0
+  ],
+  "max": [
+   0.36000001430511475,
+   0.09000000357627869,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "house_number_0": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "max": [
+   0.125,
+   0.125,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "street_plate_1": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.36000001430511475,
+   -0.09000000357627869,
+   0.0
+  ],
+  "max": [
+   0.36000001430511475,
+   0.09000000357627869,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "house_number_1": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "max": [
+   0.125,
+   0.125,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "street_plate_2": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.36000001430511475,
+   -0.09000000357627869,
+   0.0
+  ],
+  "max": [
+   0.36000001430511475,
+   0.09000000357627869,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "house_number_2": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "max": [
+   0.125,
+   0.125,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "street_plate_3": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.36000001430511475,
+   -0.09000000357627869,
+   0.0
+  ],
+  "max": [
+   0.36000001430511475,
+   0.09000000357627869,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "house_number_3": {
+  "group": "plates",
+  "tris": 12,
+  "min": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "max": [
+   0.125,
+   0.125,
+   0.012500000186264515
+  ],
+  "materials": [
+   "galv",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "awning_shop_red": {
+  "group": "misc",
+  "tris": 192,
+  "min": [
+   -1.5299999713897705,
+   -0.7200000286102295,
+   -0.0010068730916827917
+  ],
+  "max": [
+   1.5299999713897705,
+   0.029999999329447746,
+   1.215000033378601
+  ],
+  "materials": [
+   "fabric_red",
+   "paint_grey_dark"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "awning_shop_green": {
+  "group": "misc",
+  "tris": 192,
+  "min": [
+   -1.5299999713897705,
+   -0.7200000286102295,
+   -0.0010068730916827917
+  ],
+  "max": [
+   1.5299999713897705,
+   0.029999999329447746,
+   1.215000033378601
+  ],
+  "materials": [
+   "fabric_green",
+   "paint_grey_dark"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "canopy_porch_metal": {
+  "group": "misc",
+  "tris": 120,
+  "min": [
+   -1.100000023841858,
+   -0.8100000023841858,
+   -0.010418889112770557
+  ],
+  "max": [
+   1.100000023841858,
+   0.005908846389502287,
+   1.2900980710983276
+  ],
+  "materials": [
+   "roof_painted_green",
+   "paint_grey_dark"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "playground_swing": {
+  "group": "playground",
+  "tris": 308,
+  "min": [
+   -1.25,
+   -0.010850721970200539,
+   -0.7832755446434021
+  ],
+  "max": [
+   1.25,
+   2.3427975177764893,
+   0.7832755446434021
+  ],
+  "materials": [
+   "paint_blue",
+   "steel",
+   "paint_red"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "playground_slide": {
+  "group": "playground",
+  "tris": 484,
+  "min": [
+   -0.33000001311302185,
+   -0.01006394810974598,
+   -1.5691694021224976
+  ],
+  "max": [
+   0.33000001311302185,
+   1.9216506481170654,
+   2.4000000953674316
+  ],
+  "materials": [
+   "paint_red",
+   "wood_painted_brown",
+   "paint_yellow",
+   "steel"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "playground_sandbox_mushroom": {
+  "group": "playground",
+  "tris": 316,
+  "min": [
+   -1.899999976158142,
+   0.0,
+   -1.899999976158142
+  ],
+  "max": [
+   1.0700000524520874,
+   2.700000047683716,
+   1.0700000524520874
+  ],
+  "materials": [
+   "wood_painted_green",
+   "wood_painted_brown",
+   "sand",
+   "paint_red",
+   "paint_white"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "playground_hbar": {
+  "group": "playground",
+  "tris": 194,
+  "min": [
+   -1.1449999809265137,
+   0.0,
+   -0.04500000178813934
+  ],
+  "max": [
+   1.1449999809265137,
+   2.450000047683716,
+   0.04500000178813934
+  ],
+  "materials": [
+   "paint_grey_dark",
+   "steel"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "carpet_beating_bar": {
+  "group": "courtyard",
+  "tris": 196,
+  "min": [
+   -1.4249999523162842,
+   0.0,
+   -0.125
+  ],
+  "max": [
+   1.4249999523162842,
+   1.9299999475479126,
+   0.125
+  ],
+  "materials": [
+   "paint_green",
+   "concrete"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "clothes_drying_poles": {
+  "group": "courtyard",
+  "tris": 264,
+  "min": [
+   -2.125,
+   0.0,
+   -0.6499999761581421
+  ],
+  "max": [
+   2.125,
+   2.200000047683716,
+   0.6499999761581421
+  ],
+  "materials": [
+   "paint_grey",
+   "concrete",
+   "rope"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "courtyard_table_benches": {
+  "group": "courtyard",
+  "tris": 644,
+  "min": [
+   -0.699999988079071,
+   0.0,
+   -0.7950000166893005
+  ],
+  "max": [
+   0.699999988079071,
+   0.7674999833106995,
+   0.7950000166893005
+  ],
+  "materials": [
+   "paint_green_dark",
+   "wood_painted_brown"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "tapchan": {
+  "group": "courtyard",
+  "tris": 704,
+  "min": [
+   -1.0,
+   0.0,
+   -0.8999999761581421
+  ],
+  "max": [
+   1.0,
+   0.9749999642372131,
+   0.8999999761581421
+  ],
+  "materials": [
+   "wood_painted_brown",
+   "wood",
+   "fabric_red"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "gas_pipe_straight_3m": {
+  "group": "gas",
+  "tris": 196,
+  "min": [
+   -1.5,
+   -0.06499999761581421,
+   0.0
+  ],
+  "max": [
+   1.5,
+   0.03449999913573265,
+   0.14886370301246643
+  ],
+  "materials": [
+   "paint_yellow"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "gas_pipe_elbow": {
+  "group": "gas",
+  "tris": 188,
+  "min": [
+   -0.5,
+   -0.5,
+   0.0
+  ],
+  "max": [
+   0.02850000001490116,
+   0.02850000001490116,
+   0.14886370301246643
+  ],
+  "materials": [
+   "paint_yellow"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "gas_pipe_riser_3m": {
+  "group": "gas",
+  "tris": 126,
+  "min": [
+   -0.07000000029802322,
+   0.0,
+   0.0
+  ],
+  "max": [
+   0.07000000029802322,
+   3.0,
+   0.2224999964237213
+  ],
+  "materials": [
+   "paint_yellow",
+   "steel",
+   "paint_red",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "gas_pipe_ground_entry": {
+  "group": "gas",
+  "tris": 360,
+  "min": [
+   -0.07000000029802322,
+   -0.10000000149011612,
+   0.0
+  ],
+  "max": [
+   0.6000000238418579,
+   2.2284998893737793,
+   0.550000011920929
+  ],
+  "materials": [
+   "paint_yellow",
+   "paint_red",
+   "concrete"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "electrical_cabinet": {
+  "group": "misc",
+  "tris": 194,
+  "min": [
+   -0.44999998807907104,
+   0.0,
+   -0.22499999403953552
+  ],
+  "max": [
+   0.44999998807907104,
+   1.5799999237060547,
+   0.22499999403953552
+  ],
+  "materials": [
+   "concrete",
+   "paint_grey",
+   "plastic_black",
+   "steel",
+   "plates"
+  ],
+  "markers": {},
+  "lod_of": null
+ },
+ "ph_aircon_outdoor_unit": {
+  "group": "polyhaven",
+  "tris": 2499,
+  "min": [
+   -0.4000698924064636,
+   0.0,
+   -0.0
+  ],
+  "max": [
+   0.4000698924064636,
+   0.9275739789009094,
+   0.37477433681488037
+  ],
+  "materials": [
+   "exterior_aircon_unit_01",
+   "exterior_aircon_unit_02"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:exterior_aircon_unit"
+ },
+ "ph_aircon_outdoor_unit_rusted": {
+  "group": "polyhaven",
+  "tris": 2500,
+  "min": [
+   -0.4000699520111084,
+   0.0,
+   -0.0
+  ],
+  "max": [
+   0.4000698924064636,
+   0.9275739789009094,
+   0.37477433681488037
+  ],
+  "materials": [
+   "exterior_aircon_unit_rusted_01",
+   "exterior_aircon_unit_rusted_02"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:exterior_aircon_unit"
+ },
+ "ph_plastic_chair": {
+  "group": "polyhaven",
+  "tris": 1800,
+  "min": [
+   -0.3209306299686432,
+   0.0,
+   -0.31406646966934204
+  ],
+  "max": [
+   0.3209306299686432,
+   0.8805864453315735,
+   0.31406646966934204
+  ],
+  "materials": [
+   "plastic_monobloc_chair_01"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:plastic_monobloc_chair_01"
+ },
+ "ph_concrete_block_barrier": {
+  "group": "polyhaven",
+  "tris": 1499,
+  "min": [
+   -0.7816785573959351,
+   0.0,
+   -0.2230396568775177
+  ],
+  "max": [
+   0.7816785573959351,
+   1.1081509590148926,
+   0.2230396568775177
+  ],
+  "materials": [
+   "concrete_road_barrier_02"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:concrete_road_barrier_02"
+ },
+ "ph_plastic_crate": {
+  "group": "polyhaven",
+  "tris": 1500,
+  "min": [
+   -0.2527506947517395,
+   0.0,
+   -0.20264899730682373
+  ],
+  "max": [
+   0.2527506947517395,
+   0.2540891766548157,
+   0.20264899730682373
+  ],
+  "materials": [
+   "plastic_crate_02"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:plastic_crate_02"
+ },
+ "ph_barrel_blue": {
+  "group": "polyhaven",
+  "tris": 1473,
+  "min": [
+   -0.3169717490673065,
+   0.0,
+   -0.31929975748062134
+  ],
+  "max": [
+   0.3169717490673065,
+   0.9304736256599426,
+   0.31929975748062134
+  ],
+  "materials": [
+   "barrel_03"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:barrel_03"
+ },
+ "ph_trash_bag": {
+  "group": "polyhaven",
+  "tris": 999,
+  "min": [
+   -0.26163437962532043,
+   0.0,
+   -0.2330136001110077
+  ],
+  "max": [
+   0.26163437962532043,
+   0.5749256610870361,
+   0.2330136001110077
+  ],
+  "materials": [
+   "trashbag"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:trashbag"
+ },
+ "ph_rollershutter_door": {
+  "group": "polyhaven",
+  "tris": 552,
+  "min": [
+   -0.5400000214576721,
+   0.0,
+   -0.0
+  ],
+  "max": [
+   0.5400000214576721,
+   2.3999733924865723,
+   0.3000856935977936
+  ],
+  "materials": [
+   "rollershutter_door"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:rollershutter_door"
+ },
+ "ph_rollershutter_window": {
+  "group": "polyhaven",
+  "tris": 552,
+  "min": [
+   -1.050000548362732,
+   0.0,
+   -0.0
+  ],
+  "max": [
+   1.050000548362732,
+   1.8507245779037476,
+   0.3000859022140503
+  ],
+  "materials": [
+   "rollershutter_window_01"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:rollershutter_window_01"
+ },
+ "ph_security_camera": {
+  "group": "polyhaven",
+  "tris": 1500,
+  "min": [
+   -0.07074132561683655,
+   0.0,
+   -0.0
+  ],
+  "max": [
+   0.07074132561683655,
+   0.20941293239593506,
+   0.3934643864631653
+  ],
+  "materials": [
+   "security_camera_02",
+   "glass"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:security_camera_02"
+ },
+ "ph_clay_pot": {
+  "group": "polyhaven",
+  "tris": 1200,
+  "min": [
+   -0.13307355344295502,
+   0.0,
+   -0.13195562362670898
+  ],
+  "max": [
+   0.13307355344295502,
+   0.2220020741224289,
+   0.13195562362670898
+  ],
+  "materials": [
+   "planter_pot_clay"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:planter_pot_clay"
+ },
+ "ph_potted_aloe": {
+  "group": "polyhaven",
+  "tris": 2500,
+  "min": [
+   -0.0839918851852417,
+   0.0,
+   -0.09228499978780746
+  ],
+  "max": [
+   0.0839918851852417,
+   0.2676134407520294,
+   0.09228499978780746
+  ],
+  "materials": [
+   "potted_plant_04"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:potted_plant_04"
+ },
+ "ph_cardboard_box": {
+  "group": "polyhaven",
+  "tris": 800,
+  "min": [
+   -0.19362109899520874,
+   0.0,
+   -0.25754326581954956
+  ],
+  "max": [
+   0.19362109899520874,
+   0.3402997851371765,
+   0.25754326581954956
+  ],
+  "materials": [
+   "cardboard_box_01"
+  ],
+  "markers": {},
+  "lod_of": null,
+  "source": "polyhaven:cardboard_box_01"
+ }
+}

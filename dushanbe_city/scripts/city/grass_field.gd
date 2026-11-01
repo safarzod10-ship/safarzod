@@ -1,0 +1,140 @@
+class_name GrassField
+extends Node3D
+## Volumetric lawn grass: instanced clumps streamed in a radius around the active camera,
+## only on lawn areas (1 m mask built from the generated lawn rectangles). Density/radius
+## from the quality preset. Uses the vegetation catalog's grass meshes if present,
+## otherwise a procedural blade clump.
+
+var city: Dictionary
+var mask := PackedByteArray()      ## 600x600, 1 = lawn
+var _mmi: MultiMeshInstance3D
+var _last := Vector3(INF, 0, INF)
+var override_camera: Camera3D
+const W := 600
+
+
+func _ready() -> void:
+	add_to_group(&"streaming_camera_override")
+	mask.resize(W * W)
+	for l in city.get("lawns", []):
+		var r: Array = l[1]
+		var x0 := clampi(int(ceil(r[0] + 300.0)), 0, W)
+		var x1 := clampi(int(floor(r[2] + 300.0)), 0, W)
+		var z0 := clampi(int(ceil(r[1] + 300.0)), 0, W)
+		var z1 := clampi(int(floor(r[3] + 300.0)), 0, W)
+		for z in range(z0, z1):
+			for x in range(x0, x1):
+				mask[z * W + x] = 1
+	_mmi = MultiMeshInstance3D.new()
+	_mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = _grass_mesh()
+	_mmi.multimesh = mm
+	add_child(_mmi)
+	Settings.quality_changed.connect(func(_q: int) -> void: _last = Vector3(INF, 0, INF))
+
+
+func _grass_mesh() -> Mesh:
+	var cat := CityWorld._load_json("res://data/vegetation_catalog.json")
+	for e in cat.get("assets", cat.get("species", [])):
+		if e.get("kind", "") == "grass":
+			var f: Dictionary = e.get("files", e.get("meshes", {}))
+			var p := str(f.get("lod0", ""))
+			if p != "" and ResourceLoader.exists(p):
+				return load(p)
+	return _procedural_clump()
+
+
+static func _procedural_clump() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	for i in 9:
+		var a := rng.randf() * TAU
+		var r := rng.randf() * 0.18
+		var base := Vector3(cos(a) * r, 0, sin(a) * r)
+		var h := rng.randf_range(0.14, 0.32)
+		var w := rng.randf_range(0.012, 0.022)
+		var dir := Vector3(cos(a + 1.3), 0, sin(a + 1.3))
+		var lean := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0.03, 0.12)
+		var n := Vector3(-dir.z, 0.6, dir.x).normalized()
+		var segs := 3
+		for s in segs:
+			var t0 := float(s) / segs
+			var t1 := float(s + 1) / segs
+			var p0 := base + Vector3(0, h * t0, 0) + lean * t0 * t0
+			var p1 := base + Vector3(0, h * t1, 0) + lean * t1 * t1
+			var w0 := w * (1.0 - t0)
+			var w1 := w * (1.0 - t1) + 0.001
+			var c0 := Color(t0, 0, 0)
+			var c1 := Color(t1, 0, 0)
+			for v in [[p0 - dir * w0, c0], [p0 + dir * w0, c0], [p1 + dir * w1, c1], [p0 - dir * w0, c0], [p1 + dir * w1, c1], [p1 - dir * w1, c1]]:
+				st.set_color(v[1])
+				st.set_normal(n)
+				st.set_uv(Vector2(0.5, 1.0 - v[1].r))
+				st.add_vertex(v[0])
+	var m := st.commit()
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://assets/shaders/grass_field.gdshader")
+	m.surface_set_material(0, mat)
+	return m
+
+
+func _process(_d: float) -> void:
+	var cam := override_camera if override_camera else get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var p := cam.global_position
+	if Vector2(p.x - _last.x, p.z - _last.z).length() < 3.0:
+		return
+	_last = p
+	rebuild(p)
+
+
+func rebuild(center: Vector3) -> void:
+	var radius := float(Settings.get_value("grass_radius"))
+	var dens := float(Settings.get_value("grass_density"))
+	var step := 0.42 / sqrt(dens)
+	var xs: PackedFloat32Array = []
+	var cnt := 0
+	var r2 := radius * radius
+	var gx0 := floori((center.x - radius) / step)
+	var gx1 := ceili((center.x + radius) / step)
+	var gz0 := floori((center.z - radius) / step)
+	var gz1 := ceili((center.z + radius) / step)
+	xs.resize((gx1 - gx0 + 1) * (gz1 - gz0 + 1) * 16)
+	for gz in range(gz0, gz1 + 1):
+		for gx in range(gx0, gx1 + 1):
+			var hsh := (gx * 73856093) ^ (gz * 19349663)
+			var jx := float(hsh & 1023) / 1023.0
+			var jz := float((hsh >> 10) & 1023) / 1023.0
+			var x := (gx + jx) * step
+			var z := (gz + jz) * step
+			var dx := x - center.x
+			var dz := z - center.z
+			if dx * dx + dz * dz > r2:
+				continue
+			var mx := int(x + 300.0)
+			var mz := int(z + 300.0)
+			if mx < 0 or mz < 0 or mx >= W or mz >= W or mask[mz * W + mx] == 0:
+				continue
+			var rot := float((hsh >> 20) & 1023) / 1023.0 * TAU
+			var s := 0.75 + float((hsh >> 4) & 255) / 255.0 * 0.6
+			var c := cos(rot) * s
+			var sn := sin(rot) * s
+			var o := cnt * 16
+			xs[o] = c; xs[o + 1] = 0.0; xs[o + 2] = sn; xs[o + 3] = x
+			xs[o + 4] = 0.0; xs[o + 5] = s; xs[o + 6] = 0.0; xs[o + 7] = 0.15
+			xs[o + 8] = -sn; xs[o + 9] = 0.0; xs[o + 10] = c; xs[o + 11] = z
+			xs[o + 12] = jx; xs[o + 13] = jz; xs[o + 14] = 0.0; xs[o + 15] = 0.0
+			cnt += 1
+	xs.resize(cnt * 16)
+	var mm := _mmi.multimesh
+	mm.instance_count = cnt
+	if cnt > 0:
+		mm.buffer = xs
+	RenderingServer.global_shader_parameter_set(&"grass_center", Vector3(center.x, 0, center.z))
+	RenderingServer.global_shader_parameter_set(&"grass_radius", radius)

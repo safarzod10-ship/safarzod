@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" load_steps=1 format=3]
+
+[resource]
+resource_name = "plastic_grey"
+albedo_color = Color(0.55, 0.56, 0.57, 1)
+roughness = 0.5
+metallic = 0

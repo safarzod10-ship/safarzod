@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" load_steps=6 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/city_pbr.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://assets/textures/metal/albedo.jpg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/textures/metal/normal.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/textures/metal/orm.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/textures/noise_macro.png" id="5"]
+
+[resource]
+resource_name = "metal_paint"
+shader = ExtResource("1")
+shader_parameter/albedo_tex = ExtResource("2")
+shader_parameter/normal_tex = ExtResource("3")
+shader_parameter/orm_tex = ExtResource("4")
+shader_parameter/macro_tex = ExtResource("5")
+shader_parameter/uv_scale = Vector2(1.00000, 1.00000)
+shader_parameter/metallic_value = 0.25
+shader_parameter/roughness_mul = 0.9
+shader_parameter/roughness_add = 0.15
+shader_parameter/macro_strength = 0.05
