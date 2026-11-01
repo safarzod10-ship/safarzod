@@ -1,5 +1,5 @@
 extends Control
-## Multitouch surface: dynamic virtual joystick (left zone), RUN toggle and JUMP buttons
+## Multitouch surface: dynamic virtual joystick (left zone), RUN toggle, JUMP and PUNCH buttons
 ## (bottom right) and swipe-to-look on the right half. Pure Control drawing, no textures.
 
 const DEAD_ZONE := 0.12
@@ -12,6 +12,7 @@ var _joy_origin := Vector2.ZERO
 var _joy_vec := Vector2.ZERO             # raw, length <= 1
 var _look_finger := -1
 var _jump_finger := -1
+var _punch_finger := -1
 var _last_run := false
 
 
@@ -44,6 +45,11 @@ func _joy_home() -> Vector2:
 func _jump_rect() -> Array:                # [center, radius]
 	var u := _unit()
 	return [Vector2(size.x - 1.9 * u, size.y - 2.0 * u), 1.0 * u]
+
+
+func _punch_rect() -> Array:             # above-left of JUMP, on the thumb's natural arc
+	var u := _unit()
+	return [Vector2(size.x - 2.5 * u, size.y - 4.35 * u), 0.95 * u]
 
 
 func _run_rect() -> Array:
@@ -133,6 +139,28 @@ func _draw() -> void:
 	draw_colored_polygon(PackedVector2Array([a + Vector2(0, -s), a + Vector2(s, s * 0.6), a + Vector2(-s, s * 0.6)]),
 			Color(1, 1, 1, 0.85))
 	_label(jp[0] + Vector2(0, 0.42 * jp[1]), "ПРЫЖОК", int(0.24 * u), Color(1, 1, 1, 0.85))
+	# PUNCH
+	var pr := _punch_rect()
+	var pp := _punch_finger >= 0
+	draw_circle(pr[0], pr[1], Color(0.9, 0.25, 0.2, 0.5) if pp else Color(0, 0, 0, 0.32))
+	draw_arc(pr[0], pr[1], 0, TAU, 48, Color(1, 0.6, 0.55, 0.9) if pp else Color(1, 1, 1, 0.6), 0.04 * u, true)
+	_draw_fist(pr[0] + Vector2(0, -0.2 * pr[1]), 0.36 * pr[1], Color(1, 1, 1, 0.9))
+	_label(pr[0] + Vector2(0, 0.55 * pr[1]), "УДАР", int(0.24 * u), Color(1, 1, 1, 0.85))
+
+
+func _draw_fist(c: Vector2, s: float, col: Color) -> void:
+	## Simple, readable fist icon: four knuckles, palm block, thumb across the front.
+	var palm := Rect2(c + Vector2(-0.62 * s, -0.25 * s), Vector2(1.24 * s, 0.95 * s))
+	draw_rect(palm, col, true)
+	for i in 4:
+		var k := c + Vector2(-0.47 * s + i * 0.31 * s, -0.32 * s)
+		draw_circle(k, 0.2 * s, col)
+	draw_line(c + Vector2(-0.6 * s, 0.22 * s), c + Vector2(0.25 * s, 0.22 * s), Color(0, 0, 0, 0.55), 0.09 * s, true)
+	draw_circle(c + Vector2(0.38 * s, 0.22 * s), 0.17 * s, col)
+	for i in 3:
+		var x := -0.31 * s + i * 0.31 * s
+		draw_line(c + Vector2(x, -0.45 * s), c + Vector2(x, 0.05 * s), Color(0, 0, 0, 0.45), 0.05 * s, true)
+	draw_rect(Rect2(c + Vector2(-0.45 * s, 0.7 * s), Vector2(0.9 * s, 0.25 * s)), col, true)   # wrist
 
 
 func _draw_chevrons(c: Vector2, s: float, col: Color) -> void:

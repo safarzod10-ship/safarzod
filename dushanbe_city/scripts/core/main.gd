@@ -61,3 +61,9 @@ func _build() -> void:
 		return
 	for c in find_children("*", "Camera3D", true, false):
 		(c as Camera3D).far = 4500.0
+	if Settings.needs_benchmark():
+		await get_tree().create_timer(0.5).timeout
+		var ag := AutoGraphics.new()
+		add_child(ag)
+		await ag.run()
+		ag.queue_free()

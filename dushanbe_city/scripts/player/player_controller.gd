@@ -7,8 +7,8 @@ extends CharacterBody3D
 signal stepped_up(height: float)
 
 @export_group("Movement")
-@export var walk_speed := 1.4          ## m/s at full stick (matches the walk cycle)
-@export var run_speed := 4.0           ## m/s (matches the run cycle)
+@export var walk_speed := 1.15         ## m/s at full stick (walk cycle ground speed 1.05 m/s, ×1.1)
+@export var run_speed := 5.0           ## m/s (jog cycle ground speed, measured on the retargeted rig)
 @export var acceleration := 7.0        ## m/s^2
 @export var deceleration := 9.0        ## m/s^2
 @export var air_control := 0.25
@@ -22,14 +22,19 @@ signal stepped_up(height: float)
 @export var camera_distance := 3.4
 @export var camera_height := 1.55
 @export var mouse_sensitivity := 0.0025
-@export var touch_look_sensitivity := 0.005
+@export var touch_look_sensitivity := 0.0055   ## rad per 720p-pixel of swipe
 @export var pitch_min_deg := -65.0
 @export var pitch_max_deg := 30.0
 
-## Cycle data of the authored animations (see docs/PLAYER.md).
-const WALK_STRIDE := 1.4545          # metres per walk cycle — measured in-engine (flat-foot ankle speed 1.3636 m/s × 1.0667 s)
-const RUN_STRIDE := 2.5699           # metres per run cycle — measured (3.8548 m/s × 0.6667 s)
-const IDLE_BLEND_SPEED := 0.5           # below this speed idle and walk are blended
+## Cycle data of the Quaternius UAL clips retargeted to this rig (measured in-engine, see docs/PLAYER.md,
+## tests/anim_diag.gd): stance-foot ground speed × cycle length = metres per cycle.
+const WALK_STRIDE := 1.047 * 1.3333     # walk: 1.047 m/s × 1.333 s
+const RUN_STRIDE := 5.0 * 0.9333        # jog:  5.0 m/s × 0.933 s
+const IDLE_BLEND_SPEED := 0.45          # below this speed idle and walk are blended
+const TAKEOFF_TIME := 0.10              # jump_start: feet leave the ground at 0.10-0.12 s
+const UPPER_BODY := ["Spine", "Chest", "UpperChest", "Neck", "Head", "LeftShoulder", "LeftUpperArm",
+	"LeftLowerArm", "LeftHand", "RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
+const ANIM_LIB := "res://assets/characters/animations/player_anims.res"
 
 @onready var model: Node3D = $Model
 @onready var cam_rig: Node3D = $CameraRig
@@ -37,6 +42,8 @@ const IDLE_BLEND_SPEED := 0.5           # below this speed idle and walk are ble
 @onready var camera: Camera3D = $CameraRig/SpringArm3D/Camera3D
 
 var cam_yaw := 0.0
+var _view_yaw := 0.0                     # smoothed camera angles actually applied
+var _view_pitch := deg_to_rad(-14.0)
 var cam_pitch := deg_to_rad(-14.0)
 var facing := 0.0                       ## character yaw (rad); forward = -Z rotated by facing
 var ground_speed := 0.0                 ## smoothed horizontal speed used by the animation
@@ -53,6 +60,12 @@ var _coyote := 0.0
 var _jumping := false
 var _peak_fall_speed := 0.0
 var _land_timer := -1.0
+var _land_hard := false
+var _takeoff_t := -1.0                  # >= 0 while the jump push-off is playing
+var _punch_t := -1.0                    # time since the current punch started (-1 = none)
+var _punch_len := 0.0
+var _punch_queue := false
+var _punch_alt := false                 # alternates jab / cross
 
 
 func _ready() -> void:
@@ -91,6 +104,8 @@ func teleport(pos: Vector3, yaw_rad: float) -> void:
 	facing = yaw_rad
 	rotation = Vector3(0.0, facing, 0.0)
 	cam_yaw = yaw_rad
+	_view_yaw = yaw_rad
+	_view_pitch = cam_pitch
 	_visual_offset = 0.0
 	model.position.y = 0.0
 	_cam_target = _camera_anchor()
@@ -117,6 +132,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_rotate_camera(event.relative * mouse_sensitivity)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		PlayerInput.queue_punch()
 	elif event.is_action_pressed(&"run_toggle"):
 		PlayerInput.run_toggle = not PlayerInput.run_toggle
 
@@ -140,9 +157,11 @@ func _process(delta: float) -> void:
 	_cam_target.z = lerpf(_cam_target.z, target.z, kh)
 	_cam_target.y = lerpf(_cam_target.y, target.y, kv)
 	cam_rig.global_position = _cam_target
-	cam_rig.rotation = Vector3(0.0, cam_yaw, 0.0)
-	spring.rotation.x = cam_pitch
-	_update_animation(delta)
+	var ks := 1.0 - exp(-32.0 * delta)
+	_view_yaw = lerp_angle(_view_yaw, cam_yaw, ks)
+	_view_pitch = lerpf(_view_pitch, cam_pitch, ks)
+	cam_rig.rotation = Vector3(0.0, _view_yaw, 0.0)
+	spring.rotation.x = _view_pitch
 
 
 # ------------------------------------------------------------------------------- movement
@@ -176,16 +195,32 @@ func _physics_process(delta: float) -> void:
 	_jump_buffer -= delta
 	_coyote = 0.12 if on_floor else _coyote - delta
 	var vy := velocity.y
-	if _jump_buffer > 0.0 and _coyote > 0.0 and not _jumping:
-		vy = sqrt(2.0 * gravity * jump_height)
+	if _jump_buffer > 0.0 and _coyote > 0.0 and not _jumping and _takeoff_t < 0.0:
 		_jump_buffer = 0.0
-		_coyote = 0.0
-		_jumping = true
+		_takeoff_t = 0.0                    # push-off phase: animation crouches/extends first
 		_travel(&"jump_start")
+	if _takeoff_t >= 0.0:
+		_takeoff_t += delta
+		if _takeoff_t >= TAKEOFF_TIME:      # feet leave the ground exactly with the animation
+			vy = sqrt(2.0 * gravity * jump_height)
+			_takeoff_t = -1.0
+			_coyote = 0.0
+			_jumping = true
+		elif not on_floor:
+			vy -= gravity * delta
+		else:
+			vy = minf(vy, 0.0)
 	elif not on_floor:
 		vy -= gravity * delta
 	else:
 		vy = minf(vy, 0.0)
+
+	# punch (upper-body layer, alternating jab / cross, one queued press max)
+	if PlayerInput.consume_punch():
+		if _punch_t < 0.0:
+			_start_punch()
+		elif _punch_t > _punch_len * 0.45:
+			_punch_queue = true
 
 	if on_floor and vy <= 0.0 and hv.length() > 0.05:
 		_try_step_up(hv * delta)
@@ -211,6 +246,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		air_time += delta
 		_peak_fall_speed = maxf(_peak_fall_speed, -velocity.y)
+	_update_animation(delta)
 
 
 ## Climb curbs/steps: if a near-vertical obstacle is ahead and its top is <= step_height,
@@ -246,32 +282,35 @@ func _try_step_up(motion: Vector3) -> void:
 
 
 func _on_landed() -> void:
-	var hard := air_time > 0.35 or _peak_fall_speed > 3.0
+	var hard := air_time > 0.45 or _peak_fall_speed > 3.5
 	_peak_fall_speed = 0.0
-	if hard:
-		_travel(&"land")
-		_land_timer = 0.0
-	else:
-		_travel(&"ground")
+	if air_time < 0.2 and not _jumping:
+		return                                  # stepping off a curb: no landing animation
+	_travel(&"jump_land")
+	_land_timer = 0.0
+	_land_hard = hard
 
 
 # ------------------------------------------------------------------------------- animation
+func _anim_node(name: String) -> AnimationNodeAnimation:
+	var a := AnimationNodeAnimation.new()
+	a.animation = StringName("p/" + name)
+	return a
+
+
 func _setup_animation_tree() -> void:
-	for n in [&"idle", &"walk", &"run", &"fall"]:
-		if _anim_player.has_animation(n):
-			_anim_player.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+	if ResourceLoader.exists(ANIM_LIB) and not _anim_player.has_animation_library(&"p"):
+		_anim_player.add_animation_library(&"p", load(ANIM_LIB))
 	var sm := AnimationNodeStateMachine.new()
-	# ground: idle <-> (walk <-> run, phase-synced on a 1 s normalised timeline)
+
+	# ---- ground: idle <-> (walk <-> jog phase-synced on a normalised timeline)
 	var bt := AnimationNodeBlendTree.new()
-	var idle := AnimationNodeAnimation.new()
-	idle.animation = &"idle"
 	var loco := AnimationNodeBlendSpace1D.new()
 	loco.min_space = 0.0
 	loco.max_space = 1.0
 	loco.sync = true
-	for pair in [[&"walk", 0.0], [&"run", 1.0]]:
-		var a := AnimationNodeAnimation.new()
-		a.animation = pair[0]
+	for pair in [["walk", 0.0], ["jog", 1.0]]:
+		var a := _anim_node(pair[0])
 		a.use_custom_timeline = true
 		a.timeline_length = 1.0
 		a.stretch_time_scale = true
@@ -279,7 +318,8 @@ func _setup_animation_tree() -> void:
 		loco.add_blend_point(a, pair[1], -1, pair[0])
 	var ts := AnimationNodeTimeScale.new()
 	var mix := AnimationNodeBlend2.new()
-	bt.add_node(&"idle", idle, Vector2(0, 0))
+	mix.sync = false
+	bt.add_node(&"idle", _anim_node("idle"), Vector2(0, 0))
 	bt.add_node(&"loco", loco, Vector2(0, 200))
 	bt.add_node(&"ts", ts, Vector2(200, 200))
 	bt.add_node(&"mix", mix, Vector2(400, 100))
@@ -287,39 +327,81 @@ func _setup_animation_tree() -> void:
 	bt.connect_node(&"mix", 0, &"idle")
 	bt.connect_node(&"mix", 1, &"ts")
 	bt.connect_node(&"output", 0, &"mix")
-	sm.add_node(&"ground", bt)
-	for n in [&"jump_start", &"fall", &"land"]:
-		var a := AnimationNodeAnimation.new()
-		a.animation = n
-		sm.add_node(n, a)
+	sm.add_node(&"ground", bt, Vector2(0, 0))
+
+	# ---- jump phases: push-off/rise (jump_start) -> air (tuck) blending into the landing-ready
+	# pose while falling -> landing (jump_land) -> back to ground locomotion
+	var air := AnimationNodeBlendTree.new()
+	var land_pose := _anim_node("jump_land")                 # frame 0 = legs extended for touchdown
+	var hold := AnimationNodeTimeSeek.new()
+	var air_mix := AnimationNodeBlend2.new()
+	air.add_node(&"air", _anim_node("jump_air"), Vector2(0, 0))
+	air.add_node(&"landpose", land_pose, Vector2(0, 200))
+	air.add_node(&"hold", hold, Vector2(200, 200))
+	air.add_node(&"fallmix", air_mix, Vector2(400, 100))
+	air.connect_node(&"hold", 0, &"landpose")
+	air.connect_node(&"fallmix", 0, &"air")
+	air.connect_node(&"fallmix", 1, &"hold")
+	air.connect_node(&"output", 0, &"fallmix")
+	sm.add_node(&"jump_start", _anim_node("jump_start"), Vector2(300, -150))
+	sm.add_node(&"air", air, Vector2(600, -150))
+	sm.add_node(&"jump_land", _anim_node("jump_land"), Vector2(600, 150))
+
 	var start := AnimationNodeStateMachineTransition.new()
 	start.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
 	sm.add_transition(&"Start", &"ground", start)
-	var links := [
-		[&"ground", &"jump_start", 0.12], [&"ground", &"fall", 0.25], [&"jump_start", &"land", 0.1],
-		[&"jump_start", &"ground", 0.2], [&"fall", &"land", 0.06], [&"fall", &"ground", 0.2],
-		[&"land", &"ground", 0.25], [&"land", &"jump_start", 0.1], [&"land", &"fall", 0.2],
-		[&"fall", &"jump_start", 0.1],
-	]
-	for l in links:
+	for l in [[&"ground", &"jump_start", 0.08], [&"ground", &"air", 0.25], [&"jump_start", &"air", 0.3],
+			[&"jump_start", &"jump_land", 0.1], [&"air", &"jump_land", 0.08], [&"jump_land", &"ground", 0.3],
+			[&"jump_land", &"jump_start", 0.1], [&"jump_start", &"ground", 0.2], [&"air", &"ground", 0.2]]:
 		var t := AnimationNodeStateMachineTransition.new()
 		t.xfade_time = l[2]
 		t.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_IMMEDIATE
 		sm.add_transition(l[0], l[1], t)
-	var to_fall := AnimationNodeStateMachineTransition.new()
-	to_fall.xfade_time = 0.2
-	to_fall.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END
-	to_fall.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
-	sm.add_transition(&"jump_start", &"fall", to_fall)
+
+	# ---- root: state machine + upper-body punch layer (OneShot filtered to spine/arms)
+	var root := AnimationNodeBlendTree.new()
+	var punch := AnimationNodeOneShot.new()
+	punch.fadein_time = 0.08
+	punch.fadeout_time = 0.18
+	punch.filter_enabled = true
+	for b in UPPER_BODY:
+		punch.set_filter_path(NodePath("%GeneralSkeleton:" + b), true)
+	var which := AnimationNodeBlend2.new()                  # 0 = jab, 1 = cross
+	root.add_node(&"sm", sm, Vector2(0, 0))
+	root.add_node(&"jab", _anim_node("punch_jab"), Vector2(0, 200))
+	root.add_node(&"cross", _anim_node("punch_cross"), Vector2(0, 300))
+	root.add_node(&"which", which, Vector2(200, 250))
+	root.add_node(&"punch", punch, Vector2(400, 100))
+	root.connect_node(&"which", 0, &"jab")
+	root.connect_node(&"which", 1, &"cross")
+	root.connect_node(&"punch", 0, &"sm")
+	root.connect_node(&"punch", 1, &"which")
+	root.connect_node(&"output", 0, &"punch")
 
 	_tree = AnimationTree.new()
 	_tree.name = "AnimationTree"
-	_tree.tree_root = sm
+	_tree.tree_root = root
 	model.add_child(_tree)
 	_tree.anim_player = _tree.get_path_to(_anim_player)
+	_tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_PHYSICS   # in step with movement
 	_tree.active = true
-	_playback = _tree.get(&"parameters/playback")
+	_playback = _tree.get(&"parameters/sm/playback")
 	_playback.start(&"ground")
+	_tree.set(&"parameters/sm/air/hold/seek_request", 0.0)
+
+
+func _start_punch() -> void:
+	_punch_alt = not _punch_alt
+	var cross := not _punch_alt
+	_tree.set(&"parameters/which/blend_amount", 1.0 if cross else 0.0)
+	_punch_len = _anim_player.get_animation(&"p/punch_cross" if cross else &"p/punch_jab").length * 0.85
+	_tree.set(&"parameters/punch/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	_punch_t = 0.0
+	_punch_queue = false
+
+
+func is_punching() -> bool:
+	return _punch_t >= 0.0
 
 
 func _travel(state: StringName) -> void:
@@ -330,19 +412,33 @@ func _travel(state: StringName) -> void:
 func _update_animation(delta: float) -> void:
 	var hv := get_real_velocity()
 	hv.y = 0.0
-	ground_speed = lerpf(ground_speed, hv.length(), 1.0 - exp(-15.0 * delta))
+	ground_speed = lerpf(ground_speed, hv.length(), 1.0 - exp(-12.0 * delta))
 	var s := ground_speed
 	var run_blend := clampf((s - walk_speed) / (run_speed - walk_speed), 0.0, 1.0)
 	var stride := lerpf(WALK_STRIDE, RUN_STRIDE, run_blend)
-	_tree.set(&"parameters/ground/loco/blend_position", run_blend)
-	_tree.set(&"parameters/ground/ts/scale", s / stride)    # cycles per second on the 1 s timeline
-	_tree.set(&"parameters/ground/mix/blend_amount", clampf(s / IDLE_BLEND_SPEED, 0.0, 1.0))
+	_tree.set(&"parameters/sm/ground/loco/blend_position", run_blend)
+	_tree.set(&"parameters/sm/ground/ts/scale", maxf(s, 0.35) / stride)   # cycles per second
+	_tree.set(&"parameters/sm/ground/mix/blend_amount", clampf(s / IDLE_BLEND_SPEED, 0.0, 1.0))
+	# falling: blend the air pose towards the legs-extended touchdown pose as speed builds up
+	var fall := clampf(-velocity.y / 5.0, 0.0, 1.0) if not is_on_floor() else 0.0
+	_tree.set(&"parameters/sm/air/fallmix/blend_amount", fall)
 
 	var cur := _playback.get_current_node()
-	if not is_on_floor() and air_time > 0.18 and cur == &"ground":
-		_travel(&"fall")
-	if cur == &"land":
+	if cur == &"jump_start" and _jumping and _playback.get_current_play_position() > 0.45:
+		_travel(&"air")
+	if not is_on_floor() and air_time > 0.25 and cur == &"ground" and _takeoff_t < 0.0:
+		_travel(&"air")                         # walked off a ledge
+	if cur == &"jump_land":
 		_land_timer += delta
-		# leave the landing early when the player starts moving again
-		if _land_timer > 0.45 or (_land_timer > 0.15 and s > 0.6):
+		var moving := s > 0.6
+		# soft landings recover faster; moving players blend straight into the run/walk cycle
+		var leave_at := (0.22 if moving else 0.55) if not _land_hard else (0.32 if moving else 0.75)
+		if _land_timer > leave_at:
 			_travel(&"ground")
+	# punch bookkeeping: one queued follow-up, no stacking
+	if _punch_t >= 0.0:
+		_punch_t += delta
+		if _punch_t >= _punch_len:
+			_punch_t = -1.0
+			if _punch_queue:
+				_start_punch()

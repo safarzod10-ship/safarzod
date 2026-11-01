@@ -1,56 +1,182 @@
 extends CanvasLayer
-## Small in-game menu: quality preset (Low/Medium/High), time of day, FPS / draw-call overlay.
+## In-game menu (☰): graphics mode Auto/Low/Medium/High/Ultra, FPS cap 30/60, show FPS,
+## diagnostics panel, dynamic resolution, re-run auto benchmark, time of day.
+## Also draws the FPS counter and the diagnostics overlay.
 
 var _panel: PanelContainer
-var _info: Label
+var _fps: Label
+var _diag: Label
+var _mode_buttons := {}
+var _cap_buttons := {}
+var _toggles := {}
+var _bench_label: Label
+var _acc := 0.0
+var _frames := 0
+var _worst := 0.0
+var _fps_val := 0.0
+var _avg_ms := 0.0
+var _max_ms := 0.0
 
 
 func _ready() -> void:
 	layer = 20
 	var btn := Button.new()
 	btn.text = "☰"
-	btn.custom_minimum_size = Vector2(64, 64)
+	btn.custom_minimum_size = Vector2(72, 72)
 	btn.position = Vector2(16, 16)
-	btn.add_theme_font_size_override("font_size", 30)
+	btn.add_theme_font_size_override("font_size", 34)
 	add_child(btn)
-	_info = Label.new()
-	_info.position = Vector2(92, 22)
-	_info.add_theme_color_override("font_outline_color", Color.BLACK)
-	_info.add_theme_constant_override("outline_size", 4)
-	add_child(_info)
+	_fps = _outlined_label(Vector2(100, 20), 22)
+	_diag = _outlined_label(Vector2(16, 100), 18)
 	_panel = PanelContainer.new()
-	_panel.position = Vector2(16, 90)
+	_panel.position = Vector2(16, 100)
 	_panel.visible = false
 	add_child(_panel)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(620, 560)
+	_panel.add_child(scroll)
 	var v := VBoxContainer.new()
-	_panel.add_child(v)
-	var l := Label.new()
-	l.text = "Графика"
-	v.add_child(l)
+	v.add_theme_constant_override("separation", 10)
+	scroll.add_child(v)
+	_section(v, "Графика")
 	var h := HBoxContainer.new()
 	v.add_child(h)
-	for i in 3:
-		var b := Button.new()
-		b.text = ["Low", "Medium", "High"][i]
-		b.custom_minimum_size = Vector2(110, 56)
-		b.pressed.connect(func() -> void: Settings.set_quality(i))
+	for m in ["auto", "low", "medium", "high", "ultra"]:
+		var b := _button({"auto": "Авто", "low": "Low", "medium": "Medium", "high": "High", "ultra": "Ultra"}[m], 112)
+		b.pressed.connect(func() -> void: Settings.set_mode(m); _refresh())
 		h.add_child(b)
-	var l2 := Label.new()
-	l2.text = "Время суток"
-	v.add_child(l2)
+		_mode_buttons[m] = b
+	_bench_label = Label.new()
+	_bench_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bench_label.custom_minimum_size = Vector2(600, 0)
+	v.add_child(_bench_label)
+	var rb := _button("Повторить тест производительности", 600)
+	rb.pressed.connect(_rerun_benchmark)
+	v.add_child(rb)
+	_section(v, "Частота кадров")
+	var h2 := HBoxContainer.new()
+	v.add_child(h2)
+	for cap in [30, 60]:
+		var b := _button("%d FPS" % cap, 150)
+		b.pressed.connect(func() -> void:
+			Settings.set_fps_cap(cap)
+			Settings.bench["cap_set_by_user"] = true
+			Settings.save()
+			_refresh())
+		h2.add_child(b)
+		_cap_buttons[cap] = b
+	for t in [["show_fps", "Показывать FPS"], ["show_diagnostics", "Диагностика производительности"], ["dynamic_resolution", "Динамическое разрешение 3D"]]:
+		var c := CheckButton.new()
+		c.text = t[1]
+		c.add_theme_font_size_override("font_size", 22)
+		c.custom_minimum_size = Vector2(600, 52)
+		var key: String = t[0]
+		c.toggled.connect(func(on: bool) -> void: Settings.set_flag(key, on); _refresh())
+		v.add_child(c)
+		_toggles[key] = c
+	_section(v, "Время суток")
 	var s := HSlider.new()
 	s.min_value = 0
 	s.max_value = 24
 	s.step = 0.25
 	s.value = 15.5
-	s.custom_minimum_size = Vector2(340, 48)
+	s.custom_minimum_size = Vector2(600, 52)
 	s.value_changed.connect(func(x: float) -> void:
 		for n in get_tree().get_nodes_in_group(&"time_of_day"):
 			n.call("set_hour", x))
 	v.add_child(s)
-	btn.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
+	btn.pressed.connect(func() -> void:
+		_panel.visible = not _panel.visible
+		_refresh())
+	Settings.settings_changed.connect(_refresh)
+	Settings.quality_changed.connect(func(_q: int) -> void: _refresh())
+	_refresh()
 
 
-func _process(_d: float) -> void:
-	_info.text = "%d FPS · %s · DC %d" % [Engine.get_frames_per_second(), Settings.quality_name(),
-		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)]
+func _outlined_label(pos: Vector2, fs: int) -> Label:
+	var l := Label.new()
+	l.position = pos
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 5)
+	add_child(l)
+	return l
+
+
+func _section(parent: Control, text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 26)
+	parent.add_child(l)
+
+
+func _button(text: String, w: float) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.toggle_mode = false
+	b.custom_minimum_size = Vector2(w, 60)
+	b.add_theme_font_size_override("font_size", 22)
+	return b
+
+
+func _refresh() -> void:
+	for m in _mode_buttons:
+		var b: Button = _mode_buttons[m]
+		var sel: bool = Settings.mode == m
+		b.modulate = Color(1.0, 0.8, 0.35) if sel else Color.WHITE
+	for cap in _cap_buttons:
+		(_cap_buttons[cap] as Button).modulate = Color(1.0, 0.8, 0.35) if Settings.fps_cap == cap else Color.WHITE
+	for k in _toggles:
+		(_toggles[k] as CheckButton).set_pressed_no_signal(bool(Settings.get(k)))
+	var b := Settings.bench
+	var txt := "Сейчас: %s%s, разрешение 3D %d%%." % [Settings.quality_name(), " (авто)" if Settings.mode == "auto" else "", int(Settings.current_scale * 100)]
+	if b.has("quality_name"):
+		txt += "\nАвтотест: %s (%s). " % [b["quality_name"], b.get("date", "")]
+		for t in b.get("tests", []):
+			txt += "%s p90 %.0f мс; " % [t["quality"], t["p90_ms"]]
+	_bench_label.text = txt
+
+
+func _rerun_benchmark() -> void:
+	_panel.visible = false
+	var ag := AutoGraphics.new()
+	add_child(ag)
+	await ag.run()
+	ag.queue_free()
+	_refresh()
+
+
+func _process(delta: float) -> void:
+	_acc += delta
+	_frames += 1
+	_worst = maxf(_worst, delta)
+	if _acc >= 0.5:
+		_fps_val = _frames / _acc
+		_avg_ms = _acc / _frames * 1000.0
+		_max_ms = _worst * 1000.0
+		_acc = 0.0
+		_frames = 0
+		_worst = 0.0
+		_update_text()
+
+
+func _update_text() -> void:
+	_fps.visible = Settings.show_fps
+	_fps.text = "%d FPS · %.1f мс · %s" % [roundi(_fps_val), _avg_ms, Settings.quality_name()]
+	_diag.visible = Settings.show_diagnostics and not _panel.visible
+	if not _diag.visible:
+		return
+	var rs := RenderingServer
+	var info := AutoGraphics.device_info()
+	var lines := [
+		"FPS %.0f   кадр %.1f мс (макс %.1f)   лимит %d FPS" % [_fps_val, _avg_ms, _max_ms, Settings.fps_cap],
+		"GPU %.1f мс   CPU-скрипты %.1f мс   физика %.1f мс" % [Settings.gpu_time_ms(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0],
+		"Draw calls %d   треугольники %.2f млн   объекты %d" % [rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME), rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1e6, rs.get_rendering_info(rs.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)],
+		"VRAM %.0f МБ (текстуры %.0f, буферы %.0f)   RAM %.0f МБ" % [rs.get_rendering_info(rs.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0, rs.get_rendering_info(rs.RENDERING_INFO_TEXTURE_MEM_USED) / 1048576.0, rs.get_rendering_info(rs.RENDERING_INFO_BUFFER_MEM_USED) / 1048576.0, Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0],
+		"Пресет %s (%s)   3D %d%%   %s" % [Settings.quality_name(), Settings.mode, int(Settings.current_scale * 100), info["renderer"]],
+		"%s · %s · %d ядер · %d МБ RAM" % [info["model"], info["adapter"], info["cores"], info["ram_mb"]],
+		"Сборка: %s" % ("debug" if OS.is_debug_build() else "release"),
+	]
+	if not Settings.adaptive_log.is_empty():
+		lines.append("Адаптация: " + Settings.adaptive_log[-1])
+	_diag.text = "\n".join(lines)

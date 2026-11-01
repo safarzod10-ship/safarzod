@@ -4,6 +4,7 @@ shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
 global uniform float city_wetness;
+global uniform float city_macro_detail;   // 0 on Low: skip the two macro-noise fetches
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -35,8 +36,11 @@ void fragment() {
 	vec3 orm = texture(orm_tex, uv).rgb;
 	// macro variation: two octaves of a tileable noise in world space
 	vec2 mp = abs(wnrm.y) > 0.5 ? wpos.xz : vec2(wpos.x + wpos.z, wpos.y);
-	float m = texture(macro_tex, mp * macro_scale).r * 0.65 + texture(macro_tex, mp * macro_scale * 4.3).r * 0.35;
-	alb *= mix(1.0, 0.75 + 0.5 * m, macro_strength * 2.0);
+	float m = 0.5;
+	if (city_macro_detail > 0.5) {
+		m = texture(macro_tex, mp * macro_scale).r * 0.65 + texture(macro_tex, mp * macro_scale * 4.3).r * 0.35;
+		alb *= mix(1.0, 0.75 + 0.5 * m, macro_strength * 2.0);
+	}
 	if (use_vertex_color) {
 		alb *= COLOR.rgb;
 	}

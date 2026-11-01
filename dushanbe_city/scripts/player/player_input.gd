@@ -16,6 +16,7 @@ static var scripted_run := false
 static var touch_active := false
 
 static var _jump_queued := false
+static var _punch_queued := false
 static var _actions_ready := false
 
 
@@ -27,7 +28,7 @@ static func ensure_actions() -> void:
 	var keys := {
 		&"move_forward": [KEY_W, KEY_UP], &"move_back": [KEY_S, KEY_DOWN],
 		&"move_left": [KEY_A, KEY_LEFT], &"move_right": [KEY_D, KEY_RIGHT],
-		&"run": [KEY_SHIFT], &"jump": [KEY_SPACE], &"run_toggle": [KEY_CAPSLOCK],
+		&"run": [KEY_SHIFT], &"jump": [KEY_SPACE], &"run_toggle": [KEY_CAPSLOCK], &"punch": [KEY_F],
 	}
 	for action in keys:
 		if InputMap.has_action(action):
@@ -45,7 +46,7 @@ static func ensure_actions() -> void:
 		jm.axis = axes[action][0]
 		jm.axis_value = axes[action][1]
 		InputMap.action_add_event(action, jm)
-	for pair in [[&"jump", JOY_BUTTON_A], [&"run", JOY_BUTTON_B], [&"run", JOY_BUTTON_LEFT_STICK]]:
+	for pair in [[&"jump", JOY_BUTTON_A], [&"run", JOY_BUTTON_B], [&"run", JOY_BUTTON_LEFT_STICK], [&"punch", JOY_BUTTON_X]]:
 		var jb := InputEventJoypadButton.new()
 		jb.button_index = pair[1]
 		InputMap.action_add_event(pair[0], jb)
@@ -71,6 +72,17 @@ static func queue_jump() -> void:
 	_jump_queued = true
 
 
+static func queue_punch() -> void:
+	_punch_queued = true
+
+
+## Returns true once per punch press (F, gamepad X, left mouse when captured, touch button).
+static func consume_punch() -> bool:
+	var p := _punch_queued or Input.is_action_just_pressed(&"punch")
+	_punch_queued = false
+	return p
+
+
 ## Returns true once per jump press (keyboard, gamepad or touch).
 static func consume_jump() -> bool:
 	var j := _jump_queued or Input.is_action_just_pressed(&"jump")
@@ -91,3 +103,4 @@ static func reset() -> void:
 	scripted_move = null
 	scripted_run = false
 	_jump_queued = false
+	_punch_queued = false

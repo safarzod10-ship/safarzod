@@ -23,7 +23,7 @@ func _ready() -> void:
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	sky.radiance_size = Sky.RADIANCE_SIZE_128
-	sky.process_mode = Sky.PROCESS_MODE_REALTIME
+	sky.process_mode = Sky.PROCESS_MODE_AUTOMATIC   # re-filter radiance only when the sky changes (not every frame)
 
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -86,13 +86,15 @@ func _ready() -> void:
 
 
 func apply_quality() -> void:
-	var q := Settings.quality
-	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS][q]
+	var splits := int(Settings.get_value("shadow_splits"))
+	sun.directional_shadow_mode = {1: DirectionalLight3D.SHADOW_ORTHOGONAL, 2: DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS}.get(splits, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS)
 	sun.directional_shadow_max_distance = Settings.get_value("shadow_distance")
-	sun.directional_shadow_split_1 = 0.08 if q > 0 else 0.2
+	sun.directional_shadow_split_1 = 0.15 if splits == 2 else 0.08
 	sun.directional_shadow_split_2 = 0.22
 	sun.directional_shadow_split_3 = 0.5
+	sun.directional_shadow_fade_start = 0.8
 	var env := world_env.environment
 	env.glow_enabled = Settings.get_value("glow")
-	env.sky.radiance_size = {64: Sky.RADIANCE_SIZE_64, 128: Sky.RADIANCE_SIZE_128, 256: Sky.RADIANCE_SIZE_256}[int(Settings.get_value("sky_radiance"))]
+	env.sky.radiance_size = {32: Sky.RADIANCE_SIZE_32, 64: Sky.RADIANCE_SIZE_64, 128: Sky.RADIANCE_SIZE_128, 256: Sky.RADIANCE_SIZE_256}[int(Settings.get_value("sky_radiance"))]
+	RenderingServer.global_shader_parameter_set(&"city_macro_detail", 1.0 if Settings.get_value("macro_detail") else 0.0)
 	tod.apply()

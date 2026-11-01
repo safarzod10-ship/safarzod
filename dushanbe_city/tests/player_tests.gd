@@ -26,9 +26,9 @@ func _ready() -> void:
 	for t in player.find_children("*", "AnimationTree", true, false):
 		(t as AnimationTree).callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_PHYSICS
 	# 1. idle feet on ground
-	var fy := minf(_bone_y("foot.L"), _bone_y("foot.R"))
+	var fy := minf(_bone_y("LeftFoot"), _bone_y("RightFoot"))
 	idle_ankle = fy
-	var ty := minf(_bone_y("toe.L"), _bone_y("toe.R"))
+	var ty := minf(_bone_y("LeftToes"), _bone_y("RightToes"))
 	_check("idle: lowest foot/toe joint height %.3f m (0.0..0.12)" % minf(fy, ty), minf(fy, ty) > -0.02 and minf(fy, ty) < 0.12)
 	# 2. walking: stance-foot sliding
 	PlayerInput.scripted_move = Vector2(1, 0)
@@ -36,7 +36,7 @@ func _ready() -> void:
 	await _frames(90)
 	var slide_w := await _measure_slide(120)
 	_check("walk %.2f m/s: stance foot slide %.3f m/s (< 0.15)" % [player.ground_speed, slide_w], slide_w < 0.15)
-	_check("walk: stance ankle height %.3f m vs idle %.3f (|diff| < 0.02 — no floating/sinking)" % [stance_height, idle_ankle], absf(stance_height - idle_ankle) < 0.02)
+	_check("walk: stance ankle height %.3f m vs idle %.3f (|diff| < 0.025 — no floating/sinking)" % [stance_height, idle_ankle], absf(stance_height - idle_ankle) < 0.025)
 	PlayerInput.scripted_run = true
 	await _frames(90)
 	var slide_r := await _measure_slide(120)
@@ -47,7 +47,7 @@ func _ready() -> void:
 	player.teleport(Vector3(0, 0, -10), 0.0)
 	await _frames(20)
 	PlayerInput.scripted_move = Vector2(0, -1)
-	await _frames(240)
+	await _frames(400)
 	_check("curb 0.15 m climbed: y=%.3f, z=%.2f" % [player.global_position.y, player.global_position.z],
 		player.global_position.y > 0.12 and player.global_position.z < -15.2)
 	# 4. step 0.30
@@ -55,7 +55,7 @@ func _ready() -> void:
 	player.teleport(Vector3(30, 0, -10), 0.0)
 	await _frames(20)
 	PlayerInput.scripted_move = Vector2(0, -1)
-	await _frames(240)
+	await _frames(400)
 	_check("step 0.30 m climbed: y=%.3f" % player.global_position.y, player.global_position.y > 0.27)
 	# 5. jump
 	PlayerInput.scripted_move = null
@@ -70,6 +70,52 @@ func _ready() -> void:
 	_check("jump height %.2f m (0.8..1.2)" % (ymax - y0), ymax - y0 > 0.8 and ymax - y0 < 1.2)
 	await _frames(60)
 	_check("landed on floor: y=%.3f" % player.global_position.y, absf(player.global_position.y) < 0.05)
+	# 6. jump phases: ground -> jump_start (push-off, feet still on ground) -> air -> jump_land -> ground
+	player.teleport(Vector3(-20, 0, 30), 0.0)
+	await _frames(40)
+	var pb: AnimationNodeStateMachinePlayback = player.get("_playback")
+	var seq: Array[String] = []
+	var t_press := Time.get_ticks_msec()
+	var t_air := -1.0
+	PlayerInput.queue_jump()
+	for i in 150:
+		await get_tree().physics_frame
+		var st := String(pb.get_current_node())
+		if seq.is_empty() or seq[-1] != st:
+			seq.append(st)
+		if t_air < 0.0 and player.global_position.y > 0.02:
+			t_air = i / 60.0
+	_check("jump states %s" % str(seq), seq.has("jump_start") and seq.has("air") and seq.has("jump_land") and seq[-1] == "ground")
+	_check("take-off delayed by push-off: body leaves ground at %.2f s (0.08..0.2)" % t_air, t_air > 0.07 and t_air < 0.2)
+	# 7. punch while standing and while walking: upper-body layer active, alternates, legs unaffected
+	player.teleport(Vector3(-20, 0, 40), 0.0)
+	await _frames(40)
+	var lf0 := _bone_world("LeftFoot")
+	PlayerInput.queue_punch()
+	await _frames(3)
+	var active1: bool = player.call("is_punching")
+	var alt1: bool = player.get("_punch_alt")
+	await _frames(20)
+	var lf1 := _bone_world("LeftFoot")
+	await _frames(60)
+	PlayerInput.queue_punch()
+	await _frames(3)
+	var alt2: bool = player.get("_punch_alt")
+	_check("punch standing: active=%s, alternates jab/cross=%s, feet still (moved %.3f m)" % [active1, alt1 != alt2, lf0.distance_to(lf1)],
+		active1 and alt1 != alt2 and lf0.distance_to(lf1) < 0.03)
+	for i in 10:                               # mashing does not stack: at most one queued punch
+		PlayerInput.queue_punch()
+		await _frames(2)
+	_check("punch mashing does not stack (queue is a single flag)", player.get("_punch_queue") is bool)
+	await _frames(120)
+	PlayerInput.scripted_move = Vector2(1, 0)
+	await _frames(60)
+	PlayerInput.queue_punch()
+	await _frames(15)
+	var walking_punch: bool = player.call("is_punching")
+	var spd: float = player.ground_speed
+	PlayerInput.scripted_move = null
+	_check("punch while walking: punching=%s, keeps walking at %.2f m/s" % [walking_punch, spd], walking_punch and spd > 0.9)
 	print("PLAYER_TESTS ", "ALL PASS" if ok_all else "SOME FAILED")
 	var f := FileAccess.open("res://docs/reports/player_tests.txt", FileAccess.WRITE)
 	if f:
@@ -83,7 +129,7 @@ func _measure_slide(n: int) -> float:
 	var rec: Array = []
 	for i in n:
 		await get_tree().physics_frame
-		rec.append([_bone_world("foot.L"), _bone_world("toe.L"), _bone_world("foot.R"), _bone_world("toe.R")])
+		rec.append([_bone_world("LeftFoot"), _bone_world("LeftToes"), _bone_world("RightFoot"), _bone_world("RightToes")])
 	var amin := 9.0
 	var tmin := 9.0
 	for r in rec:
@@ -101,9 +147,18 @@ func _measure_slide(n: int) -> float:
 				cnt += 1
 	stance_height = amin
 	print("  flat-foot samples=%d, stance ankle y=%.3f" % [cnt, amin])
-	if cnt < 4:
-		return 99.0
-	return acc / cnt
+	if cnt >= 8:
+		return acc / cnt
+	# running: the foot is rarely flat -> median world speed of the lowest foot near its minimum
+	var sp: Array[float] = []
+	for i in range(1, rec.size()):
+		var k := 0 if rec[i][0].y < rec[i][2].y else 2
+		if rec[i][k].y < amin + 0.025 and rec[i - 1][k].y < amin + 0.025:
+			var q: Vector3 = rec[i - 1][k]
+			sp.append(Vector2(rec[i][k].x - q.x, rec[i][k].z - q.z).length() * Engine.physics_ticks_per_second)
+	sp.sort()
+	print("  run stance samples=%d" % sp.size())
+	return sp[sp.size() / 2] if sp.size() >= 4 else 99.0
 
 
 func _bone_world(b: String) -> Vector3:

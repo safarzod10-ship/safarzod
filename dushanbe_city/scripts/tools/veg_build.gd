@@ -136,7 +136,9 @@ func _bake_impostor(id: String, r: Dictionary) -> Material:
 	_dilate(atlas)
 	var tex_path := "res://assets/textures/impostors/%s.png" % id
 	atlas.save_png(tex_path)
-	var tex := ImageTexture.create_from_image(atlas)
+	# use the imported (VRAM-compressed, mipmapped) texture when available — run the bake twice:
+	# the first run writes the PNGs, `godot --import` compresses them, the second run links them.
+	var tex: Texture2D = load(tex_path) if ResourceLoader.exists(tex_path) and FileAccess.file_exists(tex_path + ".import") else ImageTexture.create_from_image(atlas)
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://assets/shaders/foliage.gdshader")
 	mat.set_shader_parameter("albedo_tex", tex)

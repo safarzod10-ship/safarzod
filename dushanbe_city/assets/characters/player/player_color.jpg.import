@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b3y8s7v4dajfr"
-path="res://.godot/imported/player_color.jpg-f26fc5d056d3254f8fc3d9c911fa2349.ctex"
+path.s3tc="res://.godot/imported/player_color.jpg-f26fc5d056d3254f8fc3d9c911fa2349.s3tc.ctex"
+path.etc2="res://.godot/imported/player_color.jpg-f26fc5d056d3254f8fc3d9c911fa2349.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8218af8a92f043410ab63b688fb56f53"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/characters/player/player_color.jpg"
-dest_files=["res://.godot/imported/player_color.jpg-f26fc5d056d3254f8fc3d9c911fa2349.ctex"]
+dest_files=["res://.godot/imported/player_color.jpg-f26fc5d056d3254f8fc3d9c911fa2349.s3tc.ctex", "res://.godot/imported/player_color.jpg-f26fc5d056d3254f8fc3d9c911fa2349.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +42,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

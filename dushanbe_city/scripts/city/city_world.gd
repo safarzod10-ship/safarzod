@@ -76,7 +76,7 @@ func _load_chunk(json_path: String) -> void:
 			copy.transform = m.global_transform if m.is_inside_tree() else m.transform
 			if String(m.name).begins_with("detail"):
 				copy.add_to_group(&"city_detail")
-				copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+				copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # frames/sills/pipes: tiny shadows, big cost
 			node.add_child(copy)
 		inst.free()
 	# colliders
@@ -158,8 +158,8 @@ func _meshes_for(kind: String, id: String) -> Array:
 		var files: Dictionary = e.get("files", e.get("meshes", {}))
 		var vr: Dictionary = e.get("visibility", e.get("visibility_ranges", {}))
 		var l0 := float(vr.get("lod0_end", 60.0)) * (float(q.get_value("tree_lod0_dist")) / 70.0)
-		var l1 := float(vr.get("lod1_end", 160.0))
 		var lf := minf(float(vr.get("far_end", 700.0)), float(q.get_value("tree_draw_dist")))
+		var l1 := minf(float(vr.get("lod1_end", 160.0)), maxf(l0 + 20.0, lf * 0.45))
 		var chain := [["lod0", 0.0, l0], ["lod1", l0, l1], ["far", l1, lf]]
 		for c in chain:
 			var path: String = str(files.get(c[0], ""))
@@ -201,8 +201,12 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.name = key.replace(":", "_")
 		mmi.multimesh = mm
+		mmi.set_meta(&"lod_kind", parts[0])
+		mmi.set_meta(&"lod_id", parts[1])
+		mmi.set_meta(&"lod_index", chain.find(lod))
 		mmi.visibility_range_begin = lod[1]
 		mmi.visibility_range_end = lod[2]
+		mmi.cast_shadow = _shadow_mode(parts[0], parts[1], chain.find(lod))
 		mmi.visibility_range_end_margin = 4.0
 		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 		if parts[0] == "prop":
@@ -348,7 +352,36 @@ func _make_bounds() -> void:
 		body.add_child(cs)
 
 
+func _shadow_mode(kind: String, id: String, lod_index: int) -> GeometryInstance3D.ShadowCastingSetting:
+	## Shadow casters are the most expensive pass measured (alpha-tested foliage in the shadow map):
+	## trees cast only from LOD0 and only when the preset allows; small props never cast.
+	if kind == "tree":
+		var e: Dictionary = veg.get(id, {})
+		var big := String(e.get("kind", "tree")) == "tree"
+		return GeometryInstance3D.SHADOW_CASTING_SETTING_ON if (big and lod_index == 0 and Settings.get_value("tree_shadows")) else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var p: Dictionary = props.get(id, {})
+	var sz: Array = p.get("size", [1, 1, 1])
+	var tall := float(sz[1]) > 2.0 and lod_index == 0
+	return GeometryInstance3D.SHADOW_CASTING_SETTING_ON if tall else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 func apply_quality() -> void:
+	_mesh_cache.clear()
+	for mmi in find_children("*", "MultiMeshInstance3D", true, false):
+		if not mmi.has_meta(&"lod_kind"):
+			continue
+		var chain := _meshes_for(mmi.get_meta(&"lod_kind"), mmi.get_meta(&"lod_id"))
+		var li: int = mmi.get_meta(&"lod_index")
+		if li < chain.size():
+			mmi.visibility_range_begin = chain[li][1]
+			mmi.visibility_range_end = chain[li][2]
+		mmi.cast_shadow = _shadow_mode(mmi.get_meta(&"lod_kind"), mmi.get_meta(&"lod_id"), li)
+	var far := float(Settings.get_value("city_draw_dist"))
+	for ch in chunks:
+		for mi in ch.get_children():
+			if mi is MeshInstance3D and String(mi.name).begins_with("base"):
+				(mi as MeshInstance3D).visibility_range_end = far
+				(mi as MeshInstance3D).visibility_range_end_margin = 30.0
 	var dd := float(Settings.get_value("building_detail_dist")) + 50.0
 	for n in get_tree().get_nodes_in_group(&"city_detail"):
 		var gi := n as GeometryInstance3D

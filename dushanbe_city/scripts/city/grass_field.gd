@@ -10,6 +10,10 @@ var mask := PackedByteArray()      ## 600x600, 1 = lawn
 var _mmi: MultiMeshInstance3D
 var _last := Vector3(INF, 0, INF)
 var override_camera: Camera3D
+var _task := -1                    ## WorkerThreadPool task building the next instance buffer
+var _pending: PackedFloat32Array
+var _pending_center := Vector3.ZERO
+var _pending_radius := 0.0
 const W := 600
 
 
@@ -94,16 +98,29 @@ func _process(_d: float) -> void:
 	var cam := override_camera if override_camera else get_viewport().get_camera_3d()
 	if cam == null:
 		return
+	# finished background build -> upload (cheap); never blocks the frame
+	if _task >= 0 and WorkerThreadPool.is_task_completed(_task):
+		WorkerThreadPool.wait_for_task_completion(_task)
+		_task = -1
+		_apply(_pending, _pending_center, _pending_radius)
 	var p := cam.global_position
-	if Vector2(p.x - _last.x, p.z - _last.z).length() < 3.0:
+	if _task >= 0 or Vector2(p.x - _last.x, p.z - _last.z).length() < 3.0:
 		return
 	_last = p
-	rebuild(p)
+	_pending_center = p
+	_pending_radius = float(Settings.get_value("grass_radius"))
+	var dens := float(Settings.get_value("grass_density"))
+	_task = WorkerThreadPool.add_task(_build_buffer.bind(p, _pending_radius, dens), false, "grass")
 
 
+## Synchronous rebuild (tests/captures).
 func rebuild(center: Vector3) -> void:
 	var radius := float(Settings.get_value("grass_radius"))
-	var dens := float(Settings.get_value("grass_density"))
+	_build_buffer(center, radius, float(Settings.get_value("grass_density")))
+	_apply(_pending, center, radius)
+
+
+func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 	var step := 0.30 / sqrt(dens)
 	var xs: PackedFloat32Array = []
 	var cnt := 0
@@ -140,6 +157,11 @@ func rebuild(center: Vector3) -> void:
 			xs[o + 12] = jx; xs[o + 13] = jz; xs[o + 14] = 0.0; xs[o + 15] = 0.0
 			cnt += 1
 	xs.resize(cnt * 16)
+	_pending = xs
+
+
+func _apply(xs: PackedFloat32Array, center: Vector3, radius: float) -> void:
+	var cnt := xs.size() / 16
 	var mm := _mmi.multimesh
 	mm.instance_count = cnt
 	if cnt > 0:
