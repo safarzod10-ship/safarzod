@@ -1,0 +1,51 @@
+{
+ "layers": {
+  "Mountains_Near": {
+   "rings": 50,
+   "segments": 480,
+   "real_radius_m": [
+    1500.0,
+    8000.0
+   ],
+   "rendered_radius_m": [
+    1500.0,
+    4000.0
+   ],
+   "triangles": 23519,
+   "max_real_elev_m": 1365.3,
+   "vertical_exaggeration": 1.15
+  },
+  "Mountains_Mid": {
+   "rings": 25,
+   "segments": 360,
+   "real_radius_m": [
+    8000.0,
+    25000.0
+   ],
+   "rendered_radius_m": [
+    4000.0,
+    7400.0
+   ],
+   "triangles": 17280,
+   "max_real_elev_m": 2985.9,
+   "vertical_exaggeration": 1.5
+  },
+  "Mountains_Far": {
+   "rings": 15,
+   "segments": 240,
+   "real_radius_m": [
+    25000.0,
+    61500.0
+   ],
+   "rendered_radius_m": [
+    7400.0,
+    14700.0
+   ],
+   "triangles": 6720,
+   "max_real_elev_m": 4477.1,
+   "vertical_exaggeration": 1.7
+  }
+ },
+ "glb_bytes": 1178212,
+ "compression": "r' = r (r <= 3000.0 m), r' = 3000.0 + (r - 3000.0) / 5.0; heights x r'/r"
+}

@@ -1,0 +1,82 @@
+{
+ "Grass004": {
+  "purpose": "terrain green grass (irrigated lawns, parks)",
+  "url": "https://ambientcg.com/view?id=Grass004",
+  "archive": "Grass004_1K-JPG.zip",
+  "sha256": "4b63495f459db8481f4d5144e4e9069345c81cf898cc71f2216f5dd3bb344469",
+  "bytes": 11003149,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Ground109": {
+  "purpose": "terrain dry loess soil",
+  "url": "https://ambientcg.com/view?id=Ground109",
+  "archive": "Ground109_1K-JPG.zip",
+  "sha256": "be2cdb97845d895bddcf75f3d7a307301e1cb22dee2c41c47b9af0b64ee0db3d",
+  "bytes": 9101131,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Ground110": {
+  "purpose": "terrain compacted gravel / dirt (future road corridors, paths)",
+  "url": "https://ambientcg.com/view?id=Ground110",
+  "archive": "Ground110_1K-JPG.zip",
+  "sha256": "5c4ba182af130afbf297bc167205c2640f3ea9e0df921fbe0c423ac68004f356",
+  "bytes": 10415140,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Rock030": {
+  "purpose": "rock (mountain foothills, boulders)",
+  "url": "https://ambientcg.com/view?id=Rock030",
+  "archive": "Rock030_1K-JPG.zip",
+  "sha256": "2fd0bc2d214e2487c19062ed0798a85dd135b41cfc12bbaed42d5acae238f989",
+  "bytes": 9677446,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Marble019": {
+  "purpose": "monument light stone",
+  "url": "https://ambientcg.com/view?id=Marble019",
+  "archive": "Marble019_1K-JPG.zip",
+  "sha256": "87515bf3b2c5d9962927f4e8a1d4443115336bd4bc59796ab677bc5ebaf1f138",
+  "bytes": 4081922,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Marble016": {
+  "purpose": "monument dark polished stone",
+  "url": "https://ambientcg.com/view?id=Marble016",
+  "archive": "Marble016_1K-JPG.zip",
+  "sha256": "3740ddfd7d355b8bd5d89a36a854070b9fdf5780e11a7c2c35b5d13c56ff64ee",
+  "bytes": 4352207,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Bark012": {
+  "purpose": "bark, dark furrowed (elm / karagach)",
+  "url": "https://ambientcg.com/view?id=Bark012",
+  "archive": "Bark012_1K-JPG.zip",
+  "sha256": "6e26e4c24fe53cf564909b371afbfc84041d9077f39bf8eb4ae16951df1c4763",
+  "bytes": 10336310,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Bark004": {
+  "purpose": "bark, light smooth (poplar, plane tree)",
+  "url": "https://ambientcg.com/view?id=Bark004",
+  "archive": "Bark004_1K-JPG.zip",
+  "sha256": "6161a463afae25f69e058356d8b6e0bd1498b10f2949ea90880e25a031063b44",
+  "bytes": 9360504,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "LeafSet024": {
+  "purpose": "individual leaf scans -> broadleaf clusters",
+  "url": "https://ambientcg.com/view?id=LeafSet024",
+  "archive": "LeafSet024_1K-JPG.zip",
+  "sha256": "5038f0dfb53647b2eed16adb9043f530f82a4fde3321f91ae59df74ba2f7ace1",
+  "bytes": 4744373,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "LeafSet018": {
+  "purpose": "individual leaf scans -> elongated leaf clusters",
+  "url": "https://ambientcg.com/view?id=LeafSet018",
+  "archive": "LeafSet018_1K-JPG.zip",
+  "sha256": "47874a3a882a337a89fb5ebad890bf8f1449f39ccad5cd8056a48358d6568295",
+  "bytes": 2828704,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ }
+}

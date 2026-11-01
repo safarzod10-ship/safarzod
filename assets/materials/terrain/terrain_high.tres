@@ -1,0 +1,41 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/terrain.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/grass_green_albedo_rough.png" id="t0"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/grass_green_normal.png" id="t1"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/grass_dry_albedo_rough.png" id="t2"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/grass_dry_normal.png" id="t3"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/soil_loess_albedo_rough.png" id="t4"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/soil_loess_normal.png" id="t5"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/gravel_dirt_albedo_rough.png" id="t6"]
+[ext_resource type="Texture2D" path="res://assets/textures/terrain/gravel_dirt_normal.png" id="t7"]
+[ext_resource type="Texture2D" path="res://assets/world/terrain/splat_1m.png" id="t8"]
+
+[sub_resource type="FastNoiseLite" id="fnl"]
+noise_type = 3
+frequency = 0.004
+fractal_octaves = 4
+
+[sub_resource type="NoiseTexture2D" id="ntex"]
+width = 512
+height = 512
+seamless = true
+generate_mipmaps = true
+noise = SubResource("fnl")
+
+[resource]
+shader = ExtResource("s")
+shader_parameter/l0_albedo = ExtResource("t0")
+shader_parameter/l0_normal = ExtResource("t1")
+shader_parameter/l1_albedo = ExtResource("t2")
+shader_parameter/l1_normal = ExtResource("t3")
+shader_parameter/l2_albedo = ExtResource("t4")
+shader_parameter/l2_normal = ExtResource("t5")
+shader_parameter/l3_albedo = ExtResource("t6")
+shader_parameter/l3_normal = ExtResource("t7")
+shader_parameter/splat = ExtResource("t8")
+shader_parameter/macro_noise = SubResource("ntex")
+shader_parameter/anti_tiling = true
+shader_parameter/use_normal_maps = true
+shader_parameter/lawn_tint = Color(0.70, 1.0, 0.60, 1)
+shader_parameter/dry_tint = Color(0.84, 0.82, 0.72, 1)

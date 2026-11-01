@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/world/dushanbe_environment.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/world/environment_rig.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/environment/weather_manager.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/world/terrain_system.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/world/vegetation_system.gd" id="5"]
+[ext_resource type="PackedScene" path="res://assets/world/mountains/mountains.glb" id="6"]
+[ext_resource type="PackedScene" path="res://assets/monuments/ismoili_somoni/ismoili_somoni.glb" id="7"]
+[ext_resource type="Script" path="res://scripts/tools/dev_camera.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/graphics/graphics_applier.gd" id="9"]
+[ext_resource type="Script" path="res://scripts/ui/diagnostics_overlay.gd" id="10"]
+[ext_resource type="Script" path="res://scripts/ui/environment_panel.gd" id="11"]
+
+[node name="DushanbeEnvironment" type="Node3D"]
+script = ExtResource("1")
+
+[node name="EnvironmentRig" parent="." instance=ExtResource("2")]
+
+[node name="WeatherManager" type="Node3D" parent="." node_paths=PackedStringArray("day_night")]
+script = ExtResource("3")
+day_night = NodePath("../EnvironmentRig/DayNightCycle")
+
+[node name="Terrain" type="Node3D" parent="."]
+script = ExtResource("4")
+
+[node name="Vegetation" type="Node3D" parent="."]
+script = ExtResource("5")
+
+[node name="Mountains" parent="." instance=ExtResource("6")]
+
+[node name="Monument" parent="." instance=ExtResource("7")]
+
+[node name="DevCamera" type="Camera3D" parent="."]
+script = ExtResource("8")
+
+[node name="GraphicsApplier" type="Node" parent="." node_paths=PackedStringArray("sun", "camera", "world_environment")]
+script = ExtResource("9")
+sun = NodePath("../EnvironmentRig/Sun")
+camera = NodePath("../DevCamera")
+world_environment = NodePath("../EnvironmentRig/WorldEnvironment")
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+script = ExtResource("10")
+title = "DUSHANBE — этап 2: окружение (реальный рельеф SRTM + OSM)"
+nav_target = "res://scenes/testing/asset_validation.tscn"
+nav_label = "Проверка моделей →"
+
+[node name="EnvironmentPanel" type="CanvasLayer" parent="." node_paths=PackedStringArray("day_night", "weather", "camera")]
+script = ExtResource("11")
+day_night = NodePath("../EnvironmentRig/DayNightCycle")
+weather = NodePath("../WeatherManager")
+camera = NodePath("../DevCamera")

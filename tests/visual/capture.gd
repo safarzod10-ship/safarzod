@@ -3,10 +3,12 @@ extends Node
 ## under xvfb-run with Mesa) and optionally measures pixel values.
 ## Args after "--":  <scene> <quality> <out.png> [key=value ...]
 ##   frames=N            frames to wait (default 90)
-##   cam=tx,ty,tz,dist,height,yaw,pitch   OrbitCamera framing
-##   fly=x,y,z,yaw,pitch FreeFlyCamera pose (environment scenes)
+##   cam=tx,ty,tz,dist,height,yaw,pitch   OrbitCamera framing (test scenes)
+##   fly=x,y,z,yaw,pitch DevCamera pose (environment scene); y is ABOVE TERRAIN
 ##   time=H              DayNightCycle hour     weather=Name  WeatherManager state
 ##   hide_ui=1           hide CanvasLayers      probes=1  measure scene probe_points()
+##   env.<prop>=value    Environment override   dn.<prop>=value  DayNightCycle property
+##   light_mult=x        weather light multiplier (experiments)
 ## Proves rendering works; it says nothing about mobile GPU speed.
 
 
@@ -28,6 +30,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var scene := get_tree().current_scene
+
 	if opt.has("cam"):
 		var c := String(opt["cam"]).split_floats(",")
 		var cam := scene.get_node("Camera") as OrbitCamera
@@ -40,7 +43,7 @@ func _ready() -> void:
 	if opt.has("fly"):
 		var f := String(opt["fly"]).split_floats(",")
 		for cam in get_tree().get_nodes_in_group(&"dev_camera"):
-			cam.call("set_pose", Vector3(f[0], f[1], f[2]), f[3], f[4])
+			cam.call("set_pose", Vector3(f[0], f[1] + WorldConfig.height_at(f[0], f[2]), f[2]), f[3], f[4])
 	for dn in get_tree().get_nodes_in_group(&"day_night"):
 		dn.set("paused", true)
 		if opt.has("time"):
@@ -48,24 +51,28 @@ func _ready() -> void:
 	if opt.has("weather"):
 		for wm in get_tree().get_nodes_in_group(&"weather"):
 			wm.call("set_state_immediate", String(opt["weather"]))
-	# experiment overrides: env.<property>=value (Environment), sun.<property>=value (light, after apply)
 	for key: String in opt:
 		if key.begins_with("env."):
 			for we in scene.find_children("*", "WorldEnvironment", true, false):
 				(we as WorldEnvironment).environment.set(key.substr(4), str_to_var(opt[key]))
-	if opt.get("hide_ui", "0") == "1":
-		for n in scene.find_children("*", "CanvasLayer", true, false):
-			(n as CanvasLayer).visible = false
-	var frames := int(opt.get("frames", "90"))
-	for key: String in opt:
-		if key.begins_with("dn."):
+		elif key.begins_with("dn."):
 			for dn in get_tree().get_nodes_in_group(&"day_night"):
 				dn.set(key.substr(3), str_to_var(opt[key]))
-				dn.call("apply_now")
 	if opt.has("light_mult"):
 		for dn in get_tree().get_nodes_in_group(&"day_night"):
 			dn.call("set_weather", {"light_mult": float(opt["light_mult"])})
-			dn.call("apply_now")
+	for dn in get_tree().get_nodes_in_group(&"day_night"):
+		dn.call("apply_now")
+	await get_tree().process_frame
+	var cam3d := get_viewport().get_camera_3d()
+	for n in scene.find_children("*", "Node3D", true, false):
+		if n.has_method("update_grass") and cam3d:
+			n.call("update_grass", cam3d.global_position, -1)
+	if opt.get("hide_ui", "0") == "1":
+		for n in scene.find_children("*", "CanvasLayer", true, false):
+			(n as CanvasLayer).visible = false
+
+	var frames := int(opt.get("frames", "90"))
 	for i in frames:
 		await get_tree().process_frame
 	var img := get_viewport().get_texture().get_image()
@@ -76,10 +83,10 @@ func _ready() -> void:
 		"draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 		"primitives": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
 		"objects": Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
-		"video_mem_mb": snappedf(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0, 0.1)}
+		"video_mem_mb": snappedf(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0, 0.1),
+		"static_mem_mb": snappedf(Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0, 0.1)}
 	print("CAPTURED ", JSON.stringify(info))
 	if opt.get("probes", "0") == "1" and scene.has_method("probe_points"):
-		var cam3d := get_viewport().get_camera_3d()
 		var res := {}
 		var k := Vector2(img.get_width(), img.get_height()) / get_viewport().get_visible_rect().size
 		var pts: Dictionary = scene.call("probe_points")

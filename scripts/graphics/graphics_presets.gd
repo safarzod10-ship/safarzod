@@ -14,7 +14,7 @@ const NAMES := {Quality.LOW: "low", Quality.MEDIUM: "medium", Quality.ULTRA: "ul
 const PRESETS := {
 	Quality.LOW: {
 		"grass_density": 0.35,         # fraction of grass instances drawn (MultiMesh.visible_instance_count)
-		"grass_distance": 28.0,        # grass visibility range end, m
+		"grass_distance": 22.0,        # grass visibility range end, m
 		"shrub_distance": 60.0,
 		"tree_detail_distance": 70.0,  # full-detail tree LOD range end (then low-poly LOD)
 		"tree_distance": 260.0,        # trees hidden beyond
@@ -39,7 +39,7 @@ const PRESETS := {
 	},
 	Quality.MEDIUM: {
 		"grass_density": 0.65,
-		"grass_distance": 45.0,
+		"grass_distance": 35.0,
 		"shrub_distance": 100.0,
 		"tree_detail_distance": 120.0,
 		"tree_distance": 450.0,
@@ -64,7 +64,7 @@ const PRESETS := {
 	},
 	Quality.ULTRA: {
 		"grass_density": 1.0,
-		"grass_distance": 75.0,
+		"grass_distance": 60.0,
 		"shrub_distance": 160.0,
 		"tree_detail_distance": 200.0,
 		"tree_distance": 900.0,

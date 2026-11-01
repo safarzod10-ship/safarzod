@@ -1,0 +1,51 @@
+{
+ "Plane": {
+  "LOD0_triangles": 1812,
+  "height_m": 19.5,
+  "LOD1_triangles": 318,
+  "glb_bytes": 117428
+ },
+ "Elm": {
+  "LOD0_triangles": 1772,
+  "height_m": 14.02,
+  "LOD1_triangles": 342,
+  "glb_bytes": 121320
+ },
+ "Poplar": {
+  "LOD0_triangles": 1544,
+  "height_m": 22.61,
+  "LOD1_triangles": 336,
+  "glb_bytes": 103456
+ },
+ "Thuja": {
+  "LOD0_triangles": 632,
+  "height_m": 6.78,
+  "LOD1_triangles": 204,
+  "glb_bytes": 57972
+ },
+ "Boxwood": {
+  "LOD0_triangles": 140,
+  "height_m": 1.71,
+  "LOD1_triangles": 42,
+  "glb_bytes": 15620
+ },
+ "Juniper": {
+  "LOD0_triangles": 128,
+  "height_m": 1.51,
+  "LOD1_triangles": 38,
+  "glb_bytes": 14436
+ },
+ "Rose": {
+  "LOD0_triangles": 110,
+  "height_m": 1.66,
+  "LOD1_triangles": 32,
+  "glb_bytes": 12644
+ },
+ "Grass_Lawn": {
+  "triangles": 30
+ },
+ "Grass_Wild": {
+  "triangles": 36
+ },
+ "grass_glb_bytes": 5908
+}

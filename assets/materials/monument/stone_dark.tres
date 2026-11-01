@@ -1,0 +1,16 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/monument/stone_dark_albedo_rough.png" id="a"]
+[ext_resource type="Texture2D" path="res://assets/textures/monument/stone_dark_normal.png" id="n"]
+
+[resource]
+albedo_texture = ExtResource("a")
+roughness_texture = ExtResource("a")
+roughness_texture_channel = 3
+normal_enabled = true
+normal_texture = ExtResource("n")
+albedo_color = Color(0.55, 0.45, 0.42, 1)
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(0.25, 0.25, 0.25)
+normal_scale = 0.6

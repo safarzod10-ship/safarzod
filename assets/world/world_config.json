@@ -1,0 +1,655 @@
+{
+ "format_version": 1,
+ "units": "metres",
+ "frame": {
+  "origin": "centroid of the Ismoili Somoni monument footprint (OSM way 1375034135)",
+  "origin_latlon": [
+   38.5739282,
+   68.7853658
+  ],
+  "origin_elevation_m": 833.24,
+  "axes": {
+   "+X": "east",
+   "-X": "west",
+   "-Z": "north",
+   "+Z": "south",
+   "+Y": "up"
+  },
+  "projection": "local equirectangular (error < 1 cm over 1 km)"
+ },
+ "bounds": {
+  "playable": [
+   -300.0,
+   -300.0,
+   300.0,
+   300.0
+  ],
+  "detailed_terrain": [
+   -400.0,
+   -400.0,
+   400.0,
+   400.0
+  ],
+  "outskirts": [
+   -1600,
+   -1600,
+   1600,
+   1600
+  ],
+  "mountain_backdrop_radius_m": 60000
+ },
+ "terrain": {
+  "chunk_size_m": 100.0,
+  "grid_step_m": 2.0,
+  "chunks_per_side": 8,
+  "heightmap": "res://assets/world/terrain/heightmap_2m.bin",
+  "heightmap_size": [
+   401,
+   401
+  ],
+  "splat": "res://assets/world/terrain/splat_1m.png",
+  "splat_res_m": 1.0,
+  "skirt_heights": "res://assets/world/terrain/skirt_heights.bin",
+  "skirt_size": [
+   201,
+   201
+  ],
+  "skirt_step_m": 16.0,
+  "skirt_half_m": 1600.0,
+  "srtm_voids_fixed": 12,
+  "base_elevation_m": 833.24,
+  "range_detailed_m": [
+   -8.5,
+   11.67
+  ],
+  "range_playable_m": [
+   -8.5,
+   8.48
+  ]
+ },
+ "chunks": [
+  {
+   "id": "Chunk_0_0",
+   "x0": -400.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_0",
+   "x0": -300.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_2_0",
+   "x0": -200.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_3_0",
+   "x0": -100.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_4_0",
+   "x0": 0.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_5_0",
+   "x0": 100.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_6_0",
+   "x0": 200.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_7_0",
+   "x0": 300.0,
+   "z0": -400.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_1",
+   "x0": -400.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_1",
+   "x0": -300.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_2_1",
+   "x0": -200.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_3_1",
+   "x0": -100.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_4_1",
+   "x0": 0.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_5_1",
+   "x0": 100.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_6_1",
+   "x0": 200.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_7_1",
+   "x0": 300.0,
+   "z0": -300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_2",
+   "x0": -400.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_2",
+   "x0": -300.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_2_2",
+   "x0": -200.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_3_2",
+   "x0": -100.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_4_2",
+   "x0": 0.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_5_2",
+   "x0": 100.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_6_2",
+   "x0": 200.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_7_2",
+   "x0": 300.0,
+   "z0": -200.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_3",
+   "x0": -400.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_3",
+   "x0": -300.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_2_3",
+   "x0": -200.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_3_3",
+   "x0": -100.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_4_3",
+   "x0": 0.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_5_3",
+   "x0": 100.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_6_3",
+   "x0": 200.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_7_3",
+   "x0": 300.0,
+   "z0": -100.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_4",
+   "x0": -400.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_4",
+   "x0": -300.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_2_4",
+   "x0": -200.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_3_4",
+   "x0": -100.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_4_4",
+   "x0": 0.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_5_4",
+   "x0": 100.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_6_4",
+   "x0": 200.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_7_4",
+   "x0": 300.0,
+   "z0": 0.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_5",
+   "x0": -400.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_5",
+   "x0": -300.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_2_5",
+   "x0": -200.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_3_5",
+   "x0": -100.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_4_5",
+   "x0": 0.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_5_5",
+   "x0": 100.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_6_5",
+   "x0": 200.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_7_5",
+   "x0": 300.0,
+   "z0": 100.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_6",
+   "x0": -400.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_6",
+   "x0": -300.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_2_6",
+   "x0": -200.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_3_6",
+   "x0": -100.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_4_6",
+   "x0": 0.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_5_6",
+   "x0": 100.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_6_6",
+   "x0": 200.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": true
+  },
+  {
+   "id": "Chunk_7_6",
+   "x0": 300.0,
+   "z0": 200.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_0_7",
+   "x0": -400.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_1_7",
+   "x0": -300.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_2_7",
+   "x0": -200.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_3_7",
+   "x0": -100.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_4_7",
+   "x0": 0.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_5_7",
+   "x0": 100.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_6_7",
+   "x0": 200.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  },
+  {
+   "id": "Chunk_7_7",
+   "x0": 300.0,
+   "z0": 300.0,
+   "size": 100.0,
+   "playable": false
+  }
+ ],
+ "zones": [
+  {
+   "id": "somoni_square",
+   "kind": "plaza_future",
+   "center": [
+    0,
+    0
+   ],
+   "radius": 80,
+   "note": "level at y=0; monument at origin, statue faces west"
+  },
+  {
+   "id": "fountain_axis",
+   "kind": "plaza_future",
+   "rect": [
+    -190.6,
+    -325.2,
+    -113.0,
+    -145.6
+   ]
+  },
+  {
+   "id": "rudaki_park",
+   "kind": "park",
+   "rect": [
+    -738.0,
+    -502.9,
+    73.3,
+    141.3
+   ]
+  },
+  {
+   "id": "rudaki_avenue",
+   "kind": "road_future",
+   "rect": [
+    88,
+    -400,
+    140,
+    400
+   ],
+   "note": "dual carriageway, OSM trunk; continues NE beyond x>120"
+  },
+  {
+   "id": "east_open_land",
+   "kind": "open_land",
+   "rect": [
+    150,
+    -300,
+    300,
+    120
+   ]
+  },
+  {
+   "id": "south_blocks",
+   "kind": "buildings_future",
+   "rect": [
+    -300,
+    60,
+    150,
+    300
+   ]
+  }
+ ],
+ "monument": {
+  "position": [
+   0,
+   0,
+   0
+  ],
+  "rotation_y_deg": -90.0
+ },
+ "spawn_points": {
+  "default": [
+   -120,
+   1.7,
+   30
+  ],
+  "square": [
+   -60,
+   1.7,
+   0
+  ]
+ },
+ "camera_bookmarks": {
+  "overview": [
+   -260,
+   120,
+   260,
+   -45,
+   -22
+  ],
+  "square": [
+   -95,
+   6,
+   8,
+   -90,
+   -4
+  ],
+  "park": [
+   -40,
+   2,
+   -150,
+   20,
+   -2
+  ],
+  "mountains_north": [
+   0,
+   30,
+   260,
+   0,
+   2
+  ],
+  "trees_closeup": [
+   -60,
+   3,
+   -110,
+   0,
+   -6
+  ],
+  "east_land": [
+   220,
+   4,
+   40,
+   60,
+   -5
+  ]
+ },
+ "sources": {
+  "layout": "OpenStreetMap (ODbL), assets/world/osm_layout.json",
+  "elevation": "AWS Terrain Tiles / SRTM (tools/geodata/fetch_dem.py)"
+ },
+ "vegetation": {
+  "trees": 1422,
+  "shrubs": 2454
+ }
+}
