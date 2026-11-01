@@ -10,6 +10,7 @@ extends Node
 @export var day_of_year := 140          ## late May
 @export var sun_path: NodePath
 @export var env_path: NodePath
+@export var moon_path: NodePath
 
 const LAT := deg_to_rad(38.56)
 const NORTH_YAW := 0.0   ## world -Z is north
@@ -59,6 +60,7 @@ func apply() -> void:
 	var dir := Vector3(-sin(az) * cos(up_el), sin(up_el), cos(az) * cos(up_el))
 	_sun.look_at_from_position(Vector3.ZERO, -dir, Vector3.UP if absf(dir.y) < 0.99 else Vector3.FORWARD)
 	var e := sin(el)
+	var moon := get_node_or_null(moon_path) as DirectionalLight3D
 	var day := smoothstep(-0.06, 0.12, e)
 	night = 1.0 - smoothstep(-0.10, 0.02, e)
 	# warm low sun, neutral high sun
@@ -69,8 +71,11 @@ func apply() -> void:
 	_sun.shadow_enabled = day > 0.05 and Settings.get_value("shadows")
 	if _env:
 		_env.background_energy_multiplier = lerpf(0.06, 1.0, day)
-		_env.ambient_light_energy = lerpf(0.10, 0.75, day)
+		_env.ambient_light_energy = lerpf(0.22, 0.75, day)
 		_env.fog_light_color = Color(0.70, 0.76, 0.84).lerp(Color(0.86, 0.72, 0.60), warm * day).lerp(Color(0.06, 0.07, 0.10), night)
+	if moon:
+		moon.light_energy = 0.22 * night
+		moon.visible = night > 0.01
 	RenderingServer.global_shader_parameter_set(&"city_night", night)
 	for m in ["lamp_emissive", "sign"]:
 		var mat := CityMaterials.get_material(m) as StandardMaterial3D

@@ -66,11 +66,20 @@ func _ready() -> void:
 	sun.light_angular_distance = 0.53
 	add_child(sun)
 
+	var moon := DirectionalLight3D.new()
+	moon.name = "Moon"
+	moon.light_color = Color(0.62, 0.72, 0.95)
+	moon.light_energy = 0.0
+	moon.shadow_enabled = false
+	moon.rotation_degrees = Vector3(-55, 140, 0)
+	add_child(moon)
+
 	tod = TimeOfDay.new()
 	tod.name = "TimeOfDay"
 	add_child(tod)
 	tod.sun_path = tod.get_path_to(sun)
 	tod.env_path = tod.get_path_to(world_env)
+	tod.moon_path = tod.get_path_to(moon)
 	tod._ready()
 	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
 	apply_quality()

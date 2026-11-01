@@ -33,3 +33,6 @@ func _ready() -> void:
 		cam.position = Vector3(sp[0], 1.7, sp[2])
 		add_child(cam)
 	add_child(preload("res://scripts/ui/game_menu.gd").new())
+	await get_tree().process_frame
+	for c in find_children("*", "Camera3D", true, false):
+		(c as Camera3D).far = 4500.0

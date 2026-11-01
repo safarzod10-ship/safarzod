@@ -150,8 +150,6 @@ class Network:
                     edge = other.c + sgn * other.cw
                     if not (road.a0 < edge + sgn * 6 < road.a1):
                         continue
-                    if road.lanes == 0:
-                        continue
                     r = min(road.corner_r, other.corner_r, road.strip + road.sidewalk, other.strip + other.sidewalk)
                     a0 = edge + sgn * (r + 0.6)
                     a1 = a0 + sgn * 4.0
@@ -226,8 +224,8 @@ class Network:
                 so0 = side * (road.cw + 1.2)
                 so1 = side * (road.cw + road.strip)
                 self._cw_strip_cuts.append(road.rect(min(so0, so1), max(so0, so1), a0, a1))
-        # stripes (parallel to traffic), 0.5 m wide, 0.5 m gaps
-        n = int((2 * road.cw - 0.6) / 1.0)
+        # stripes (parallel to traffic), 0.5 m wide, 0.5 m gaps (no zebra on unmarked lanes)
+        n = int((2 * road.cw - 0.6) / 1.0) if road.lanes > 0 else 0
         start = -n / 2.0
         for k in range(n):
             o = (start + k) * 1.0 + 0.25

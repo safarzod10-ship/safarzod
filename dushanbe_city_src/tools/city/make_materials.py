@@ -47,6 +47,7 @@ PLAIN = {  # name: (albedo rgb, roughness, metallic, extra)
     "frame_paint": ((0.9, 0.9, 0.9), 0.55, 0.0, ""),
     "frame_alu": ((0.85, 0.85, 0.87), 0.35, 0.65, ""),
     "fabric": ((1, 1, 1), 0.92, 0.0, "cull_mode = 2\n"),
+    "canopy_far": ((1, 1, 1), 0.9, 0.0, ""),
 }
 
 
@@ -88,6 +89,26 @@ metallic = {metal}
 
 
 def write_special():
+    open(os.path.join(OUT, "facade_far.tres"), "w").write('''[gd_resource type="StandardMaterial3D" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/facade_far/albedo.png" id="1"]
+
+[resource]
+resource_name = "facade_far"
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1")
+roughness = 0.85
+''')
+    open(os.path.join(OUT, "mountain.tres"), "w").write('''[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/mountain.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://assets/textures/noise_macro.png" id="2"]
+
+[resource]
+resource_name = "mountain"
+shader = ExtResource("1")
+shader_parameter/noise_tex = ExtResource("2")
+''')
     open(os.path.join(OUT, "glass.tres"), "w").write('''[gd_resource type="ShaderMaterial" load_steps=3 format=3]
 
 [ext_resource type="Shader" path="res://assets/shaders/glass.gdshader" id="1"]

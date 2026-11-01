@@ -272,12 +272,15 @@ def make(kind, rng, **kw):
                  tint=(1, 1, 1), ww=1.35, wh=1.5, roof=rng.choice(["flat", "gable"]), balc_every=2, balc_offset=0)
     elif kind == "panel9":
         B.update(floors=9, fh=2.8, plinth=1.0, bay=3.3, wall="wall_plaster", ww=1.5, balc_sides=("back", "front"),
-                 balc_every=2, balc_offset=1, gas=False, ground_grille=0.3)
+                 balc_every=2, balc_offset=1, gas=False, ground_grille=0.3,
+                 accent=rng.choice([None, None, (0.86, 0.80, 0.70), (0.80, 0.84, 0.86)]))
     elif kind == "tower":
         B.update(floors=rng.choice([12, 14, 16]), fh=3.0, plinth=0.3, bay=3.6, wall="wall_plaster",
                  tint=rng.choice([(0.95, 0.90, 0.80), (0.93, 0.87, 0.76), (0.96, 0.94, 0.90)]), win="alu", ww=1.8,
                  wh=1.75, sill_h=0.7, balc_sides=("front", "back"), balc_every=2, balc_offset=0, gas=False, ac=0.25,
-                 ground_fh=4.5, ground_grille=0.0, cornice=0.35, parapet=0.9, lobby_glazed=True)
+                 ground_fh=4.5, ground_grille=0.0, cornice=0.35, parapet=0.9, lobby_glazed=True,
+                 base_floors=2, base_wall="wall_travertine", belt_every=4,
+                 accent=rng.choice([(0.78, 0.58, 0.42), (0.70, 0.52, 0.40), (0.62, 0.60, 0.58), (0.84, 0.70, 0.52)]))
     elif kind == "office":
         B.update(floors=5, fh=3.4, plinth=0.45, bay=3.6, wall="wall_travertine", tint=(1, 1, 1), win="alu",
                  ww=2.6, wh=1.9, sill_h=0.8, balc_sides=(), gas=False, ac=0.15, ground_grille=0.0, cornice=0.3,
@@ -289,7 +292,8 @@ def make(kind, rng, **kw):
     elif kind == "hotel":
         B.update(floors=7, fh=3.1, plinth=0.5, bay=3.4, wall="wall_plaster", tint=(0.96, 0.91, 0.80), win="alu",
                  ww=1.6, wh=1.9, sill_h=0.7, balc_sides=("front",), balc_every=1, balc_depth=0.7, gas=False, ac=0.2,
-                 ground_fh=4.2, ground_grille=0.0, cornice=0.4, parapet=0.8, end_windows=True, lobby_glazed=True)
+                 ground_fh=4.2, ground_grille=0.0, cornice=0.4, parapet=0.8, end_windows=True, lobby_glazed=True,
+                 base_floors=1, belt_every=3)
     elif kind == "school":
         B.update(floors=3, fh=3.6, plinth=0.7, bay=3.6, wall="wall_plaster", tint=rng.choice([(0.97, 0.90, 0.68), (0.96, 0.93, 0.85)]),
                  win="pvc", ww=2.6, wh=2.0, sill_h=0.85, balc_sides=(), gas=False, ac=0.05, ground_grille=0.2,
@@ -332,6 +336,8 @@ def build(ctx, B):
     # roof + collider in building frame
     ctx.tf(B["x"], B["y"], B["z"], B["yaw"])
     roof(ctx, B)
+    if kind == "house":
+        aivan(ctx, B)
     ctx.colliders.append(("box", ctx.world((0, H / 2, 0)), (B["L"], H, B["D"]), B["yaw"]))
 
 
@@ -430,7 +436,24 @@ def facade(ctx, B, side, W):
     pm = "plinth" if kind not in ("house", "shop", "garage") else "plinth"
     wall_with_holes(b, pm, -W / 2 - 0.03, W / 2 + 0.03, 0.0, ph, 0.03, holes, tint=(0.80, 0.79, 0.76))
     b.quad(pm, (-W / 2 - 0.03, ph, 0.03), (W / 2 + 0.03, ph, 0.03), (W / 2 + 0.03, ph, 0.0), (-W / 2 - 0.03, ph, 0.0), tint=(0.8, 0.79, 0.76))
-    wall_with_holes(b, B["wall"], -W / 2, W / 2, ph, top, 0.0, holes, tint=B["tint"])
+    y_base = floor_y(B, B.get("base_floors", 0)) if B.get("base_floors", 0) > 0 else ph
+    if y_base > ph:
+        wall_with_holes(b, B.get("base_wall", "wall_travertine"), -W / 2, W / 2, ph, y_base, 0.0, holes, tint=(1, 1, 1))
+        b.box("concrete", -W / 2 - 0.12, y_base - 0.05, 0.0, W / 2 + 0.12, y_base + 0.25, 0.14, tint=(0.9, 0.88, 0.84), faces="ZYy")
+    acc = B.get("accent")
+    if acc and long_side and nb >= 6:
+        cw_ = bw
+        wall_with_holes(b, B["wall"], -W / 2, -W / 2 + cw_, y_base, top, 0.0, holes, tint=acc)
+        wall_with_holes(b, B["wall"], W / 2 - cw_, W / 2, y_base, top, 0.0, holes, tint=acc)
+        wall_with_holes(b, B["wall"], -W / 2 + cw_, W / 2 - cw_, y_base, top, 0.0, holes, tint=B["tint"])
+    elif acc and not long_side:
+        wall_with_holes(b, B["wall"], -W / 2, W / 2, y_base, top, 0.0, holes, tint=acc)
+    else:
+        wall_with_holes(b, B["wall"], -W / 2, W / 2, y_base, top, 0.0, holes, tint=B["tint"])
+    if B.get("belt_every"):
+        for f in range(B["belt_every"], B["floors"], B["belt_every"]):
+            y = floor_y(B, f)
+            b.box("concrete", -W / 2 - 0.08, y - 0.1, 0.0, W / 2 + 0.08, y + 0.12, 0.1, tint=(0.88, 0.86, 0.82), faces="ZYy")
     for fn in units:
         fn()
     # panel seams (large-panel buildings)
@@ -654,6 +677,48 @@ def roof(ctx, B):
             cx = rng.uniform(-L / 2 + 2, L / 2 - 2)
             b.box("wall_brick_red", cx - 0.3, y0 + rh * 0.5, -0.9, cx + 0.3, y0 + rh + 0.9, -0.3, faces="xXzZY")
         ctx.colliders.append(("box", ctx.world((0, y0 + rh / 2, 0)), (L, rh, D), B["yaw"]))
+
+
+def aivan(ctx, B):
+    """Covered veranda (айвон) along the yard façade: raised tiled deck, carved-look wooden
+    posts with brackets, beam and a lean-to metal roof — a defining feature of Tajik houses."""
+    rng = ctx.rng
+    b, d = ctx.base, ctx.detail
+    L, D = B["L"], B["D"]
+    dep = 2.6
+    x0, x1 = -L / 2 + 0.4, L / 2 - 0.4
+    z0, z1 = D / 2, D / 2 + dep
+    hdeck = 0.45
+    b.box("tiles", x0, 0.0, z0, x1, hdeck, z1, tint=(0.82, 0.76, 0.68), faces="YZxX")
+    for i in range(2):
+        b.box("concrete", (x0 + x1) / 2 - 0.9, 0, z1 + i * 0.3, (x0 + x1) / 2 + 0.9, hdeck * (2 - i) / 3, z1 + (i + 1) * 0.3, tint=(0.8, 0.79, 0.76), faces="YZxX")
+    top = B["plinth"] + B["fh"] * min(B["floors"], 1) - 0.1
+    wt = rng.choice([(0.55, 0.36, 0.22), (0.45, 0.28, 0.16), (0.85, 0.85, 0.82), (0.25, 0.42, 0.55)])
+    n = max(3, int((x1 - x0) / 2.6) + 1)
+    for i in range(n):
+        x = x0 + 0.15 + (x1 - x0 - 0.3) * i / (n - 1)
+        d.box("wood", x - 0.09, hdeck, z1 - 0.3, x + 0.09, top, z1 - 0.12, tint=wt)
+        d.box("wood", x - 0.14, hdeck, z1 - 0.35, x + 0.14, hdeck + 0.25, z1 - 0.07, tint=wt)        # base
+        d.box("wood", x - 0.18, top - 0.22, z1 - 0.36, x + 0.18, top - 0.05, z1 - 0.06, tint=wt)     # capital
+        for s_ in (-1, 1):                                                                              # brackets
+            d.quad("wood", (x, top - 0.6, z1 - 0.16), (x + s_ * 0.5, top - 0.05, z1 - 0.16), (x + s_ * 0.5, top - 0.05, z1 - 0.26), (x, top - 0.6, z1 - 0.26), tint=wt)
+    d.box("wood", x0 - 0.1, top - 0.05, z1 - 0.38, x1 + 0.1, top + 0.18, z1 - 0.02, tint=wt)
+    # railing between posts (low carved balustrade)
+    for i in range(n - 1):
+        xa = x0 + 0.15 + (x1 - x0 - 0.3) * i / (n - 1) + 0.12
+        xb = x0 + 0.15 + (x1 - x0 - 0.3) * (i + 1) / (n - 1) - 0.12
+        if abs((xa + xb) / 2 - (x0 + x1) / 2) < 1.2:
+            continue
+        d.box("wood", xa, hdeck + 0.8, z1 - 0.26, xb, hdeck + 0.86, z1 - 0.16, tint=wt)
+        k = int((xb - xa) / 0.18)
+        for j in range(k):
+            xx = xa + (xb - xa) * (j + 0.5) / k
+            d.box("wood", xx - 0.02, hdeck, z1 - 0.23, xx + 0.02, hdeck + 0.8, z1 - 0.19, tint=wt, faces="ZzxX")
+    rt = B["roof_tint"]
+    b.quad("roof_metal", (x0 - 0.3, top + 0.35, z0), (x1 + 0.3, top + 0.35, z0), (x1 + 0.3, top + 0.1, z1 + 0.4), (x0 - 0.3, top + 0.1, z1 + 0.4), tint=rt)
+    b.quad("roof_metal", (x0 - 0.3, top + 0.1, z1 + 0.4), (x1 + 0.3, top + 0.1, z1 + 0.4), (x1 + 0.3, top + 0.35, z0), (x0 - 0.3, top + 0.35, z0), tint=[c * 0.45 for c in rt])
+    ctx.colliders.append(("box", ctx.world((0, hdeck / 2, (z0 + z1) / 2)), (x1 - x0, hdeck, dep), B["yaw"]))
+    ctx.lights.append(("entrance", ctx.world((0, top - 0.3, z0 + 1.0))))
 
 
 def _front_point(B, u):

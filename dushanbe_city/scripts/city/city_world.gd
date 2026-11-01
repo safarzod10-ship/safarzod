@@ -18,11 +18,15 @@ var props: Dictionary = {}    ## id -> entry
 var chunks: Array[Node3D] = []
 var _mesh_cache := {}
 var _missing := {}
+var light_pool: LightPool
 var stats := {"trees": 0, "props": 0, "multimeshes": 0, "colliders": 0}
 
 
 func _ready() -> void:
 	city = _load_json(CITY_JSON)
+	light_pool = LightPool.new()
+	light_pool.name = "NightLights"
+	add_child(light_pool)
 	category_map = _load_json(MAP_JSON)
 	_load_catalogs()
 	var ground := _make_outer_ground()
@@ -31,6 +35,7 @@ func _ready() -> void:
 		if path.begins_with("chunk_") and path.ends_with(".json"):
 			_load_chunk("res://data/city/" + path)
 	_make_bounds()
+	_load_backdrop()
 	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
 	apply_quality()
 	if not _missing.is_empty():
@@ -86,6 +91,8 @@ func _load_chunk(json_path: String) -> void:
 		cs.transform = Transform3D(Basis(Vector3.UP, c[6]), Vector3(c[0], c[1], c[2]))
 		body.add_child(cs)
 		stats.colliders += 1
+	for l in J.get("lights", []):
+		light_pool.add_point(Vector3(l[1], l[2], l[3]), 1 if l[0] == "entrance" else 2)
 	# instances grouped by category
 	var groups := {}
 	for t in J.get("trees", []):
@@ -204,6 +211,11 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array) -> void:
 			mmi.add_to_group(&"city_trees")
 		parent.add_child(mmi)
 		stats.multimeshes += 1
+	if parts[0] == "prop":
+		var e: Dictionary = props.get(parts[1], {})
+		for lp in e.get("light_points", []):
+			for xf in xfs:
+				light_pool.add_point(xf * Vector3(lp[0], lp[1], lp[2]), 0)
 	if parts[0] == "tree":
 		stats.trees += xfs.size()
 		_tree_colliders(parent, parts[1], xfs)
@@ -277,6 +289,21 @@ func _make_outer_ground() -> Node3D:
 	body.add_child(cs)
 	root.add_child(body)
 	return root
+
+
+func _load_backdrop() -> void:
+	const P := "res://assets/city/backdrop.glb"
+	if not ResourceLoader.exists(P):
+		return
+	var inst: Node3D = (load(P) as PackedScene).instantiate()
+	inst.name = "Backdrop"
+	add_child(inst)
+	CityMaterials.remap_tree(inst)
+	for mi in inst.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if String(m.name).begins_with("far_city"):
+			m.visibility_range_begin = 0.0
 
 
 func _make_bounds() -> void:

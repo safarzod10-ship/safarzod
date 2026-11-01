@@ -387,6 +387,15 @@ def plan():
 
 def small_square(P, sq, reserve=None):
     """Сквер: paths, benches, flower beds, lamps, trees — the reserved rectangle stays empty."""
+    n_props = len(P.props)
+    _small_square(P, sq, reserve)
+    if reserve:
+        x0, z0, x1, z1 = reserve
+        keep = P.props[:n_props] + [p for p in P.props[n_props:] if not (x0 - 1 < p[1] < x1 + 1 and z0 - 1 < p[2] < z1 + 1)]
+        P.props[:] = keep
+
+
+def _small_square(P, sq, reserve=None):
     x0, z0, x1, z1 = sq
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     P.pave((x0, cz - 2.5, x1, cz + 2.5), "plaza", True)
