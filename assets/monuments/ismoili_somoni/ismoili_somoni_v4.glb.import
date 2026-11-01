@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://des5c4u0r1yph"
-path="res://.godot/imported/ismoili_somoni_v3.glb-4bbc9f03ad80084b839a71d5428ff527.scn"
+path="res://.godot/imported/ismoili_somoni_v4.glb-36f1ab887338d10302f7554f4c23f6e0.scn"
 
 [deps]
 
-source_file="res://assets/monuments/ismoili_somoni/ismoili_somoni_v3.glb"
-dest_files=["res://.godot/imported/ismoili_somoni_v3.glb-4bbc9f03ad80084b839a71d5428ff527.scn"]
+source_file="res://assets/monuments/ismoili_somoni/ismoili_somoni_v4.glb"
+dest_files=["res://.godot/imported/ismoili_somoni_v4.glb-36f1ab887338d10302f7554f4c23f6e0.scn"]
 
 [params]
 

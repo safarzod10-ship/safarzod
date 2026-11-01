@@ -62,9 +62,15 @@ CFG = {
     "Arch_Pilasters":         (0, 0.0, 40, "arch", 0.5, 0.15, True),
     "Statue":                 (1, 0.0, None, "sculpt", 0.25, 0.06, False),
     "Statue_Details":         (1, 0.0, None, "sculpt", 0.25, 0.06, False),
-    "Statue_Sceptre":         (1, 0.0, None, "sculpt", 0.25, 0.06, False),
+    "Statue_Sceptre":         (0, 0.0, 35, "sculpt", 0.5, 0.2, False),    # v4: procedural fan + stars (no subdivision)
     "Crown":                  (0, 0.0, 35, "sculpt", 0.5, 0.15, False),
     "Crown_Base":             (0, 0.0, 35, "sculpt", 0.5, 0.15, False),
+    # v4 elements (tools/blender/monument_v4_parts.py)
+    "Arch_Lining":            (0, 0.0, 35, "arch", 0.45, 0.15, True),
+    "Museum_Portal":          (0, 0.0, 30, "arch", 1.0, 0.6, True),
+    "Museum_Portal_Stone":    (0, 0.0, 35, "arch", 0.6, 0.25, True),
+    "Museum_Portal_Steps":    (0, 0.0, 30, "arch", 1.0, 1.0, True),
+    "Museum_Doors":           (0, 0.0, 30, "arch", 0.7, 0.3, False),
     "Lion_L":                 (0, 0.0, 180, "lions", 0.3, 0.08, True),
     "Lion_R":                 (0, 0.0, 180, "lions", 0.3, 0.08, True),
 }
@@ -79,6 +85,8 @@ ELEMENT_MAT = {
     "Colonnade_Entablatures": M_COLUMN, "Colonnade_Columns": M_COLUMN, "Arch_Pilasters": M_GOLD,
     "Statue": M_BRONZE, "Statue_Details": M_BRONZE, "Statue_Sceptre": M_GOLD, "Crown": M_GOLD,
     "Crown_Base": M_BRONZE, "Lion_L": M_BRONZE, "Lion_R": M_BRONZE,
+    "Arch_Lining": M_GOLD, "Museum_Portal": M_GRANITE, "Museum_Portal_Steps": M_GRANITE,
+    "Museum_Portal_Stone": M_COLUMN, "Museum_Doors": M_GOLD,
 }
 LIONS_HI_BLEND = Path(__file__).resolve().parents[2] / "source_assets" / "monument_v3" / "lions_from_old_hi.blend"
 REPORT = {"elements": {}, "lod": {}, "bake": {}, "timing_s": {}}
@@ -128,6 +136,16 @@ def refine(ob):
     edit(ob, lambda: bpy.ops.mesh.remove_doubles(threshold=1e-4))
     activate(ob)
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
+    if ob.name == "Base_Platform":
+        # v4 QA: the rear terraces of the source are wound inwards (rendered pitch black from the
+        # esplanade). The platform is a stepped solid: outward = away from a point below its centre.
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        bad = [f for f in bm.faces if f.normal.dot(f.calc_center_median() - Vector((0, 0, -15))) < 0]
+        bmesh.ops.reverse_faces(bm, faces=bad)
+        bm.to_mesh(ob.data)
+        bm.free()
+        REPORT.setdefault("platform_faces_flipped_outwards", len(bad))
     if bev:
         edit(ob, lambda: (bpy.ops.mesh.remove_doubles(threshold=1e-3), bpy.ops.mesh.dissolve_limited(angle_limit=math.radians(0.5))))
         stash = ob.data.copy()  # pre-bevel shape: used for LOD1/LOD2/collision of hard stone

@@ -1,0 +1,23 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/vehicle_surface.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/prado_v3/paint_albedo_rough.png" id="a"]
+[ext_resource type="Texture2D" path="res://assets/textures/prado_v3/paint_normal.png" id="n"]
+[ext_resource type="Texture2D" path="res://assets/textures/prado_v3/bake_prado.png" id="b"]
+
+[resource]
+resource_name = "M_Prado_Paint"
+shader = ExtResource("s")
+shader_parameter/detail_albedo_rough = ExtResource("a")
+shader_parameter/detail_normal = ExtResource("n")
+shader_parameter/bake_map = ExtResource("b")
+shader_parameter/tile_m = 0.35
+shader_parameter/detail_fade_start = 15.0
+shader_parameter/detail_fade_end = 45.0
+shader_parameter/tint = Color(0.9451, 0.9451, 0.9255, 1)
+shader_parameter/roughness_scale = 0.8
+shader_parameter/normal_strength = 0.12
+shader_parameter/clearcoat_amount = 1
+shader_parameter/clearcoat_gloss = 0.96
+shader_parameter/cavity_darkening = 0.25
+shader_parameter/ao_strength = 0.25

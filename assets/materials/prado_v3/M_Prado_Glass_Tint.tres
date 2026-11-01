@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/vehicle_glass.gdshader" id="s"]
+
+[resource]
+resource_name = "M_Prado_Glass_Tint"
+shader = ExtResource("s")
+shader_parameter/vlt = 0.2
+render_priority = 1

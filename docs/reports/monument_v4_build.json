@@ -1,0 +1,618 @@
+{
+ "elements": {
+  "Base_Platform": {
+   "tris_source": 1101,
+   "tris_lod0": 7932,
+   "subdivision_levels": 0,
+   "bevel_m": 0.03,
+   "smooth_by_angle_deg": null
+  },
+  "Statue_Pedestal": {
+   "tris_source": 126,
+   "tris_lod0": 894,
+   "subdivision_levels": 0,
+   "bevel_m": 0.025,
+   "smooth_by_angle_deg": null
+  },
+  "Lion_Plinth_Caps": {
+   "tris_source": 55,
+   "tris_lod0": 308,
+   "subdivision_levels": 0,
+   "bevel_m": 0.015,
+   "smooth_by_angle_deg": null
+  },
+  "Arch": {
+   "tris_source": 6127,
+   "tris_lod0": 6127,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 32,
+   "faces_gold_ornament": 231,
+   "faces_stone": 5896
+  },
+  "Arch_Pilasters": {
+   "tris_source": 4784,
+   "tris_lod0": 4784,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 40
+  },
+  "Colonnade_Columns": {
+   "tris_source": 4272,
+   "tris_lod0": 4272,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 40
+  },
+  "Colonnade_Entablatures": {
+   "tris_source": 290,
+   "tris_lod0": 1827,
+   "subdivision_levels": 0,
+   "bevel_m": 0.02,
+   "smooth_by_angle_deg": null
+  },
+  "Statue": {
+   "tris_source": 9691,
+   "tris_lod0": 58146,
+   "subdivision_levels": 1,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": null
+  },
+  "Statue_Sceptre": {
+   "tris_source": 992,
+   "tris_lod0": 1666,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 35
+  },
+  "Statue_Details": {
+   "tris_source": 2736,
+   "tris_lod0": 16416,
+   "subdivision_levels": 1,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": null
+  },
+  "Crown_Base": {
+   "tris_source": 244,
+   "tris_lod0": 664,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 35
+  },
+  "Crown": {
+   "tris_source": 3536,
+   "tris_lod0": 6544,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 35
+  },
+  "Arch_Lining": {
+   "tris_source": 9464,
+   "tris_lod0": 16016,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 35
+  },
+  "Museum_Portal": {
+   "tris_source": 43,
+   "tris_lod0": 92,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 30
+  },
+  "Museum_Portal_Stone": {
+   "tris_source": 756,
+   "tris_lod0": 1688,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 35
+  },
+  "Museum_Doors": {
+   "tris_source": 488,
+   "tris_lod0": 768,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 30
+  },
+  "Museum_Portal_Steps": {
+   "tris_source": 78,
+   "tris_lod0": 132,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 30
+  },
+  "Lion_L": {
+   "tris_source": 32000,
+   "tris_lod0": 32000,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 180
+  },
+  "Lion_R": {
+   "tris_source": 32000,
+   "tris_lod0": 32000,
+   "subdivision_levels": 0,
+   "bevel_m": 0.0,
+   "smooth_by_angle_deg": 180
+  }
+ },
+ "lod": {
+  "Base_Platform": {
+   "tris": [
+    7932,
+    1075,
+    1075
+   ],
+   "lod1_error": {
+    "mean_m": 0.0,
+    "p99_m": 0.0008,
+    "max_m": 0.0132
+   },
+   "lod2_error": {
+    "mean_m": 0.0,
+    "p99_m": 0.0008,
+    "max_m": 0.0132
+   },
+   "lod1_min_distance_m_1px": 0.6,
+   "lod2_min_distance_m_1px": 0.6
+  },
+  "Statue_Pedestal": {
+   "tris": [
+    894,
+    126,
+    126
+   ],
+   "lod1_error": {
+    "mean_m": 0.0002,
+    "p99_m": 0.0049,
+    "max_m": 0.0063
+   },
+   "lod2_error": {
+    "mean_m": 0.0002,
+    "p99_m": 0.0049,
+    "max_m": 0.0063
+   },
+   "lod1_min_distance_m_1px": 3.8,
+   "lod2_min_distance_m_1px": 3.8
+  },
+  "Lion_Plinth_Caps": {
+   "tris": [
+    308,
+    55,
+    55
+   ],
+   "lod1_error": {
+    "mean_m": 0.0005,
+    "p99_m": 0.0119,
+    "max_m": 0.0592
+   },
+   "lod2_error": {
+    "mean_m": 0.0005,
+    "p99_m": 0.0119,
+    "max_m": 0.0592
+   },
+   "lod1_min_distance_m_1px": 9.2,
+   "lod2_min_distance_m_1px": 9.2
+  },
+  "Arch": {
+   "tris": [
+    6127,
+    3674,
+    2756
+   ],
+   "lod1_error": {
+    "mean_m": 0.0035,
+    "p99_m": 0.0277,
+    "max_m": 0.08
+   },
+   "lod2_error": {
+    "mean_m": 0.0079,
+    "p99_m": 0.0561,
+    "max_m": 0.1461
+   },
+   "lod1_min_distance_m_1px": 21.4,
+   "lod2_min_distance_m_1px": 43.3
+  },
+  "Arch_Pilasters": {
+   "tris": [
+    4784,
+    2389,
+    717
+   ],
+   "lod1_error": {
+    "mean_m": 0.0046,
+    "p99_m": 0.0224,
+    "max_m": 0.037
+   },
+   "lod2_error": {
+    "mean_m": 0.0437,
+    "p99_m": 0.1414,
+    "max_m": 0.2213
+   },
+   "lod1_min_distance_m_1px": 17.3,
+   "lod2_min_distance_m_1px": 109.0
+  },
+  "Colonnade_Columns": {
+   "tris": [
+    4272,
+    2136,
+    638
+   ],
+   "lod1_error": {
+    "mean_m": 0.0116,
+    "p99_m": 0.0381,
+    "max_m": 0.0777
+   },
+   "lod2_error": {
+    "mean_m": 0.0355,
+    "p99_m": 0.1915,
+    "max_m": 0.2534
+   },
+   "lod1_min_distance_m_1px": 29.4,
+   "lod2_min_distance_m_1px": 147.7
+  },
+  "Colonnade_Entablatures": {
+   "tris": [
+    1827,
+    284,
+    284
+   ],
+   "lod1_error": {
+    "mean_m": 0.0001,
+    "p99_m": 0.0026,
+    "max_m": 0.0048
+   },
+   "lod2_error": {
+    "mean_m": 0.0001,
+    "p99_m": 0.0026,
+    "max_m": 0.0048
+   },
+   "lod1_min_distance_m_1px": 2.0,
+   "lod2_min_distance_m_1px": 2.0
+  },
+  "Statue": {
+   "tris": [
+    58146,
+    14536,
+    3487
+   ],
+   "lod1_error": {
+    "mean_m": 0.0015,
+    "p99_m": 0.0057,
+    "max_m": 0.011
+   },
+   "lod2_error": {
+    "mean_m": 0.0063,
+    "p99_m": 0.0227,
+    "max_m": 0.0486
+   },
+   "lod1_min_distance_m_1px": 4.4,
+   "lod2_min_distance_m_1px": 17.5
+  },
+  "Statue_Sceptre": {
+   "tris": [
+    1666,
+    832,
+    390
+   ],
+   "lod1_error": {
+    "mean_m": 0.0046,
+    "p99_m": 0.0186,
+    "max_m": 0.022
+   },
+   "lod2_error": {
+    "mean_m": 0.72,
+    "p99_m": 3.3526,
+    "max_m": 3.4594
+   },
+   "lod1_min_distance_m_1px": 14.3,
+   "lod2_min_distance_m_1px": 2585.5
+  },
+  "Statue_Details": {
+   "tris": [
+    16416,
+    4104,
+    984
+   ],
+   "lod1_error": {
+    "mean_m": 0.0016,
+    "p99_m": 0.0059,
+    "max_m": 0.011
+   },
+   "lod2_error": {
+    "mean_m": 0.0084,
+    "p99_m": 0.0275,
+    "max_m": 0.0526
+   },
+   "lod1_min_distance_m_1px": 4.6,
+   "lod2_min_distance_m_1px": 21.2
+  },
+  "Crown_Base": {
+   "tris": [
+    664,
+    332,
+    96
+   ],
+   "lod1_error": {
+    "mean_m": 0.0064,
+    "p99_m": 0.046,
+    "max_m": 0.053
+   },
+   "lod2_error": {
+    "mean_m": 0.0322,
+    "p99_m": 0.2016,
+    "max_m": 0.2311
+   },
+   "lod1_min_distance_m_1px": 35.5,
+   "lod2_min_distance_m_1px": 155.5
+  },
+  "Crown": {
+   "tris": [
+    6544,
+    3272,
+    978
+   ],
+   "lod1_error": {
+    "mean_m": 0.001,
+    "p99_m": 0.011,
+    "max_m": 0.0215
+   },
+   "lod2_error": {
+    "mean_m": 0.0145,
+    "p99_m": 0.0743,
+    "max_m": 0.0968
+   },
+   "lod1_min_distance_m_1px": 8.5,
+   "lod2_min_distance_m_1px": 57.3
+  },
+  "Arch_Lining": {
+   "tris": [
+    16016,
+    7206,
+    2400
+   ],
+   "lod1_error": {
+    "mean_m": 0.0054,
+    "p99_m": 0.0081,
+    "max_m": 0.0081
+   },
+   "lod2_error": {
+    "mean_m": 0.1075,
+    "p99_m": 0.162,
+    "max_m": 0.1745
+   },
+   "lod1_min_distance_m_1px": 6.2,
+   "lod2_min_distance_m_1px": 124.9
+  },
+  "Museum_Portal": {
+   "tris": [
+    92,
+    92,
+    52
+   ],
+   "lod1_error": {
+    "mean_m": 0.0,
+    "p99_m": 0.0,
+    "max_m": 0.0041
+   },
+   "lod2_error": {
+    "mean_m": 0.003,
+    "p99_m": 0.0058,
+    "max_m": 0.0058
+   },
+   "lod1_min_distance_m_1px": 0.0,
+   "lod2_min_distance_m_1px": 4.5
+  },
+  "Museum_Portal_Stone": {
+   "tris": [
+    1688,
+    1012,
+    420
+   ],
+   "lod1_error": {
+    "mean_m": 0.0029,
+    "p99_m": 0.0064,
+    "max_m": 0.007
+   },
+   "lod2_error": {
+    "mean_m": 0.0058,
+    "p99_m": 0.0118,
+    "max_m": 0.0165
+   },
+   "lod1_min_distance_m_1px": 4.9,
+   "lod2_min_distance_m_1px": 9.1
+  },
+  "Museum_Doors": {
+   "tris": [
+    768,
+    536,
+    228
+   ],
+   "lod1_error": {
+    "mean_m": 0.0031,
+    "p99_m": 0.004,
+    "max_m": 0.004
+   },
+   "lod2_error": {
+    "mean_m": 0.0048,
+    "p99_m": 0.005,
+    "max_m": 0.0055
+   },
+   "lod1_min_distance_m_1px": 3.1,
+   "lod2_min_distance_m_1px": 3.9
+  },
+  "Museum_Portal_Steps": {
+   "tris": [
+    132,
+    132,
+    132
+   ],
+   "lod1_error": {
+    "mean_m": 0.0,
+    "p99_m": 0.0002,
+    "max_m": 0.0044
+   },
+   "lod2_error": {
+    "mean_m": 0.0,
+    "p99_m": 0.0002,
+    "max_m": 0.0044
+   },
+   "lod1_min_distance_m_1px": 0.2,
+   "lod2_min_distance_m_1px": 0.2
+  },
+  "Lion_L": {
+   "tris": [
+    32000,
+    9599,
+    2560
+   ],
+   "lod1_error": {
+    "mean_m": 0.0014,
+    "p99_m": 0.005,
+    "max_m": 0.0083
+   },
+   "lod2_error": {
+    "mean_m": 0.0082,
+    "p99_m": 0.0301,
+    "max_m": 0.0516
+   },
+   "lod1_min_distance_m_1px": 3.9,
+   "lod2_min_distance_m_1px": 23.2
+  },
+  "Lion_R": {
+   "tris": [
+    32000,
+    9599,
+    2560
+   ],
+   "lod1_error": {
+    "mean_m": 0.0015,
+    "p99_m": 0.0053,
+    "max_m": 0.0097
+   },
+   "lod2_error": {
+    "mean_m": 0.0096,
+    "p99_m": 0.0343,
+    "max_m": 0.0565
+   },
+   "lod1_min_distance_m_1px": 4.1,
+   "lod2_min_distance_m_1px": 26.5
+  }
+ },
+ "bake": {
+  "sculpt": {
+   "objects": [
+    "Statue",
+    "Statue_Sceptre",
+    "Statue_Details",
+    "Crown_Base",
+    "Crown"
+   ],
+   "surface_m2": 482.4,
+   "uv_texels_covered_frac": 0.689,
+   "uv_overlap_frac": 0.001,
+   "uv_coverage": 0.693,
+   "atlas_px": 2048,
+   "texels_per_m": 77.6,
+   "cm_per_texel": 1.29,
+   "ao_large_seconds": 70.8,
+   "ao_local_seconds": 41.1,
+   "convex_seconds": 13.2,
+   "mean_rgb": [
+    0.3840000033378601,
+    0.6129999756813049,
+    0.6570000052452087
+   ]
+  },
+  "lions": {
+   "objects": [
+    "Lion_L",
+    "Lion_R"
+   ],
+   "surface_m2": 93.5,
+   "uv_texels_covered_frac": 0.522,
+   "uv_overlap_frac": 0.0011,
+   "uv_coverage": 0.523,
+   "atlas_px": 2048,
+   "texels_per_m": 153.2,
+   "cm_per_texel": 0.65,
+   "ao_large_seconds": 47.8,
+   "ao_local_seconds": 26.5,
+   "convex_seconds": 5.8,
+   "normal_seconds": 20.3,
+   "mean_rgb": [
+    0.37700000405311584,
+    0.6019999980926514,
+    0.40400001406669617
+   ]
+  },
+  "arch": {
+   "objects": [
+    "Base_Platform",
+    "Statue_Pedestal",
+    "Lion_Plinth_Caps",
+    "Arch",
+    "Arch_Pilasters",
+    "Colonnade_Columns",
+    "Colonnade_Entablatures",
+    "Arch_Lining",
+    "Museum_Portal",
+    "Museum_Portal_Stone",
+    "Museum_Doors",
+    "Museum_Portal_Steps"
+   ],
+   "surface_m2": 8292.0,
+   "uv_texels_covered_frac": 0.137,
+   "uv_overlap_frac": 0.0008,
+   "uv_coverage": 0.132,
+   "atlas_px": 4096,
+   "texels_per_m": 16.3,
+   "cm_per_texel": 6.12,
+   "ao_large_seconds": 169.5,
+   "ao_local_seconds": 133.4,
+   "convex_seconds": 96.0,
+   "mean_rgb": [
+    0.13899999856948853,
+    0.23999999463558197,
+    0.30000001192092896
+   ]
+  }
+ },
+ "timing_s": {
+  "geometry": 8.6,
+  "materials": 8.7,
+  "uv": 21.3,
+  "bake sculpt ao_large": 92.2,
+  "bake sculpt ao_local": 133.3,
+  "bake sculpt convex": 146.5,
+  "bake lions ao_large": 197.9,
+  "bake lions ao_local": 224.4,
+  "bake lions convex": 230.1,
+  "bake lions normal (from old model)": 253.8,
+  "bake arch ao_large": 423.4,
+  "bake arch ao_local": 556.9,
+  "bake arch convex": 652.9,
+  "save source": 666.5,
+  "lods": 672.5,
+  "collision": 672.5,
+  "export": 672.9
+ },
+ "lions_from_old": {
+  "Lion_L": {
+   "hi_tris": 86479,
+   "lod0_tris": 32000
+  },
+  "Lion_R": {
+   "hi_tris": 85903,
+   "lod0_tris": 32000
+  }
+ },
+ "platform_faces_flipped_outwards": 201,
+ "collision_tris": 13775,
+ "lod_totals_tris": {
+  "0": 192276,
+  "1": 60991,
+  "2": 19938
+ },
+ "glb_bytes": 11885488
+}

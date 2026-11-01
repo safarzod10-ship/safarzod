@@ -1,0 +1,36 @@
+{
+ "leather_beige": {
+  "source": "Leather037",
+  "target_srgb": "#C4B496",
+  "result_mean_srgb": "#C4B496"
+ },
+ "leather_black": {
+  "source": "Leather026",
+  "target_srgb": "#1F1F20",
+  "result_mean_srgb": "#1F1F20"
+ },
+ "carpet_dark": {
+  "source": "Carpet012",
+  "target_srgb": "#2E2E30",
+  "result_mean_srgb": "#2E2E30"
+ },
+ "headliner": {
+  "source": "Fabric036",
+  "target_srgb": "#CDC3AF",
+  "result_mean_srgb": "#CDC3AF"
+ },
+ "plastic_grain": {
+  "source": "Plastic011",
+  "target_srgb": "#E0E0E0",
+  "result_mean_srgb": "#E0E0E0"
+ },
+ "tyre_rubber": {
+  "source": "Rubber004",
+  "target_srgb": "#1C1C1D",
+  "result_mean_srgb": "#1C1C1D"
+ },
+ "paint": {
+  "source": "procedural (numpy FFT band-limited noise)",
+  "note": "clear-coat orange peel"
+ }
+}

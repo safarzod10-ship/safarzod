@@ -93,8 +93,28 @@ func _run() -> void:
 				_check("prado_wheel_pivots", ok and absf(rl.position.y - 0.38) < 0.03 and absf(wb - 2.79) < 0.02,
 					"wheelbase(FL-RL)=%.3f hub_y=%.3f" % [wb, rl.position.y if ok else 0.0])
 				_check("prado_front_wheels_symmetric", ok and absf(fl.position.x + fr.position.x) < 0.01 and absf(fl.position.z - fr.position.z) < 0.01)
-				_check("prado_dimensions_j150", absf(stats["aabb_size"][1] - 1.845) < 0.04 and absf(stats["aabb_size"][2] - 4.47) < 0.05 and stats["aabb_size"][0] < 2.1,
+				# v3: overhangs stretched to the J150 (2017+) length 4.78 m, wheelbase unchanged
+				_check("prado_dimensions_j150", absf(stats["aabb_size"][1] - 1.845) < 0.04 and absf(stats["aabb_size"][2] - 4.78) < 0.05 and stats["aabb_size"][0] < 2.1,
 					stats["aabb_size"])
+				var missing := PackedStringArray()
+				for n in ["Body", "Hood", "Tailgate", "Door_FL", "Door_FR", "Door_RL", "Door_RR", "Glass_Windshield", "Glass_Backlight",
+						"Glass_FrontDoor_L", "Glass_RearDoor_R", "Headlights", "TailLights", "Interior", "Interior_Static",
+						"SteeringWheel", "SteeringWheel_Pivot", "Hub_FL", "Caliper_FL"]:
+					if inst.find_child(n, true, false) == null:
+						missing.append(n)
+				_check("prado_v3_separate_parts", missing.is_empty(), missing)
+				var tint := (inst.find_child("Glass_FrontDoor_L", true, false) as MeshInstance3D).get_active_material(0) as ShaderMaterial
+				var ws := (inst.find_child("Glass_Windshield", true, false) as MeshInstance3D).get_active_material(0) as ShaderMaterial
+				_check("prado_v3_glass_vlt", tint != null and ws != null and is_equal_approx(float(tint.get_shader_parameter("vlt")), 0.20)
+					and float(ws.get_shader_parameter("vlt")) >= 0.7, "%s / %s" % [tint.get_shader_parameter("vlt") if tint else null,
+					ws.get_shader_parameter("vlt") if ws else null])
+				var rig := inst as PradoRig
+				var door := inst.find_child("Door_FL", true, false) as Node3D
+				var before := door.global_transform * Vector3(0, 0, -0.9)
+				rig.set_door("Door_FL", 1.0)
+				var after := door.global_transform * Vector3(0, 0, -0.9)
+				_check("prado_v3_door_opens_outwards", after.x > before.x + 0.4, "%.2f -> %.2f" % [before.x, after.x])
+				rig.set_door("Door_FL", 0.0)
 				_check("prado_left_is_plus_x", fl != null and fl.position.x > 0)
 		inst.queue_free()
 
@@ -338,7 +358,8 @@ func _finish() -> void:
 # ------------------------------------------------------------ monument v3
 const MONUMENT_V3_ELEMENTS := ["Base_Platform", "Statue_Pedestal", "Lion_Plinth_Caps", "Arch", "Arch_Pilasters",
 	"Colonnade_Columns", "Colonnade_Entablatures", "Statue", "Statue_Sceptre", "Statue_Details", "Crown",
-	"Crown_Base", "Lion_L", "Lion_R"]
+	"Crown_Base", "Lion_L", "Lion_R", "Arch_Lining", "Museum_Portal", "Museum_Portal_Stone", "Museum_Portal_Steps",
+	"Museum_Doors"]
 
 
 func _monument_v3_checks() -> void:
@@ -398,5 +419,7 @@ func _monument_v3_checks() -> void:
 	_check("v3_triangle_budget", tri[0] <= 200000 and tri[1] <= 70000 and tri[2] <= 25000 and tri[0] > tri[1] and tri[1] > tri[2], tri)
 	_check("v3_originals_kept", FileAccess.file_exists("res://assets/monuments/old_monument/old_monument.glb")
 		and FileAccess.file_exists("res://source_assets/monument_v2_backup/ismoili_somoni_v2.glb")
-		and FileAccess.file_exists("res://source_assets/monument_v3/monument_v3_lod0_source.blend"))
+		and FileAccess.file_exists("res://source_assets/monument_v3/monument_v3_lod0_source.blend")
+		and FileAccess.file_exists("res://source_assets/monument_v3/ismoili_somoni_v3.glb")
+		and FileAccess.file_exists("res://source_assets/monument_v4/monument_v4_lod0_source.blend"))
 	inst.queue_free()

@@ -1,0 +1,150 @@
+{
+ "timing_s": {
+  "body": 1.7,
+  "panels": 3.2,
+  "glass": 3.3,
+  "interior": 3.9,
+  "lights/brakes": 4.1,
+  "uv": 4.7,
+  "bake ao_large": 181.8,
+  "bake ao_local": 312.6,
+  "export": 313.1
+ },
+ "stretch": {
+  "length_before": 4.473,
+  "length_after": 4.78,
+  "front_overhang_scale": 1.428,
+  "rear_overhang_scale": 1.428
+ },
+ "faces_flipped_outwards": 10135,
+ "pseudo_glass_and_old_interior_faces_removed": 12623,
+ "panels": {
+  "Door_FL": {
+   "faces": 1206,
+   "pivot": [
+    0.86,
+    -0.8,
+    1.0
+   ]
+  },
+  "Door_FR": {
+   "faces": 1206,
+   "pivot": [
+    -0.86,
+    -0.8,
+    1.0
+   ]
+  },
+  "Door_RL": {
+   "faces": 724,
+   "pivot": [
+    0.86,
+    0.38,
+    1.0
+   ]
+  },
+  "Door_RR": {
+   "faces": 744,
+   "pivot": [
+    -0.86,
+    0.38,
+    1.0
+   ]
+  },
+  "Hood": {
+   "faces": 1311,
+   "pivot": [
+    0.0,
+    -1.06,
+    1.2
+   ]
+  },
+  "Tailgate": {
+   "faces": 1023,
+   "pivot": [
+    -0.66,
+    2.2,
+    1.1
+   ]
+  }
+ },
+ "glass": {
+  "Glass_FrontDoor_L": 316,
+  "Glass_FrontDoor_R": 316,
+  "Glass_RearDoor_L": 394,
+  "Glass_RearDoor_R": 394,
+  "Glass_Quarter_L": 220,
+  "Glass_Quarter_R": 220,
+  "Glass_Windshield": 814,
+  "Glass_Backlight": 694
+ },
+ "steering_wheel": {
+  "centre": [
+   0.4000000059604645,
+   -0.4699999988079071,
+   1.159999966621399
+  ],
+  "diameter_m": 0.382,
+  "tilt_from_vertical_deg": 26
+ },
+ "headliner_cells": 284,
+ "interior_tris": 10316,
+ "lights": {
+  "Headlights": 873,
+  "TailLights": 2347
+ },
+ "interior_merged": {
+  "objects": 76,
+  "materials": 11,
+  "tris": 10316
+ },
+ "glb_bytes": 4899092,
+ "triangles": {
+  "Body": 39472,
+  "BrakeDisc_FL": 42,
+  "BrakeDisc_FR": 42,
+  "BrakeDisc_RL": 42,
+  "BrakeDisc_RR": 42,
+  "Caliper_FL": 98,
+  "Caliper_FR": 98,
+  "Caliper_RL": 98,
+  "Caliper_RR": 98,
+  "Door_FL": 1949,
+  "Door_FL_Armrest": 98,
+  "Door_FL_Card": 1112,
+  "Door_FL_Handle": 98,
+  "Door_FR": 1924,
+  "Door_FR_Armrest": 98,
+  "Door_FR_Card": 1103,
+  "Door_FR_Handle": 98,
+  "Door_RL": 1083,
+  "Door_RL_Armrest": 98,
+  "Door_RL_Card": 681,
+  "Door_RL_Handle": 98,
+  "Door_RR": 1092,
+  "Door_RR_Armrest": 98,
+  "Door_RR_Card": 711,
+  "Door_RR_Handle": 98,
+  "Glass_Backlight": 694,
+  "Glass_FrontDoor_L": 316,
+  "Glass_FrontDoor_R": 316,
+  "Glass_Quarter_L": 220,
+  "Glass_Quarter_R": 220,
+  "Glass_RearDoor_L": 394,
+  "Glass_RearDoor_R": 394,
+  "Glass_Windshield": 814,
+  "Headlights": 873,
+  "Hood": 2404,
+  "Interior_Static": 10316,
+  "SteeringColumn": 18,
+  "SteeringWheel": 1754,
+  "Tailgate": 1879,
+  "Tailgate_Card": 98,
+  "TailLights": 2347,
+  "Wheel_FL": 3232,
+  "Wheel_FR": 3208,
+  "Wheel_RL": 3171,
+  "Wheel_RR": 3158
+ },
+ "triangles_total": 86297
+}

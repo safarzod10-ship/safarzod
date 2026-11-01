@@ -1,0 +1,54 @@
+{
+ "arch_depth": {
+  "before_m": 10.83,
+  "after_m": 6.5,
+  "scale_y": 0.6,
+  "centre_y": 3.56
+ },
+ "sceptre_shaft_top_xy": [
+  -1.874,
+  -4.922
+ ],
+ "sceptre": {
+  "fan_radius_m": 0.82,
+  "rays": 13,
+  "stars": 7,
+  "triangles": 1728
+ },
+ "crown_source": {
+  "width_m": 7.26,
+  "seat_z": 38.79
+ },
+ "crown": {
+  "diameter_m": 5.0,
+  "drum_h": 1.6,
+  "band_h": 0.8,
+  "teeth_h": 1.81,
+  "teeth": 6,
+  "triangles": 6544
+ },
+ "arch_faces_removed": 13219,
+ "arch_lining": {
+  "pendant_bars": 108,
+  "vault_cubes": 232,
+  "lining_depth_y": [
+   0.86,
+   6.26
+  ],
+  "triangles": 16016
+ },
+ "portal": {
+  "location": "rear face of the platform, centre, plaza level (photo: rear view 2018)",
+  "block": [
+   9.2,
+   5.85,
+   6.0
+  ],
+  "door_w_h": [
+   2.8,
+   4.2
+  ],
+  "columns": 4,
+  "status": "[оценка] dimensions from people in the photo (person 1.7 m)"
+ }
+}

@@ -118,5 +118,53 @@
   "sha256": "7c7b9b0f7bf1fcec8aa9777492ac891f33f4af4f6f9fb916315d9475dac6379f",
   "bytes": 30921368,
   "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Leather037": {
+  "purpose": "prado v3: leather_beige",
+  "url": "https://ambientcg.com/view?id=Leather037",
+  "archive": "Leather037_2K-JPG.zip",
+  "sha256": "edfefef45891df244eee88d392e30bf70e797b77898926f00ea7cde7b88e1c14",
+  "bytes": 21182522,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Leather026": {
+  "purpose": "prado v3: leather_black",
+  "url": "https://ambientcg.com/view?id=Leather026",
+  "archive": "Leather026_2K-JPG.zip",
+  "sha256": "681d26d63912c849151266a087290a41c2fc5e95789c2cd6669f36c45d70efa6",
+  "bytes": 24017175,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Carpet012": {
+  "purpose": "prado v3: carpet_dark",
+  "url": "https://ambientcg.com/view?id=Carpet012",
+  "archive": "Carpet012_2K-JPG.zip",
+  "sha256": "476528d0deb91b38608e7d2ef51991ba89b5c976e0ae726d655588728f5852c8",
+  "bytes": 36592838,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Fabric036": {
+  "purpose": "prado v3: headliner",
+  "url": "https://ambientcg.com/view?id=Fabric036",
+  "archive": "Fabric036_2K-JPG.zip",
+  "sha256": "e7dd89a2bbaa89dd8868493141751230a2feb8d879ba867e4824b5cf871d3112",
+  "bytes": 33928892,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Plastic011": {
+  "purpose": "prado v3: plastic_grain",
+  "url": "https://ambientcg.com/view?id=Plastic011",
+  "archive": "Plastic011_2K-JPG.zip",
+  "sha256": "ba27faabdea6500fdc7bbee218782ee0592e6deecf77198be713f3737de2d39c",
+  "bytes": 14353850,
+  "license": "CC0 1.0 Universal (ambientCG)"
+ },
+ "Rubber004": {
+  "purpose": "prado v3: tyre_rubber",
+  "url": "https://ambientcg.com/view?id=Rubber004",
+  "archive": "Rubber004_2K-JPG.zip",
+  "sha256": "dc1566f645f6ef7853bb3a3e7a15ef450edbb90cbd471c6097d44cd04521bea0",
+  "bytes": 30486130,
+  "license": "CC0 1.0 Universal (ambientCG)"
  }
 }
