@@ -15,6 +15,9 @@ const W := 600
 
 func _ready() -> void:
 	add_to_group(&"streaming_camera_override")
+	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
+		set_process(false)   # GLES3 fallback: blades shade incorrectly there; lawn texture only
+		return
 	mask.resize(W * W)
 	for l in city.get("lawns", []):
 		var r: Array = l[1]
