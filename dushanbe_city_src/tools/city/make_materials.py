@@ -25,7 +25,7 @@ PBR = {
     "tiles":             ("tiles", 1.2, {"macro_strength": 0.1}),
     "wood":              ("wood", 1.5, {"macro_strength": 0.05}),
     # ground
-    "asphalt":           ("asphalt_road", 4.0, {"macro_strength": 0.25, "macro_scale": 0.012, "wet_receptive": 1.0, "tint": (0.92, 0.92, 0.92)}),
+    "asphalt":           ("asphalt_road", 4.0, {"macro_strength": 0.25, "macro_scale": 0.012, "wet_receptive": 1.0, "tint": (0.92, 0.91, 0.89), "roughness_add": 0.12}),
     "asphalt_yard":      ("asphalt_yard", 3.5, {"macro_strength": 0.12, "macro_scale": 0.02, "wet_receptive": 1.0}),
     "sidewalk":          ("sidewalk", 2.4, {"macro_strength": 0.22, "wet_receptive": 1.0}),
     "plaza":             ("plaza", 2.5, {"macro_strength": 0.2, "wet_receptive": 1.0}),
@@ -89,6 +89,16 @@ metallic = {metal}
 
 
 def write_special():
+    open(os.path.join(OUT, "vine.tres"), "w").write('''[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/vine.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://assets/textures/leaves_round/albedo.png" id="2"]
+
+[resource]
+resource_name = "vine"
+shader = ExtResource("1")
+shader_parameter/leaf_tex = ExtResource("2")
+''')
     open(os.path.join(OUT, "facade_far.tres"), "w").write('''[gd_resource type="StandardMaterial3D" load_steps=2 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/textures/facade_far/albedo.png" id="1"]

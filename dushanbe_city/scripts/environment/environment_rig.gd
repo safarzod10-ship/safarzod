@@ -38,10 +38,10 @@ func _ready() -> void:
 	env.tonemap_white = 6.0
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	env.fog_density = 0.0007
+	env.fog_density = 0.00035
 	env.fog_light_color = Color(0.70, 0.76, 0.84)
 	env.fog_sun_scatter = 0.22
-	env.fog_aerial_perspective = 0.35
+	env.fog_aerial_perspective = 0.2
 	env.fog_sky_affect = 0.0
 	env.fog_height = 60.0
 	env.fog_height_density = 0.004
@@ -50,8 +50,8 @@ func _ready() -> void:
 	env.glow_bloom = 0.02
 	env.glow_hdr_threshold = 1.2
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.04
-	env.adjustment_contrast = 1.03
+	env.adjustment_saturation = 1.1
+	env.adjustment_contrast = 1.1
 	world_env = WorldEnvironment.new()
 	world_env.environment = env
 	add_child(world_env)

@@ -13,6 +13,7 @@ import meshkit as mk
 import buildings as bl
 import streets as st
 import layout as lay
+import extras
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 GAME = os.path.join(ROOT, "dushanbe_city")
@@ -141,6 +142,18 @@ def main():
                 add_ground_collider(C, q)
     for (r, d) in net.ramps:
         pass  # ramps: walkable via step-up (0.13 m)
+
+    # ---- procedural small structures (not in prop library) -> geometry ----------------------
+    for k, J in C.data.items():
+        keep = []
+        for p in J["props"]:
+            fn = extras.BUILDERS.get(p[0])
+            if fn:
+                fn(C.B(k), C.D(k), J["colliders"], p[1], p[3], p[4], RNG)
+                C.B(k).set_transform(0, 0, 0, 0); C.D(k).set_transform(0, 0, 0, 0)
+            elif p[0] != "flagpole":
+                keep.append(p)
+        J["props"] = keep
 
     # ---- write -----------------------------------------------------------------------------------
     os.makedirs(os.path.join(GAME, "assets/city/chunks"), exist_ok=True)

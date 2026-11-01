@@ -304,6 +304,35 @@ func _load_backdrop() -> void:
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if String(m.name).begins_with("far_city"):
 			m.visibility_range_begin = 0.0
+	# distant tree canopies: far impostors of the city trees, MultiMesh
+	var ft: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/city/backdrop_trees.json")) if FileAccess.file_exists("res://data/city/backdrop_trees.json") else null
+	if ft is Array:
+		var ids: Array = category_map.get("park_tree", [])
+		var per := {}
+		for t in ft:
+			if ids.is_empty():
+				break
+			var id: String = ids[absi(int(t[0] * 13.0 + t[1] * 7.0)) % ids.size()]
+			if not per.has(id):
+				per[id] = []
+			per[id].append(Transform3D(Basis(Vector3.UP, t[2]).scaled(Vector3.ONE * t[3]), Vector3(t[0], 0.0, t[1])))
+		for id in per:
+			var e: Dictionary = veg.get(id, {})
+			var files: Dictionary = e.get("files", e.get("meshes", {}))
+			var path := str(files.get("far", files.get("lod1", "")))
+			if path == "" or not ResourceLoader.exists(path):
+				continue
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_custom_data = true
+			mm.mesh = load(path)
+			mm.instance_count = per[id].size()
+			for i in per[id].size():
+				mm.set_instance_transform(i, per[id][i])
+			var mmi := MultiMeshInstance3D.new()
+			mmi.multimesh = mm
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mmi)
 
 
 func _make_bounds() -> void:

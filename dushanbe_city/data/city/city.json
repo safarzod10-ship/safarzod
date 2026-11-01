@@ -12232,178 +12232,178 @@
 ],
 "stats": {
 "chunk_0_0": {
-"tris_base": 11712,
-"tris_detail": 25078,
+"tris_base": 11802,
+"tris_detail": 26934,
 "trees": 92,
-"props": 131
+"props": 120
 },
 "chunk_0_1": {
-"tris_base": 9532,
-"tris_detail": 20554,
+"tris_base": 9560,
+"tris_detail": 20604,
 "trees": 92,
-"props": 109
-},
-"chunk_0_2": {
-"tris_base": 5938,
-"tris_detail": 14452,
-"trees": 47,
-"props": 74
-},
-"chunk_0_3": {
-"tris_base": 1190,
-"tris_detail": 1566,
-"trees": 46,
-"props": 49
-},
-"chunk_0_4": {
-"tris_base": 7802,
-"tris_detail": 15576,
-"trees": 73,
 "props": 105
 },
+"chunk_0_2": {
+"tris_base": 5926,
+"tris_detail": 14126,
+"trees": 47,
+"props": 65
+},
+"chunk_0_3": {
+"tris_base": 1242,
+"tris_detail": 1550,
+"trees": 46,
+"props": 34
+},
+"chunk_0_4": {
+"tris_base": 8166,
+"tris_detail": 17302,
+"trees": 73,
+"props": 76
+},
 "chunk_0_5": {
-"tris_base": 8444,
-"tris_detail": 36600,
+"tris_base": 9660,
+"tris_detail": 39432,
 "trees": 50,
-"props": 85
+"props": 76
 },
 "chunk_1_0": {
-"tris_base": 4672,
-"tris_detail": 9820,
+"tris_base": 4610,
+"tris_detail": 10084,
 "trees": 63,
-"props": 71
+"props": 66
 },
 "chunk_1_1": {
-"tris_base": 5720,
-"tris_detail": 11718,
+"tris_base": 5754,
+"tris_detail": 11366,
 "trees": 103,
-"props": 55
+"props": 58
 },
 "chunk_1_2": {
-"tris_base": 598,
+"tris_base": 594,
 "tris_detail": 412,
 "trees": 151,
 "props": 35
 },
 "chunk_1_3": {
-"tris_base": 5764,
-"tris_detail": 10812,
+"tris_base": 5570,
+"tris_detail": 12084,
 "trees": 44,
-"props": 107
+"props": 91
 },
 "chunk_1_4": {
-"tris_base": 6570,
-"tris_detail": 11906,
+"tris_base": 6878,
+"tris_detail": 13012,
 "trees": 81,
-"props": 76
+"props": 75
 },
 "chunk_1_5": {
-"tris_base": 7278,
-"tris_detail": 30632,
+"tris_base": 8244,
+"tris_detail": 32192,
 "trees": 43,
-"props": 74
+"props": 69
 },
 "chunk_2_0": {
-"tris_base": 10070,
-"tris_detail": 18980,
+"tris_base": 9626,
+"tris_detail": 16914,
 "trees": 21,
-"props": 80
+"props": 65
 },
 "chunk_2_1": {
-"tris_base": 11074,
-"tris_detail": 17978,
+"tris_base": 10678,
+"tris_detail": 17718,
 "trees": 36,
-"props": 118
+"props": 95
 },
 "chunk_2_2": {
-"tris_base": 486,
+"tris_base": 516,
 "tris_detail": 0,
 "trees": 53,
-"props": 40
-},
-"chunk_2_3": {
-"tris_base": 1186,
-"tris_detail": 0,
-"trees": 32,
 "props": 39
 },
-"chunk_2_4": {
-"tris_base": 1676,
+"chunk_2_3": {
+"tris_base": 1206,
 "tris_detail": 0,
+"trees": 32,
+"props": 29
+},
+"chunk_2_4": {
+"tris_base": 1834,
+"tris_detail": 320,
 "trees": 68,
-"props": 47
+"props": 45
 },
 "chunk_2_5": {
-"tris_base": 3466,
-"tris_detail": 15676,
+"tris_base": 4002,
+"tris_detail": 16780,
 "trees": 30,
-"props": 51
+"props": 44
 },
 "chunk_3_0": {
-"tris_base": 10180,
-"tris_detail": 33172,
+"tris_base": 10208,
+"tris_detail": 33140,
 "trees": 5,
-"props": 87
+"props": 77
 },
 "chunk_3_1": {
-"tris_base": 3274,
-"tris_detail": 10512,
+"tris_base": 3288,
+"tris_detail": 10752,
 "trees": 22,
-"props": 15
+"props": 21
 },
 "chunk_3_2": {
 "tris_base": 128,
-"tris_detail": 0,
+"tris_detail": 144,
 "trees": 13,
-"props": 2
+"props": 0
 },
 "chunk_3_3": {
-"tris_base": 2698,
-"tris_detail": 5726,
+"tris_base": 2722,
+"tris_detail": 5758,
 "trees": 16,
-"props": 50
+"props": 45
 },
 "chunk_3_4": {
-"tris_base": 11154,
-"tris_detail": 30332,
+"tris_base": 11244,
+"tris_detail": 29452,
 "trees": 94,
-"props": 119
+"props": 123
 },
 "chunk_3_5": {
-"tris_base": 3610,
-"tris_detail": 12056,
+"tris_base": 3776,
+"tris_detail": 11116,
 "trees": 27,
-"props": 24
+"props": 21
 },
 "chunk_4_0": {
-"tris_base": 11566,
-"tris_detail": 33172,
+"tris_base": 11404,
+"tris_detail": 34048,
 "trees": 39,
-"props": 101
+"props": 113
 },
 "chunk_4_1": {
-"tris_base": 15944,
-"tris_detail": 32710,
+"tris_base": 15956,
+"tris_detail": 31944,
 "trees": 57,
-"props": 175
+"props": 130
 },
 "chunk_4_2": {
-"tris_base": 812,
+"tris_base": 816,
 "tris_detail": 880,
 "trees": 73,
-"props": 36
+"props": 31
 },
 "chunk_4_3": {
-"tris_base": 1292,
-"tris_detail": 684,
+"tris_base": 1322,
+"tris_detail": 700,
 "trees": 37,
-"props": 56
+"props": 37
 },
 "chunk_4_4": {
-"tris_base": 6064,
-"tris_detail": 11768,
+"tris_base": 5920,
+"tris_detail": 12704,
 "trees": 45,
-"props": 50
+"props": 68
 },
 "chunk_4_5": {
 "tris_base": 220,
@@ -12412,40 +12412,40 @@
 "props": 8
 },
 "chunk_5_0": {
-"tris_base": 7668,
-"tris_detail": 14864,
+"tris_base": 7630,
+"tris_detail": 14542,
 "trees": 0,
-"props": 58
+"props": 67
 },
 "chunk_5_1": {
-"tris_base": 11204,
-"tris_detail": 21356,
+"tris_base": 11512,
+"tris_detail": 22260,
 "trees": 29,
-"props": 97
+"props": 92
 },
 "chunk_5_2": {
-"tris_base": 11426,
-"tris_detail": 22118,
+"tris_base": 11230,
+"tris_detail": 22214,
 "trees": 50,
-"props": 118
+"props": 112
 },
 "chunk_5_3": {
-"tris_base": 4294,
-"tris_detail": 10120,
+"tris_base": 4328,
+"tris_detail": 10408,
 "trees": 28,
-"props": 117
+"props": 106
 },
 "chunk_5_4": {
-"tris_base": 7958,
-"tris_detail": 20132,
+"tris_base": 8016,
+"tris_detail": 19466,
 "trees": 36,
-"props": 141
+"props": 119
 },
 "chunk_5_5": {
-"tris_base": 5534,
-"tris_detail": 11870,
+"tris_base": 5366,
+"tris_detail": 12612,
 "trees": 38,
-"props": 73
+"props": 65
 }
 }
 }

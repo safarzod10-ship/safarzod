@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 GAME = os.path.join(ROOT, "dushanbe_city")
 rng = random.Random(5)
+FAR_TREES = []
 
 
 def facade_texture():
@@ -59,8 +60,7 @@ def far_city(b):
             # tree canopies between blocks (dark-green lumps) — Dushanbe is very green from afar
             for k in range(rng.randint(6, 14)):
                 x = cx + rng.uniform(-50, 50); z = cz + rng.uniform(-50, 50)
-                r = rng.uniform(4, 8); h = rng.uniform(9, 18)
-                lump(b, x, z, r, h)
+                FAR_TREES.append([round(x, 1), round(z, 1), round(rng.uniform(0, 6.28), 2), round(rng.uniform(0.8, 1.3), 2)])
 
 
 def far_box(b, x0, z0, x1, z1, h, t):
@@ -142,6 +142,8 @@ def main():
     far_city(b)
     m = mk.Builder()
     mountains(m)
+    import json
+    json.dump(FAR_TREES, open(os.path.join(GAME, "data/city/backdrop_trees.json"), "w"))
     mk.write_glb(os.path.join(GAME, "assets/city/backdrop.glb"), [("far_city", b.meshes), ("mountains", m.meshes)])
     print("backdrop tris", sum(b.stats().values()), "mountains", sum(m.stats().values()))
 
