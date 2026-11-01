@@ -10,6 +10,6 @@ albedo_color = Color(0.82, 0.84, 0.86, 1)
 albedo_texture = ExtResource("1")
 orm_texture = ExtResource("2")
 roughness = 1
-metallic = 0.85
+metallic = 0.45
 normal_enabled = true
 normal_texture = ExtResource("3")

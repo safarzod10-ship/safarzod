@@ -145,6 +145,10 @@ func _bake_impostor(id: String, r: Dictionary) -> Material:
 	mat.set_shader_parameter("branch_amount", 0.0)
 	mat.set_shader_parameter("flutter_amount", 0.0)
 	mat.set_shader_parameter("use_instance_custom", true)
+	mat.set_shader_parameter("translucency", 0.15)
+	mat.set_shader_parameter("specular", 0.05)
+	mat.set_shader_parameter("roughness", 0.95)
+	mat.set_shader_parameter("volume_normals", 0.5)
 	mat.resource_name = "impostor_" + id
 	return mat
 

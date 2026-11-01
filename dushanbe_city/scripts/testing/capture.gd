@@ -11,8 +11,8 @@ func _ready() -> void:
 	var packed: PackedScene = load(opt.get("scene", "res://scenes/main/main.tscn"))
 	var scene := packed.instantiate()
 	get_tree().root.add_child.call_deferred(scene)
-	await get_tree().process_frame
-	await get_tree().process_frame
+	for i in 8:
+		await get_tree().process_frame
 	if opt.has("time"):
 		for n in get_tree().get_nodes_in_group(&"time_of_day"):
 			n.call("set_hour", float(opt["time"]))

@@ -7,7 +7,7 @@ global uniform float city_night;
 uniform sampler2D interior_tex : source_color, filter_linear_mipmap, repeat_disable;
 uniform float interior_day = 0.32;
 uniform vec3 glass_tint : source_color = vec3(0.80, 0.86, 0.90);
-uniform float night_energy = 1.6;
+uniform float night_energy = 0.8;
 
 void fragment() {
 	vec4 it = texture(interior_tex, UV);

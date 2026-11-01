@@ -71,12 +71,16 @@ func apply() -> void:
 	_sun.shadow_enabled = day > 0.05 and Settings.get_value("shadows")
 	if _env:
 		_env.background_energy_multiplier = lerpf(0.06, 1.0, day)
+		_env.tonemap_exposure = lerpf(1.0, 1.7, night)   # eye adaptation at night
 		_env.ambient_light_energy = lerpf(0.22, 0.75, day)
 		_env.fog_light_color = Color(0.70, 0.76, 0.84).lerp(Color(0.86, 0.72, 0.60), warm * day).lerp(Color(0.06, 0.07, 0.10), night)
 	if moon:
 		moon.light_energy = 0.22 * night
 		moon.visible = night > 0.01
 	RenderingServer.global_shader_parameter_set(&"city_night", night)
+	var pl := load("res://assets/materials/props/lamp_emissive.tres") as StandardMaterial3D if ResourceLoader.exists("res://assets/materials/props/lamp_emissive.tres") else null
+	if pl:
+		pl.emission_energy_multiplier = night * 2.0
 	for m in ["lamp_emissive", "sign"]:
 		var mat := CityMaterials.get_material(m) as StandardMaterial3D
 		if mat:

@@ -5,6 +5,7 @@ uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_e
 uniform float snow_line = 590.0;
 uniform vec3 haze : source_color = vec3(0.62, 0.70, 0.80);
 uniform float haze_amount = 0.42;
+global uniform float city_night;
 varying vec3 wp;
 void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 void fragment() {
@@ -15,5 +16,5 @@ void fragment() {
 	float snow = smoothstep(snow_line - 40.0, snow_line + 20.0, wp.y + (n - 0.5) * 140.0);
 	ALBEDO = mix(c, vec3(0.93, 0.94, 0.96), snow);
 	ROUGHNESS = 0.95;
-	FOG = vec4(haze, haze_amount * (1.0 - smoothstep(200.0, 700.0, wp.y) * 0.35));
+	FOG = vec4(haze * (1.0 - 0.93 * city_night), haze_amount * (1.0 - smoothstep(200.0, 700.0, wp.y) * 0.35));
 }

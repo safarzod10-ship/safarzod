@@ -1,0 +1,94 @@
+{
+ "ph_aircon_outdoor_unit": {
+  "source": "Poly Haven",
+  "id": "exterior_aircon_unit",
+  "url": "https://polyhaven.com/a/exterior_aircon_unit",
+  "license": "CC0 1.0",
+  "changes": "decimated to 2500 tris, re-origined (wall), textures 1024 px"
+ },
+ "ph_aircon_outdoor_unit_rusted": {
+  "source": "Poly Haven",
+  "id": "exterior_aircon_unit",
+  "url": "https://polyhaven.com/a/exterior_aircon_unit",
+  "license": "CC0 1.0",
+  "changes": "decimated to 2500 tris, re-origined (wall), textures 1024 px"
+ },
+ "ph_plastic_chair": {
+  "source": "Poly Haven",
+  "id": "plastic_monobloc_chair_01",
+  "url": "https://polyhaven.com/a/plastic_monobloc_chair_01",
+  "license": "CC0 1.0",
+  "changes": "decimated to 1800 tris, re-origined (ground), textures 512 px"
+ },
+ "ph_concrete_block_barrier": {
+  "source": "Poly Haven",
+  "id": "concrete_road_barrier_02",
+  "url": "https://polyhaven.com/a/concrete_road_barrier_02",
+  "license": "CC0 1.0",
+  "changes": "decimated to 1500 tris, re-origined (ground), textures 1024 px"
+ },
+ "ph_plastic_crate": {
+  "source": "Poly Haven",
+  "id": "plastic_crate_02",
+  "url": "https://polyhaven.com/a/plastic_crate_02",
+  "license": "CC0 1.0",
+  "changes": "decimated to 1500 tris, re-origined (ground), textures 512 px"
+ },
+ "ph_barrel_blue": {
+  "source": "Poly Haven",
+  "id": "barrel_03",
+  "url": "https://polyhaven.com/a/barrel_03",
+  "license": "CC0 1.0",
+  "changes": "decimated to None tris, re-origined (ground), textures 512 px"
+ },
+ "ph_trash_bag": {
+  "source": "Poly Haven",
+  "id": "trashbag",
+  "url": "https://polyhaven.com/a/trashbag",
+  "license": "CC0 1.0",
+  "changes": "decimated to 1000 tris, re-origined (ground), textures 512 px"
+ },
+ "ph_rollershutter_door": {
+  "source": "Poly Haven",
+  "id": "rollershutter_door",
+  "url": "https://polyhaven.com/a/rollershutter_door",
+  "license": "CC0 1.0",
+  "changes": "decimated to None tris, re-origined (wall), textures 1024 px"
+ },
+ "ph_rollershutter_window": {
+  "source": "Poly Haven",
+  "id": "rollershutter_window_01",
+  "url": "https://polyhaven.com/a/rollershutter_window_01",
+  "license": "CC0 1.0",
+  "changes": "decimated to None tris, re-origined (wall), textures 1024 px"
+ },
+ "ph_security_camera": {
+  "source": "Poly Haven",
+  "id": "security_camera_02",
+  "url": "https://polyhaven.com/a/security_camera_02",
+  "license": "CC0 1.0",
+  "changes": "decimated to 1500 tris, re-origined (wall), textures 512 px"
+ },
+ "ph_clay_pot": {
+  "source": "Poly Haven",
+  "id": "planter_pot_clay",
+  "url": "https://polyhaven.com/a/planter_pot_clay",
+  "license": "CC0 1.0",
+  "changes": "decimated to 1200 tris, re-origined (ground), textures 512 px"
+ },
+ "ph_potted_aloe": {
+  "source": "Poly Haven",
+  "id": "potted_plant_04",
+  "url": "https://polyhaven.com/a/potted_plant_04",
+  "license": "CC0 1.0",
+  "changes": "decimated to 2500 tris, re-origined (ground), textures 512 px"
+ },
+ "ph_cardboard_box": {
+  "source": "Poly Haven",
+  "id": "cardboard_box_01",
+  "url": "https://polyhaven.com/a/cardboard_box_01",
+  "license": "CC0 1.0",
+  "changes": "decimated to 800 tris, re-origined (ground), textures 512 px"
+ },
+ "_custom": "All other props are original models built procedurally in Blender by dushanbe_city_src/tools/props/props_lib.py using the project CC0 textures (ambientCG)."
+}
