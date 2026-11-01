@@ -46,7 +46,10 @@ const KEYS := [
 ## dulls whites. It uses the Linear tonemapper with an exposure that keeps a white (0.79 albedo)
 ## surface in full sun at ~0.9 instead.
 const COMPAT_TONEMAP := Environment.TONE_MAPPER_LINEAR
-const COMPAT_EXPOSURE_SCALE := 0.22
+const COMPAT_EXPOSURE_SCALE := 0.26
+## Sky background brightness compensation for the Linear tonemapper (measured: without it
+## the Compatibility sky renders ~2x darker than the Filmic-mapped Mobile sky).
+const COMPAT_SKY_BOOST := 1.5
 const MOON_COLOR := Color(0.66, 0.74, 0.92)
 const MOON_ENERGY := 0.16
 
@@ -73,6 +76,7 @@ var exposure_scale := 0.55
 var radiance_scale := 1.0
 var light_scale := 1.0
 var ambient_scale := 0.9
+var sky_scale := 1.0
 var current: Dictionary = {}
 
 var _dirty := true
@@ -87,6 +91,7 @@ func _ready() -> void:
 		_sky_mat = world_environment.environment.sky.sky_material as ShaderMaterial
 	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
 		exposure_scale = COMPAT_EXPOSURE_SCALE
+		sky_scale = COMPAT_SKY_BOOST
 		if world_environment and world_environment.environment:
 			world_environment.environment.tonemap_mode = COMPAT_TONEMAP
 	apply_now()
@@ -182,7 +187,7 @@ func apply_now() -> void:
 		_sky_mat.set_shader_parameter("zenith_color", k["zenith"])
 		_sky_mat.set_shader_parameter("horizon_color", k["horizon"])
 		_sky_mat.set_shader_parameter("ground_color", k["ground"])
-		_sky_mat.set_shader_parameter("sky_energy", sky_mult * radiance_scale)
+		_sky_mat.set_shader_parameter("sky_energy", sky_mult * radiance_scale * sky_scale)
 		_sky_mat.set_shader_parameter("star_intensity", k["stars"])
 		_sky_mat.set_shader_parameter("moon_dir", moon_dir)
 		_sky_mat.set_shader_parameter("moon_visibility", moon_w)

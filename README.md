@@ -10,7 +10,7 @@
 | 3D | Blender **4.5.15 LTS** (background + Python API), обмен — GLB/glTF 2.0 |
 | Платформа | Android, ARM64 (`arm64-v8a`), minSdk 24, targetSdk 36 |
 | Физика | Jolt Physics (встроена в Godot 4.4+) |
-| Статус | **Этап 1 из 10** — техническая основа. См. [docs/PROGRESS.md](docs/PROGRESS.md) |
+| Статус | **Этапы 1–2 из 10**. Передача проекта: [docs/HANDOFF_FOR_NEXT_AI.md](docs/HANDOFF_FOR_NEXT_AI.md) |
 
 ## Быстрый старт
 

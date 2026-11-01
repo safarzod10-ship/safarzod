@@ -31,7 +31,7 @@ static func collect(root: Node) -> Dictionary:
 				var m := mi.get_active_material(s)
 				if m:
 					materials[m.resource_name if m.resource_name != "" else str(m.get_instance_id())] = true
-			var box := mi.global_transform * mi.get_aabb()
+			var box := _xform(mi, root) * mi.get_aabb()
 			aabb = box if first else aabb.merge(box)
 			first = false
 	names.sort()
@@ -59,6 +59,17 @@ static func check(stats: Dictionary, expected: Dictionary) -> PackedStringArray:
 		if want != stats["mesh_nodes"]:
 			problems.append("mesh nodes %s != expected %s" % [stats["mesh_nodes"], want])
 	return problems
+
+
+## Transform relative to the root of the collected tree (works outside the scene tree).
+static func _xform(n: Node3D, root: Node) -> Transform3D:
+	var t := n.transform
+	var p := n.get_parent()
+	while p and p != root.get_parent():
+		if p is Node3D:
+			t = (p as Node3D).transform * t
+		p = p.get_parent()
+	return t
 
 
 static func _walk(n: Node) -> Array[Node]:

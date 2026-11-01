@@ -9,6 +9,7 @@ roughness_texture = ExtResource("a")
 roughness_texture_channel = 3
 normal_enabled = true
 normal_texture = ExtResource("n")
+resource_name = "M_Mon_StoneDark"
 albedo_color = Color(0.55, 0.45, 0.42, 1)
 uv1_triplanar = true
 uv1_world_triplanar = true

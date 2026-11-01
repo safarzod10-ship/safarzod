@@ -71,5 +71,5 @@ shader_mat(M / "vegetation/grass.tres", "res://assets/shaders/grass.gdshader", {
 S = "res://assets/textures/monument/"
 for n, extra in (("stone_light", "albedo_color = Color(0.93, 0.9, 0.85, 1)\n"), ("stone_dark", "albedo_color = Color(0.55, 0.45, 0.42, 1)\n")):
     std_mat(M / f"monument/{n}.tres", f"{S}{n}_albedo_rough.png", f"{S}{n}_normal.png",
-            extra + "uv1_triplanar = true\nuv1_world_triplanar = true\nuv1_scale = Vector3(0.25, 0.25, 0.25)\nnormal_scale = 0.6\n")
+            f'resource_name = "M_Mon_{"StoneLight" if n == "stone_light" else "StoneDark"}"\n' + extra + "uv1_triplanar = true\nuv1_world_triplanar = true\nuv1_scale = Vector3(0.25, 0.25, 0.25)\nnormal_scale = 0.6\n")
 print("materials written")

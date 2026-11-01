@@ -1,0 +1,162 @@
+{
+ "key": "oldmonument",
+ "blender": "4.5.15 LTS",
+ "source_analysis": {
+  "vertices": 1036280,
+  "triangles": 1929803,
+  "has_normals": true,
+  "has_uv": true,
+  "finite": true,
+  "index_in_range": true,
+  "bbox_min": [
+   -0.4449000060558319,
+   0.0,
+   -0.4902999997138977
+  ],
+  "bbox_max": [
+   0.4449000060558319,
+   0.8424000144004822,
+   0.4902999997138977
+  ],
+  "size_xyz_m": [
+   0.8898000121116638,
+   0.8424000144004822,
+   0.9805999994277954
+  ],
+  "normal_len_min_max": [
+   1.0,
+   1.0
+  ],
+  "normals_bad_count": 0,
+  "uv_min": [
+   0.0,
+   0.0
+  ],
+  "uv_max": [
+   1.0,
+   1.0
+  ],
+  "surface_area_m2": 2.645,
+  "degenerate_tris": 0,
+  "tris_facing_against_normals": 85,
+  "welded_vertices": 964689,
+  "duplicate_tris": 0,
+  "edges": 2894702,
+  "boundary_edges": 9,
+  "non_manifold_edges": 9,
+  "connected_components": 1,
+  "largest_components": [
+   {
+    "id": 0,
+    "tris": 1929803,
+    "min": [
+     -0.4449999928474426,
+     0.0,
+     -0.49000000953674316
+    ],
+    "max": [
+     0.4449999928474426,
+     0.8420000076293945,
+     0.49000000953674316
+    ]
+   }
+  ]
+ },
+ "fixes": [],
+ "scale_factor": 24.0,
+ "bmesh_checks": {
+  "Monument_Old_Mesh": {
+   "verts": 1036280,
+   "faces": 1929803,
+   "edges": 2963714,
+   "non_manifold_edges": 138019,
+   "boundary_edges": 138019,
+   "loose_verts": 0,
+   "zero_area_faces": 0
+  }
+ },
+ "before_export": {
+  "objects_total": 2,
+  "mesh_objects": [
+   "Monument_Old_Mesh"
+  ],
+  "empties": [
+   "Monument_Old"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 1929803,
+  "vertices": 1036280,
+  "materials": [
+   "M_OldMonument_PBR"
+  ],
+  "images": [
+   "color.jpg",
+   "normal.png",
+   "rm.jpg"
+  ],
+  "objects_with_uv": 1,
+  "bbox_min_zup": [
+   -10.6776,
+   -11.7675,
+   0.0
+  ],
+  "bbox_max_zup": [
+   10.6776,
+   11.7675,
+   20.2178
+  ],
+  "size_zup_m": [
+   21.3552,
+   23.5349,
+   20.2178
+  ]
+ },
+ "glb_bytes": 71105564,
+ "after_reimport": {
+  "objects_total": 2,
+  "mesh_objects": [
+   "Monument_Old_Mesh"
+  ],
+  "empties": [
+   "Monument_Old"
+  ],
+  "armatures": [],
+  "actions": 0,
+  "triangles": 1929803,
+  "vertices": 1036280,
+  "materials": [
+   "M_OldMonument_PBR"
+  ],
+  "images": [
+   "color",
+   "normal",
+   "rm"
+  ],
+  "objects_with_uv": 1,
+  "bbox_min_zup": [
+   -10.6776,
+   -11.7675,
+   0.0
+  ],
+  "bbox_max_zup": [
+   10.6776,
+   11.7675,
+   20.2178
+  ],
+  "size_zup_m": [
+   21.3552,
+   23.5349,
+   20.2178
+  ]
+ },
+ "roundtrip": {
+  "triangles_equal": true,
+  "mesh_objects_equal": true,
+  "materials_equal": true,
+  "bbox_max_abs_diff_m": 0.0,
+  "uv_preserved": true,
+  "image_count": 3
+ },
+ "seconds": 33.84
+}

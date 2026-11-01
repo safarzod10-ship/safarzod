@@ -105,7 +105,8 @@ func _run() -> void:
 	# --- scene flow
 	var changed: Array[String] = []
 	SceneLoader.scene_changed.connect(func(p: String) -> void: changed.append(p))
-	for scene_path in ["res://scenes/testing/diagnostics.tscn", "res://scenes/testing/asset_validation.tscn"]:
+	for scene_path in ["res://scenes/testing/diagnostics.tscn", "res://scenes/testing/asset_validation.tscn",
+			"res://scenes/testing/lighting_calibration.tscn", "res://scenes/world/dushanbe_environment.tscn"]:
 		var start := Time.get_ticks_msec()
 		SceneLoader.change_scene(scene_path)
 		while not changed.has(scene_path) and Time.get_ticks_msec() - start < 30000:
@@ -119,7 +120,203 @@ func _run() -> void:
 			for id: String in res:
 				all_ok = all_ok and res[id]["ok"]
 			_check("asset_validation_scene_all_ok", all_ok, res.keys())
+	_s2_dynamic_done = false
+	if get_tree().current_scene and get_tree().current_scene.name == "DushanbeEnvironment":
+		await _stage2_checks(get_tree().current_scene)
+	_check("s2_dynamic_checks_completed", _s2_dynamic_done, "a script error inside _stage2_checks aborts it -> FAIL")
+	_stage2_static_checks()
 	_check("no_boot_errors", GameManager.boot_errors.is_empty(), GameManager.boot_errors)
+
+
+# ------------------------------------------------------------------ stage 2
+var _s2_dynamic_done := false
+const STAGE2_RESOURCES := [
+	"res://assets/world/world_config.json", "res://assets/world/vegetation_instances.json",
+	"res://assets/world/osm_layout.json", "res://assets/world/terrain/heightmap_2m.bin",
+	"res://assets/world/terrain/skirt_heights.bin", "res://assets/world/terrain/splat_1m.png",
+	"res://assets/world/terrain/terrain.glb", "res://assets/world/mountains/mountains.glb",
+	"res://assets/vegetation/plane.glb", "res://assets/vegetation/elm.glb", "res://assets/vegetation/poplar.glb",
+	"res://assets/vegetation/thuja.glb", "res://assets/vegetation/boxwood.glb", "res://assets/vegetation/juniper.glb",
+	"res://assets/vegetation/rose.glb", "res://assets/vegetation/grass.glb",
+	"res://assets/shaders/sky_dushanbe.gdshader", "res://assets/shaders/terrain.gdshader",
+	"res://assets/shaders/foliage.gdshader", "res://assets/shaders/grass.gdshader", "res://assets/shaders/mountains.gdshader",
+	"res://assets/materials/terrain/terrain_high.tres", "res://assets/materials/terrain/terrain_low.tres",
+	"res://assets/materials/mountains/mountains.tres", "res://assets/materials/vegetation/grass.tres",
+	"res://assets/materials/monument/stone_light.tres", "res://assets/materials/monument/stone_dark.tres",
+	"res://scenes/world/environment_rig.tscn", "res://scenes/world/dushanbe_environment.tscn",
+]
+
+
+func _stage2_static_checks() -> void:
+	var missing := PackedStringArray()
+	for path: String in STAGE2_RESOURCES:
+		if not (ResourceLoader.exists(path) or FileAccess.file_exists(path)):
+			missing.append(path)
+	_check("s2_resources_present", missing.is_empty(), missing)
+	# every res:// reference inside scenes / materials points to an existing file
+	var broken := PackedStringArray()
+	var files := _collect("res://scenes", [".tscn"]) + _collect("res://assets/materials", [".tres"])
+	var re := RegEx.create_from_string('path="(res://[^"]+)"')
+	for f: String in files:
+		for m in re.search_all(FileAccess.get_file_as_string(f)):
+			var ref := m.get_string(1)
+			if not (ResourceLoader.exists(ref) or FileAccess.file_exists(ref)):
+				broken.append("%s -> %s" % [f.get_file(), ref])
+	_check("s2_no_broken_references", broken.is_empty(), "%d files scanned %s" % [files.size(), broken])
+	# materials
+	var tm := load("res://assets/materials/terrain/terrain_high.tres") as ShaderMaterial
+	var ok := tm != null and tm.shader != null
+	for k in ["splat", "l0_albedo", "l1_albedo", "l2_albedo", "l3_albedo", "l0_normal", "macro_noise"]:
+		ok = ok and tm.get_shader_parameter(k) is Texture2D
+	_check("s2_terrain_material_complete", ok)
+	var fol_ok := true
+	for n in ["plane", "elm", "poplar", "thuja", "boxwood", "juniper", "rose"]:
+		var fm := load("res://assets/materials/vegetation/leaves_%s.tres" % n) as ShaderMaterial
+		fol_ok = fol_ok and fm != null and fm.shader != null and fm.get_shader_parameter("leaves") is Texture2D
+	_check("s2_foliage_materials_complete", fol_ok)
+	# world config / territory
+	var cfg := WorldConfig.data()
+	var pb: Array = cfg["bounds"]["playable"]
+	_check("s2_territory_600x600", float(pb[2]) - float(pb[0]) == 600.0 and float(pb[3]) - float(pb[1]) == 600.0, pb)
+	var n := WorldConfig.grid_size()
+	_check("s2_heightmap_800m_2m", n == 401 and is_equal_approx(WorldConfig.grid_step(), 2.0), "n=%d" % n)
+	var h0 := WorldConfig.height_at(0, 0)
+	var hmin := INF
+	var hmax := -INF
+	for z in range(-300, 301, 10):
+		for x in range(-300, 301, 10):
+			var hh := WorldConfig.height_at(x, z)
+			hmin = minf(hmin, hh)
+			hmax = maxf(hmax, hh)
+	_check("s2_city_relief_gentle", absf(h0) < 0.05 and hmax - hmin < 25.0 and hmax - hmin > 2.0,
+		"h(0,0)=%.3f range=%.2f..%.2f m" % [h0, hmin, hmax])
+	_check("s2_chunk_grid_8x8", (cfg["chunks"] as Array).size() == 64 and int(cfg["terrain"]["chunk_size_m"]) == 100)
+	var veg: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world/vegetation_instances.json"))
+	var in_square := 0
+	for t: Dictionary in veg["trees"]:
+		if Vector2(t["x"], t["z"]).length() < 78.0:
+			in_square += 1
+	_check("s2_no_trees_on_square", in_square == 0 and (veg["trees"] as Array).size() > 500, "trees=%d in_square=%d" % [(veg["trees"] as Array).size(), in_square])
+	# imported models
+	var terr := (load("res://assets/world/terrain/terrain.glb") as PackedScene).instantiate()
+	var chunk_meshes := terr.find_children("Chunk_*", "MeshInstance3D", true, false).size()
+	terr.free()
+	_check("s2_terrain_glb_chunks", chunk_meshes == 64, chunk_meshes)
+	var mnt := (load("res://assets/world/mountains/mountains.glb") as PackedScene).instantiate()
+	var mstats := MeshStats.collect(mnt)
+	mnt.free()
+	_check("s2_mountains_glb", mstats["mesh_nodes"].size() == 3 and mstats["triangles"] > 30000 and mstats["triangles"] < 80000, mstats["triangles"])
+	var veg_ok := true
+	for sp in ["plane", "elm", "poplar", "thuja"]:
+		var r := (load("res://assets/vegetation/%s.glb" % sp) as PackedScene).instantiate()
+		var st := MeshStats.collect(r)
+		veg_ok = veg_ok and st["mesh_nodes"].size() == 2 and st["triangles"] < 4000
+		r.free()
+	_check("s2_tree_glbs_lod0_lod1", veg_ok)
+
+
+func _stage2_checks(scene: Node) -> void:
+	var dn := scene.get_node("EnvironmentRig/DayNightCycle") as DayNightCycle
+	var wm := scene.get_node("WeatherManager") as WeatherManager
+	var veg := scene.get_node("Vegetation") as VegetationSystem
+	var terr := scene.get_node("Terrain") as TerrainSystem
+	var sun := scene.get_node("EnvironmentRig/Sun") as DirectionalLight3D
+	_check("s2_env_scene_systems", dn != null and wm != null and veg != null and terr != null)
+	_check("s2_terrain_chunks_loaded", terr.chunks.size() == 64 and terr.outskirts.size() == 8, "%d + %d" % [terr.chunks.size(), terr.outskirts.size()])
+	_check("s2_terrain_colliders", terr.colliders.size() == 36, terr.colliders.size())
+	# --- collision: ray down onto the terrain near the square and in the park
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var space := (scene as Node3D).get_world_3d().direct_space_state
+	var hits := []
+	for p in [Vector2(-120, 30), Vector2(-60, -150), Vector2(200, 100)]:
+		var q := PhysicsRayQueryParameters3D.create(Vector3(p.x, 60, p.y), Vector3(p.x, -60, p.y))
+		var r := space.intersect_ray(q)
+		hits.append(absf(float(r.get("position", Vector3(0, 999, 0)).y) - WorldConfig.height_at(p.x, p.y)) if r else 999.0)
+	_check("s2_terrain_collision_matches_heightmap", hits.max() < 0.25, hits)
+	# --- day / night
+	dn.paused = true
+	dn.set_time(12.0)
+	var el12 := dn.sun_elevation_deg
+	var e12 := sun.light_energy
+	dn.set_time(6.0)
+	var el6 := dn.sun_elevation_deg
+	var az6 := dn.sun_azimuth_deg
+	dn.set_time(18.0)
+	var az18 := dn.sun_azimuth_deg
+	var e18 := sun.light_energy
+	dn.set_time(0.0)
+	var el0 := dn.sun_elevation_deg
+	var moon := sun.light_color.is_equal_approx(DayNightCycle.MOON_COLOR)
+	_check("s2_daynight_noon", absf(el12 - 66.3) < 1.5 and e12 > e18, "el=%.1f E=%.2f" % [el12, e12])
+	_check("s2_daynight_morning_east", el6 > 4.0 and el6 < 14.0 and az6 > 55.0 and az6 < 115.0, "el=%.1f az=%.1f" % [el6, az6])
+	_check("s2_daynight_evening_west", az18 > 245.0 and az18 < 305.0, "az=%.1f" % az18)
+	_check("s2_daynight_night_moon", el0 < -20.0 and moon, "el=%.1f moon=%s" % [el0, moon])
+	dn.set_time(10.0)
+	dn.time_scale = 3600.0
+	dn.paused = false
+	var t0 := dn.time_of_day
+	for i in 10:
+		await get_tree().process_frame
+	_check("s2_daynight_time_advances", dn.time_of_day > t0)
+	dn.paused = true
+	var t1 := dn.time_of_day
+	for i in 5:
+		await get_tree().process_frame
+	_check("s2_daynight_pause", is_equal_approx(dn.time_of_day, t1))
+	dn.set_time(12.0)
+	# --- weather
+	var env := (scene.get_node("EnvironmentRig/WorldEnvironment") as WorldEnvironment).environment
+	wm.set_state_immediate("Clear")
+	var fog_clear := env.fog_density
+	var rain := wm.rain_node()
+	var clear_rain_off := not bool(rain.get("emitting"))
+	wm.set_state_immediate("Rain")
+	var wet := float(wm.current["wetness"])   # (global shader params read back null under --headless)
+	_check("s2_weather_rain", bool(rain.get("emitting")) and clear_rain_off and wet > 0.9 and sun.light_energy < e12 * 0.2,
+		"emitting=%s wet=%.2f E=%.2f" % [rain.get("emitting"), wet, sun.light_energy])
+	wm.set_state_immediate("Fog")
+	_check("s2_weather_fog", env.fog_density > fog_clear * 20.0, "%.5f vs %.5f" % [env.fog_density, fog_clear])
+	var all_states := true
+	for st: String in WeatherManager.STATES:
+		wm.set_state_immediate(st)
+		all_states = all_states and wm.state == st
+	_check("s2_weather_all_states", all_states and WeatherManager.STATES.size() == 6)
+	wm.set_state("Overcast", 0.2)
+	for i in 30:
+		await get_tree().process_frame
+	_check("s2_weather_transition_completes", wm.progress >= 1.0 and absf(float(wm.current["overcast"]) - 0.75) < 0.01, wm.progress)
+	wm.set_state_immediate("Clear")
+	# --- presets drive the environment (not decorative)
+	var res := []
+	for q: int in [GraphicsPresets.Quality.LOW, GraphicsPresets.Quality.ULTRA]:
+		SettingsManager.set_quality(q)
+		var p := GraphicsPresets.get_preset(q)
+		veg.update_grass(Vector3(-60, 1, -150), -1)
+		res.append([is_equal_approx(veg.lod0_batches[0].visibility_range_end, p["tree_detail_distance"]),
+			is_equal_approx(veg.lod1_batches[0].visibility_range_end, p["tree_distance"]),
+			env.sky.radiance_size == p["sky_radiance_size"], int(rain.get("amount")) == int(p["rain_particles"]),
+			veg.grass_instance_count()])
+	_check("s2_presets_apply_to_environment", res[0].slice(0, 4).all(func(v: bool) -> bool: return v) and res[1].slice(0, 4).all(func(v: bool) -> bool: return v)
+		and res[1][4] > res[0][4], res)
+	SettingsManager.set_quality(GraphicsPresets.Quality.MEDIUM)
+	_check("s2_vegetation_counts", veg.counts["trees"] > 500 and veg.counts["shrubs"] > 500 and veg.lod0_batches.size() == veg.lod1_batches.size(),
+		"%s lod0=%d lod1=%d" % [veg.counts, veg.lod0_batches.size(), veg.lod1_batches.size()])
+	_s2_dynamic_done = true
+
+
+func _collect(dir: String, exts: Array) -> PackedStringArray:
+	var out := PackedStringArray()
+	var d := DirAccess.open(dir)
+	if d == null:
+		return out
+	for f in d.get_files():
+		for e: String in exts:
+			if f.ends_with(e):
+				out.append(dir.path_join(f))
+	for sub in d.get_directories():
+		out.append_array(_collect(dir.path_join(sub), exts))
+	return out
 
 
 func _finish() -> void:

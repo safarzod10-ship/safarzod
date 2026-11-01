@@ -58,6 +58,15 @@ if [ -s "$APK" ]; then
   unzip -tq "$APK" || fail=1
   $BT/aapt2 dump badging "$APK" 2>/dev/null | grep -E "^package|native-code|sdkVersion|targetSdk"
   ls -l "$APK"; sha256sum "$APK"
+  # APK structure: stage-2 world data, environment scene, VRAM-compressed textures, no dev folders
+  LIST=$(unzip -l "$APK" | awk '{print $4}')
+  for need in assets/assets/world/world_config.json assets/assets/world/vegetation_instances.json \
+              assets/assets/world/terrain/heightmap_2m.bin lib/arm64-v8a/libgodot_android.so; do
+    echo "$LIST" | grep -qx "$need" && echo "apk has $need" || { echo "APK MISSING $need"; fail=1; }
+  done
+  echo "$LIST" | grep -q "dushanbe_environment" && echo "apk has environment scene" || { echo "APK MISSING environment scene"; fail=1; }
+  echo "apk VRAM textures: $(echo "$LIST" | grep -c '\.ctex$')  (etc2/astc variants: $(echo "$LIST" | grep -cE 's3tc|etc2|astc'))"
+  echo "$LIST" | grep -qE '^assets/(tests|tools|docs|source_assets)/' && { echo "APK CONTAINS DEV FOLDERS"; fail=1; } || echo "apk excludes dev folders"
 else
   echo "APK missing"; fail=1
 fi

@@ -56,6 +56,8 @@ func set_state(new_state: String, seconds := -1.0) -> void:
 	state_changed.emit(new_state)
 	if progress >= 1.0:
 		_apply(target)
+		if day_night:
+			day_night.apply_now()   # immediate switch: no one-frame delay
 
 
 func set_state_immediate(new_state: String) -> void:

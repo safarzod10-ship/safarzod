@@ -26,7 +26,7 @@ import artifact_mesh as am  # noqa: E402
 #  prado:    measured wheelbase 0.6241 -> 2.79 m (J150 5-door wheelbase)
 #  character: already metric (height 1.75 m)
 PRADO_WHEELBASE_M = 2.79
-SCALE = {"monument": 43.0, "character": 1.0}
+SCALE = {"monument": 43.0, "character": 1.0, "oldmonument": 24.0}  # oldmonument: ASSUMED (no real size in source)
 
 
 def reset_scene():
@@ -228,13 +228,15 @@ def main():
     if key == "character":
         mat = textured_material("M_Character_PBR", art / "character")
         mat.use_backface_culling = True  # closed mesh (3 boundary edges) -> glTF doubleSided=false
+    elif key == "oldmonument":
+        mat = textured_material("M_OldMonument_PBR", art / "oldmonument")
     elif key == "monument":
         mat = principled("M_Monument_Provisional", (0.72, 0.68, 0.60, 1), 0.0, 0.6)
     else:
         mat = principled("M_Prado_Provisional", (0.78, 0.78, 0.76, 1), 0.3, 0.45)
 
     root = bpy.data.objects.new({"prado": "Prado", "monument": "Monument_IsmoiliSomoni",
-                                 "character": "MainCharacter"}[key], None)
+                                 "character": "MainCharacter", "oldmonument": "Monument_Old"}[key], None)
     bpy.context.scene.collection.objects.link(root)
 
     if key == "prado":
