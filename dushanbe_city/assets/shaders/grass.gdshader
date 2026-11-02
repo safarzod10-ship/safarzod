@@ -1,7 +1,7 @@
 // DUSHANBE grass: alpha-free geometric blades for dense MultiMesh lawns.
 // COLOR.g = height factor along the blade (0 root .. 1 tip), COLOR.r = root AO, COLOR.b = blade seed.
 // Wind bend grows with height^2. Root->tip colour gradient, per-instance colour variation
-// (world hash or INSTANCE_CUSTOM), and distance fade: blades shrink to nothing between
+// (world-position hash), and distance fade: blades shrink to nothing between
 // fade_start and fade_end so the edge of a grass patch around the camera is invisible.
 shader_type spatial;
 render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
@@ -48,10 +48,7 @@ void vertex() {
 	vec3 opos = MODEL_MATRIX[3].xyz;
 	float ih = veg_hash12(opos.xz * 1.713 + 7.0);
 	float ih2 = veg_hash12(opos.zx * 2.37 + 1.0);
-	if (use_instance_custom) {
-		ih = INSTANCE_CUSTOM.r;
-		ih2 = INSTANCE_CUSTOM.g;
-	}
+	// (no INSTANCE_CUSTOM: undefined on the GLES3 fallback renderer -> white blades)
 	float hgt = COLOR.g;
 	// distance fade (shrink): uses the instance origin so a clump fades as a whole
 	vec3 cam = INV_VIEW_MATRIX[3].xyz;

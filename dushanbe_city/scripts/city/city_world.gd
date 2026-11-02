@@ -247,7 +247,10 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array, cell_size := -1.0
 			var maabb := mesh.get_aabb()
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_custom_data = true
+			# per-instance colour (white), NOT custom data: on the GLES3 Compatibility renderer (Android
+			# fallback when Vulkan is unavailable) a MultiMesh without instance colours multiplies the
+			# vertex COLOR by 0 -> baked AO = 0 -> leaves at 15 % albedo under a white specular sheen
+			mm.use_colors = true
 			mm.mesh = mesh
 			mm.instance_count = cxfs.size()
 			var box := AABB()
@@ -255,8 +258,7 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array, cell_size := -1.0
 				var w: Transform3D = cxfs[i]
 				var lx := Transform3D(w.basis, w.origin - origin)
 				mm.set_instance_transform(i, lx)
-				var o: Vector3 = w.origin
-				mm.set_instance_custom_data(i, Color(fposmod(o.x * 0.37 + o.z * 0.11, 1.0), fposmod(o.z * 0.29, 1.0), 0, 0))
+				mm.set_instance_color(i, Color.WHITE)
 				var ib := lx * maabb
 				box = ib if i == 0 else box.merge(ib)
 			mm.custom_aabb = box
@@ -436,11 +438,12 @@ func _load_backdrop() -> void:
 				continue
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_custom_data = true
+			mm.use_colors = true          # see _build_multimesh: GLES3 multiplies vertex COLOR by the instance colour
 			mm.mesh = load(path)
 			mm.instance_count = per[id].size()
 			for i in per[id].size():
 				mm.set_instance_transform(i, per[id][i])
+				mm.set_instance_color(i, Color.WHITE)
 			var mmi := MultiMeshInstance3D.new()
 			mmi.multimesh = mm
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

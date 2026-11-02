@@ -1,7 +1,7 @@
 // DUSHANBE foliage: leaf-cluster cards, flower cards, impostor cards.
 // Two-sided, alpha cut-out via discard (ALPHA_SCISSOR rendered black on lavapipe/Mobile),
 // mip-aware alpha to keep crowns dense at distance, wind (global), per-instance hue/brightness
-// variation (world-position hash or INSTANCE_CUSTOM), cheap translucency via BACKLIGHT.
+// variation (world-position hash), cheap translucency via BACKLIGHT.
 shader_type spatial;
 render_mode cull_disabled, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
 
@@ -47,9 +47,9 @@ void vertex() {
 	vec3 opos = MODEL_MATRIX[3].xyz;
 	float ih = veg_hash12(opos.xz * 0.713 + 11.0);
 	v_seed = vec2(ih, veg_hash12(opos.zx * 1.37 + 3.0));
-	if (use_instance_custom) {
-		v_seed = INSTANCE_CUSTOM.rg;
-	}
+	// INSTANCE_CUSTOM is NOT used: on the GLES3 (Compatibility) fallback renderer used by many Android
+	// devices it arrives undefined and pushed leaf colours far outside [0,1] (grey/white crowns).
+	// The world-position hash gives the same per-tree variation on every renderer.
 	VERTEX += veg_tree_wind(VERTEX, NORMAL, COLOR, MODEL_MATRIX, TIME * veg_wind_speed, ih,
 			sway_height, sway_amount, branch_amount, flutter_amount);
 	v_ao = COLOR.r;

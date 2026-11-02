@@ -37,9 +37,9 @@ void vertex() {
 	vec3 opos = MODEL_MATRIX[3].xyz;
 	float ih = veg_hash12(opos.xz * 0.713 + 11.0);
 	v_seed = vec2(ih, veg_hash12(opos.zx * 1.37 + 3.0));
-	if (use_instance_custom) {
-		v_seed = INSTANCE_CUSTOM.rg;
-	}
+	// INSTANCE_CUSTOM is NOT used: on the GLES3 (Compatibility) fallback renderer used by many Android
+	// devices it arrives undefined and pushed leaf colours far outside [0,1] (grey/white crowns).
+	// The world-position hash gives the same per-tree variation on every renderer.
 	v_y = VERTEX.y;
 	v_ww = step(veg_hash12(opos.xz * 0.37 + 5.0), whitewash_chance);
 	VERTEX += veg_tree_wind(VERTEX, NORMAL, COLOR, MODEL_MATRIX, TIME * veg_wind_speed, ih,

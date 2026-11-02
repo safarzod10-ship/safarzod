@@ -17,6 +17,8 @@ var _pending_radius := 0.0
 const W := 600
 
 
+const STRIDE := 20   ## floats per instance in the MultiMesh buffer
+
 func _ready() -> void:
 	add_to_group(&"streaming_camera_override")
 	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
@@ -36,7 +38,8 @@ func _ready() -> void:
 	_mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_custom_data = true
+	mm.use_colors = true      # white instance colour: GLES3 multiplies vertex COLOR by it (0 without colours)
+	mm.use_custom_data = true # full 20-float layout (transform 12 + colour 4 + custom 4) for the raw buffer
 	mm.mesh = _grass_mesh()
 	_mmi.multimesh = mm
 	add_child(_mmi)
@@ -129,7 +132,7 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 	var gx1 := ceili((center.x + radius) / step)
 	var gz0 := floori((center.z - radius) / step)
 	var gz1 := ceili((center.z + radius) / step)
-	xs.resize((gx1 - gx0 + 1) * (gz1 - gz0 + 1) * 16)
+	xs.resize((gx1 - gx0 + 1) * (gz1 - gz0 + 1) * STRIDE)
 	for gz in range(gz0, gz1 + 1):
 		for gx in range(gx0, gx1 + 1):
 			var hsh := (gx * 73856093) ^ (gz * 19349663)
@@ -150,18 +153,19 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 			var s := 0.9 + float((h2 >> 12) & 255) / 255.0 * 0.7
 			var c := cos(rot) * s
 			var sn := sin(rot) * s
-			var o := cnt * 16
+			var o := cnt * STRIDE
 			xs[o] = c; xs[o + 1] = 0.0; xs[o + 2] = sn; xs[o + 3] = x
 			xs[o + 4] = 0.0; xs[o + 5] = s; xs[o + 6] = 0.0; xs[o + 7] = 0.15
 			xs[o + 8] = -sn; xs[o + 9] = 0.0; xs[o + 10] = c; xs[o + 11] = z
-			xs[o + 12] = jx; xs[o + 13] = jz; xs[o + 14] = 0.0; xs[o + 15] = 0.0
+			xs[o + 12] = 1.0; xs[o + 13] = 1.0; xs[o + 14] = 1.0; xs[o + 15] = 1.0   # instance colour
+			xs[o + 16] = jx; xs[o + 17] = jz; xs[o + 18] = 0.0; xs[o + 19] = 0.0     # custom (unused by shaders)
 			cnt += 1
-	xs.resize(cnt * 16)
+	xs.resize(cnt * STRIDE)
 	_pending = xs
 
 
 func _apply(xs: PackedFloat32Array, center: Vector3, radius: float) -> void:
-	var cnt := xs.size() / 16
+	var cnt := xs.size() / STRIDE
 	var mm := _mmi.multimesh
 	mm.instance_count = cnt
 	if cnt > 0:

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_prado.gd" id="1"]
+
+[node name="Prado" type="RigidBody3D"]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1")

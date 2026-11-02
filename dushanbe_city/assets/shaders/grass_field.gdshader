@@ -11,7 +11,10 @@ varying float t;
 varying vec2 var_;
 void vertex() {
 	t = COLOR.r;
-	var_ = INSTANCE_CUSTOM.xy;
+	// per-clump variation from the clump's world position (INSTANCE_CUSTOM is undefined on the GLES3
+	// fallback renderer used by many Android devices and turned the blades white)
+	vec3 o = MODEL_MATRIX[3].xyz;
+	var_ = fract(sin(vec2(dot(o.xz, vec2(12.9898, 78.233)), dot(o.xz, vec2(39.3468, 11.135)))) * 43758.5453);
 	vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float d = distance(wp.xz, grass_center.xz);
 	float fade = 1.0 - smoothstep(grass_radius * 0.7, grass_radius, d);
