@@ -15,7 +15,8 @@ signal stepped_up(height: float)
 @export var turn_rate := 9.0           ## 1/s, exponential turn smoothing
 @export var jump_height := 0.7         ## m (a strong human standing jump; 1 m looked super-human)
 @export var gravity := 9.8
-@export var step_height := 0.32        ## max curb/step that is climbed automatically
+@export var step_height := 0.30        ## max curb/step climbed automatically (configurable; 0.40 is blocked)
+@export var step_min_tread := 0.10     ## the top of a step must be at least this deep (no climbing rails/edges)
 @export var max_slope_deg := 40.0
 
 @export_group("Camera")
@@ -31,6 +32,7 @@ signal stepped_up(height: float)
 const WALK_STRIDE := 2.017 * 0.9223     # CMU 07_12 brisk walk, contact-warped: constant contact speed 2.017 m/s × 0.922 s cycle
 const RUN_STRIDE := 2.822 * 0.7768      # CMU 35_17 run, contact-warped: 2.822 m/s × 0.777 s cycle
 const IDLE_BLEND_SPEED := 0.45          # below this speed idle and walk are blended
+const STEP_OVERLAP := 0.08              # how far the collider is placed onto a step's top (> convex radius)
 const TAKEOFF_TIME := 0.25              # jump_start = last 0.25 s of the mocap push-off before the feet leave the ground
 const AIR_CLIP := 0.408                 # mocap air phase length (s); time-scaled to the real air time
 const UPPER_BODY := ["Spine", "Chest", "UpperChest", "LeftShoulder", "LeftUpperArm",   # neck/head follow locomotion
@@ -63,6 +65,8 @@ var _jumping := false
 var _peak_fall_speed := 0.0
 var _land_timer := -1.0
 var _land_hard := false
+var _visual_h := Vector3.ZERO           # horizontal model smoothing after a step-up nudge (global)
+var _snapped := false                   # grounded by _snap_down() this frame (edge contacts)
 var _takeoff_t := -1.0                  # >= 0 while the jump push-off is playing
 var _punch_t := -1.0                    # time since the current punch started (-1 = none)
 var _punch_len := 0.0
@@ -109,7 +113,8 @@ func teleport(pos: Vector3, yaw_rad: float) -> void:
 	_view_yaw = yaw_rad
 	_view_pitch = cam_pitch
 	_visual_offset = 0.0
-	model.position.y = 0.0
+	_visual_h = Vector3.ZERO
+	model.position = Vector3.ZERO
 	_cam_target = _camera_anchor()
 	if is_node_ready():
 		cam_rig.global_position = _cam_target
@@ -170,7 +175,7 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	var inp := PlayerInput.get_move()
 	var running := PlayerInput.is_running()
-	var on_floor := is_on_floor()
+	var on_floor := is_on_floor() or _snapped
 
 	# camera-relative wish direction
 	var fwd := Vector3(-sin(cam_yaw), 0.0, -cos(cam_yaw))
@@ -231,13 +236,21 @@ func _physics_process(delta: float) -> void:
 	var y_before := global_position.y
 	move_and_slide()
 	var now_floor := is_on_floor()
+	_snapped = false
+	if on_floor and not now_floor and not _jumping and _takeoff_t < 0.0 and velocity.y <= 0.0:
+		now_floor = _snap_down()
+		_snapped = now_floor
 
-	# step-down off a curb: keep the model/camera smooth
-	if on_floor and now_floor and y_before - global_position.y > 0.05 and get_floor_normal().y > 0.95:
+	# step-down off a curb / down stairs: keep the model/camera smooth
+	if on_floor and now_floor and y_before - global_position.y > 0.05 and (_snapped or get_floor_normal().y > 0.95):
 		_visual_offset += y_before - global_position.y
 	_visual_offset = clampf(_visual_offset, -0.4, 0.4)
-	_visual_offset = move_toward(_visual_offset * exp(-12.0 * delta), 0.0, 0.2 * delta)
-	model.position.y = _visual_offset
+	# fast enough that on a staircase (1.3 m/s vertical) the model lags < 7 cm, slow enough that a
+	# single 0.30 m curb is spread over ~8 frames; the visible vertical speed is capped at 3 m/s
+	var vo := move_toward(_visual_offset * exp(-20.0 * delta), 0.0, 0.2 * delta)
+	_visual_offset = move_toward(_visual_offset, vo, 3.0 * delta)
+	_visual_h = _visual_h * exp(-14.0 * delta)
+	model.position = global_transform.basis.inverse() * _visual_h + Vector3(0.0, _visual_offset, 0.0)
 
 	# air / landing bookkeeping
 	if now_floor:
@@ -251,36 +264,82 @@ func _physics_process(delta: float) -> void:
 	_update_animation(delta)
 
 
-## Climb curbs/steps: if a near-vertical obstacle is ahead and its top is <= step_height,
-## lift the body onto it (the flat-bottomed collider then lands on the top face).
+## Automatic step-up (curbs, stairs, small ledges) as a three-phase sweep of the real collider:
+##   1. UP by step_height (stops early under a low ceiling -> only what fits is climbable),
+##   2. FORWARD by this frame's motion from the raised position (still blocked -> a wall / too tall),
+##   3. DOWN onto the top surface -> exact step height (the top's normal is checked with a ray, as the
+##      swept collider may touch the edge).
+## Accepted only if: the top is walkable (normal within max_slope_deg), the step is 1 cm..step_height,
+## the tread is at least step_min_tread deep (a real step, not a fence rail or a wall top edge),
+## and the body fits standing on it. The body is placed STEP_OVERLAP onto the top (the model and
+## camera absorb the lift and the nudge smoothly via _visual_offset / _visual_h).
 func _try_step_up(motion: Vector3) -> void:
 	var dir := motion.normalized()
-	var probe := dir * maxf(motion.length(), 0.08)
+	var probe := dir * maxf(motion.length(), 0.02)   # only what this frame actually reaches
 	var xf := global_transform
 	var col := KinematicCollision3D.new()
-	if not test_move(xf, probe, col):
+	if not test_move(xf, probe, col, 0.001):
 		return
 	if col.get_normal().y > cos(floor_max_angle):
-		return                                          # walkable slope, not a step
-	var contact := col.get_position()
-	var from := Vector3(contact.x, xf.origin.y + step_height + 0.05, contact.z) + dir * 0.06
-	var to := Vector3(from.x, xf.origin.y - 0.02, from.z)
-	var hit := get_world_3d().direct_space_state.intersect_ray(
-			PhysicsRayQueryParameters3D.create(from, to, collision_mask, [get_rid()]))
-	if hit.is_empty() or (hit.normal as Vector3).y < cos(floor_max_angle):
+		return                                          # walkable slope: move_and_slide handles it
+	# 1. up
+	var up_col := KinematicCollision3D.new()
+	var rise := step_height + 0.02
+	if test_move(xf, Vector3.UP * rise, up_col, 0.001):
+		rise = up_col.get_travel().length() - 0.005     # low ceiling: only climb what fits under it
+		if rise < 0.03:
+			return
+	var raised := xf.translated(Vector3.UP * rise)
+	# 2. forward, exactly as far as the final placement: to the contact + STEP_OVERLAP onto the top
+	var onto := col.get_travel() + dir * STEP_OVERLAP
+	if test_move(raised, onto, null, 0.001):
+		return                                          # still blocked at max step height: a wall
+	var ahead := raised.translated(onto)
+	# 3. down
+	var down_col := KinematicCollision3D.new()
+	if not test_move(ahead, Vector3.DOWN * (rise + 0.05), down_col, 0.001):
+		return                                          # nothing to stand on (a gap)
+	var h := rise - down_col.get_travel().length()
+	if h < 0.01 or h > step_height + 0.005:
 		return
-	var h: float = (hit.position as Vector3).y - xf.origin.y
-	if h < 0.01 or h > step_height:
+	# tread depth: the top surface must continue step_min_tread beyond the edge
+	var edge := col.get_position()
+	var space := get_world_3d().direct_space_state
+	var top_y := xf.origin.y + h
+	var tread_pt := Vector3(edge.x, 0.0, edge.z) + dir * step_min_tread
+	var ray := PhysicsRayQueryParameters3D.create(Vector3(tread_pt.x, top_y + 0.1, tread_pt.z),
+			Vector3(tread_pt.x, top_y - 0.06, tread_pt.z), collision_mask, [get_rid()])
+	var hit := space.intersect_ray(ray)
+	if hit.is_empty() or (hit.normal as Vector3).y < cos(floor_max_angle) or absf((hit.position as Vector3).y - top_y) > 0.05:
 		return
-	var up := Vector3.UP * (h + 0.01)
-	if test_move(xf, up):
-		return                                          # no head room
-	if test_move(xf.translated(up), probe):
-		return                                          # still blocked: it is a wall
-	global_position += up
-	_visual_offset -= up.y
+	# the body must fit standing on the step (no head bump right after it)
+	var lift := Vector3.UP * (h + 0.005)
+	if test_move(xf.translated(lift + onto), Vector3.ZERO, null, 0.001):
+		return
+	# up, and far enough onto the step that the collider's rounded rim (Jolt convex radius) rests on the
+	# flat top instead of sliding back off the edge; the model/camera absorb both moves smoothly
+	global_position += lift + onto
+	_visual_offset -= lift.y
+	_visual_h -= onto
 	last_step_height = h
 	stepped_up.emit(h)
+
+
+## Step DOWN (curbs, stairs): Godot's own floor snap rejects contacts where the flat collider rests
+## on a step EDGE (the contact normal is tilted), and the body would free-fall. Sweep the collider down
+## by up to step_height and accept the drop if the surface under the contact point is walkable.
+func _snap_down() -> bool:
+	var col := KinematicCollision3D.new()
+	if not test_move(global_transform, Vector3.DOWN * (step_height + 0.05), col, 0.001):
+		return false                                  # real ledge: fall
+	var p := col.get_position()
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(
+			p + Vector3.UP * 0.05, p + Vector3.DOWN * 0.05, collision_mask, [get_rid()]))
+	if hit.is_empty() or (hit.normal as Vector3).y < cos(floor_max_angle):
+		return false
+	global_position += col.get_travel()
+	velocity.y = 0.0
+	return true
 
 
 func _on_landed() -> void:
