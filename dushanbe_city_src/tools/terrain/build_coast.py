@@ -8,7 +8,7 @@ C(azimuth) and one height function, so mesh, collision, splat weights, water dep
 paths and the minimap always agree.
 
 Outputs (all deterministic):
-  dushanbe_city/assets/terrain/coast_<i>_<j>.glb   200 m terrain tiles, material "terrain",
+  dushanbe_city/assets/terrain/coast_<i>_<j>.glb   400 m terrain tiles, material "terrain",
         vertex colour = splat weights R sand, G rock, B earth/path, A asphalt (grass = remainder)
   dushanbe_city/assets/terrain/promenade.glb       paved promenade strip with curb (south bay)
   dushanbe_city/data/city/chunk_coast_<i>_<j>.json loaded by CityWorld like city chunks
@@ -35,7 +35,7 @@ SEA = -1.6            # sea level (city ground is 0)
 WADE = 0.9            # playable wading depth
 STEP = 4.0            # height grid / collision resolution (m)
 EXT = 2400.0          # terrain extent (+-)
-TILE = 200.0
+TILE = 400.0          # terrain tile / coast chunk size (fewer draw calls)
 
 
 # ------------------------------------------------------------------------------------- noise
@@ -424,23 +424,38 @@ def main():
         land[c0:c1, c0:c1].sum() * STEP * STEP / 1e6, len(paths), len(prom) * 5.0, chunks))
 
 
+def tile_rects():
+    """(x0, z0, size) of every terrain tile: 400 m tiles within +-800 m (near the player, good LOD),
+    800 m tiles further out (far terrain: 4x fewer meshes = fewer draw calls)"""
+    out = []
+    for gz in range(-3, 3):
+        for gx in range(-3, 3):
+            x0, z0 = gx * 800.0, gz * 800.0
+            if -800 <= x0 < 800 and -800 <= z0 < 800:
+                for sz in range(2):
+                    for sx in range(2):
+                        out.append((x0 + sx * 400.0, z0 + sz * 400.0, 400.0))
+            else:
+                out.append((x0, z0, 800.0))
+    return out
+
+
 def write_tiles(X, Z, H, sand, rock, earth, asphalt):
     out = os.path.join(GAME, "assets/terrain")
     for f in os.listdir(out):
         if f.startswith("coast_") and f.endswith(".glb"):
             os.remove(os.path.join(out, f))
-    nt = int(2 * EXT / TILE)
-    per = int(TILE / STEP)
     count = 0; tris = 0
-    for tj in range(nt):
-        for ti in range(nt):
-            x0 = -EXT + ti * TILE; z0 = -EXT + tj * TILE
-            cx, cz = x0 + TILE / 2, z0 + TILE / 2
+    names = []
+    gz_all, gx_all = np.gradient(H, STEP)
+    for (x0, z0, size) in tile_rects():
+            cx, cz = x0 + size / 2, z0 + size / 2
             dist = math.hypot(cx, cz)
-            if max(abs(x0), abs(x0 + TILE)) <= HALF and max(abs(z0), abs(z0 + TILE)) <= HALF:
+            if max(abs(x0), abs(x0 + size)) <= HALF and max(abs(z0), abs(z0 + size)) <= HALF:
                 continue                               # fully inside the city
-            stride = 1 if dist < 800 else (2 if dist < 1400 else 4)
-            i0 = ti * per; j0 = tj * per
+            stride = 1 if size <= 400 else (2 if dist < 1500 else 4)
+            per = int(size / STEP)
+            i0 = int((x0 + EXT) / STEP); j0 = int((z0 + EXT) / STEP)
             sl = (slice(j0, j0 + per + 1, stride), slice(i0, i0 + per + 1, stride))
             h = H[sl]
             if h.max() < SEA - 0.4:
@@ -448,8 +463,7 @@ def write_tiles(X, Z, H, sand, rock, earth, asphalt):
             x = X[sl]; z = Z[sl]
             col = np.stack([sand[sl], rock[sl], earth[sl], asphalt[sl]], -1)
             # normals from the full-res grid
-            gz, gx = np.gradient(H, STEP)
-            nx = -gx[sl]; nz = -gz[sl]; ny = np.ones_like(nx)
+            nx = -gx_all[sl]; nz = -gz_all[sl]; ny = np.ones_like(nx)
             ln = np.sqrt(nx * nx + ny * ny + nz * nz)
             nrm = np.stack([nx / ln, ny / ln, nz / ln], -1)
             ny_, nx_ = h.shape
@@ -487,10 +501,12 @@ def write_tiles(X, Z, H, sand, rock, earth, asphalt):
                     m.pos.append([p[0], p[1] - 1.5, p[2]]); m.nrm.append(nrm[rr, cc].tolist())
                     m.uv.append([p[0] / 4, p[2] / 4]); m.col.append(col[rr, cc].tolist())
                 m.idx += [k0, k0 + 1, k0 + 2, k0 + 1, k0 + 3, k0 + 2, k0, k0 + 2, k0 + 1, k0 + 1, k0 + 2, k0 + 3]
-            mk.write_glb(os.path.join(out, "coast_%d_%d.glb" % (ti, tj)), [("terrain", {"terrain": m})],
-                         origin=(cx, 0.0, cz))
+            name = "coast_%d_%d_%d.glb" % (int(x0), int(z0), int(size))
+            mk.write_glb(os.path.join(out, name), [("terrain", {"terrain": m})], origin=(cx, 0.0, cz))
+            names.append(name)
             count += 1; tris += len(m.idx) // 3
     print("tiles", count, "triangles", tris)
+    return names
 
 
 def write_promenade(prom, prom_h):
@@ -552,7 +568,7 @@ def scatter(X, Z, H, S, E, R, Wb, slope, sand, earth, asphalt, paths, prom, prom
     items = {}   # chunk key -> dict
 
     def chunk(x, z):
-        k = (int(math.floor(x / 200.0)), int(math.floor(z / 200.0)))
+        k = (int(math.floor(x / TILE)), int(math.floor(z / TILE)))
         if k not in items:
             items[k] = {"trees": [], "props": [], "lines": [], "colliders": [], "lights": [], "attach": [], "doors": []}
         return items[k]
@@ -660,19 +676,17 @@ def scatter(X, Z, H, S, E, R, Wb, slope, sand, earth, asphalt, paths, prom, prom
     for f in os.listdir(d):
         if f.startswith("chunk_coast_"):
             os.remove(os.path.join(d, f))
-    tiles = {f for f in os.listdir(os.path.join(GAME, "assets/terrain")) if f.startswith("coast_")}
-    nt = int(2 * EXT / TILE)
-    for tj in range(nt):
-        for ti in range(nt):
-            k = (ti - nt // 2, tj - nt // 2)
-            g = "coast_%d_%d.glb" % (ti, tj)
-            J = items.get(k, {"trees": [], "props": [], "lines": [], "colliders": [], "lights": [], "attach": [], "doors": []})
-            if g not in tiles and not any(J.values()):
-                continue
-            J["glb"] = "res://assets/terrain/" + g if g in tiles else ""
-            J["origin"] = [k[0] * 200.0, k[1] * 200.0]
-            J["terrain"] = True
-            json.dump(J, open(os.path.join(d, "chunk_coast_%d_%d.json" % (ti, tj)), "w"), separators=(",", ":"))
+    for k, J in items.items():
+        if not any(J.values()):
+            continue
+        J["glb"] = ""
+        J["origin"] = [k[0] * TILE, k[1] * TILE]
+        J["terrain"] = True
+        json.dump(J, open(os.path.join(d, "chunk_coast_v_%d_%d.json" % (k[0], k[1])), "w"), separators=(",", ":"))
+    for f in sorted(os.listdir(os.path.join(GAME, "assets/terrain"))):
+        if f.startswith("coast_") and f.endswith(".glb"):
+            json.dump({"glb": "res://assets/terrain/" + f, "origin": [0, 0], "terrain": True},
+                      open(os.path.join(d, "chunk_" + f.replace(".glb", ".json")), "w"))
     pj = os.path.join(GAME, "data/city/chunk_coast_promenade.json")
     json.dump({"glb": "res://assets/terrain/promenade.glb", "origin": [0, 0], "trees": [], "props": [], "lines": [],
                "colliders": [], "lights": [], "attach": [], "doors": [], "terrain": True}, open(pj, "w"))

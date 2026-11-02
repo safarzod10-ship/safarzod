@@ -45,7 +45,7 @@ const PRESETS := {
 }
 
 const CFG_PATH := "user://settings.cfg"
-const BENCH_VERSION := 2      ## bump to force a new benchmark after big optimisations
+const BENCH_VERSION := 3      ## bump to force a new benchmark after big optimisations
 
 var mode := "auto"             ## "auto" | "low" | "medium" | "high" | "ultra"
 var quality: int = Quality.MEDIUM

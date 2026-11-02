@@ -40,7 +40,6 @@ TEXTURES = {
     "soil":           ("Ground048", 1024, "mat"),
     "gravel":         ("Gravel023", 1024, "mat"),
     "sand":           ("Ground093A", 1024, "mat"),   # beige coastal beach sand
-    "sand_wet":       ("Ground054", 1024, "mat"),    # darker wet beach sand / mud
     "rock_cliff":     ("Rock030", 1024, "mat"),      # grey coastal cliff rock
     "wood":           ("Wood049", 1024, "mat"),
     "tiles":          ("Tiles107", 1024, "mat"),

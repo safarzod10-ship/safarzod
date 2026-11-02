@@ -14,10 +14,11 @@ extends Node
 
 signal finished(result: Dictionary)
 
-const VIEWS := [   # x, y, z, yaw, pitch — representative load (dense trees / buildings / park)
+const VIEWS := [   # x, y, z, yaw, pitch — representative load (dense trees / buildings / park / coast)
 	[-50.0, 1.7, -60.0, 15.0, 3.0],
 	[-262.0, 1.7, -205.0, 200.0, 4.0],
 	[-80.0, 1.7, -30.0, -60.0, 0.0],
+	[-28.0, 2.6, 360.0, -110.6, -3.0],     # promenade: terrain, coast trees, sea, far mountains
 ]
 const WARMUP_S := 0.8
 const MEASURE_S := 1.2

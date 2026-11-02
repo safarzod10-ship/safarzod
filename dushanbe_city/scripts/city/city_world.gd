@@ -110,19 +110,19 @@ func _load_chunk(json_path: String) -> void:
 	for l in J.get("lights", []):
 		light_pool.add_point(Vector3(l[1], l[2], l[3]), 1 if l[0] == "entrance" else 2)
 	# instances grouped by category (coast chunks: trees carry their terrain height, boulders a scale;
-	# every third coast tree/shrub goes to an "extra" layer shown from Medium up)
+	# every second coast tree/shrub goes to an "extra" layer shown from Medium up)
 	var groups := {}
 	var extra := {}
 	var ti := 0
 	for t in J.get("trees", []):
 		var y: float = t[5] if t.size() > 5 else 0.15
-		_group(extra if terrain and ti % 3 == 2 else groups, "tree", t[0], Transform3D(Basis(Vector3.UP, t[3]).scaled(Vector3.ONE * t[4]), Vector3(t[1], y, t[2])))
+		_group(extra if terrain and ti % 2 == 1 else groups, "tree", t[0], Transform3D(Basis(Vector3.UP, t[3]).scaled(Vector3.ONE * t[4]), Vector3(t[1], y, t[2])))
 		ti += 1
 	for p in J.get("props", []):
 		var sc: float = p[5] if p.size() > 5 else 1.0
 		_group(groups, "prop", p[0], Transform3D(Basis(Vector3.UP, p[4]).scaled(Vector3.ONE * sc), Vector3(p[1], p[2], p[3])))
 	if terrain:
-		# coast: 100 m cells (sparser vegetation over a large area); every third tree/shrub is an
+		# coast: 100 m cells (sparser vegetation over a large area); every second tree/shrub is an
 		# "extra" instance appended after the main ones -> hidden on Low via visible_instance_count
 		for key in extra:
 			var main: Array = groups.get(key, [])

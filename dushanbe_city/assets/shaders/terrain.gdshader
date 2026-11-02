@@ -1,7 +1,8 @@
 // DUSHANBE coast terrain: grass base + sand / rock / earth / asphalt blended by vertex colour
 // (R sand, G rock, B earth, A asphalt; grass = 1 - sum). World-space UVs, wet sand near the sea,
-// macro variation against tiling. Low preset (city_macro_detail = 0): albedo-only blending with
-// one shared normal map (5 texture fetches + 1); Medium+: per-layer normals and macro noise.
+// macro variation against tiling. Layers are only sampled where their weight is non-zero.
+// Low preset (city_macro_detail = 0): albedo blending + one shared normal map; Medium+: per-layer
+// normals and macro noise.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
@@ -35,11 +36,13 @@ void fragment() {
 	vec2 p = wp.xz;
 	// rock: blend planar projections by the normal on steep faces (no stretching on cliffs)
 	vec2 rock_uv = abs(wn.y) > 0.75 ? p / 6.0 : (abs(wn.x) > abs(wn.z) ? wp.zy : wp.xy) / 6.0;
-	vec3 g = texture(grass_alb, p / 3.0).rgb;
-	vec3 s = texture(sand_alb, p / 4.0).rgb;
-	vec3 r = texture(rock_alb, rock_uv).rgb;
-	vec3 e = texture(earth_alb, p / 3.0).rgb;
-	vec3 a = texture(asphalt_alb, p / 5.0).rgb;
+	// layers are fetched only where they have weight (weights are spatially coherent -> cheap branches;
+	// most of the terrain is grass-only and costs one albedo fetch)
+	vec3 g = wg > 0.003 ? texture(grass_alb, p / 3.0).rgb : vec3(0.0);
+	vec3 s = w.r > 0.003 ? texture(sand_alb, p / 4.0).rgb : vec3(0.0);
+	vec3 r = w.g > 0.003 ? texture(rock_alb, rock_uv).rgb : vec3(0.0);
+	vec3 e = w.b > 0.003 ? texture(earth_alb, p / 3.0).rgb : vec3(0.0);
+	vec3 a = w.a > 0.003 ? texture(asphalt_alb, p / 5.0).rgb : vec3(0.0);
 	float m = 0.5;
 	if (city_macro_detail > 0.5) {
 		m = texture(macro_tex, p * 0.004).r * 0.6 + texture(macro_tex, p * 0.019).r * 0.4;
@@ -57,8 +60,9 @@ void fragment() {
 	rough = mix(rough, 0.15, wet_rain);
 	vec3 n;
 	if (city_macro_detail > 0.5) {
-		n = texture(grass_nrm, p / 3.0).rgb * (wg + w.b + w.a) + texture(sand_nrm, p / 4.0).rgb * w.r
-			+ texture(rock_nrm, rock_uv).rgb * w.g;
+		n = texture(grass_nrm, p / 3.0).rgb * (wg + w.b + w.a);
+		if (w.r > 0.003) { n += texture(sand_nrm, p / 4.0).rgb * w.r; }
+		if (w.g > 0.003) { n += texture(rock_nrm, rock_uv).rgb * w.g; }
 	} else {
 		n = texture(grass_nrm, p / 3.0).rgb;
 	}

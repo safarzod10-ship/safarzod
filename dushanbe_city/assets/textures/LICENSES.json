@@ -202,13 +202,6 @@
   "url": "https://ambientcg.com/view?id=Ground093A",
   "game_resolution": 1024
  },
- "sand_wet": {
-  "source": "ambientCG",
-  "id": "Ground054",
-  "license": "CC0 1.0",
-  "url": "https://ambientcg.com/view?id=Ground054",
-  "game_resolution": 1024
- },
  "rock_cliff": {
   "source": "ambientCG",
   "id": "Rock030",

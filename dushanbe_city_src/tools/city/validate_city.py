@@ -74,7 +74,8 @@ def main():
             if r[0] < p[1] < r[2] and r[1] < p[2] < r[3]:
                 viol.append((name, p[0]))
     # chunk instances too
-    chunks = sorted(glob.glob(os.path.join(GAME, "data/city/chunk_*.json")))
+    chunks = sorted(c for c in glob.glob(os.path.join(GAME, "data/city/chunk_*.json"))
+                    if not os.path.basename(c).startswith("chunk_coast"))   # coast chunks: tools/terrain
     medians = [rc for (k, rc, y) in net.surfaces if k == "median"]
     carriage = [rc for rc in st.rects_sub([rc for (k, rc, y) in net.surfaces if k == "asphalt"],
                 [r.rect(-r.median, r.median) for r in lay.ROADS if r.median > 0])]

@@ -1,0 +1,13 @@
+PASS city loaded in 1795 ms: 36 city chunks (+73 coast chunks)
+PASS colliders 2007, trees 7793, props 5004, multimeshes 5591
+PASS all categories resolve to assets (missing: [])
+PASS player spawned
+PASS player on sidewalk at spawn: y=0.151 (≈0.15)
+PASS player runs 5 s through the city: moved 15.7 m, y=0.151
+PASS terrain collision at (-20, 385): ray -0.29 m, baked height -0.29 m
+PASS terrain collision at (420, 176): ray 20.89 m, baked height 20.89 m
+PASS terrain collision at (-300, -700): ray 2.69 m, baked height 2.69 m
+PASS promenade surface walkable at (-28, 361): y=0.88
+PASS walk from the city to the sea: reached z=412, stopped at water depth 0.92 m (wading limit 0.9)
+PASS player stays inside the playable boundary: z=412
+PASS minimap present and centred on the player
