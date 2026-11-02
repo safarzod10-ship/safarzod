@@ -221,7 +221,8 @@ def write_glb(path, nodes, extras=None, origin=(0.0, 0.0, 0.0)):
             nrm = np.asarray(m.nrm, np.float32)
             uv = np.asarray(m.uv, np.float32)
             col = np.clip(np.asarray(m.col, np.float32), 0, 1)
-            col = np.concatenate([col, np.ones((len(col), 1), np.float32)], 1)
+            if col.shape[1] == 3:
+                col = np.concatenate([col, np.ones((len(col), 1), np.float32)], 1)
             col8 = (col * 255 + 0.5).astype(np.uint8)
             idx = np.asarray(m.idx, np.uint32)
             attrs = {

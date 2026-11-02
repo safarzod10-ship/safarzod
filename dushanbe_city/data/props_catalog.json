@@ -1,769 +1,758 @@
 {
- "version": 1,
  "props": [
   {
+   "collision": null,
    "id": "awning_shop_green",
-   "ru": "навес",
    "mesh": "res://assets/models/props/meshes/awning_shop_green.res",
-   "size": [
-    3.06,
-    0.75,
-    1.216
-   ],
-   "tris": 192,
-   "visibility_end": 120,
-   "collision": null
-  },
-  {
-   "id": "awning_shop_red",
    "ru": "навес",
-   "mesh": "res://assets/models/props/meshes/awning_shop_red.res",
    "size": [
     3.06,
     0.75,
     1.216
    ],
-   "tris": 192,
-   "visibility_end": 120,
-   "collision": null
+   "tris": 192.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "barrier_pedestrian",
-   "ru": "пешеходное ограждение",
-   "mesh": "res://assets/models/props/meshes/barrier_pedestrian.res",
+   "collision": null,
+   "id": "awning_shop_red",
+   "mesh": "res://assets/models/props/meshes/awning_shop_red.res",
+   "ru": "навес",
    "size": [
-    2.035,
-    1.06,
-    0.07
+    3.06,
+    0.75,
+    1.216
    ],
-   "tris": 260,
-   "visibility_end": 120,
+   "tris": 192.0,
+   "visibility_end": 120.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     -0.018,
+     0.53,
+     0.0
+    ],
     "size": [
      2.035,
      1.06,
      0.07
     ],
-    "offset": [
-     -0.018,
-     0.53,
-     0.0
-    ]
+    "type": "box"
    },
-   "segment_length": 2.035
+   "id": "barrier_pedestrian",
+   "mesh": "res://assets/models/props/meshes/barrier_pedestrian.res",
+   "ru": "пешеходное ограждение",
+   "segment_length": 2.035,
+   "size": [
+    2.035,
+    1.06,
+    0.07
+   ],
+   "tris": 260.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "bench_concrete_slats",
-   "ru": "скамейка",
-   "mesh": "res://assets/models/props/meshes/bench_concrete_slats.res",
-   "size": [
-    2.0,
-    0.44,
-    0.42
-   ],
-   "tris": 308,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.22,
+     0.0
+    ],
     "size": [
      2.0,
      0.44,
      0.42
     ],
-    "offset": [
-     0.0,
-     0.22,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "bench_concrete_slats",
+   "mesh": "res://assets/models/props/meshes/bench_concrete_slats.res",
+   "ru": "скамейка",
+   "size": [
+    2.0,
+    0.44,
+    0.42
+   ],
+   "tris": 308.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "bench_courtyard",
-   "ru": "скамейка",
-   "mesh": "res://assets/models/props/meshes/bench_courtyard.res",
-   "size": [
-    1.8,
-    0.824,
-    0.51
-   ],
-   "tris": 636,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.412,
+     -0.035
+    ],
     "size": [
      1.8,
      0.824,
      0.51
     ],
-    "offset": [
-     -0.0,
-     0.412,
-     -0.035
-    ]
-   }
+    "type": "box"
+   },
+   "id": "bench_courtyard",
+   "mesh": "res://assets/models/props/meshes/bench_courtyard.res",
+   "ru": "скамейка",
+   "size": [
+    1.8,
+    0.824,
+    0.51
+   ],
+   "tris": 636.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "bench_modern_metal",
-   "ru": "скамейка",
-   "mesh": "res://assets/models/props/meshes/bench_modern_metal.res",
-   "size": [
-    1.933,
-    0.855,
-    0.61
-   ],
-   "tris": 972,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.427,
+     -0.035
+    ],
     "size": [
      1.933,
      0.855,
      0.61
     ],
-    "offset": [
-     0.0,
-     0.427,
-     -0.035
-    ]
-   }
+    "type": "box"
+   },
+   "id": "bench_modern_metal",
+   "mesh": "res://assets/models/props/meshes/bench_modern_metal.res",
+   "ru": "скамейка",
+   "size": [
+    1.933,
+    0.855,
+    0.61
+   ],
+   "tris": 972.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "bench_park_soviet",
-   "ru": "скамейка",
-   "mesh": "res://assets/models/props/meshes/bench_park_soviet.res",
-   "size": [
-    2.0,
-    0.868,
-    0.609
-   ],
-   "tris": 544,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.432,
+     -0.04
+    ],
     "size": [
      2.0,
      0.868,
      0.609
     ],
-    "offset": [
-     0.0,
-     0.432,
-     -0.04
-    ]
-   }
-  },
-  {
-   "id": "bike_rack_5",
-   "ru": "велопарковка",
-   "mesh": "res://assets/models/props/meshes/bike_rack_5.res",
+    "type": "box"
+   },
+   "id": "bench_park_soviet",
+   "mesh": "res://assets/models/props/meshes/bench_park_soviet.res",
+   "ru": "скамейка",
    "size": [
     2.0,
-    0.772,
-    0.65
+    0.868,
+    0.609
    ],
-   "tris": 964,
-   "visibility_end": 120,
+   "tris": 544.0,
+   "visibility_end": 120.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.386,
+     0.0
+    ],
     "size": [
      2.0,
      0.772,
      0.65
     ],
-    "offset": [
-     0.0,
-     0.386,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "bike_rack_5",
+   "mesh": "res://assets/models/props/meshes/bike_rack_5.res",
+   "ru": "велопарковка",
+   "size": [
+    2.0,
+    0.772,
+    0.65
+   ],
+   "tris": 964.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "bin_modern_steel",
-   "ru": "урна",
-   "mesh": "res://assets/models/props/meshes/bin_modern_steel.res",
-   "size": [
-    0.4,
-    0.9,
-    0.4
-   ],
-   "tris": 294,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.45,
+     0.0
+    ],
     "size": [
      0.4,
      0.9,
      0.4
     ],
-    "offset": [
-     0.0,
-     0.45,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "bin_modern_steel",
+   "mesh": "res://assets/models/props/meshes/bin_modern_steel.res",
+   "ru": "урна",
+   "size": [
+    0.4,
+    0.9,
+    0.4
+   ],
+   "tris": 294.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 0.56,
+    "offset": [
+     0.0,
+     0.28,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "bollard_concrete",
-   "ru": "столбик",
    "mesh": "res://assets/models/props/meshes/bollard_concrete.res",
+   "ru": "столбик",
    "size": [
     0.4,
     0.56,
     0.4
    ],
-   "tris": 128,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 0.56,
-    "offset": [
-     0,
-     0.28,
-     0
-    ]
-   }
+   "tris": 128.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "bus_stop_shelter",
-   "ru": "остановка",
-   "mesh": "res://assets/models/props/meshes/bus_stop_shelter.res",
-   "size": [
-    4.915,
-    2.65,
-    1.75
-   ],
-   "tris": 608,
-   "mesh_lod1": "res://assets/models/props/meshes/bus_stop_shelter_lod1.res",
-   "visibility_end": 220,
    "collision": {
-    "type": "box",
+    "offset": [
+     -0.082,
+     1.325,
+     -0.05
+    ],
     "size": [
      4.915,
      2.65,
      1.75
     ],
-    "offset": [
-     -0.082,
-     1.325,
-     -0.05
-    ]
+    "type": "box"
    },
+   "id": "bus_stop_shelter",
    "light_points": [
     [
      0.0,
      2.45,
      -0.1
     ]
-   ]
+   ],
+   "mesh": "res://assets/models/props/meshes/bus_stop_shelter.res",
+   "mesh_lod1": "res://assets/models/props/meshes/bus_stop_shelter_lod1.res",
+   "ru": "остановка",
+   "size": [
+    4.915,
+    2.65,
+    1.75
+   ],
+   "tris": 608.0,
+   "visibility_end": 220.0
   },
   {
+   "collision": null,
    "id": "canopy_porch_metal",
-   "ru": "козырёк",
    "mesh": "res://assets/models/props/meshes/canopy_porch_metal.res",
+   "ru": "козырёк",
    "size": [
     2.2,
     0.816,
     1.301
    ],
-   "tris": 120,
-   "visibility_end": 120,
-   "collision": null
+   "tris": 120.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "carpet_beating_bar",
-   "ru": "выбивалка для ковров",
-   "mesh": "res://assets/models/props/meshes/carpet_beating_bar.res",
-   "size": [
-    2.85,
-    1.93,
-    0.25
-   ],
-   "tris": 196,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.965,
+     0.0
+    ],
     "size": [
      2.85,
      1.93,
      0.25
     ],
-    "offset": [
-     0.0,
-     0.965,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "carpet_beating_bar",
+   "mesh": "res://assets/models/props/meshes/carpet_beating_bar.res",
+   "ru": "выбивалка для ковров",
+   "size": [
+    2.85,
+    1.93,
+    0.25
+   ],
+   "tris": 196.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "clothes_drying_poles",
-   "ru": "столбы для белья",
-   "mesh": "res://assets/models/props/meshes/clothes_drying_poles.res",
-   "size": [
-    4.25,
-    2.2,
-    1.3
-   ],
-   "tris": 264,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     1.1,
+     0.0
+    ],
     "size": [
      4.25,
      2.2,
      1.3
     ],
-    "offset": [
-     0.0,
-     1.1,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "clothes_drying_poles",
+   "mesh": "res://assets/models/props/meshes/clothes_drying_poles.res",
+   "ru": "столбы для белья",
+   "size": [
+    4.25,
+    2.2,
+    1.3
+   ],
+   "tris": 264.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "container_euro_wheeled",
-   "ru": "мусорный контейнер",
-   "mesh": "res://assets/models/props/meshes/container_euro_wheeled.res",
-   "size": [
-    1.44,
-    1.195,
-    1.125
-   ],
-   "tris": 488,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.597,
+     -0.017
+    ],
     "size": [
      1.44,
      1.195,
      1.125
     ],
-    "offset": [
-     0.0,
-     0.597,
-     -0.017
-    ]
-   }
+    "type": "box"
+   },
+   "id": "container_euro_wheeled",
+   "mesh": "res://assets/models/props/meshes/container_euro_wheeled.res",
+   "ru": "мусорный контейнер",
+   "size": [
+    1.44,
+    1.195,
+    1.125
+   ],
+   "tris": 488.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "container_site",
-   "ru": "мусорный контейнер",
-   "mesh": "res://assets/models/props/meshes/container_site.res",
-   "size": [
-    4.2,
-    1.82,
-    2.2
-   ],
-   "tris": 248,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.91,
+     0.0
+    ],
     "size": [
      4.2,
      1.82,
      2.2
     ],
+    "type": "box"
+   },
+   "id": "container_site",
+   "mesh": "res://assets/models/props/meshes/container_site.res",
+   "ru": "мусорный контейнер",
+   "size": [
+    4.2,
+    1.82,
+    2.2
+   ],
+   "tris": 248.0,
+   "visibility_end": 120.0
+  },
+  {
+   "collision": {
     "offset": [
      0.0,
-     0.91,
+     0.507,
      0.0
-    ]
-   }
-  },
-  {
+    ],
+    "size": [
+     1.5,
+     1.015,
+     0.97
+    ],
+    "type": "box"
+   },
    "id": "container_trash_green",
-   "ru": "мусорный контейнер",
    "mesh": "res://assets/models/props/meshes/container_trash_green.res",
-   "size": [
-    1.5,
-    1.015,
-    0.97
-   ],
-   "tris": 252,
-   "visibility_end": 120,
-   "collision": {
-    "type": "box",
-    "size": [
-     1.5,
-     1.015,
-     0.97
-    ],
-    "offset": [
-     0.0,
-     0.507,
-     -0.0
-    ]
-   }
-  },
-  {
-   "id": "container_trash_grey",
    "ru": "мусорный контейнер",
-   "mesh": "res://assets/models/props/meshes/container_trash_grey.res",
    "size": [
     1.5,
     1.015,
     0.97
    ],
-   "tris": 252,
-   "visibility_end": 120,
+   "tris": 252.0,
+   "visibility_end": 120.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.507,
+     0.0
+    ],
     "size": [
      1.5,
      1.015,
      0.97
     ],
-    "offset": [
-     0.0,
-     0.507,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "container_trash_grey",
+   "mesh": "res://assets/models/props/meshes/container_trash_grey.res",
+   "ru": "мусорный контейнер",
+   "size": [
+    1.5,
+    1.015,
+    0.97
+   ],
+   "tris": 252.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "courtyard_table_benches",
-   "ru": "стол со скамейками",
-   "mesh": "res://assets/models/props/meshes/courtyard_table_benches.res",
-   "size": [
-    1.4,
-    0.767,
-    1.59
-   ],
-   "tris": 644,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.384,
+     0.0
+    ],
     "size": [
      1.4,
      0.767,
      1.59
     ],
-    "offset": [
-     -0.0,
-     0.384,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "courtyard_table_benches",
+   "mesh": "res://assets/models/props/meshes/courtyard_table_benches.res",
+   "ru": "стол со скамейками",
+   "size": [
+    1.4,
+    0.767,
+    1.59
+   ],
+   "tris": 644.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": null,
    "id": "curb_wheel_stop",
-   "ru": "колесоотбойник",
    "mesh": "res://assets/models/props/meshes/curb_wheel_stop.res",
+   "ru": "колесоотбойник",
    "size": [
     1.8,
     0.12,
     0.162
    ],
-   "tris": 30,
-   "visibility_end": 120,
-   "collision": null
+   "tris": 30.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "electrical_cabinet",
-   "ru": "электрощит",
-   "mesh": "res://assets/models/props/meshes/electrical_cabinet.res",
-   "size": [
-    0.9,
-    1.58,
-    0.45
-   ],
-   "tris": 194,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.79,
+     0.0
+    ],
     "size": [
      0.9,
      1.58,
      0.45
     ],
-    "offset": [
-     0.0,
-     0.79,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "electrical_cabinet",
+   "mesh": "res://assets/models/props/meshes/electrical_cabinet.res",
+   "ru": "электрощит",
+   "size": [
+    0.9,
+    1.58,
+    0.45
+   ],
+   "tris": 194.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "fence_decorative_15",
-   "ru": "ограждение",
-   "mesh": "res://assets/models/props/meshes/fence_decorative_15.res",
-   "size": [
-    2.56,
-    1.72,
-    0.12
-   ],
-   "tris": 860,
-   "visibility_end": 110,
    "collision": {
-    "type": "box",
+    "offset": [
+     -0.03,
+     0.86,
+     0.0
+    ],
     "size": [
      2.56,
      1.72,
      0.12
     ],
-    "offset": [
-     -0.03,
-     0.86,
-     0.0
-    ]
+    "type": "box"
    },
-   "segment_length": 2.56
+   "id": "fence_decorative_15",
+   "mesh": "res://assets/models/props/meshes/fence_decorative_15.res",
+   "ru": "ограждение",
+   "segment_length": 2.56,
+   "size": [
+    2.56,
+    1.72,
+    0.12
+   ],
+   "tris": 860.0,
+   "visibility_end": 110.0
   },
   {
+   "collision": {
+    "offset": [
+     0.0,
+     0.169,
+     0.0
+    ],
+    "size": [
+     2.214,
+     0.577,
+     0.05
+    ],
+    "type": "box"
+   },
    "id": "fence_lawn_hoop_green",
-   "ru": "ограждение",
    "mesh": "res://assets/models/props/meshes/fence_lawn_hoop_green.res",
+   "ru": "ограждение",
+   "segment_length": 2.214,
    "size": [
     2.214,
     0.577,
     0.016
    ],
-   "tris": 652,
-   "visibility_end": 110,
+   "tris": 652.0,
+   "visibility_end": 110.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.169,
+     0.0
+    ],
     "size": [
      2.214,
      0.577,
      0.05
     ],
-    "offset": [
-     0.0,
-     0.169,
-     0.0
-    ]
+    "type": "box"
    },
-   "segment_length": 2.214
-  },
-  {
    "id": "fence_lawn_hoop_white",
-   "ru": "ограждение",
    "mesh": "res://assets/models/props/meshes/fence_lawn_hoop_white.res",
+   "ru": "ограждение",
+   "segment_length": 2.214,
    "size": [
     2.214,
     0.577,
     0.016
    ],
-   "tris": 652,
-   "visibility_end": 110,
-   "collision": {
-    "type": "box",
-    "size": [
-     2.214,
-     0.577,
-     0.05
-    ],
-    "offset": [
-     0.0,
-     0.169,
-     0.0
-    ]
-   },
-   "segment_length": 2.214
+   "tris": 652.0,
+   "visibility_end": 110.0
   },
   {
-   "id": "fence_school_brick",
-   "ru": "ограждение",
-   "mesh": "res://assets/models/props/meshes/fence_school_brick.res",
-   "size": [
-    3.23,
-    1.98,
-    0.46
-   ],
-   "tris": 444,
-   "visibility_end": 110,
    "collision": {
-    "type": "box",
+    "offset": [
+     -0.115,
+     0.99,
+     0.0
+    ],
     "size": [
      3.23,
      1.98,
      0.46
     ],
-    "offset": [
-     -0.115,
-     0.99,
-     0.0
-    ]
+    "type": "box"
    },
-   "segment_length": 3.23
+   "id": "fence_school_brick",
+   "mesh": "res://assets/models/props/meshes/fence_school_brick.res",
+   "ru": "ограждение",
+   "segment_length": 3.23,
+   "size": [
+    3.23,
+    1.98,
+    0.46
+   ],
+   "tris": 444.0,
+   "visibility_end": 110.0
   },
   {
+   "collision": null,
    "id": "gas_pipe_elbow",
-   "ru": "газовая труба",
    "mesh": "res://assets/models/props/meshes/gas_pipe_elbow.res",
+   "ru": "газовая труба",
    "size": [
     0.529,
     0.529,
     0.149
    ],
-   "tris": 188,
-   "visibility_end": 70,
-   "collision": null
+   "tris": 188.0,
+   "visibility_end": 70.0
   },
   {
+   "collision": null,
    "id": "gas_pipe_ground_entry",
-   "ru": "газовая труба",
    "mesh": "res://assets/models/props/meshes/gas_pipe_ground_entry.res",
+   "ru": "газовая труба",
    "size": [
     0.67,
     2.328,
     0.55
    ],
-   "tris": 360,
-   "visibility_end": 70,
-   "collision": null
+   "tris": 360.0,
+   "visibility_end": 70.0
   },
   {
+   "collision": null,
    "id": "gas_pipe_riser_3m",
-   "ru": "газовая труба",
    "mesh": "res://assets/models/props/meshes/gas_pipe_riser_3m.res",
+   "ru": "газовая труба",
    "size": [
     0.14,
     3.0,
     0.222
    ],
-   "tris": 126,
-   "visibility_end": 70,
-   "collision": null
+   "tris": 126.0,
+   "visibility_end": 70.0
   },
   {
+   "collision": null,
    "id": "gas_pipe_straight_3m",
-   "ru": "газовая труба",
    "mesh": "res://assets/models/props/meshes/gas_pipe_straight_3m.res",
+   "ru": "газовая труба",
    "size": [
     3.0,
     0.1,
     0.149
    ],
-   "tris": 196,
-   "visibility_end": 70,
-   "collision": null
+   "tris": 196.0,
+   "visibility_end": 70.0
   },
   {
+   "collision": {
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "size": [
+     4.5,
+     2.84,
+     0.55
+    ],
+    "type": "box"
+   },
    "id": "gate_havli_blue",
-   "ru": "ворота",
    "mesh": "res://assets/models/props/meshes/gate_havli_blue.res",
-   "size": [
-    4.5,
-    2.84,
-    0.55
-   ],
-   "tris": 1760,
-   "visibility_end": 200,
-   "collision": {
-    "type": "box",
-    "size": [
-     4.5,
-     2.84,
-     0.55
-    ],
-    "offset": [
-     0.0,
-     1.42,
-     0.0
-    ]
-   }
-  },
-  {
-   "id": "gate_havli_green",
    "ru": "ворота",
-   "mesh": "res://assets/models/props/meshes/gate_havli_green.res",
    "size": [
     4.5,
     2.84,
     0.55
    ],
-   "tris": 1760,
-   "visibility_end": 200,
+   "tris": 1760.0,
+   "visibility_end": 200.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
     "size": [
      4.5,
      2.84,
      0.55
     ],
-    "offset": [
-     0.0,
-     1.42,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "gate_havli_green",
+   "mesh": "res://assets/models/props/meshes/gate_havli_green.res",
+   "ru": "ворота",
+   "size": [
+    4.5,
+    2.84,
+    0.55
+   ],
+   "tris": 1760.0,
+   "visibility_end": 200.0
   },
   {
+   "collision": null,
    "id": "house_number_0",
-   "ru": "номер дома",
    "mesh": "res://assets/models/props/meshes/house_number_0.res",
+   "ru": "номер дома",
    "size": [
     0.25,
     0.25,
     0.013
    ],
-   "tris": 12,
-   "visibility_end": 40,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 40.0
   },
   {
+   "collision": null,
    "id": "house_number_1",
-   "ru": "номер дома",
    "mesh": "res://assets/models/props/meshes/house_number_1.res",
+   "ru": "номер дома",
    "size": [
     0.25,
     0.25,
     0.013
    ],
-   "tris": 12,
-   "visibility_end": 40,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 40.0
   },
   {
+   "collision": null,
    "id": "house_number_2",
-   "ru": "номер дома",
    "mesh": "res://assets/models/props/meshes/house_number_2.res",
-   "size": [
-    0.25,
-    0.25,
-    0.013
-   ],
-   "tris": 12,
-   "visibility_end": 40,
-   "collision": null
-  },
-  {
-   "id": "house_number_3",
    "ru": "номер дома",
-   "mesh": "res://assets/models/props/meshes/house_number_3.res",
    "size": [
     0.25,
     0.25,
     0.013
    ],
-   "tris": 12,
-   "visibility_end": 40,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 40.0
   },
   {
-   "id": "light_avenue_double",
-   "ru": "фонарь",
-   "mesh": "res://assets/models/props/meshes/light_avenue_double.res",
+   "collision": null,
+   "id": "house_number_3",
+   "mesh": "res://assets/models/props/meshes/house_number_3.res",
+   "ru": "номер дома",
    "size": [
-    4.8,
-    10.065,
-    0.5
+    0.25,
+    0.25,
+    0.013
    ],
-   "tris": 794,
-   "mesh_lod1": "res://assets/models/props/meshes/light_avenue_double_lod1.res",
-   "visibility_end": 260,
+   "tris": 12.0,
+   "visibility_end": 40.0
+  },
+  {
    "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
     "height": 10.06,
     "offset": [
-     0,
+     0.0,
      5.03,
-     0
-    ]
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
    },
+   "id": "light_avenue_double",
    "light_points": [
     [
      -2.09,
@@ -775,1070 +764,1123 @@
      9.9,
      0.0
     ]
-   ]
+   ],
+   "mesh": "res://assets/models/props/meshes/light_avenue_double.res",
+   "mesh_lod1": "res://assets/models/props/meshes/light_avenue_double_lod1.res",
+   "ru": "фонарь",
+   "size": [
+    4.8,
+    10.065,
+    0.5
+   ],
+   "tris": 794.0,
+   "visibility_end": 260.0
   },
   {
-   "id": "light_park_4m",
-   "ru": "фонарь",
-   "mesh": "res://assets/models/props/meshes/light_park_4m.res",
-   "size": [
-    0.473,
-    4.12,
-    0.473
-   ],
-   "tris": 504,
-   "mesh_lod1": "res://assets/models/props/meshes/light_park_4m_lod1.res",
-   "visibility_end": 260,
    "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
     "height": 4.12,
     "offset": [
-     0,
+     0.0,
      2.06,
-     0
-    ]
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
    },
+   "id": "light_park_4m",
    "light_points": [
     [
      0.0,
      3.8,
      0.0
     ]
-   ]
+   ],
+   "mesh": "res://assets/models/props/meshes/light_park_4m.res",
+   "mesh_lod1": "res://assets/models/props/meshes/light_park_4m_lod1.res",
+   "ru": "фонарь",
+   "size": [
+    0.473,
+    4.12,
+    0.473
+   ],
+   "tris": 504.0,
+   "visibility_end": 260.0
   },
   {
-   "id": "light_street_single",
-   "ru": "фонарь",
-   "mesh": "res://assets/models/props/meshes/light_street_single.res",
-   "size": [
-    0.5,
-    9.115,
-    2.52
-   ],
-   "tris": 516,
-   "mesh_lod1": "res://assets/models/props/meshes/light_street_single_lod1.res",
-   "visibility_end": 260,
    "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
     "height": 9.11,
     "offset": [
-     0,
+     0.0,
      4.56,
-     0
-    ]
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
    },
+   "id": "light_street_single",
    "light_points": [
     [
      0.0,
      8.95,
      2.0
     ]
-   ]
+   ],
+   "mesh": "res://assets/models/props/meshes/light_street_single.res",
+   "mesh_lod1": "res://assets/models/props/meshes/light_street_single_lod1.res",
+   "ru": "фонарь",
+   "size": [
+    0.5,
+    9.115,
+    2.52
+   ],
+   "tris": 516.0,
+   "visibility_end": 260.0
   },
   {
+   "collision": null,
    "id": "manhole_cover",
-   "ru": "люк",
    "mesh": "res://assets/models/props/meshes/manhole_cover.res",
+   "ru": "люк",
    "size": [
     0.84,
     0.035,
     0.84
    ],
-   "tris": 70,
-   "visibility_end": 60,
-   "collision": null
+   "tris": 70.0,
+   "visibility_end": 60.0
   },
   {
+   "collision": null,
    "id": "ph_aircon_outdoor_unit",
-   "ru": "кондиционер",
    "mesh": "res://assets/models/props/meshes/ph_aircon_outdoor_unit.res",
-   "size": [
-    0.8,
-    0.928,
-    0.375
-   ],
-   "tris": 2499,
-   "visibility_end": 90,
-   "collision": null
-  },
-  {
-   "id": "ph_aircon_outdoor_unit_rusted",
    "ru": "кондиционер",
-   "mesh": "res://assets/models/props/meshes/ph_aircon_outdoor_unit_rusted.res",
    "size": [
     0.8,
     0.928,
     0.375
    ],
-   "tris": 2500,
-   "visibility_end": 90,
-   "collision": null
+   "tris": 2499.0,
+   "visibility_end": 90.0
   },
   {
-   "id": "ph_barrel_blue",
-   "ru": "ph_barrel_blue",
-   "mesh": "res://assets/models/props/meshes/ph_barrel_blue.res",
+   "collision": null,
+   "id": "ph_aircon_outdoor_unit_rusted",
+   "mesh": "res://assets/models/props/meshes/ph_aircon_outdoor_unit_rusted.res",
+   "ru": "кондиционер",
    "size": [
-    0.634,
-    0.93,
-    0.639
+    0.8,
+    0.928,
+    0.375
    ],
-   "tris": 1473,
-   "visibility_end": 120,
+   "tris": 2500.0,
+   "visibility_end": 90.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.465,
+     0.0
+    ],
     "size": [
      0.634,
      0.93,
      0.639
     ],
-    "offset": [
-     -0.0,
-     0.465,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_barrel_blue",
+   "mesh": "res://assets/models/props/meshes/ph_barrel_blue.res",
+   "ru": "ph_barrel_blue",
+   "size": [
+    0.634,
+    0.93,
+    0.639
+   ],
+   "tris": 1473.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_cardboard_box",
-   "ru": "ph_cardboard_box",
-   "mesh": "res://assets/models/props/meshes/ph_cardboard_box.res",
-   "size": [
-    0.387,
-    0.34,
-    0.515
-   ],
-   "tris": 800,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.17,
+     0.0
+    ],
     "size": [
      0.387,
      0.34,
      0.515
     ],
-    "offset": [
-     -0.0,
-     0.17,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_cardboard_box",
+   "mesh": "res://assets/models/props/meshes/ph_cardboard_box.res",
+   "ru": "ph_cardboard_box",
+   "size": [
+    0.387,
+    0.34,
+    0.515
+   ],
+   "tris": 800.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_clay_pot",
-   "ru": "ph_clay_pot",
-   "mesh": "res://assets/models/props/meshes/ph_clay_pot.res",
-   "size": [
-    0.266,
-    0.222,
-    0.264
-   ],
-   "tris": 1200,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.111,
+     0.0
+    ],
     "size": [
      0.266,
      0.222,
      0.264
     ],
-    "offset": [
-     0.0,
-     0.111,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_clay_pot",
+   "mesh": "res://assets/models/props/meshes/ph_clay_pot.res",
+   "ru": "ph_clay_pot",
+   "size": [
+    0.266,
+    0.222,
+    0.264
+   ],
+   "tris": 1200.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_concrete_block_barrier",
-   "ru": "ph_concrete_block_barrier",
-   "mesh": "res://assets/models/props/meshes/ph_concrete_block_barrier.res",
-   "size": [
-    1.563,
-    1.108,
-    0.446
-   ],
-   "tris": 1499,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.554,
+     0.0
+    ],
     "size": [
      1.563,
      1.108,
      0.446
     ],
-    "offset": [
-     0.0,
-     0.554,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_concrete_block_barrier",
+   "mesh": "res://assets/models/props/meshes/ph_concrete_block_barrier.res",
+   "ru": "ph_concrete_block_barrier",
+   "size": [
+    1.563,
+    1.108,
+    0.446
+   ],
+   "tris": 1499.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_plastic_chair",
-   "ru": "ph_plastic_chair",
-   "mesh": "res://assets/models/props/meshes/ph_plastic_chair.res",
-   "size": [
-    0.642,
-    0.881,
-    0.628
-   ],
-   "tris": 1800,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.44,
+     0.0
+    ],
     "size": [
      0.642,
      0.881,
      0.628
     ],
-    "offset": [
-     0.0,
-     0.44,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_plastic_chair",
+   "mesh": "res://assets/models/props/meshes/ph_plastic_chair.res",
+   "ru": "ph_plastic_chair",
+   "size": [
+    0.642,
+    0.881,
+    0.628
+   ],
+   "tris": 1800.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_plastic_crate",
-   "ru": "ph_plastic_crate",
-   "mesh": "res://assets/models/props/meshes/ph_plastic_crate.res",
-   "size": [
-    0.506,
-    0.254,
-    0.405
-   ],
-   "tris": 1500,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.127,
+     0.0
+    ],
     "size": [
      0.506,
      0.254,
      0.405
     ],
-    "offset": [
-     -0.0,
-     0.127,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_plastic_crate",
+   "mesh": "res://assets/models/props/meshes/ph_plastic_crate.res",
+   "ru": "ph_plastic_crate",
+   "size": [
+    0.506,
+    0.254,
+    0.405
+   ],
+   "tris": 1500.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_potted_aloe",
-   "ru": "ph_potted_aloe",
-   "mesh": "res://assets/models/props/meshes/ph_potted_aloe.res",
-   "size": [
-    0.168,
-    0.268,
-    0.185
-   ],
-   "tris": 2500,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.134,
+     0.0
+    ],
     "size": [
      0.168,
      0.268,
      0.185
     ],
-    "offset": [
-     -0.0,
-     0.134,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_potted_aloe",
+   "mesh": "res://assets/models/props/meshes/ph_potted_aloe.res",
+   "ru": "ph_potted_aloe",
+   "size": [
+    0.168,
+    0.268,
+    0.185
+   ],
+   "tris": 2500.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": null,
    "id": "ph_rollershutter_door",
-   "ru": "ph_rollershutter_door",
    "mesh": "res://assets/models/props/meshes/ph_rollershutter_door.res",
+   "ru": "ph_rollershutter_door",
    "size": [
     1.08,
     2.4,
     0.3
    ],
-   "tris": 552,
-   "visibility_end": 120,
-   "collision": null
+   "tris": 552.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": null,
    "id": "ph_rollershutter_window",
-   "ru": "ph_rollershutter_window",
    "mesh": "res://assets/models/props/meshes/ph_rollershutter_window.res",
+   "ru": "ph_rollershutter_window",
    "size": [
     2.1,
     1.851,
     0.3
    ],
-   "tris": 552,
-   "visibility_end": 120,
-   "collision": null
+   "tris": 552.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": null,
    "id": "ph_security_camera",
-   "ru": "ph_security_camera",
    "mesh": "res://assets/models/props/meshes/ph_security_camera.res",
+   "ru": "ph_security_camera",
    "size": [
     0.141,
     0.209,
     0.393
    ],
-   "tris": 1500,
-   "visibility_end": 120,
-   "collision": null
+   "tris": 1500.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "ph_trash_bag",
-   "ru": "ph_trash_bag",
-   "mesh": "res://assets/models/props/meshes/ph_trash_bag.res",
-   "size": [
-    0.523,
-    0.575,
-    0.466
-   ],
-   "tris": 999,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.287,
+     0.0
+    ],
     "size": [
      0.523,
      0.575,
      0.466
     ],
-    "offset": [
-     0.0,
-     0.287,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "ph_trash_bag",
+   "mesh": "res://assets/models/props/meshes/ph_trash_bag.res",
+   "ru": "ph_trash_bag",
+   "size": [
+    0.523,
+    0.575,
+    0.466
+   ],
+   "tris": 999.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "planter_rect_concrete",
-   "ru": "клумба/вазон",
-   "mesh": "res://assets/models/props/meshes/planter_rect_concrete.res",
-   "size": [
-    1.5,
-    0.5,
-    0.6
-   ],
-   "tris": 80,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.25,
+     0.0
+    ],
     "size": [
      1.5,
      0.5,
      0.6
     ],
-    "offset": [
-     0.0,
-     0.25,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "planter_rect_concrete",
+   "mesh": "res://assets/models/props/meshes/planter_rect_concrete.res",
+   "ru": "клумба/вазон",
+   "size": [
+    1.5,
+    0.5,
+    0.6
+   ],
+   "tris": 80.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "planter_vase_soviet",
-   "ru": "клумба/вазон",
-   "mesh": "res://assets/models/props/meshes/planter_vase_soviet.res",
-   "size": [
-    1.1,
-    0.98,
-    1.1
-   ],
-   "tris": 480,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.49,
+     0.0
+    ],
     "size": [
      1.1,
      0.98,
      1.1
     ],
-    "offset": [
-     0.0,
-     0.49,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "planter_vase_soviet",
+   "mesh": "res://assets/models/props/meshes/planter_vase_soviet.res",
+   "ru": "клумба/вазон",
+   "size": [
+    1.1,
+    0.98,
+    1.1
+   ],
+   "tris": 480.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "playground_hbar",
-   "ru": "детская площадка",
-   "mesh": "res://assets/models/props/meshes/playground_hbar.res",
-   "size": [
-    2.29,
-    2.45,
-    0.09
-   ],
-   "tris": 194,
-   "visibility_end": 140,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     1.225,
+     0.0
+    ],
     "size": [
      2.29,
      2.45,
      0.09
     ],
-    "offset": [
-     0.0,
-     1.225,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "playground_hbar",
+   "mesh": "res://assets/models/props/meshes/playground_hbar.res",
+   "ru": "детская площадка",
+   "size": [
+    2.29,
+    2.45,
+    0.09
+   ],
+   "tris": 194.0,
+   "visibility_end": 140.0
   },
   {
-   "id": "playground_sandbox_mushroom",
-   "ru": "детская площадка",
-   "mesh": "res://assets/models/props/meshes/playground_sandbox_mushroom.res",
-   "size": [
-    2.97,
-    2.7,
-    2.97
-   ],
-   "tris": 316,
-   "visibility_end": 140,
    "collision": {
-    "type": "box",
+    "offset": [
+     -0.415,
+     1.35,
+     -0.415
+    ],
     "size": [
      2.97,
      2.7,
      2.97
     ],
-    "offset": [
-     -0.415,
-     1.35,
-     -0.415
-    ]
-   }
+    "type": "box"
+   },
+   "id": "playground_sandbox_mushroom",
+   "mesh": "res://assets/models/props/meshes/playground_sandbox_mushroom.res",
+   "ru": "детская площадка",
+   "size": [
+    2.97,
+    2.7,
+    2.97
+   ],
+   "tris": 316.0,
+   "visibility_end": 140.0
   },
   {
-   "id": "playground_slide",
-   "ru": "детская площадка",
-   "mesh": "res://assets/models/props/meshes/playground_slide.res",
-   "size": [
-    0.66,
-    1.932,
-    3.969
-   ],
-   "tris": 484,
-   "visibility_end": 140,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.956,
+     0.415
+    ],
     "size": [
      0.66,
      1.932,
      3.969
     ],
-    "offset": [
-     0.0,
-     0.956,
-     0.415
-    ]
-   }
+    "type": "box"
+   },
+   "id": "playground_slide",
+   "mesh": "res://assets/models/props/meshes/playground_slide.res",
+   "ru": "детская площадка",
+   "size": [
+    0.66,
+    1.932,
+    3.969
+   ],
+   "tris": 484.0,
+   "visibility_end": 140.0
   },
   {
-   "id": "playground_swing",
-   "ru": "детская площадка",
-   "mesh": "res://assets/models/props/meshes/playground_swing.res",
-   "size": [
-    2.5,
-    2.354,
-    1.567
-   ],
-   "tris": 308,
-   "visibility_end": 140,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     1.166,
+     0.0
+    ],
     "size": [
      2.5,
      2.354,
      1.567
     ],
-    "offset": [
-     0.0,
-     1.166,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "playground_swing",
+   "mesh": "res://assets/models/props/meshes/playground_swing.res",
+   "ru": "детская площадка",
+   "size": [
+    2.5,
+    2.354,
+    1.567
+   ],
+   "tris": 308.0,
+   "visibility_end": 140.0
   },
   {
+   "collision": null,
    "id": "satellite_dish_060",
-   "ru": "спутниковая тарелка",
    "mesh": "res://assets/models/props/meshes/satellite_dish_060.res",
+   "ru": "спутниковая тарелка",
    "size": [
     0.6,
     0.551,
     0.859
    ],
-   "tris": 616,
-   "visibility_end": 90,
-   "collision": null
+   "tris": 616.0,
+   "visibility_end": 90.0
   },
   {
+   "collision": null,
    "id": "satellite_dish_090",
-   "ru": "спутниковая тарелка",
    "mesh": "res://assets/models/props/meshes/satellite_dish_090.res",
+   "ru": "спутниковая тарелка",
    "size": [
     0.9,
     0.822,
     1.027
    ],
-   "tris": 616,
-   "visibility_end": 90,
-   "collision": null
+   "tris": 616.0,
+   "visibility_end": 90.0
   },
   {
+   "collision": {
+    "height": 2.92,
+    "offset": [
+     0.0,
+     1.46,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_1_23",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_1_23.res",
+   "ru": "дорожный знак",
    "size": [
     0.9,
     2.919,
     0.127
    ],
-   "tris": 194,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.92,
-    "offset": [
-     0,
-     1.46,
-     0
-    ]
-   }
+   "tris": 194.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 3.13,
+    "offset": [
+     0.0,
+     1.56,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_2_1",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_2_1.res",
+   "ru": "дорожный знак",
    "size": [
     0.99,
     3.13,
     0.127
    ],
-   "tris": 198,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 3.13,
-    "offset": [
-     0,
-     1.56,
-     0
-    ]
-   }
+   "tris": 198.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.92,
+    "offset": [
+     0.0,
+     1.46,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_2_4",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_2_4.res",
+   "ru": "дорожный знак",
    "size": [
     0.9,
     2.919,
     0.127
    ],
-   "tris": 194,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.92,
-    "offset": [
-     0,
-     1.46,
-     0
-    ]
-   }
+   "tris": 194.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_3_1",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_3_1.res",
+   "ru": "дорожный знак",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 294,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 294.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_3_24_60",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_3_24_60.res",
+   "ru": "дорожный знак",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 294,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 294.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_3_27",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_3_27.res",
+   "ru": "дорожный знак",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 294,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 294.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_5_16",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_5_16.res",
+   "ru": "дорожный знак",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 198,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 198.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_5_19_1",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_5_19_1.res",
+   "ru": "дорожный знак",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 198,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 198.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_5_19_2",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_5_19_2.res",
+   "ru": "дорожный знак",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 198,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 198.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "sign_5_5",
-   "ru": "дорожный знак",
    "mesh": "res://assets/models/props/meshes/sign_5_5.res",
-   "size": [
-    0.7,
-    2.84,
-    0.127
-   ],
-   "tris": 198,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
-  },
-  {
-   "id": "sign_6_4",
    "ru": "дорожный знак",
-   "mesh": "res://assets/models/props/meshes/sign_6_4.res",
    "size": [
     0.7,
     2.84,
     0.127
    ],
-   "tris": 198,
-   "visibility_end": 120,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.84,
-    "offset": [
-     0,
-     1.42,
-     0
-    ]
-   }
+   "tris": 198.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 2.84,
+    "offset": [
+     0.0,
+     1.42,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
+   "id": "sign_6_4",
+   "mesh": "res://assets/models/props/meshes/sign_6_4.res",
+   "ru": "дорожный знак",
+   "size": [
+    0.7,
+    2.84,
+    0.127
+   ],
+   "tris": 198.0,
+   "visibility_end": 120.0
+  },
+  {
+   "collision": null,
    "id": "storm_grate",
-   "ru": "ливневая решётка",
    "mesh": "res://assets/models/props/meshes/storm_grate.res",
+   "ru": "ливневая решётка",
    "size": [
     0.8,
     0.038,
     0.5
    ],
-   "tris": 12,
-   "visibility_end": 50,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 50.0
   },
   {
+   "collision": null,
    "id": "street_plate_0",
-   "ru": "табличка улицы",
    "mesh": "res://assets/models/props/meshes/street_plate_0.res",
+   "ru": "табличка улицы",
    "size": [
     0.72,
     0.18,
     0.013
    ],
-   "tris": 12,
-   "visibility_end": 50,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 50.0
   },
   {
+   "collision": null,
    "id": "street_plate_1",
-   "ru": "табличка улицы",
    "mesh": "res://assets/models/props/meshes/street_plate_1.res",
+   "ru": "табличка улицы",
    "size": [
     0.72,
     0.18,
     0.013
    ],
-   "tris": 12,
-   "visibility_end": 50,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 50.0
   },
   {
+   "collision": null,
    "id": "street_plate_2",
-   "ru": "табличка улицы",
    "mesh": "res://assets/models/props/meshes/street_plate_2.res",
-   "size": [
-    0.72,
-    0.18,
-    0.013
-   ],
-   "tris": 12,
-   "visibility_end": 50,
-   "collision": null
-  },
-  {
-   "id": "street_plate_3",
    "ru": "табличка улицы",
-   "mesh": "res://assets/models/props/meshes/street_plate_3.res",
    "size": [
     0.72,
     0.18,
     0.013
    ],
-   "tris": 12,
-   "visibility_end": 50,
-   "collision": null
+   "tris": 12.0,
+   "visibility_end": 50.0
   },
   {
-   "id": "tapchan",
-   "ru": "топчан",
-   "mesh": "res://assets/models/props/meshes/tapchan.res",
+   "collision": null,
+   "id": "street_plate_3",
+   "mesh": "res://assets/models/props/meshes/street_plate_3.res",
+   "ru": "табличка улицы",
    "size": [
-    2.0,
-    0.975,
-    1.8
+    0.72,
+    0.18,
+    0.013
    ],
-   "tris": 704,
-   "visibility_end": 120,
+   "tris": 12.0,
+   "visibility_end": 50.0
+  },
+  {
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.487,
+     0.0
+    ],
     "size": [
      2.0,
      0.975,
      1.8
     ],
-    "offset": [
-     0.0,
-     0.487,
-     -0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "tapchan",
+   "mesh": "res://assets/models/props/meshes/tapchan.res",
+   "ru": "топчан",
+   "size": [
+    2.0,
+    0.975,
+    1.8
+   ],
+   "tris": 704.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 6.82,
+    "offset": [
+     0.0,
+     3.41,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "traffic_light_mast",
-   "ru": "светофор",
    "mesh": "res://assets/models/props/meshes/traffic_light_mast.res",
+   "mesh_lod1": "res://assets/models/props/meshes/traffic_light_mast_lod1.res",
+   "ru": "светофор",
    "size": [
     6.381,
     6.82,
     0.78
    ],
-   "tris": 868,
-   "mesh_lod1": "res://assets/models/props/meshes/traffic_light_mast_lod1.res",
-   "visibility_end": 200,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 6.82,
-    "offset": [
-     0,
-     3.41,
-     0
-    ]
-   }
+   "tris": 868.0,
+   "visibility_end": 200.0
   },
   {
+   "collision": {
+    "height": 2.9,
+    "offset": [
+     0.0,
+     1.45,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "traffic_light_ped",
-   "ru": "светофор",
    "mesh": "res://assets/models/props/meshes/traffic_light_ped.res",
+   "mesh_lod1": "res://assets/models/props/meshes/traffic_light_ped_lod1.res",
+   "ru": "светофор",
    "size": [
     0.32,
     2.9,
     0.495
    ],
-   "tris": 274,
-   "mesh_lod1": "res://assets/models/props/meshes/traffic_light_ped_lod1.res",
-   "visibility_end": 200,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 2.9,
-    "offset": [
-     0,
-     1.45,
-     0
-    ]
-   }
+   "tris": 274.0,
+   "visibility_end": 200.0
   },
   {
+   "collision": {
+    "height": 3.63,
+    "offset": [
+     0.0,
+     1.82,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "traffic_light_pole",
-   "ru": "светофор",
    "mesh": "res://assets/models/props/meshes/traffic_light_pole.res",
+   "mesh_lod1": "res://assets/models/props/meshes/traffic_light_pole_lod1.res",
+   "ru": "светофор",
    "size": [
     0.56,
     3.63,
     0.614
    ],
-   "tris": 338,
-   "mesh_lod1": "res://assets/models/props/meshes/traffic_light_pole_lod1.res",
-   "visibility_end": 200,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 3.63,
-    "offset": [
-     0,
-     1.82,
-     0
-    ]
-   }
+   "tris": 338.0,
+   "visibility_end": 200.0
   },
   {
-   "id": "urn_concrete_round",
-   "ru": "урна",
-   "mesh": "res://assets/models/props/meshes/urn_concrete_round.res",
-   "size": [
-    0.62,
-    0.66,
-    0.62
-   ],
-   "tris": 348,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.33,
+     0.0
+    ],
     "size": [
      0.62,
      0.66,
      0.62
     ],
-    "offset": [
-     0.0,
-     0.33,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "urn_concrete_round",
+   "mesh": "res://assets/models/props/meshes/urn_concrete_round.res",
+   "ru": "урна",
+   "size": [
+    0.62,
+    0.66,
+    0.62
+   ],
+   "tris": 348.0,
+   "visibility_end": 120.0
   },
   {
-   "id": "urn_tilting",
-   "ru": "урна",
-   "mesh": "res://assets/models/props/meshes/urn_tilting.res",
-   "size": [
-    0.66,
-    0.85,
-    0.419
-   ],
-   "tris": 422,
-   "visibility_end": 120,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     0.425,
+     0.0
+    ],
     "size": [
      0.66,
      0.85,
      0.419
     ],
-    "offset": [
-     0.0,
-     0.425,
-     0.0
-    ]
-   }
+    "type": "box"
+   },
+   "id": "urn_tilting",
+   "mesh": "res://assets/models/props/meshes/urn_tilting.res",
+   "ru": "урна",
+   "size": [
+    0.66,
+    0.85,
+    0.419
+   ],
+   "tris": 422.0,
+   "visibility_end": 120.0
   },
   {
+   "collision": {
+    "height": 9.72,
+    "offset": [
+     0.0,
+     4.86,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "utility_pole_concrete",
-   "ru": "столб",
    "mesh": "res://assets/models/props/meshes/utility_pole_concrete.res",
+   "mesh_lod1": "res://assets/models/props/meshes/utility_pole_concrete_lod1.res",
+   "ru": "столб",
    "size": [
     1.7,
     9.715,
     0.297
    ],
-   "tris": 430,
-   "mesh_lod1": "res://assets/models/props/meshes/utility_pole_concrete_lod1.res",
-   "visibility_end": 260,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 9.72,
-    "offset": [
-     0,
-     4.86,
-     0
-    ]
-   }
+   "tris": 430.0,
+   "visibility_end": 260.0
   },
   {
+   "collision": {
+    "height": 8.55,
+    "offset": [
+     0.0,
+     4.28,
+     0.0
+    ],
+    "radius": 0.13,
+    "type": "cylinder"
+   },
    "id": "utility_pole_wood",
-   "ru": "столб",
    "mesh": "res://assets/models/props/meshes/utility_pole_wood.res",
+   "mesh_lod1": "res://assets/models/props/meshes/utility_pole_wood_lod1.res",
+   "ru": "столб",
    "size": [
     1.6,
     8.55,
     0.507
    ],
-   "tris": 628,
-   "mesh_lod1": "res://assets/models/props/meshes/utility_pole_wood_lod1.res",
-   "visibility_end": 260,
-   "collision": {
-    "type": "cylinder",
-    "radius": 0.13,
-    "height": 8.55,
-    "offset": [
-     0,
-     4.28,
-     0
-    ]
-   }
+   "tris": 628.0,
+   "visibility_end": 260.0
   },
   {
-   "id": "wall_havli",
-   "ru": "дувал",
-   "mesh": "res://assets/models/props/meshes/wall_havli.res",
-   "size": [
-    3.0,
-    2.18,
-    0.4
-   ],
-   "tris": 40,
-   "visibility_end": 300,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     1.09,
+     0.0
+    ],
     "size": [
      3.0,
      2.18,
      0.4
     ],
-    "offset": [
-     0.0,
-     1.09,
-     0.0
-    ]
+    "type": "box"
    },
-   "segment_length": 3.0
+   "id": "wall_havli",
+   "mesh": "res://assets/models/props/meshes/wall_havli.res",
+   "ru": "дувал",
+   "segment_length": 3.0,
+   "size": [
+    3.0,
+    2.18,
+    0.4
+   ],
+   "tris": 40.0,
+   "visibility_end": 300.0
   },
   {
-   "id": "wall_havli_end",
-   "ru": "дувал",
-   "mesh": "res://assets/models/props/meshes/wall_havli_end.res",
-   "size": [
-    0.55,
-    2.5,
-    0.55
-   ],
-   "tris": 80,
-   "visibility_end": 300,
    "collision": {
-    "type": "box",
+    "offset": [
+     0.0,
+     1.25,
+     0.0
+    ],
     "size": [
      0.55,
      2.5,
      0.55
     ],
-    "offset": [
-     0.0,
-     1.25,
-     0.0
-    ]
+    "type": "box"
    },
-   "segment_length": 0.55
+   "id": "wall_havli_end",
+   "mesh": "res://assets/models/props/meshes/wall_havli_end.res",
+   "ru": "дувал",
+   "segment_length": 0.55,
+   "size": [
+    0.55,
+    2.5,
+    0.55
+   ],
+   "tris": 80.0,
+   "visibility_end": 300.0
+  },
+  {
+   "collision": null,
+   "id": "boulder_a",
+   "mesh": "res://assets/models/props/meshes/boulder_a.res",
+   "mesh_far": "res://assets/models/props/meshes/boulder_a_far.res",
+   "ru": "валун",
+   "size": [
+    1.6,
+    0.66,
+    1.27
+   ],
+   "tris": 1280,
+   "visibility_end": 260
+  },
+  {
+   "collision": null,
+   "id": "boulder_b",
+   "mesh": "res://assets/models/props/meshes/boulder_b.res",
+   "mesh_far": "res://assets/models/props/meshes/boulder_b_far.res",
+   "ru": "валун",
+   "size": [
+    1.26,
+    0.61,
+    1.79
+   ],
+   "tris": 1280,
+   "visibility_end": 260
+  },
+  {
+   "collision": null,
+   "id": "boulder_c",
+   "mesh": "res://assets/models/props/meshes/boulder_c.res",
+   "mesh_far": "res://assets/models/props/meshes/boulder_c_far.res",
+   "ru": "валун",
+   "size": [
+    1.25,
+    0.87,
+    1.14
+   ],
+   "tris": 1280,
+   "visibility_end": 260
   }
- ]
+ ],
+ "version": 1.0
 }

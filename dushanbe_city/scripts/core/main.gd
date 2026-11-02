@@ -60,6 +60,11 @@ func _build() -> void:
 		add_child(cam)
 	var menu: CanvasLayer = preload("res://scripts/ui/game_menu.gd").new()
 	add_child(menu)
+	var map_layer := CanvasLayer.new()
+	map_layer.name = "MinimapLayer"
+	map_layer.layer = 15
+	map_layer.add_child(Minimap.new())
+	add_child(map_layer)
 	if OS.get_cmdline_user_args().has("menu"):
 		menu.call_deferred("set", "_open_on_start", true)
 	if OS.get_cmdline_user_args().has("diag"):
@@ -68,7 +73,7 @@ func _build() -> void:
 	if not is_inside_tree():
 		return
 	for c in find_children("*", "Camera3D", true, false):
-		(c as Camera3D).far = 4500.0
+		(c as Camera3D).far = 9500.0
 	if Settings.needs_benchmark():
 		await get_tree().create_timer(0.5).timeout
 		var ag := AutoGraphics.new()

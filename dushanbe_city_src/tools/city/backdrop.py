@@ -3,7 +3,7 @@
 impostor facade texture + roofs), distant tree canopies and a mountain horizon (Hissar range to
 the north, lower foothills to the south/east) compressed in distance, keeping angular size.
 Outputs dushanbe_city/assets/city/backdrop.glb and assets/textures/facade_far/albedo.png."""
-import math, os, random, sys
+import json, math, os, random, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import meshkit as mk
 from PIL import Image, ImageDraw, ImageFilter
@@ -37,40 +37,67 @@ def facade_texture():
     im.save(os.path.join(GAME, "assets/textures/facade_far/albedo.png"))
 
 
+_HM = None
+
+
+def terrain_h(x, z):
+    """(min, max) height of the coast terrain around (x, z) from the full-extent bake
+    (dushanbe_city_src/build/height_full.npy: 8 m grid, +-2400 m); None outside"""
+    global _HM
+    import numpy as np
+    if _HM is None:
+        hm = np.load(os.path.join(ROOT, "dushanbe_city_src/build/height_full.npy"))
+        _HM = (hm, {"origin": [-2400.0, -2400.0], "step": 8.0})
+    hm, meta = _HM
+    fx = (x - meta["origin"][0]) / meta["step"]; fz = (z - meta["origin"][1]) / meta["step"]
+    if not (0 <= fx < hm.shape[1] - 1 and 0 <= fz < hm.shape[0] - 1):
+        return None
+    i, j = int(fx), int(fz)
+    return float(hm[j:j + 2, i:i + 2].min()), float(hm[j:j + 2, i:i + 2].max())
+
+
 def far_city(b):
-    """Blocks of buildings from 330 to 1100 m, sparser further out."""
+    """Suburbs on the MAINLAND only (north, beyond the playable boundary at ~1050 m): blocks of
+    buildings sitting on the terrain, sparser further out. The peninsula itself stays green."""
     PAL = [(0.96, 0.92, 0.82), (0.95, 0.86, 0.74), (0.88, 0.90, 0.86), (0.92, 0.88, 0.84), (0.98, 0.97, 0.94), (0.85, 0.80, 0.72)]
-    for gx in range(-11, 12):
-        for gz in range(-11, 12):
+    for gx in range(-16, 17):
+        for gz in range(-23, -10):
             cx, cz = gx * 100.0, gz * 100.0
-            if max(abs(cx), abs(cz)) < 360:
-                continue
             dist = math.hypot(cx, cz)
-            if dist > 1150 or rng.random() < 0.15 + dist / 3000:
+            if cz > -1080 or dist > 2350 or rng.random() < 0.2 + (dist - 1100) / 2500:
                 continue
             for k in range(rng.randint(2, 4)):
-                L = rng.uniform(30, 80); D = rng.uniform(11, 15)
-                floors = rng.choice([4, 5, 5, 5, 9, 9, 12, 16]) if dist < 800 else rng.choice([5, 9, 9, 12])
+                L = rng.uniform(30, 70); D = rng.uniform(11, 15)
+                floors = rng.choice([4, 5, 5, 9, 9, 12])
                 Hh = floors * 2.8 + 1.0
                 along_x = rng.random() < 0.5
                 x = cx + rng.uniform(-30, 30); z = cz + rng.uniform(-30, 30)
                 hx, hz = (L / 2, D / 2) if along_x else (D / 2, L / 2)
+                hs = [terrain_h(x + sx * hx, z + sz * hz) for sx in (-1, 1) for sz in (-1, 1)]
+                if any(h is None for h in hs):
+                    continue
+                lo = min(h[0] for h in hs); hi = max(h[1] for h in hs)
+                if lo < 0.5 or hi - lo > 4.0:
+                    continue                       # water / too steep
                 t = rng.choice(PAL)
-                far_box(b, x - hx, z - hz, x + hx, z + hz, Hh, t)
-            # tree canopies between blocks (dark-green lumps) — Dushanbe is very green from afar
-            for k in range(rng.randint(6, 14)):
+                far_box(b, x - hx, z - hz, x + hx, z + hz, Hh, t, base=lo - 1.0)
+            for k in range(rng.randint(4, 10)):
                 x = cx + rng.uniform(-50, 50); z = cz + rng.uniform(-50, 50)
-                FAR_TREES.append([round(x, 1), round(z, 1), round(rng.uniform(0, 6.28), 2), round(rng.uniform(0.8, 1.3), 2)])
+                h = terrain_h(x, z)
+                if h is None or h[0] < 0.5:
+                    continue
+                FAR_TREES.append([round(x, 1), round(z, 1), round(rng.uniform(0, 6.28), 2), round(rng.uniform(0.8, 1.3), 2), round(h[0], 2)])
 
 
-def far_box(b, x0, z0, x1, z1, h, t):
+def far_box(b, x0, z0, x1, z1, h, t, base=0.0):
     b.ao_ground = False
     v = h / 11.2   # 4 floors per texture repeat
+    top = base + 1.0 + h
     for (p0, p1, L) in (((x0, z1), (x1, z1), x1 - x0), ((x1, z0), (x0, z0), x1 - x0), ((x1, z1), (x1, z0), z1 - z0), ((x0, z0), (x0, z1), z1 - z0)):
         u = L / 12.8
-        b.quad("facade_far", (p0[0], 0, p0[1]), (p1[0], 0, p1[1]), (p1[0], h, p1[1]), (p0[0], h, p0[1]),
+        b.quad("facade_far", (p0[0], base, p0[1]), (p1[0], base, p1[1]), (p1[0], top, p1[1]), (p0[0], top, p0[1]),
                uv=[(0, v), (u, v), (u, 0), (0, 0)], tint=t)
-    b.quad("roof_flat", (x0, h, z1), (x1, h, z1), (x1, h, z0), (x0, h, z0), tint=(0.45, 0.44, 0.42))
+    b.quad("roof_flat", (x0, top, z1), (x1, top, z1), (x1, top, z0), (x0, top, z0), tint=(0.45, 0.44, 0.42))
 
 
 def lump(b, x, z, r, h):
@@ -122,18 +149,23 @@ def mountains(b):
             # direction: azimuth from north (-Z), clockwise to east (+X)
             pa = (math.sin(aa) * R, -math.cos(aa) * R)
             pb = (math.sin(ab) * R, -math.cos(ab) * R)
-            qa = (math.sin(aa) * (R + 900), -math.cos(aa) * (R + 900))
-            qb = (math.sin(ab) * (R + 900), -math.cos(ab) * (R + 900))
+            depth = max(900.0, hmax * 2.8)          # gentler slopes (~35 deg) instead of walls
+            qa = (math.sin(aa) * (R + depth), -math.cos(aa) * (R + depth))
+            qb = (math.sin(ab) * (R + depth), -math.cos(ab) * (R + depth))
             # front slope (two bands so snow line follows height)
             b.ao_ground = False
             mid = 0.55
             ca, cb = (pa[0] + (qa[0] - pa[0]) * mid, pa[1] + (qa[1] - pa[1]) * mid), (pb[0] + (qb[0] - pb[0]) * mid, pb[1] + (qb[1] - pb[1]) * mid)
-            b.quad("mountain", (pa[0], -5, pa[1]), (pb[0], -5, pb[1]), (cb[0], hb * 0.72, cb[1]), (ca[0], ha * 0.72, ca[1]))
+            b.quad("mountain", (pa[0], -8, pa[1]), (pb[0], -8, pb[1]), (cb[0], hb * 0.72, cb[1]), (ca[0], ha * 0.72, ca[1]))
             b.quad("mountain", (ca[0], ha * 0.72, ca[1]), (cb[0], hb * 0.72, cb[1]), (qb[0], hb, qb[1]), (qa[0], ha, qa[1]))
-    ridge(3200, math.radians(-75), math.radians(70), 180, 680, 3)    # Hissar range (north)
-    ridge(3600, math.radians(-110), math.radians(-60), 90, 420, 4)   # north-west
-    ridge(2900, math.radians(100), math.radians(250), 40, 220, 8)    # southern foothills
-    ridge(3000, math.radians(60), math.radians(105), 40, 200, 9)     # east
+    # layers, back to front; haze grows with distance in the shader (aerial perspective)
+    ridge(5600, math.radians(-85), math.radians(80), 380, 920, 3, n=700)     # Hissar range, snow (north)
+    ridge(6000, math.radians(-130), math.radians(-70), 250, 620, 5, n=300)   # north-west range
+    ridge(3700, math.radians(-95), math.radians(95), 160, 560, 4, n=600)     # middle range
+    ridge(2550, math.radians(-75), math.radians(75), 70, 240, 6, n=500)      # foothills behind the mainland
+    ridge(4800, math.radians(95), math.radians(265), 30, 210, 8, n=600)      # low hills across the sea (south)
+    ridge(4300, math.radians(70), math.radians(115), 40, 260, 9, n=200)      # east shore
+    ridge(4300, math.radians(245), math.radians(290), 40, 240, 10, n=200)    # west shore
 
 
 def main():

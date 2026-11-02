@@ -12,6 +12,7 @@ const VEG_JSON := "res://data/vegetation_catalog.json"
 const PROPS_JSON := "res://data/props_catalog.json"
 const CELL := 50.0       ## LOD/culling cell for instanced trees (m)
 const PROP_CELL := 100.0 ## props: coarser cells = fewer draw calls (their LOD ranges are short anyway)
+const COAST_CELL := 100.0 ## coast vegetation/boulders: sparse over ~3 km2
 
 var city: Dictionary
 var category_map: Dictionary
@@ -22,6 +23,10 @@ var _mesh_cache := {}
 var _missing := {}
 var light_pool: LightPool
 var stats := {"trees": 0, "props": 0, "multimeshes": 0, "colliders": 0}
+var terrain_info := {}
+var terrain_heights := PackedFloat32Array()
+var sea: Sea
+var _extra_from := {}
 
 
 func _ready() -> void:
@@ -38,6 +43,9 @@ func _ready() -> void:
 			_load_chunk("res://data/city/" + path)
 	_make_bounds()
 	_load_backdrop()
+	sea = Sea.new()
+	sea.name = "Sea"
+	add_child(sea)
 	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
 	apply_quality()
 	if not _missing.is_empty():
@@ -67,7 +75,8 @@ func _load_chunk(json_path: String) -> void:
 	node.name = json_path.get_file().get_basename()
 	add_child(node)
 	chunks.append(node)
-	if ResourceLoader.exists(J["glb"]):
+	var terrain: bool = J.get("terrain", false)
+	if String(J["glb"]) != "" and ResourceLoader.exists(J["glb"]):
 		var inst: Node = (load(J["glb"]) as PackedScene).instantiate()
 		for mi in inst.find_children("*", "MeshInstance3D", true, false):
 			var m := mi as MeshInstance3D
@@ -79,6 +88,11 @@ func _load_chunk(json_path: String) -> void:
 			if String(m.name).begins_with("detail"):
 				copy.add_to_group(&"city_detail")
 				copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # frames/sills/pipes: tiny shadows, big cost
+			if terrain:
+				# coast terrain tiles: receive shadows only (gentle hills: their own shadows are not worth
+				# a shadow-map pass); mesh LODs come from the glTF import
+				copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				copy.add_to_group(&"coast_terrain")
 			node.add_child(copy)
 		inst.free()
 	# colliders
@@ -95,12 +109,29 @@ func _load_chunk(json_path: String) -> void:
 		stats.colliders += 1
 	for l in J.get("lights", []):
 		light_pool.add_point(Vector3(l[1], l[2], l[3]), 1 if l[0] == "entrance" else 2)
-	# instances grouped by category
+	# instances grouped by category (coast chunks: trees carry their terrain height, boulders a scale;
+	# every third coast tree/shrub goes to an "extra" layer shown from Medium up)
 	var groups := {}
+	var extra := {}
+	var ti := 0
 	for t in J.get("trees", []):
-		_group(groups, "tree", t[0], Transform3D(Basis(Vector3.UP, t[3]).scaled(Vector3.ONE * t[4]), Vector3(t[1], 0.15, t[2])))
+		var y: float = t[5] if t.size() > 5 else 0.15
+		_group(extra if terrain and ti % 3 == 2 else groups, "tree", t[0], Transform3D(Basis(Vector3.UP, t[3]).scaled(Vector3.ONE * t[4]), Vector3(t[1], y, t[2])))
+		ti += 1
 	for p in J.get("props", []):
-		_group(groups, "prop", p[0], Transform3D(Basis(Vector3.UP, p[4]), Vector3(p[1], p[2], p[3])))
+		var sc: float = p[5] if p.size() > 5 else 1.0
+		_group(groups, "prop", p[0], Transform3D(Basis(Vector3.UP, p[4]).scaled(Vector3.ONE * sc), Vector3(p[1], p[2], p[3])))
+	if terrain:
+		# coast: 100 m cells (sparser vegetation over a large area); every third tree/shrub is an
+		# "extra" instance appended after the main ones -> hidden on Low via visible_instance_count
+		for key in extra:
+			var main: Array = groups.get(key, [])
+			groups[key] = main + extra[key]
+			_extra_from[key] = main.size()
+		for key in groups:
+			_build_multimesh(node, key, groups[key], COAST_CELL, _extra_from.get(key, -1))
+		_extra_from.clear()
+		return
 	for a in J.get("attach", []):
 		_group(groups, "prop", a[0], Transform3D(Basis(Vector3.UP, a[4]), Vector3(a[1], a[2], a[3])))
 	for l in J.get("lines", []):
@@ -184,7 +215,7 @@ func _meshes_for(kind: String, id: String) -> Array:
 	return out
 
 
-func _build_multimesh(parent: Node3D, key: String, xfs: Array) -> void:
+func _build_multimesh(parent: Node3D, key: String, xfs: Array, cell_size := -1.0, extra_from := -1) -> void:
 	var parts := key.split(":", true, 1)
 	var chain := _meshes_for(parts[0], parts[1])
 	if chain.is_empty():
@@ -195,13 +226,18 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array) -> void:
 	# LOD and frustum culling are then evaluated per cell (not per 100 m chunk, and never against a
 	# stale/zero AABB at the world origin).
 	var cells := {}
-	var cell := CELL if parts[0] == "tree" else PROP_CELL
-	for xf in xfs:
+	var mains := {}
+	var cell := cell_size if cell_size > 0.0 else (CELL if parts[0] == "tree" else PROP_CELL)
+	for k in xfs.size():
+		var xf: Transform3D = xfs[k]
 		var o: Vector3 = xf.origin
 		var ck := Vector2i(floori(o.x / cell), floori(o.z / cell))
 		if not cells.has(ck):
 			cells[ck] = []
+			mains[ck] = 0
 		cells[ck].append(xf)
+		if extra_from < 0 or k < extra_from:
+			mains[ck] += 1
 	for ck in cells:
 		var origin := Vector3((ck.x + 0.5) * cell, 0.0, (ck.y + 0.5) * cell)
 		var cxfs: Array = cells[ck]
@@ -231,6 +267,9 @@ func _build_multimesh(parent: Node3D, key: String, xfs: Array) -> void:
 			mmi.set_meta(&"lod_kind", parts[0])
 			mmi.set_meta(&"lod_id", parts[1])
 			mmi.set_meta(&"lod_index", li)
+			if extra_from >= 0 and mains[ck] < cxfs.size():
+				mmi.set_meta(&"main_count", mains[ck])
+				mmi.add_to_group(&"coast_extra")
 			mmi.visibility_range_begin = lod[1]
 			mmi.visibility_range_end = lod[2]
 			mmi.visibility_range_begin_margin = 3.0
@@ -301,23 +340,67 @@ func _prop_colliders(parent: Node3D, id: String, xfs: Array) -> void:
 
 # ---------------------------------------------------------------------------------------------
 func _make_outer_ground() -> Node3D:
-	## Large lawn/loess plane around the district (fades into fog) + floor collision.
+	## Ground under the district (fallback plane under the city square) and the collision of the whole
+	## peninsula: a HeightMapShape3D (4 m grid, +-1200 m) baked by tools/terrain/build_coast.py, the same
+	## heights as the visible terrain tiles. A world boundary far below is only a safety net.
 	var root := Node3D.new()
 	root.name = "OuterGround"
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(3000, 3000)
+	pm.size = Vector2(600, 600)
 	mi.mesh = pm
 	mi.position.y = -0.06
 	mi.material_override = CityMaterials.get_material("lawn_worn")
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(mi)
 	var body := StaticBody3D.new()
-	var cs := CollisionShape3D.new()
-	cs.shape = WorldBoundaryShape3D.new()
-	body.add_child(cs)
+	body.name = "TerrainBody"
 	root.add_child(body)
+	var meta := _load_json("res://data/terrain/terrain.json")
+	if not meta.is_empty() and FileAccess.file_exists("res://data/terrain/height.bin"):
+		var n: int = meta["size"]
+		var step: float = meta["step"]
+		var data := FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
+		for i in data.size():
+			data[i] /= step                    # uniform scale by `step` below (non-uniform shape scale is unsupported)
+		var hs := HeightMapShape3D.new()
+		hs.map_width = n
+		hs.map_depth = n
+		hs.map_data = data
+		var cs := CollisionShape3D.new()
+		cs.shape = hs
+		cs.scale = Vector3.ONE * step
+		var o: Array = meta["origin"]
+		cs.position = Vector3(o[0] + (n - 1) * step * 0.5, 0.0, o[1] + (n - 1) * step * 0.5)
+		body.add_child(cs)
+		terrain_info = meta
+		terrain_heights = FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
+	else:
+		var cs0 := CollisionShape3D.new()
+		cs0.shape = WorldBoundaryShape3D.new()
+		body.add_child(cs0)
+	var safety := CollisionShape3D.new()
+	safety.shape = WorldBoundaryShape3D.new()
+	safety.position.y = -30.0
+	body.add_child(safety)
 	return root
+
+
+## Terrain height at a world point (bilinear, same data as the collision); 0 outside the baked area.
+func terrain_height(x: float, z: float) -> float:
+	if terrain_info.is_empty():
+		return 0.0
+	var n: int = terrain_info["size"]
+	var step: float = terrain_info["step"]
+	var o: Array = terrain_info["origin"]
+	var fx := clampf((x - float(o[0])) / step, 0.0, n - 1.001)
+	var fz := clampf((z - float(o[1])) / step, 0.0, n - 1.001)
+	var i := int(fx)
+	var j := int(fz)
+	var u := fx - i
+	var v := fz - j
+	return lerpf(lerpf(terrain_heights[j * n + i], terrain_heights[j * n + i + 1], u),
+			lerpf(terrain_heights[(j + 1) * n + i], terrain_heights[(j + 1) * n + i + 1], u), v)
 
 
 func _load_backdrop() -> void:
@@ -344,7 +427,7 @@ func _load_backdrop() -> void:
 			var id: String = ids[absi(int(t[0] * 13.0 + t[1] * 7.0)) % ids.size()]
 			if not per.has(id):
 				per[id] = []
-			per[id].append(Transform3D(Basis(Vector3.UP, t[2]).scaled(Vector3.ONE * t[3]), Vector3(t[0], 0.0, t[1])))
+			per[id].append(Transform3D(Basis(Vector3.UP, t[2]).scaled(Vector3.ONE * t[3]), Vector3(t[0], t[4] if t.size() > 4 else 0.0, t[1])))
 		for id in per:
 			var e: Dictionary = veg.get(id, {})
 			var files: Dictionary = e.get("files", e.get("meshes", {}))
@@ -365,15 +448,24 @@ func _load_backdrop() -> void:
 
 
 func _make_bounds() -> void:
+	## Playable boundary: invisible walls along the line where the sea gets deeper than the wading
+	## depth (0.9 m), closed across the mainland in the north (data/terrain/bounds.json).
 	var body := StaticBody3D.new()
 	body.name = "Bounds"
 	add_child(body)
-	for i in 4:
+	var B := _load_json("res://data/terrain/bounds.json")
+	var pts: Array = B.get("polyline", [])
+	if pts.is_empty():
+		pts = [[-301, -301], [301, -301], [301, 301], [-301, 301]]
+	for i in pts.size():
+		var a := Vector2(pts[i][0], pts[i][1])
+		var b := Vector2(pts[(i + 1) % pts.size()][0], pts[(i + 1) % pts.size()][1])
+		var mid := (a + b) * 0.5
 		var cs := CollisionShape3D.new()
-		var b := BoxShape3D.new()
-		b.size = Vector3(620, 40, 2) if i < 2 else Vector3(2, 40, 620)
-		cs.shape = b
-		cs.position = [Vector3(0, 20, -301), Vector3(0, 20, 301), Vector3(-301, 20, 0), Vector3(301, 20, 0)][i]
+		var bs := BoxShape3D.new()
+		bs.size = Vector3(1.0, 80.0, a.distance_to(b) + 1.0)
+		cs.shape = bs
+		cs.transform = Transform3D(Basis(Vector3.UP, atan2(b.x - a.x, b.y - a.y)), Vector3(mid.x, 10.0, mid.y))
 		body.add_child(cs)
 
 
@@ -392,6 +484,12 @@ func _shadow_mode(kind: String, id: String, lod_index: int) -> GeometryInstance3
 
 func apply_quality() -> void:
 	_mesh_cache.clear()
+	var q := Settings.quality
+	for n in get_tree().get_nodes_in_group(&"coast_extra"):
+		var mm := (n as MultiMeshInstance3D).multimesh
+		mm.visible_instance_count = -1 if q >= Settings.Quality.MEDIUM else int(n.get_meta(&"main_count"))
+	if sea:
+		sea.apply_quality(q)
 	for mmi in find_children("*", "MultiMeshInstance3D", true, false):
 		if not mmi.has_meta(&"lod_kind"):
 			continue

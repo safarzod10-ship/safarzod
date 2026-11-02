@@ -1,0 +1,11 @@
+{
+ "step": 4.0,
+ "size": 601,
+ "origin": [
+  -1200.0,
+  -1200.0
+ ],
+ "sea_level": -1.6,
+ "wade_depth": 0.9,
+ "note": "row-major float32, rows = z from -W, cols = x from -W"
+}

@@ -23,7 +23,7 @@ func _ready() -> void:
 	if opt.has("cam"):
 		var c := String(opt["cam"]).split_floats(",")
 		var cam := Camera3D.new()
-		cam.far = 4500.0
+		cam.far = 9500.0
 		cam.fov = float(opt.get("fov", "70"))
 		get_tree().root.add_child(cam)
 		cam.global_position = Vector3(c[0], c[1], c[2])

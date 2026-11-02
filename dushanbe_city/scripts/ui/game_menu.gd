@@ -4,6 +4,7 @@ extends CanvasLayer
 ## Also draws the FPS counter and the diagnostics overlay.
 
 var _panel: PanelContainer
+var _btn: Button
 var _fps: Label
 var _diag: Label
 var _mode_buttons := {}
@@ -26,18 +27,21 @@ var _open_on_start := false:
 
 func _ready() -> void:
 	layer = 20
-	var btn := Button.new()
+	# top-right: the top-left corner belongs to the round minimap
+	_btn = Button.new()
+	var btn := _btn
 	btn.text = "☰"
 	btn.custom_minimum_size = Vector2(72, 72)
-	btn.position = Vector2(16, 16)
+	btn.size = Vector2(72, 72)
 	btn.add_theme_font_size_override("font_size", 34)
 	add_child(btn)
-	_fps = _outlined_label(Vector2(100, 20), 22)
-	_diag = _outlined_label(Vector2(16, 100), 18)
+	_fps = _outlined_label(Vector2(0, 0), 22)
+	_fps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_diag = _outlined_label(Vector2(16, 16), 18)
 	_panel = PanelContainer.new()
-	_panel.position = Vector2(16, 100)
 	_panel.visible = false
 	add_child(_panel)
+	get_viewport().size_changed.connect(_layout)
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(620, 560)
 	_panel.add_child(scroll)
@@ -93,10 +97,21 @@ func _ready() -> void:
 	v.add_child(s)
 	btn.pressed.connect(func() -> void:
 		_panel.visible = not _panel.visible
+		_layout()
 		_refresh())
 	Settings.settings_changed.connect(_refresh)
 	Settings.quality_changed.connect(func(_q: int) -> void: _refresh())
 	_refresh()
+	_layout.call_deferred()
+
+
+func _layout() -> void:
+	## top-right corner (the top-left one belongs to the round minimap)
+	var w := get_viewport().get_visible_rect().size.x
+	_btn.position = Vector2(w - 16 - _btn.size.x, 16)
+	_fps.size = Vector2(420, 30)
+	_fps.position = Vector2(w - 16 - 420, 96)
+	_panel.position = Vector2(maxf(16.0, w - 16 - _panel.get_combined_minimum_size().x), 100)
 
 
 func _outlined_label(pos: Vector2, fs: int) -> Label:
@@ -172,6 +187,8 @@ func _update_text() -> void:
 	_diag.visible = Settings.show_diagnostics and not _panel.visible
 	if not _diag.visible:
 		return
+	var vs := get_viewport().get_visible_rect().size
+	_diag.position = Vector2(16, 16 + clampf(minf(vs.x, vs.y) * 0.22, 150.0, 320.0) + 12)   # under the minimap
 	var rs := RenderingServer
 	var info := AutoGraphics.device_info()
 	var lines := [

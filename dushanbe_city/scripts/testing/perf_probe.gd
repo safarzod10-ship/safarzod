@@ -4,7 +4,7 @@ extends Node
 ## process/physics script time, draw calls, primitives, objects, video memory.
 ## Usage (one line per run, JSON appended to out file):
 ##   godot --path . res://scenes/testing/perf_probe.tscn -- cam=x,y,z,yaw,pitch label=NAME out=FILE
-##        [quality=low|medium|high|ultra] [off=shadows,trees,grass,props,detail,backdrop,lights,foliage_shadows,sky_rt]
+##        [quality=low|medium|high|ultra] [off=shadows,trees,grass,props,detail,backdrop,lights,foliage_shadows,sky_rt,coast,sea]
 ##        [scale=0.5] [frames=40]
 
 func _ready() -> void:
@@ -18,7 +18,7 @@ func _ready() -> void:
 		await get_tree().process_frame
 	var c := String(opt.get("cam", "-50,1.7,-60,15,3")).split_floats(",")
 	var cam := Camera3D.new()
-	cam.far = 4500.0
+	cam.far = 9500.0
 	get_tree().root.add_child(cam)
 	cam.global_position = Vector3(c[0], c[1], c[2])
 	cam.rotation = Vector3(deg_to_rad(c[4]), deg_to_rad(c[3]), 0)
@@ -59,6 +59,12 @@ func _ready() -> void:
 			"city":
 				for ch in get_tree().root.find_children("chunk_*", "", true, false):
 					(ch as Node3D).visible = false
+			"coast":      # terrain tiles, coast vegetation/boulders, promenade
+				for ch in get_tree().root.find_children("chunk_coast*", "", true, false):
+					(ch as Node3D).visible = false
+			"sea":
+				for n in get_tree().root.find_children("Sea", "", true, false):
+					(n as Node3D).visible = false
 			"fog":
 				for we in get_tree().root.find_children("*", "WorldEnvironment", true, false):
 					(we as WorldEnvironment).environment.fog_enabled = false
