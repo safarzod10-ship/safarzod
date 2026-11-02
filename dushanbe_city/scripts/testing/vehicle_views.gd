@@ -46,6 +46,14 @@ func _ready() -> void:
 	await _shot("front_close", c + Vector3(-1.4, 0.9, -3.6), c + Vector3(0, 0.1, -2.0))
 	var w: Node3D = car.wheels[0]["node"]
 	await _shot("wheel_close", w.global_position + Vector3(-1.8, 0.35, -0.6), w.global_position)
+	# seated driver (left-hand drive): through the open side / windscreen
+	car.set_driver_visible(true)
+	await _frames(3)
+	var dl := car.global_position + car.global_transform.basis * Vector3(-0.45, 0.55, -0.3)
+	await _shot("driver_side", c + Vector3(-3.2, 1.2, -0.6), dl)
+	await _shot("driver_front", c + Vector3(-0.9, 1.6, -4.2), dl)
+	await _shot("driver_close", c + Vector3(-1.9, 1.15, -0.4), dl)
+	car.set_driver_visible(false)
 	# damage: a front-left corner hit, a door hit, a rear hit (scripted impacts = same path as crashes)
 	var b := car.global_transform.basis
 	car.damage_at(car.global_position + b * Vector3(-0.7, -0.05, -2.25), b * Vector3(0, 0, 1), 9.0)

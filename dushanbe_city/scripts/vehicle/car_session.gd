@@ -116,6 +116,7 @@ func enter() -> void:
 	player.visible = false
 	player.process_mode = Node.PROCESS_MODE_DISABLED       # also removes its collision from physics
 	car.driven = true
+	car.set_driver_visible(true)
 	cam.car = car
 	cam.snap()
 	cam.make_current()
@@ -131,6 +132,7 @@ func exit() -> void:
 	var spot := find_exit_spot()
 	driving = false
 	car.driven = false
+	car.set_driver_visible(false)
 	controls.release()
 	controls.visible = false
 	VehicleInput.release_all()

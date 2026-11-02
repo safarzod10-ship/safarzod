@@ -511,6 +511,8 @@ func _process(delta: float) -> void:
 		mesh.transform = Transform3D(Basis(Vector3.RIGHT, -float(w["spin"])) * mr.basis, mr.origin)
 	if _steering_wheel:
 		_steering_wheel.transform = Transform3D(_steering_rest.basis * Basis(Vector3.BACK, steer * deg_to_rad(240.0)), _steering_rest.origin)
+	if _driver and _driver.visible:
+		_driver.pose(steer)
 
 
 # ------------------------------------------------------------------------------------------- damage
@@ -680,3 +682,28 @@ func apply_quality() -> void:
 			m.visible = not low
 		elif String(m.name).begins_with("wheel") or m.name == "windscreen" or m.name == "fari":
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if low else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+
+
+# ------------------------------------------------------------------------------------------- driver
+var _driver: SeatedDriver
+
+
+## Seated player character (visible while somebody drives). Driver's seat = the model's front-seat
+## point mirrored to the steering-wheel side (left-hand drive).
+func set_driver_visible(on: bool) -> void:
+	if on and _driver == null:
+		_driver = SeatedDriver.new()
+		_driver.name = "Driver"
+		model.add_child(_driver)
+		var seat: Node3D = model.find_child("ped_frontseat", true, false)
+		var sp := model.global_transform.affine_inverse() * seat.global_position
+		var sw := model.global_transform.affine_inverse() * _steering_wheel.global_position if _steering_wheel else Vector3(-0.42, 0, 0)
+		var x := -absf(sp.x) if sw.x < 0.0 else absf(sp.x)
+		_driver.seat_at(model, Vector3(x, sp.y + DRIVER_SEAT_UP, sp.z + DRIVER_SEAT_BACK))
+	if _driver:
+		_driver.visible = on
+
+
+const DRIVER_SEAT_UP := 0.06       ## hips above the seat point (cushion)
+const DRIVER_SEAT_BACK := 0.05     ## towards the seat back
