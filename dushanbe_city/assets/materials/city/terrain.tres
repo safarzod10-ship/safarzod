@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/textures/rock_cliff/albedo.jpg" id="6"]
 [ext_resource type="Texture2D" path="res://assets/textures/rock_cliff/normal.png" id="7"]
 [ext_resource type="Texture2D" path="res://assets/textures/soil/albedo.jpg" id="8"]
-[ext_resource type="Texture2D" path="res://assets/textures/asphalt_yard/albedo.jpg" id="9"]
+[ext_resource type="Texture2D" path="res://assets/textures/asphalt_road/albedo.jpg" id="9"]
 [ext_resource type="Texture2D" path="res://assets/textures/noise_macro.png" id="10"]
 
 [resource]

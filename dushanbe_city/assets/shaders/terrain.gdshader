@@ -33,6 +33,13 @@ void vertex() {
 void fragment() {
 	vec4 w = clamp(COLOR, 0.0, 1.0);
 	float wg = clamp(1.0 - w.r - w.g - w.b - w.a, 0.0, 1.0);
+	// sharpen the weights (power 3, renormalised): blending happens in LINEAR colour, where a small
+	// share of bright grass would otherwise wash out dark asphalt or wet sand; transitions stay smooth
+	vec4 w3 = w * w * w;
+	float g3 = wg * wg * wg;
+	float tot = max(g3 + w3.r + w3.g + w3.b + w3.a, 1e-5);
+	w = w3 / tot;
+	wg = g3 / tot;
 	vec2 p = wp.xz;
 	// rock: blend planar projections by the normal on steep faces (no stretching on cliffs)
 	vec2 rock_uv = abs(wn.y) > 0.75 ? p / 6.0 : (abs(wn.x) > abs(wn.z) ? wp.zy : wp.xy) / 6.0;
@@ -42,7 +49,7 @@ void fragment() {
 	vec3 s = w.r > 0.003 ? texture(sand_alb, p / 4.0).rgb : vec3(0.0);
 	vec3 r = w.g > 0.003 ? texture(rock_alb, rock_uv).rgb : vec3(0.0);
 	vec3 e = w.b > 0.003 ? texture(earth_alb, p / 3.0).rgb : vec3(0.0);
-	vec3 a = w.a > 0.003 ? texture(asphalt_alb, p / 5.0).rgb : vec3(0.0);
+	vec3 a = w.a > 0.003 ? texture(asphalt_alb, p / 6.0).rgb * vec3(0.58, 0.6, 0.66) : vec3(0.0);   // matched to the city road
 	float m = 0.5;
 	if (city_macro_detail > 0.5) {
 		m = texture(macro_tex, p * 0.004).r * 0.6 + texture(macro_tex, p * 0.019).r * 0.4;

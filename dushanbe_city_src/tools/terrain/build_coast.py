@@ -469,7 +469,7 @@ def write_tiles(X, Z, H, sand, rock, earth, asphalt):
             ny_, nx_ = h.shape
             # cells: skip those fully inside the city or fully under water
             keep = np.ones((ny_ - 1, nx_ - 1), bool)
-            inside = (np.abs(x) <= HALF - 0.01) & (np.abs(z) <= HALF - 0.01)
+            inside = (np.abs(x) <= HALF + 0.01) & (np.abs(z) <= HALF + 0.01)   # boundary counts as city
             keep &= ~(inside[:-1, :-1] & inside[1:, 1:] & inside[:-1, 1:] & inside[1:, :-1])
             wet = h < SEA - 0.4
             keep &= ~(wet[:-1, :-1] & wet[1:, 1:] & wet[:-1, 1:] & wet[1:, :-1])
@@ -579,7 +579,10 @@ def scatter(X, Z, H, S, E, R, Wb, slope, sand, earth, asphalt, paths, prom, prom
 
     pathd = None
     for p in paths:
-        d = dist_to_polyline(X, Z, p["pts"], p["width"] / 2 + 6)
+        # country asphalt roads keep a 14 m open corridor each side (vista to the mountains),
+        # earth paths only a narrow one
+        clear = 14.0 if p["asphalt"] else 0.0
+        d = dist_to_polyline(X, Z, p["pts"], p["width"] / 2 + 6 + clear) - clear
         pathd = d if pathd is None else np.minimum(pathd, d)
 
     def hgt(x, z):   # bilinear height of the final grid
