@@ -1,5 +1,5 @@
 """Prepare the uploaded Prado GLB for the game (Blender, background):
-  blender -b --python prepare_prado.py -- <source.glb> <out.glb>
+  blender -b --python prepare_prado.py -- [--low] <source.glb> <out.glb>
 * uniform scale 1.047 -> real J150 5-door proportions (L 4.83 m, wheelbase 2.77 m, H 1.87 m, tyre r 0.398 m)
 * node structure kept: body (+ doors, windscreen, interior, steering wheel), wheel pivots at hub centres
 * triangle budget for mobile: careful collapse-decimation, mostly of interior/steering/wheels (hidden or
@@ -7,6 +7,7 @@
 Prints per-object triangles before/after."""
 import bpy, sys
 src, out = sys.argv[-2], sys.argv[-1]
+LOW = "--low" in sys.argv          # Low-preset variant: ~35 % of the triangles
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
 SCALE = 1.047
@@ -24,6 +25,8 @@ for o in list(bpy.data.objects):
         continue
     t0 = tris(o)
     r = RATIO.get(o.name)
+    if r and LOW:
+        r *= 0.38
     if o.name in WHEELS:
         continue
     if r:

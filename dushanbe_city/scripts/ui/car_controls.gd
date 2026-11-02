@@ -107,6 +107,11 @@ func release() -> void:
 
 
 func _process(_d: float) -> void:
+	# full-screen overlay (a Control directly under a CanvasLayer: follow the viewport size)
+	var vs := get_viewport_rect().size
+	if size != vs:
+		position = Vector2.ZERO
+		size = vs
 	if visible:
 		queue_redraw()
 
@@ -117,7 +122,7 @@ func _draw() -> void:
 	var held := _fingers.values()
 	if not touch_mode:
 		if car:
-			_speedometer(Vector2(size.x * 0.5, size.y - 0.55 * u), 1.75 * u)
+			_speedometer(_gauge_center(), 1.3 * u)
 		return
 	var base := Color(0, 0, 0, 0.34)
 	var on := Color(1, 1, 1, 0.32)
@@ -137,7 +142,13 @@ func _draw() -> void:
 	_button(r["repair"], "ВОССТАНОВИТЬ", base)
 	_button(r["exit"], "ВЫЙТИ", base)
 	if car:
-		_speedometer(Vector2(size.x * 0.5, size.y - 0.55 * u), 1.75 * u)
+		_speedometer(_gauge_center(), 1.3 * u)
+
+
+func _gauge_center() -> Vector2:
+	## right side above the pedals: never covers the car (which sits at the bottom centre)
+	var u := _u()
+	return Vector2(size.x - 3.7 * u, size.y - 6.9 * u)
 
 
 func _pedal(rc: Rect2, label: String, col: Color) -> void:
@@ -181,8 +192,8 @@ func _speedometer(c: Vector2, rad: float) -> void:
 	_text("км/ч  %s" % g, c + Vector2(0, -rad * 0.05), int(rad * 0.2))
 	# condition bar
 	var bw := rad * 1.4
-	var br := Rect2(c.x - bw * 0.5, c.y - rad * 1.2, bw, rad * 0.09)
+	var br := Rect2(c.x - bw * 0.5, c.y + rad * 0.55, bw, rad * 0.09)
 	draw_rect(br, Color(0, 0, 0, 0.5))
 	var hcol := Color(0.3, 0.85, 0.35).lerp(Color(0.95, 0.25, 0.2), 1.0 - car.health / 100.0)
 	draw_rect(Rect2(br.position, Vector2(bw * car.health / 100.0, br.size.y)), hcol)
-	_text("состояние %d%%" % roundi(car.health), c + Vector2(0, -rad * 1.36), int(rad * 0.16))
+	_text("состояние %d%%" % roundi(car.health), c + Vector2(0, rad * 0.38), int(rad * 0.16))

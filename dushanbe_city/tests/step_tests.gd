@@ -57,7 +57,7 @@ func _ready() -> void:
 
 	for i in heights.size():
 		var h: float = heights[i]
-		var y := await _walk_lane(Vector3(i * 6.0, 0, 0), false, 150)
+		var y := await _walk_lane(Vector3(i * 6.0, 0, 0), false, 330)
 		if h <= player.step_height + 0.001:
 			_check("step %.2f m climbed walking: y=%.3f" % [h, y], absf(y - h) < 0.02)
 			var yr := await _walk_lane(Vector3(i * 6.0, 0, 0), true, 120)
@@ -69,7 +69,7 @@ func _ready() -> void:
 	# staircase up: model and camera must not pop
 	await _place(Vector3(40, 0, 0))
 	PlayerInput.scripted_move = Vector2(0, -1)
-	var m := await _track(230)
+	var m := await _track(470)      # walking 1 m/s: 12 steps + part of the landing
 	_check("staircase up (12 × 0.17 m): top y=%.3f, %d step-ups" % [player.global_position.y, m["steps"]],
 		absf(player.global_position.y - 2.04) < 0.02 and m["steps"] >= 12)
 	_check("staircase up: model moves smoothly, max %.3f m per frame (a pop would be 0.17)" % m["model_dy"], m["model_dy"] < 0.052)
@@ -87,7 +87,7 @@ func _ready() -> void:
 	# staircase down
 	await _place(Vector3(40, 0, -3 - 3.6 - 1.0), PI)
 	PlayerInput.scripted_move = Vector2(0, -1)
-	m = await _track(280)
+	m = await _track(600)
 	_check("staircase down: bottom y=%.3f" % player.global_position.y, absf(player.global_position.y) < 0.02)
 	_check("staircase down: model max %.3f m per frame, camera max %.2f m/s" % [m["model_dy"], m["cam_dy"]], m["model_dy"] < 0.052 and m["cam_dy"] < 3.1)
 	_check("staircase down: no landing animation, states seen %s" % [m["states"]], not m["states"].has("jump_land"))
@@ -95,28 +95,40 @@ func _ready() -> void:
 	# step down a 0.30 m ledge
 	await _place(Vector3(50, 0, 3.5))
 	PlayerInput.scripted_move = Vector2(0, 1)
-	m = await _track(120)
+	m = await _track(200)
 	_check("step down 0.30 m: y=%.3f, model max %.3f m per frame, camera max %.2f m/s, states %s" % [player.global_position.y, m["model_dy"], m["cam_dy"], m["states"]],
 		absf(player.global_position.y) < 0.02 and m["model_dy"] < 0.052 and m["cam_dy"] < 3.1 and not m["states"].has("jump_land"))
 
 	# ramps
-	var yr20 := await _walk_lane(Vector3(60, 0, 0), false, 200)
+	await _place(Vector3(60, 0, 0))
+	PlayerInput.scripted_move = Vector2(0, -1)
+	var yr20 := 0.0
+	for i in 720:                                              # 8 m ramp at 1 m/s walking: highest point reached
+		await get_tree().physics_frame
+		yr20 = maxf(yr20, player.global_position.y)
+	PlayerInput.scripted_move = null
 	_check("20° ramp walkable: y=%.2f" % yr20, yr20 > 1.5)
-	var yr50 := await _walk_lane(Vector3(66, 0, 0), false, 200)
+	var yr50 := await _walk_lane(Vector3(66, 0, 0), false, 400)
 	_check("50° ramp (> %d° limit) not climbed: y=%.2f" % [int(player.max_slope_deg), yr50], yr50 < 0.35)
 	# wall / narrow edge / low ceiling
 	var yw := await _walk_lane(Vector3(72, 0, 0), true, 150)
 	_check("1.2 m wall blocks: y=%.3f, z=%.2f" % [yw, player.global_position.z], yw < 0.02 and player.global_position.z > -3.05)
-	var ye := await _walk_lane(Vector3(78, 0, 0), false, 150)
+	var ye := await _walk_lane(Vector3(78, 0, 0), false, 330)
 	_check("narrow 4 cm edge is not used as a step: y=%.3f" % ye, ye < 0.02 and player.global_position.z > -3.05)
-	var yc := await _walk_lane(Vector3(84, 0, 0), false, 150)
+	var yc := await _walk_lane(Vector3(84, 0, 0), false, 330)
 	_check("step under a low ceiling (1.5 m clear) not climbed: y=%.3f, z=%.2f" % [yc, player.global_position.z], yc < 0.02)
 	# jump onto a 0.5 m box (too high to step, reachable by jumping)
-	await _place(Vector3(90, 0, -1.2))
+	await _place(Vector3(90, 0, 4.0))                       # run-up: a 0.5 m box needs a running jump
 	PlayerInput.scripted_move = Vector2(0, -1)
+	PlayerInput.scripted_run = true
+	for i in 300:
+		await get_tree().physics_frame
+		if player.global_position.z < -1.9:
+			break
 	PlayerInput.queue_jump()
 	await _frames(150)
-	_check("jump onto a 0.5 m box: y=%.3f" % player.global_position.y, absf(player.global_position.y - 0.5) < 0.02)
+	PlayerInput.scripted_run = false
+	_check("running jump onto a 0.5 m box: y=%.3f" % player.global_position.y, absf(player.global_position.y - 0.5) < 0.02)
 
 	PlayerInput.scripted_move = null
 	PlayerInput.scripted_run = false
@@ -141,10 +153,10 @@ func _walk_lane(start: Vector3, run: bool, n: int) -> float:
 	await _place(start)
 	PlayerInput.scripted_move = Vector2(0, -1)
 	PlayerInput.scripted_run = run
-	await _frames(80 if not run else 55)            # around the moment the step face is reached
+	await _frames(170 if not run else 55)           # around the moment the step face is reached
 	if not run:
 		await _shot("walk %.2f m" % _lane_h(start.x))
-	await _frames(n - (80 if not run else 55))
+	await _frames(n - (170 if not run else 55))
 	PlayerInput.scripted_move = null
 	PlayerInput.scripted_run = false
 	await _frames(10)

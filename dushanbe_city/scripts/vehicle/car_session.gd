@@ -89,6 +89,10 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(_d: float) -> void:
+	var vs := _prompt.get_viewport_rect().size
+	if _prompt.size != vs:
+		_prompt.position = Vector2.ZERO
+		_prompt.size = vs
 	var show := can_enter()
 	if show != _prompt.visible:
 		_prompt.visible = show

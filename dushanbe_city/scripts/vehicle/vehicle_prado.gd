@@ -76,6 +76,9 @@ var model: Node3D
 var _reverse_timer := 0.0
 var _shift_timer := 0.0
 var _materials: Array[ShaderMaterial] = []
+var _mat_cache := {}                      ## source material name -> ShaderMaterial (shared by both LOD sets)
+var _hi_meshes := {}                      ## MeshInstance3D -> full-detail mesh
+var _lo_meshes := {}                      ## node name -> Low-preset mesh (prado_low.glb)
 var _dents: Array = []                    ## [Vector4 pos_r, Vector4 dir_depth]
 var _hit_cooldown := 0.0
 var _boost := 0.3                         ## turbo spool 0..1
@@ -113,6 +116,8 @@ func _ready() -> void:
 	var H := 1.85
 	inertia = Vector3(mass / 12.0 * (H * H + L * L), mass / 12.0 * (W * W + L * L), mass / 12.0 * (W * W + H * H)) * 0.8
 	_setup_wheels()
+	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
+	apply_quality()
 	var audio := VehicleAudio.new()
 	audio.name = "Audio"
 	audio.car = self
@@ -124,36 +129,42 @@ func _build_model() -> void:
 	model = (load(MODEL) as PackedScene).instantiate()
 	model.name = "Model"
 	add_child(model)
-	var shader: Shader = load("res://assets/shaders/vehicle.gdshader")
-	var glass: Shader = load("res://assets/shaders/vehicle_glass.gdshader")
-	var cache := {}
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		var interior := String(m.name).begins_with("int") or m.name == "steeringwheel"
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if interior else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		for s in m.mesh.get_surface_count():
-			var src := m.mesh.surface_get_material(s) as BaseMaterial3D
-			if src == null:
-				continue
-			var key := src.resource_name
-			if not cache.has(key):
-				var sm := ShaderMaterial.new()
-				var is_glass := key.begins_with("glass") or src.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA
-				sm.shader = glass if is_glass else shader
-				sm.resource_name = key
-				sm.set_shader_parameter("albedo_tex", src.albedo_texture)
-				sm.set_shader_parameter("albedo_color", src.albedo_color)
-				if not is_glass:
-					_style_material(sm, key, src)
-				cache[key] = sm
-				_materials.append(sm)
-			m.set_surface_override_material(s, cache[key])
+		_hi_meshes[m] = m.mesh
+		_apply_materials(m)
 	_steering_wheel = model.find_child("steeringwheel", true, false)
 	if _steering_wheel:
 		_steering_rest = _steering_wheel.transform
 	# per-part transform into car (model root) space, for the shared dent field
 	await get_tree().process_frame
 	_update_part_uniforms()
+
+
+func _apply_materials(m: MeshInstance3D) -> void:
+	## glTF materials -> vehicle shaders (paint/parts or glass), cached by source material name so the
+	## dent uniforms live in one set of materials for every mesh variant
+	var shader: Shader = load("res://assets/shaders/vehicle.gdshader")
+	var glass: Shader = load("res://assets/shaders/vehicle_glass.gdshader")
+	for s in m.mesh.get_surface_count():
+		var src := m.mesh.surface_get_material(s) as BaseMaterial3D
+		if src == null:
+			continue
+		var key := src.resource_name
+		if not _mat_cache.has(key):
+			var sm := ShaderMaterial.new()
+			var is_glass := key.begins_with("glass") or src.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA
+			sm.shader = glass if is_glass else shader
+			sm.resource_name = key
+			sm.set_shader_parameter("albedo_tex", src.albedo_texture)
+			sm.set_shader_parameter("albedo_color", src.albedo_color)
+			if not is_glass:
+				_style_material(sm, key, src)
+			_mat_cache[key] = sm
+			_materials.append(sm)
+		m.set_surface_override_material(s, _mat_cache[key])
 
 
 func _style_material(sm: ShaderMaterial, key: String, src: BaseMaterial3D) -> void:
@@ -642,3 +653,30 @@ func driver_door_point(outside := 0.9) -> Vector3:
 	var d: Node3D = model.find_child("door_lf_dummy", true, false)
 	var p := d.global_position + global_transform.basis.x * -outside
 	return p
+
+
+
+## Per preset: mesh LOD bias (the glTF import generated LODs) and interior/shadow detail.
+## Low: 71 k-triangle mesh set, no interior, only the body/doors cast shadows; High/Ultra: full detail.
+func apply_quality() -> void:
+	var q := Settings.quality
+	var low := q == Settings.Quality.LOW
+	if low and _lo_meshes.is_empty() and ResourceLoader.exists("res://assets/vehicles/prado/prado_low.glb"):
+		var lo: Node = (load("res://assets/vehicles/prado/prado_low.glb") as PackedScene).instantiate()
+		for mi in lo.find_children("*", "MeshInstance3D", true, false):
+			_lo_meshes[String(mi.name)] = (mi as MeshInstance3D).mesh
+		lo.free()
+	var bias: float = [0.5, 0.7, 1.0, 1.4][q]
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		# Low: the 71 k-triangle variant (prado_low.glb) instead of the 188 k one
+		var want: Mesh = _lo_meshes.get(String(m.name), _hi_meshes.get(m)) if low else _hi_meshes.get(m)
+		if want and m.mesh != want:
+			m.mesh = want
+			_apply_materials(m)
+		m.lod_bias = bias
+		var interior := String(m.name).begins_with("int") or m.name == "steeringwheel"
+		if interior:
+			m.visible = not low
+		elif String(m.name).begins_with("wheel") or m.name == "windscreen" or m.name == "fari":
+			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if low else GeometryInstance3D.SHADOW_CASTING_SETTING_ON

@@ -62,6 +62,9 @@ func _ready() -> void:
 			"coast":      # terrain tiles, coast vegetation/boulders, promenade
 				for ch in get_tree().root.find_children("chunk_coast*", "", true, false):
 					(ch as Node3D).visible = false
+			"car":
+				for n in get_tree().get_nodes_in_group(&"vehicle"):
+					(n as Node3D).visible = false
 			"sea":
 				for n in get_tree().root.find_children("Sea", "", true, false):
 					(n as Node3D).visible = false

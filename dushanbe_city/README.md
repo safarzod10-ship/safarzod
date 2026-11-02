@@ -20,7 +20,8 @@ cd dushanbe_city
 godot --headless --import                                   # импорт ресурсов
 godot --headless res://tests/player_tests.tscn              # тесты персонажа (анимации, скольжение стоп, прыжок, удары)
 godot --headless res://tests/step_tests.tscn                # ступени 10–40 см, лестница, пандусы, потолок
-godot --headless res://tests/city_tests.tscn                # загрузка города и побережья, вода, миникарта
+godot --headless res://tests/city_tests.tscn                # загрузка города и побережья, вода, миникарта, посадка в Prado
+godot --headless res://tests/vehicle_tests.tscn             # физика Prado: разгон, 200 км/ч, торможение, крен, занос, удары, ремонт
 python3 ../dushanbe_city_src/tools/city/validate_city.py    # 5 проверок планировки
 godot -e                                                    # редактор (нужен GPU)
 godot --headless --export-debug "Android" ../builds/android/dushanbe-city-debug.apk
@@ -46,6 +47,8 @@ python3 props/make_catalog.py           # каталог уличной мебе
 ## Управление
 
 * ПК: WASD — ходьба, Shift — бег, Space — прыжок, F или ЛКМ — удар, мышь — камера (клик захватывает курсор, Esc отпускает).
+* Prado (`docs/VEHICLE.md`): у водительской двери E или «СЕСТЬ»; W/S газ и тормоз (тормоз на стоянке включает задний ход),
+  A/D руль, пробел ручник, R ремонт, C обзор, E выйти. На Android стрелки, педали, «РУЧНИК», «ВОССТАНОВИТЬ», «ВЫЙТИ».
 * Android: джойстик слева, свайп справа — камера, кнопки «БЕГ», «ПРЫЖОК», «УДАР».
 * Меню ☰ (вверху справа): графика Авто / Low / Medium / High / Ultra, 30/60 FPS, показ FPS, диагностика,
   динамическое разрешение, повтор теста производительности, время суток. См. `docs/PERFORMANCE.md`.
