@@ -14,7 +14,7 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("mode="):
 			mode = a.substr(5)
-	Settings.quality = Settings.Quality.MEDIUM
+	Settings.set_mode("medium")          # fixed preset: no adaptive downgrade during the recording
 	main = (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
 	add_child(main)
 	while main.get("car_session") == null:
@@ -60,6 +60,9 @@ func _car() -> void:
 	var s: CarSession = main.get("car_session")
 	var p: PlayerController = main.get("player")
 	var car: VehiclePrado = s.car
+	# open mainland asphalt road north of the city (the avenue's continuation): room for slides
+	car.place(Vector3(-41.3, 0.0, -425.9), 0.086)        # along the road (heading +4.9 deg)
+	await _sec(1.0)
 	p.teleport(car.driver_door_point(2.2), PI * 0.5)
 	p.set_camera_angles(-0.6, -0.2)
 	await _sec(1.0)
@@ -72,10 +75,10 @@ func _car() -> void:
 	s.enter()
 	await _sec(1.0)
 	VehicleInput.scripted = {"throttle": 1.0}
-	await _sec(5.0)                                        # accelerate north along the avenue
+	await _sec(4.0)                                        # accelerate north along the road
 	for k in 4:                                            # slalom: body roll, steering
-		VehicleInput.scripted = {"throttle": 0.6, "steer": 0.45 if k % 2 == 0 else -0.45}
-		await _sec(1.0)
+		VehicleInput.scripted = {"throttle": 0.6, "steer": 0.14 if k % 2 == 0 else -0.14}
+		await _sec(1.1)
 	VehicleInput.scripted = {"throttle": 0.5}
 	await _sec(1.0)
 	VehicleInput.scripted = {"throttle": 0.4, "steer": -0.9, "handbrake": true}   # handbrake slide
