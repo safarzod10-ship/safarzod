@@ -1,6 +1,6 @@
 extends SceneTree
 func _init() -> void:
-	for p in ["res://assets/characters/player/player.glb", "res://assets/characters/animations/ual_standard.glb"]:
+	for p in ["res://assets/characters/player/player.glb", "res://assets/characters/animations/cmu/16_15.glb"]:
 		var n: Node = (load(p) as PackedScene).instantiate()
 		var sk: Skeleton3D = n.find_children("*", "Skeleton3D", true, false)[0]
 		var names := []

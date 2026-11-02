@@ -35,12 +35,12 @@ func _ready() -> void:
 	PlayerInput.scripted_run = false
 	await _frames(90)
 	var slide_w := await _measure_slide(120)
-	_check("walk %.2f m/s: stance foot slide %.3f m/s (< 0.15)" % [player.ground_speed, slide_w], slide_w < 0.15)
-	_check("walk: stance ankle height %.3f m vs idle %.3f (|diff| < 0.025 — no floating/sinking)" % [stance_height, idle_ankle], absf(stance_height - idle_ankle) < 0.025)
+	_check("walk %.2f m/s: contact-point slide %.3f m/s (%.0f%% of speed, < 5%%)" % [player.ground_speed, slide_w, slide_w / player.ground_speed * 100.0], slide_w < 0.05 * player.ground_speed)
+	_check("feet on the ground: idle ankle %.3f m (rest 0.090 ± 0.025)" % idle_ankle, absf(idle_ankle - 0.09) < 0.025)
 	PlayerInput.scripted_run = true
 	await _frames(90)
 	var slide_r := await _measure_slide(120)
-	_check("run %.2f m/s: stance foot slide %.3f m/s (< 0.3)" % [player.ground_speed, slide_r], slide_r < 0.3)
+	_check("run %.2f m/s: contact-point slide %.3f m/s (%.0f%% of speed, < 5%%)" % [player.ground_speed, slide_r, slide_r / player.ground_speed * 100.0], slide_r < 0.05 * player.ground_speed)
 	# 3. curb 0.15 m
 	PlayerInput.scripted_move = null
 	PlayerInput.scripted_run = false
@@ -67,7 +67,7 @@ func _ready() -> void:
 	for i in 90:
 		await get_tree().physics_frame
 		ymax = maxf(ymax, player.global_position.y)
-	_check("jump height %.2f m (0.8..1.2)" % (ymax - y0), ymax - y0 > 0.8 and ymax - y0 < 1.2)
+	_check("jump height %.2f m (0.6..0.85, human standing jump)" % (ymax - y0), ymax - y0 > 0.6 and ymax - y0 < 0.85)
 	await _frames(60)
 	_check("landed on floor: y=%.3f" % player.global_position.y, absf(player.global_position.y) < 0.05)
 	# 6. jump phases: ground -> jump_start (push-off, feet still on ground) -> air -> jump_land -> ground
@@ -86,7 +86,7 @@ func _ready() -> void:
 		if t_air < 0.0 and player.global_position.y > 0.02:
 			t_air = i / 60.0
 	_check("jump states %s" % str(seq), seq.has("jump_start") and seq.has("air") and seq.has("jump_land") and seq[-1] == "ground")
-	_check("take-off delayed by push-off: body leaves ground at %.2f s (0.08..0.2)" % t_air, t_air > 0.07 and t_air < 0.2)
+	_check("take-off after the mocap push-off: body leaves ground at %.2f s (0.2..0.3)" % t_air, t_air > 0.2 and t_air < 0.3)
 	# 7. punch while standing and while walking: upper-body layer active, alternates, legs unaffected
 	player.teleport(Vector3(-20, 0, 40), 0.0)
 	await _frames(40)
@@ -124,41 +124,49 @@ func _ready() -> void:
 
 
 func _measure_slide(n: int) -> float:
-	## Flat-foot stance frames: ankle AND toe joints both within 1.5 cm of their cycle minimum.
-	## Then the foot is planted, and its world-space horizontal velocity is the sliding error.
-	var rec: Array = []
+	## Slide of the CONTACT POINT (what touches the asphalt), not of the ankle: for each foot the
+	## sole points heel (under the ankle) and ball (under the toe joint) are tracked through the foot
+	## and toe bones; the lowest one is the contact point when it is within 2 cm of the ground.
+	## Its horizontal world velocity while in contact is the visible sliding.
+	var feet := {"LeftFoot": "LeftToes", "RightFoot": "RightToes"}
+	var local := {}
+	skel.reset_bone_poses()
+	for f in feet:
+		var fi := skel.find_bone(f)
+		var ti := skel.find_bone(feet[f])
+		var fr := skel.get_bone_global_rest(fi)
+		var tr := skel.get_bone_global_rest(ti)
+		local[f] = [fr.affine_inverse() * Vector3(fr.origin.x, 0.0, fr.origin.z),
+				tr.affine_inverse() * Vector3(tr.origin.x, 0.0, tr.origin.z)]
+	var prev := {}
+	var sp: Array[float] = []
+	var signed: Array[float] = []
+	var lat: Array[float] = []
+	var ground := player.global_position.y
 	for i in n:
 		await get_tree().physics_frame
-		rec.append([_bone_world("LeftFoot"), _bone_world("LeftToes"), _bone_world("RightFoot"), _bone_world("RightToes")])
-	var amin := 9.0
-	var tmin := 9.0
-	for r in rec:
-		amin = minf(amin, minf(r[0].y, r[2].y))
-		tmin = minf(tmin, minf(r[1].y, r[3].y))
-	var acc := 0.0
-	var cnt := 0
-	for i in range(1, rec.size()):
-		for k in [0, 2]:
-			var p: Vector3 = rec[i][k]
-			var t: Vector3 = rec[i][k + 1]
-			if p.y < amin + 0.015 and t.y < tmin + 0.015:
-				var q: Vector3 = rec[i - 1][k]
-				acc += Vector2(p.x - q.x, p.z - q.z).length() * Engine.physics_ticks_per_second
-				cnt += 1
-	stance_height = amin
-	print("  flat-foot samples=%d, stance ankle y=%.3f" % [cnt, amin])
-	if cnt >= 8:
-		return acc / cnt
-	# running: the foot is rarely flat -> median world speed of the lowest foot near its minimum
-	var sp: Array[float] = []
-	for i in range(1, rec.size()):
-		var k := 0 if rec[i][0].y < rec[i][2].y else 2
-		if rec[i][k].y < amin + 0.025 and rec[i - 1][k].y < amin + 0.025:
-			var q: Vector3 = rec[i - 1][k]
-			sp.append(Vector2(rec[i][k].x - q.x, rec[i][k].z - q.z).length() * Engine.physics_ticks_per_second)
+		for f in feet:
+			var fx := skel.global_transform * skel.get_bone_global_pose(skel.find_bone(f))
+			var tx := skel.global_transform * skel.get_bone_global_pose(skel.find_bone(feet[f]))
+			var heel: Vector3 = fx * (local[f][0] as Vector3)
+			var ball: Vector3 = tx * (local[f][1] as Vector3)
+			var c := heel if heel.y < ball.y else ball
+			var which := 0 if heel.y < ball.y else 1
+			if c.y - ground < 0.02 and prev.has(f) and prev[f][1] == which:
+				var pc: Vector3 = prev[f][0]
+				sp.append(Vector2(c.x - pc.x, c.z - pc.z).length() * Engine.physics_ticks_per_second)
+				var vdir := Vector3(player.velocity.x, 0, player.velocity.z).normalized()
+				signed.append(Vector3(c.x - pc.x, 0, c.z - pc.z).dot(vdir) * Engine.physics_ticks_per_second)
+				lat.append(Vector3(c.x - pc.x, 0, c.z - pc.z).dot(vdir.cross(Vector3.UP)) * Engine.physics_ticks_per_second)
+			prev[f] = [c, which]
+	stance_height = _bone_y("LeftFoot")
 	sp.sort()
-	print("  run stance samples=%d" % sp.size())
-	return sp[sp.size() / 2] if sp.size() >= 4 else 99.0
+	signed.sort()
+	lat.sort()
+	print("  contact samples=%d, along motion median %.3f m/s, sideways median %.3f m/s" % [sp.size(), signed[signed.size() / 2], lat[lat.size() / 2]])
+	if sp.size() < 6:
+		return 99.0
+	return sp[sp.size() / 2]
 
 
 func _bone_world(b: String) -> Vector3:

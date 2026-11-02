@@ -1,0 +1,51 @@
+{
+ "idle_offset": -0.062,
+ "jump": {
+  "air_s": 0.408333333333333,
+  "clip": "16_01",
+  "takeoff": 1.09166666666667,
+  "touchdown": 1.5
+ },
+ "run": {
+  "clip": "35_17",
+  "contact_p25_p75_after": [
+   2.81,
+   2.86
+  ],
+  "contact_speed": 2.822,
+  "cycle_s": 0.776830092153349,
+  "cycle_s_src": 0.775,
+  "ground_offset": -0.042,
+  "hips_speed": 3.044,
+  "lateral_lock": {
+   "max_shift_m": 0.023,
+   "rms_after": 0.115,
+   "rms_before": 0.424
+  },
+  "warp_range": [
+   0.81,
+   1.36
+  ]
+ },
+ "walk": {
+  "clip": "07_12",
+  "contact_p25_p75_after": [
+   2.01,
+   2.03
+  ],
+  "contact_speed": 2.017,
+  "cycle_s": 0.922286512631132,
+  "cycle_s_src": 0.883333333333333,
+  "ground_offset": 0.033,
+  "hips_speed": 1.866,
+  "lateral_lock": {
+   "max_shift_m": 0.028,
+   "rms_after": 0.033,
+   "rms_before": 0.162
+  },
+  "warp_range": [
+   0.63,
+   1.6
+  ]
+ }
+}

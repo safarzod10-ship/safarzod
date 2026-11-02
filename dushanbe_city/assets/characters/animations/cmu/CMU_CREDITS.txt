@@ -1,0 +1,6 @@
+Motion capture data: CMU Graphics Lab Motion Capture Database, http://mocap.cs.cmu.edu
+"The data used in this project was obtained from mocap.cs.cmu.edu.
+The database was created with funding from NSF EIA-0196217."
+BVH conversion: cgspeed (Bruce Hahne). Terms: free to use for any purpose, including commercial
+products; credit to CMU requested. Clips: 07_12, 35_17, 16_01 (+ evaluated: 16_15, 16_16, 16_35,
+16_36, 132_17, 132_18, 91_17, 81_04, 35_18, 35_01).

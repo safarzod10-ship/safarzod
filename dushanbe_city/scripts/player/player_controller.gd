@@ -7,13 +7,13 @@ extends CharacterBody3D
 signal stepped_up(height: float)
 
 @export_group("Movement")
-@export var walk_speed := 1.15         ## m/s at full stick (walk cycle ground speed 1.05 m/s, ×1.1)
-@export var run_speed := 5.0           ## m/s (jog cycle ground speed, measured on the retargeted rig)
+@export var walk_speed := 2.30         ## m/s at full stick: exactly 2x the previous 1.15 (mocap brisk walk 2.02 m/s, cadence ×1.14)
+@export var run_speed := 3.30          ## m/s (mocap run 2.82 m/s, cadence ×1.17 ≈ 181 steps/min; 1.43× walking)
 @export var acceleration := 7.0        ## m/s^2
 @export var deceleration := 9.0        ## m/s^2
 @export var air_control := 0.25
 @export var turn_rate := 9.0           ## 1/s, exponential turn smoothing
-@export var jump_height := 1.0         ## m
+@export var jump_height := 0.7         ## m (a strong human standing jump; 1 m looked super-human)
 @export var gravity := 9.8
 @export var step_height := 0.32        ## max curb/step that is climbed automatically
 @export var max_slope_deg := 40.0
@@ -28,13 +28,15 @@ signal stepped_up(height: float)
 
 ## Cycle data of the Quaternius UAL clips retargeted to this rig (measured in-engine, see docs/PLAYER.md,
 ## tests/anim_diag.gd): stance-foot ground speed × cycle length = metres per cycle.
-const WALK_STRIDE := 1.047 * 1.3333     # walk: 1.047 m/s × 1.333 s
-const RUN_STRIDE := 5.0 * 0.9333        # jog:  5.0 m/s × 0.933 s
+const WALK_STRIDE := 2.017 * 0.9223     # CMU 07_12 brisk walk, contact-warped: constant contact speed 2.017 m/s × 0.922 s cycle
+const RUN_STRIDE := 2.822 * 0.7768      # CMU 35_17 run, contact-warped: 2.822 m/s × 0.777 s cycle
 const IDLE_BLEND_SPEED := 0.45          # below this speed idle and walk are blended
-const TAKEOFF_TIME := 0.10              # jump_start: feet leave the ground at 0.10-0.12 s
-const UPPER_BODY := ["Spine", "Chest", "UpperChest", "Neck", "Head", "LeftShoulder", "LeftUpperArm",
+const TAKEOFF_TIME := 0.25              # jump_start = last 0.25 s of the mocap push-off before the feet leave the ground
+const AIR_CLIP := 0.408                 # mocap air phase length (s); time-scaled to the real air time
+const UPPER_BODY := ["Spine", "Chest", "UpperChest", "LeftShoulder", "LeftUpperArm",   # neck/head follow locomotion
 	"LeftLowerArm", "LeftHand", "RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
-const ANIM_LIB := "res://assets/characters/animations/player_anims.res"
+const ANIM_LIB := "res://assets/characters/animations/player_anims.res"     # punches (Quaternius UAL, CC0)
+const MOCAP_LIB := "res://assets/characters/animations/player_mocap.res"  # locomotion + jump (CMU mocap)
 
 @onready var model: Node3D = $Model
 @onready var cam_rig: Node3D = $CameraRig
@@ -294,13 +296,15 @@ func _on_landed() -> void:
 # ------------------------------------------------------------------------------- animation
 func _anim_node(name: String) -> AnimationNodeAnimation:
 	var a := AnimationNodeAnimation.new()
-	a.animation = StringName("p/" + name)
+	a.animation = StringName(("p/" if name.begins_with("punch") else "m/") + name)
 	return a
 
 
 func _setup_animation_tree() -> void:
 	if ResourceLoader.exists(ANIM_LIB) and not _anim_player.has_animation_library(&"p"):
 		_anim_player.add_animation_library(&"p", load(ANIM_LIB))
+	if ResourceLoader.exists(MOCAP_LIB) and not _anim_player.has_animation_library(&"m"):
+		_anim_player.add_animation_library(&"m", load(MOCAP_LIB))
 	var sm := AnimationNodeStateMachine.new()
 
 	# ---- ground: idle <-> (walk <-> jog phase-synced on a normalised timeline)
@@ -309,7 +313,7 @@ func _setup_animation_tree() -> void:
 	loco.min_space = 0.0
 	loco.max_space = 1.0
 	loco.sync = true
-	for pair in [["walk", 0.0], ["jog", 1.0]]:
+	for pair in [["walk", 0.0], ["run", 1.0]]:
 		var a := _anim_node(pair[0])
 		a.use_custom_timeline = true
 		a.timeline_length = 1.0
@@ -319,7 +323,10 @@ func _setup_animation_tree() -> void:
 	var ts := AnimationNodeTimeScale.new()
 	var mix := AnimationNodeBlend2.new()
 	mix.sync = false
-	bt.add_node(&"idle", _anim_node("idle"), Vector2(0, 0))
+	bt.add_node(&"idle_clip", _anim_node("idle"), Vector2(-200, 0))
+	var idle_ts := AnimationNodeTimeScale.new()           # mocap standing loop is short: play at half speed
+	bt.add_node(&"idle", idle_ts, Vector2(0, 0))
+	bt.connect_node(&"idle", 0, &"idle_clip")
 	bt.add_node(&"loco", loco, Vector2(0, 200))
 	bt.add_node(&"ts", ts, Vector2(200, 200))
 	bt.add_node(&"mix", mix, Vector2(400, 100))
@@ -335,7 +342,10 @@ func _setup_animation_tree() -> void:
 	var land_pose := _anim_node("jump_land")                 # frame 0 = legs extended for touchdown
 	var hold := AnimationNodeTimeSeek.new()
 	var air_mix := AnimationNodeBlend2.new()
-	air.add_node(&"air", _anim_node("jump_air"), Vector2(0, 0))
+	air.add_node(&"air_clip", _anim_node("jump_air"), Vector2(-200, 0))
+	var air_ts := AnimationNodeTimeScale.new()
+	air.add_node(&"air", air_ts, Vector2(0, 0))
+	air.connect_node(&"air", 0, &"air_clip")
 	air.add_node(&"landpose", land_pose, Vector2(0, 200))
 	air.add_node(&"hold", hold, Vector2(200, 200))
 	air.add_node(&"fallmix", air_mix, Vector2(400, 100))
@@ -388,6 +398,10 @@ func _setup_animation_tree() -> void:
 	_playback = _tree.get(&"parameters/sm/playback")
 	_playback.start(&"ground")
 	_tree.set(&"parameters/sm/air/hold/seek_request", 0.0)
+	_tree.set(&"parameters/sm/ground/idle/scale", 0.5)
+	# stretch the captured air phase over the real ballistic air time of our jump
+	var v0 := sqrt(2.0 * gravity * jump_height)
+	_tree.set(&"parameters/sm/air/air/scale", AIR_CLIP / (2.0 * v0 / gravity))
 
 
 func _start_punch() -> void:
@@ -424,7 +438,7 @@ func _update_animation(delta: float) -> void:
 	_tree.set(&"parameters/sm/air/fallmix/blend_amount", fall)
 
 	var cur := _playback.get_current_node()
-	if cur == &"jump_start" and _jumping and _playback.get_current_play_position() > 0.45:
+	if cur == &"jump_start" and _jumping:
 		_travel(&"air")
 	if not is_on_floor() and air_time > 0.25 and cur == &"ground" and _takeoff_t < 0.0:
 		_travel(&"air")                         # walked off a ledge
