@@ -6,6 +6,9 @@ extends Control
 ## Size follows the screen (22 % of the short side, 150..320 px in the 1600x900 canvas).
 
 var player: PlayerController
+## while driving: follow this node (the car) and rotate with this camera instead of the player
+static var focus: Node3D = null
+static var focus_camera: Camera3D = null
 var _map: ColorRect
 var _overlay: Control              # arrow + north marker, drawn above the map
 var _mat: ShaderMaterial
@@ -45,10 +48,21 @@ func _process(_delta: float) -> void:
 		if ps.is_empty():
 			return
 		player = ps[0] as PlayerController
-	var p := player.global_position
+	var p := focus.global_position if is_instance_valid(focus) else player.global_position
 	_mat.set_shader_parameter("center", Vector2(p.x, p.z))
-	_mat.set_shader_parameter("yaw", player.cam_yaw)
+	_mat.set_shader_parameter("yaw", _view_yaw())
 	_overlay.queue_redraw()
+
+
+func _view_yaw() -> float:
+	if is_instance_valid(focus_camera):
+		var f := -focus_camera.global_transform.basis.z
+		return atan2(-f.x, -f.z)
+	return player.cam_yaw
+
+
+func _facing() -> float:
+	return focus.global_rotation.y if is_instance_valid(focus) else player.facing
 
 
 func _draw_overlay() -> void:
@@ -56,9 +70,9 @@ func _draw_overlay() -> void:
 		return
 	var c := size * 0.5
 	var R := size.x * 0.5
-	var yaw := player.cam_yaw
+	var yaw := _view_yaw()
 	# player arrow: facing relative to the camera (screen-up = camera forward)
-	var rel := player.facing - yaw
+	var rel := _facing() - yaw
 	var dir := Vector2(-sin(rel), -cos(rel))
 	var side := Vector2(-dir.y, dir.x)
 	var s := R * 0.13

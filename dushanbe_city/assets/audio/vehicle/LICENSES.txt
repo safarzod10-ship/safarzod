@@ -1,0 +1,9 @@
+engine_0..5.wav   "racing car engine sound loops" — OpenGameArt, CC0 (https://opengameart.org/content/racing-car-engine-sound-loops)
+                  level-normalised, seam cross-faded
+tyre_squeal.wav   "car tire squeal skid loop" by qubodup — OpenGameArt, CC-BY 3.0
+                  (https://opengameart.org/content/car-tire-squeal-skid-loop) — attribution required (credited in docs/ASSETS.md)
+crash_heavy.ogg   "crash collision" by qubodup — OpenGameArt, CC0 (https://opengameart.org/content/crash-collision)
+hit_metal_*.ogg, bump_*.ogg, glass_hit.ogg
+                  "75 CC0 breaking / falling / hit sfx" — OpenGameArt, CC0
+                  (https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx)
+road_noise.wav    generated for this project (filtered noise + low hum), project licence

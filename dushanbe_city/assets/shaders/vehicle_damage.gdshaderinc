@@ -49,10 +49,10 @@ void apply_dents(inout vec3 vertex, inout vec3 normal, out vec3 carpos, out floa
 		float f = (1.0 - x2) * (1.0 - x2);
 		vec3 ax = normalize(cross(D.xyz, vec3(0.0, 1.0, 0.0)) + vec3(1e-4, 0.0, 0.0));
 		float ph = dot(rel, ax) * 12.0 / P.w;
-		float crease = 0.82 + 0.18 * cos(ph);
+		float crease = 0.7 + 0.3 * cos(ph);
 		u += D.xyz * (D.w * f * crease);
 		// gradient of f*crease (scalar part of u . n)
-		vec3 gf = (-4.0 * (1.0 - x2) / r2) * rel * crease - f * 0.18 * sin(ph) * (12.0 / P.w) * ax;
+		vec3 gf = (-4.0 * (1.0 - x2) / r2) * rel * crease - f * 0.3 * sin(ph) * (12.0 / P.w) * ax;
 		g += gf * (D.w * dot(D.xyz, cn));
 		damage = max(damage, f * clamp(D.w / 0.05, 0.0, 1.0));
 	}
@@ -61,10 +61,15 @@ void apply_dents(inout vec3 vertex, inout vec3 normal, out vec3 carpos, out floa
 	normal = normalize(from_car_dir(normalize(cn - gt)) );
 }
 
-// procedural scratches fixed to the car body: fine parallel streaks, only where dented
+// scratches fixed to the car body: a few long, thin, anti-aliased streaks running along the car
+// (as from scraping a wall or another car), broken into segments, only inside strongly dented areas.
+// Call from fragment() (uses fwidth).
 float scratch_mask(vec3 cp, float dmg) {
-	if (dmg <= 0.001) { return 0.0; }
-	float a = fract(sin(dot(floor(cp.yz * 40.0), vec2(12.9898, 78.233))) * 43758.5453);
-	float streak = smoothstep(0.92, 0.985, fract(cp.y * 55.0 + cp.z * 7.0 + a * 0.15));
-	return streak * smoothstep(0.15, 0.7, dmg);
+	if (dmg <= 0.3) { return 0.0; }
+	float s = cp.y * 9.0 + sin(cp.z * 2.3) * 0.15;
+	float d = abs(fract(s) - 0.5);                         // distance to the streak centre line
+	float w = fwidth(s) * 1.2 + 0.015;
+	float line = 1.0 - smoothstep(0.03, 0.03 + w, d);
+	float seg = fract(sin(floor(s) * 91.7 + floor(cp.z * 2.5 + floor(s) * 0.37) * 17.3) * 43758.5453);
+	return line * step(0.45, seg) * smoothstep(0.3, 0.75, dmg);
 }

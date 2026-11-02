@@ -1,4 +1,4 @@
-PASS city loaded in 1548 ms: 36 city chunks (+57 coast chunks)
+PASS city loaded in 1955 ms: 36 city chunks (+57 coast chunks)
 PASS colliders 1983, trees 7553, props 5004, multimeshes 5590
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
@@ -11,3 +11,8 @@ PASS promenade surface walkable at (-28, 361): y=0.88
 PASS walk from the city to the sea: reached z=412, stopped at water depth 0.92 m (wading limit 0.9)
 PASS player stays inside the playable boundary: z=412
 PASS minimap present and centred on the player
+PASS Prado parked on the avenue: on 4 wheels (4), 0.0 km/h
+PASS «СЕСТЬ» only near the driver's door (far: false, near: true)
+PASS entered: car driven, car camera current, walker hidden
+PASS drove 30 m along the avenue and stopped (0.4 km/h)
+PASS exit: on foot again beside the door (1.4 m), on the floor true, not inside/under the car (overlaps 0)

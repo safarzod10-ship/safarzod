@@ -34,7 +34,7 @@ void fragment() {
 	float met = metallic;
 	float sc = scratch_mask(v_carpos, v_damage) * paint;
 	// dented paint: slightly darker, duller; scratches show grey primer / bare metal
-	alb = mix(alb, alb * 0.82, v_damage * paint * 0.6);
+	alb = mix(alb, alb * 0.78, v_damage * paint * 0.7);
 	rough = mix(rough, 0.55, v_damage * paint);
 	alb = mix(alb, vec3(0.56, 0.57, 0.58), sc);
 	met = mix(met, 0.7, sc);

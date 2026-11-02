@@ -34,6 +34,7 @@ func _ready() -> void:
 		var moved := player.global_position.distance_to(p0)
 		_check("player runs 5 s through the city: moved %.1f m, y=%.3f" % [moved, player.global_position.y], moved > 12.0 and player.global_position.y > -0.1)
 	await _coast_tests(world)
+	await _car_tests()
 	print("CITY_TESTS ", "ALL PASS" if ok_all else "SOME FAILED")
 	var f := FileAccess.open("res://docs/reports/city_tests.txt", FileAccess.WRITE)
 	if f:
@@ -99,3 +100,50 @@ func _coast_tests(world: Node) -> void:
 func _frames(n: int) -> void:
 	for i in n:
 		await get_tree().physics_frame
+
+
+func _car_tests() -> void:
+	## Prado in the city: «СЕСТЬ» near the driver's door, driving with the car inputs, leaving next to the door
+	var sess: CarSession = get_tree().root.find_children("CarSession", "", true, false)[0] if not get_tree().root.find_children("CarSession", "", true, false).is_empty() else null
+	if sess == null:
+		_check("car session present", false)
+		return
+	var player: PlayerController = sess.player
+	var car: VehiclePrado = sess.car
+	_check("Prado parked on the avenue: on 4 wheels (%d), %.1f km/h" % [car.wheels_on_ground, car.speed_kmh], car.wheels_on_ground == 4 and car.speed_kmh < 1.0)
+	player.teleport(car.driver_door_point(4.0), 0.0)
+	await _frames(20)
+	var far_ok := not sess.can_enter()
+	player.teleport(car.driver_door_point(1.0), 0.0)
+	await _frames(20)
+	_check("«СЕСТЬ» only near the driver's door (far: %s, near: %s)" % [not far_ok, sess.can_enter()], far_ok and sess.can_enter())
+	sess.enter()
+	await _frames(5)
+	_check("entered: car driven, car camera current, walker hidden", sess.driving and car.driven and sess.cam.current and not player.visible)
+	var p0 := car.global_position
+	VehicleInput.scripted = {"throttle": 0.6}
+	await _frames(60 * 5)
+	VehicleInput.scripted = {"brake": 1.0}
+	for i in 60 * 4:
+		await get_tree().physics_frame
+		if car.speed_kmh < 0.8:
+			break
+	VehicleInput.scripted = {}
+	await _frames(10)
+	VehicleInput.scripted = null
+	var moved := car.global_position.distance_to(p0)
+	_check("drove %.0f m along the avenue and stopped (%.1f km/h)" % [moved, car.speed_kmh], moved > 15.0 and car.speed_kmh < 3.0)
+	sess.exit()
+	await _frames(60)
+	var space := get_viewport().world_3d.direct_space_state
+	var q := PhysicsShapeQueryParameters3D.new()
+	var cap := CapsuleShape3D.new()
+	cap.radius = 0.3
+	cap.height = 1.7
+	q.shape = cap
+	q.transform = Transform3D(Basis.IDENTITY, player.global_position + Vector3.UP * 0.95)
+	q.exclude = [player.get_rid()]
+	var overlap := space.intersect_shape(q, 4)
+	var d := player.global_position.distance_to(car.driver_door_point(0.0))
+	_check("exit: on foot again beside the door (%.1f m), on the floor %s, not inside/under the car (overlaps %d)" % [d, player.is_on_floor(), overlap.size()],
+		not sess.driving and player.visible and player.is_on_floor() and d < 3.0 and overlap.is_empty() and player.global_position.y > -0.1)

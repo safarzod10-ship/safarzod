@@ -49,11 +49,13 @@ func _build() -> void:
 		add_child(player)
 		if player.has_method("teleport"):
 			player.call("teleport", Vector3(sp[0], sp[1], sp[2]), sp[3])
+		var touch: CanvasLayer = null
 		if ResourceLoader.exists(TOUCH_SCENE):
-			var touch := (load(TOUCH_SCENE) as PackedScene).instantiate()
+			touch = (load(TOUCH_SCENE) as PackedScene).instantiate()
 			add_child(touch)
 			if OS.get_cmdline_user_args().has("touchui"):     # captures/testing on desktop
 				touch.call("set_shown", true)
+		_spawn_car(touch if ResourceLoader.exists(TOUCH_SCENE) else null)
 	else:
 		var cam := Camera3D.new()
 		cam.position = Vector3(sp[0], 1.7, sp[2])
@@ -80,3 +82,26 @@ func _build() -> void:
 		add_child(ag)
 		await ag.run()
 		ag.queue_free()
+
+
+const CAR_SPAWN := Vector3(-49.0, 0.0, -12.0)    ## parked on the avenue's northbound lane, by the spawn
+var car: VehiclePrado
+var car_session: CarSession
+
+
+func _spawn_car(touch: CanvasLayer) -> void:
+	car = (load("res://scenes/vehicles/prado.tscn") as PackedScene).instantiate()
+	car.name = "Prado"
+	add_child(car)
+	await get_tree().physics_frame
+	car.place(CAR_SPAWN, 0.0)
+	car_session = CarSession.new()
+	car_session.name = "CarSession"
+	car_session.player = player
+	car_session.car = car
+	car_session.walk_touch = touch
+	add_child(car_session)
+	if OS.get_cmdline_user_args().has("drive"):
+		await get_tree().physics_frame
+		player.teleport(car.driver_door_point(1.0), 0.0)
+		car_session.enter()

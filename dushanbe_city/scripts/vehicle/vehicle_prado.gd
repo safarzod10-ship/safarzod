@@ -91,6 +91,7 @@ var _ground_y := -0.823                   ## model-space ground at rest
 
 
 func _ready() -> void:
+	VehicleInput.ensure_actions()
 	mass = vehicle_mass
 	center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
 	continuous_cd = true
@@ -112,6 +113,10 @@ func _ready() -> void:
 	var H := 1.85
 	inertia = Vector3(mass / 12.0 * (H * H + L * L), mass / 12.0 * (W * W + L * L), mass / 12.0 * (W * W + H * H)) * 0.8
 	_setup_wheels()
+	var audio := VehicleAudio.new()
+	audio.name = "Audio"
+	audio.car = self
+	add_child(audio)
 
 
 # ------------------------------------------------------------------------------------------- model
@@ -243,6 +248,15 @@ func _read_input(delta: float) -> void:
 		b = VehicleInput.brake()
 		s = VehicleInput.steer()
 		hb = VehicleInput.handbrake()
+	else:
+		# nobody at the wheel: 'P' — service brake + handbrake, no automatic reverse
+		throttle = 0.0
+		brake = move_toward(brake, 1.0, delta * 5.0)
+		handbrake = true
+		steer = move_toward(steer, 0.0, delta * 3.4)
+		if gear == -1 and absf(forward_speed) < 0.5:
+			gear = 1
+		return
 	# reverse logic: holding BRAKE at standstill engages reverse (then brake = reverse throttle,
 	# gas = brake); holding GAS at standstill in reverse engages drive again
 	var v := forward_speed
@@ -546,7 +560,7 @@ func _add_damage(p_world: Vector3, n_world: Vector3, dv: float) -> void:
 	var to_center := (Vector3(0, p.y, 0) - Vector3(p.x, p.y, p.z)).normalized()
 	if dir.dot(to_center) < 0.0:
 		dir = -dir
-	var depth := clampf((dv - 1.4) * 0.025, 0.01, 0.16)
+	var depth := clampf((dv - 1.4) * 0.03, 0.015, 0.2)
 	var radius := clampf(0.28 + dv * 0.05, 0.3, 0.75)
 	_dents.append([Vector4(p.x, p.y, p.z, radius), Vector4(dir.x, dir.y, dir.z, depth)])
 	if _dents.size() > 8:
