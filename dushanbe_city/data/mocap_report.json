@@ -1,4 +1,54 @@
 {
+ "arms_idle": {
+  "after": {
+   "frames_inside_pct": 0.0,
+   "hand_x": 0.36,
+   "worst_clearance": 0.039
+  },
+  "before": {
+   "frames_inside_pct": 100.0,
+   "hand_x": 0.02,
+   "worst_clearance": -0.137
+  }
+ },
+ "arms_jump": [
+  {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.28,
+    "worst_clearance": 0.042
+   },
+   "before": {
+    "frames_inside_pct": 69.6,
+    "hand_x": 0.01,
+    "worst_clearance": -0.105
+   }
+  },
+  {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.31,
+    "worst_clearance": 0.036
+   },
+   "before": {
+    "frames_inside_pct": 91.7,
+    "hand_x": 0.04,
+    "worst_clearance": -0.12
+   }
+  },
+  {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.34,
+    "worst_clearance": 0.036
+   },
+   "before": {
+    "frames_inside_pct": 88.6,
+    "hand_x": 0.03,
+    "worst_clearance": -0.155
+   }
+  }
+ ],
  "idle_offset": -0.062,
  "jump": {
   "air_s": 0.408333333333333,
@@ -7,45 +57,69 @@
   "touchdown": 1.5
  },
  "run": {
-  "clip": "35_17",
+  "arms": {
+   "after": {
+    "frames_inside_pct": 1.1,
+    "hand_x": 0.17,
+    "worst_clearance": -0.003
+   },
+   "before": {
+    "frames_inside_pct": 52.3,
+    "hand_x": 0.03,
+    "worst_clearance": -0.151
+   }
+  },
+  "clip": "09_09",
   "contact_p25_p75_after": [
-   2.81,
-   2.86
+   3.06,
+   3.1
   ],
-  "contact_speed": 2.822,
-  "cycle_s": 0.776830092153349,
-  "cycle_s_src": 0.775,
-  "ground_offset": -0.042,
-  "hips_speed": 3.044,
+  "contact_speed": 3.077,
+  "cycle_s": 0.741239742156999,
+  "cycle_s_src": 0.758333333333333,
+  "ground_offset": -0.052,
+  "hips_speed": 3.363,
   "lateral_lock": {
-   "max_shift_m": 0.023,
-   "rms_after": 0.115,
-   "rms_before": 0.424
+   "max_shift_m": 0.017,
+   "rms_after": 0.161,
+   "rms_before": 0.44
   },
   "warp_range": [
-   0.81,
-   1.36
+   0.6,
+   1.35
   ]
  },
  "walk": {
-  "clip": "07_12",
+  "arms": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.32,
+    "worst_clearance": 0.037
+   },
+   "before": {
+    "frames_inside_pct": 87.2,
+    "hand_x": 0.02,
+    "worst_clearance": -0.173
+   }
+  },
+  "clip": "16_16",
   "contact_p25_p75_after": [
-   2.01,
-   2.03
+   0.97,
+   0.99
   ],
-  "contact_speed": 2.017,
-  "cycle_s": 0.922286512631132,
-  "cycle_s_src": 0.883333333333333,
-  "ground_offset": 0.033,
-  "hips_speed": 1.866,
+  "contact_speed": 0.983,
+  "cycle_s": 1.23618014300492,
+  "cycle_s_src": 1.2,
+  "ground_offset": 0.007,
+  "hips_speed": 0.983,
   "lateral_lock": {
-   "max_shift_m": 0.028,
-   "rms_after": 0.033,
-   "rms_before": 0.162
+   "max_shift_m": 0.018,
+   "rms_after": 0.034,
+   "rms_before": 0.105
   },
   "warp_range": [
-   0.63,
-   1.6
+   0.61,
+   1.49
   ]
  }
 }

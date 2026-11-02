@@ -116,6 +116,28 @@ func _ready() -> void:
 	var spd: float = player.ground_speed
 	PlayerInput.scripted_move = null
 	_check("punch while walking: punching=%s, keeps walking at %.2f m/s" % [walking_punch, spd], walking_punch and spd > 0.9)
+	# running jump: horizontal speed kept through the air, back to running after landing
+	PlayerInput.scripted_move = null
+	player.teleport(Vector3(-40, 0, 60), 0.0)
+	await _frames(20)
+	PlayerInput.scripted_move = Vector2(0, -1)
+	PlayerInput.scripted_run = true
+	await _frames(150)
+	var pbr: AnimationNodeStateMachinePlayback = player.get("_playback")
+	var v0 := Vector2(player.velocity.x, player.velocity.z).length()
+	PlayerInput.queue_jump()
+	var vmin := 99.0
+	var airborne := false
+	for i in 90:
+		await get_tree().physics_frame
+		if not player.is_on_floor():
+			airborne = true
+			vmin = minf(vmin, Vector2(player.velocity.x, player.velocity.z).length())
+	await _frames(40)
+	_check("running jump: %.2f m/s before, >= %.2f m/s in the air, state after landing '%s'" % [v0, vmin, pbr.get_current_node()],
+		airborne and vmin > 0.85 * v0 and String(pbr.get_current_node()) == "ground")
+	PlayerInput.scripted_move = null
+	PlayerInput.scripted_run = false
 	print("PLAYER_TESTS ", "ALL PASS" if ok_all else "SOME FAILED")
 	var f := FileAccess.open("res://docs/reports/player_tests.txt", FileAccess.WRITE)
 	if f:

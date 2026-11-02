@@ -7,8 +7,8 @@ extends CharacterBody3D
 signal stepped_up(height: float)
 
 @export_group("Movement")
-@export var walk_speed := 2.30         ## m/s at full stick: exactly 2x the previous 1.15 (mocap brisk walk 2.02 m/s, cadence ×1.14)
-@export var run_speed := 3.30          ## m/s (mocap run 2.82 m/s, cadence ×1.17 ≈ 181 steps/min; 1.43× walking)
+@export var walk_speed := 1.0          ## m/s at full stick (CMU 16_16 natural walk recorded at 0.98 m/s: cadence x1.02)
+@export var run_speed := 4.0           ## m/s (CMU 09_09 run, contact speed 3.08 m/s: cadence x1.30)
 @export var acceleration := 7.0        ## m/s^2
 @export var deceleration := 9.0        ## m/s^2
 @export var air_control := 0.25
@@ -29,8 +29,8 @@ signal stepped_up(height: float)
 
 ## Cycle data of the Quaternius UAL clips retargeted to this rig (measured in-engine, see docs/PLAYER.md,
 ## tests/anim_diag.gd): stance-foot ground speed × cycle length = metres per cycle.
-const WALK_STRIDE := 2.017 * 0.9223     # CMU 07_12 brisk walk, contact-warped: constant contact speed 2.017 m/s × 0.922 s cycle
-const RUN_STRIDE := 2.822 * 0.7768      # CMU 35_17 run, contact-warped: 2.822 m/s × 0.777 s cycle
+const WALK_STRIDE := 0.983 * 1.2362     # CMU 16_16 walk, contact-warped: constant contact speed 0.983 m/s × 1.236 s cycle
+const RUN_STRIDE := 3.077 * 0.7412      # CMU 09_09 run, contact-warped: 3.077 m/s × 0.741 s cycle
 const IDLE_BLEND_SPEED := 0.45          # below this speed idle and walk are blended
 const STEP_OVERLAP := 0.08              # how far the collider is placed onto a step's top (> convex radius)
 const TAKEOFF_TIME := 0.25              # jump_start = last 0.25 s of the mocap push-off before the feet leave the ground

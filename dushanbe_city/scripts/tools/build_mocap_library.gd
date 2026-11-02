@@ -32,6 +32,36 @@ func _ready() -> void:
 	ap = player.find_children("*", "AnimationPlayer", true, false)[0]
 	sk = player.find_children("*", "Skeleton3D", true, false)[0]
 	var args := OS.get_cmdline_user_args()
+	if args.has("scanidle"):
+		_torso_profile()
+		for f in DirAccess.get_files_at(DIR):
+			if f.ends_with(".glb"):
+				_scan_idle(f.get_basename())
+		get_tree().quit()
+		return
+	if args.has("armsdbg"):
+		_torso_profile()
+		var lib0: AnimationLibrary = load(OUT)
+		var an: Animation = lib0.get_animation("run")
+		for i in 22:
+			_anim_eval(an, an.length * i / 22.0)
+			for pp in _arm_points():
+				var p: Vector3 = pp[1]
+				var key := int(floor(p.y / 0.05))
+				if _profile.has(key):
+					var e: Array = _profile[key]
+					var c := absf(p.x) - float(e[0]) - 0.04
+					if c < 0.0 and not (p.z < float(e[1]) - 0.04 or p.z > float(e[2]) + 0.04):
+						print("RUNBAD t=%.2f %s p=%s profile w=%.2f z[%.2f,%.2f] clear=%.3f" % [an.length * i / 22.0, pp[0], p.snapped(Vector3.ONE * 0.01), e[0], e[1], e[2], c])
+		get_tree().quit()
+		return
+	if args.has("arms"):
+		_torso_profile()
+		var lib: AnimationLibrary = load(OUT)
+		for n in lib.get_animation_list():
+			print("ARMS ", n, " ", JSON.stringify(arm_clearance(lib.get_animation(n), true)))
+		get_tree().quit()
+		return
 	if args.has("trace"):
 		var a := _src(OS.get_cmdline_user_args()[-1] if OS.get_cmdline_user_args().size() > 1 else "35_17")
 		var s := _sample(a)
@@ -43,7 +73,7 @@ func _ready() -> void:
 		get_tree().quit()
 		return
 	if args.has("list"):
-		for f in ["132_17", "132_18", "91_17", "81_04", "07_12", "16_15", "16_16", "35_01", "16_35", "16_36", "35_17", "35_18"]:
+		for f in ["16_16", "16_15", "35_17", "16_55", "09_01", "09_02", "09_03", "09_04", "09_05", "09_06", "09_07", "09_08", "09_09", "09_10", "09_11"]:
 			var a := _src(f)
 			var c := _find_cycle(a, f)
 			print("CYCLE ", f, " ", c)
@@ -61,9 +91,10 @@ func _ready() -> void:
 		var warp := _contact_warp(anim)
 		anim = warp["anim"]
 		var lat := _lateral_lock(anim)
+		var arms := _fix_arms(anim)
 		lib.add_animation(key, anim)
 		report[key] = {"clip": f, "hips_speed": c["speed"], "contact_speed": warp["speed"], "cycle_s": anim.length,
-			"cycle_s_src": warp["src_len"], "ground_offset": dy, "warp_range": warp["range"], "contact_p25_p75_after": warp["after_p25_p75"], "lateral_lock": lat}
+			"cycle_s_src": warp["src_len"], "ground_offset": dy, "warp_range": warp["range"], "contact_p25_p75_after": warp["after_p25_p75"], "lateral_lock": lat, "arms": arms}
 	var jf: String = picks["jump"]
 	var ja := _src(jf)
 	var j := _find_jump(ja)
@@ -74,6 +105,7 @@ func _ready() -> void:
 	_shift_hips(jair, jdy)
 	var jl := _segment(ja, j["touchdown"], j["touchdown"] + picks.get("land_len", 0.75), false, false)
 	_ground(jl, ankle_ref, false)
+	report["arms_jump"] = [_fix_arms(js), _fix_arms(jair), _fix_arms(jl)]
 	lib.add_animation("jump_start", js)
 	lib.add_animation("jump_air", jair)
 	lib.add_animation("jump_land", jl)
@@ -81,6 +113,7 @@ func _ready() -> void:
 	var ia := _src(idf)
 	var idle := _loop_segment(ia, picks.get("idle_t0", 0.1), picks.get("idle_t1", 1.6))
 	report["idle_offset"] = _ground(idle, ankle_ref, false)
+	report["arms_idle"] = _fix_arms(idle, true)
 	lib.add_animation("idle", idle)
 	ResourceSaver.save(lib, OUT)
 	var fo := FileAccess.open("res://data/mocap_report.json", FileAccess.WRITE)
@@ -141,7 +174,7 @@ func _find_cycle(a: Animation, f: String) -> Dictionary:
 	var strikes: Array[int] = []
 	var w := int(0.12 * FPS)
 	for i in range(int(0.1 * FPS), s.size() - int(0.1 * FPS)):
-		if ys[i] > p10 + 0.04:
+		if ys[i] > p10 + 0.07:
 			continue
 		var is_min := true
 		for k in range(maxi(0, i - w), mini(s.size(), i + w + 1)):
@@ -540,3 +573,257 @@ func _contact_warp(an: Animation) -> Dictionary:
 	v2.sort()
 	return {"anim": out, "speed": snappedf(cbar, 0.001), "src_len": an.length, "range": [snappedf(fmin, 0.01), snappedf(fmax, 0.01)],
 		"after_p25_p75": [snappedf(v2[v2.size() / 4], 0.01), snappedf(v2[v2.size() * 3 / 4], 0.01)]}
+
+
+
+# ------------------------------------------------------------------------------------------- arms
+var _profile := {}      ## height bin (5 cm, relative to the hips) -> [half width |x|, z min, z max] of the torso + coat
+
+
+func _torso_profile() -> void:
+	## Torso shape of OUR character (incl. the chapan coat) from the skinned mesh in rest pose:
+	## vertices driven mainly by Hips/Spine/Chest/UpperChest, binned by height relative to the hips.
+	var mi: MeshInstance3D = player.find_children("*", "MeshInstance3D", true, false)[0]
+	var torso := {}
+	for b in ["Hips", "Spine", "Chest", "UpperChest"]:
+		torso[sk.find_bone(b)] = true
+	var skin := mi.skin
+	var hips_y := sk.get_bone_global_rest(sk.find_bone("Hips")).origin.y
+	for si in mi.mesh.get_surface_count():
+		var arr := mi.mesh.surface_get_arrays(si)
+		var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var bs: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+		var ws: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+		var per := bs.size() / vs.size()
+		for i in vs.size():
+			var best := 0.0
+			var bb := -1
+			for k in per:
+				if ws[i * per + k] > best:
+					best = ws[i * per + k]
+					bb = bs[i * per + k]
+			if skin and bb >= 0 and bb < skin.get_bind_count():
+				bb = sk.find_bone(skin.get_bind_name(bb)) if skin.get_bind_name(bb) != "" else skin.get_bind_bone(bb)
+			if not torso.has(bb):
+				continue
+			var v := vs[i]
+			var key := int(floor((v.y - hips_y) / 0.05))
+			var e: Array = _profile.get(key, [0.0, 9.0, -9.0])
+			e[0] = maxf(e[0], absf(v.x))
+			e[1] = minf(e[1], v.z)
+			e[2] = maxf(e[2], v.z)
+			_profile[key] = e
+	var keys := _profile.keys()
+	keys.sort()
+	var line := ""
+	for k in keys:
+		line += "%+.2f:%.2f " % [k * 0.05, _profile[k][0]]
+	print("PROFILE torso half-width by height above hips: ", line)
+
+
+func _arm_points() -> Array:
+	## points along the forearm and hand (in the hips' yaw frame, relative to the hips)
+	var hips := sk.get_bone_global_pose(sk.find_bone("Hips"))
+	var fwd := hips.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var yaw := Basis(Vector3.UP, atan2(fwd.x, fwd.z))
+	var inv := yaw.inverse()
+	var out := []
+	for side in ["Left", "Right"]:
+		var el := _pos(side + "LowerArm")
+		var wr := _pos(side + "Hand")
+		var hand_dir := (wr - el).normalized()
+		for t in [0.35, 0.7, 1.0]:
+			out.append([side, inv * (el.lerp(wr, t) - hips.origin)])
+		out.append([side, inv * (wr + hand_dir * 0.08 - hips.origin)])     # middle of the hand
+	return out
+
+
+func arm_clearance(a: Animation, already_built := false) -> Dictionary:
+	## worst clearance (m) between forearm/hand points and the torso+coat profile (+4 cm arm radius);
+	## negative = the arm sinks into the body. Also the mean lateral hand distance.
+	var worst := 9.0
+	var bad := 0
+	var n := 0
+	var hand_x := 0.0
+	var steps := int(a.length * 30.0)
+	for i in steps:
+		if already_built:
+			_anim_eval(a, a.length * i / steps)
+		else:
+			_pose_at(a, a.length * i / steps)
+		var pts := _arm_points()
+		for pp in pts:
+			var c := _ellipse_clear(pp[1])
+			if c > 8.0:
+				continue
+			worst = minf(worst, c)
+			if c < 0.0:
+				bad += 1
+		hand_x += (absf((pts[3][1] as Vector3).x) + absf((pts[7][1] as Vector3).x)) * 0.5
+		n += 1
+	return {"worst_clearance": snappedf(worst, 0.001), "frames_inside_pct": snappedf(100.0 * bad / maxf(n * 8, 1), 0.1), "hand_x": snappedf(hand_x / maxf(n, 1), 0.01)}
+
+
+func _scan_idle(f: String) -> void:
+	## standing windows (hips speed < 0.12 m/s for >= 1 s) where the arms hang beside the body
+	var a := _src(f)
+	var step := 1.0 / 20.0
+	var prev := Vector3.ZERO
+	var run_start := -1.0
+	var t := 0.0
+	var best := []
+	while t < a.length:
+		_pose_at(a, t)
+		var h := _pos("Hips")
+		var v := Vector2(h.x - prev.x, h.z - prev.z).length() / step if t > 0.0 else 0.0
+		prev = h
+		var pts := _arm_points()
+		var lx := absf((pts[3][1] as Vector3).x)
+		var rx := absf((pts[7][1] as Vector3).x)
+		var lz := absf((pts[3][1] as Vector3).z)
+		var rz := absf((pts[7][1] as Vector3).z)
+		var ly := (pts[3][1] as Vector3).y
+		var ok := v < 0.12 and lx > 0.2 and rx > 0.2 and lz < 0.16 and rz < 0.16 and ly < 0.05
+		if v < 0.15 and int(t / step) % 10 == 0:
+			print("  STAND %s t=%.1f hands L(x %.2f z %+.2f y %+.2f) R(x %.2f z %+.2f)" % [f, t, lx, (pts[3][1] as Vector3).z, ly, rx, (pts[7][1] as Vector3).z])
+		if ok and run_start < 0.0:
+			run_start = t
+		if (not ok or t + step >= a.length) and run_start >= 0.0:
+			if t - run_start >= 1.0:
+				best.append([snappedf(run_start, 0.01), snappedf(t, 0.01)])
+			run_start = -1.0
+		t += step
+	print("IDLE ", f, " len %.1f s windows %s" % [a.length, str(best)])
+
+
+
+func _fix_arms(an: Animation, hang := false) -> Dictionary:
+	## Arm spacing for OUR (wider) body: per key and side, the smallest outward rotation of the upper
+	## arm (about the body's forward axis, at the shoulder) that keeps forearm + hand >= 2.5 cm outside
+	## the torso+chapan profile; hang = true also swings the arm back so the hand hangs beside the
+	## thigh (idle). Angles are smoothed over time (no popping), max 40 deg (target 3.5 cm before smoothing).
+	if _profile.is_empty():
+		_torso_profile()
+	var before := arm_clearance(an, true)
+	var tracks := {}
+	for tr in an.get_track_count():
+		var b := String(an.track_get_path(tr)).get_slice(":", 1)
+		if an.track_get_type(tr) == Animation.TYPE_ROTATION_3D and b in ["LeftUpperArm", "RightUpperArm"]:
+			tracks[b] = tr
+	for side in ["Left", "Right"]:
+		var bname: String = side + "UpperArm"
+		if not tracks.has(bname):
+			continue
+		var tr: int = tracks[bname]
+		var bi := sk.find_bone(bname)
+		var parent := sk.get_bone_parent(bi)
+		var nk := an.track_get_key_count(tr)
+		var angles: Array[float] = []
+		var backs: Array[float] = []
+		for k in nk:
+			_anim_eval(an, an.track_get_key_time(tr, k))
+			var q0: Quaternion = an.track_get_key_value(tr, k)
+			var best := 40.0
+			var back := 0.0
+			if hang:
+				# swing back until the hand is no more than 4 cm in front of the hips line
+				for bdeg in range(0, 26, 2):
+					_set_arm(bi, parent, q0, 0.0, float(bdeg), side)
+					var hz := (_side_points(side)[3] as Vector3).z
+					back = float(bdeg)
+					if hz < 0.04:
+						break
+			var found := false
+			# smallest correction first: abduction alone, then with the arm carried slightly forward
+			# (bent running arms pass IN FRONT of the chest instead of through the coat)
+			for fwd in [0.0, -6.0, -12.0, -18.0]:
+				for deg in range(0, 41):
+					_set_arm(bi, parent, q0, float(deg), back + fwd, side)
+					if _side_clear(side) >= 0.035:
+						best = float(deg)
+						back += fwd
+						found = true
+						break
+				if found:
+					break
+			angles.append(best)
+			backs.append(back)
+		# smoothing: running max over +-0.12 s, then a moving average (loops wrap)
+		var sm := _smooth(angles, an.loop_mode != Animation.LOOP_NONE)
+		var sb := _smooth(backs, an.loop_mode != Animation.LOOP_NONE)
+		for k in nk:
+			_anim_eval(an, an.track_get_key_time(tr, k))
+			var q0: Quaternion = an.track_get_key_value(tr, k)
+			an.track_set_key_value(tr, k, _arm_rot(bi, parent, q0, sm[k], sb[k], side))
+	var after := arm_clearance(an, true)
+	return {"before": before, "after": after}
+
+
+func _smooth(v: Array[float], loop: bool) -> Array[float]:
+	var n := v.size()
+	var w := 7
+	var mx: Array[float] = []
+	for i in n:
+		var m := 0.0
+		for d in range(-w, w + 1):
+			var j := posmod(i + d, n) if loop else clampi(i + d, 0, n - 1)
+			m = maxf(m, v[j])
+		mx.append(m)
+	var out: Array[float] = []
+	for i in n:
+		var a := 0.0
+		for d in range(-w, w + 1):
+			var j := posmod(i + d, n) if loop else clampi(i + d, 0, n - 1)
+			a += mx[j]
+		out.append(a / (2 * w + 1))
+	return out
+
+
+func _arm_rot(bi: int, parent: int, q0: Quaternion, abd_deg: float, back_deg: float, side: String) -> Quaternion:
+	var hips := sk.get_bone_global_pose(sk.find_bone("Hips"))
+	var fwd := hips.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var yaw := Basis(Vector3.UP, atan2(fwd.x, fwd.z))
+	var sgn := 1.0 if side == "Left" else -1.0
+	# body-frame rotation: abduction about forward (z), swing back about lateral (x)
+	var r := yaw * Basis(Vector3.BACK, deg_to_rad(abd_deg) * sgn) * Basis(Vector3.RIGHT, deg_to_rad(back_deg)) * yaw.inverse()
+	var gp := sk.get_bone_global_pose(parent).basis.orthonormalized()
+	var local := Basis(q0)
+	return Quaternion((gp.inverse() * r * gp * local).orthonormalized())
+
+
+func _set_arm(bi: int, parent: int, q0: Quaternion, abd_deg: float, back_deg: float, side: String) -> void:
+	sk.set_bone_pose_rotation(bi, _arm_rot(bi, parent, q0, abd_deg, back_deg, side))
+
+
+func _side_points(side: String) -> Array:
+	var pts := _arm_points()
+	var out := []
+	for p in pts:
+		if p[0] == side:
+			out.append(p[1])
+	return out
+
+
+func _ellipse_clear(p: Vector3) -> float:
+	## distance (approx.) of p outside the torso+coat cross-section at its height, modelled as an
+	## ellipse (half-width w, depth from z-min to z-max), minus a 4 cm arm radius; 9 if no torso there
+	var key := int(floor(p.y / 0.05))
+	if not _profile.has(key):
+		return 9.0
+	var e: Array = _profile[key]
+	var w: float = maxf(float(e[0]), 0.02)
+	var zc: float = (float(e[1]) + float(e[2])) * 0.5
+	var d: float = maxf((float(e[2]) - float(e[1])) * 0.5, 0.02)
+	var r := sqrt(pow(p.x / w, 2.0) + pow((p.z - zc) / d, 2.0))
+	return (r - 1.0) * minf(w, d) - 0.04
+
+
+func _side_clear(side: String) -> float:
+	var worst := 9.0
+	for p: Vector3 in _side_points(side):
+		worst = minf(worst, _ellipse_clear(p))
+	return worst

@@ -36,19 +36,29 @@ func _ready() -> void:
 	cam.make_current()
 	await _frames(30)
 	await _views("idle")
+	await _closeup("idle: arms close-up")
 	PlayerInput.scripted_move = Vector2(0, -1)
-	await _frames(120)
-	await _views("walk")
+	await _frames(150)
+	await _views("walk 1.0 m/s")
 	PlayerInput.scripted_run = true
-	await _frames(120)
-	await _views("run")
+	await _frames(150)
+	await _views("run 4.0 m/s")
 	PlayerInput.scripted_run = false
 	PlayerInput.scripted_move = null
-	await _frames(90)
-	PlayerInput.queue_jump()
-	await _frames(28)
-	await _views("jump (air)")
 	await _frames(120)
+	PlayerInput.queue_jump()
+	await _frames(9)
+	await _views("jump: push-off")
+	await _frames(22)
+	await _views("jump: flight")
+	for i in 120:
+		await get_tree().physics_frame
+		if player.is_on_floor() and i > 5:
+			break
+	await _frames(4)
+	await _views("jump: landing")
+	await _frames(90)
+	await _views("back to idle")
 	_save()
 	get_tree().quit()
 
@@ -83,6 +93,17 @@ func _views(label: String) -> void:
 	for v in [["side", bs.x], ["front", fwd], ["back", -fwd]]:
 		cam.global_position = p + (v[1] as Vector3) * 3.2 + Vector3(0, 1.15, 0)
 		cam.look_at(p + Vector3(0, 1.05, 0), Vector3.UP)
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
+		shots.append([label + " / " + v[0], get_viewport().get_texture().get_image()])
+
+
+func _closeup(label: String) -> void:
+	var p := player.global_position
+	var bs := player.global_transform.basis
+	for v in [["front", -bs.z], ["side", bs.x]]:
+		cam.global_position = p + (v[1] as Vector3) * 1.35 + Vector3(0, 1.0, 0)
+		cam.look_at(p + Vector3(0, 0.95, 0), Vector3.UP)
 		await RenderingServer.frame_post_draw
 		await RenderingServer.frame_post_draw
 		shots.append([label + " / " + v[0], get_viewport().get_texture().get_image()])
