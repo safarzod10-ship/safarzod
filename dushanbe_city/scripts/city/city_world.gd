@@ -533,6 +533,11 @@ func apply_quality() -> void:
 		mm.visible_instance_count = -1 if q >= Settings.Quality.MEDIUM else int(n.get_meta(&"main_count"))
 	if sea:
 		sea.apply_quality(q)
+	# mountain ring: 2.4-8.8 km away, a few pixels per triangle -> coarser mesh LODs on weaker presets
+	var bd := get_node_or_null("Backdrop")
+	if bd:
+		for mi in bd.find_children("mountains*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).lod_bias = [0.12, 0.3, 0.7, 1.0][q]
 	for mmi in find_children("*", "MultiMeshInstance3D", true, false):
 		if not mmi.has_meta(&"lod_kind"):
 			continue

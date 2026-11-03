@@ -34,6 +34,7 @@ func _ready() -> void:
 		PlayerInput.scripted_move = null
 		var moved := player.global_position.distance_to(p0)
 		_check("player runs 5 s through the city: moved %.1f m, y=%.3f" % [moved, player.global_position.y], moved > 12.0 and player.global_position.y > -0.1)
+	await _weather_tests()
 	await _relief_tests(world)
 	await _coast_tests(world)
 	await _car_tests()
@@ -55,6 +56,33 @@ func _ray_y(x: float, z: float) -> float:
 	var space := get_viewport().world_3d.direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, 80, z), Vector3(x, -40, z), 1))
 	return (hit.position as Vector3).y if not hit.is_empty() else -999.0
+
+
+func _weather_tests() -> void:
+	## clear -> rain: weaker direct sun, wet ground, rain visible; back to clear: dries over time
+	var ws := get_tree().get_nodes_in_group(&"weather")
+	if ws.is_empty():
+		_check("weather node present", false)
+		return
+	var w: Weather = ws[0]
+	w.auto_cycle = false
+	var sun: DirectionalLight3D = w.tod.get_node(w.tod.sun_path)
+	w.set_state(Weather.State.CLEAR, true)
+	await _frames(15)
+	var e_clear := sun.light_energy
+	w.set_state(Weather.State.RAIN)
+	for i in 60 * 30:
+		await get_tree().physics_frame
+	var wet: float = w.wetness
+	_check("rain (30 s transition): sun %.2f -> %.2f, wetness %.2f, rain shown %s" % [e_clear, sun.light_energy, wet, w._rain[0].visible],
+		sun.light_energy < e_clear * 0.5 and wet > 0.6 and w._rain[0].visible)
+	w.set_state(Weather.State.CLEAR)
+	for i in 60 * 30:
+		await get_tree().physics_frame
+	var wet2: float = w.wetness
+	_check("clearing up: rain stops, ground dries slowly (wetness %.2f < %.2f), sun back %.2f" % [wet2, wet, sun.light_energy],
+		not w._rain[0].visible and wet2 < wet and wet2 > 0.3 and sun.light_energy > e_clear * 0.8)
+	w.set_state(Weather.State.CLEAR, true)
 
 
 func _relief_tests(world: CityWorld) -> void:
