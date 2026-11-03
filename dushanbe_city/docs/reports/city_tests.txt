@@ -1,4 +1,4 @@
-PASS city loaded in 1732 ms: 36 city chunks (+57 coast chunks)
+PASS city loaded in 26692 ms: 36 city chunks (+57 coast chunks)
 PASS colliders 1394, trees 7564, props 5131, multimeshes 5574
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
@@ -12,8 +12,12 @@ PASS terrain collision at (-20, 385): ray -0.29 m, baked height -0.29 m
 PASS terrain collision at (420, 176): ray 21.57 m, baked height 21.57 m
 PASS terrain collision at (-300, -700): ray 8.06 m, baked height 8.06 m
 PASS promenade surface walkable at (-28, 361): y=0.87
-PASS walk from the city to the sea: reached z=412, stopped at water depth 0.92 m (wading limit 0.9)
-PASS player stays inside the playable boundary: z=412
+PASS into the sea: shallow true, medium true (deep wading speed 0.60 m/s < run), swimming true
+PASS swims at the surface (feet 1.30 m below it ±0.04), never on/under the sea bed: true
+PASS swam out to z=447 (well beyond the wading line ~370-410) and stopped at the swimming boundary
+PASS swims back and walks out onto the beach: mode 0 (0 = dry), on floor true, z=400
+PASS sea sounds: surf + coastal wind playing near the shore (shore 15 m)
+PASS player stays inside the playable boundary: z=400
 PASS minimap present and centred on the player
 PASS Prado parked on the avenue: on 4 wheels (4), 0.0 km/h
 PASS «СЕСТЬ» only near the driver's door (far: false, near: true)

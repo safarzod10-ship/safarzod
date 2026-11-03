@@ -46,6 +46,9 @@ func _ready() -> void:
 	sea = Sea.new()
 	sea.name = "Sea"
 	add_child(sea)
+	var sa := SeaAudio.new()
+	sa.name = "SeaAudio"
+	add_child(sa)
 	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
 	apply_quality()
 	if not _missing.is_empty():

@@ -14,7 +14,7 @@
 //   - foam around obstacles: rocks / headlands (shore proximity near deep water);
 //   - wake / ripples around the swimming or wading character (global water_player).
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
+render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx;
 
 global uniform float city_night;
 global uniform vec4 water_player;      // xyz = character position, w = 0 none / 1 wading / 2 swimming
@@ -106,7 +106,8 @@ void fragment() {
 		float r = length(dv);
 		float ring = sin(r * 7.0 - t * 6.0) * exp(-r * 0.55) * (water_player.w > 1.5 ? 1.0 : 0.6);
 		dn.xy += normalize(dv + 1e-4) * ring * 0.9;
-		pr = smoothstep(1.4, 0.35, r) * (0.35 + 0.35 * sin(t * 3.0 + r * 6.0)) * (water_player.w > 1.5 ? 1.0 : 0.7);
+		// thin broken foam ring hugging the body (stirred water), not a solid disc
+		pr = smoothstep(1.2, 0.75, r) * smoothstep(0.25, 0.6, r) * (0.25 + 0.25 * sin(t * 3.0 + r * 9.0)) * (water_player.w > 1.5 ? 1.0 : 0.6);
 		dn = normalize(dn);
 	}
 	// colour by depth
@@ -137,7 +138,7 @@ void fragment() {
 			float rocks = shore * smoothstep(1.2, 3.0, depth) * smoothstep(0.55, 0.85, fn2 + 0.3 * sin(t * 1.1 + fn * 6.0));
 			f = max(f, rocks * 0.8);
 		}
-		f = max(f, pr * smoothstep(0.3, 0.6, fn2 + 0.3));
+		f = max(f, pr * smoothstep(0.45, 0.75, fn2 + fn * 0.3));
 		f *= foam_amount;
 	}
 	alpha = max(alpha, f);

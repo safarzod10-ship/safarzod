@@ -72,6 +72,9 @@ var _punch_t := -1.0                    # time since the current punch started (
 var _punch_len := 0.0
 var _punch_queue := false
 var _punch_alt := false                 # alternates jab / cross
+var water: PlayerWater                  # sea: wading / swimming state and effects
+var swim_speed := 1.1                   ## m/s breaststroke-like cruising; run button: 1.7
+var _water_landed := false
 
 
 func _ready() -> void:
@@ -91,6 +94,13 @@ func _ready() -> void:
 	cam_yaw = facing
 	_cam_target = _camera_anchor()
 	cam_rig.global_position = _cam_target
+	water = PlayerWater.new()
+	water.name = "Water"
+	add_child(water)
+
+
+func is_swimming() -> bool:
+	return water != null and water.mode == PlayerWater.Mode.SWIM
 
 
 # ------------------------------------------------------------------------------- public API
@@ -176,13 +186,24 @@ func _physics_process(delta: float) -> void:
 	var inp := PlayerInput.get_move()
 	var running := PlayerInput.is_running()
 	var on_floor := is_on_floor() or _snapped
+	# ---- sea: classify (floor under the body by a ray from above the surface)
+	var fhit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(
+			global_position + Vector3.UP * 1.0, global_position + Vector3.DOWN * 6.0, collision_mask, [get_rid()]))
+	var floor_y: float = (fhit.position as Vector3).y if not fhit.is_empty() else NAN
+	var was_swim := is_swimming()
+	water.update_mode(global_position, floor_y)
+	if is_swimming():
+		_swim_physics(delta, inp, running, was_swim)
+		return
+	if not water.can_run():
+		running = false
 
 	# camera-relative wish direction
 	var fwd := Vector3(-sin(cam_yaw), 0.0, -cos(cam_yaw))
 	var right := Vector3(cos(cam_yaw), 0.0, -sin(cam_yaw))
 	var wish := right * inp.x - fwd * inp.y
 	var mag := clampf(inp.length(), 0.0, 1.0)
-	var target_speed := mag * (run_speed if running else walk_speed)
+	var target_speed := mag * (run_speed if running else walk_speed) * water.speed_factor()
 	var hv := Vector3(velocity.x, 0.0, velocity.z)
 	var target := wish.normalized() * target_speed if mag > 0.01 else Vector3.ZERO
 	var rate := acceleration if target.length() >= hv.length() else deceleration
@@ -253,8 +274,10 @@ func _physics_process(delta: float) -> void:
 	model.position = global_transform.basis.inverse() * _visual_h + Vector3(0.0, _visual_offset, 0.0)
 
 	# air / landing bookkeeping
+	_water_landed = false
 	if now_floor:
 		if air_time > 0.0:
+			_water_landed = air_time > 0.2
 			_on_landed()
 		air_time = 0.0
 		_jumping = false if velocity.y <= 0.0 else _jumping
@@ -262,6 +285,42 @@ func _physics_process(delta: float) -> void:
 		air_time += delta
 		_peak_fall_speed = maxf(_peak_fall_speed, -velocity.y)
 	_update_animation(delta)
+	var sp := Vector2(velocity.x, velocity.z).length()
+	water.effects(delta, global_position, sp, lerpf(WALK_STRIDE, RUN_STRIDE, clampf((sp - walk_speed) / (run_speed - walk_speed), 0.0, 1.0)), _water_landed)
+
+
+## Swimming: the body floats at the surface (feet SWIM_BODY below it, gentle bobbing with the
+## swell); horizontal movement with water drag; no gravity, no jumping, no walking on the sea bed.
+## Swimming towards the shore ends when the floor comes up under the feet (back to wading).
+func _swim_physics(delta: float, inp: Vector2, running: bool, was_swim: bool) -> void:
+	PlayerInput.consume_jump()
+	_jumping = false
+	_takeoff_t = -1.0
+	air_time = 0.0
+	var fwd := Vector3(-sin(cam_yaw), 0.0, -cos(cam_yaw))
+	var right := Vector3(cos(cam_yaw), 0.0, -sin(cam_yaw))
+	var wish := right * inp.x - fwd * inp.y
+	var mag := clampf(inp.length(), 0.0, 1.0)
+	var target := wish.normalized() * mag * (swim_speed * 1.55 if running else swim_speed) if mag > 0.01 else Vector3.ZERO
+	var hv := Vector3(velocity.x, 0.0, velocity.z)
+	hv = hv.move_toward(target, (2.2 if target.length() >= hv.length() else 1.6) * delta)
+	if mag > 0.05:
+		var want := atan2(-wish.x, -wish.z)
+		facing = lerp_angle(facing, want, 1.0 - exp(-4.0 * delta))
+		rotation.y = facing
+	var t := Time.get_ticks_msec() * 0.001
+	var target_y := PlayerWater.SEA_LEVEL - PlayerWater.SWIM_BODY + sin(t * 1.3) * 0.04
+	var vy := clampf((target_y - global_position.y) * (3.0 if was_swim else 1.5), -2.5, 1.5)
+	velocity = Vector3(hv.x, vy, hv.z)
+	move_and_slide()
+	_visual_offset = move_toward(_visual_offset, 0.0, 2.0 * delta)
+	model.position = Vector3(0.0, _visual_offset, 0.0)
+	_travel(&"swim")
+	var s := hv.length()
+	ground_speed = lerpf(ground_speed, s, 1.0 - exp(-8.0 * delta))
+	_tree.set(&"parameters/sm/swim/move/blend_amount", clampf(ground_speed / 0.5, 0.0, 1.0))
+	_tree.set(&"parameters/sm/swim/ts/scale", clampf(0.6 + ground_speed / swim_speed * 0.5, 0.6, 1.6))
+	water.effects(delta, global_position, s, 1.0, false)
 
 
 ## Automatic step-up (curbs, stairs, small ledges) as a three-phase sweep of the real collider:
@@ -355,7 +414,7 @@ func _on_landed() -> void:
 # ------------------------------------------------------------------------------- animation
 func _anim_node(name: String) -> AnimationNodeAnimation:
 	var a := AnimationNodeAnimation.new()
-	a.animation = StringName(("p/" if name.begins_with("punch") else "m/") + name)
+	a.animation = StringName(("p/" if name.begins_with("punch") or name.begins_with("swim") else "m/") + name)
 	return a
 
 
@@ -416,12 +475,28 @@ func _setup_animation_tree() -> void:
 	sm.add_node(&"air", air, Vector2(600, -150))
 	sm.add_node(&"jump_land", _anim_node("jump_land"), Vector2(600, 150))
 
+	# ---- swimming: idle treading <-> forward strokes (Quaternius UAL Swim_Idle / Swim_Fwd, CC0)
+	var swim := AnimationNodeBlendTree.new()
+	swim.add_node(&"idle", _anim_node("swim_idle"), Vector2(-200, 0))
+	swim.add_node(&"fwd", _anim_node("swim"), Vector2(-200, 200))
+	var swim_ts := AnimationNodeTimeScale.new()
+	swim.add_node(&"ts", swim_ts, Vector2(0, 200))
+	swim.connect_node(&"ts", 0, &"fwd")
+	var swim_mix := AnimationNodeBlend2.new()
+	swim.add_node(&"move", swim_mix, Vector2(200, 100))
+	swim.connect_node(&"move", 0, &"idle")
+	swim.connect_node(&"move", 1, &"ts")
+	swim.connect_node(&"output", 0, &"move")
+	sm.add_node(&"swim", swim, Vector2(300, 300))
+
 	var start := AnimationNodeStateMachineTransition.new()
 	start.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
 	sm.add_transition(&"Start", &"ground", start)
 	for l in [[&"ground", &"jump_start", 0.08], [&"ground", &"air", 0.25], [&"jump_start", &"air", 0.3],
 			[&"jump_start", &"jump_land", 0.1], [&"air", &"jump_land", 0.08], [&"jump_land", &"ground", 0.3],
-			[&"jump_land", &"jump_start", 0.1], [&"jump_start", &"ground", 0.2], [&"air", &"ground", 0.2]]:
+			[&"jump_land", &"jump_start", 0.1], [&"jump_start", &"ground", 0.2], [&"air", &"ground", 0.2],
+			[&"ground", &"swim", 0.45], [&"air", &"swim", 0.3], [&"jump_start", &"swim", 0.3], [&"jump_land", &"swim", 0.3],
+			[&"swim", &"ground", 0.45]]:
 		var t := AnimationNodeStateMachineTransition.new()
 		t.xfade_time = l[2]
 		t.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_IMMEDIATE
@@ -497,6 +572,8 @@ func _update_animation(delta: float) -> void:
 	_tree.set(&"parameters/sm/air/fallmix/blend_amount", fall)
 
 	var cur := _playback.get_current_node()
+	if cur == &"swim":
+		_travel(&"ground")                      # out of the deep water: wading again
 	if cur == &"jump_start" and _jumping:
 		_travel(&"air")
 	if not is_on_floor() and air_time > 0.25 and cur == &"ground" and _takeoff_t < 0.0:

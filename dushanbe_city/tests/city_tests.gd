@@ -109,22 +109,53 @@ func _coast_tests(world: Node) -> void:
 	var pm: Array = prom[prom.size() / 2]
 	var py := _ray_y(pm[0], pm[1])
 	_check("promenade surface walkable at (%.0f, %.0f): y=%.2f" % [pm[0], pm[1], py], py > 0.4 and py < 3.0)
-	# walk from the end of the avenue down the path to the south beach
+	# walk from the end of the avenue down the path to the south beach and into the sea:
+	# shallow -> medium -> swimming at the surface -> boundary far out -> swim back -> on land
 	player.teleport(Vector3(-40, 0.2 + CityWorld.city_relief(-40, 296), 296), PI)
 	player.set_camera_angles(PI, player.cam_pitch)
 	await _frames(10)
 	PlayerInput.scripted_move = Vector2(0, -1)
 	PlayerInput.scripted_run = true
 	var zmax := 0.0
-	for i in 60 * 40:
+	var seen := {}
+	var swim_y_err := 0.0
+	var swim_frames := 0
+	var below_floor := false
+	var wade_speed := 0.0
+	for i in 60 * 70:
 		await get_tree().physics_frame
 		zmax = maxf(zmax, player.global_position.z)
+		var m: int = player.water.mode
+		seen[m] = true
+		if m == PlayerWater.Mode.MEDIUM and player.water.depth > 0.8:
+			wade_speed = maxf(wade_speed, Vector2(player.velocity.x, player.velocity.z).length())
+		if m == PlayerWater.Mode.SWIM:
+			swim_frames += 1
+			if swim_frames > 90:
+				swim_y_err = maxf(swim_y_err, absf(player.global_position.y - (PlayerWater.SEA_LEVEL - PlayerWater.SWIM_BODY)))
+				var fy := _ray_y(player.global_position.x, player.global_position.z)
+				below_floor = below_floor or player.global_position.y < fy - 0.05
+	var swim_z := player.global_position.z
+	_check("into the sea: shallow %s, medium %s (deep wading speed %.2f m/s < run), swimming %s" % [
+		seen.has(PlayerWater.Mode.SHALLOW), seen.has(PlayerWater.Mode.MEDIUM), wade_speed, seen.has(PlayerWater.Mode.SWIM)],
+		seen.has(PlayerWater.Mode.SHALLOW) and seen.has(PlayerWater.Mode.MEDIUM) and seen.has(PlayerWater.Mode.SWIM) and wade_speed < 2.0)
+	_check("swims at the surface (feet %.2f m below it ±%.2f), never on/under the sea bed: %s" % [PlayerWater.SWIM_BODY, swim_y_err, not below_floor],
+		swim_frames > 120 and swim_y_err < 0.12 and not below_floor)
+	_check("swam out to z=%.0f (well beyond the wading line ~370-410) and stopped at the swimming boundary" % zmax, zmax > 420.0)
+	# back to the beach
+	player.set_camera_angles(0.0, player.cam_pitch)
+	for i in 60 * 90:
+		await get_tree().physics_frame
+		if player.water.mode == PlayerWater.Mode.DRY and player.is_on_floor():
+			break
 	PlayerInput.scripted_move = null
 	PlayerInput.scripted_run = false
-	var y := player.global_position.y
-	var depth := -1.6 - y
-	_check("walk from the city to the sea: reached z=%.0f, stopped at water depth %.2f m (wading limit 0.9)" % [zmax, depth],
-		zmax > 370.0 and depth < 1.0 and depth > 0.3)
+	await _frames(20)
+	_check("swims back and walks out onto the beach: mode %d (0 = dry), on floor %s, z=%.0f" % [player.water.mode, player.is_on_floor(), player.global_position.z],
+		player.water.mode == PlayerWater.Mode.DRY and player.is_on_floor() and player.global_position.z < swim_z)
+	var sa: SeaAudio = world.get_node_or_null("SeaAudio")
+	_check("sea sounds: surf + coastal wind playing near the shore (shore %.0f m)" % (sa.shore_distance if sa else -1.0),
+		sa != null and sa.shore_distance < 120.0 and sa._wind.playing)
 	_check("player stays inside the playable boundary: z=%.0f" % player.global_position.z, player.global_position.z < 700.0)
 	# minimap follows the player
 	var mm := get_tree().root.find_children("*", "Control", true, false).filter(func(n: Node) -> bool: return n is Minimap)
