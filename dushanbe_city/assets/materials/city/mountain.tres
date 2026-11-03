@@ -1,9 +1,13 @@
-[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+[gd_resource type="ShaderMaterial" load_steps=5 format=3]
 
 [ext_resource type="Shader" path="res://assets/shaders/mountain.gdshader" id="1"]
 [ext_resource type="Texture2D" path="res://assets/textures/noise_macro.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/textures/rock_cliff/albedo.jpg" id="3"]
+[ext_resource type="Texture2D" path="res://assets/textures/soil/albedo.jpg" id="4"]
 
 [resource]
 resource_name = "mountain"
 shader = ExtResource("1")
 shader_parameter/noise_tex = ExtResource("2")
+shader_parameter/rock_tex = ExtResource("3")
+shader_parameter/soil_tex = ExtResource("4")

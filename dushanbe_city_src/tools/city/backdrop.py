@@ -117,67 +117,139 @@ def lump(b, x, z, r, h):
         b.tri("canopy_far", a, (c[0], h * 0.2, c[2]), (a[0], h * 0.2, a[2]), tint=[v * 0.7 for v in t])
 
 
-def mountains(b):
-    """Ridge ring: north (Hissar range, snow-capped) high, south/east lower foothills.
-    Real range: 15-25 km away, 3-4.5 km high (~7-9 deg). Placed at R=2.6-3.4 km with heights
-    giving similar angular size."""
-    def ridge(R, a0, a1, hmin, hmax, seed, n=520, snow=True):
-        r = random.Random(seed)
-        # fractal profile
-        pts = [r.random() for _ in range(23)]
-        prof = []
-        for i in range(n + 1):
-            t = i / n
-            v = 0.0
-            amp = 1.0
-            for o in range(7):
-                f = 2 ** o
-                k = t * (len(pts) - 1) * f
-                i0 = int(k) % (len(pts) - 1)
-                fr = k - int(k)
-                fr = fr * fr * (3 - 2 * fr)
-                v += amp * (pts[i0] * (1 - fr) + pts[i0 + 1] * fr)
-                amp *= 0.5
-            prof.append(v)
-        lo, hi = min(prof), max(prof)
-        for i in range(n):
-            ta, tb = i / n, (i + 1) / n
-            aa, ab = a0 + (a1 - a0) * ta, a0 + (a1 - a0) * tb
-            edge = lambda t: math.sin(math.pi * t) ** 0.35
-            ha = hmin + (hmax - hmin) * (prof[i] - lo) / (hi - lo + 1e-9) * edge(ta)
-            hb = hmin + (hmax - hmin) * (prof[i + 1] - lo) / (hi - lo + 1e-9) * edge(tb)
-            # direction: azimuth from north (-Z), clockwise to east (+X)
-            pa = (math.sin(aa) * R, -math.cos(aa) * R)
-            pb = (math.sin(ab) * R, -math.cos(ab) * R)
-            depth = max(900.0, hmax * 2.8)          # gentler slopes (~35 deg) instead of walls
-            qa = (math.sin(aa) * (R + depth), -math.cos(aa) * (R + depth))
-            qb = (math.sin(ab) * (R + depth), -math.cos(ab) * (R + depth))
-            # front slope (two bands so snow line follows height)
-            b.ao_ground = False
-            mid = 0.55
-            ca, cb = (pa[0] + (qa[0] - pa[0]) * mid, pa[1] + (qa[1] - pa[1]) * mid), (pb[0] + (qb[0] - pb[0]) * mid, pb[1] + (qb[1] - pb[1]) * mid)
-            b.quad("mountain", (pa[0], -8, pa[1]), (pb[0], -8, pb[1]), (cb[0], hb * 0.72, cb[1]), (ca[0], ha * 0.72, ca[1]))
-            b.quad("mountain", (ca[0], ha * 0.72, ca[1]), (cb[0], hb * 0.72, cb[1]), (qb[0], hb, qb[1]), (qa[0], ha, qa[1]))
-    # layers, back to front; haze grows with distance in the shader (aerial perspective)
-    ridge(5600, math.radians(-85), math.radians(80), 380, 920, 3, n=700)     # Hissar range, snow (north)
-    ridge(6000, math.radians(-130), math.radians(-70), 250, 620, 5, n=300)   # north-west range
-    ridge(3700, math.radians(-95), math.radians(95), 160, 560, 4, n=600)     # middle range
-    ridge(2550, math.radians(-75), math.radians(75), 70, 240, 6, n=500)      # foothills behind the mainland
-    ridge(4800, math.radians(95), math.radians(265), 30, 210, 8, n=600)      # low hills across the sea (south)
-    ridge(4300, math.radians(70), math.radians(115), 40, 260, 9, n=200)      # east shore
-    ridge(4300, math.radians(245), math.radians(290), 40, 240, 10, n=200)    # west shore
+def _vn(x, z, freq, seed):
+    """value noise (numpy, smooth, non-periodic over the mountain ring)"""
+    import numpy as np
+    x = np.asarray(x) * freq; z = np.asarray(z) * freq
+    xi = np.floor(x); zi = np.floor(z)
+    fx = x - xi; fz = z - zi
+    fx = fx * fx * fx * (fx * (fx * 6 - 15) + 10); fz = fz * fz * fz * (fz * (fz * 6 - 15) + 10)
+    def h(i, j):
+        n = (i.astype(np.int64) * 374761393 + j.astype(np.int64) * 668265263 + seed * 2147483647) & 0xffffffff
+        n = ((n ^ (n >> 13)) * 1274126177) & 0xffffffff
+        return ((n ^ (n >> 16)) & 0xffff) / 65535.0
+    a = h(xi, zi); b = h(xi + 1, zi); c = h(xi, zi + 1); d = h(xi + 1, zi + 1)
+    return a + (b - a) * fx + (c - a) * fz + (a - b - c + d) * fx * fz
+
+
+def ridged(x, z, freq, seed, oct=6):
+    """ridged multifractal: sharp crests, branching spurs and valleys; detail weighted by the
+    previous octave so crests are rough and valley floors smooth"""
+    import numpy as np
+    v = np.zeros_like(np.asarray(x, float)); w = np.ones_like(v); amp = 1.0; tot = 0.0
+    # domain warp: no straight ridge lines
+    wx = x + (_vn(x, z, freq * 0.7, seed + 91) - 0.5) * 0.9 / freq
+    wz = z + (_vn(x, z, freq * 0.7, seed + 92) - 0.5) * 0.9 / freq
+    for o in range(oct):
+        n = 1.0 - np.abs(_vn(wx, wz, freq, seed + o) * 2.0 - 1.0)
+        n = n * n * w
+        w = np.clip(n * 1.6, 0, 1)
+        v += n * amp; tot += amp
+        amp *= 0.5; freq *= 2.03
+    return v / tot
+
+
+def _ss(a, b, x):
+    import numpy as np
+    t = np.clip((x - a) / (b - a), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def mountain_height(x, z):
+    """Height field of the mountain ring around the peninsula (world metres).
+    North: foothills (2.6-3.6 km, 80-250 m) -> middle range (3.8-5 km, 300-650 m) -> snowy main
+    range (5.5-8 km, 0.8-1.3 km, Hissar-like, compressed in distance keeping the angular size).
+    South/east/west across the sea: low dry hills (4-6 km, 100-350 m). Inside the playable terrain
+    square (+-2400 m) the field stays under the baked terrain and joins its edge height."""
+    import numpy as np
+    r = np.hypot(x, z)
+    az = np.degrees(np.arctan2(x, -z))                    # 0 = north, +-180 = south
+    north = _ss(115.0, 70.0, np.abs(az))                   # 1 in the northern half
+    # irregular range fronts (not circles)
+    jr = (_vn(az, 0 * az, 1 / 35.0, 7) - 0.5) * 900.0
+    rr = r + jr
+    M = ridged(x, z, 1 / 2600.0, 11)
+    Mf = ridged(x, z, 1 / 1100.0, 21, 5)
+    foot = 170.0 * _ss(2500.0, 3400.0, rr) * (0.45 + 0.9 * Mf)
+    mid = 380.0 * _ss(3500.0, 4900.0, rr) * (0.3 + 1.0 * M)
+    main = 820.0 * _ss(5000.0, 6800.0, rr) * (0.3 + 1.0 * M * M)
+    hN = foot + mid + main
+    hS = 300.0 * _ss(3600.0, 5600.0, rr) * (0.3 + 1.0 * Mf) + 120.0 * _ss(5200.0, 7000.0, rr) * M
+    h = hN * north + hS * (1.0 - north) - 18.0 * (1.0 - north) * (1.0 - _ss(3400.0, 4400.0, rr))
+    # join the baked terrain at the edge of its square, stay below it inside
+    if _HM is None:
+        terrain_h(0.0, 0.0)
+    hm, meta = _HM
+    E = 2400.0
+    cx = np.clip(x, -E + 8, E - 8); cz = np.clip(z, -E + 8, E - 8)
+    fx = (cx - meta["origin"][0]) / meta["step"]; fz = (cz - meta["origin"][1]) / meta["step"]
+    i = np.clip(fx.astype(int), 0, hm.shape[1] - 2); j = np.clip(fz.astype(int), 0, hm.shape[0] - 2)
+    u = fx - i; v = fz - j
+    T = hm[j, i] * (1 - u) * (1 - v) + hm[j, i + 1] * u * (1 - v) + hm[j + 1, i] * (1 - u) * v + hm[j + 1, i + 1] * u * v
+    dout = np.maximum(np.abs(x) - E, np.abs(z) - E)       # >0 outside the terrain square
+    T = np.maximum(T, -16.0)
+    h = np.where(dout <= 0, T - 2.5, T + (np.maximum(h, T) - T) * _ss(0.0, 700.0, dout))
+    return h
+
+
+def mountains(nodes):
+    """Mountain ring as a smooth-shaded height field on a polar grid (r 2.35-8.8 km), split into
+    16 azimuth sectors (frustum culling; Godot generates mesh LODs per sector on import)."""
+    import numpy as np
+    NA = 896                                         # 0.31 deg
+    R0, R1 = 2350.0, 8800.0
+    rs = R0 * (R1 / R0) ** (np.linspace(0, 1, 80) ** 1.0)   # geometric: ~35 m near, ~330 m far
+    SECT = 16
+    per = NA // SECT
+    tris = 0
+    for s in range(SECT):
+        a = np.radians(np.linspace(s * 360.0 / SECT, (s + 1) * 360.0 / SECT, per + 1)) - math.pi
+        A, Rr = np.meshgrid(a, rs)                   # rows = radius
+        X = np.sin(A) * Rr; Z = -np.cos(A) * Rr
+        Hh = mountain_height(X, Z)
+        # rows fully under the terrain square and its edge are skipped (hidden anyway)
+        keep_row = [k for k in range(len(rs)) if (np.maximum(np.abs(X[k]), np.abs(Z[k])) > 2300).any()]
+        k0 = max(0, keep_row[0] - 1)
+        X, Z, Hh = X[k0:], Z[k0:], Hh[k0:]
+        nr, nc = Hh.shape
+        P = np.stack([X, Hh, Z], -1)
+        # smooth normals from the grid
+        dx = np.gradient(P, axis=1); dr = np.gradient(P, axis=0)
+        N = np.cross(dr, dx)
+        N = N / np.maximum(np.linalg.norm(N, axis=-1, keepdims=True), 1e-9)
+        N[N[..., 1] < 0] *= -1
+        m = mk.Mesh()
+        m.pos = [tuple(p) for p in P.reshape(-1, 3)]
+        m.nrm = [tuple(n) for n in N.reshape(-1, 3)]
+        m.uv = [(float(p[0]) / 50.0, float(p[2]) / 50.0) for p in P.reshape(-1, 3)]
+        # vertex colour: R = cavity/ridge (curvature) for darker gullies, G = far mask unused
+        lap = np.zeros_like(Hh)
+        lap[1:-1, 1:-1] = (Hh[:-2, 1:-1] + Hh[2:, 1:-1] + Hh[1:-1, :-2] + Hh[1:-1, 2:] - 4 * Hh[1:-1, 1:-1])
+        cav = np.clip(0.5 + lap / 60.0, 0, 1)
+        m.col = [(float(c), 1.0, 1.0) for c in cav.reshape(-1)]
+        idx = []
+        for k in range(nr - 1):
+            for c in range(nc - 1):
+                i0 = k * nc + c; i1 = i0 + 1; i2 = i0 + nc; i3 = i2 + 1
+                if Hh[k, c] < -10 and Hh[k + 1, c + 1] < -10 and Hh[k, c + 1] < -10 and Hh[k + 1, c] < -10:
+                    continue                          # deep under the sea
+                idx += [i0, i1, i2, i1, i3, i2]
+        m.idx = idx
+        tris += len(idx) // 3
+        nodes.append(("mountains_%02d" % s, {"mountain": m}))
+    return tris
 
 
 def main():
     facade_texture()
     b = mk.Builder()
     far_city(b)
-    m = mk.Builder()
-    mountains(m)
+    nodes = [("far_city", b.meshes)]
+    mt = mountains(nodes)
     import json
     json.dump(FAR_TREES, open(os.path.join(GAME, "data/city/backdrop_trees.json"), "w"))
-    mk.write_glb(os.path.join(GAME, "assets/city/backdrop.glb"), [("far_city", b.meshes), ("mountains", m.meshes)])
-    print("backdrop tris", sum(b.stats().values()), "mountains", sum(m.stats().values()))
+    mk.write_glb(os.path.join(GAME, "assets/city/backdrop.glb"), nodes)
+    print("backdrop tris", sum(b.stats().values()), "mountains", mt)
 
 
 if __name__ == "__main__":
