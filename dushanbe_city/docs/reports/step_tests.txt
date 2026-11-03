@@ -13,9 +13,9 @@ PASS staircase up: camera moves smoothly, max vertical speed 1.10 m/s (a pop wou
 PASS staircase up: no jump/landing states, states seen ["ground"]
 PASS jump on the stairs: +0.73 m
 PASS staircase down: bottom y=0.000
-PASS staircase down: model max 0.050 m per frame, camera max 0.97 m/s
+PASS staircase down: model max 0.050 m per frame, camera max 1.00 m/s
 PASS staircase down: no landing animation, states seen ["ground"]
-PASS step down 0.30 m: y=0.001, model max 0.050 m per frame, camera max 1.49 m/s, states ["ground"]
+PASS step down 0.30 m: y=0.001, model max 0.050 m per frame, camera max 1.50 m/s, states ["ground"]
 PASS 20° ramp walkable: y=2.72
 PASS 50° ramp (> 40° limit) not climbed: y=0.00
 PASS 1.2 m wall blocks: y=0.000, z=-2.70

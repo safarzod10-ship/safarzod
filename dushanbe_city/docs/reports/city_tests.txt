@@ -1,5 +1,5 @@
-PASS city loaded in 1035 ms: 36 city chunks (+57 coast chunks)
-PASS colliders 1521, trees 7540, props 5171, multimeshes 5516
+PASS city loaded in 950 ms: 36 city chunks (+57 coast chunks)
+PASS colliders 1521, trees 7540, props 5138, multimeshes 5521
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
 PASS player on sidewalk at spawn: y=2.379 (relief+0.15 = 2.377)

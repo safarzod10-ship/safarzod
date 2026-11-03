@@ -575,7 +575,7 @@ def shopfront(ctx, B, a, bnd, y0, y1, key):
         ctx.lights.append(("sign", ctx.world(((a + bnd) / 2, sy0 + 0.4, 0.8))))
         b.box("asphalt_yard", a - 0.3, 0.0, 0.0, bnd + 0.3, 0.02, 1.0, faces="Y")    # apron
         return
-    glass(ctx, a, bnd, y0, y1, z, rng.choice([5, 13, 5, 13, 3]), tint=(1.0, 1.0, 1.0))
+    glass(ctx, a, bnd, y0, y1, z, rng.choice([5, 7, 5, 4]), tint=(1.0, 1.0, 1.0))   # lit sales floor / dark glass (no full-height blinds: read as shutters)
     n = max(2, int(w / 1.6))
     mull = [a + w * i / n for i in range(1, n)]
     doorc = mull[len(mull) // 2] if mull else (a + bnd) / 2
