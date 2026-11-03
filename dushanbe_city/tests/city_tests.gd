@@ -24,7 +24,8 @@ func _ready() -> void:
 		for i in 60:
 			await get_tree().physics_frame
 		var y0 := player.global_position.y
-		_check("player on sidewalk at spawn: y=%.3f (≈0.15)" % y0, absf(y0 - 0.15) < 0.06)
+		var want0 := 0.15 + CityWorld.city_relief(player.global_position.x, player.global_position.z)
+		_check("player on sidewalk at spawn: y=%.3f (relief+0.15 = %.3f)" % [y0, want0], absf(y0 - want0) < 0.06)
 		PlayerInput.scripted_move = Vector2(0, -1)
 		PlayerInput.scripted_run = true
 		var p0 := player.global_position
@@ -33,6 +34,7 @@ func _ready() -> void:
 		PlayerInput.scripted_move = null
 		var moved := player.global_position.distance_to(p0)
 		_check("player runs 5 s through the city: moved %.1f m, y=%.3f" % [moved, player.global_position.y], moved > 12.0 and player.global_position.y > -0.1)
+	await _relief_tests(world)
 	await _coast_tests(world)
 	await _car_tests()
 	print("CITY_TESTS ", "ALL PASS" if ok_all else "SOME FAILED")
@@ -55,6 +57,43 @@ func _ray_y(x: float, z: float) -> float:
 	return (hit.position as Vector3).y if not hit.is_empty() else -999.0
 
 
+func _relief_tests(world: CityWorld) -> void:
+	## the city is not a flat platform: ground follows city_relief(x, z) everywhere (roads = heightmap,
+	## raised blocks = collision mesh), height range > 3 m, continuous with the coast terrain
+	var worst_road := 0.0
+	var worst_side := 0.0
+	var lo := 99.0
+	var hi := -99.0
+	for r in world.city["roads"]:
+		var c: float = r["c"]
+		for a in [float(r["a0"]) + 20.0, (float(r["a0"]) + float(r["a1"])) * 0.5, float(r["a1"]) - 20.0]:
+			var x: float = c if r["axis"] == "z" else a
+			var z: float = a if r["axis"] == "z" else c
+			var f := CityWorld.city_relief(x, z)
+			lo = minf(lo, f)
+			hi = maxf(hi, f)
+			if float(r["carriage_half"]) > 0.0 and r["lanes"] > 0:
+				# middle of a traffic lane (the avenue's centre is a raised median)
+				var lo_: float = float(r["carriage_half"]) * 0.7
+				var lx: float = x + (lo_ if r["axis"] == "z" else 0.0)
+				var lz: float = z + (0.0 if r["axis"] == "z" else lo_)
+				worst_road = maxf(worst_road, absf(_ray_y(lx, lz) - CityWorld.city_relief(lx, lz)))
+			# sidewalk edge (outside the carriageway, raised by 0.15)
+			var o: float = float(r["half"]) - 0.6
+			var sx: float = x + (o if r["axis"] == "z" else 0.0)
+			var sz: float = z + (0.0 if r["axis"] == "z" else o)
+			var g := _ray_y(sx, sz)
+			var fs := CityWorld.city_relief(sx, sz)
+			worst_side = maxf(worst_side, minf(absf(g - fs - 0.15), absf(g - fs)))
+	_check("roads follow the relief: worst |ray - f| = %.3f m" % worst_road, worst_road < 0.05)
+	_check("sidewalks/blocks follow the relief (+0.15): worst = %.3f m" % worst_side, worst_side < 0.06)
+	_check("relief height range along the streets %.2f .. %.2f m (not flat)" % [lo, hi], hi - lo > 2.5)
+	var e1 := absf(_ray_y(-40.0, 303.0) - world.terrain_height(-40.0, 303.0))
+	var g2 := _ray_y(-40.0, 297.0) - CityWorld.city_relief(-40.0, 297.0)
+	var e2 := minf(absf(g2), absf(g2 - 0.15))          # road or sidewalk
+	_check("city edge joins the terrain: |ray - terrain| %.2f / %.2f m" % [e1, e2], e1 < 0.15 and e2 < 0.03)
+
+
 func _coast_tests(world: Node) -> void:
 	## peninsula: collision = visible terrain, walk to the beach, wading limit, promenade, minimap
 	var players := get_tree().get_nodes_in_group(&"player")
@@ -71,7 +110,7 @@ func _coast_tests(world: Node) -> void:
 	var py := _ray_y(pm[0], pm[1])
 	_check("promenade surface walkable at (%.0f, %.0f): y=%.2f" % [pm[0], pm[1], py], py > 0.4 and py < 3.0)
 	# walk from the end of the avenue down the path to the south beach
-	player.teleport(Vector3(-40, 0.2, 296), PI)
+	player.teleport(Vector3(-40, 0.2 + CityWorld.city_relief(-40, 296), 296), PI)
 	player.set_camera_angles(PI, player.cam_pitch)
 	await _frames(10)
 	PlayerInput.scripted_move = Vector2(0, -1)

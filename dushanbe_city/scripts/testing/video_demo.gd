@@ -34,7 +34,7 @@ func _sec(s: float) -> void:
 
 func _player() -> void:
 	var p: PlayerController = main.get("player")
-	p.teleport(Vector3(-58, 0.15, 30), PI * 0.5)
+	p.teleport(Vector3(-58, 0.15 + CityWorld.city_relief(-58, 30), 30), PI * 0.5)
 	p.set_camera_angles(PI * 0.5 + 0.6, -0.15)
 	await _sec(2.0)                                        # idle (arms beside the body)
 	PlayerInput.scripted_move = Vector2(0, -1)

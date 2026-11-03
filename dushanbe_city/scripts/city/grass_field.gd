@@ -155,7 +155,7 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 			var sn := sin(rot) * s
 			var o := cnt * STRIDE
 			xs[o] = c; xs[o + 1] = 0.0; xs[o + 2] = sn; xs[o + 3] = x
-			xs[o + 4] = 0.0; xs[o + 5] = s; xs[o + 6] = 0.0; xs[o + 7] = 0.15
+			xs[o + 4] = 0.0; xs[o + 5] = s; xs[o + 6] = 0.0; xs[o + 7] = 0.15 + CityWorld.city_relief(x, z)
 			xs[o + 8] = -sn; xs[o + 9] = 0.0; xs[o + 10] = c; xs[o + 11] = z
 			xs[o + 12] = 1.0; xs[o + 13] = 1.0; xs[o + 14] = 1.0; xs[o + 15] = 1.0   # instance colour
 			xs[o + 16] = jx; xs[o + 17] = jz; xs[o + 18] = 0.0; xs[o + 19] = 0.0     # custom (unused by shaders)

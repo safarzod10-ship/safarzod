@@ -25,6 +25,8 @@ from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "city"))
 import meshkit as mk
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from relief import city_relief
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 GAME = os.path.join(ROOT, "dushanbe_city")
@@ -173,9 +175,11 @@ def fields(x, z):
     land = land + np.maximum(hills, -0.3) * ramp
     # mainland foothills rising towards the mountains (north)
     land = land + (fbm(x, z, 1 / 700.0, 45, 4) * 1.3 - 0.25) * 90.0 * smoothstep(800.0, 2300.0, -z) * smoothstep(Wb + 40, Wb + 250, s)
-    land = land * smoothstep(2.0, 26.0, e)               # flat (0) next to the city
+    land = land * smoothstep(2.0, 26.0, e)               # no extra hills right next to the city
+    # the city relief continues outside the city and fades out towards the beaches
+    land = land + city_relief(x, z) * smoothstep(Wb, Wb + 40.0, s)
     h = np.where(s < 0, h_sea, land)
-    h = np.where(e < 0, 0.0, h)
+    h = np.where(e < 0, city_relief(x, z), h)
     return {"h": h, "s": s, "e": e, "R": R, "Wb": Wb, "az": az}
 
 
@@ -332,7 +336,7 @@ def main():
         prof = np.array([height_at(x, z) for (x, z) in pts])
         k = 7
         prof_s = np.convolve(np.pad(prof, k, mode="edge"), np.ones(2 * k + 1) / (2 * k + 1), mode="same")[k:-k]
-        prof_s[0] = 0.0
+        prof_s[0] = float(city_relief(pts[0][0], pts[0][1]))
         p["prof"] = prof_s.tolist()
         half = p["width"] / 2
         d = dist_to_polyline(X, Z, pts, half + 10)
@@ -357,7 +361,7 @@ def main():
                 wide = smoothstep(p["road_half"] + 1.0, p["road_half"] - 0.5, d[idx]) * ap
                 asphalt[idx] = np.maximum(asphalt[idx], wide)
                 earth[idx] = np.maximum(earth[idx], cov * (1 - wide))
-                H[idx] = np.where(wide > 0.01, H[idx] * (1 - wide), H[idx])
+                H[idx] = np.where(wide > 0.01, H[idx] * (1 - wide) + city_relief(qx, qz) * wide, H[idx])
 
     # --- promenade: flatten a 7 m strip 0.15 m below its paved top
     prom = make_promenade()
@@ -393,7 +397,7 @@ def main():
     tot = sand + rock + earth + asphalt
     k = np.where(tot > 1, 1 / np.maximum(tot, 1e-6), 1.0)
     sand *= k; rock *= k; earth *= k; asphalt *= k
-    H[inside] = 0.0
+    H[inside] = city_relief(X, Z)[inside]
 
     os.makedirs(os.path.join(GAME, "assets/terrain"), exist_ok=True)
     os.makedirs(os.path.join(GAME, "data/terrain"), exist_ok=True)

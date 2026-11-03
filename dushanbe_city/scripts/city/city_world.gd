@@ -80,6 +80,17 @@ func _load_chunk(json_path: String) -> void:
 		var inst: Node = (load(J["glb"]) as PackedScene).instantiate()
 		for mi in inst.find_children("*", "MeshInstance3D", true, false):
 			var m := mi as MeshInstance3D
+			if String(m.name).begins_with("collision"):
+				# raised blocks / sidewalks on the relief: invisible collision mesh (top + curb faces)
+				var gb := StaticBody3D.new()
+				gb.name = "GroundCollision"
+				var gcs := CollisionShape3D.new()
+				gcs.shape = m.mesh.create_trimesh_shape()
+				gcs.transform = m.global_transform if m.is_inside_tree() else m.transform
+				gb.add_child(gcs)
+				node.add_child(gb)
+				stats.colliders += 1
+				continue
 			CityMaterials.remap_mesh(m.mesh)
 			var copy := MeshInstance3D.new()
 			copy.name = m.name
@@ -163,8 +174,8 @@ func _line_instances(groups: Dictionary, l: Array) -> void:
 	var id: String = ids[0]
 	var e: Dictionary = props.get(id, veg.get(id, {}))
 	var seg: float = float(e.get("segment_length", e.get("size", [2.0])[0] if e.has("size") else 2.0))
-	var a := Vector3(l[1], 0.15, l[2])
-	var b := Vector3(l[3], 0.15, l[4])
+	var a := Vector3(l[1], l[5] if l.size() > 6 else 0.15, l[2])     # ends on the relief
+	var b := Vector3(l[3], l[6] if l.size() > 6 else 0.15, l[4])
 	var dir := b - a
 	var L := dir.length()
 	if L < 0.3:
@@ -351,7 +362,7 @@ func _make_outer_ground() -> Node3D:
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(600, 600)
 	mi.mesh = pm
-	mi.position.y = -0.06
+	mi.position.y = -0.6                       # below the lowest point of the city relief (-0.21 m)
 	mi.material_override = CityMaterials.get_material("lawn_worn")
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(mi)
@@ -386,6 +397,13 @@ func _make_outer_ground() -> Node3D:
 	safety.position.y = -30.0
 	body.add_child(safety)
 	return root
+
+
+## City relief (same formula as dushanbe_city_src/tools/relief.py): ground height offset at (x, z);
+## raised blocks / sidewalks / lawns are at relief + 0.15, roads at relief.
+static func city_relief(x: float, z: float) -> float:
+	return (1.7 + 1.5 * (-z / 300.0) + 0.9 * sin(x / 140.0 + 0.6) * cos(z / 170.0 - 0.3)
+			+ 0.45 * sin((x + 0.6 * z) / 95.0 + 1.1))
 
 
 ## Terrain height at a world point (bilinear, same data as the collision); 0 outside the baked area.

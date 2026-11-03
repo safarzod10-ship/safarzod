@@ -14,6 +14,8 @@ import buildings as bl
 import streets as st
 import layout as lay
 import extras
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from relief import city_relief
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 GAME = os.path.join(ROOT, "dushanbe_city")
@@ -21,6 +23,23 @@ CH = 100.0
 ORIGIN = -300.0
 H = st.H
 RNG = random.Random(7)
+SINK = 0.9          # building plinths / wall bases / colliders reach this far below the local ground
+
+
+def rel(x, z):
+    return float(city_relief(x, z))
+
+
+def sink_box(c):
+    """collider [cx,cy,cz,sx,sy,sz,yaw] on the flat plan -> on the relief: lifted by f(centre); boxes
+    that stand on the ground are extended downwards so slopes never leave a gap under them"""
+    c = list(c)
+    dy = rel(c[0], c[2])
+    if c[1] - c[4] / 2 <= H + 0.05:
+        c[1] -= SINK / 2
+        c[4] += SINK
+    c[1] += dy
+    return [round(v, 3) for v in c]
 
 GROUND_MAT = {"soil_garden": "soil", "flowerbed": "soil", "plaza_reserved": "plaza", "lawn_park": "lawn",
               "concrete_yard": "concrete", "tiles_out": "tiles", "lawn": "lawn", "gravel": "gravel",
@@ -37,7 +56,7 @@ def chunk_of(x, z):
 
 class Chunks:
     def __init__(self):
-        self.base, self.detail, self.data = {}, {}, {}
+        self.base, self.detail, self.data, self.col = {}, {}, {}, {}
 
     def B(self, k):
         if k not in self.base:
@@ -49,6 +68,11 @@ class Chunks:
             self.detail[k] = mk.Builder()
         return self.detail[k]
 
+    def Col(self, k):
+        if k not in self.col:
+            self.col[k] = mk.Builder()
+        return self.col[k]
+
     def J(self, k):
         if k not in self.data:
             self.data[k] = {"trees": [], "props": [], "lines": [], "colliders": [], "lights": [], "attach": []}
@@ -57,6 +81,7 @@ class Chunks:
 
 def main():
     t0 = time.time()
+    mk.Builder.RELIEF = rel
     C = Chunks()
     P = lay.plan()
     roads = {r.id: r for r in lay.ROADS}
@@ -104,17 +129,28 @@ def main():
     for B in P.buildings:
         k = chunk_of(B["x"], B["z"])
         ctx = bl.Ctx(C.B(k), C.D(k), random.Random(hash(B["id"]) & 0xffffffff))
+        # rigid on the relief: level floors, lifted by the ground height at the footprint centre,
+        # base pushed into the ground (the plinth shows on the downhill side)
+        dy = rel(B["x"], B["z"])
+        B["dy"] = dy
+        C.B(k).rigid = C.D(k).rigid = (dy, B["y"] + 0.02, SINK)
         bl.build(ctx, B)
+        C.B(k).rigid = C.D(k).rigid = None
         J = C.J(k)
         for (cat, p, yaw) in ctx.attach:
-            J["attach"].append([cat, round(p[0], 3), round(p[1], 3), round(p[2], 3), round(yaw, 4)])
+            J["attach"].append([cat, round(p[0], 3), round(p[1] + dy, 3), round(p[2], 3), round(yaw, 4)])
         for (_, c, s, yaw) in ctx.colliders:
-            J["colliders"].append([round(v, 3) for v in (*c, *s, yaw)])
+            cc = [c[0], c[1], c[2], s[0], s[1], s[2], yaw]
+            if cc[1] - cc[4] / 2 <= B["y"] + 0.05:
+                cc[1] -= SINK / 2
+                cc[4] += SINK
+            cc[1] += dy
+            J["colliders"].append([round(v, 3) for v in cc])
         for (kind, p) in ctx.lights:
-            J["lights"].append([kind, round(p[0], 2), round(p[1], 2), round(p[2], 2)])
+            J["lights"].append([kind, round(p[0], 2), round(p[1] + dy, 2), round(p[2], 2)])
         J.setdefault("doors", [])
         for (bid, p, yaw) in ctx.doors:
-            J["doors"].append([bid, round(p[0], 2), round(p[1], 2), round(p[2], 2), round(yaw, 4)])
+            J["doors"].append([bid, round(p[0], 2), round(p[1] + dy, 2), round(p[2], 2), round(yaw, 4)])
         C.B(k).set_transform(0, 0, 0, 0)
         C.D(k).set_transform(0, 0, 0, 0)
 
@@ -132,7 +168,7 @@ def main():
         parking_paint(C, r)
     street_furniture(C, net, roads)
 
-    # ---- raised ground colliders (one box per block / raised road band) ------------------------
+    # ---- raised ground collision: a mesh following the relief (top + curb faces) per chunk -------
     for blk in blocks:
         for q in st.split_grid(blk):
             add_ground_collider(C, q)
@@ -149,11 +185,22 @@ def main():
         for p in J["props"]:
             fn = extras.BUILDERS.get(p[0])
             if fn:
-                fn(C.B(k), C.D(k), J["colliders"], p[1], p[3], p[4], RNG)
+                cols = []
+                fn(C.B(k), C.D(k), cols, p[1], p[3], p[4], RNG)
+                J["colliders"] += [sink_box(c) for c in cols]
                 C.B(k).set_transform(0, 0, 0, 0); C.D(k).set_transform(0, 0, 0, 0)
             elif p[0] != "flagpole":
                 keep.append(p)
         J["props"] = keep
+
+    # ---- instances onto the relief (props: +f, trees: explicit y, fence lines: y at both ends) -----
+    for k, J in C.data.items():
+        for p in J["props"]:
+            p[2] = round(p[2] + rel(p[1], p[3]), 3)
+        for t in J["trees"]:
+            t.append(round(H + rel(t[1], t[2]), 3))
+        for l in J["lines"]:
+            l += [round(H + rel(l[1], l[2]), 3), round(H + rel(l[3], l[4]), 3)]
 
     # ---- write -----------------------------------------------------------------------------------
     os.makedirs(os.path.join(GAME, "assets/city/chunks"), exist_ok=True)
@@ -161,7 +208,8 @@ def main():
     stats = {}
     for k in sorted(set(C.base) | set(C.detail) | set(C.data)):
         name = "chunk_%d_%d" % k
-        nodes = [("base", C.base[k].meshes if k in C.base else {}), ("detail", C.detail[k].meshes if k in C.detail else {})]
+        nodes = [("base", C.base[k].meshes if k in C.base else {}), ("detail", C.detail[k].meshes if k in C.detail else {}),
+                 ("collision", C.col[k].meshes if k in C.col else {})]
         mk.write_glb(os.path.join(GAME, "assets/city/chunks", name + ".glb"), nodes, origin=(ORIGIN + (k[0] + 0.5) * CH, 0.0, ORIGIN + (k[1] + 0.5) * CH))
         J = C.J(k)
         J["glb"] = "res://assets/city/chunks/%s.glb" % name
@@ -172,7 +220,8 @@ def main():
         stats[name] = {"tris_base": tb, "tris_detail": td, "trees": len(J["trees"]), "props": len(J["props"]) + len(J["attach"])}
     city = {
         "size": [600, 600], "chunk": CH, "origin": ORIGIN, "ground_y": H,
-        "spawn": [-58.0, H, -90.0, 0.0],
+        "spawn": [-58.0, round(H + rel(-58.0, -90.0), 3), -90.0, 0.0],
+        "relief": "tools/relief.py city_relief(x, z): ground = relief (+0.15 on raised blocks)",
         "roads": [{"id": r.id, "name": r.name, "axis": r.axis, "c": r.c, "a0": r.a0, "a1": r.a1, "half": r.half,
                    "carriage_half": r.cw, "lanes": r.lanes} for r in lay.ROADS],
         "zones": [[n, list(r)] for (n, r) in P.zones],
@@ -223,13 +272,13 @@ def havli_wall(C, x0, z0, x1, z1):
         b.box("wall_plaster", a, H, z0 - th / 2, c, H + hgt, z0 + th / 2, tint=t, faces="xXzZ")
         b.box("wall_brick_red", a - 0.03, H + hgt, z0 - th / 2 - 0.04, c + 0.03, H + hgt + 0.12, z0 + th / 2 + 0.04, faces="YxXzZy")
         b.box("plinth", a, H, z0 - th / 2 - 0.02, c, H + 0.4, z0 + th / 2 + 0.02, tint=(0.8, 0.8, 0.78), faces="zZ")
-        C.J(k)["colliders"].append([round((a + c) / 2, 2), H + hgt / 2, z0, round(c - a, 2), hgt, th, 0.0])
+        C.J(k)["colliders"].append(sink_box([round((a + c) / 2, 2), H + hgt / 2, z0, round(c - a, 2), hgt, th, 0.0]))
     else:
         a, c = min(z0, z1), max(z0, z1)
         b.box("wall_plaster", x0 - th / 2, H, a, x0 + th / 2, H + hgt, c, tint=t, faces="xXzZ")
         b.box("wall_brick_red", x0 - th / 2 - 0.04, H + hgt, a - 0.03, x0 + th / 2 + 0.04, H + hgt + 0.12, c + 0.03, faces="YxXzZy")
         b.box("plinth", x0 - th / 2 - 0.02, H, a, x0 + th / 2 + 0.02, H + 0.4, c, tint=(0.8, 0.8, 0.78), faces="xX")
-        C.J(k)["colliders"].append([x0, H + hgt / 2, round((a + c) / 2, 2), th, hgt, round(c - a, 2), 0.0])
+        C.J(k)["colliders"].append(sink_box([x0, H + hgt / 2, round((a + c) / 2, 2), th, hgt, round(c - a, 2), 0.0]))
 
 
 def parking_paint(C, r):
@@ -260,9 +309,12 @@ def parking_paint(C, r):
 
 
 def add_ground_collider(C, q):
+    """walkable top of a raised block / band + its four curb faces (down to road level - 0.4 m),
+    tessellated and lifted by the relief like the visible ground"""
     k = chunk_of((q[0] + q[2]) / 2, (q[1] + q[3]) / 2)
-    C.J(k)["colliders"].append([round((q[0] + q[2]) / 2, 3), H / 2 - 0.25, round((q[1] + q[3]) / 2, 3),
-                                round(q[2] - q[0], 3), H + 0.5, round(q[3] - q[1], 3), 0.0])
+    b = C.Col(k)
+    x0, z0, x1, z1 = q
+    b.box("col", x0, -0.4, z0, x1, H, z1, faces="YxXzZ")
 
 
 def occupied(x, z, P_rects):

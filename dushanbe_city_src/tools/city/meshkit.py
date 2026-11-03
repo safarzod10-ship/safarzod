@@ -21,13 +21,23 @@ class Mesh:
 
 
 class Builder:
-    """Collects geometry by material. Optional transform (yaw + offset) for building-local coords."""
+    """Collects geometry by material. Optional transform (yaw + offset) for building-local coords.
+
+    Terrain relief (city on a gently rolling ground): when Builder.RELIEF = f(x, z) is set, every
+    vertex is lifted by f at its world position (ground, roads, curbs, walls, small structures follow
+    the ground exactly) and large quads are tessellated to <= TESS m so long surfaces bend with it.
+    Buildings use `rigid = (dy, base_y, sink)`: the whole building moves up by dy (floors stay level)
+    and vertices at its base (y <= base_y) are pushed `sink` m into the ground (plinth on slopes).
+    UVs and baked AO are computed from the undeformed positions (textures stay level)."""
+    RELIEF = None
+    TESS = 12.0
 
     def __init__(self):
         self.meshes = {}
         self.set_transform(0.0, 0.0, 0.0, 0.0)
         self.tint = (1.0, 1.0, 1.0)
         self.ao_ground = True
+        self.rigid = None
 
     # ---- transform -------------------------------------------------------------------------
     def set_transform(self, ox, oy, oz, yaw):
@@ -37,6 +47,16 @@ class Builder:
     def _xf(self, p):
         x, y, z = p
         return (self.ox + x * self.c + z * self.s, self.oy + y, self.oz - x * self.s + z * self.c)
+
+    def _deform(self, P):
+        """undeformed world points -> deformed (relief / rigid building shift)"""
+        if self.rigid is not None:
+            dy, base, sink = self.rigid
+            return [(p[0], p[1] + dy - (sink if p[1] <= base else 0.0), p[2]) for p in P]
+        f = Builder.RELIEF
+        if f is None:
+            return P
+        return [(p[0], p[1] + f(p[0], p[2]), p[2]) for p in P]
 
     def _xn(self, n):
         x, y, z = n
@@ -51,8 +71,26 @@ class Builder:
     # ---- primitives --------------------------------------------------------------------------
     def quad(self, mat, p0, p1, p2, p3, uv=None, ao=1.0, tint=None, uvmode="auto"):
         """Quad p0..p3 counter-clockwise when seen from the front (normal side)."""
+        if Builder.RELIEF is not None and self.rigid is None:
+            hl = lambda a, b: math.hypot(a[0] - b[0], a[2] - b[2])
+            nu = int(math.ceil(max(hl(p0, p1), hl(p3, p2)) / Builder.TESS - 1e-6))
+            nv = int(math.ceil(max(hl(p1, p2), hl(p0, p3)) / Builder.TESS - 1e-6))
+            if nu > 1 or nv > 1:
+                nu, nv = max(nu, 1), max(nv, 1)
+                L = lambda a, b, t: tuple(a[i] + (b[i] - a[i]) * t for i in range(len(a)))
+                def at(u, v, q):
+                    return L(L(q[0], q[1], u), L(q[3], q[2], u), v)
+                pts = (p0, p1, p2, p3)
+                for i in range(nu):
+                    for j in range(nv):
+                        u0, u1, v0, v1 = i / nu, (i + 1) / nu, j / nv, (j + 1) / nv
+                        c = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+                        self.quad(mat, *[at(u, v, pts) for (u, v) in c],
+                                  uv=None if uv is None else [at(u, v, uv) for (u, v) in c], ao=ao, tint=tint)
+                return
         m = self.mesh(mat)
-        P = [self._xf(p) for p in (p0, p1, p2, p3)]
+        P0 = [self._xf(p) for p in (p0, p1, p2, p3)]
+        P = self._deform(P0)
         a = np.subtract(P[2], P[0]); b = np.subtract(P[3], P[1])
         n = np.cross(a, b)
         ln = np.linalg.norm(n)
@@ -60,12 +98,12 @@ class Builder:
             return
         n = n / ln
         if uv is None:
-            uv = self._auto_uv(P, n)
+            uv = self._auto_uv(P0, n)
         t = tint or self.tint
         base = len(m.pos)
         for i in range(4):
             m.pos.append(P[i]); m.nrm.append(tuple(n)); m.uv.append(uv[i])
-            y = P[i][1]
+            y = P0[i][1]
             g = 1.0
             if self.ao_ground and y < 1.2:
                 g = 0.72 + 0.28 * max(y, 0.0) / 1.2
@@ -134,14 +172,15 @@ class Builder:
 
     def tri(self, mat, p0, p1, p2, ao=1.0, tint=None, uv=None):
         m = self.mesh(mat)
-        P = [self._xf(p) for p in (p0, p1, p2)]
+        P0 = [self._xf(p) for p in (p0, p1, p2)]
+        P = self._deform(P0)
         n = np.cross(np.subtract(P[1], P[0]), np.subtract(P[2], P[0]))
         ln = np.linalg.norm(n)
         if ln < 1e-12:
             return
         n = n / ln
         if uv is None:
-            uv = self._auto_uv(P, n)
+            uv = self._auto_uv(P0, n)
         t = tint or self.tint
         base = len(m.pos)
         for i in range(3):

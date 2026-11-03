@@ -8,10 +8,11 @@
 "ground_y": 0.15,
 "spawn": [
 -58.0,
-0.15,
+2.377,
 -90.0,
 0.0
 ],
+"relief": "tools/relief.py city_relief(x, z): ground = relief (+0.15 on raised blocks)",
 "roads": [
 {
 "id": "av",
@@ -12232,220 +12233,220 @@
 ],
 "stats": {
 "chunk_0_0": {
-"tris_base": 11802,
-"tris_detail": 26934,
+"tris_base": 12484,
+"tris_detail": 25692,
 "trees": 92,
-"props": 120
+"props": 134
 },
 "chunk_0_1": {
-"tris_base": 9560,
-"tris_detail": 20604,
+"tris_base": 10126,
+"tris_detail": 21532,
 "trees": 92,
-"props": 105
+"props": 117
 },
 "chunk_0_2": {
-"tris_base": 5926,
-"tris_detail": 14126,
+"tris_base": 6412,
+"tris_detail": 14158,
 "trees": 47,
-"props": 65
+"props": 64
 },
 "chunk_0_3": {
-"tris_base": 1242,
-"tris_detail": 1550,
+"tris_base": 1714,
+"tris_detail": 1566,
 "trees": 46,
 "props": 34
 },
 "chunk_0_4": {
-"tris_base": 8166,
-"tris_detail": 17302,
+"tris_base": 8826,
+"tris_detail": 15306,
 "trees": 73,
-"props": 76
+"props": 106
 },
 "chunk_0_5": {
-"tris_base": 9660,
-"tris_detail": 39432,
+"tris_base": 11430,
+"tris_detail": 40584,
 "trees": 50,
-"props": 76
+"props": 83
 },
 "chunk_1_0": {
-"tris_base": 4610,
-"tris_detail": 10084,
+"tris_base": 5100,
+"tris_detail": 10746,
 "trees": 63,
-"props": 66
+"props": 76
 },
 "chunk_1_1": {
-"tris_base": 5754,
-"tris_detail": 11366,
+"tris_base": 6206,
+"tris_detail": 11820,
 "trees": 103,
-"props": 58
+"props": 60
 },
 "chunk_1_2": {
-"tris_base": 594,
+"tris_base": 1170,
 "tris_detail": 412,
 "trees": 151,
 "props": 35
 },
 "chunk_1_3": {
-"tris_base": 5570,
-"tris_detail": 12084,
+"tris_base": 6418,
+"tris_detail": 10996,
 "trees": 44,
-"props": 91
+"props": 78
 },
 "chunk_1_4": {
-"tris_base": 6878,
-"tris_detail": 13012,
+"tris_base": 7888,
+"tris_detail": 12902,
 "trees": 81,
-"props": 75
+"props": 68
 },
 "chunk_1_5": {
-"tris_base": 8244,
-"tris_detail": 32192,
+"tris_base": 9908,
+"tris_detail": 31400,
 "trees": 43,
-"props": 69
+"props": 53
 },
 "chunk_2_0": {
-"tris_base": 9626,
-"tris_detail": 16914,
+"tris_base": 10368,
+"tris_detail": 18596,
 "trees": 21,
-"props": 65
+"props": 85
 },
 "chunk_2_1": {
-"tris_base": 10678,
-"tris_detail": 17718,
+"tris_base": 11790,
+"tris_detail": 16964,
 "trees": 36,
-"props": 95
+"props": 102
 },
 "chunk_2_2": {
-"tris_base": 516,
+"tris_base": 1392,
 "tris_detail": 0,
 "trees": 53,
 "props": 39
 },
 "chunk_2_3": {
-"tris_base": 1206,
+"tris_base": 1854,
 "tris_detail": 0,
 "trees": 32,
 "props": 29
 },
 "chunk_2_4": {
-"tris_base": 1834,
+"tris_base": 2682,
 "tris_detail": 320,
 "trees": 68,
 "props": 45
 },
 "chunk_2_5": {
-"tris_base": 4002,
-"tris_detail": 16780,
+"tris_base": 5278,
+"tris_detail": 16852,
 "trees": 30,
-"props": 44
+"props": 41
 },
 "chunk_3_0": {
-"tris_base": 10208,
-"tris_detail": 33140,
+"tris_base": 10526,
+"tris_detail": 32816,
 "trees": 5,
-"props": 77
+"props": 76
 },
 "chunk_3_1": {
-"tris_base": 3288,
-"tris_detail": 10752,
+"tris_base": 3812,
+"tris_detail": 10736,
 "trees": 22,
-"props": 21
+"props": 30
 },
 "chunk_3_2": {
-"tris_base": 128,
+"tris_base": 468,
 "tris_detail": 144,
 "trees": 13,
 "props": 0
 },
 "chunk_3_3": {
-"tris_base": 2722,
-"tris_detail": 5758,
+"tris_base": 3170,
+"tris_detail": 5726,
 "trees": 16,
-"props": 45
+"props": 46
 },
 "chunk_3_4": {
-"tris_base": 11244,
-"tris_detail": 29452,
+"tris_base": 11502,
+"tris_detail": 29832,
 "trees": 94,
-"props": 123
+"props": 128
 },
 "chunk_3_5": {
-"tris_base": 3776,
-"tris_detail": 11116,
+"tris_base": 3802,
+"tris_detail": 12964,
 "trees": 27,
-"props": 21
+"props": 25
 },
 "chunk_4_0": {
-"tris_base": 11404,
-"tris_detail": 34048,
+"tris_base": 11992,
+"tris_detail": 33172,
 "trees": 39,
-"props": 113
+"props": 115
 },
 "chunk_4_1": {
-"tris_base": 15956,
-"tris_detail": 31944,
+"tris_base": 16624,
+"tris_detail": 32116,
 "trees": 57,
-"props": 130
+"props": 145
 },
 "chunk_4_2": {
-"tris_base": 816,
-"tris_detail": 880,
+"tris_base": 1304,
+"tris_detail": 864,
 "trees": 73,
-"props": 31
+"props": 36
 },
 "chunk_4_3": {
-"tris_base": 1322,
+"tris_base": 1854,
 "tris_detail": 700,
 "trees": 37,
 "props": 37
 },
 "chunk_4_4": {
-"tris_base": 5920,
-"tris_detail": 12704,
+"tris_base": 6442,
+"tris_detail": 10704,
 "trees": 45,
-"props": 68
+"props": 61
 },
 "chunk_4_5": {
-"tris_base": 220,
+"tris_base": 602,
 "tris_detail": 0,
 "trees": 71,
 "props": 8
 },
 "chunk_5_0": {
-"tris_base": 7630,
-"tris_detail": 14542,
+"tris_base": 7994,
+"tris_detail": 14082,
 "trees": 0,
-"props": 67
+"props": 66
 },
 "chunk_5_1": {
-"tris_base": 11512,
-"tris_detail": 22260,
+"tris_base": 11852,
+"tris_detail": 22132,
 "trees": 29,
-"props": 92
+"props": 87
 },
 "chunk_5_2": {
-"tris_base": 11230,
-"tris_detail": 22214,
+"tris_base": 11784,
+"tris_detail": 21754,
 "trees": 50,
-"props": 112
+"props": 130
 },
 "chunk_5_3": {
-"tris_base": 4328,
-"tris_detail": 10408,
+"tris_base": 4872,
+"tris_detail": 10120,
 "trees": 28,
-"props": 106
+"props": 114
 },
 "chunk_5_4": {
-"tris_base": 8016,
-"tris_detail": 19466,
+"tris_base": 8282,
+"tris_detail": 19442,
 "trees": 36,
-"props": 119
+"props": 132
 },
 "chunk_5_5": {
-"tris_base": 5366,
-"tris_detail": 12612,
+"tris_base": 5568,
+"tris_detail": 12748,
 "trees": 38,
-"props": 65
+"props": 64
 }
 }
 }
