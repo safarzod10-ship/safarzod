@@ -7,3 +7,9 @@ hit_metal_*.ogg, bump_*.ogg, glass_hit.ogg
                   "75 CC0 breaking / falling / hit sfx" — OpenGameArt, CC0
                   (https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx)
 road_noise.wav    generated for this project (filtered noise + low hum), project licence
+door_open.ogg, door_close.ogg, engine_start_up.ogg, engine_turning_off.ogg, parking_brake.ogg
+                  "Car Sound Effects Pack (low quality)" — OpenGameArt, CC0
+                  (https://opengameart.org/content/car-sound-effects-pack-low-quality), converted to mono Ogg
+NOTE: no recording of an actual Toyota Land Cruiser Prado engine with a usable licence was found on
+reachable sources (Freesound blocked from the build machine, Wikimedia Commons rate-limited); the
+engine is the multi-layer CC0 loop set above, pitched/cross-faded by rpm and load.

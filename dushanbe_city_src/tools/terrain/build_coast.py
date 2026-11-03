@@ -410,6 +410,12 @@ def main():
     c0 = int((EXT - W) / STEP); c1 = int((EXT + W) / STEP) + 1
     hm = H[c0:c1, c0:c1].astype(np.float32)
     hm.tofile(os.path.join(GAME, "data/terrain/height.bin"))
+    # surface classes on the same grid (tyre grip, smoke / dust / skid-mark colour):
+    # 0 grass, 1 sand, 2 rock, 3 earth, 4 asphalt; inside the city the heightmap carries the roads -> asphalt
+    grass = 1.0 - (sand + rock + earth + asphalt)
+    cls = np.argmax(np.stack([grass, sand, rock, earth, asphalt * 1.15], -1), -1).astype(np.uint8)
+    cls[inside] = 4
+    cls[c0:c1, c0:c1].tofile(os.path.join(GAME, "data/terrain/surface.bin"))
     json.dump({"step": STEP, "size": hm.shape[0], "origin": [-W, -W], "sea_level": SEA, "wade_depth": WADE,
                "note": "row-major float32, rows = z from -W, cols = x from -W"},
               open(os.path.join(GAME, "data/terrain/terrain.json"), "w"), indent=1)

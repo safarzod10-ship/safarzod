@@ -26,10 +26,14 @@ var stats := {"trees": 0, "props": 0, "multimeshes": 0, "colliders": 0}
 var terrain_info := {}
 var terrain_heights := PackedFloat32Array()
 var sea: Sea
+var terrain_surface := PackedByteArray()
+static var instance: CityWorld           ## the loaded city (surface / height queries)
+enum Surface { GRASS, SAND, ROCK, EARTH, ASPHALT, PAVED }
 var _extra_from := {}
 
 
 func _ready() -> void:
+	instance = self
 	city = _load_json(CITY_JSON)
 	light_pool = LightPool.new()
 	light_pool.name = "NightLights"
@@ -391,6 +395,8 @@ func _make_outer_ground() -> Node3D:
 		body.add_child(cs)
 		terrain_info = meta
 		terrain_heights = FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
+		if FileAccess.file_exists("res://data/terrain/surface.bin"):
+			terrain_surface = FileAccess.get_file_as_bytes("res://data/terrain/surface.bin")
 	else:
 		var cs0 := CollisionShape3D.new()
 		cs0.shape = WorldBoundaryShape3D.new()
@@ -407,6 +413,19 @@ func _make_outer_ground() -> Node3D:
 static func city_relief(x: float, z: float) -> float:
 	return (1.7 + 1.5 * (-z / 300.0) + 0.9 * sin(x / 140.0 + 0.6) * cos(z / 170.0 - 0.3)
 			+ 0.45 * sin((x + 0.6 * z) / 95.0 + 1.1))
+
+
+## Surface class of the baked terrain at (x, z) (data/terrain/surface.bin, 4 m grid, same window as
+## the heightmap): grass / sand / rock / earth / asphalt (country roads, and the city's roads).
+func surface_at(x: float, z: float) -> int:
+	if terrain_surface.is_empty() or terrain_info.is_empty():
+		return Surface.ASPHALT
+	var n: int = terrain_info["size"]
+	var step: float = terrain_info["step"]
+	var o: Array = terrain_info["origin"]
+	var i := clampi(int(round((x - float(o[0])) / step)), 0, n - 1)
+	var j := clampi(int(round((z - float(o[1])) / step)), 0, n - 1)
+	return terrain_surface[j * n + i]
 
 
 ## Terrain height at a world point (bilinear, same data as the collision); 0 outside the baked area.

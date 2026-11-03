@@ -35,8 +35,10 @@ func _ready() -> void:
 	_check("settles on 4 wheels at static ride height: offsets %s m, contacts %d" % [str(offs), contacts],
 		contacts == 4 and offs.all(func(o: float) -> bool: return absf(o) < 0.03))
 
+	var fx: VehicleFX = car.get_node("FX")
 	# 2-3. acceleration and top speed on the straight
 	VehicleInput.scripted = {"throttle": 1.0}
+	var cruise_smoke := 0.0
 	var t := 0.0
 	var t100 := -1.0
 	var vmax := 0.0
@@ -48,11 +50,15 @@ func _ready() -> void:
 		var v := car.linear_velocity.length() * 3.6
 		speedo_err = maxf(speedo_err, absf(v - car.speed_kmh))
 		vmax = maxf(vmax, car.speed_kmh)
+		if t > 6.0:
+			cruise_smoke = maxf(cruise_smoke, fx.smoke_level)
 		if t100 < 0.0 and car.speed_kmh >= 100.0:
 			t100 = t
 	_check("0-100 km/h in %.1f s (heavy 4WD diesel: 9..14 s)" % t100, t100 > 9.0 and t100 < 14.0)
 	_check("top speed %.1f km/h (game target 200, limiter holds)" % vmax, vmax > 197.0 and vmax < 202.0)
 	_check("speedometer = physical body speed (max error %.2f km/h)" % speedo_err, speedo_err < 0.5)
+	_check("no tyre smoke / skid marks while gripping in a straight line (smoke %.2f, marks %d)" % [cruise_smoke, fx.marks_laid],
+		cruise_smoke < 0.01 and fx.marks_laid == 0)
 	# 4. braking from 100 (fresh start on the straight)
 	VehicleInput.scripted = {"brake": 1.0}
 	while car.speed_kmh > 2.0:
@@ -103,8 +109,11 @@ func _ready() -> void:
 	VehicleInput.scripted = {"steer": 0.8, "handbrake": true}
 	var slide_max := 0.0
 	var yaw_max := 0.0
+	var marks0 := fx.marks_laid
+	var smoke_max := 0.0
 	for i in 60:
 		await get_tree().physics_frame
+		smoke_max = maxf(smoke_max, fx.smoke_level)
 		for w in car.wheels:
 			if not w["front"]:
 				slide_max = maxf(slide_max, w["slide"])
@@ -120,6 +129,8 @@ func _ready() -> void:
 			rec = i / 60.0
 	_check("handbrake slide: rear grip lost (slide %.2f), yaw rate %.2f rad/s" % [slide_max, yaw_max], slide_max > 0.6 and yaw_max > 0.6)
 	_check("grip recovers gradually after release: %.2f s" % rec, rec > 0.2 and rec < 4.0)
+	_check("slide makes tyre smoke ∝ slip (max %.2f) and skid marks (%d segments)" % [smoke_max, fx.marks_laid - marks0],
+		smoke_max > 0.3 and fx.marks_laid - marks0 > 10)
 	_check("did not roll over: up.y = %.2f" % car.global_transform.basis.y.y, car.global_transform.basis.y.y > 0.8)
 	VehicleInput.scripted = {}
 	await _frames(240)

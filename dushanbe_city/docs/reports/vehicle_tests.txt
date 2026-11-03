@@ -2,11 +2,13 @@ PASS settles on 4 wheels at static ride height: offsets [0.0, 0.0, 0.0, 0.0] m, 
 PASS 0-100 km/h in 9.1 s (heavy 4WD diesel: 9..14 s)
 PASS top speed 200.0 km/h (game target 200, limiter holds)
 PASS speedometer = physical body speed (max error 0.00 km/h)
+PASS no tyre smoke / skid marks while gripping in a straight line (smoke 0.00, marks 0)
 PASS braking 100-0 km/h: 46.2 m (ABS, real Prado ~40-45 m)
 PASS nose dives under braking: 2.3 deg
 PASS cornering at 60 km/h: lateral 0.78 g, body roll 2.9 deg (SUV: <= 0.85 g, 2..8 deg)
 PASS handbrake slide: rear grip lost (slide 1.00), yaw rate 1.72 rad/s
 PASS grip recovers gradually after release: 2.32 s
+PASS slide makes tyre smoke ∝ slip (max 1.00) and skid marks (180 segments)
 PASS did not roll over: up.y = 1.00
 PASS holding brake at standstill engages reverse: gear -1, 25.3 km/h backwards (limit 25)
 PASS gas brings it back into drive: gear 1

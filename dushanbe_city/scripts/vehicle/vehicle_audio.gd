@@ -19,6 +19,10 @@ var _bump: AudioStreamPlayer3D
 var _bump_cd := 0.0
 var _running := false
 var _start_t := 0.0
+var _door: AudioStreamPlayer3D
+var _last_gear := 1
+var _shift_dip := 0.0
+var _hb := false
 
 
 func _ready() -> void:
@@ -34,6 +38,9 @@ func _ready() -> void:
 	_bump = AudioStreamPlayer3D.new()
 	_bump.unit_size = 6.0
 	add_child(_bump)
+	_door = AudioStreamPlayer3D.new()
+	_door.unit_size = 5.0
+	add_child(_door)
 	if car:
 		car.damaged.connect(_on_hit)
 
@@ -60,13 +67,17 @@ func _process(delta: float) -> void:
 	var on := car.driven
 	if on and not _running:
 		_running = true
-		_start_t = 0.0
+		_start_t = -0.75                               # door, then the starter cranks before the engine catches
+		_play(_door, "res://assets/audio/vehicle/door_close.ogg", -4.0, 1.0)
+		_play(_oneshot, "res://assets/audio/vehicle/engine_start_up.ogg", -2.0, 0.85)
 		for p in _eng:
 			p.play(randf() * 0.3)
 		_road.play()
 		_squeal.play()
 	elif not on and _running:
 		_running = false
+		_play(_oneshot, "res://assets/audio/vehicle/engine_turning_off.ogg", -4.0, 0.85)
+		_play(_door, "res://assets/audio/vehicle/door_open.ogg", -4.0, 1.0)
 		for p in _eng:
 			p.stop()
 		_road.stop()
@@ -87,14 +98,23 @@ func _process(delta: float) -> void:
 			w *= lerpf(0.6, 1.3, load)               # harsher loops under load
 		ws.append(w)
 		total += w
-	var start_fade := clampf(_start_t / 0.8, 0.0, 1.0)  # engine start
+	var start_fade := clampf(_start_t / 0.8, 0.0, 1.0)  # engine start (after the starter)
+	# automatic gearbox: a short torque cut / dip at every shift, handbrake ratchet click
+	if car.gear != _last_gear:
+		if car.gear > 0 and _last_gear > 0:
+			_shift_dip = 0.18
+		_last_gear = car.gear
+	_shift_dip = maxf(0.0, _shift_dip - delta)
+	if car.handbrake and not _hb:
+		_play(_door, "res://assets/audio/vehicle/parking_brake.ogg", -6.0, 1.0)
+	_hb = car.handbrake
 	var level := lerpf(-9.0, -1.0, load) + 4.0 * clampf((rpm - 800.0) / 3600.0, 0.0, 1.0)
 	for i in F0.size():
 		var p := _eng[i]
 		var w: float = ws[i] / maxf(total, 1e-4)
 		p.pitch_scale = clampf(fire / float(F0[i]), 0.5, 2.2)
 		p.volume_db = (linear_to_db(maxf(w, 1e-4)) + level) if w > 0.01 else -80.0
-		p.volume_db += linear_to_db(maxf(start_fade, 1e-3))
+		p.volume_db += linear_to_db(maxf(start_fade, 1e-3)) - (5.0 if _shift_dip > 0.0 else 0.0)
 		p.stream_paused = w <= 0.01                   # inaudible layers cost nothing
 	# tyres
 	var spd := car.speed_kmh

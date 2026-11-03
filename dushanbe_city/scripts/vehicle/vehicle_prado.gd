@@ -122,6 +122,10 @@ func _ready() -> void:
 	audio.name = "Audio"
 	audio.car = self
 	add_child(audio)
+	var fx := VehicleFX.new()
+	fx.name = "FX"
+	fx.car = self
+	add_child(fx)
 
 
 # ------------------------------------------------------------------------------------------- model
@@ -233,7 +237,7 @@ func _setup_wheels() -> void:
 			"static_load": load_n, "k": k, "c": 2.0 * damping_ratio * sqrt(k * corner_m),
 			"offset": 0.0, "offset_vel": 0.0, "contact": false, "normal": Vector3.UP, "load": 0.0,
 			"spin": 0.0, "omega": 0.0, "steer": 0.0, "slide": 0.0, "slip_lat": 0.0, "slip_long": 0.0,
-			"surface_mu": 1.0, "collider": null,
+			"surface_mu": 1.0, "collider": null, "slip_speed": 0.0, "surface": 5,
 		})
 		_part_rest[dummy] = dummy.transform
 
@@ -338,7 +342,13 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		w["contact_point"] = contact
 		w["normal"] = hit.normal
 		w["collider"] = hit.collider
-		w["surface_mu"] = 0.78 if hit.collider is StaticBody3D and String((hit.collider as Node).name) == "TerrainBody" else 1.0
+		# surface under the tyre: baked terrain classes for the heightmap (country asphalt road, grass,
+		# sand, earth, rock); everything else (raised city blocks, kerbs, test pads) is paved
+		var surf := CityWorld.Surface.PAVED
+		if hit.collider is StaticBody3D and String((hit.collider as Node).name) == "TerrainBody" and CityWorld.instance:
+			surf = CityWorld.instance.surface_at(contact.x, contact.z)
+		w["surface"] = surf
+		w["surface_mu"] = [0.74, 0.62, 0.85, 0.72, 1.0, 1.0][surf]
 	wheels_on_ground = on
 	# anti-roll bars: left/right offset difference per axle
 	var arb := {true: 0.0, false: 0.0}
@@ -386,6 +396,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			st *= 1.12 if inner else 0.9
 		w["steer"] = st if front else 0.0
 		if not w["contact"]:
+			w["slip_speed"] = 0.0
 			w["omega"] = lerpf(float(w["omega"]), float(w["omega"]) * 0.98, 1.0)
 			w["spin"] = fmod(float(w["spin"]) + float(w["omega"]) * dt, TAU)
 			continue
@@ -447,6 +458,14 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		var rec := 1.1 if not easy_drift else 0.7
 		w["slide"] = move_toward(slide, target, dt * (4.0 if target > slide else rec))
 		w["slip_lat"] = alpha
+		# sliding speed of the contact patch (m/s): drives smoke, skid marks and dust
+		var s_lat := absf(v_lat) * smoothstep(0.07, 0.22, absf(alpha))
+		var s_long := 0.0
+		if locked:
+			s_long = absf(v_long)
+		elif spinning:
+			s_long = 6.0 * throttle * float(w["radius"]) * 2.5 + absf(v_long) * 0.1
+		w["slip_speed"] = sqrt(s_lat * s_lat + s_long * s_long)
 		total_slip = maxf(total_slip, clampf(maxf(absf(alpha) / 0.3, float(w["slide"])), 0.0, 1.0))
 		state.apply_force(wf * fx + wr * fy, apply_at)
 		# wheel rotation: rolls with the ground, faster when spinning, stops when locked
