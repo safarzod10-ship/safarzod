@@ -3,7 +3,8 @@ extends MeshInstance3D
 ## The sea: one radial mesh centred on the active camera (fine rings near the viewer, coarse towards
 ## the 9 km horizon), snapped to an 8 m grid while it follows the camera. The shader evaluates waves
 ## and colours in WORLD space, so following the camera never makes the water "swim".
-## Opaque (no screen/depth reads): depth colour and foam come from the baked sea_mask.png.
+## Alpha-blended shallows, no screen/depth reads: depth colour and foam come from the baked sea_mask.png;
+## Gerstner waves in the vertex shader (see sea.gdshader).
 ## Per preset: ring/segment density, vertex swell (High/Ultra), third normal layer + foam lines (Medium+).
 
 const SEA_LEVEL := -1.6
@@ -22,6 +23,7 @@ func _ready() -> void:
 	m.set_shader_parameter("foam_tex", load("res://assets/textures/noise_macro.png"))
 	material_override = m
 	custom_aabb = AABB(Vector3(-RADIUS, -5, -RADIUS), Vector3(RADIUS * 2, 10, RADIUS * 2))
+	sorting_offset = -50.0                     # transparent: drawn before particles / the wake
 	apply_quality(Settings.quality)
 
 
@@ -29,13 +31,13 @@ func apply_quality(q: int) -> void:
 	if q == _q:
 		return
 	_q = q
-	var segs: int = [40, 64, 96, 128][q]
-	var growth: float = [1.22, 1.16, 1.12, 1.10][q]
+	var segs: int = [64, 96, 128, 160][q]           # Gerstner waves need vertices near the viewer
+	var growth: float = [1.16, 1.12, 1.09, 1.08][q]
 	mesh = _radial_mesh(segs, growth)
 	var m := material_override as ShaderMaterial
 	m.set_shader_parameter("detail", 0.0 if q == Settings.Quality.LOW else 1.0)
 	m.set_shader_parameter("foam_amount", 0.7 if q == Settings.Quality.LOW else 1.0)
-	m.set_shader_parameter("wave_height", [0.0, 0.0, 0.10, 0.14][q])
+	m.set_shader_parameter("wave_scale", [0.6, 1.0, 1.0, 1.0][q])
 
 
 func _process(_delta: float) -> void:

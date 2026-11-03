@@ -462,8 +462,8 @@ def write_tiles(X, Z, H, sand, rock, earth, asphalt):
             i0 = int((x0 + EXT) / STEP); j0 = int((z0 + EXT) / STEP)
             sl = (slice(j0, j0 + per + 1, stride), slice(i0, i0 + per + 1, stride))
             h = H[sl]
-            if h.max() < SEA - 0.4:
-                continue                               # fully under the (opaque) sea
+            if h.max() < SEA - 4.5:
+                continue                               # deep: the sea is opaque there
             x = X[sl]; z = Z[sl]
             col = np.stack([sand[sl], rock[sl], earth[sl], asphalt[sl]], -1)
             # normals from the full-res grid
@@ -475,7 +475,7 @@ def write_tiles(X, Z, H, sand, rock, earth, asphalt):
             keep = np.ones((ny_ - 1, nx_ - 1), bool)
             inside = (np.abs(x) <= HALF + 0.01) & (np.abs(z) <= HALF + 0.01)   # boundary counts as city
             keep &= ~(inside[:-1, :-1] & inside[1:, 1:] & inside[:-1, 1:] & inside[1:, :-1])
-            wet = h < SEA - 0.4
+            wet = h < SEA - 4.5          # seabed kept down to 4.5 m: seen through the clear shallows
             keep &= ~(wet[:-1, :-1] & wet[1:, 1:] & wet[:-1, 1:] & wet[1:, :-1])
             if not keep.any():
                 continue

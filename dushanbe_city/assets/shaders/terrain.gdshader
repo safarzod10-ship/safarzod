@@ -61,6 +61,9 @@ void fragment() {
 	s *= mix(1.0, 0.62, wet);
 	vec3 alb = g * wg + s * w.r + r * w.g + e * w.b + a * w.a;
 	alb *= mix(1.0, 0.82 + 0.36 * m, 0.5 * city_macro_detail);
+	// seabed seen through the clear shallows: wet, darker, blue-green with depth
+	float uw = smoothstep(sea_level + 0.05, sea_level - 2.5, wp.y);
+	alb *= mix(vec3(1.0), vec3(0.55, 0.72, 0.70), uw);
 	float rough = 0.92 - 0.55 * wet * w.r - 0.1 * w.a;
 	float wet_rain = city_wetness * (w.a + w.g * 0.6 + w.b * 0.4);
 	alb *= mix(1.0, 0.6, wet_rain);
