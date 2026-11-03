@@ -34,7 +34,9 @@ CITY = json.load(open(os.path.join(GAME, "data/city/city.json")))
 
 HALF = 300.0          # city half size
 SEA = -1.6            # sea level (city ground is 0)
-WADE = 0.9            # playable wading depth
+WADE = 0.9            # wading depth (deeper: swimming)
+SWIM_OUT = 70.0       # the swimming zone reaches this far beyond the wading line ...
+SWIM_FLOOR = 4.2      # ... but not past where the seabed (kept down to 4.5 m) drops below this
 STEP = 4.0            # height grid / collision resolution (m)
 EXT = 2400.0          # terrain extent (+-)
 TILE = 400.0          # terrain tile / coast chunk size (fewer draw calls)
@@ -535,19 +537,28 @@ def write_promenade(prom, prom_h):
 
 
 def write_bounds(H):
-    """playable boundary: along each azimuth, the first point where the sea is deeper than WADE;
-    the mainland (north) is closed at 1050 m from the centre"""
+    """playable boundary: the swimming zone. Along each azimuth: the first point where the sea is
+    deeper than WADE (end of wading), then up to SWIM_OUT m further out to sea - but not beyond where
+    the sea floor drops below SWIM_FLOOR (the visible seabed); the mainland is closed at 1050 m"""
     az = np.radians(np.arange(0.0, 360.0, 1.0))[:, None]
     r = np.arange(HALF, 1180.0, 2.0)[None, :]
     x = np.sin(az) * r; z = -np.cos(az) * r
-    deep = sample_grid(H, x, z) < SEA - WADE
+    hs = sample_grid(H, x, z)
+    deep = hs < SEA - WADE
     first = np.where(deep.any(axis=1), deep.argmax(axis=1), -1)
+    floor_ = hs < SEA - SWIM_FLOOR
     pts = []
     for k in range(az.shape[0]):
         rr = float(r[0, first[k]]) if first[k] >= 0 else 1050.0
+        if first[k] >= 0:
+            lim = rr + SWIM_OUT
+            beyond = np.nonzero(floor_[k, first[k]:])[0]
+            if len(beyond):
+                lim = min(lim, float(r[0, first[k] + beyond[0]]))
+            rr = max(rr, lim)
         rr = min(rr, 1050.0)
         pts.append((round(float(np.sin(az[k, 0]) * rr), 2), round(float(-np.cos(az[k, 0]) * rr), 2)))
-    json.dump({"polyline": pts, "closed": True, "wade_depth": WADE}, open(os.path.join(GAME, "data/terrain/bounds.json"), "w"))
+    json.dump({"polyline": pts, "closed": True, "wade_depth": WADE, "swim_out": SWIM_OUT, "swim_floor": SWIM_FLOOR}, open(os.path.join(GAME, "data/terrain/bounds.json"), "w"))
     return pts
 
 

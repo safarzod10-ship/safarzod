@@ -6,8 +6,9 @@ const PICK := {
 	"idle": "Idle", "walk": "Walk", "jog": "Jog_Fwd", "sprint": "Sprint",
 	"jump_start": "Jump_Start", "jump_air": "Jump", "jump_land": "Jump_Land",
 	"punch_jab": "Punch_Jab", "punch_cross": "Punch_Cross", "punch_enter": "Punch_Enter",
+	"swim": "Swim_Fwd", "swim_idle": "Swim_Idle",
 }
-const LOOPS := ["idle", "walk", "jog", "sprint", "jump_air"]
+const LOOPS := ["idle", "walk", "jog", "sprint", "jump_air", "swim", "swim_idle"]
 
 func _init() -> void:
 	var n: Node = (load("res://assets/characters/animations/ual_standard.glb") as PackedScene).instantiate()

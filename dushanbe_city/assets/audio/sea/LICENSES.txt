@@ -1,0 +1,10 @@
+Sea / water sounds — all CC0 1.0 (public domain), downloaded from OpenGameArt.org and converted to mono Ogg Vorbis
+(trimmed / faded; no other changes).
+
+surf_1..4.ogg      "Beach Ocean Waves" (jasinski, freesound #18363 Alki beach) — https://opengameart.org/content/beach-ocean-waves — CC0
+surf_5..6.ogg      "Water Waves" (transitking, freesound #11505) — https://opengameart.org/content/water-waves — CC0
+coast_wind.ogg     "Windy Ambient Noise" (40 s excerpt) — https://opengameart.org/content/windy-ambient-noise — CC0
+step_water_1..3    "40 CC0 water / splash / slime SFX" (splash_02/03/06, shortened) — https://opengameart.org/content/40-cc0-water-splash-slime-sfx — CC0
+swim_loop.ogg      same pack, loop_water_01 — CC0
+splash_entry.ogg   same pack, splash_01 — CC0
+splash_big.ogg     "Water splash and sand footsteps" (splash1) — https://opengameart.org/content/water-splash-and-sand-footsteps — CC0
