@@ -177,6 +177,199 @@
 ]
 ]
 ],
+"districts": {
+"centre": {
+"desc": "проспект, площади, администрация, гостиница, бизнес-центр, новые высотки",
+"rects": [
+[
+-61.5,
+-300,
+-18.5,
+300
+],
+[
+-18.5,
+-300,
+140.75,
+-159.75
+],
+[
+159.25,
+-300,
+300,
+-159.75
+],
+[
+-112,
+36,
+-66,
+166
+]
+]
+},
+"residential": {
+"desc": "микрорайоны 5- и 9-этажек: подъезды, балконы, дворы, детские площадки",
+"rects": [
+[
+-300,
+-300,
+-208,
+-159.75
+],
+[
+-192,
+-300,
+-61.5,
+-159.75
+],
+[
+-300,
+-140.25,
+-208,
+8
+],
+[
+159.25,
+-140.25,
+300,
+8
+],
+[
+-300,
+32,
+-208,
+166.5
+],
+[
+-192,
+32,
+-124,
+166.5
+],
+[
+159.25,
+183.5,
+300,
+300
+],
+[
+-18.5,
+183.5,
+140.75,
+300
+]
+]
+},
+"private": {
+"desc": "махалля: 1-2-этажные дома, дувалы, ворота, узкие переулки",
+"rects": [
+[
+-300,
+183.5,
+-61.5,
+300
+]
+]
+},
+"commercial": {
+"desc": "кӯчаи Гулистон: магазины, кафе, аптеки, салоны, супермаркет, вывески",
+"rects": [
+[
+-300,
+8,
+300,
+32
+],
+[
+-18.5,
+32,
+140.75,
+100
+],
+[
+-300,
+-50,
+-208,
+8
+]
+]
+},
+"public": {
+"desc": "школа, больница, поликлиника, спорткомплекс, пожарная часть, почта, хукумат",
+"rects": [
+[
+-18.5,
+-140.25,
+140.75,
+8
+],
+[
+159.25,
+32,
+300,
+166.5
+],
+[
+159.25,
+-300,
+300,
+-159.75
+]
+]
+},
+"parks": {
+"desc": "парк, скверы",
+"rects": [
+[
+-192,
+-140.25,
+-61.5,
+8
+],
+[
+162,
+-36,
+230,
+6
+],
+[
+-112,
+100,
+-66,
+162
+],
+[
+30,
+190,
+136,
+296
+]
+]
+},
+"embankment": {
+"desc": "набережная южной бухты (data/terrain/paths.json promenade)",
+"rects": [
+[
+-260,
+330,
+200,
+420
+]
+]
+},
+"outskirts": {
+"desc": "зелёный пояс, пляжи, мысы, загородные дороги (coast chunks)",
+"rects": [
+[
+-1200,
+-1200,
+1200,
+1200
+]
+]
+}
+},
+"traffic": "res://data/city/traffic.json",
 "reserved_lots": [
 {
 "name": "reserved_lot_1",
@@ -12242,88 +12435,88 @@
 ],
 "stats": {
 "chunk_0_0": {
-"tris_base": 12276,
-"tris_detail": 26104,
+"tris_base": 12114,
+"tris_detail": 26170,
 "trees": 92,
-"props": 136
+"props": 131
 },
 "chunk_0_1": {
-"tris_base": 9942,
-"tris_detail": 19902,
+"tris_base": 9856,
+"tris_detail": 20494,
 "trees": 92,
-"props": 106
+"props": 117
 },
 "chunk_0_2": {
-"tris_base": 6292,
-"tris_detail": 13780,
+"tris_base": 6360,
+"tris_detail": 14622,
 "trees": 47,
-"props": 70
+"props": 72
 },
 "chunk_0_3": {
-"tris_base": 1714,
-"tris_detail": 1566,
+"tris_base": 1726,
+"tris_detail": 1550,
 "trees": 46,
-"props": 34
+"props": 29
 },
 "chunk_0_4": {
-"tris_base": 8906,
-"tris_detail": 15852,
+"tris_base": 8988,
+"tris_detail": 15196,
 "trees": 73,
-"props": 95
+"props": 81
 },
 "chunk_0_5": {
 "tris_base": 11430,
-"tris_detail": 39576,
+"tris_detail": 39000,
 "trees": 50,
 "props": 87
 },
 "chunk_1_0": {
-"tris_base": 4844,
-"tris_detail": 10650,
+"tris_base": 5040,
+"tris_detail": 9814,
 "trees": 63,
-"props": 65
+"props": 71
 },
 "chunk_1_1": {
-"tris_base": 6534,
-"tris_detail": 11586,
+"tris_base": 6276,
+"tris_detail": 11004,
 "trees": 103,
-"props": 83
+"props": 58
 },
 "chunk_1_2": {
 "tris_base": 1174,
 "tris_detail": 412,
 "trees": 151,
-"props": 36
+"props": 35
 },
 "chunk_1_3": {
-"tris_base": 6538,
-"tris_detail": 11470,
+"tris_base": 6446,
+"tris_detail": 11386,
 "trees": 44,
-"props": 91
+"props": 80
 },
 "chunk_1_4": {
-"tris_base": 7802,
-"tris_detail": 13076,
+"tris_base": 7760,
+"tris_detail": 12280,
 "trees": 81,
-"props": 82
+"props": 68
 },
 "chunk_1_5": {
 "tris_base": 9908,
-"tris_detail": 31472,
+"tris_detail": 32552,
 "trees": 43,
 "props": 55
 },
 "chunk_2_0": {
-"tris_base": 10808,
-"tris_detail": 16672,
+"tris_base": 11096,
+"tris_detail": 17930,
 "trees": 21,
 "props": 72
 },
 "chunk_2_1": {
-"tris_base": 11302,
-"tris_detail": 16790,
+"tris_base": 11456,
+"tris_detail": 18242,
 "trees": 36,
-"props": 111
+"props": 108
 },
 "chunk_2_2": {
 "tris_base": 1392,
@@ -12345,21 +12538,21 @@
 },
 "chunk_2_5": {
 "tris_base": 5278,
-"tris_detail": 16564,
+"tris_detail": 16996,
 "trees": 30,
-"props": 50
+"props": 39
 },
 "chunk_3_0": {
-"tris_base": 10704,
-"tris_detail": 31754,
+"tris_base": 10338,
+"tris_detail": 33772,
 "trees": 5,
-"props": 93
+"props": 88
 },
 "chunk_3_1": {
 "tris_base": 3812,
-"tris_detail": 9872,
+"tris_detail": 10628,
 "trees": 22,
-"props": 20
+"props": 35
 },
 "chunk_3_2": {
 "tris_base": 468,
@@ -12368,52 +12561,52 @@
 "props": 0
 },
 "chunk_3_3": {
-"tris_base": 3174,
-"tris_detail": 5758,
+"tris_base": 3170,
+"tris_detail": 5742,
 "trees": 16,
-"props": 45
+"props": 37
 },
 "chunk_3_4": {
-"tris_base": 11886,
-"tris_detail": 28754,
+"tris_base": 11556,
+"tris_detail": 30048,
 "trees": 94,
-"props": 123
+"props": 119
 },
 "chunk_3_5": {
-"tris_base": 4108,
-"tris_detail": 11286,
+"tris_base": 3790,
+"tris_detail": 12964,
 "trees": 27,
-"props": 29
+"props": 25
 },
 "chunk_4_0": {
-"tris_base": 11836,
-"tris_detail": 34096,
+"tris_base": 11992,
+"tris_detail": 33140,
 "trees": 39,
-"props": 108
+"props": 101
 },
 "chunk_4_1": {
-"tris_base": 16798,
-"tris_detail": 32236,
+"tris_base": 16474,
+"tris_detail": 33212,
 "trees": 57,
-"props": 175
+"props": 144
 },
 "chunk_4_2": {
-"tris_base": 1304,
-"tris_detail": 880,
+"tris_base": 1308,
+"tris_detail": 864,
 "trees": 73,
 "props": 31
 },
 "chunk_4_3": {
-"tris_base": 1846,
+"tris_base": 1850,
 "tris_detail": 700,
 "trees": 37,
 "props": 37
 },
 "chunk_4_4": {
-"tris_base": 6578,
-"tris_detail": 10868,
+"tris_base": 6388,
+"tris_detail": 11236,
 "trees": 45,
-"props": 67
+"props": 70
 },
 "chunk_4_5": {
 "tris_base": 602,
@@ -12422,40 +12615,40 @@
 "props": 8
 },
 "chunk_5_0": {
-"tris_base": 7968,
-"tris_detail": 14304,
+"tris_base": 7956,
+"tris_detail": 14980,
 "trees": 0,
-"props": 43
+"props": 56
 },
 "chunk_5_1": {
-"tris_base": 11652,
-"tris_detail": 21178,
+"tris_base": 11212,
+"tris_detail": 24300,
 "trees": 29,
-"props": 107
+"props": 101
 },
 "chunk_5_2": {
-"tris_base": 11898,
-"tris_detail": 21520,
+"tris_base": 11596,
+"tris_detail": 21034,
 "trees": 50,
-"props": 106
+"props": 112
 },
 "chunk_5_3": {
 "tris_base": 4872,
-"tris_detail": 10136,
+"tris_detail": 9832,
 "trees": 28,
-"props": 123
+"props": 109
 },
 "chunk_5_4": {
 "tris_base": 8336,
-"tris_detail": 19064,
+"tris_detail": 19448,
 "trees": 36,
-"props": 128
+"props": 132
 },
 "chunk_5_5": {
-"tris_base": 5606,
-"tris_detail": 12818,
+"tris_base": 5662,
+"tris_detail": 12184,
 "trees": 38,
-"props": 66
+"props": 52
 }
 }
 }

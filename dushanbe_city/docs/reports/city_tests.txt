@@ -1,5 +1,5 @@
-PASS city loaded in 964 ms: 36 city chunks (+57 coast chunks)
-PASS colliders 1394, trees 7564, props 5177, multimeshes 5573
+PASS city loaded in 1017 ms: 36 city chunks (+57 coast chunks)
+PASS colliders 1394, trees 7564, props 5102, multimeshes 5572
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
 PASS player on sidewalk at spawn: y=2.379 (relief+0.15 = 2.377)
@@ -25,4 +25,7 @@ PASS Prado parked on the avenue: on 4 wheels (4), 0.0 km/h
 PASS «СЕСТЬ» only near the driver's door (far: false, near: true)
 PASS entered: car driven, car camera current, walker hidden
 PASS drove 28 m along the avenue and stopped (0.5 km/h)
+PASS traffic graph loaded: 84 lanes, 13 junctions, 511 parking spots, 8 bus stops
+PASS route found av_p1_l2_s1 -> com_n1_l0_s1 (2 lanes)
+PASS Prado drives the graph route 203 m (avenue -> turn): reached end true, max deviation from lane centre 1.56 m, no damage (100 %)
 PASS exit: on foot again beside the door (1.4 m), on the floor true, not inside/under the car (overlaps 0)

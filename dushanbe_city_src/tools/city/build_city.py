@@ -16,6 +16,7 @@ import layout as lay
 import extras
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from relief import city_relief
+import traffic
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 GAME = os.path.join(ROOT, "dushanbe_city")
@@ -206,6 +207,18 @@ def main():
                 keep.append(p)
         J["props"] = keep
 
+    # ---- traffic data for stage 6 (lanes, junctions, lights, crossings, parking, bus stops) -------
+    all_props = [p for J in C.data.values() for p in J["props"]]
+    T = traffic.build(lay.ROADS, net, P.parking, all_props, [B["rect"] for B in P.buildings])
+    json.dump(T, open(os.path.join(GAME, "data/city/traffic.json"), "w"), ensure_ascii=False, separators=(",", ":"))
+    traffic.plan_png(T, os.path.join(GAME, "docs/maps/traffic_graph.png"))
+    carr = [r for (k, r, y) in net.surfaces if k == "asphalt"]
+    for (msg, ok) in traffic.check(T, carr, [B["rect"] for B in P.buildings], net.fillets):
+        print("TRAFFIC", "PASS" if ok else "FAIL", msg)
+    print("traffic: %d lanes, %d connectors, %d junctions, %d stop lines, %d light groups, %d crossings, %d parking, %d bus stops" % (
+        len(T["lanes"]), len(T["connectors"]), len(T["nodes"]), len(T["stop_lines"]), len(T["lights"]), len(T["crossings"]),
+        len(T["parking"]), len(T["bus_stops"])))
+
     # ---- instances onto the relief (props: +f, trees: explicit y, fence lines: y at both ends) -----
     for k, J in C.data.items():
         for p in J["props"]:
@@ -238,6 +251,23 @@ def main():
         "roads": [{"id": r.id, "name": r.name, "axis": r.axis, "c": r.c, "a0": r.a0, "a1": r.a1, "half": r.half,
                    "carriage_half": r.cw, "lanes": r.lanes} for r in lay.ROADS],
         "zones": [[n, list(r)] for (n, r) in P.zones],
+        # districts (stage 3 organisation; scenes stay chunked by 100 m, streaming only if profiling needs it)
+        "districts": {
+            "centre": {"desc": "проспект, площади, администрация, гостиница, бизнес-центр, новые высотки",
+                       "rects": [[-61.5, -300, -18.5, 300], [-18.5, -300, 140.75, -159.75], [159.25, -300, 300, -159.75], [-112, 36, -66, 166]]},
+            "residential": {"desc": "микрорайоны 5- и 9-этажек: подъезды, балконы, дворы, детские площадки",
+                            "rects": [[-300, -300, -208, -159.75], [-192, -300, -61.5, -159.75], [-300, -140.25, -208, 8], [159.25, -140.25, 300, 8],
+                                      [-300, 32, -208, 166.5], [-192, 32, -124, 166.5], [159.25, 183.5, 300, 300], [-18.5, 183.5, 140.75, 300]]},
+            "private": {"desc": "махалля: 1-2-этажные дома, дувалы, ворота, узкие переулки", "rects": [[-300, 183.5, -61.5, 300]]},
+            "commercial": {"desc": "кӯчаи Гулистон: магазины, кафе, аптеки, салоны, супермаркет, вывески",
+                           "rects": [[-300, 8, 300, 32], [-18.5, 32, 140.75, 100], [-300, -50, -208, 8]]},
+            "public": {"desc": "школа, больница, поликлиника, спорткомплекс, пожарная часть, почта, хукумат",
+                       "rects": [[-18.5, -140.25, 140.75, 8], [159.25, 32, 300, 166.5], [159.25, -300, 300, -159.75]]},
+            "parks": {"desc": "парк, скверы", "rects": [[-192, -140.25, -61.5, 8], [162, -36, 230, 6], [-112, 100, -66, 162], [30, 190, 136, 296]]},
+            "embankment": {"desc": "набережная южной бухты (data/terrain/paths.json promenade)", "rects": [[-260, 330, 200, 420]]},
+            "outskirts": {"desc": "зелёный пояс, пляжи, мысы, загородные дороги (coast chunks)", "rects": [[-1200, -1200, 1200, 1200]]},
+        },
+        "traffic": "res://data/city/traffic.json",
         "reserved_lots": [{"name": n, "rect": list(r), "note": note} for (n, r, note) in P.reserved],
         "lawns": [[k, [round(v, 2) for v in r]] for (k, r) in lawn_rects],
         "buildings": [{"id": B["id"], "kind": B["kind"], "rect": list(B["rect"]), "floors": B["floors"], "height": round(B["H"], 2)} for B in P.buildings],

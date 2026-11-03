@@ -195,6 +195,60 @@ func _coast_tests(world: Node) -> void:
 	_check("minimap present and centred on the player", ok)
 
 
+func _graph_drive_test(car: VehiclePrado) -> void:
+	## the traffic data (stage 6) is consistent with the drivable city: the Prado follows a graph
+	## route (avenue south -> right turn into kӯчаи Гулистон -> ... ) by pure pursuit, staying in lane
+	var g := TrafficGraph.load_default()
+	_check("traffic graph loaded: %d lanes, %d junctions, %d parking spots, %d bus stops" % [g.lanes.size(), g.data["nodes"].size(), g.data["parking"].size(), g.data["bus_stops"].size()],
+		g.lanes.size() > 60 and g.data["parking"].size() > 300)
+	var start := g.nearest_lane(Vector3(-50.0, 2.0, -120.0), Vector3(0, 0, 1))
+	var goal := ""
+	for id in g.lanes:
+		if String(id).begins_with("com_n1") and int(g.lanes[id]["lane"]) == 0 and g.lanes[id]["from"] == "J04":
+			pass
+	# a destination two junctions away: westbound kӯчаи Гулистон after the avenue junction (right turn)
+	for id in g.lanes:
+		var l: Dictionary = g.lanes[id]
+		if l["road"] == "com" and int(l["dir"]) == -1 and l["from"] == "J00":
+			goal = id
+	var r := g.route(start, goal)
+	_check("route found %s -> %s (%d lanes)" % [start, goal, r.size()], r.size() >= 2)
+	if r.size() < 2:
+		return
+	var path := g.route_points(r)
+	car.place(path[0] + (path[1] - path[0]).normalized() * 0.5, atan2(-(path[1] - path[0]).x, -(path[1] - path[0]).z))
+	await _frames(30)
+	var idx := 0
+	var max_dev := 0.0
+	var h0 := car.health
+	var t := 0.0
+	while idx < path.size() - 2 and t < 60.0:
+		await get_tree().physics_frame
+		t += 1.0 / 60.0
+		var p := car.global_position
+		while idx < path.size() - 2 and Vector2(path[idx].x - p.x, path[idx].z - p.z).length() < 7.0:
+			idx += 1
+		var tgt := path[idx]
+		var fwd := -car.global_transform.basis.z
+		var to := (tgt - p)
+		to.y = 0.0
+		var ang := fwd.signed_angle_to(to.normalized(), Vector3.UP)
+		var spd := car.speed_kmh
+		var want := 35.0 if absf(ang) < 0.25 else 18.0
+		VehicleInput.scripted = {"throttle": 0.55 if spd < want else 0.0, "brake": 0.4 if spd > want + 8.0 else 0.0, "steer": clampf(-ang * 2.2, -1.0, 1.0)}
+		# lateral distance to the route polyline
+		var d := INF
+		for i in range(maxi(0, idx - 4), mini(path.size() - 1, idx + 2)):
+			d = minf(d, Geometry3D.get_closest_point_to_segment(Vector3(p.x, path[i].y, p.z), path[i], path[i + 1]).distance_to(Vector3(p.x, path[i].y, p.z)))
+		max_dev = maxf(max_dev, d)
+	VehicleInput.scripted = {"brake": 1.0}
+	await _frames(120)
+	VehicleInput.scripted = null
+	_check("Prado drives the graph route %d m (avenue -> turn): reached end %s, max deviation from lane centre %.2f m, no damage (%.0f %%)" % [
+		int(path[0].distance_to(path[path.size() - 1])), idx >= path.size() - 2, max_dev, car.health],
+		idx >= path.size() - 2 and max_dev < 1.6 and car.health >= h0)
+
+
 func _frames(n: int) -> void:
 	for i in n:
 		await get_tree().physics_frame
@@ -231,6 +285,7 @@ func _car_tests() -> void:
 	VehicleInput.scripted = null
 	var moved := car.global_position.distance_to(p0)
 	_check("drove %.0f m along the avenue and stopped (%.1f km/h)" % [moved, car.speed_kmh], moved > 15.0 and car.speed_kmh < 3.0)
+	await _graph_drive_test(car)
 	sess.exit()
 	await _frames(60)
 	var space := get_viewport().world_3d.direct_space_state
