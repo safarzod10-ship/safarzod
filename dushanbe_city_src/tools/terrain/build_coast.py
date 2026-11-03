@@ -366,6 +366,7 @@ def main():
                 H[idx] = np.where(wide > 0.01, H[idx] * (1 - wide) + city_relief(qx, qz) * wide, H[idx])
 
     # --- promenade: flatten a 7 m strip 0.15 m below its paved top
+    PATHS_FOR_PROM.extend(paths)
     prom = make_promenade()
     prom_h = []
     for (x, z) in prom:
@@ -429,7 +430,8 @@ def main():
     write_sea_mask(H, S)
     chunks = scatter(X, Z, H, S, E, R, Wb, slope, sand, earth, asphalt, paths, prom, prom_h, dprom, bounds)
     write_minimap(H, sand, rock, earth, asphalt, paths, prom)
-    json.dump({"paths": [{k: v for k, v in p.items() if k != "prof"} for p in paths], "promenade": prom},
+    json.dump({"paths": [{k: v for k, v in p.items() if k != "prof"} for p in paths], "promenade": prom,
+               "promenade_stairs": PROM_EXTRA["stairs"], "promenade_ramp": PROM_EXTRA["ramp"], "promenade_rails": PROM_EXTRA["rails"]},
               open(os.path.join(GAME, "data/terrain/paths.json"), "w"))
     land = (H > SEA)
     print("terrain: land %.2f km2 within +-1200 m, paths %d, promenade %.0f m, chunks %d" % (
@@ -521,6 +523,135 @@ def write_tiles(X, Z, H, sand, rock, earth, asphalt):
     return names
 
 
+PROM_EXTRA = {"props": [], "colliders": [], "lights": [], "stairs": [], "rails": [], "ramp": []}
+
+
+PATHS_FOR_PROM = []
+
+
+def promenade_features(b, P, prom_h, W2):
+    """Sea-side railings where the embankment drops to the beach, stairs every ~90 m, one 1:12 ramp,
+    rest areas (tapchans + benches) - geometry into promenade.glb (+ a collision mesh for the ramp),
+    colliders/props into chunk_coast_promenade.json"""
+    col = mk.Builder()
+    n = len(P)
+    seg_dir = []
+    for i in range(n - 1):
+        (ax, az), (bx, bz) = P[i], P[i + 1]
+        L = math.hypot(bx - ax, bz - az) or 1.0
+        tx, tz = (bx - ax) / L, (bz - az) / L
+        nx, nz = -tz, tx
+        # which side is the sea (lower / wet terrain)?
+        hl = float(sample_grid(GRID_H, np.array([ax + nx * 9]), np.array([az + nz * 9]))[0])
+        hr = float(sample_grid(GRID_H, np.array([ax - nx * 9]), np.array([az - nz * 9]))[0])
+        sx, sz = (nx, nz) if hl < hr else (-nx, -nz)
+        seg_dir.append((tx, tz, sx, sz, L))
+    # drop to the beach per segment (sea-side edge vs terrain 2 m further out)
+    drops = []
+    for i in range(n - 1):
+        tx, tz, sx, sz, L = seg_dir[i]
+        (ax, az) = P[i]
+        mx, mz = ax + tx * L / 2 + sx * W2, az + tz * L / 2 + sz * W2
+        prof = [float(sample_grid(GRID_H, np.array([mx + sx * t]), np.array([mz + sz * t]))[0]) for t in (2.0, 4.0, 6.0, 10.0, 14.0)]
+        below = prof[0]
+        worst = float(prom_h[i]) - min(prof[:3])               # railing: largest drop within 6 m
+        # a beach to walk down to: still dry land 14 m out and no cliff (gentle profile)
+        beach = prof[4] > SEA + 0.1 and (prof[0] - prof[3]) < 2.0 and float(prom_h[i]) - prof[0] < 1.8
+        drops.append((worst, below, beach))
+    # stairs where the edge drops >= 0.35 m onto a beach, at least 60 m apart; one ramp near the middle
+    cand = [i for i in range(3, n - 4) if drops[i][0] >= 0.35 and drops[i][2]]
+    ramp_at = min(cand, key=lambda i: abs(i - n // 2)) if cand else -1
+    stairs_at = []
+    for i in cand:
+        if abs(i - ramp_at) >= 4 and all(abs(i - j) >= 12 for j in stairs_at):
+            stairs_at.append(i)
+    rest_at = set(range(14, n - 14, 36))
+    rail_segments = 0
+    for i in range(n - 1):
+        tx, tz, sx, sz, L = seg_dir[i]
+        (ax, az) = P[i]
+        y = float(prom_h[i])
+        drop, below, _beach = drops[i]
+        ex, ez = ax + sx * W2, az + sz * W2                     # sea-side edge (segment start)
+        mx, mz = ex + tx * L / 2, ez + tz * L / 2               # sea-side edge (segment middle)
+        if i in stairs_at:
+            _stairs(b, mx, mz, y, below, tx, tz, sx, sz)
+            PROM_EXTRA["stairs"].append({"top": [round(mx - sx * 1.0, 2), round(y, 3), round(mz - sz * 1.0, 2)], "dir": [round(sx, 3), round(sz, 3)], "drop": round(drop, 2)})
+            continue
+        if i == ramp_at:
+            _ramp(b, col, ex, ez, y, below, tx, tz, sx, sz)
+            PROM_EXTRA["ramp"].append({"top": [round(ex + sx * 1.1, 2), round(y, 3), round(ez + sz * 1.1, 2)], "dir": [round(tx, 3), round(tz, 3)], "drop": round(drop, 2)})
+            continue
+        # openings where a path from the city crosses the embankment (no railing across a path)
+        crossing = False
+        for pth in PATHS_FOR_PROM:
+            pp = np.array(pth["pts"])
+            dmin = float(np.min(np.hypot(pp[:, 0] - mx, pp[:, 1] - mz)))
+            if dmin < pth["width"] / 2 + 4.0:
+                crossing = True
+        if drop > 0.35 and not crossing:                       # railing on this segment
+            bx_, bz_ = ex + tx * L, ez + tz * L
+            yb = float(prom_h[i + 1])
+            p0 = (ex - sx * 0.15, y, ez - sz * 0.15); p1 = (bx_ - sx * 0.15, yb, bz_ - sz * 0.15)
+            b.htube("metal_galv", (p0[0], p0[1], p0[2]), (p0[0], p0[1] + 1.05, p0[2]), 0.035, 6, tint=(0.75, 0.77, 0.78))
+            for hgt_ in (1.05, 0.55):
+                b.htube("metal_galv", (p0[0], p0[1] + hgt_, p0[2]), (p1[0], p1[1] + hgt_, p1[2]), 0.03 if hgt_ > 1 else 0.02, 6, tint=(0.75, 0.77, 0.78))
+            cx, cz = (p0[0] + p1[0]) / 2, (p0[2] + p1[2]) / 2
+            PROM_EXTRA["colliders"].append([round(cx, 2), round((y + yb) / 2 + 0.55, 3), round(cz, 2), 0.12, 1.1, round(L - 0.2, 2), round(math.atan2(tx, tz), 4)])
+            rail_segments += 1
+            PROM_EXTRA["rails"].append({"mid": [round(mx - sx * 1.5, 2), round(y, 3), round(mz - sz * 1.5, 2)], "sea": [round(sx, 3), round(sz, 3)]})
+        if i in rest_at:
+            # rest area on the land side: two tapchans, a pair of benches facing the sea
+            lx, lz = ax - sx * (W2 - 1.4), az - sz * (W2 - 1.4)
+            yaw = math.atan2(sx, sz)
+            for k in (-1, 1):
+                PROM_EXTRA["props"].append(["tapchan", round(lx + tx * 3.2 * k, 2), round(y, 3), round(lz + tz * 3.2 * k, 2), round(yaw, 3)])
+            for k in (-1, 1):
+                bxp, bzp = ax + sx * (W2 - 1.0) + tx * 2.2 * k, az + sz * (W2 - 1.0) + tz * 2.2 * k
+                PROM_EXTRA["props"].append(["bench_park", round(bxp, 2), round(y, 3), round(bzp, 2), round(yaw, 3)])
+    print("promenade: railing segments %d, stairs %d, ramp %d, rest areas %d, segments with a drop >= 0.35 m: %d / %d" % (
+        rail_segments, len(stairs_at), 1 if ramp_at >= 0 else 0, len(rest_at), len(cand), n - 1))
+    return col
+
+
+def _stairs(b, ex, ez, y, below, tx, tz, sx, sz):
+    """3 m wide stair from the promenade edge down to the beach: risers <= 0.17 m, treads 0.32 m"""
+    h = y - below
+    nst = max(2, int(math.ceil(h / 0.17)))
+    rise = h / nst
+    yaw = math.atan2(sx, sz)                                   # local +Z = towards the sea
+    b.set_transform(ex, 0.0, ez, yaw)
+    for k in range(nst):
+        top = y - rise * (k + 1)
+        z0, z1 = k * 0.32, (k + 1) * 0.32
+        b.box("concrete", -1.5, below - 0.3, z0, 1.5, top, z1, faces="YzxX")
+        cx, cz = ex + sx * (z0 + z1) / 2, ez + sz * (z0 + z1) / 2
+        PROM_EXTRA["colliders"].append([round(cx, 2), round((top + below - 0.3) / 2, 3), round(cz, 2), 3.0, round(top - below + 0.3, 3), 0.32, round(yaw, 4)])
+    # cheek walls
+    for xs in (-1.6, 1.5):
+        b.box("concrete", xs, below - 0.3, 0.0, xs + 0.1, y + 0.1, nst * 0.32, faces="YxXZ")
+    b.set_transform(0, 0, 0, 0)
+
+
+def _ramp(b, col, ex, ez, y, below, tx, tz, sx, sz):
+    """accessible ramp 1:12, 2 m wide, with handrails; walkable surface also as a collision mesh"""
+    h = y - below
+    L = max(2.0, h * 12.0)
+    yaw = math.atan2(tx, tz)                                   # runs along the promenade, outside its edge
+    ox, oz = ex + sx * 1.1, ez + sz * 1.1
+    for bb in (b, col):
+        bb.set_transform(ox, 0.0, oz, yaw)
+        bb.quad("concrete" if bb is b else "col", (-1.0, y, 0.0), (1.0, y, 0.0), (1.0, below, L), (-1.0, below, L))
+        bb.quad("concrete" if bb is b else "col", (1.0, y, 0.0), (-1.0, y, 0.0), (-1.0, below, L), (1.0, below, L))
+        bb.set_transform(0, 0, 0, 0)
+    b.set_transform(ox, 0.0, oz, yaw)
+    for xs in (-1.05, 1.05):
+        b.htube("metal_galv", (xs, y + 0.9, 0.0), (xs, below + 0.9, L), 0.025, 6, tint=(0.75, 0.77, 0.78))
+        for t in (0.0, 0.5, 1.0):
+            b.htube("metal_galv", (xs, y + (below - y) * t, L * t), (xs, y + (below - y) * t + 0.9, L * t), 0.025, 6, tint=(0.75, 0.77, 0.78))
+    b.set_transform(0, 0, 0, 0)
+
+
 def write_promenade(prom, prom_h):
     """paved top (sidewalk material) + curb faces on both sides"""
     b = mk.Builder()
@@ -537,9 +668,10 @@ def write_promenade(prom, prom_h):
         b.quad("sidewalk", A0, A1, B1, B0, uvmode="auto")
         for (P0, Q0) in ((A0, B0), (B1, A1)):
             b.quad("curb", (P0[0], P0[1] - 0.6, P0[2]), (Q0[0], Q0[1] - 0.6, Q0[2]), Q0, P0, uvmode="auto")
+    col = promenade_features(b, P, prom_h, W2)
     for mesh in b.meshes.values():   # quads may come out facing down: make every face point up/out
         pass
-    mk.write_glb(os.path.join(GAME, "assets/terrain/promenade.glb"), [("promenade", b.meshes)])
+    mk.write_glb(os.path.join(GAME, "assets/terrain/promenade.glb"), [("promenade", b.meshes), ("collision", col.meshes)])
 
 
 def write_bounds(H):
@@ -712,8 +844,8 @@ def scatter(X, Z, H, S, E, R, Wb, slope, sand, earth, asphalt, paths, prom, prom
             json.dump({"glb": "res://assets/terrain/" + f, "origin": [0, 0], "terrain": True},
                       open(os.path.join(d, "chunk_" + f.replace(".glb", ".json")), "w"))
     pj = os.path.join(GAME, "data/city/chunk_coast_promenade.json")
-    json.dump({"glb": "res://assets/terrain/promenade.glb", "origin": [0, 0], "trees": [], "props": [], "lines": [],
-               "colliders": [], "lights": [], "attach": [], "doors": [], "terrain": True}, open(pj, "w"))
+    json.dump({"glb": "res://assets/terrain/promenade.glb", "origin": [0, 0], "trees": [], "props": PROM_EXTRA["props"], "lines": [],
+               "colliders": PROM_EXTRA["colliders"], "lights": PROM_EXTRA["lights"], "attach": [], "doors": [], "terrain": True}, open(pj, "w"))
     print("vegetation: trees %d, shrubs %d, boulders %d" % (ntree, nshrub, nb))
     return len(items)
 

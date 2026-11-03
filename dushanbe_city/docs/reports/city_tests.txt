@@ -1,5 +1,5 @@
-PASS city loaded in 1017 ms: 36 city chunks (+57 coast chunks)
-PASS colliders 1394, trees 7564, props 5102, multimeshes 5572
+PASS city loaded in 1035 ms: 36 city chunks (+57 coast chunks)
+PASS colliders 1521, trees 7540, props 5171, multimeshes 5516
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
 PASS player on sidewalk at spawn: y=2.379 (relief+0.15 = 2.377)
@@ -14,6 +14,9 @@ PASS terrain collision at (-20, 385): ray -0.29 m, baked height -0.29 m
 PASS terrain collision at (420, 176): ray 21.57 m, baked height 21.57 m
 PASS terrain collision at (-300, -700): ray 8.06 m, baked height 8.06 m
 PASS promenade surface walkable at (-28, 361): y=0.87
+PASS embankment has stairs (6), a ramp (1) and railings (108 segments)
+PASS walk down the stairs to the beach: 22.9 m towards the sea, 1.48 m lower
+PASS railing at the drop keeps the walker on the promenade (moved 0.99 m towards the edge, railing at ~1.85 m)
 PASS into the sea: shallow true, medium true (deep wading speed 0.60 m/s < run), swimming true
 PASS swims at the surface (feet 1.30 m below it ±0.04), never on/under the sea bed: true
 PASS swam out to z=447 (well beyond the wading line ~370-410) and stopped at the swimming boundary
