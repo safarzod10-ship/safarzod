@@ -10345,6 +10345,33 @@
 191.8,
 -270,
 300.0,
+-262.8
+]
+],
+[
+"lawn",
+[
+191.8,
+-262.8,
+207.2,
+-262
+]
+],
+[
+"lawn",
+[
+250.8,
+-262.8,
+257.2,
+-262
+]
+],
+[
+"lawn",
+[
+292.8,
+-262.8,
+300.0,
 -262
 ]
 ],
@@ -11497,7 +11524,31 @@
 "height": 23.3
 },
 {
-"id": "office_13",
+"id": "shop_13",
+"kind": "shop",
+"rect": [
+208,
+-262,
+250,
+-232
+],
+"floors": 1,
+"height": 8.3
+},
+{
+"id": "garage_14",
+"kind": "garage",
+"rect": [
+258,
+-262,
+292,
+-238
+],
+"floors": 1,
+"height": 5.35
+},
+{
+"id": "office_15",
 "kind": "office",
 "rect": [
 205,
@@ -11509,7 +11560,7 @@
 "height": 17.45
 },
 {
-"id": "brick5_14",
+"id": "brick5_16",
 "kind": "brick5",
 "rect": [
 -296,
@@ -11521,7 +11572,7 @@
 "height": 15.3
 },
 {
-"id": "panel5_15",
+"id": "panel5_17",
 "kind": "panel5",
 "rect": [
 -250,
@@ -11533,7 +11584,7 @@
 "height": 14.9
 },
 {
-"id": "shop_16",
+"id": "shop_18",
 "kind": "shop",
 "rect": [
 -290,
@@ -11545,7 +11596,7 @@
 "height": 4.3
 },
 {
-"id": "shop_17",
+"id": "shop_19",
 "kind": "shop",
 "rect": [
 -262,
@@ -11557,7 +11608,7 @@
 "height": 4.3
 },
 {
-"id": "shop_18",
+"id": "shop_20",
 "kind": "shop",
 "rect": [
 -232,
@@ -11569,7 +11620,7 @@
 "height": 4.3
 },
 {
-"id": "shop_19",
+"id": "shop_21",
 "kind": "shop",
 "rect": [
 -152.0,
@@ -11581,7 +11632,7 @@
 "height": 4.3
 },
 {
-"id": "school_20",
+"id": "school_22",
 "kind": "school",
 "rect": [
 0,
@@ -11593,7 +11644,7 @@
 "height": 11.5
 },
 {
-"id": "school_21",
+"id": "school_23",
 "kind": "school",
 "rect": [
 64,
@@ -11605,7 +11656,7 @@
 "height": 11.5
 },
 {
-"id": "panel5_22",
+"id": "panel5_24",
 "kind": "panel5",
 "rect": [
 104,
@@ -11617,7 +11668,7 @@
 "height": 14.9
 },
 {
-"id": "shop_23",
+"id": "shop_25",
 "kind": "shop",
 "rect": [
 96,
@@ -11629,7 +11680,7 @@
 "height": 4.3
 },
 {
-"id": "panel9_24",
+"id": "panel9_26",
 "kind": "panel9",
 "rect": [
 166,
@@ -11641,7 +11692,7 @@
 "height": 26.2
 },
 {
-"id": "panel9_25",
+"id": "panel9_27",
 "kind": "panel9",
 "rect": [
 240,
@@ -11653,7 +11704,7 @@
 "height": 26.2
 },
 {
-"id": "panel9_26",
+"id": "panel9_28",
 "kind": "panel9",
 "rect": [
 280,
@@ -11665,7 +11716,7 @@
 "height": 26.2
 },
 {
-"id": "shop_27",
+"id": "shop_29",
 "kind": "shop",
 "rect": [
 -290,
@@ -11677,7 +11728,7 @@
 "height": 4.3
 },
 {
-"id": "shop_28",
+"id": "shop_30",
 "kind": "shop",
 "rect": [
 -264,
@@ -11689,7 +11740,7 @@
 "height": 4.3
 },
 {
-"id": "shop_29",
+"id": "shop_31",
 "kind": "shop",
 "rect": [
 -234,
@@ -11701,7 +11752,7 @@
 "height": 4.3
 },
 {
-"id": "garage_30",
+"id": "garage_32",
 "kind": "garage",
 "rect": [
 -230,
@@ -11713,7 +11764,7 @@
 "height": 4.55
 },
 {
-"id": "panel5_31",
+"id": "panel5_33",
 "kind": "panel5",
 "rect": [
 -296,
@@ -11725,7 +11776,7 @@
 "height": 14.9
 },
 {
-"id": "panel5_32",
+"id": "panel5_34",
 "kind": "panel5",
 "rect": [
 -188,
@@ -11737,7 +11788,7 @@
 "height": 14.9
 },
 {
-"id": "panel5_33",
+"id": "panel5_35",
 "kind": "panel5",
 "rect": [
 -188,
@@ -11749,7 +11800,7 @@
 "height": 14.9
 },
 {
-"id": "office_34",
+"id": "office_36",
 "kind": "office",
 "rect": [
 -14,
@@ -11761,7 +11812,7 @@
 "height": 17.45
 },
 {
-"id": "shop_35",
+"id": "shop_37",
 "kind": "shop",
 "rect": [
 30,
@@ -11773,7 +11824,7 @@
 "height": 8.3
 },
 {
-"id": "shop_36",
+"id": "shop_38",
 "kind": "shop",
 "rect": [
 78,
@@ -11785,7 +11836,7 @@
 "height": 4.3
 },
 {
-"id": "shop_37",
+"id": "shop_39",
 "kind": "shop",
 "rect": [
 104,
@@ -11797,7 +11848,7 @@
 "height": 4.3
 },
 {
-"id": "panel5_38",
+"id": "panel5_40",
 "kind": "panel5",
 "rect": [
 20,
@@ -11809,7 +11860,7 @@
 "height": 14.9
 },
 {
-"id": "hospital_39",
+"id": "hospital_41",
 "kind": "hospital",
 "rect": [
 186,
@@ -11821,7 +11872,7 @@
 "height": 17.3
 },
 {
-"id": "hospital_40",
+"id": "hospital_42",
 "kind": "hospital",
 "rect": [
 250,
@@ -11833,7 +11884,7 @@
 "height": 10.7
 },
 {
-"id": "hospital_41",
+"id": "hospital_43",
 "kind": "hospital",
 "rect": [
 186,
@@ -11845,7 +11896,7 @@
 "height": 10.7
 },
 {
-"id": "house_42",
+"id": "house_44",
 "kind": "house",
 "rect": [
 -297.3886855468789,
@@ -11857,7 +11908,7 @@
 "height": 3.5
 },
 {
-"id": "house_43",
+"id": "house_45",
 "kind": "house",
 "rect": [
 -280.24071482535027,
@@ -11869,7 +11920,7 @@
 "height": 3.5
 },
 {
-"id": "house_44",
+"id": "house_46",
 "kind": "house",
 "rect": [
 -261.46101931345646,
@@ -11881,7 +11932,7 @@
 "height": 6.5
 },
 {
-"id": "house_45",
+"id": "house_47",
 "kind": "house",
 "rect": [
 -241.7775906969157,
@@ -11893,7 +11944,7 @@
 "height": 3.5
 },
 {
-"id": "house_46",
+"id": "house_48",
 "kind": "house",
 "rect": [
 -223.8991142394431,
@@ -11905,7 +11956,7 @@
 "height": 6.5
 },
 {
-"id": "house_47",
+"id": "house_49",
 "kind": "house",
 "rect": [
 -296.6591228865467,
@@ -11917,7 +11968,7 @@
 "height": 3.5
 },
 {
-"id": "house_48",
+"id": "house_50",
 "kind": "house",
 "rect": [
 -280.2601257965617,
@@ -11929,7 +11980,7 @@
 "height": 3.5
 },
 {
-"id": "house_49",
+"id": "house_51",
 "kind": "house",
 "rect": [
 -259.51668129644895,
@@ -11941,7 +11992,7 @@
 "height": 6.5
 },
 {
-"id": "house_50",
+"id": "house_52",
 "kind": "house",
 "rect": [
 -239.78244791793782,
@@ -11953,7 +12004,7 @@
 "height": 3.5
 },
 {
-"id": "house_51",
+"id": "house_53",
 "kind": "house",
 "rect": [
 -224.41217289966747,
@@ -11965,7 +12016,7 @@
 "height": 6.5
 },
 {
-"id": "house_52",
+"id": "house_54",
 "kind": "house",
 "rect": [
 -298.46209075813357,
@@ -11977,7 +12028,7 @@
 "height": 3.5
 },
 {
-"id": "house_53",
+"id": "house_55",
 "kind": "house",
 "rect": [
 -279.77317810653756,
@@ -11989,7 +12040,7 @@
 "height": 3.5
 },
 {
-"id": "house_54",
+"id": "house_56",
 "kind": "house",
 "rect": [
 -260.51779048944235,
@@ -12001,7 +12052,7 @@
 "height": 6.5
 },
 {
-"id": "house_55",
+"id": "house_57",
 "kind": "house",
 "rect": [
 -241.51083271591241,
@@ -12013,7 +12064,7 @@
 "height": 3.5
 },
 {
-"id": "house_56",
+"id": "house_58",
 "kind": "house",
 "rect": [
 -224.79374133144654,
@@ -12025,7 +12076,7 @@
 "height": 6.5
 },
 {
-"id": "house_57",
+"id": "house_59",
 "kind": "house",
 "rect": [
 -298.25050521841933,
@@ -12037,7 +12088,7 @@
 "height": 3.5
 },
 {
-"id": "house_58",
+"id": "house_60",
 "kind": "house",
 "rect": [
 -277.2370910331243,
@@ -12049,7 +12100,7 @@
 "height": 6.5
 },
 {
-"id": "house_59",
+"id": "house_61",
 "kind": "house",
 "rect": [
 -260.66391497736976,
@@ -12061,7 +12112,7 @@
 "height": 3.5
 },
 {
-"id": "house_60",
+"id": "house_62",
 "kind": "house",
 "rect": [
 -242.52009357045068,
@@ -12073,7 +12124,7 @@
 "height": 6.5
 },
 {
-"id": "house_61",
+"id": "house_63",
 "kind": "house",
 "rect": [
 -223.95627263029405,
@@ -12085,7 +12136,7 @@
 "height": 3.5
 },
 {
-"id": "house_62",
+"id": "house_64",
 "kind": "house",
 "rect": [
 -190.07296355069988,
@@ -12097,7 +12148,7 @@
 "height": 3.5
 },
 {
-"id": "house_63",
+"id": "house_65",
 "kind": "house",
 "rect": [
 -169.4918149080904,
@@ -12109,7 +12160,7 @@
 "height": 3.5
 },
 {
-"id": "house_64",
+"id": "house_66",
 "kind": "house",
 "rect": [
 -148.79757982887529,
@@ -12121,7 +12172,7 @@
 "height": 6.5
 },
 {
-"id": "house_65",
+"id": "house_67",
 "kind": "house",
 "rect": [
 -186.22430850025947,
@@ -12133,7 +12184,7 @@
 "height": 6.5
 },
 {
-"id": "house_66",
+"id": "house_68",
 "kind": "house",
 "rect": [
 -170.2973286833091,
@@ -12145,7 +12196,7 @@
 "height": 3.5
 },
 {
-"id": "house_67",
+"id": "house_69",
 "kind": "house",
 "rect": [
 -150.39731244151577,
@@ -12157,7 +12208,7 @@
 "height": 3.5
 },
 {
-"id": "house_68",
+"id": "house_70",
 "kind": "house",
 "rect": [
 -189.05660241383558,
@@ -12169,7 +12220,7 @@
 "height": 6.5
 },
 {
-"id": "house_69",
+"id": "house_71",
 "kind": "house",
 "rect": [
 -171.18824255213843,
@@ -12181,7 +12232,7 @@
 "height": 6.5
 },
 {
-"id": "house_70",
+"id": "house_72",
 "kind": "house",
 "rect": [
 -150.24180460558716,
@@ -12193,7 +12244,7 @@
 "height": 3.5
 },
 {
-"id": "house_71",
+"id": "house_73",
 "kind": "house",
 "rect": [
 -188.20263650829617,
@@ -12205,7 +12256,7 @@
 "height": 6.5
 },
 {
-"id": "house_72",
+"id": "house_74",
 "kind": "house",
 "rect": [
 -170.11893221059879,
@@ -12217,7 +12268,7 @@
 "height": 3.5
 },
 {
-"id": "house_73",
+"id": "house_75",
 "kind": "house",
 "rect": [
 -152.18996424510527,
@@ -12229,7 +12280,7 @@
 "height": 6.5
 },
 {
-"id": "house_74",
+"id": "house_76",
 "kind": "house",
 "rect": [
 -119.77044843102398,
@@ -12241,7 +12292,7 @@
 "height": 3.5
 },
 {
-"id": "house_75",
+"id": "house_77",
 "kind": "house",
 "rect": [
 -99.83402320421142,
@@ -12253,7 +12304,7 @@
 "height": 3.5
 },
 {
-"id": "house_76",
+"id": "house_78",
 "kind": "house",
 "rect": [
 -81.39901513038814,
@@ -12265,7 +12316,7 @@
 "height": 3.5
 },
 {
-"id": "house_77",
+"id": "house_79",
 "kind": "house",
 "rect": [
 -122.42122671650051,
@@ -12277,7 +12328,7 @@
 "height": 3.5
 },
 {
-"id": "house_78",
+"id": "house_80",
 "kind": "house",
 "rect": [
 -98.94031437833212,
@@ -12289,7 +12340,7 @@
 "height": 3.5
 },
 {
-"id": "house_79",
+"id": "house_81",
 "kind": "house",
 "rect": [
 -79.19617997712179,
@@ -12301,7 +12352,7 @@
 "height": 6.5
 },
 {
-"id": "house_80",
+"id": "house_82",
 "kind": "house",
 "rect": [
 -119.46486615687111,
@@ -12313,7 +12364,7 @@
 "height": 3.5
 },
 {
-"id": "house_81",
+"id": "house_83",
 "kind": "house",
 "rect": [
 -100.93235157413069,
@@ -12325,7 +12376,7 @@
 "height": 6.5
 },
 {
-"id": "house_82",
+"id": "house_84",
 "kind": "house",
 "rect": [
 -80.58104542172366,
@@ -12337,7 +12388,7 @@
 "height": 6.5
 },
 {
-"id": "house_83",
+"id": "house_85",
 "kind": "house",
 "rect": [
 -121.93109584528311,
@@ -12349,7 +12400,7 @@
 "height": 3.5
 },
 {
-"id": "house_84",
+"id": "house_86",
 "kind": "house",
 "rect": [
 -101.91263969407561,
@@ -12361,7 +12412,7 @@
 "height": 3.5
 },
 {
-"id": "house_85",
+"id": "house_87",
 "kind": "house",
 "rect": [
 -80.56848036017271,
@@ -12373,7 +12424,7 @@
 "height": 3.5
 },
 {
-"id": "tower_86",
+"id": "tower_88",
 "kind": "tower",
 "rect": [
 -14,
@@ -12385,7 +12436,7 @@
 "height": 37.8
 },
 {
-"id": "tower_87",
+"id": "tower_89",
 "kind": "tower",
 "rect": [
 -14,
@@ -12397,7 +12448,7 @@
 "height": 37.8
 },
 {
-"id": "panel5_88",
+"id": "panel5_90",
 "kind": "panel5",
 "rect": [
 166,
@@ -12409,7 +12460,7 @@
 "height": 14.9
 },
 {
-"id": "brick5_89",
+"id": "brick5_91",
 "kind": "brick5",
 "rect": [
 240,
@@ -12421,7 +12472,7 @@
 "height": 15.3
 },
 {
-"id": "panel5_90",
+"id": "panel5_92",
 "kind": "panel5",
 "rect": [
 166,
@@ -12435,124 +12486,124 @@
 ],
 "stats": {
 "chunk_0_0": {
-"tris_base": 12114,
-"tris_detail": 26170,
+"tris_base": 12234,
+"tris_detail": 26984,
 "trees": 92,
-"props": 131
+"props": 136
 },
 "chunk_0_1": {
-"tris_base": 9856,
-"tris_detail": 20494,
-"trees": 92,
-"props": 117
+"tris_base": 9958,
+"tris_detail": 19826,
+"trees": 95,
+"props": 103
 },
 "chunk_0_2": {
-"tris_base": 6360,
-"tris_detail": 14622,
-"trees": 47,
-"props": 72
+"tris_base": 6370,
+"tris_detail": 13894,
+"trees": 44,
+"props": 63
 },
 "chunk_0_3": {
-"tris_base": 1726,
+"tris_base": 1716,
 "tris_detail": 1550,
 "trees": 46,
-"props": 29
+"props": 32
 },
 "chunk_0_4": {
-"tris_base": 8988,
-"tris_detail": 15196,
+"tris_base": 8838,
+"tris_detail": 17070,
 "trees": 73,
-"props": 81
+"props": 101
 },
 "chunk_0_5": {
-"tris_base": 11430,
-"tris_detail": 39000,
-"trees": 50,
-"props": 87
+"tris_base": 11420,
+"tris_detail": 39432,
+"trees": 47,
+"props": 68
 },
 "chunk_1_0": {
-"tris_base": 5040,
-"tris_detail": 9814,
-"trees": 63,
-"props": 71
+"tris_base": 4780,
+"tris_detail": 9844,
+"trees": 62,
+"props": 81
 },
 "chunk_1_1": {
-"tris_base": 6276,
-"tris_detail": 11004,
-"trees": 103,
-"props": 58
+"tris_base": 6466,
+"tris_detail": 11066,
+"trees": 98,
+"props": 68
 },
 "chunk_1_2": {
 "tris_base": 1174,
-"tris_detail": 412,
+"tris_detail": 396,
 "trees": 151,
-"props": 35
+"props": 36
 },
 "chunk_1_3": {
-"tris_base": 6446,
-"tris_detail": 11386,
-"trees": 44,
-"props": 80
+"tris_base": 6050,
+"tris_detail": 11644,
+"trees": 46,
+"props": 85
 },
 "chunk_1_4": {
-"tris_base": 7760,
-"tris_detail": 12280,
-"trees": 81,
-"props": 68
+"tris_base": 7952,
+"tris_detail": 12138,
+"trees": 82,
+"props": 74
 },
 "chunk_1_5": {
-"tris_base": 9908,
-"tris_detail": 32552,
+"tris_base": 9918,
+"tris_detail": 31472,
 "trees": 43,
-"props": 55
+"props": 73
 },
 "chunk_2_0": {
-"tris_base": 11096,
-"tris_detail": 17930,
-"trees": 21,
-"props": 72
+"tris_base": 10952,
+"tris_detail": 18340,
+"trees": 22,
+"props": 88
 },
 "chunk_2_1": {
-"tris_base": 11456,
-"tris_detail": 18242,
-"trees": 36,
-"props": 108
+"tris_base": 11444,
+"tris_detail": 19256,
+"trees": 38,
+"props": 100
 },
 "chunk_2_2": {
 "tris_base": 1392,
 "tris_detail": 0,
-"trees": 53,
+"trees": 52,
 "props": 39
 },
 "chunk_2_3": {
 "tris_base": 1854,
 "tris_detail": 0,
-"trees": 32,
+"trees": 33,
 "props": 29
 },
 "chunk_2_4": {
 "tris_base": 2682,
 "tris_detail": 320,
-"trees": 68,
+"trees": 65,
 "props": 45
 },
 "chunk_2_5": {
-"tris_base": 5278,
-"tris_detail": 16996,
-"trees": 30,
-"props": 39
+"tris_base": 5272,
+"tris_detail": 17068,
+"trees": 28,
+"props": 37
 },
 "chunk_3_0": {
-"tris_base": 10338,
-"tris_detail": 33772,
+"tris_base": 10174,
+"tris_detail": 34696,
 "trees": 5,
-"props": 88
+"props": 97
 },
 "chunk_3_1": {
 "tris_base": 3812,
-"tris_detail": 10628,
+"tris_detail": 10428,
 "trees": 22,
-"props": 35
+"props": 17
 },
 "chunk_3_2": {
 "tris_base": 468,
@@ -12564,91 +12615,91 @@
 "tris_base": 3170,
 "tris_detail": 5742,
 "trees": 16,
-"props": 37
+"props": 43
 },
 "chunk_3_4": {
-"tris_base": 11556,
-"tris_detail": 30048,
+"tris_base": 11806,
+"tris_detail": 27742,
 "trees": 94,
-"props": 119
+"props": 121
 },
 "chunk_3_5": {
-"tris_base": 3790,
-"tris_detail": 12964,
+"tris_base": 4130,
+"tris_detail": 11116,
 "trees": 27,
-"props": 25
+"props": 23
 },
 "chunk_4_0": {
-"tris_base": 11992,
-"tris_detail": 33140,
+"tris_base": 12160,
+"tris_detail": 32216,
 "trees": 39,
-"props": 101
+"props": 116
 },
 "chunk_4_1": {
-"tris_base": 16474,
-"tris_detail": 33212,
-"trees": 57,
-"props": 144
+"tris_base": 16926,
+"tris_detail": 32592,
+"trees": 51,
+"props": 154
 },
 "chunk_4_2": {
-"tris_base": 1308,
+"tris_base": 1304,
 "tris_detail": 864,
-"trees": 73,
-"props": 31
+"trees": 71,
+"props": 36
 },
 "chunk_4_3": {
-"tris_base": 1850,
-"tris_detail": 700,
-"trees": 37,
-"props": 37
+"tris_base": 1848,
+"tris_detail": 684,
+"trees": 34,
+"props": 41
 },
 "chunk_4_4": {
-"tris_base": 6388,
-"tris_detail": 11236,
-"trees": 45,
-"props": 70
+"tris_base": 6592,
+"tris_detail": 11666,
+"trees": 42,
+"props": 53
 },
 "chunk_4_5": {
 "tris_base": 602,
 "tris_detail": 0,
-"trees": 71,
+"trees": 69,
 "props": 8
 },
 "chunk_5_0": {
-"tris_base": 7956,
-"tris_detail": 14980,
+"tris_base": 8802,
+"tris_detail": 15716,
 "trees": 0,
-"props": 56
+"props": 62
 },
 "chunk_5_1": {
-"tris_base": 11212,
-"tris_detail": 24300,
-"trees": 29,
-"props": 101
+"tris_base": 11496,
+"tris_detail": 20624,
+"trees": 31,
+"props": 118
 },
 "chunk_5_2": {
-"tris_base": 11596,
-"tris_detail": 21034,
+"tris_base": 12094,
+"tris_detail": 20224,
 "trees": 50,
-"props": 112
+"props": 117
 },
 "chunk_5_3": {
-"tris_base": 4872,
-"tris_detail": 9832,
-"trees": 28,
-"props": 109
+"tris_base": 4870,
+"tris_detail": 10336,
+"trees": 27,
+"props": 107
 },
 "chunk_5_4": {
-"tris_base": 8336,
-"tris_detail": 19448,
-"trees": 36,
-"props": 132
+"tris_base": 8318,
+"tris_detail": 20198,
+"trees": 35,
+"props": 135
 },
 "chunk_5_5": {
-"tris_base": 5662,
-"tris_detail": 12184,
+"tris_base": 5560,
+"tris_detail": 12056,
 "trees": 38,
-"props": 52
+"props": 67
 }
 }
 }

@@ -559,6 +559,22 @@ def shopfront(ctx, B, a, bnd, y0, y1, key):
     reveal(ctx, B["wall"], a, bnd, y0, y1, 0.25, B["tint"], bottom=True)
     z = -0.22
     w = bnd - a
+    if key == "otashnishon":
+        # fire station: red sectional garage doors (horizontal panels with small windows), no glazing
+        b.box("metal_paint", a, y0, z - 0.05, bnd, y1, z, tint=(0.70, 0.08, 0.07), faces="Z")
+        ns = max(4, int((y1 - y0) / 0.55))
+        for i in range(1, ns):
+            yy = y0 + (y1 - y0) * i / ns
+            d.box("metal_paint", a + 0.05, yy - 0.025, z, bnd - 0.05, yy + 0.025, z + 0.03, tint=(0.55, 0.06, 0.05), faces="YyZ")
+        for k in range(int(w / 1.2)):
+            u = a + 0.4 + k * 1.2
+            if u + 0.6 < bnd - 0.2:
+                glass(ctx, u, u + 0.6, y0 + (y1 - y0) * 0.62, y0 + (y1 - y0) * 0.72, z + 0.01, 5, tint=(0.9, 0.9, 0.9))
+        sy0 = y1 + 0.15
+        sign_board(ctx, key, a + 0.1, bnd - 0.1, sy0, sy0 + min(0.9, (bnd - a) / 7.5), depth=0.14)
+        ctx.lights.append(("sign", ctx.world(((a + bnd) / 2, sy0 + 0.4, 0.8))))
+        b.box("asphalt_yard", a - 0.3, 0.0, 0.0, bnd + 0.3, 0.02, 1.0, faces="Y")    # apron
+        return
     glass(ctx, a, bnd, y0, y1, z, rng.choice([5, 13, 5, 13, 3]), tint=(1.0, 1.0, 1.0))
     n = max(2, int(w / 1.6))
     mull = [a + w * i / n for i in range(1, n)]

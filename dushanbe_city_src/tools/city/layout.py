@@ -250,16 +250,21 @@ def plan():
     P.scatter("park_tree", (100, -270, 140, -240), 3)
     # ==== block (3,0): district administration + small hotel ====================================
     x0, x1 = COLS[3]; z0, z1 = ROWS[3]
-    adm = P.bld("admin", 175, -280, 191, -226, "W", n_entr=1, entr_side="front", sign="idora")
+    adm = P.bld("admin", 175, -280, 191, -226, "W", n_entr=1, entr_side="front", sign="idora_ru")
     P.pave((159.25, -268, 175, -238), "plaza", True)
     P.prop("flagpole", 167, -253, 0)
     P.bld("hotel", 230, -296, 290, -282, "S", n_entr=1, entr_side="front", sign="mehmonkhona",
           shops=[("front", 18, 27, "osh")])
     P.pave((200, -282, 296, -270), "plaza")
     P.pave((205, -262, 296, -205), "asphalt_yard", True)
-    P.parking.append(((205, -262, 296, -205), "x"))
+    # sports complex (tall hall) and the district fire station on the north part of the lot
+    P.bld("shop", 208, -262, 250, -232, "S", floors=1, fh=8.0, wall="wall_plaster", tint=(0.86, 0.90, 0.86),
+          sign="varzish", shops=[("front", -7, 7, "varzish")])
+    P.bld("garage", 258, -262, 292, -238, "S", fh=5.2, tint=(0.92, 0.88, 0.84), sign="otashnishon",
+          shops=[("front", -15, -2, "otashnishon"), ("front", 2, 15, "otashnishon")])
+    P.parking.append(((205, -226, 296, -205), "x"))
     P.bld("office", 205, -195, 255, -180, "N", n_entr=1, entr_side="front", sign="office",
-          shops=[("front", -24, -15, "bank")])
+          shops=[("front", -24, -15, "bank"), ("front", 12, 22, "pochta")])
     P.tree_row("thuja", 162, -278, 162, -228, 4.0, 0.1, 0.0)
     P.scatter("park_tree", (262, -200, 296, -164), 4)
     # ==== block (0,1): brick 5-storeys + shop pavilions on the commercial street =================
@@ -269,7 +274,7 @@ def plan():
     b = P.bld("panel5", -250, -134, -238, -70, "W", n_entr=4, entr_side="front")
     P.front_garden(b)
     P.bld("shop", -290, -12, -268, 2, "S", shops=[("front", -9, 9, "sartaroshkhona")])
-    P.bld("shop", -262, -14, -238, 2, "S", shops=[("front", -10, 10, "magoza")])
+    P.bld("shop", -262, -14, -238, 2, "S", shops=[("front", -10, 10, "kafe")])
     P.bld("shop", -232, -12, -214, 2, "S", shops=[("front", -7.5, 7.5, "kitob")])
     P.pave((-296, -50, -212, 8), "plaza")
     courtyard_kit(P, (-280, -130, -254, -66), play=True)
@@ -301,7 +306,7 @@ def plan():
     x0, x1 = COLS[3]; z0, z1 = ROWS[3]
     b = P.bld("panel9", 166, -136, 230, -123, "S", n_entr=4, entr_side="back")
     b = P.bld("panel9", 240, -136, 296, -123, "S", n_entr=3, entr_side="back",
-              shops=[("front", -24, -14, "dorukhona")])
+              shops=[("front", -24, -14, "dorukhona"), ("front", 4, 14, "salon")])
     b = P.bld("panel9", 280, -110, 293, -40, "W", n_entr=4, entr_side="front")
     P.front_garden(b)
     courtyard_kit(P, (176, -108, 270, -50), sport=False)
@@ -486,7 +491,7 @@ def park(P, x0, z0, x1, z1):
 
 def hospital(P, x0, z0, x1, z1):
     main = P.bld("hospital", 186, 50, 266, 66, "N", n_entr=2, entr_side="front", sign="bemorkhona")
-    P.bld("hospital", 250, 76, 266, 140, "W", n_entr=1, entr_side="front", floors=3, sign=None)
+    P.bld("hospital", 250, 76, 266, 140, "W", n_entr=1, entr_side="front", floors=3, sign="darmongoh")   # polyclinic
     P.bld("hospital", 186, 104, 236, 118, "S", n_entr=1, entr_side="front", floors=3, sign="qabul")
     P.pave((166, 36, 296, 46), "asphalt_yard", True)                 # entrance drive
     P.pave((170, 124, 244, 160), "asphalt_yard", True)               # ambulance yard + parking
