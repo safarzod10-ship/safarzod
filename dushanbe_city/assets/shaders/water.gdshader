@@ -11,9 +11,9 @@ void fragment() {
 	float t = TIME * flow_speed;
 	float a = texture(noise_tex, p + vec2(t, t * 0.3)).r;
 	float b = texture(noise_tex, p * 1.7 - vec2(t * 0.6, -t)).r;
-	vec3 n = normalize(vec3((a - 0.5) * 0.6, 1.0, (b - 0.5) * 0.6));
+	vec3 n = normalize(vec3((a - 0.5) * 0.18, 1.0, (b - 0.5) * 0.18));   // gentle ripples (strong tilts caught sun glints)
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	ALBEDO = water_color;
-	ROUGHNESS = 0.04;
-	SPECULAR = 0.5;
+	ROUGHNESS = 0.12;
+	SPECULAR = 0.4;
 }

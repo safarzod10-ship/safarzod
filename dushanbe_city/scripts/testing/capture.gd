@@ -1,7 +1,7 @@
 extends Node
 ## Real-renderer screenshot tool (works headless-GPU via xvfb-run + Mesa lavapipe).
 ## godot --path . res://scenes/testing/capture.tscn -- scene=<res path> out=<png> [frames=60]
-##   [cam=x,y,z,yaw,pitch] [player=x,z,yaw] [time=H] [quality=low|medium|high] [hide_ui=1]
+##   [cam=x,y,z,yaw,pitch] [player=x,z,yaw] [time=H] [weather=clear|cloudy|rain] [quality=low|medium|high] [hide_ui=1]
 
 func _ready() -> void:
 	var opt := {}
@@ -16,6 +16,12 @@ func _ready() -> void:
 	if opt.has("time"):
 		for n in get_tree().get_nodes_in_group(&"time_of_day"):
 			n.call("set_hour", float(opt["time"]))
+	for w in get_tree().get_nodes_in_group(&"weather"):
+		w.set("auto_cycle", false)                     # deterministic captures
+		if opt.has("weather"):
+			w.call("set_state", {"clear": 0, "cloudy": 1, "rain": 2}.get(String(opt["weather"]), 0), true)
+		if opt.has("wet"):
+			w.set("wetness", float(opt["wet"]))
 	if opt.has("player"):
 		var p := String(opt["player"]).split_floats(",")
 		for pl in get_tree().get_nodes_in_group(&"player"):

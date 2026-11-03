@@ -6,6 +6,7 @@ extends Node3D
 var world_env: WorldEnvironment
 var sun: DirectionalLight3D
 var tod: TimeOfDay
+var weather: Weather
 
 
 func _ready() -> void:
@@ -81,6 +82,12 @@ func _ready() -> void:
 	tod.env_path = tod.get_path_to(world_env)
 	tod.moon_path = tod.get_path_to(moon)
 	tod._ready()
+	weather = Weather.new()
+	weather.name = "Weather"
+	weather.tod = tod
+	weather.env = env
+	weather.sky_mat = sky_mat
+	add_child(weather)
 	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
 	apply_quality()
 

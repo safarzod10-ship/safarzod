@@ -18,6 +18,7 @@ const NORTH_YAW := 0.0   ## world -Z is north
 var _sun: DirectionalLight3D
 var _env: Environment
 var night := 0.0
+var overcast := 0.0                     ## 0..1 from Weather: clouds block the direct sun, light gets diffuse
 
 
 func _ready() -> void:
@@ -66,13 +67,14 @@ func apply() -> void:
 	# warm low sun, neutral high sun
 	var warm := 1.0 - smoothstep(0.05, 0.45, e)
 	_sun.light_color = Color(1.0, 0.94, 0.85).lerp(Color(1.0, 0.68, 0.42), warm)
-	_sun.light_energy = 3.0 * day
+	_sun.light_energy = 3.0 * day * lerpf(1.0, 0.16, overcast)
+	_sun.light_specular = lerpf(1.0, 0.08, overcast)        # behind clouds the sun is no point source: no sharp glints
 	_sun.visible = day > 0.001
 	_sun.shadow_enabled = day > 0.05 and Settings.get_value("shadows")
 	if _env:
 		_env.background_energy_multiplier = lerpf(0.06, 1.0, day)
 		_env.tonemap_exposure = lerpf(1.0, 1.7, night)   # eye adaptation at night
-		_env.ambient_light_energy = lerpf(0.22, 0.75, day)
+		_env.ambient_light_energy = lerpf(0.22, 0.75, day) * lerpf(1.0, 1.15, overcast)
 		_env.fog_light_color = Color(0.70, 0.76, 0.84).lerp(Color(0.86, 0.72, 0.60), warm * day).lerp(Color(0.06, 0.07, 0.10), night)
 	if moon:
 		moon.light_energy = 0.22 * night

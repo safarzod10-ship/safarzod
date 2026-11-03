@@ -91,6 +91,19 @@ def main():
     lawn_rects = []
     for (kind, r, y) in net.surfaces:
         if kind in LAWN_KINDS:
+            if kind == "strip:aryk":
+                # two lawn bands: no grass blades over the open channel (0.6 m + curbs) in the middle
+                x0, z0, x1, z1 = r
+                if (z1 - z0) > (x1 - x0):
+                    m = (x0 + x1) / 2
+                    parts = [(x0, z0, m - 0.42, z1), (m + 0.42, z0, x1, z1)]
+                else:
+                    m = (z0 + z1) / 2
+                    parts = [(x0, z0, x1, m - 0.42), (x0, m + 0.42, x1, z1)]
+                for q in parts:
+                    if q[2] - q[0] > 0.05 and q[3] - q[1] > 0.05:
+                        lawn_rects.append(("strip", q))
+                continue
             lawn_rects.append(("strip" if kind.startswith("strip") else "median", r))
 
     # ---- block ground (painter with priority, no overlaps) -----------------------------------
