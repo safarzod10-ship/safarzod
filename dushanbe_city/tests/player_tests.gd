@@ -30,12 +30,22 @@ func _ready() -> void:
 	idle_ankle = fy
 	var ty := minf(_bone_y("LeftToes"), _bone_y("RightToes"))
 	_check("idle: lowest foot/toe joint height %.3f m (0.0..0.12)" % minf(fy, ty), minf(fy, ty) > -0.02 and minf(fy, ty) < 0.12)
-	# 2. walking: stance-foot sliding
-	PlayerInput.scripted_move = Vector2(1, 0)
+	# 2. walking: stance-foot sliding (forward 1 m/s; side steps / backwards with their own clips)
+	player.set_camera_angles(-PI / 2.0, player.cam_pitch)          # camera looks along +X
+	await _frames(30)
+	PlayerInput.scripted_move = Vector2(0, -1)
 	PlayerInput.scripted_run = false
 	await _frames(90)
 	var slide_w := await _measure_slide(120)
-	_check("walk %.2f m/s: contact-point slide %.3f m/s (%.0f%% of speed, < 5%%)" % [player.ground_speed, slide_w, slide_w / player.ground_speed * 100.0], slide_w < 0.05 * player.ground_speed)
+	_check("walk %.2f m/s: contact-point slide %.3f m/s (%.0f%% of speed, < 5%%)" % [player.ground_speed, slide_w, slide_w / player.ground_speed * 100.0], slide_w < 0.05 * player.ground_speed and absf(player.ground_speed - 1.0) < 0.05)
+	for dv in [[Vector2(1, 0), "side step right"], [Vector2(-1, 0), "side step left"], [Vector2(0, 1), "walking backwards"]]:
+		PlayerInput.scripted_move = dv[0]
+		await _frames(90)
+		var sl := await _measure_slide(120)
+		_check("%s %.2f m/s (own clip): contact-point slide %.3f m/s (%.0f%%, < 10%%)" % [dv[1], player.ground_speed, sl, sl / maxf(player.ground_speed, 0.01) * 100.0],
+			sl < 0.10 * player.ground_speed and player.ground_speed > 0.45)
+	PlayerInput.scripted_move = Vector2(0, -1)
+	await _frames(60)
 	_check("feet on the ground: idle ankle %.3f m (rest 0.090 ± 0.025)" % idle_ankle, absf(idle_ankle - 0.09) < 0.025)
 	PlayerInput.scripted_run = true
 	await _frames(90)
@@ -108,7 +118,7 @@ func _ready() -> void:
 		await _frames(2)
 	_check("punch mashing does not stack (queue is a single flag)", player.get("_punch_queue") is bool)
 	await _frames(120)
-	PlayerInput.scripted_move = Vector2(1, 0)
+	PlayerInput.scripted_move = Vector2(0, -1)                      # forward walk (1 m/s)
 	await _frames(60)
 	PlayerInput.queue_punch()
 	await _frames(15)

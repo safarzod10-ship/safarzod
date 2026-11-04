@@ -1,6 +1,12 @@
 extends Control
-## Multitouch surface: dynamic virtual joystick (left zone), RUN toggle, JUMP and PUNCH buttons
-## (bottom right) and swipe-to-look on the right half. Pure Control drawing, no textures.
+## MobileInputController (stage 4) - multitouch surface, pure Control drawing, no textures:
+## * left: dynamic analog joystick (dead zone 12 %, rescaled -> smooth start, diagonals);
+## * right: JUMP, RUN (toggle), PUNCH and a contextual ACTION button that appears only when an
+##   interactable is in range and carries its label («СЕСТЬ», ...);
+## * swipe anywhere else on the right half rotates the camera (sensitivity from the settings);
+## every finger is tracked separately: walk + look + jump / run at the same time.
+## Sizes scale with PlayerInput.ui_scale; everything stays inside the display safe area (notches,
+## gesture bars) with an extra margin from the screen edges.
 
 const DEAD_ZONE := 0.12
 const FONT_PATH := "res://assets/fonts/DejaVuSans-Bold.ttf"
@@ -13,7 +19,10 @@ var _joy_vec := Vector2.ZERO             # raw, length <= 1
 var _look_finger := -1
 var _jump_finger := -1
 var _punch_finger := -1
+var _action_finger := -1
 var _last_run := false
+var _action_label := ""
+var _safe := Rect2()
 
 
 func _ready() -> void:
@@ -26,11 +35,45 @@ func _process(_delta: float) -> void:
 	if PlayerInput.run_toggle != _last_run:      # RUN may also be toggled from the keyboard
 		_last_run = PlayerInput.run_toggle
 		queue_redraw()
+	var lbl := ""
+	for pl in get_tree().get_nodes_in_group(&"player"):
+		var it: Variant = pl.get("interaction")
+		if it and (pl as Node).process_mode != Node.PROCESS_MODE_DISABLED:
+			lbl = (it as CharacterInteraction).label()
+	if lbl != _action_label:
+		_action_label = lbl
+		queue_redraw()
+	var sa := _safe_rect()
+	if sa != _safe:
+		_safe = sa
+		queue_redraw()
+
+
+func _safe_rect() -> Rect2:
+	## display safe area (notch / rounded corners / gesture bar) in this control's coordinates
+	var r := Rect2(Vector2.ZERO, size)
+	if DisplayServer.get_name() != "headless":
+		var sa := DisplayServer.get_display_safe_area()
+		var ws := DisplayServer.window_get_size()
+		if sa.size.x > 0 and ws.x > 0:
+			var k := size / Vector2(ws)
+			r = Rect2(Vector2(sa.position) * k, Vector2(sa.size) * k).intersection(r)
+	return r
 
 
 # ---------------------------------------------------------------- layout (works for 16:9 .. 21:9)
 func _unit() -> float:
-	return minf(size.x, size.y) / 10.0
+	return minf(size.x, size.y) / 10.0 * PlayerInput.ui_scale
+
+
+func _right() -> float:
+	var sa := _safe if _safe.size.x > 0 else Rect2(Vector2.ZERO, size)
+	return sa.end.x - 0.25 * _unit()            # keep clear of the edge gesture zone
+
+
+func _bottom() -> float:
+	var sa := _safe if _safe.size.y > 0 else Rect2(Vector2.ZERO, size)
+	return sa.end.y - 0.2 * _unit()
 
 
 func _joy_radius() -> float:
@@ -39,22 +82,28 @@ func _joy_radius() -> float:
 
 func _joy_home() -> Vector2:
 	var u := _unit()
-	return Vector2(2.4 * u, size.y - 2.5 * u)
+	var x0 := (_safe.position.x if _safe.size.x > 0 else 0.0) + 0.25 * u
+	return Vector2(x0 + 2.4 * u, _bottom() - 2.3 * u)
 
 
 func _jump_rect() -> Array:                # [center, radius]
 	var u := _unit()
-	return [Vector2(size.x - 1.9 * u, size.y - 2.0 * u), 1.0 * u]
+	return [Vector2(_right() - 1.65 * u, _bottom() - 1.8 * u), 1.0 * u]
 
 
 func _punch_rect() -> Array:             # above-left of JUMP, on the thumb's natural arc
 	var u := _unit()
-	return [Vector2(size.x - 2.5 * u, size.y - 4.35 * u), 0.95 * u]
+	return [Vector2(_right() - 2.25 * u, _bottom() - 4.15 * u), 0.95 * u]
 
 
 func _run_rect() -> Array:
 	var u := _unit()
-	return [Vector2(size.x - 4.3 * u, size.y - 1.5 * u), 0.8 * u]
+	return [Vector2(_right() - 4.05 * u, _bottom() - 1.3 * u), 0.8 * u]
+
+
+func _action_rect() -> Array:            # contextual: left of PUNCH (only when something is usable)
+	var u := _unit()
+	return [Vector2(_right() - 4.6 * u, _bottom() - 3.9 * u), 0.85 * u]
 
 
 func _in_circle(p: Vector2, c: Array) -> bool:
@@ -73,6 +122,12 @@ func _input(event: InputEvent) -> void:
 			if _in_circle(p, _jump_rect()):
 				_jump_finger = event.index
 				PlayerInput.queue_jump()
+			elif _in_circle(p, _punch_rect()):
+				_punch_finger = event.index
+				PlayerInput.queue_punch()
+			elif _action_label != "" and _in_circle(p, _action_rect()):
+				_action_finger = event.index
+				PlayerInput.queue_action()
 			elif _in_circle(p, _run_rect()):
 				PlayerInput.run_toggle = not PlayerInput.run_toggle
 			elif _joy_finger < 0 and _in_joy_zone(p):
@@ -95,6 +150,10 @@ func _input(event: InputEvent) -> void:
 				_look_finger = -1
 			elif event.index == _jump_finger:
 				_jump_finger = -1
+			elif event.index == _punch_finger:
+				_punch_finger = -1
+			elif event.index == _action_finger:
+				_action_finger = -1
 		queue_redraw()
 	elif event is InputEventScreenDrag:
 		if event.index == _joy_finger:
@@ -146,6 +205,13 @@ func _draw() -> void:
 	draw_arc(pr[0], pr[1], 0, TAU, 48, Color(1, 0.6, 0.55, 0.9) if pp else Color(1, 1, 1, 0.6), 0.04 * u, true)
 	_draw_fist(pr[0] + Vector2(0, -0.2 * pr[1]), 0.36 * pr[1], Color(1, 1, 1, 0.9))
 	_label(pr[0] + Vector2(0, 0.55 * pr[1]), "УДАР", int(0.24 * u), Color(1, 1, 1, 0.85))
+	# ACTION (contextual)
+	if _action_label != "":
+		var ar := _action_rect()
+		var ap := _action_finger >= 0
+		draw_circle(ar[0], ar[1], Color(0.15, 0.5, 0.95, 0.75) if not ap else Color(0.4, 0.7, 1.0, 0.85))
+		draw_arc(ar[0], ar[1], 0, TAU, 48, Color(1, 1, 1, 0.85), 0.04 * u, true)
+		_label(ar[0], _action_label, int(0.26 * u), Color(1, 1, 1, 0.98))
 
 
 func _draw_fist(c: Vector2, s: float, col: Color) -> void:

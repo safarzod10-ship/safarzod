@@ -135,6 +135,10 @@ func _process(delta: float) -> void:
 				break
 
 
+func play_door(close: bool) -> void:
+	_play(_door, "res://assets/audio/vehicle/door_close.ogg" if close else "res://assets/audio/vehicle/door_open.ogg", -4.0, 1.0)
+
+
 func _on_hit(_health: float) -> void:
 	var dv := car.last_impact
 	if dv > 7.0:

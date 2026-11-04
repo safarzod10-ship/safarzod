@@ -88,6 +88,30 @@ func _ready() -> void:
 	_big = _load("res://assets/audio/sea/splash_big.ogg")
 
 
+## Sea surface at (x, z): Vector3(slope_x, height, slope_z) of the same 5 Gerstner waves as
+## sea.gdshader (vertical part, shoaling by depth); used to float the swimmer on the swell.
+static func wave_at(x: float, z: float, depth: float) -> Vector3:
+	const W := [[0.15, -1.0, 60.0, 0.32], [-0.45, -0.9, 37.0, 0.20], [0.6, -0.8, 23.0, 0.12], [-0.1, -1.0, 14.5, 0.07], [0.85, -0.5, 9.0, 0.04]]
+	var t := Time.get_ticks_msec() * 0.001
+	var sh := lerpf(0.25, 1.0, smoothstep(0.3, 4.0, depth)) * wave_scale
+	var h := 0.0
+	var sx := 0.0
+	var sz := 0.0
+	for w in W:
+		var d := Vector2(w[0], w[1]).normalized()
+		var k := TAU / float(w[2])
+		var c := sqrt(9.81 / k)
+		var f := k * (d.x * x + d.y * z - c * t)
+		var a := float(w[3]) * sh
+		h += a * sin(f)
+		sx += a * k * d.x * cos(f)
+		sz += a * k * d.y * cos(f)
+	return Vector3(sx, h, sz)
+
+
+static var wave_scale := 1.0      ## kept equal to the sea material's wave_scale (Sea.apply_quality)
+
+
 static func _load(p: String) -> AudioStream:
 	return load(p) if ResourceLoader.exists(p) else null
 

@@ -38,6 +38,7 @@ func apply_quality(q: int) -> void:
 	m.set_shader_parameter("detail", 0.0 if q == Settings.Quality.LOW else 1.0)
 	m.set_shader_parameter("foam_amount", 0.7 if q == Settings.Quality.LOW else 1.0)
 	m.set_shader_parameter("wave_scale", [0.6, 1.0, 1.0, 1.0][q])
+	PlayerWater.wave_scale = [0.6, 1.0, 1.0, 1.0][q]
 
 
 func _process(_delta: float) -> void:

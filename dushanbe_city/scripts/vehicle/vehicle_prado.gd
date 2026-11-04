@@ -710,6 +710,13 @@ var _driver: SeatedDriver
 
 ## Seated player character (visible while somebody drives). Driver's seat = the model's front-seat
 ## point mirrored to the steering-wheel side (left-hand drive).
+## door sound (getting in / out on foot): open = true -> door opening
+func audio_door(close: bool) -> void:
+	var a := get_node_or_null("Audio")
+	if a and a.has_method("play_door"):
+		a.call("play_door", close)
+
+
 func set_driver_visible(on: bool) -> void:
 	if on and _driver == null:
 		_driver = SeatedDriver.new()

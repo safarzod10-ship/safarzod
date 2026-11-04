@@ -15,6 +15,10 @@ static var scripted_run := false
 ## True while the touch UI is shown (the controller then never captures the mouse).
 static var touch_active := false
 
+## UI settings (user://controls.cfg): size of the touch controls and camera swipe sensitivity
+static var ui_scale := 1.0
+static var look_scale := 1.0
+static var _action_queued := false
 static var _jump_queued := false
 static var _punch_queued := false
 static var _actions_ready := false
@@ -28,7 +32,7 @@ static func ensure_actions() -> void:
 	var keys := {
 		&"move_forward": [KEY_W, KEY_UP], &"move_back": [KEY_S, KEY_DOWN],
 		&"move_left": [KEY_A, KEY_LEFT], &"move_right": [KEY_D, KEY_RIGHT],
-		&"run": [KEY_SHIFT], &"jump": [KEY_SPACE], &"run_toggle": [KEY_CAPSLOCK], &"punch": [KEY_F],
+		&"run": [KEY_SHIFT], &"jump": [KEY_SPACE], &"run_toggle": [KEY_CAPSLOCK], &"punch": [KEY_F], &"interact": [KEY_E],
 	}
 	for action in keys:
 		if InputMap.has_action(action):
@@ -46,7 +50,7 @@ static func ensure_actions() -> void:
 		jm.axis = axes[action][0]
 		jm.axis_value = axes[action][1]
 		InputMap.action_add_event(action, jm)
-	for pair in [[&"jump", JOY_BUTTON_A], [&"run", JOY_BUTTON_B], [&"run", JOY_BUTTON_LEFT_STICK], [&"punch", JOY_BUTTON_X]]:
+	for pair in [[&"jump", JOY_BUTTON_A], [&"run", JOY_BUTTON_B], [&"run", JOY_BUTTON_LEFT_STICK], [&"punch", JOY_BUTTON_X], [&"interact", JOY_BUTTON_Y]]:
 		var jb := InputEventJoypadButton.new()
 		jb.button_index = pair[1]
 		InputMap.action_add_event(pair[0], jb)
@@ -70,6 +74,31 @@ static func is_running() -> bool:
 
 static func queue_jump() -> void:
 	_jump_queued = true
+
+
+static func queue_action() -> void:
+	_action_queued = true
+
+
+## Returns true once per ACTION press (touch button or E / gamepad Y).
+static func consume_action() -> bool:
+	var a := _action_queued or Input.is_action_just_pressed(&"interact")
+	_action_queued = false
+	return a
+
+
+static func load_settings() -> void:
+	var c := ConfigFile.new()
+	if c.load("user://controls.cfg") == OK:
+		ui_scale = clampf(float(c.get_value("touch", "ui_scale", 1.0)), 0.75, 1.35)
+		look_scale = clampf(float(c.get_value("touch", "look_scale", 1.0)), 0.4, 2.5)
+
+
+static func save_settings() -> void:
+	var c := ConfigFile.new()
+	c.set_value("touch", "ui_scale", ui_scale)
+	c.set_value("touch", "look_scale", look_scale)
+	c.save("user://controls.cfg")
 
 
 static func queue_punch() -> void:
@@ -104,3 +133,4 @@ static func reset() -> void:
 	scripted_run = false
 	_jump_queued = false
 	_punch_queued = false
+	_action_queued = false

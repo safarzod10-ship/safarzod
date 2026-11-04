@@ -1,9 +1,9 @@
-PASS city loaded in 950 ms: 36 city chunks (+57 coast chunks)
+PASS city loaded in 1501 ms: 36 city chunks (+57 coast chunks)
 PASS colliders 1521, trees 7540, props 5138, multimeshes 5521
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
 PASS player on sidewalk at spawn: y=2.379 (relief+0.15 = 2.377)
-PASS player runs 5 s through the city: moved 18.9 m, y=2.406
+PASS player runs 5 s through the city: moved 20.7 m, y=2.408
 PASS rain (30 s transition): sun 3.00 -> 0.84, wetness 1.00, rain shown true
 PASS clearing up: rain stops, ground dries slowly (wetness 0.88 < 1.00), sun back 2.95
 PASS roads follow the relief: worst |ray - f| = 0.000 m
@@ -15,10 +15,10 @@ PASS terrain collision at (420, 176): ray 21.57 m, baked height 21.57 m
 PASS terrain collision at (-300, -700): ray 8.06 m, baked height 8.06 m
 PASS promenade surface walkable at (-28, 361): y=0.87
 PASS embankment has stairs (6), a ramp (1) and railings (108 segments)
-PASS walk down the stairs to the beach: 22.9 m towards the sea, 1.48 m lower
+PASS walk down the stairs to the beach: 25.1 m towards the sea, 1.58 m lower
 PASS railing at the drop keeps the walker on the promenade (moved 0.99 m towards the edge, railing at ~1.85 m)
 PASS into the sea: shallow true, medium true (deep wading speed 0.60 m/s < run), swimming true
-PASS swims at the surface (feet 1.30 m below it ±0.04), never on/under the sea bed: true
+PASS swims at the (wavy) surface: feet 1.30 m below the local wave height ±0.01, never on/under the sea bed: true
 PASS swam out to z=447 (well beyond the wading line ~370-410) and stopped at the swimming boundary
 PASS swims back and walks out onto the beach: mode 0 (0 = dry), on floor true, z=400
 PASS sea sounds: surf + coastal wind playing near the shore (shore 15 m)

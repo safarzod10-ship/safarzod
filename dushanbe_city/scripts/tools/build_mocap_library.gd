@@ -72,6 +72,19 @@ func _ready() -> void:
 		print("tracks: ", a.get_track_count(), " ", a.track_get_path(0), " type ", a.track_get_type(0))
 		get_tree().quit()
 		return
+	if args.has("ual"):
+		var ul: AnimationLibrary = load("res://assets/characters/animations/player_anims.res")
+		for n in ["jog", "sprint"]:
+			var an := ul.get_animation(n)
+			var c := _contact_curve(an, 240)
+			var vals: Array[float] = []
+			for v in c:
+				if v > 0.2:
+					vals.append(v)
+			vals.sort()
+			print("UAL ", n, " len ", an.length, " contact speed ", vals[vals.size() / 2] if vals.size() > 0 else -1.0, " stride/cycle ", (vals[vals.size() / 2] if vals.size() > 0 else 0.0) * an.length, " arms ", JSON.stringify(arm_clearance(an, true)))
+		get_tree().quit()
+		return
 	if args.has("list"):
 		for f in ["16_16", "16_15", "35_17", "16_55", "09_01", "09_02", "09_03", "09_04", "09_05", "09_06", "09_07", "09_08", "09_09", "09_10", "09_11"]:
 			var a := _src(f)
@@ -82,19 +95,58 @@ func _ready() -> void:
 	var lib := AnimationLibrary.new()
 	var picks: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/mocap_picks.json"))
 	var ankle_ref := _rest_ankle()
-	for key in ["walk", "run"]:
-		var f: String = picks[key]
+	for key in ["walk", "run", "run_fast"]:
+		if not picks.has(key):
+			continue
+		var pv: Variant = picks[key]
+		var f: String = pv["clip"] if pv is Dictionary else String(pv)
 		var a := _src(f)
-		var c := _find_cycle(a, f)
+		var c := _find_cycle(a, f, pv.get("t0", -1.0) if pv is Dictionary else -1.0, pv.get("t1", -1.0) if pv is Dictionary else -1.0)
+		if c.has("error"):
+			report[key] = c
+			continue
 		var anim := _make_cycle(a, c)
 		var dy := _ground(anim, ankle_ref)
 		var warp := _contact_warp(anim)
 		anim = warp["anim"]
 		var lat := _lateral_lock(anim)
 		var arms := _fix_arms(anim)
+		if key == "walk":
+			_FWD_YAW_REF = _facing_yaw(anim)
 		lib.add_animation(key, anim)
 		report[key] = {"clip": f, "hips_speed": c["speed"], "contact_speed": warp["speed"], "cycle_s": anim.length,
 			"cycle_s_src": warp["src_len"], "ground_offset": dy, "warp_range": warp["range"], "contact_p25_p75_after": warp["after_p25_p75"], "lateral_lock": lat, "arms": arms}
+	# directional walks (8-way locomotion): built in the TRAVEL frame (travel -> +Z: contact warp and
+	# lateral lock work as for the forward walk), then turned so the BODY faces +Z again
+	for key in ["walk_back", "strafe_left", "strafe_right"]:
+		if not picks.has(key):
+			continue
+		var pk: Dictionary = picks[key]
+		var a := _src(pk["clip"])
+		var c := _find_cycle(a, pk["clip"], pk.get("t0", -1.0), pk.get("t1", -1.0))
+		if c.has("error"):
+			report[key] = c
+			continue
+		var anim := _make_cycle(a, c)
+		var warp := _contact_warp(anim)
+		anim = warp["anim"]
+		var lat := _lateral_lock(anim)
+		var face := _face_forward(anim)
+		var dy := _ground(anim, ankle_ref)
+		var arms := _fix_arms(anim)
+		lib.add_animation(key, anim)
+		report[key] = {"clip": pk["clip"], "hips_speed": c["speed"], "contact_speed": warp["speed"], "cycle_s": anim.length,
+			"travel_dir_body": face["travel"], "turned_deg": face["deg"], "ground_offset": dy, "lateral_lock": lat, "arms": arms}
+	for key in ["stop_walk", "stop_run"]:
+		if not picks.has(key):
+			continue
+		var pk2: Dictionary = picks[key]
+		var a2 := _src(pk2["clip"])
+		var st := _make_stop(a2, pk2)
+		var sa: Animation = st["anim"]
+		_ground(sa, ankle_ref)
+		report[key] = {"clip": pk2["clip"], "len": sa.length, "speed_curve": st["curve"], "arms": _fix_arms(sa)}
+		lib.add_animation(key, sa)
 	var jf: String = picks["jump"]
 	var ja := _src(jf)
 	var j := _find_jump(ja)
@@ -161,7 +213,9 @@ func _sample(a: Animation) -> Array:
 	return out
 
 
-func _find_cycle(a: Animation, f: String) -> Dictionary:
+func _find_cycle(a: Animation, f: String, tw0 := -1.0, tw1 := -1.0) -> Dictionary:
+	## tw0 / tw1 (s): optional window of the source clip to take the cycle from (clips that change
+	## direction, e.g. 113_18 sidesteps right, then left)
 	var s := _sample(a)
 	var ys: Array[float] = []
 	for x in s:
@@ -173,7 +227,9 @@ func _find_cycle(a: Animation, f: String) -> Dictionary:
 	# at least 0.35 s apart; skip the first/last 0.1 s (edge frames of a capture are unreliable)
 	var strikes: Array[int] = []
 	var w := int(0.12 * FPS)
-	for i in range(int(0.1 * FPS), s.size() - int(0.1 * FPS)):
+	var i_lo := int(0.1 * FPS) if tw0 < 0.0 else int(tw0 * FPS)
+	var i_hi := s.size() - int(0.1 * FPS) if tw1 < 0.0 else mini(s.size() - int(0.1 * FPS), int(tw1 * FPS))
+	for i in range(i_lo, i_hi):
 		if ys[i] > p10 + 0.07:
 			continue
 		var is_min := true
@@ -187,7 +243,7 @@ func _find_cycle(a: Animation, f: String) -> Dictionary:
 		return {"error": "strikes %d" % strikes.size(), "speed": 0.0, "t0": 0.0, "t1": a.length}
 	# choose the cycle closest to the middle of the clip (steady state)
 	var best := 0
-	var mid := s.size() / 2
+	var mid := s.size() / 2 if tw0 < 0.0 else (i_lo + i_hi) / 2
 	for k in range(strikes.size() - 1):
 		if absi((strikes[k] + strikes[k + 1]) / 2 - mid) < absi((strikes[best] + strikes[best + 1]) / 2 - mid):
 			best = k
@@ -214,6 +270,86 @@ func _make_cycle(a: Animation, c: Dictionary) -> Animation:
 		return Vector3(p.x - drift.x, p.y, p.z - drift.z))
 	_close_loop(cyc)
 	return cyc
+
+
+func _facing_yaw(an: Animation) -> float:
+	## mean body facing of a clip (yaw of the hips' forward = up x (right hip - left hip)), radians
+	var acc := Vector2.ZERO
+	for i in 12:
+		_anim_eval(an, an.length * i / 12.0)
+		var side := _pos("RightUpperLeg") - _pos("LeftUpperLeg")
+		var fwd := Vector3.UP.cross(side)
+		acc += Vector2(fwd.x, fwd.z).normalized()
+	return atan2(acc.x, acc.y)
+
+
+func _face_forward(an: Animation) -> Dictionary:
+	## rotate a travel-frame cycle (travel = +Z) about Y so the BODY faces +Z; returns the travel
+	## direction in the body frame (walk back ~ (0,-1), strafe right ~ (-1,0) / left (+1,0) in +Z-forward
+	## model space, checked against the forward walk which must give ~0 deg)
+	var phi := _facing_yaw(an) - _FWD_YAW_REF
+	var q := Quaternion(Vector3.UP, -phi)
+	for tr in an.get_track_count():
+		if not String(an.track_get_path(tr)).ends_with(":Hips"):
+			continue
+		for k in an.track_get_key_count(tr):
+			var v: Variant = an.track_get_key_value(tr, k)
+			if v is Quaternion:
+				an.track_set_key_value(tr, k, (q * (v as Quaternion)).normalized())
+			elif v is Vector3:
+				an.track_set_key_value(tr, k, q * (v as Vector3))
+	var travel := q * Vector3(0, 0, 1)
+	return {"travel": [snappedf(travel.x, 0.01), snappedf(travel.z, 0.01)], "deg": snappedf(rad_to_deg(phi), 0.1)}
+
+
+var _FWD_YAW_REF := 0.0
+
+
+func _make_stop(a: Animation, pk: Dictionary) -> Dictionary:
+	## one-shot stop: from the last steady steps until standing; hips translation removed completely
+	## (in place) and its speed profile returned, so the controller decelerates exactly like the
+	## capture (no sliding while the stop plays)
+	var s := _sample(a)
+	var sp: Array[float] = []
+	var win := int(0.1 * FPS)
+	for i in s.size():
+		var i0 := maxi(0, i - win); var i1 := mini(s.size() - 1, i + win)
+		var d: Vector3 = s[i1]["hips"] - s[i0]["hips"]
+		d.y = 0
+		sp.append(d.length() / ((i1 - i0) / FPS))
+	var vmax := 0.0
+	for v in sp:
+		vmax = maxf(vmax, v)
+	var stop_i := s.size() - 1
+	for i in range(s.size() - 1, 0, -1):
+		if sp[i] > float(pk.get("stop_speed", 0.12)):
+			stop_i = i
+			break
+	var dec_i := stop_i
+	while dec_i > 0 and sp[dec_i] < vmax * 0.85:
+		dec_i -= 1
+	var t0: float = maxf(0.0, s[dec_i]["t"] - float(pk.get("lead", 0.15)))
+	var t1: float = minf(a.length, s[stop_i]["t"] + float(pk.get("settle", 0.6)))
+	var d0: Vector3 = s[stop_i]["hips"] - s[dec_i]["hips"]
+	d0.y = 0
+	var yaw := Quaternion(Vector3.UP, atan2(d0.x, d0.z)).inverse()
+	var hp: Array = []
+	for x in s:
+		hp.append([x["t"], x["hips"]])
+	var hips_at := func(t: float) -> Vector3:
+		var k := clampi(int(t * FPS), 0, hp.size() - 1)
+		return hp[k][1]
+	var h0: Vector3 = hips_at.call(t0)
+	var an := _resample(a, t0, t1, yaw, func(t: float, p: Vector3) -> Vector3:
+		var d: Vector3 = (hips_at.call(t) - h0) / sk.motion_scale
+		return Vector3(p.x - d.x, p.y, p.z - d.z))
+	an.loop_mode = Animation.LOOP_NONE
+	var curve: Array = []
+	var t := t0
+	while t <= t1 + 0.001:
+		curve.append([snappedf(t - t0, 0.01), snappedf(sp[clampi(int(t * FPS), 0, sp.size() - 1)], 0.01)])
+		t += 0.05
+	return {"anim": an, "curve": curve}
 
 
 func _find_jump(a: Animation) -> Dictionary:

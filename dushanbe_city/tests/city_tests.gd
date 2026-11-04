@@ -191,14 +191,15 @@ func _coast_tests(world: Node) -> void:
 		if m == PlayerWater.Mode.SWIM:
 			swim_frames += 1
 			if swim_frames > 90:
-				swim_y_err = maxf(swim_y_err, absf(player.global_position.y - (PlayerWater.SEA_LEVEL - PlayerWater.SWIM_BODY)))
+				var wv := PlayerWater.wave_at(player.global_position.x, player.global_position.z, player.water.floor_depth)
+				swim_y_err = maxf(swim_y_err, absf(player.global_position.y - (PlayerWater.SEA_LEVEL - PlayerWater.SWIM_BODY + wv.y * 0.85)))
 				var fy := _ray_y(player.global_position.x, player.global_position.z)
 				below_floor = below_floor or player.global_position.y < fy - 0.05
 	var swim_z := player.global_position.z
 	_check("into the sea: shallow %s, medium %s (deep wading speed %.2f m/s < run), swimming %s" % [
 		seen.has(PlayerWater.Mode.SHALLOW), seen.has(PlayerWater.Mode.MEDIUM), wade_speed, seen.has(PlayerWater.Mode.SWIM)],
 		seen.has(PlayerWater.Mode.SHALLOW) and seen.has(PlayerWater.Mode.MEDIUM) and seen.has(PlayerWater.Mode.SWIM) and wade_speed < 2.0)
-	_check("swims at the surface (feet %.2f m below it ±%.2f), never on/under the sea bed: %s" % [PlayerWater.SWIM_BODY, swim_y_err, not below_floor],
+	_check("swims at the (wavy) surface: feet %.2f m below the local wave height ±%.2f, never on/under the sea bed: %s" % [PlayerWater.SWIM_BODY, swim_y_err, not below_floor],
 		swim_frames > 120 and swim_y_err < 0.12 and not below_floor)
 	_check("swam out to z=%.0f (well beyond the wading line ~370-410) and stopped at the swimming boundary" % zmax, zmax > 420.0)
 	# back to the beach

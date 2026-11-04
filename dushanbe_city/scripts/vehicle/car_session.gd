@@ -19,6 +19,8 @@ var _prompt: Control
 var _layer: CanvasLayer
 var _exit_requested := false
 var _font: Font
+var busy := false                       ## animated get-in / get-out running
+var door: CarDoorInteractable
 
 
 func _ready() -> void:
@@ -44,6 +46,10 @@ func _ready() -> void:
 	_prompt.visible = false
 	_prompt.draw.connect(_draw_prompt)
 	_layer.add_child(_prompt)
+	door = CarDoorInteractable.new()
+	door.name = "DriverDoor"
+	door.session = self
+	add_child(door)
 
 
 func _prompt_rect() -> Rect2:
@@ -57,13 +63,13 @@ func _draw_prompt() -> void:
 	_prompt.draw_rect(r, Color(0.1, 0.45, 0.9, 0.75))
 	_prompt.draw_rect(r, Color(1, 1, 1, 0.8), false, 3.0)
 	var fs := int(r.size.y * 0.42)
-	var t := "СЕСТЬ"
+	var t := "[E] СЕСТЬ"
 	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
 	_prompt.draw_string(_font, r.get_center() + Vector2(-w.x * 0.5, fs * 0.36), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
 
 
 func can_enter() -> bool:
-	if driving or player == null or car == null:
+	if driving or busy or player == null or car == null:
 		return false
 	var d := player.global_position.distance_to(car.driver_door_point(0.6))
 	return d < ENTER_DIST and car.speed_kmh < 5.0 and player.is_on_floor()
@@ -71,10 +77,9 @@ func can_enter() -> bool:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"car_enter"):
-		if driving:
+		if driving and not busy:
 			_exit_requested = true
-		elif can_enter():
-			enter()
+		# on foot: E is the generic "interact" action (CharacterInteraction -> CarDoorInteractable)
 	elif driving and event.is_action_pressed(&"car_repair"):
 		car.repair()
 	elif driving and event.is_action_pressed(&"car_camera"):
@@ -85,7 +90,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _input(event: InputEvent) -> void:
 	if _prompt.visible and event is InputEventScreenTouch and event.pressed and _prompt_rect().has_point(event.position):
 		get_viewport().set_input_as_handled()
-		enter()
+		enter_animated()
 
 
 func _process(_d: float) -> void:
@@ -93,7 +98,7 @@ func _process(_d: float) -> void:
 	if _prompt.size != vs:
 		_prompt.position = Vector2.ZERO
 		_prompt.size = vs
-	var show := can_enter()
+	var show := can_enter() and not PlayerInput.touch_active   # touch: the ACTION button shows «СЕСТЬ»
 	if show != _prompt.visible:
 		_prompt.visible = show
 	if show:
@@ -105,7 +110,7 @@ func _process(_d: float) -> void:
 		else:
 			VehicleInput.scripted = null
 			_exit_requested = false
-			exit()
+			exit_animated()
 
 
 func enter() -> void:
@@ -124,6 +129,74 @@ func enter() -> void:
 	controls.visible = true
 	Minimap.focus = car
 	Minimap.focus_camera = cam
+
+
+## Animated get-in: walk to the door (normal locomotion, no teleport), face the car, open the door
+## (UAL Interact), sit down while sliding into the seat (UAL Sitting_Enter; the body's collision is
+## off so it passes the door opening, not the bodywork), then control and camera switch to the car.
+func enter_animated() -> void:
+	if driving or busy or not can_enter():
+		return
+	busy = true
+	player.interaction.busy = true
+	var door_pt := car.driver_door_point(0.75)
+	var bx := car.global_transform.basis.x
+	var face := atan2(-bx.x, -bx.z)                 # looking at the car's left side
+	await player.walk_to(door_pt, face, 2.5)
+	car.audio_door(false)
+	await player.play_action("interact", 0.65)
+	var seat := car.driver_door_point(-0.45) + Vector3.UP * 0.25
+	var start := player.global_position
+	var shape_on := player.collision_layer
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.set_physics_process(false)
+	player.anim.travel(&"sit_enter")
+	var T := 0.85
+	var t := 0.0
+	while t < T:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		var k := smoothstep(0.0, 1.0, t / T)
+		player.global_position = start.lerp(seat, k)
+	player.collision_layer = shape_on
+	player.collision_mask = 1
+	player.set_physics_process(true)
+	player.end_sequence()
+	player.interaction.busy = false
+	busy = false
+	enter()
+
+
+## Animated get-out: the car must be (nearly) stopped; a free spot next to the door is found first;
+## the character appears in the seat and gets out (UAL Sitting_Exit) to that spot, then walks freely.
+func exit_animated() -> void:
+	if not driving or busy:
+		return
+	busy = true
+	var spot := find_exit_spot()
+	var seat := car.driver_door_point(-0.45) + Vector3.UP * 0.25
+	exit()                                           # control / camera back to the walker
+	player.interaction.busy = true
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.set_physics_process(false)
+	player.global_position = seat
+	player.seq_active = true
+	player.anim.travel(&"sit_exit")
+	var T := 0.9
+	var t := 0.0
+	while t < T:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		player.global_position = seat.lerp(spot, smoothstep(0.0, 1.0, t / T))
+	player.global_position = spot
+	player.collision_layer = 2
+	player.collision_mask = 1
+	player.set_physics_process(true)
+	player.end_sequence()
+	player.interaction.busy = false
+	busy = false
 
 
 func exit() -> void:

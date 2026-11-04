@@ -10,6 +10,7 @@ var player: Node3D
 
 
 func _ready() -> void:
+	PlayerInput.load_settings()
 	# loading screen first, build the city on the next frames
 	var ui := CanvasLayer.new()
 	ui.layer = 50
