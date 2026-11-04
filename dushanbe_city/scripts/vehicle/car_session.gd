@@ -145,8 +145,9 @@ func enter_animated() -> void:
 	await player.walk_to(door_pt, face, 2.5)
 	car.audio_door(false)
 	await player.play_action("interact", 0.65)
-	var seat := car.driver_door_point(-0.45) + Vector3.UP * 0.25
 	var start := player.global_position
+	var seat := car.driver_door_point(-0.45)
+	seat.y = start.y + 0.42                          # the sitting clip lowers the hips onto a 0.85 m seat
 	var shape_on := player.collision_layer
 	player.collision_layer = 0
 	player.collision_mask = 0
@@ -175,7 +176,8 @@ func exit_animated() -> void:
 		return
 	busy = true
 	var spot := find_exit_spot()
-	var seat := car.driver_door_point(-0.45) + Vector3.UP * 0.25
+	var seat := car.driver_door_point(-0.45)
+	seat.y = spot.y + 0.42
 	exit()                                           # control / camera back to the walker
 	player.interaction.busy = true
 	player.collision_layer = 0

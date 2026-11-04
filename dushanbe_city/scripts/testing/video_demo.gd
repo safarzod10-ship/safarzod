@@ -33,81 +33,66 @@ func _sec(s: float) -> void:
 
 
 func _player() -> void:
+	## stage 4: idle -> walk 1 m/s -> stop -> side steps -> backwards -> turn on the spot -> run 4.5 m/s
+	## -> running jump -> run stop -> standing jump
 	var p: PlayerController = main.get("player")
 	p.teleport(Vector3(-58, 0.15 + CityWorld.city_relief(-58, 30), 30), PI * 0.5)
-	p.set_camera_angles(PI * 0.5 + 0.6, -0.15)
+	p.set_camera_angles(PI * 0.5 + 0.5, -0.18)
 	await _sec(2.0)                                        # idle (arms beside the body)
 	PlayerInput.scripted_move = Vector2(0, -1)
-	await _sec(4.0)                                        # walk 1 m/s
-	PlayerInput.scripted_run = true
-	await _sec(3.5)                                        # run 4 m/s
-	PlayerInput.scripted_run = false
+	await _sec(4.0)                                        # start + walk 1 m/s
 	PlayerInput.scripted_move = null
-	await _sec(1.5)
-	PlayerInput.queue_jump()                               # standing jump -> back to idle
-	await _sec(2.2)
+	await _sec(2.2)                                        # captured walk stop
+	PlayerInput.scripted_move = Vector2(1, 0)
+	await _sec(2.5)                                        # side steps right
+	PlayerInput.scripted_move = Vector2(-1, 0)
+	await _sec(2.5)                                        # side steps left
+	PlayerInput.scripted_move = Vector2(0, 1)
+	await _sec(2.5)                                        # walking backwards
+	PlayerInput.scripted_move = null
+	await _sec(1.0)
+	p.set_camera_angles(p.cam_yaw + PI, -0.18)             # camera turned around ...
+	PlayerInput.scripted_move = Vector2(0, -0.4)
+	await _sec(2.0)                                        # ... turn on the spot (stepping), then walk
 	PlayerInput.scripted_move = Vector2(0, -1)
 	PlayerInput.scripted_run = true
-	await _sec(1.6)
-	PlayerInput.queue_jump()                               # running jump -> keeps running
-	await _sec(2.0)
+	await _sec(3.0)                                        # start run -> 4.5 m/s
+	PlayerInput.queue_jump()                               # running jump: keeps running
+	await _sec(1.8)
 	PlayerInput.scripted_move = null
 	PlayerInput.scripted_run = false
-	await _sec(1.5)
+	await _sec(2.0)                                        # captured run stop
+	PlayerInput.queue_jump()                               # standing jump -> back to idle
+	await _sec(2.5)
 
 
 func _car() -> void:
+	## stage 4: walk up to the Prado, «СЕСТЬ» (door, sit down), drive, stop, get out, walk away
 	var s: CarSession = main.get("car_session")
 	var p: PlayerController = main.get("player")
 	var car: VehiclePrado = s.car
-	# open mainland asphalt road north of the city (the avenue's continuation): room for slides
-	car.place(Vector3(-41.3, 0.0, -425.9), 0.086)        # along the road (heading +4.9 deg)
+	car.place(Vector3(-49.0, 0.0, -12.0), 0.0)
 	await _sec(1.0)
-	p.teleport(car.driver_door_point(2.2), PI * 0.5)
-	p.set_camera_angles(-0.6, -0.2)
+	p.teleport(car.driver_door_point(4.0) + car.global_transform.basis.z * 2.0, PI * 0.5)
+	p.set_camera_angles(PI * 0.5 + 0.7, -0.2)
 	await _sec(1.0)
-	PlayerInput.scripted_move = Vector2(0, -1)
-	for i in 120:
-		await get_tree().physics_frame
-		if s.can_enter():
-			break
-	PlayerInput.scripted_move = null
-	s.enter()
+	await p.walk_to(car.driver_door_point(1.3), null, 5.0)
+	p.end_sequence()
+	await _sec(0.5)
+	await s.enter_animated()
 	await _sec(1.0)
-	VehicleInput.scripted = {"throttle": 1.0}
-	await _sec(4.0)                                        # accelerate north along the road
-	for k in 4:                                            # slalom: body roll, steering
-		VehicleInput.scripted = {"throttle": 0.6, "steer": 0.14 if k % 2 == 0 else -0.14}
-		await _sec(1.1)
-	VehicleInput.scripted = {"throttle": 0.5}
-	await _sec(1.0)
-	VehicleInput.scripted = {"throttle": 0.4, "steer": -0.9, "handbrake": true}   # handbrake slide
-	await _sec(1.2)
-	VehicleInput.scripted = {"throttle": 0.3, "steer": 0.4}                       # counter-steer, grip returns
-	await _sec(1.5)
+	VehicleInput.scripted = {"throttle": 0.6}
+	await _sec(5.0)
 	VehicleInput.scripted = {"brake": 1.0}
 	for i in 300:
 		await get_tree().physics_frame
 		if car.speed_kmh < 1.0:
 			break
-	VehicleInput.scripted = {}
-	await _sec(0.5)
-	# damage: three hits on the front-left (same path as a crash), orbit camera to show them
-	s.cam.orbit_mode = true
-	var b := car.global_transform.basis
-	car.damage_at(car.global_position + b * Vector3(-0.7, -0.05, -2.25), b * Vector3(0, 0, 1), 9.0)
-	await _sec(0.6)
-	car.damage_at(car.global_position + b * Vector3(-0.95, 0.05, -0.6), b * Vector3(1, 0, 0), 7.0)
-	await _sec(0.6)
-	car.damage_at(car.global_position + b * Vector3(-0.55, 0.4, -1.6), b * Vector3(0.3, -1, 0.4).normalized(), 6.0)
-	for i in 4 * Engine.physics_ticks_per_second:
-		VehicleInput.look_delta = Vector2(-4.0, 0.0)          # orbit around the car
-		await get_tree().physics_frame
-	car.repair()                                          # «ВОССТАНОВИТЬ»
-	for i in 3 * Engine.physics_ticks_per_second:
-		VehicleInput.look_delta = Vector2(-4.0, 0.0)
-		await get_tree().physics_frame
-	s.cam.orbit_mode = false
 	VehicleInput.scripted = null
-	s.exit()                                              # «ВЫЙТИ»
-	await _sec(2.0)
+	await _sec(0.5)
+	await s.exit_animated()
+	await _sec(0.5)
+	PlayerInput.scripted_move = Vector2(0, -1)
+	await _sec(3.0)
+	PlayerInput.scripted_move = null
+	await _sec(1.5)

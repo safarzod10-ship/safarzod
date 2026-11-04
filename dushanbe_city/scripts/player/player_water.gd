@@ -15,7 +15,7 @@ enum Mode { DRY, SHALLOW, MEDIUM, SWIM }
 const SEA_LEVEL := -1.6
 const SWIM_ENTER := 1.38      ## floor this far below the surface -> swim
 const SWIM_EXIT := 1.22       ## floor rises above this (feet touch) -> back to wading
-const SWIM_BODY := 1.30       ## feet this far below the surface while swimming (shoulders at the surface)
+const SWIM_BODY := 1.08       ## feet this far below the surface while swimming: back and head at the surface (body centre 8 cm under)
 
 var mode := Mode.DRY
 var depth := 0.0              ## water depth at the feet (m, 0 on land)
