@@ -1,0 +1,377 @@
+[
+  {
+    "name": "A: brand name shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "A: balance 500",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "A: two active auctions",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "A: bottom navigation with 4 tabs",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "A: greeting texts",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "A: two rounds Active with 20s endAt",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "A: ledger has +500 entry",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Nav: collection tab active",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Nav: rating tab active",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Nav: profile tab active",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Nav: home tab active",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Collection: empty state",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Collection: \"Смотреть аукционы\" returns home",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Rating: 10 demo rows",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Rating: user position shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Profile: Demo Player + 500",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Profile: every icon has drawable content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Settings: sound off + reduced motion saved",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Settings: persisted after reload",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "B: timer and participants visible",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "B: CTA text",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "B: button switches to \"Вы участвуете\" and disabled",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "B: user listed among participants",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "B: duplicate registration refused",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "F: timer continues after reload (not reset to 00:20)",
+    "ok": true,
+    "detail": "00:07 → 00:07"
+  },
+  {
+    "name": "F: endAt unchanged after reload",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "F: every participant shows 100/n %",
+    "ok": true,
+    "detail": "25% 25% 25% 25%"
+  },
+  {
+    "name": "C: urgent accent in last 5 s",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "C: registration closed, round Completed, statusLog Active→Drawing→Completed",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "C: result stored before animation (revealed=false while roulette runs)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "D: forced winner is the user",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "D: card transferred to user in model",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "C: roulette stops with pointer inside winner tile",
+    "ok": true,
+    "detail": "{\"p\":196.5,\"l\":148.199951171875,\"r\":244.800048828125,\"name\":\"Вы\"}"
+  },
+  {
+    "name": "D: \"Поздравляем!\" shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "D: \"Вы получили Golden Dragon #1111\"",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "D: card appears in collection",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Detail: date + history shown",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "D: reloads do not duplicate the card or re-draw",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "D: Wolf round also finished (simultaneous end)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Profile: 1 participation, 1 win, 1 card",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Edge: both rounds finished in the same tick",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "E: user lost both, no card in collection",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "E: \"Победитель — <name>\" shown",
+    "ok": true,
+    "detail": "Победитель — Alex"
+  },
+  {
+    "name": "Edge: second result opens after first is closed",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "E: collection still empty",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "E: participation history saved (2 entries)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "E: stats 2 participations / 0 wins",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "E: no result screen re-opens after everything was seen",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "H: balance 500, empty collection",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "H: both rounds recreated with new IDs and new endAt",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "H: history cleared",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "G: reopened after end → result screen restored",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "G: result finalized exactly once",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "G: card owner matches stored winner",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "G: reload does not re-draw",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Edge: round left in Drawing is completed once on next load",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Edge: reload at exactly endAt finalizes once and opens result",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Tabs: both tabs converge on the same winners",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Motion: prefers-reduced-motion shows result immediately (no roulette)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Fairness: secureRandomInt uniform for n=2,3,4 (±1%)",
+    "ok": true,
+    "detail": "{\"2\":[\"0.498\",\"0.502\"],\"3\":[\"0.333\",\"0.332\",\"0.335\"],\"4\":[\"0.250\",\"0.250\",\"0.250\",\"0.251\"]}"
+  },
+  {
+    "name": "Fairness: no Math.random in source",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "No external URLs / CDN in source",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Storage off: app still works and warns",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Storage off: join works in memory",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Corrupt data recovered: {not json",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Corrupt data recovered: {\"version\":99}",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Corrupt data recovered: {\"version\":1,\"rev\":0}",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Inconsistent ownership rejected",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Migration v0 → v1 keeps data",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Width 320px: no horizontal scroll, CTA/tabbar do not cover content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Width 360px: no horizontal scroll, CTA/tabbar do not cover content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Width 393px: no horizontal scroll, CTA/tabbar do not cover content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Width 412px: no horizontal scroll, CTA/tabbar do not cover content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "Width 430px: no horizontal scroll, CTA/tabbar do not cover content",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "No uncaught page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

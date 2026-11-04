@@ -1,0 +1,2151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#09090D">
+<meta name="color-scheme" content="dark">
+<meta name="format-detection" content="telephone=no">
+<title>CardArena</title>
+<link rel="icon" href="assets/cardarena-avatar.png">
+<style>
+/* =====================================================================
+   DESIGN TOKENS
+   Palette derived from the brief; accent kept for state, not decoration.
+   ===================================================================== */
+:root {
+  --bg: #09090D;
+  --bg-deep: #050507;
+  --surface: #15151D;
+  --surface-2: #1D1D28;
+  --surface-3: #252532;
+  --border: #292935;
+  --border-soft: #1F1F2A;
+  --accent: #A855F7;
+  --accent-active: #8B5CF6;
+  --accent-soft: rgba(168, 85, 247, 0.14);
+  --text: #F5F5F7;
+  --text-2: #9696A6;
+  --text-3: #6C6C7C;
+  --success: #34C98A;
+  --success-soft: rgba(52, 201, 138, 0.13);
+  --warning: #F2B84B;
+  --warning-soft: rgba(242, 184, 75, 0.13);
+  --danger: #EF6B6B;
+  --mythic: #E2B857;
+  --legendary: #B9A3FF;
+
+  --gutter: 20px;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --tabbar-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --font: system-ui, -apple-system, "Roboto", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Roboto Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--bg-deep); }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-deep);
+  color: var(--text);
+  font: 400 15px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
+button:disabled { cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3, p { margin: 0; }
+img, svg { display: block; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* App frame: phone-only layout, centred on wide screens */
+.app {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--bg);
+  overflow-x: clip;
+}
+@media (min-width: 481px) {
+  .app { box-shadow: 0 0 0 1px var(--border-soft); }
+}
+
+.page {
+  padding: calc(var(--safe-top) + 8px) calc(var(--gutter) + var(--safe-right)) calc(var(--tabbar-h) + var(--safe-bottom) + 32px) calc(var(--gutter) + var(--safe-left));
+}
+.page.sub { padding-bottom: calc(var(--safe-bottom) + 112px); }
+.section { margin-top: 28px; }
+.section:first-child { margin-top: 0; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.section-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.section-note { font-size: 12px; color: var(--text-3); }
+.muted { color: var(--text-2); }
+.small { font-size: 13px; }
+.tiny { font-size: 12px; }
+
+/* ---------- Top bar (home / tabs) ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: calc(56px + var(--safe-top));
+  padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) 0 calc(var(--gutter) + var(--safe-left));
+  margin: calc(-8px - var(--safe-top)) calc(-1 * (var(--gutter) + var(--safe-right))) 0 calc(-1 * (var(--gutter) + var(--safe-left)));
+  background: rgba(9, 9, 13, 0.94);
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s;
+}
+.topbar.scrolled { border-bottom-color: var(--border-soft); }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-logo { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; flex: none; background: var(--surface-2); }
+.brand-fallback {
+  width: 32px; height: 32px; border-radius: 9px; flex: none;
+  display: grid; place-items: center;
+  background: var(--surface-2); border: 1px dashed var(--border); color: var(--text-3);
+  font-size: 11px; font-weight: 600;
+}
+.brand-name { font-size: 17px; font-weight: 600; letter-spacing: -0.015em; white-space: nowrap; }
+.topbar-right { display: flex; align-items: center; gap: 10px; flex: none; }
+.balance {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 12px 0 8px; border-radius: 17px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  font-size: 14px; font-weight: 600;
+}
+.coin { width: 18px; height: 18px; flex: none; }
+.page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+
+/* ---------- Avatars ---------- */
+.avatar {
+  --size: 36px;
+  width: var(--size); height: var(--size); flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: calc(var(--size) * 0.36); font-weight: 600; letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--av, #3A3A4A);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  user-select: none;
+}
+.avatar.me { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent); }
+.avatar-btn { border-radius: 50%; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
+.avatar-stack { display: flex; }
+.avatar-stack .avatar { --size: 24px; margin-left: -7px; box-shadow: 0 0 0 2px var(--surface); font-size: 9px; }
+.avatar-stack .avatar:first-child { margin-left: 0; }
+
+/* ---------- Chips / badges ---------- */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 9px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+  background: var(--surface-2); color: var(--text-2);
+}
+.chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.live { color: var(--success); background: var(--success-soft); }
+.chip.drawing { color: var(--warning); background: var(--warning-soft); }
+.chip.done { color: var(--text-2); }
+.chip.cancelled { color: var(--danger); background: rgba(239,107,107,.12); }
+.chip.scheduled { color: var(--legendary); background: var(--accent-soft); }
+.tag-demo {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+  font-size: 11px; font-weight: 500; line-height: 16px; vertical-align: 1px;
+  color: var(--text-3); border: 1px solid var(--border);
+}
+.tag-me { color: var(--accent); border-color: rgba(168,85,247,.45); }
+.rarity { font-weight: 500; }
+.rarity.mythic { color: var(--mythic); }
+.rarity.legendary { color: var(--legendary); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 52px; padding: 0 22px; border-radius: 14px;
+  font-size: 16px; font-weight: 600; letter-spacing: -0.005em;
+  transition: transform .12s, background-color .2s, opacity .2s;
+  user-select: none;
+}
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn-block { width: 100%; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:active:not(:disabled) { background: var(--accent-active); }
+.btn-primary:disabled { background: var(--surface-2); color: var(--text-2); }
+.btn-primary.joined:disabled { background: var(--success-soft); color: var(--success); }
+.btn-secondary { background: var(--surface-2); color: var(--text); }
+.btn-ghost { color: var(--text-2); height: 44px; padding: 0 14px; font-weight: 500; font-size: 15px; }
+.btn-small { height: 40px; padding: 0 16px; border-radius: 11px; font-size: 14px; font-weight: 600; }
+.btn-danger { background: rgba(239,107,107,.12); color: var(--danger); }
+.btn svg { width: 18px; height: 18px; }
+
+.icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- Home ---------- */
+.greeting { margin-top: 18px; }
+.greeting .hello { font-size: 14px; color: var(--text-2); }
+.greeting h1 { margin-top: 2px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+
+.auction-list { display: grid; gap: 14px; margin-top: 18px; }
+.auction-tile {
+  position: relative;
+  display: grid; grid-template-columns: 92px 1fr; gap: 16px;
+  padding: 14px; border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  text-align: left; width: 100%;
+  transition: transform .15s var(--ease-out), border-color .2s;
+}
+.auction-tile:active { transform: scale(0.985); }
+.auction-tile.urgent { border-color: rgba(242,184,75,.28); }
+.auction-thumb { width: 92px; aspect-ratio: 5 / 7; border-radius: 9px; overflow: hidden; background: #000; }
+.auction-thumb svg { width: 100%; height: 100%; }
+.auction-info { display: flex; flex-direction: column; min-width: 0; }
+.auction-info .name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auction-info .meta { margin-top: 2px; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auction-info .status-row { margin-top: 10px; }
+.auction-info .live-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 12px; }
+.mini-timer { font-size: 20px; font-weight: 600; color: var(--text); transition: color .3s; }
+.mini-timer.urgent { color: var(--warning); }
+.people { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.people .icon { width: 17px; height: 17px; }
+.open-hint { display: inline-flex; align-items: center; gap: 2px; margin-top: 12px; height: 36px; padding: 0 12px 0 14px; border-radius: 10px; background: var(--surface-2); font-size: 14px; font-weight: 600; align-self: flex-start; }
+.open-hint .icon { width: 16px; height: 16px; }
+.winner-line { margin-top: auto; padding-top: 12px; font-size: 14px; color: var(--text-2); }
+.winner-line b { color: var(--text); font-weight: 600; }
+.winner-line.me b { color: var(--success); }
+.empty-note {
+  margin-top: 18px; padding: 18px; border-radius: var(--radius);
+  border: 1px dashed var(--border); color: var(--text-2); font-size: 14px;
+}
+.demo-footnote { margin-top: 28px; font-size: 12px; color: var(--text-3); line-height: 1.5; }
+
+/* ---------- Sub-screen header ---------- */
+.subbar {
+  position: sticky; top: 0; z-index: 20;
+  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px;
+  height: calc(56px + var(--safe-top));
+  padding: var(--safe-top) calc(var(--gutter) + var(--safe-right) - 6px) 0 calc(var(--gutter) + var(--safe-left) - 10px);
+  margin: calc(-8px - var(--safe-top)) calc(-1 * (var(--gutter) + var(--safe-right))) 0 calc(-1 * (var(--gutter) + var(--safe-left)));
+  background: rgba(9, 9, 13, 0.94);
+}
+.icon-btn { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--text); }
+.icon-btn:active { background: var(--surface); }
+.subbar-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Card stage (auction / detail) ---------- */
+.card-stage { display: flex; justify-content: center; margin-top: 14px; perspective: 900px; }
+.card-art {
+  position: relative;
+  width: min(62vw, 252px);
+  aspect-ratio: 5 / 7;
+  border-radius: 14px;
+  transform-style: preserve-3d;
+  will-change: transform;
+  box-shadow: 0 18px 40px -18px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,0.04);
+  touch-action: pan-y;
+}
+.card-art svg { width: 100%; height: 100%; border-radius: 14px; }
+.card-art .sheen {
+  position: absolute; inset: 0; border-radius: 14px; overflow: hidden; pointer-events: none;
+}
+.card-art .sheen::before {
+  content: ""; position: absolute; top: -10%; bottom: -10%; width: 45%; left: -60%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0) 20%, rgba(255,240,210,.16) 50%, rgba(255,255,255,0) 80%, transparent 100%);
+  transform: skewX(-12deg);
+  opacity: 0;
+}
+.card-art.enter { animation: cardIn .62s var(--ease-out) both; }
+.card-art.enter .sheen::before { animation: sheen 1.15s .35s ease-in-out both; }
+.card-art.mythic { box-shadow: 0 22px 46px -20px rgba(0,0,0,.95), 0 0 0 1px rgba(226,184,87,.18), 0 0 38px -12px rgba(168,85,247,.35); }
+.card-art.legendary { box-shadow: 0 22px 46px -20px rgba(0,0,0,.95), 0 0 0 1px rgba(185,163,255,.18), 0 0 38px -12px rgba(120,140,255,.32); }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(14px) scale(.86) rotateX(9deg); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sheen {
+  0%   { opacity: 0; left: -60%; }
+  20%  { opacity: 1; }
+  100% { opacity: 0; left: 120%; }
+}
+.fade-up { animation: fadeUp .45s var(--ease-out) both; }
+.fade-up.d1 { animation-delay: .18s; } .fade-up.d2 { animation-delay: .26s; } .fade-up.d3 { animation-delay: .34s; } .fade-up.d4 { animation-delay: .42s; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.card-facts {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  margin-top: 22px; padding: 14px 4px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border-soft);
+}
+.card-facts > div { text-align: center; padding: 0 6px; min-width: 0; }
+.card-facts > div + div { border-left: 1px solid var(--border); }
+.fact-label { font-size: 12px; color: var(--text-3); }
+.fact-value { margin-top: 2px; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.timer-block { margin-top: 16px; padding: 18px 20px 20px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border-soft); }
+.timer-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.timer-label { font-size: 13px; color: var(--text-2); }
+.timer-value { margin-top: 6px; font-size: 44px; line-height: 1.05; font-weight: 600; transition: color .35s; }
+.timer-block.urgent .timer-value { color: var(--warning); }
+.progress { margin-top: 14px; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left center; transition: background-color .35s; }
+.timer-block.urgent .progress > i { background: var(--warning); }
+.round-code { font-size: 12px; color: var(--text-3); }
+
+.participants { margin-top: 28px; }
+.p-list { margin-top: 4px; }
+.p-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+.p-row:last-child { border-bottom: 0; }
+.p-row .p-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-row .p-sub { font-size: 12px; color: var(--text-3); font-weight: 400; }
+.p-chance { font-size: 15px; font-weight: 600; color: var(--text-2); }
+.p-row.me .p-chance { color: var(--accent); }
+.p-row.enter { animation: fadeUp .4s var(--ease-out) both; }
+.p-row.winner .p-chance { color: var(--success); }
+
+.cta-bar {
+  position: fixed; z-index: 30; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  padding: 14px calc(var(--gutter) + var(--safe-right)) calc(14px + var(--safe-bottom)) calc(var(--gutter) + var(--safe-left));
+  background: linear-gradient(to top, var(--bg) 70%, rgba(9,9,13,0));
+}
+.cta-note { margin-top: 8px; text-align: center; font-size: 12px; color: var(--text-3); }
+
+/* ---------- Tab bar ---------- */
+.tabbar {
+  position: fixed; z-index: 40; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: rgba(13, 13, 18, 0.97);
+  border-top: 1px solid var(--border-soft);
+}
+.tabbar[hidden] { display: none; }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--text-3); font-size: 11px; font-weight: 500; min-height: 44px; transition: color .2s; }
+.tab .icon { width: 24px; height: 24px; }
+.tab.active { color: var(--accent); }
+.tab:active .icon { transform: scale(.92); }
+
+/* ---------- Collection ---------- */
+.collection-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 18px; }
+.coll-item { text-align: left; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border-soft); padding: 10px 10px 14px; transition: transform .15s var(--ease-out); }
+.coll-item:active { transform: scale(.98); }
+.coll-item .thumb { aspect-ratio: 5/7; border-radius: 10px; overflow: hidden; background: #000; }
+.coll-item .thumb svg { width: 100%; height: 100%; }
+.coll-item .name { margin-top: 10px; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+.coll-item .meta { font-size: 12px; color: var(--text-2); padding: 0 2px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 48px 12px 0; }
+.empty-state svg.illu { width: 148px; height: 120px; }
+.empty-state h2 { margin-top: 22px; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.empty-state p { margin-top: 8px; max-width: 280px; font-size: 14px; color: var(--text-2); }
+.empty-state .btn { margin-top: 24px; }
+
+.timeline { margin-top: 6px; padding-left: 4px; }
+.tl-item { position: relative; padding: 0 0 18px 22px; }
+.tl-item::before { content: ""; position: absolute; left: 4px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--surface-3); box-shadow: 0 0 0 3px var(--bg); }
+.tl-item::after { content: ""; position: absolute; left: 7px; top: 16px; bottom: 0; width: 1px; background: var(--border); }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item:last-child::after { display: none; }
+.tl-item.hl::before { background: var(--accent); }
+.tl-text { font-size: 14px; }
+.tl-time { font-size: 12px; color: var(--text-3); }
+
+/* ---------- Generic list surface ---------- */
+.list { border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border-soft); overflow: hidden; }
+.list-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; width: 100%; text-align: left; }
+.list-row + .list-row { border-top: 1px solid var(--border-soft); }
+.list-row .grow { flex: 1; min-width: 0; }
+.list-row .title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-row .sub { font-size: 12px; color: var(--text-3); }
+.list-row .end { font-size: 14px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.list-row .end.win { color: var(--success); }
+.list-row .end.plus { color: var(--success); }
+.list-row > .icon { color: var(--text-2); }
+button.list-row:active { background: var(--surface-2); }
+
+/* ---------- Rating ---------- */
+.my-rank { display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 16px; border-radius: var(--radius); background: var(--accent-soft); border: 1px solid rgba(168,85,247,.25); }
+.my-rank .pos { font-size: 26px; font-weight: 600; min-width: 40px; color: var(--accent); }
+.rank-row .pos { width: 26px; font-size: 14px; font-weight: 600; color: var(--text-3); text-align: center; }
+.rank-row .pos.top { color: var(--mythic); }
+.rank-row .avatar { --size: 32px; }
+.rank-row .count { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 50px; font-size: 15px; font-weight: 600; }
+.rank-row .count .icon { width: 16px; height: 16px; color: var(--text-3); }
+.rank-row.is-me { background: rgba(168,85,247,.07); }
+
+/* ---------- Profile ---------- */
+.profile-head { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
+.profile-head .avatar { --size: 64px; }
+.profile-head .name { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 22px; padding: 16px 4px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border-soft); }
+.stats > div { text-align: center; }
+.stats > div + div { border-left: 1px solid var(--border); }
+.stats .v { font-size: 22px; font-weight: 600; }
+.stats .l { font-size: 12px; color: var(--text-3); }
+.ach-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); color: var(--text-3); flex: none; }
+.ach-icon .icon { width: 19px; height: 19px; }
+.ach-icon.on { background: var(--accent-soft); color: var(--accent); }
+.switch { position: relative; width: 46px; height: 28px; border-radius: 14px; background: var(--surface-3); flex: none; transition: background-color .2s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #CFCFD8; transition: transform .2s var(--ease-out), background-color .2s; }
+.switch.on { background: var(--accent); }
+.switch.on::after { transform: translateX(18px); background: #fff; }
+.seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface-2); }
+.seg button { height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-2); min-width: 44px; }
+.seg button.on { background: var(--surface-3); color: var(--text); }
+
+/* ---------- Result / roulette (full screen) ---------- */
+.result {
+  position: fixed; inset: 0; z-index: 60;
+  width: 100%; max-width: 480px; margin: 0 auto;
+  background: var(--bg-deep);
+  overflow-y: auto; overflow-x: hidden;
+  padding: calc(var(--safe-top) + 12px) calc(var(--gutter) + var(--safe-right)) calc(var(--safe-bottom) + 24px) calc(var(--gutter) + var(--safe-left));
+  display: flex; flex-direction: column;
+}
+.result-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.result-top .label { font-size: 13px; color: var(--text-2); }
+.result-title { margin-top: 20px; text-align: center; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.result-sub { margin-top: 6px; text-align: center; font-size: 14px; color: var(--text-2); }
+.roulette {
+  position: relative; margin: 26px calc(-1 * (var(--gutter) + var(--safe-right))) 0 calc(-1 * (var(--gutter) + var(--safe-left)));
+  height: 142px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+}
+.roulette-strip { position: absolute; top: 14px; left: 0; display: flex; gap: 10px; will-change: transform; }
+.r-tile {
+  width: 92px; height: 114px; flex: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 14px; background: var(--surface); border: 1px solid var(--border-soft);
+  transition: border-color .3s, background-color .3s, transform .3s var(--ease-out);
+}
+.r-tile .avatar { --size: 44px; }
+.r-tile .r-name { font-size: 13px; font-weight: 500; max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-tile .r-tag { font-size: 11px; color: var(--text-3); margin-top: -6px; }
+.r-tile.is-winner { border-color: var(--accent); background: var(--surface-2); transform: scale(1.05); }
+.roulette-pointer { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; border-radius: 1px; }
+.roulette-pointer::before, .roulette-pointer::after { content: ""; position: absolute; left: 50%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; transform: translateX(-50%); }
+.roulette-pointer::before { top: 0; border-top: 9px solid var(--accent); }
+.roulette-pointer::after { bottom: 0; border-bottom: 9px solid var(--accent); }
+.roulette-note { margin-top: 12px; text-align: center; font-size: 12px; color: var(--text-3); }
+.reveal { display: flex; flex-direction: column; align-items: center; margin-top: 18px; }
+.reveal .card-art { width: min(48vw, 196px); }
+.reveal .result-title { margin-top: 22px; }
+.winner-chip { display: inline-flex; align-items: center; gap: 10px; margin-top: 16px; padding: 6px 14px 6px 6px; border-radius: 24px; background: var(--surface); border: 1px solid var(--border-soft); font-size: 14px; font-weight: 500; }
+.winner-chip .avatar { --size: 32px; }
+.result-actions { display: grid; gap: 10px; margin-top: auto; padding-top: 26px; }
+.result-spacer { flex: 1; min-height: 8px; }
+
+/* ---------- Sheet / dialog ---------- */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.6); animation: fadeIn .2s both; }
+.sheet {
+  position: fixed; z-index: 81; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  padding: 10px calc(var(--gutter) + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(var(--gutter) + var(--safe-left));
+  border-radius: 22px 22px 0 0; background: var(--surface); border-top: 1px solid var(--border);
+  animation: sheetIn .28s var(--ease-out) both;
+}
+.sheet .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--surface-3); margin: 0 auto 18px; }
+.sheet h3 { font-size: 18px; font-weight: 600; }
+.sheet p { margin-top: 8px; font-size: 14px; color: var(--text-2); }
+.sheet .actions { display: grid; gap: 10px; margin-top: 22px; }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes sheetIn { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
+
+/* ---------- Banner / toast / fatal ---------- */
+.banner { position: relative; z-index: 50; padding: calc(var(--safe-top) + 10px) var(--gutter) 10px; background: var(--warning-soft); color: var(--warning); font-size: 13px; text-align: center; }
+.banner[hidden] { display: none; }
+.toast {
+  position: fixed; z-index: 90; left: 50%; bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
+  transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+  max-width: min(440px, calc(100% - 40px));
+  padding: 12px 16px; border-radius: 12px; background: var(--surface-3); color: var(--text);
+  font-size: 14px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.8);
+  transition: opacity .25s, transform .25s var(--ease-out);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.above-cta { bottom: calc(var(--safe-bottom) + 120px); }
+.fatal { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 32px 24px; gap: 10px; }
+.fatal h1 { font-size: 20px; font-weight: 600; }
+.fatal p { color: var(--text-2); font-size: 15px; }
+
+/* Reduced motion: either the OS preference or the in-app setting */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
+}
+@media (max-width: 340px) {
+  :root { --gutter: 16px; }
+  .auction-tile { grid-template-columns: 80px 1fr; gap: 12px; padding: 12px; }
+  .auction-thumb { width: 80px; }
+  .timer-value { font-size: 40px; }
+  .brand-name { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app" class="app">
+  <div id="banner" class="banner" role="status" hidden></div>
+  <main id="screen" aria-live="polite"></main>
+  <nav id="tabbar" class="tabbar" aria-label="Основная навигация" hidden></nav>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+<noscript><div class="fatal"><h1>Нужен JavaScript</h1><p>CardArena работает только с включённым JavaScript.</p></div></noscript>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   CONFIG
+   ===================================================================== */
+const CONFIG = Object.freeze({
+  APP_VERSION: '0.1.0',
+  STORAGE_KEY: 'cardarena.state',
+  SCHEMA_VERSION: 1,
+  ROUND_MS: 20000,
+  START_BALANCE: 500,
+  MIN_PARTICIPANTS: 2,
+  URGENT_MS: 5000,
+  ROULETTE_MS: 5200,
+  USER_ID: 'me',
+  LOGO_SRC: 'assets/cardarena-avatar.png',
+});
+
+/* =====================================================================
+   UTILS
+   ===================================================================== */
+const Utils = {
+  now: () => Date.now(),
+
+  /**
+   * Uniform integer in [0, max) from crypto.getRandomValues.
+   * Uses rejection sampling so that the modulo does not bias low values:
+   * values >= the largest multiple of `max` below 2^32 are discarded.
+   */
+  secureRandomInt(max) {
+    if (!Number.isInteger(max) || max <= 0 || max > 0x100000000) throw new RangeError('secureRandomInt: bad max');
+    const limit = Math.floor(0x100000000 / max) * max;
+    const buf = new Uint32Array(1);
+    for (;;) {
+      crypto.getRandomValues(buf);
+      if (buf[0] < limit) return buf[0] % max;
+    }
+  },
+
+  /** Random float in [0, 1) from crypto, used for cosmetic jitter only. */
+  secureRandomFloat() {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] / 0x100000000;
+  },
+
+  secureId(prefix) {
+    const bytes = new Uint8Array(3);
+    crypto.getRandomValues(bytes);
+    return prefix + '-' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  },
+
+  /** mm:ss, rounding up so the display reaches 00:00 exactly at endAt. */
+  formatTimer(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(total / 60), s = total % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  },
+
+  formatDateTime(ts) {
+    try {
+      return new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) { return new Date(ts).toISOString(); }
+  },
+
+  formatPercent(value) {
+    const rounded = Math.round(value * 10) / 10;
+    return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace('.', ',')) + '%';
+  },
+
+  plural(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  },
+
+  deepClone: (obj) => JSON.parse(JSON.stringify(obj)),
+};
+
+/* =====================================================================
+   DOM HELPERS
+   All dynamic values go through textContent / setAttribute.
+   `trustedMarkup` is used ONLY for SVG constants authored in this file.
+   ===================================================================== */
+function h(tag, props, ...children) {
+  const el = document.createElement(tag);
+  if (props) {
+    for (const key of Object.keys(props)) {
+      const value = props[key];
+      if (value === null || value === undefined || value === false) continue;
+      if (key === 'class') el.className = value;
+      else if (key === 'text') el.textContent = value;
+      else if (key === 'style') el.setAttribute('style', value);
+      else if (key === 'dataset') Object.assign(el.dataset, value);
+      else if (key.startsWith('on') && typeof value === 'function') el.addEventListener(key.slice(2).toLowerCase(), value);
+      else el.setAttribute(key, value === true ? '' : String(value));
+    }
+  }
+  appendChildren(el, children);
+  return el;
+}
+function appendChildren(parent, children) {
+  for (const child of children) {
+    if (child === null || child === undefined || child === false) continue;
+    if (Array.isArray(child)) appendChildren(parent, child);
+    else if (child instanceof Node) parent.appendChild(child);
+    else parent.appendChild(document.createTextNode(String(child)));
+  }
+}
+/** Parses an SVG string that is a constant authored in this file (never user data). */
+function trustedSvg(markup) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = markup.trim();
+  return tpl.content.firstElementChild;
+}
+
+/* =====================================================================
+   ICONS — monochrome 24px line icons drawn for CardArena
+   ===================================================================== */
+const ICON_PATHS = {
+  home: '<path d="M4 10.4 12 4l8 6.4V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"/>',
+  cards: '<rect x="3.5" y="6" width="11" height="14.5" rx="2"/><path d="M17.2 7.3l2.4.8a1.2 1.2 0 0 1 .7 1.5l-3.5 10.2"/><path d="M14.5 3.5h-8"/>',
+  trophy: '<path d="M8 4h8v5.5a4 4 0 0 1-8 0z"/><path d="M8 6H5.2a3 3 0 0 0 3 4.3M16 6h2.8a3 3 0 0 1-3 4.3M12 13.5V17M8.5 20.5h7M9.5 17h5v3.5h-5z"/>',
+  user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.8 20c1.1-3.5 3.8-5.4 7.2-5.4s6.1 1.9 7.2 5.4"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  chevron: '<path d="M9.5 6l6 6-6 6"/>',
+  users: '<circle cx="9" cy="8.8" r="3.2"/><path d="M3.6 19c.9-3 3-4.6 5.4-4.6s4.5 1.6 5.4 4.6"/><path d="M15.4 5.9a3 3 0 0 1 0 5.8M17.4 14.6c1.5.6 2.5 2 3 4.4"/>',
+  clock: '<circle cx="12" cy="12" r="8.3"/><path d="M12 7.8v4.6l3 1.8"/>',
+  sound: '<path d="M4.5 9.5h3l4.5-3.8v12.6l-4.5-3.8h-3z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.7 7.7 0 0 1 0 10.8"/>',
+  motion: '<path d="M3.5 12h4l2-5 4 10 2-5h5"/>',
+  reset: '<path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.3"/><path d="M4.6 4.6v3.8h3.8"/>',
+  info: '<circle cx="12" cy="12" r="8.3"/><path d="M12 11v5.3M12 7.9v.3"/>',
+  check: '<path d="M5 12.5l4.3 4.3L19 7.3"/>',
+  spark: '<path d="M12 3.8l1.9 5.3 5.3 1.9-5.3 1.9L12 18.2l-1.9-5.3L4.8 11l5.3-1.9z"/>',
+  crown: '<path d="M4 17.5 3.5 8l4.8 3.6L12 5.5l3.7 6.1L20.5 8 20 17.5z"/><path d="M5 20.5h14"/>',
+  layers: '<path d="M12 4 3.5 8.5 12 13l8.5-4.5z"/><path d="M3.5 12.5 12 17l8.5-4.5M3.5 16.3 12 20.8l8.5-4.5"/>',
+  flag: '<path d="M5.5 20.5V4.5M5.5 5h11l-2 4 2 4h-11"/>',
+  lock: '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+  wallet: '<rect x="3.5" y="6.5" width="17" height="12.5" rx="2.5"/><path d="M16 12.8h1.5M3.5 9.5h17"/>',
+};
+function icon(name, extraClass) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'icon' + (extraClass ? ' ' + extraClass : ''));
+  svg.innerHTML = ICON_PATHS[name] || ''; // trusted constant
+  return svg;
+}
+function coinGlyph() {
+  return trustedSvg('<svg class="coin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="#F2B84B"/><circle cx="10" cy="10" r="5.6" fill="none" stroke="#9A6A16" stroke-width="1.4"/><path d="M10 6.9v6.2" stroke="#9A6A16" stroke-width="1.4" stroke-linecap="round"/></svg>');
+}
+
+/* =====================================================================
+   CARD ART — original SVG compositions
+   Each instance gets a unique suffix so gradient ids never collide when
+   the same card is rendered several times on one page.
+   ===================================================================== */
+const CardArt = (() => {
+  let seq = 0;
+
+  function sunburst(cx, cy, r1, r2, count, color, opacity) {
+    let d = '';
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const rr2 = i % 2 === 0 ? r2 : r2 - 4;
+      d += 'M' + (cx + Math.cos(a) * r1).toFixed(1) + ' ' + (cy + Math.sin(a) * r1).toFixed(1) +
+           'L' + (cx + Math.cos(a) * rr2).toFixed(1) + ' ' + (cy + Math.sin(a) * rr2).toFixed(1);
+    }
+    return '<path d="' + d + '" stroke="' + color + '" stroke-opacity="' + opacity + '" stroke-width=".8"/>';
+  }
+
+  /* ---------- #1111 Golden Dragon: art-deco medallion, rearing dragon ---------- */
+  function goldenDragon(u) {
+    const corner = '<path d="M14 44V14h30M20 36V20h16M14 54v6M54 14h6"/><path d="M26 26l5 0 0 5z" fill="url(#gdG' + u + ')" stroke="none"/>';
+    return '<svg viewBox="0 0 250 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Golden Dragon">' +
+    '<defs>' +
+      '<linearGradient id="gdG' + u + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F8E9B6"/><stop offset=".42" stop-color="#DDB157"/><stop offset="1" stop-color="#8A6222"/></linearGradient>' +
+      '<linearGradient id="gdB' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ECCB7C"/><stop offset=".55" stop-color="#C9973E"/><stop offset="1" stop-color="#7D581D"/></linearGradient>' +
+      '<linearGradient id="gdW' + u + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C9A04C"/><stop offset="1" stop-color="#5E431A"/></linearGradient>' +
+      '<radialGradient id="gdGlow' + u + '" cx=".5" cy=".47" r=".55"><stop offset="0" stop-color="#5A3790" stop-opacity=".62"/><stop offset=".55" stop-color="#2A1A44" stop-opacity=".38"/><stop offset="1" stop-color="#0A090E" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="gdBg' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141118"/><stop offset="1" stop-color="#060608"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="250" height="350" fill="url(#gdBg' + u + ')"/>' +
+    '<rect width="250" height="350" fill="url(#gdGlow' + u + ')"/>' +
+    // frames
+    '<rect x="7.5" y="7.5" width="235" height="335" rx="9" fill="none" stroke="url(#gdG' + u + ')" stroke-width="1.6"/>' +
+    '<rect x="14" y="14" width="222" height="322" rx="5" fill="none" stroke="#DDB157" stroke-opacity=".28" stroke-width=".8"/>' +
+    '<g fill="none" stroke="url(#gdG' + u + ')" stroke-width="1.3">' + corner +
+      '<g transform="translate(250 0) scale(-1 1)">' + corner + '</g>' +
+      '<g transform="translate(0 350) scale(1 -1)">' + corner + '</g>' +
+      '<g transform="translate(250 350) scale(-1 -1)">' + corner + '</g>' +
+    '</g>' +
+    // title
+    '<text x="125" y="47" text-anchor="middle" font-family="Georgia, \'Times New Roman\', serif" font-size="14" letter-spacing="3.6" fill="url(#gdG' + u + ')">GOLDEN DRAGON</text>' +
+    '<path d="M70 58h44M136 58h44" stroke="#DDB157" stroke-opacity=".45" stroke-width=".8"/><path d="M125 54.5l3.5 3.5-3.5 3.5-3.5-3.5z" fill="url(#gdG' + u + ')"/>' +
+    // medallion
+    '<circle cx="125" cy="170" r="88" fill="#0B0A10" fill-opacity=".55"/>' +
+    sunburst(125, 170, 90, 100, 48, '#DDB157', .45) +
+    '<circle cx="125" cy="170" r="88" fill="none" stroke="url(#gdG' + u + ')" stroke-width="1.4"/>' +
+    '<circle cx="125" cy="170" r="80" fill="none" stroke="#DDB157" stroke-opacity=".3" stroke-width=".7" stroke-dasharray="1.5 3.5"/>' +
+    // dragon: back wing
+    '<path d="M134 150 L148 72 Q158 76 174 64 Q172 80 190 88 Q176 98 188 114 Q172 118 172 134 Q160 138 158 150 Z" fill="#3B2A12" stroke="#8A6222" stroke-width=".8"/>' +
+    '<path d="M148 72 L174 64 M148 72 L190 88 M148 72 L188 114 M148 72 L172 134" stroke="#8A6222" stroke-width=".9" fill="none"/>' +
+    // front wing membrane + bones
+    '<path d="M128 156 L164 86 L210 104 Q194 112 206 130 Q190 134 196 152 Q180 152 176 166 Q156 158 128 156 Z" fill="url(#gdW' + u + ')"/>' +
+    '<path d="M164 86 L210 104 M164 86 L206 130 M164 86 L196 152 M164 86 L176 166 M128 156 L164 86" stroke="#F3D892" stroke-opacity=".75" stroke-width="1.3" fill="none" stroke-linecap="round"/>' +
+    '<path d="M164 86 l-3 -8 l7 4z" fill="url(#gdG' + u + ')"/>' +
+    // tail (tapering in three strokes)
+    '<g fill="none" stroke="url(#gdB' + u + ')" stroke-linecap="round">' +
+      '<path d="M120 214 C104 232 108 250 134 252" stroke-width="12"/>' +
+      '<path d="M134 252 C156 253 172 242 174 228" stroke-width="7"/>' +
+      '<path d="M174 228 C175 220 170 214 164 212" stroke-width="3.2"/>' +
+    '</g>' +
+    '<path d="M164 212 l-9 -6 l12 -3 z" fill="url(#gdG' + u + ')"/>' +
+    // hind leg
+    '<path d="M126 206 L140 226 L152 228" fill="none" stroke="url(#gdB' + u + ')" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M150 224 l8 2 M151 229 l7 4" stroke="#F3D892" stroke-width="1.6" stroke-linecap="round"/>' +
+    // body + neck
+    '<path d="M118 164 C130 182 134 198 120 216" fill="none" stroke="url(#gdB' + u + ')" stroke-width="19" stroke-linecap="round"/>' +
+    '<path d="M118 166 C110 142 100 128 84 122" fill="none" stroke="url(#gdB' + u + ')" stroke-width="12" stroke-linecap="round"/>' +
+    // belly plates
+    '<path d="M112 172 C121 186 123 198 113 211" fill="none" stroke="#5E431A" stroke-width="5" stroke-linecap="round" stroke-dasharray="2.2 2.4"/>' +
+    // dorsal spikes
+    '<g fill="url(#gdG' + u + ')"><path d="M114 147 l9 -5 l-2 9z"/><path d="M107 137 l8 -6 l-1 9z"/><path d="M98 129 l7 -7 l0 9z"/><path d="M127 170 l9 -1 l-5 7z"/><path d="M130 186 l9 1 l-6 6z"/></g>' +
+    // front leg
+    '<path d="M114 182 L100 196 L90 195" fill="none" stroke="url(#gdB' + u + ')" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M91 192 l-6 -2 M90 197 l-6 2" stroke="#F3D892" stroke-width="1.5" stroke-linecap="round"/>' +
+    // head
+    '<path d="M92 112 L72 114 L55 122 L60 127 L72 127 L64 133 L79 134 L95 128 Z" fill="url(#gdB' + u + ')"/>' +
+    '<path d="M60 127 L72 127 L64 133" fill="none" stroke="#5E431A" stroke-width="1"/>' +
+    '<path d="M87 113 L98 95 M92 115 L107 102" stroke="url(#gdG' + u + ')" stroke-width="2.6" stroke-linecap="round"/>' +
+    '<path d="M76 119.5 l6 -1.4 l-1 2.4z" fill="#A970FF"/>' +
+    '<circle cx="59" cy="123" r=".9" fill="#2A1C0C"/>' +
+    // footer
+    '<path d="M30 284h190" stroke="#DDB157" stroke-opacity=".35" stroke-width=".8"/>' +
+    '<text x="32" y="306" font-family="Georgia, serif" font-size="10" letter-spacing="2.4" fill="#DDB157">MYTHIC</text>' +
+    '<text x="218" y="306" text-anchor="end" font-family="Georgia, serif" font-size="10" letter-spacing="1.5" fill="#DDB157">1 / 1</text>' +
+    '<rect x="100" y="294" width="50" height="17" rx="3" fill="none" stroke="url(#gdG' + u + ')" stroke-width=".9"/>' +
+    '<text x="125" y="306.5" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.2" fill="#F3D892">#1111</text>' +
+    '<text x="125" y="326" text-anchor="middle" font-family="Georgia, serif" font-size="7" letter-spacing="2.6" fill="#8A6222">CARDARENA · SERIES I</text>' +
+    '</svg>';
+  }
+
+  /* ---------- #2026 Shadow Wolf: gothic arch, moon, faceted wolf head ---------- */
+  function shadowWolf(u) {
+    // Faceted (low-poly) wolf head: [points, fill]
+    const facets = [
+      ['80,104 104,146 74,160', '#4C587B'], ['84,116 100,145 86,152', '#232944'],
+      ['170,104 146,146 176,160', '#435073'], ['166,116 150,145 164,152', '#232944'],
+      ['104,146 125,138 106,170', '#A7B2CE'], ['125,138 146,146 144,170', '#8C98B8'],
+      ['125,138 106,170 125,190', '#C6CEE2'], ['125,138 144,170 125,190', '#B0BAD4'],
+      ['74,160 104,146 106,170', '#6D7A9E'], ['176,160 146,146 144,170', '#5E6B8F'],
+      ['74,160 106,170 64,200', '#56628A'], ['176,160 144,170 186,200', '#4A5680'],
+      ['106,170 125,190 106,222', '#97A2C2'], ['144,170 125,190 144,222', '#828EB0'],
+      ['106,222 125,190 144,222', '#D3D9E9'], ['106,222 144,222 125,236', '#E2E7F2'],
+      ['64,200 106,170 106,222', '#47527A'], ['186,200 144,170 144,222', '#3E4970'],
+      ['64,200 106,222 90,238', '#3A4468'], ['186,200 144,222 160,238', '#343E62'],
+      ['106,222 125,236 90,238', '#7480A4'], ['144,222 125,236 160,238', '#66729A'],
+      ['90,238 125,236 125,262', '#55618A'], ['160,238 125,236 125,262', '#4B5781'],
+      ['64,200 90,238 66,252', '#2E3758'], ['66,252 90,238 125,262', '#283152'],
+      ['186,200 160,238 184,252', '#2A3354'], ['184,252 160,238 125,262', '#242D4C'],
+      ['64,200 66,252 52,226', '#1E2541'], ['186,200 184,252 198,226', '#1B2240'],
+    ];
+    const head = facets.map(f => '<polygon points="' + f[0] + '" fill="' + f[1] + '"/>').join('');
+    const stars = [[38,70,1.1],[62,52,.8],[196,58,1],[214,84,.7],[46,112,.7],[206,128,.9],[30,150,.6],[222,170,.7],[176,40,.6],[86,40,.7]]
+      .map(s => '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="' + s[2] + '" fill="#D7DEF5" fill-opacity=".8"/>').join('');
+    return '<svg viewBox="0 0 250 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shadow Wolf">' +
+    '<defs>' +
+      '<linearGradient id="swBg' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121A33"/><stop offset=".6" stop-color="#0B1022"/><stop offset="1" stop-color="#05070F"/></linearGradient>' +
+      '<linearGradient id="swS' + u + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EEF1FA"/><stop offset=".5" stop-color="#A9B3CF"/><stop offset="1" stop-color="#5F6888"/></linearGradient>' +
+      '<radialGradient id="swMoon' + u + '" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#E9E6FF"/><stop offset=".7" stop-color="#B9B4E8"/><stop offset="1" stop-color="#8E86CF"/></radialGradient>' +
+      '<radialGradient id="swHalo' + u + '" cx=".5" cy=".5" r=".5"><stop offset=".5" stop-color="#7E6BE0" stop-opacity=".28"/><stop offset="1" stop-color="#7E6BE0" stop-opacity="0"/></radialGradient>' +
+    '</defs>' +
+    '<rect width="250" height="350" fill="url(#swBg' + u + ')"/>' +
+    stars +
+    // moon with halo rings
+    '<circle cx="125" cy="118" r="86" fill="url(#swHalo' + u + ')"/>' +
+    '<circle cx="125" cy="118" r="64" fill="none" stroke="#B9B4E8" stroke-opacity=".12" stroke-width=".8"/>' +
+    '<circle cx="125" cy="118" r="54" fill="url(#swMoon' + u + ')" fill-opacity=".92"/>' +
+    '<circle cx="108" cy="102" r="7" fill="#9E97D6" fill-opacity=".35"/><circle cx="142" cy="96" r="4" fill="#9E97D6" fill-opacity=".3"/><circle cx="148" cy="132" r="9" fill="#9E97D6" fill-opacity=".22"/>' +
+    // mountains
+    '<path d="M0 262 L40 226 L66 246 L104 206 L136 240 L170 214 L210 248 L250 222 V350 H0 Z" fill="#151C36"/>' +
+    '<path d="M0 286 L30 266 L58 280 L92 256 L128 284 L166 262 L204 284 L250 266 V350 H0 Z" fill="#0D1328"/>' +
+    '<g fill="#080C1A"><path d="M26 300 l8 -26 l8 26z"/><path d="M38 302 l6 -18 l6 18z"/><path d="M200 300 l8 -28 l8 28z"/><path d="M214 302 l6 -18 l6 18z"/></g>' +
+    // wolf head
+    '<g transform="translate(0 8)" stroke="#0B1022" stroke-width=".5" stroke-opacity=".55" stroke-linejoin="round">' + head +
+      '<polygon points="117,231 133,231 125,241" fill="#0E1326" stroke="none"/>' +
+      '<polygon points="99,176 115,180 102,185" fill="#B794FF" stroke="none"/><polygon points="151,176 135,180 148,185" fill="#B794FF" stroke="none"/>' +
+      '<circle cx="104" cy="180" r="1" fill="#F4EEFF" stroke="none"/><circle cx="146" cy="180" r="1" fill="#F4EEFF" stroke="none"/>' +
+    '</g>' +
+    // gothic arch frame
+    '<path d="M12 338 V100 Q12 44 125 14 Q238 44 238 100 V338 Z" fill="none" stroke="url(#swS' + u + ')" stroke-width="1.5"/>' +
+    '<path d="M19 331 V102 Q19 52 125 22 Q231 52 231 102 V331 Z" fill="none" stroke="#A9B3CF" stroke-opacity=".25" stroke-width=".7"/>' +
+    '<path d="M125 8 l5 6 -5 6 -5 -6z" fill="url(#swS' + u + ')"/>' +
+    // footer plate
+    '<rect x="19" y="290" width="212" height="41" fill="#070A16" fill-opacity=".86"/>' +
+    '<path d="M19 290 H231" stroke="url(#swS' + u + ')" stroke-width=".9"/>' +
+    '<text x="125" y="308" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12.5" font-weight="600" letter-spacing="4.2" fill="url(#swS' + u + ')">SHADOW WOLF</text>' +
+    '<text x="30" y="324" font-family="system-ui, sans-serif" font-size="8" letter-spacing="2" fill="#9C8CF0">LEGENDARY</text>' +
+    '<text x="220" y="324" text-anchor="end" font-family="system-ui, sans-serif" font-size="8" letter-spacing="1.4" fill="#A9B3CF">1 / 1</text>' +
+    '<path d="M110 318 l5 -5 h20 l5 5 l-5 5 h-20z" fill="none" stroke="#A9B3CF" stroke-opacity=".7" stroke-width=".8"/>' +
+    '<text x="125" y="321" text-anchor="middle" font-family="ui-monospace, monospace" font-size="7.5" letter-spacing="1" fill="#E3E7F4">#2026</text>' +
+    '</svg>';
+  }
+
+  const builders = { '1111': goldenDragon, '2026': shadowWolf };
+
+  return {
+    /** Returns a fresh <svg> element for the given card id. */
+    render(cardId) {
+      const build = builders[cardId];
+      if (!build) return h('div');
+      seq += 1;
+      return trustedSvg(build('_' + seq));
+    },
+  };
+})();
+
+/* =====================================================================
+   STORAGE MANAGER — the only place that touches localStorage.
+   Falls back to in-memory storage when localStorage is unavailable.
+   ===================================================================== */
+const StorageManager = (() => {
+  const memory = new Map();
+  let persistent = false;
+  try {
+    const probe = '__cardarena_probe__';
+    window.localStorage.setItem(probe, '1');
+    window.localStorage.removeItem(probe);
+    persistent = true;
+  } catch (e) { persistent = false; }
+
+  return {
+    isPersistent: () => persistent,
+    read(key) {
+      if (persistent) {
+        try { return window.localStorage.getItem(key); } catch (e) { persistent = false; }
+      }
+      return memory.has(key) ? memory.get(key) : null;
+    },
+    write(key, value) {
+      memory.set(key, value);
+      if (!persistent) return false;
+      try { window.localStorage.setItem(key, value); return true; }
+      catch (e) { persistent = false; return false; }
+    },
+    remove(key) {
+      memory.delete(key);
+      if (persistent) { try { window.localStorage.removeItem(key); } catch (e) { /* ignore */ } }
+    },
+  };
+})();
+
+/* =====================================================================
+   CARD MANAGER — catalog and ownership rules (each card exists once)
+   ===================================================================== */
+const CardManager = (() => {
+  const CATALOG = Object.freeze({
+    '1111': Object.freeze({ id: '1111', name: 'Golden Dragon', rarity: 'Mythic', rarityKey: 'mythic', edition: '1/1', theme: 'Золотой дракон' }),
+    '2026': Object.freeze({ id: '2026', name: 'Shadow Wolf', rarity: 'Legendary', rarityKey: 'legendary', edition: '1/1', theme: 'Теневой волк' }),
+  });
+
+  return {
+    CATALOG,
+    ids: () => Object.keys(CATALOG),
+    get: (id) => CATALOG[id] || null,
+
+    createInitialOwnership() {
+      const cards = {};
+      for (const id of Object.keys(CATALOG)) cards[id] = { id, ownerId: null, acquiredAt: null, roundId: null, history: [] };
+      return cards;
+    },
+
+    /**
+     * Assigns a unique card to its round winner. Idempotent for the same
+     * round; refuses to re-assign a card that already has an owner, which
+     * is what keeps a 1/1 card from ever being granted twice.
+     */
+    transfer(state, cardId, winner, round, at) {
+      const card = state.cards[cardId];
+      if (!card) return false;
+      if (card.ownerId) return card.roundId === round.id && card.ownerId === winner.id;
+      card.ownerId = winner.id;
+      card.acquiredAt = at;
+      card.roundId = round.id;
+      card.history.push({ at, text: 'Передана победителю раунда ' + round.id + ': ' + (winner.id === CONFIG.USER_ID ? 'вам' : winner.name) });
+      return true;
+    },
+
+    ownedBy(state, ownerId) {
+      return Object.values(state.cards).filter(c => c.ownerId === ownerId).sort((a, b) => (b.acquiredAt || 0) - (a.acquiredAt || 0));
+    },
+
+    countOwnedBy(state, ownerId) {
+      return Object.values(state.cards).filter(c => c.ownerId === ownerId).length;
+    },
+  };
+})();
+
+/* =====================================================================
+   DEMO PEOPLE — clearly fictional participants
+   ===================================================================== */
+const People = (() => {
+  const BOTS = {
+    'bot:alex':   { id: 'bot:alex', name: 'Alex', color: '#3F6FD8' },
+    'bot:timur':  { id: 'bot:timur', name: 'Timur', color: '#C8643F' },
+    'bot:samir':  { id: 'bot:samir', name: 'Samir', color: '#2E9E83' },
+    'bot:mira':   { id: 'bot:mira', name: 'Mira', color: '#B4508A' },
+    'bot:daler':  { id: 'bot:daler', name: 'Daler', color: '#5A62C9' },
+    'bot:lina':   { id: 'bot:lina', name: 'Lina', color: '#9A7B2E' },
+    'bot:oleg':   { id: 'bot:oleg', name: 'Oleg', color: '#4F8A3C' },
+    'bot:kira':   { id: 'bot:kira', name: 'Kira', color: '#8B4CC2' },
+    'bot:nika':   { id: 'bot:nika', name: 'Nika', color: '#2F8FB0' },
+    'bot:rustam': { id: 'bot:rustam', name: 'Rustam', color: '#A9473F' },
+  };
+  // Base card counts for the demo leaderboard (fictional). Won demo cards add on top.
+  const LEADERBOARD_BASE = [
+    ['bot:mira', 14], ['bot:daler', 12], ['bot:lina', 11], ['bot:oleg', 9], ['bot:timur', 7],
+    ['bot:kira', 6], ['bot:alex', 5], ['bot:nika', 4], ['bot:samir', 3], ['bot:rustam', 2],
+  ];
+  return {
+    BOTS, LEADERBOARD_BASE,
+    get(id) { return BOTS[id] || null; },
+    displayName(state, id) {
+      if (id === CONFIG.USER_ID) return state.profile.name;
+      return BOTS[id] ? BOTS[id].name : 'Участник';
+    },
+    avatar(state, id, size) {
+      const isMe = id === CONFIG.USER_ID;
+      const bot = BOTS[id];
+      const name = isMe ? state.profile.name : (bot ? bot.name : '?');
+      const initials = isMe ? 'DP' : name.slice(0, 1).toUpperCase();
+      const el = h('div', { class: 'avatar' + (isMe ? ' me' : ''), 'aria-hidden': 'true', text: initials });
+      el.style.setProperty('--av', isMe ? '#6D3BC4' : (bot ? bot.color : '#3A3A4A'));
+      if (size) el.style.setProperty('--size', size + 'px');
+      return el;
+    },
+  };
+})();
+
+/* =====================================================================
+   AUCTION MANAGER — round lifecycle and the draw
+   Statuses: Scheduled → Active → Drawing → Completed
+             Scheduled/Active/Drawing → Cancelled
+   ===================================================================== */
+const AuctionManager = (() => {
+  const STATUS = Object.freeze({ SCHEDULED: 'Scheduled', ACTIVE: 'Active', DRAWING: 'Drawing', COMPLETED: 'Completed', CANCELLED: 'Cancelled' });
+  const TRANSITIONS = Object.freeze({
+    Scheduled: ['Active', 'Cancelled'],
+    Active: ['Drawing', 'Cancelled'],
+    Drawing: ['Completed', 'Cancelled'],
+    Completed: [],
+    Cancelled: [],
+  });
+  // Demo opponents and the offset (ms after round start) at which each joins.
+  const DEMO_LINEUPS = {
+    '1111': [['bot:alex', 0], ['bot:timur', 4000], ['bot:samir', 9000]],
+    '2026': [['bot:samir', 0], ['bot:timur', 6000]],
+  };
+
+  function transition(round, to, at) {
+    if (!TRANSITIONS[round.status] || TRANSITIONS[round.status].indexOf(to) === -1) {
+      throw new Error('Illegal round transition ' + round.status + ' → ' + to + ' (' + round.id + ')');
+    }
+    round.status = to;
+    round.statusLog.push({ status: to, at });
+  }
+
+  function buildRound(cardId, startAt) {
+    const lineup = DEMO_LINEUPS[cardId] || [];
+    return {
+      id: Utils.secureId('R'),
+      cardId,
+      status: STATUS.ACTIVE,
+      statusLog: [{ status: STATUS.ACTIVE, at: startAt }],
+      createdAt: startAt,
+      startAt,
+      endAt: startAt + CONFIG.ROUND_MS, // absolute end time: survives reloads
+      closedAt: null,
+      participants: lineup.map(([id, offset]) => ({ id, name: People.get(id).name, isBot: true, joinedAt: startAt + offset })),
+      result: null,
+    };
+  }
+
+  function visibleParticipants(round, now) {
+    if (round.status !== STATUS.ACTIVE && round.status !== STATUS.SCHEDULED) return round.participants.slice();
+    return round.participants.filter(p => p.joinedAt <= now).sort((a, b) => a.joinedAt - b.joinedAt);
+  }
+
+  function isUserIn(round) { return round.participants.some(p => p.id === CONFIG.USER_ID); }
+
+  /** Step 1–3: close registration, freeze the list. Active → Drawing. */
+  function closeRegistration(round, now) {
+    transition(round, STATUS.DRAWING, now);
+    round.closedAt = now;
+    round.participants = round.participants.filter(p => p.joinedAt <= round.endAt).sort((a, b) => a.joinedAt - b.joinedAt);
+  }
+
+  /**
+   * Step 3–5: validate and pick the winner with crypto.getRandomValues.
+   * Equal probability for every frozen participant. The result is stored
+   * before any animation runs; the roulette only visualises it.
+   */
+  function drawWinner(state, round, now) {
+    if (round.status !== STATUS.DRAWING || round.result) return;
+    const order = round.participants.map(p => p.id);
+    if (order.length < CONFIG.MIN_PARTICIPANTS) {
+      transition(round, STATUS.CANCELLED, now);
+      round.result = { cancelled: true, reason: 'Недостаточно участников', order, drawnAt: now, revealed: false };
+      return;
+    }
+    const winnerIndex = Utils.secureRandomInt(order.length);
+    const winner = round.participants[winnerIndex];
+    round.result = { cancelled: false, order, winnerIndex, winnerId: winner.id, drawnAt: now, chance: 100 / order.length, revealed: false };
+    CardManager.transfer(state, round.cardId, winner, round, now);
+    transition(round, STATUS.COMPLETED, now);
+  }
+
+  return {
+    STATUS,
+    createInitialRounds(now) { return CardManager.ids().map(id => buildRound(id, now)); },
+    visibleParticipants,
+    isUserIn,
+    getRound: (state, id) => state.rounds.find(r => r.id === id) || null,
+    winChance(round, now) {
+      const n = visibleParticipants(round, now).length;
+      return n ? 100 / n : 0;
+    },
+    remaining(round, now) { return Math.max(0, round.endAt - now); },
+    isOpen(round, now) { return round.status === STATUS.ACTIVE && now < round.endAt; },
+
+    /** Registers the current user once. Returns a status string for the UI. */
+    join(roundId) {
+      let outcome = 'error';
+      StateManager.update((state) => {
+        const now = Utils.now();
+        const round = state.rounds.find(r => r.id === roundId);
+        if (!round) { outcome = 'missing'; return false; }
+        if (!(round.status === STATUS.ACTIVE && now < round.endAt)) { outcome = 'closed'; return false; }
+        if (isUserIn(round)) { outcome = 'already'; return false; }
+        round.participants.push({ id: CONFIG.USER_ID, name: state.profile.name, isBot: false, joinedAt: now });
+        outcome = 'joined';
+        return true;
+      });
+      return outcome;
+    },
+
+    /**
+     * Advances all rounds according to the clock. Safe to call any number
+     * of times (on every tick, on load, on visibility change): each step
+     * checks the current status first, so a result is produced exactly once.
+     * Returns ids of rounds that reached a final state during this call.
+     */
+    tick(now) {
+      const state = StateManager.get();
+      const due = state.rounds.some(r =>
+        (r.status === STATUS.SCHEDULED && now >= r.startAt) ||
+        (r.status === STATUS.ACTIVE && now >= r.endAt) ||
+        (r.status === STATUS.DRAWING));
+      if (!due) return [];
+      const finished = [];
+      // Phase A: Scheduled → Active, Active → Drawing (persisted on its own)
+      StateManager.update((s) => {
+        let changed = false;
+        for (const r of s.rounds) {
+          if (r.status === STATUS.SCHEDULED && now >= r.startAt) { transition(r, STATUS.ACTIVE, now); changed = true; }
+          if (r.status === STATUS.ACTIVE && now >= r.endAt) { closeRegistration(r, now); changed = true; }
+        }
+        return changed;
+      });
+      // Phase B: Drawing → Completed/Cancelled. If the page dies between A and B,
+      // the next load finds the round in Drawing and finishes it here.
+      StateManager.update((s) => {
+        let changed = false;
+        for (const r of s.rounds) {
+          if (r.status === STATUS.DRAWING && !r.result) { drawWinner(s, r, now); finished.push(r.id); changed = true; }
+        }
+        return changed;
+      });
+      return finished;
+    },
+
+    markRevealed(roundId) {
+      StateManager.update((s) => {
+        const r = s.rounds.find(x => x.id === roundId);
+        if (!r || !r.result || r.result.revealed) return false;
+        r.result.revealed = true;
+        return true;
+      });
+    },
+
+    /** Finished rounds the user took part in whose result has not been shown yet. */
+    pendingReveals(state) {
+      return state.rounds.filter(r => r.result && !r.result.revealed && isUserIn(r));
+    },
+  };
+})();
+
+/* =====================================================================
+   STATE MANAGER — load, validate, migrate, persist, notify
+   ===================================================================== */
+const StateManager = (() => {
+  let state = null;
+  const listeners = new Set();
+  let recoveredFromCorruption = false;
+
+  function createDefault(now, keepSettings) {
+    return {
+      version: CONFIG.SCHEMA_VERSION,
+      rev: 0,
+      createdAt: now,
+      profile: { id: CONFIG.USER_ID, name: 'Demo Player' },
+      balance: CONFIG.START_BALANCE,
+      ledger: [{ id: Utils.secureId('TX'), at: now, amount: CONFIG.START_BALANCE, label: 'Начисление тестового баланса' }],
+      settings: keepSettings ? { ...keepSettings } : { sound: true, motion: 'full' },
+      cards: CardManager.createInitialOwnership(),
+      rounds: AuctionManager.createInitialRounds(now),
+    };
+  }
+
+  /* Migrations keyed by the version they upgrade FROM. */
+  const MIGRATIONS = {
+    // 0 = unversioned pre-release prototype data
+    0: (s) => { s.version = 1; s.settings = s.settings || { sound: true, motion: 'full' }; s.rev = s.rev || 0; return s; },
+  };
+  function migrate(raw) {
+    let s = raw;
+    let v = Number.isInteger(s.version) ? s.version : 0;
+    if (v > CONFIG.SCHEMA_VERSION) throw new Error('Data from a newer version');
+    while (v < CONFIG.SCHEMA_VERSION) {
+      if (!MIGRATIONS[v]) throw new Error('No migration from v' + v);
+      s = MIGRATIONS[v](s);
+      v = s.version;
+    }
+    return s;
+  }
+
+  function validate(s) {
+    const statuses = Object.values(AuctionManager.STATUS);
+    const isNum = Number.isFinite;
+    if (!s || typeof s !== 'object') return false;
+    if (s.version !== CONFIG.SCHEMA_VERSION || !isNum(s.rev)) return false;
+    if (!s.profile || typeof s.profile.name !== 'string') return false;
+    if (!isNum(s.balance) || !Array.isArray(s.ledger)) return false;
+    if (!s.settings || typeof s.settings.sound !== 'boolean' || ['full', 'reduced'].indexOf(s.settings.motion) === -1) return false;
+    if (!s.cards || typeof s.cards !== 'object') return false;
+    for (const id of CardManager.ids()) {
+      const c = s.cards[id];
+      if (!c || c.id !== id || !Array.isArray(c.history)) return false;
+    }
+    if (!Array.isArray(s.rounds)) return false;
+    const seen = new Set();
+    for (const r of s.rounds) {
+      if (!r || typeof r.id !== 'string' || seen.has(r.id)) return false;
+      seen.add(r.id);
+      if (!CardManager.get(r.cardId) || statuses.indexOf(r.status) === -1) return false;
+      if (!isNum(r.startAt) || !isNum(r.endAt) || !Array.isArray(r.participants) || !Array.isArray(r.statusLog)) return false;
+      const ids = r.participants.map(p => p && p.id);
+      if (new Set(ids).size !== ids.length) return false; // duplicate registration
+      if (r.status === 'Completed' && (!r.result || typeof r.result.winnerId !== 'string')) return false;
+    }
+    // Ownership must agree with completed rounds (no card held without a win)
+    for (const id of CardManager.ids()) {
+      const c = s.cards[id];
+      if (c.ownerId) {
+        const r = s.rounds.find(x => x.id === c.roundId);
+        if (!r || !r.result || r.result.winnerId !== c.ownerId || r.cardId !== id) return false;
+      }
+    }
+    return true;
+  }
+
+  function parse(raw) {
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    const migrated = migrate(obj);
+    return validate(migrated) ? migrated : (() => { throw new Error('Invalid state'); })();
+  }
+
+  function persist() { StorageManager.write(CONFIG.STORAGE_KEY, JSON.stringify(state)); }
+
+  /** Adopt a newer revision written by another tab before mutating. */
+  function syncFromStorage() {
+    try {
+      const fresh = parse(StorageManager.read(CONFIG.STORAGE_KEY));
+      if (fresh && fresh.rev > state.rev) { state = fresh; return true; }
+    } catch (e) { /* keep in-memory state */ }
+    return false;
+  }
+
+  function emit(reason) { listeners.forEach(fn => { try { fn(reason); } catch (e) { console.error(e); } }); }
+
+  return {
+    load() {
+      const raw = StorageManager.read(CONFIG.STORAGE_KEY);
+      try {
+        state = parse(raw);
+      } catch (e) {
+        console.warn('[CardArena] Stored data unreadable, recreating demo.', e);
+        // Keep the broken payload for inspection instead of silently losing it.
+        if (raw) StorageManager.write(CONFIG.STORAGE_KEY + '.corrupt', raw);
+        recoveredFromCorruption = true;
+        state = null;
+      }
+      if (!state) { state = createDefault(Utils.now()); persist(); }
+      return state;
+    },
+    wasRecovered: () => recoveredFromCorruption,
+    get: () => state,
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+
+    /** Central mutation entry point. `fn` returns false to signal "no change". */
+    update(fn, reason) {
+      syncFromStorage();
+      const before = state.rev;
+      const changed = fn(state);
+      if (changed === false) return false;
+      state.rev = before + 1;
+      persist();
+      emit(reason || 'update');
+      return true;
+    },
+
+    reset() {
+      const settings = state ? state.settings : null;
+      const nextRev = state ? state.rev + 1 : 0;
+      state = createDefault(Utils.now(), settings);
+      state.rev = nextRev;
+      persist();
+      emit('reset');
+    },
+
+    /**
+     * Another tab changed storage. Adopt it when it is the same or a newer
+     * revision: if two tabs drew at the same moment, every tab converges on
+     * the last write instead of keeping its own diverging copy. (Without a
+     * server there is no true arbitration — this only keeps tabs consistent.)
+     */
+    handleExternalChange() {
+      try {
+        const raw = StorageManager.read(CONFIG.STORAGE_KEY);
+        const fresh = parse(raw);
+        if (fresh && fresh.rev >= state.rev && raw !== JSON.stringify(state)) { state = fresh; emit('external'); }
+      } catch (e) { /* ignore unreadable foreign writes; ours stays authoritative */ }
+    },
+    validate,
+  };
+})();
+
+/* =====================================================================
+   PROFILE MANAGER — derived stats, history, achievements, settings
+   ===================================================================== */
+const ProfileManager = {
+  stats(state) {
+    const joined = state.rounds.filter(AuctionManager.isUserIn);
+    const wins = joined.filter(r => r.result && r.result.winnerId === CONFIG.USER_ID);
+    return { participations: joined.length, wins: wins.length, cards: CardManager.countOwnedBy(state, CONFIG.USER_ID) };
+  },
+
+  drawHistory(state) {
+    return state.rounds.filter(AuctionManager.isUserIn).map((r) => {
+      const card = CardManager.get(r.cardId);
+      const me = r.participants.find(p => p.id === CONFIG.USER_ID);
+      let outcome, kind = '';
+      if (r.status === 'Completed') {
+        if (r.result.winnerId === CONFIG.USER_ID) { outcome = 'Победа'; kind = 'win'; }
+        else outcome = 'Победил ' + People.displayName(state, r.result.winnerId);
+      } else if (r.status === 'Cancelled') outcome = 'Отменён';
+      else outcome = 'Идёт';
+      return { roundId: r.id, title: card.name + ' #' + card.id, at: me.joinedAt, outcome, kind };
+    }).sort((a, b) => b.at - a.at);
+  },
+
+  achievements(state) {
+    const st = this.stats(state);
+    const finishedJoined = state.rounds.filter(r => AuctionManager.isUserIn(r) && r.result).length;
+    return [
+      { key: 'first_join', icon: 'flag', title: 'Первое участие', desc: 'Зарегистрируйтесь в любом розыгрыше', done: st.participations >= 1 },
+      { key: 'first_win', icon: 'crown', title: 'Первая победа', desc: 'Выиграйте уникальную карточку', done: st.wins >= 1 },
+      { key: 'full_round', icon: 'clock', title: 'До конца', desc: 'Дождитесь итогов обоих розыгрышей с вашим участием', done: finishedJoined >= CardManager.ids().length },
+      { key: 'collector', icon: 'layers', title: 'Коллекционер', desc: 'Соберите обе демо-карточки', done: st.cards >= CardManager.ids().length },
+    ];
+  },
+
+  leaderboard(state) {
+    const rows = People.LEADERBOARD_BASE.map(([id, base]) => ({ id, name: People.get(id).name, cards: base + CardManager.countOwnedBy(state, id), isMe: false }));
+    rows.push({ id: CONFIG.USER_ID, name: state.profile.name, cards: CardManager.countOwnedBy(state, CONFIG.USER_ID), isMe: true });
+    // Ties: the earlier (demo) entry keeps the higher place.
+    rows.sort((a, b) => b.cards - a.cards || (a.isMe ? 1 : 0) - (b.isMe ? 1 : 0));
+    rows.forEach((r, i) => { r.position = i + 1; });
+    return rows;
+  },
+
+  setSetting(key, value) {
+    StateManager.update((s) => {
+      if (s.settings[key] === value) return false;
+      s.settings[key] = value;
+      return true;
+    }, 'settings');
+  },
+};
+
+/* =====================================================================
+   MOTION + SOUND
+   ===================================================================== */
+const Motion = {
+  mq: window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null,
+  reduced() {
+    const s = StateManager.get();
+    return (s && s.settings.motion === 'reduced') || !!(this.mq && this.mq.matches);
+  },
+  apply() { document.documentElement.classList.toggle('reduce-motion', this.reduced()); },
+};
+
+const SoundManager = (() => {
+  let ctx = null;
+  let lastTick = 0;
+  function enabled() { const s = StateManager.get(); return !!(s && s.settings.sound); }
+  function context() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { ctx = new AC(); } catch (e) { return null; }
+    }
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return ctx;
+  }
+  function blip(freq, dur, gain, delay) {
+    const c = context(); if (!c) return;
+    const t = c.currentTime + (delay || 0);
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(c.destination);
+    osc.start(t); osc.stop(t + dur + 0.02);
+  }
+  return {
+    unlock() { if (enabled()) context(); },
+    tick() {
+      if (!enabled()) return;
+      const n = performance.now();
+      if (n - lastTick < 45) return;
+      lastTick = n;
+      blip(1500, 0.035, 0.035);
+    },
+    tap() { if (enabled()) blip(900, 0.05, 0.03); },
+    win() { if (!enabled()) return; [523, 659, 784, 1046].forEach((f, i) => blip(f, 0.32, 0.05, i * 0.09)); },
+    lose() { if (enabled()) { blip(440, 0.22, 0.04); blip(330, 0.3, 0.035, 0.12); } },
+  };
+})();
+
+/* Telegram Mini App bridge: inactive until the Telegram SDK is present. */
+const TelegramBridge = {
+  wa: (window.Telegram && window.Telegram.WebApp) || null,
+  init() { if (this.wa) { try { this.wa.ready(); this.wa.expand(); } catch (e) { /* noop */ } } },
+  haptic(kind) { try { this.wa && this.wa.HapticFeedback && this.wa.HapticFeedback.notificationOccurred(kind); } catch (e) { /* noop */ } },
+};
+
+/* =====================================================================
+   ROULETTE CONTROLLER — purely visual.
+   Receives an already-decided winnerIndex and only animates toward it.
+   ===================================================================== */
+const RouletteController = {
+  /**
+   * @param host       element with class .roulette (viewport)
+   * @param tiles      array of tile elements, one per participant (in result.order)
+   * @param winnerIndex index into `tiles`
+   * @returns {skip(): void}
+   */
+  play({ host, makeTile, count, winnerIndex, duration, onDone }) {
+    const strip = h('div', { class: 'roulette-strip' });
+    // Enough cycles that the strip visibly travels ~35–45 tiles.
+    const cycles = Math.max(6, Math.ceil(44 / count));
+    const targetCycle = cycles - 2;
+    const total = cycles * count;
+    const tiles = [];
+    for (let i = 0; i < total; i++) { const t = makeTile(i % count); tiles.push(t); strip.appendChild(t); }
+    host.appendChild(strip);
+
+    const targetIndex = targetCycle * count + winnerIndex;
+    const tileWidth = tiles[0].offsetWidth;
+    const pitch = tiles[1] ? tiles[1].offsetLeft - tiles[0].offsetLeft : tileWidth + 10;
+    const center = host.clientWidth / 2;
+    // Cosmetic landing offset inside the winner tile (never beyond ±32% of its
+    // width, so the pointer always stays on the predetermined tile).
+    const jitter = (Utils.secureRandomFloat() * 2 - 1) * tileWidth * 0.32;
+    const startX = center - (count * pitch + tileWidth / 2);
+    const endX = center - (targetIndex * pitch + tileWidth / 2) + jitter;
+    const finalX = center - (targetIndex * pitch + tileWidth / 2);
+
+    let raf = 0, start = 0, done = false, lastIdx = -1;
+    const ease = (t) => 1 - Math.pow(1 - t, 4); // easeOutQuart: long, smooth deceleration
+    const setX = (x) => { strip.style.transform = 'translate3d(' + x.toFixed(2) + 'px,0,0)'; };
+
+    function finish() {
+      if (done) return;
+      done = true;
+      cancelAnimationFrame(raf);
+      // Settle exactly on the winner tile centre.
+      strip.style.transition = 'transform .35s cubic-bezier(.2,.8,.2,1)';
+      setX(finalX);
+      tiles[targetIndex].classList.add('is-winner');
+      setTimeout(onDone, 380);
+    }
+    function frame(ts) {
+      if (!start) start = ts;
+      const t = Math.min(1, (ts - start) / duration);
+      const x = startX + (endX - startX) * ease(t);
+      setX(x);
+      const idx = Math.floor((center - x) / pitch);
+      if (idx !== lastIdx) { lastIdx = idx; SoundManager.tick(); }
+      if (t < 1) raf = requestAnimationFrame(frame);
+      else finish();
+    }
+    setX(startX);
+    raf = requestAnimationFrame(frame);
+    return { skip: finish };
+  },
+};
+
+/* =====================================================================
+   NAVIGATION CONTROLLER — hash routes, Android back via history
+   ===================================================================== */
+const NavigationController = (() => {
+  const TABS = ['home', 'collection', 'rating', 'profile'];
+  function parse(hash) {
+    const parts = (hash || '').replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+    const name = parts[0] || 'home';
+    const known = ['home', 'collection', 'rating', 'profile', 'auction', 'card', 'result'];
+    if (known.indexOf(name) === -1) return { name: 'home', param: null };
+    return { name, param: parts[1] || null };
+  }
+  return {
+    TABS,
+    current: () => parse(location.hash),
+    isTab: (name) => TABS.indexOf(name) !== -1,
+    /**
+     * Push = sub-screen opened from inside the app (Android back returns).
+     * Replace = tab switch / redirect (does not grow the back stack).
+     */
+    go(path, opts) {
+      const target = '#/' + path;
+      if (opts && opts.replace) history.replaceState(history.state, '', target);
+      else if (location.hash !== target) history.pushState({ inApp: true }, '', target);
+      UI.render();
+    },
+    back(fallback) {
+      if (history.state && history.state.inApp) history.back();
+      else this.go(fallback || 'home', { replace: true });
+    },
+  };
+})();
+
+/* =====================================================================
+   REVEAL QUEUE — opens the result screen for finished rounds
+   ===================================================================== */
+const RevealQueue = {
+  /** Open the next unseen result if no result screen is open. */
+  next(fallbackPath) {
+    const pending = AuctionManager.pendingReveals(StateManager.get());
+    if (pending.length) { NavigationController.go('result/' + pending[0].id, { replace: true }); return true; }
+    if (fallbackPath) NavigationController.go(fallbackPath, { replace: true });
+    return false;
+  },
+  handleFinished(roundIds) {
+    const route = NavigationController.current();
+    if (route.name === 'result') return; // shown after the current one closes
+    const state = StateManager.get();
+    // Someone watching a round they did not join still sees its draw.
+    if (route.name === 'auction' && roundIds.indexOf(route.param) !== -1) {
+      const r = AuctionManager.getRound(state, route.param);
+      if (r && !AuctionManager.isUserIn(r)) { NavigationController.go('result/' + r.id, { replace: true }); return; }
+    }
+    this.next();
+  },
+};
+
+/* =====================================================================
+   UI RENDERER
+   ===================================================================== */
+const UI = {
+  screen: null,
+  tabbar: null,
+  lastRouteKey: '',
+  liveSig: '',
+  activeRoulette: null,
+  toastTimer: 0,
+
+  init() {
+    this.screen = document.getElementById('screen');
+    this.tabbar = document.getElementById('tabbar');
+    this.buildTabbar();
+    window.addEventListener('scroll', () => {
+      const bar = this.screen.querySelector('.topbar');
+      if (bar) bar.classList.toggle('scrolled', window.scrollY > 4);
+    }, { passive: true });
+  },
+
+  buildTabbar() {
+    const items = [['home', 'Главная', 'home'], ['collection', 'Коллекция', 'cards'], ['rating', 'Рейтинг', 'trophy'], ['profile', 'Профиль', 'user']];
+    for (const [route, label, ic] of items) {
+      this.tabbar.appendChild(h('button', {
+        class: 'tab', type: 'button', dataset: { route }, 'aria-label': label,
+        onClick: () => { SoundManager.tap(); NavigationController.go(route, { replace: true }); },
+      }, icon(ic), h('span', { text: label })));
+    }
+  },
+
+  toast(message) {
+    const el = document.getElementById('toast');
+    el.textContent = message;
+    el.classList.toggle('above-cta', !!this.screen.querySelector('.cta-bar'));
+    el.classList.add('show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  },
+
+  /** Full render of the current route. */
+  render(force) {
+    const route = NavigationController.current();
+    const key = route.name + '/' + (route.param || '');
+    const isNewRoute = key !== this.lastRouteKey;
+    // The result screen owns its own lifecycle; re-rendering it would restart the roulette.
+    if (!isNewRoute && route.name === 'result' && !force && this.screen.firstChild) return;
+    if (this.activeRoulette && isNewRoute) { this.activeRoulette = null; }
+    this.lastRouteKey = key;
+    const state = StateManager.get();
+
+    let view;
+    switch (route.name) {
+      case 'collection': view = Screens.collection(state); break;
+      case 'rating': view = Screens.rating(state); break;
+      case 'profile': view = Screens.profile(state); break;
+      case 'auction': view = Screens.auction(state, route.param, isNewRoute); break;
+      case 'card': view = Screens.cardDetail(state, route.param, isNewRoute); break;
+      case 'result': view = Screens.result(state, route.param); break;
+      default: view = Screens.home(state);
+    }
+    if (!view) return; // screen redirected
+    const scroll = isNewRoute ? 0 : window.scrollY;
+    this.screen.replaceChildren(view);
+    window.scrollTo(0, scroll);
+
+    const showTabs = NavigationController.isTab(route.name);
+    this.tabbar.hidden = !showTabs;
+    this.tabbar.querySelectorAll('.tab').forEach(t => {
+      const on = t.dataset.route === route.name;
+      t.classList.toggle('active', on);
+      if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+    });
+    this.liveSig = this.liveSignature(Utils.now());
+    this.updateLive(Utils.now());
+  },
+
+  /** Changes in this signature (status, visible participant count) need a re-render. */
+  liveSignature(now) {
+    return StateManager.get().rounds.map(r => r.id + ':' + r.status + ':' + AuctionManager.visibleParticipants(r, now).length).join('|');
+  },
+
+  /** Cheap per-tick updates of timers and progress bars — no re-render. */
+  updateLive(now) {
+    const state = StateManager.get();
+    this.screen.querySelectorAll('[data-countdown]').forEach((el) => {
+      const r = AuctionManager.getRound(state, el.dataset.countdown);
+      if (!r) return;
+      const rem = AuctionManager.remaining(r, now);
+      const txt = Utils.formatTimer(rem);
+      if (el.textContent !== txt) el.textContent = txt;
+      const urgent = r.status === 'Active' && rem <= CONFIG.URGENT_MS;
+      const scope = el.closest('[data-urgent-scope]');
+      if (scope) scope.classList.toggle('urgent', urgent);
+      el.classList.toggle('urgent', urgent);
+    });
+    this.screen.querySelectorAll('[data-progress]').forEach((el) => {
+      const r = AuctionManager.getRound(state, el.dataset.progress);
+      if (!r) return;
+      const frac = Math.max(0, Math.min(1, AuctionManager.remaining(r, now) / (r.endAt - r.startAt)));
+      el.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+    });
+  },
+
+  onTick(now) {
+    const route = NavigationController.current();
+    if (route.name !== 'result') {
+      const sig = this.liveSignature(now);
+      if (sig !== this.liveSig) { this.render(); return; }
+    }
+    this.updateLive(now);
+  },
+
+  onStateChange(reason) {
+    Motion.apply();
+    const route = NavigationController.current();
+    // Never rebuild the result screen while it is animating.
+    if (route.name === 'result' && reason !== 'reset' && reason !== 'external') return;
+    this.render(reason === 'reset' || reason === 'external');
+  },
+
+  sheet({ title, text, actions }) {
+    const close = () => { backdrop.remove(); panel.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    const backdrop = h('div', { class: 'sheet-backdrop', onClick: close });
+    const panel = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+      h('div', { class: 'grabber' }),
+      h('h3', { text: title }),
+      text ? (Array.isArray(text) ? text.map(t => h('p', { text: t })) : h('p', { text })) : null,
+      h('div', { class: 'actions' }, actions.map(a => h('button', {
+        class: 'btn btn-block ' + (a.kind || 'btn-secondary'), type: 'button', text: a.label,
+        onClick: () => { close(); if (a.onClick) a.onClick(); },
+      }))));
+    document.addEventListener('keydown', onKey);
+    document.body.append(backdrop, panel);
+    const first = panel.querySelector('button'); if (first) first.focus({ preventScroll: true });
+  },
+};
+
+/* ---------- Shared view fragments ---------- */
+const View = {
+  logo() {
+    const img = h('img', { class: 'brand-logo', src: CONFIG.LOGO_SRC, alt: 'CardArena', width: 32, height: 32, decoding: 'async' });
+    // The official avatar file is required; if missing, show a neutral placeholder
+    // (deliberately NOT a substitute logo).
+    img.addEventListener('error', () => {
+      console.warn('[CardArena] Official avatar not found at ' + CONFIG.LOGO_SRC);
+      img.replaceWith(h('div', { class: 'brand-fallback', 'aria-label': 'CardArena', title: 'Нет файла ' + CONFIG.LOGO_SRC, text: 'CA' }));
+    }, { once: true });
+    return img;
+  },
+
+  topbar(state, title) {
+    return h('header', { class: 'topbar' },
+      title ? h('h1', { class: 'page-title', text: title }) : h('div', { class: 'brand' }, View.logo(), h('span', { class: 'brand-name', text: 'CardArena' })),
+      h('div', { class: 'topbar-right' },
+        h('div', { class: 'balance', 'aria-label': 'Баланс: ' + state.balance + ' тестовых монет' }, coinGlyph(), h('span', { class: 'mono', text: String(state.balance) })),
+        h('button', { class: 'avatar-btn', type: 'button', 'aria-label': 'Профиль', onClick: () => NavigationController.go('profile', { replace: true }) }, People.avatar(state, CONFIG.USER_ID, 36))));
+  },
+
+  subbar(title, right, onBack) {
+    return h('header', { class: 'subbar' },
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Назад', onClick: onBack }, icon('back')),
+      h('div', { class: 'subbar-title', text: title }),
+      right || h('span'));
+  },
+
+  statusChip(round, now) {
+    const S = AuctionManager.STATUS;
+    const map = {
+      [S.SCHEDULED]: ['scheduled', 'Скоро'],
+      [S.ACTIVE]: ['live', 'Идёт приём'],
+      [S.DRAWING]: ['drawing', 'Розыгрыш'],
+      [S.COMPLETED]: ['done', 'Завершён'],
+      [S.CANCELLED]: ['cancelled', 'Отменён'],
+    };
+    let [cls, label] = map[round.status];
+    if (round.status === S.ACTIVE && now >= round.endAt) { cls = 'drawing'; label = 'Розыгрыш'; }
+    return h('span', { class: 'chip ' + cls }, h('span', { class: 'dot' }), label);
+  },
+
+  rarity(card) { return h('span', { class: 'rarity ' + card.rarityKey, text: card.rarity }); },
+
+  cardArt(cardId, { enter, tilt, extraClass } = {}) {
+    const card = CardManager.get(cardId);
+    const wrap = h('div', { class: 'card-art ' + card.rarityKey + (enter ? ' enter' : '') + (extraClass ? ' ' + extraClass : '') },
+      CardArt.render(cardId), h('div', { class: 'sheen' }));
+    if (tilt) View.attachTilt(wrap);
+    return wrap;
+  },
+
+  /** Gentle pointer tilt (max ~7°), rAF-throttled, disabled with reduced motion. */
+  attachTilt(el) {
+    let raf = 0, rx = 0, ry = 0;
+    const apply = () => { raf = 0; el.style.transform = 'rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)'; };
+    el.addEventListener('pointermove', (e) => {
+      if (Motion.reduced()) return;
+      const r = el.getBoundingClientRect();
+      ry = ((e.clientX - r.left) / r.width - 0.5) * 12;
+      rx = -((e.clientY - r.top) / r.height - 0.5) * 12;
+      if (!raf) raf = requestAnimationFrame(apply);
+    });
+    const reset = () => { rx = 0; ry = 0; el.style.transition = 'transform .45s cubic-bezier(.2,.8,.2,1)'; apply(); setTimeout(() => { el.style.transition = ''; }, 460); };
+    el.addEventListener('pointerleave', reset);
+    el.addEventListener('pointerup', reset);
+    el.addEventListener('pointercancel', reset);
+  },
+};
+
+/* =====================================================================
+   SCREENS
+   ===================================================================== */
+const Screens = {
+  home(state) {
+    const now = Utils.now();
+    const active = state.rounds.filter(r => r.status === 'Active' || r.status === 'Scheduled' || r.status === 'Drawing');
+    const finished = state.rounds.filter(r => r.status === 'Completed' || r.status === 'Cancelled');
+
+    return h('div', { class: 'page' },
+      View.topbar(state),
+      h('div', { class: 'greeting' },
+        h('p', { class: 'hello', text: 'Добро пожаловать' }),
+        h('h1', { text: 'Активные аукционы' })),
+      active.length
+        ? h('div', { class: 'auction-list' }, active.map(r => Screens.auctionTile(state, r, now)))
+        : h('p', { class: 'empty-note', text: 'Сейчас активных аукционов нет. Чтобы снова проверить механику, сбросьте демо в профиле.' }),
+      finished.length ? h('section', { class: 'section' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'Итоги' })),
+        h('div', { class: 'auction-list', style: 'margin-top:0' }, finished.map(r => Screens.auctionTile(state, r, now)))) : null,
+      h('p', { class: 'demo-footnote', text: 'Демо-версия. Розыгрыши бесплатные, соперники Alex, Timur и Samir — демонстрационные участники. Данные хранятся только на этом устройстве.' }));
+  },
+
+  auctionTile(state, round, now) {
+    const card = CardManager.get(round.cardId);
+    const visible = AuctionManager.visibleParticipants(round, now);
+    const finished = round.status === 'Completed' || round.status === 'Cancelled';
+    let bottom;
+    if (finished) {
+      if (round.status === 'Cancelled') bottom = h('p', { class: 'winner-line', text: 'Недостаточно участников' });
+      else {
+        const isMe = round.result.winnerId === CONFIG.USER_ID;
+        bottom = h('p', { class: 'winner-line' + (isMe ? ' me' : '') }, isMe ? 'Победитель — ' : 'Победитель — ', h('b', { text: isMe ? 'вы' : People.displayName(state, round.result.winnerId) }));
+      }
+    } else {
+      bottom = h('div', { class: 'live-row' },
+        h('span', { class: 'mini-timer mono', dataset: { countdown: round.id }, text: Utils.formatTimer(AuctionManager.remaining(round, now)) }),
+        h('span', { class: 'people', 'aria-label': visible.length + ' участников' }, icon('users'), h('span', { class: 'mono', text: String(visible.length) })));
+    }
+    const joined = AuctionManager.isUserIn(round);
+    return h('button', {
+      class: 'auction-tile', type: 'button', dataset: { urgentScope: '' },
+      'aria-label': card.name + ', ' + (finished ? 'итоги' : 'открыть аукцион'),
+      onClick: () => {
+        SoundManager.tap();
+        if (finished) NavigationController.go('result/' + round.id);
+        else NavigationController.go('auction/' + round.id);
+      },
+    },
+      h('div', { class: 'auction-thumb' }, CardArt.render(card.id)),
+      h('div', { class: 'auction-info' },
+        h('div', { class: 'name', text: card.name }),
+        h('div', { class: 'meta' }, h('span', { class: 'mono', text: '#' + card.id }), ' · ', View.rarity(card)),
+        h('div', { class: 'status-row' }, View.statusChip(round, now), joined && !finished ? h('span', { class: 'tag-demo tag-me', text: 'вы участвуете' }) : null),
+        bottom,
+        h('span', { class: 'open-hint' }, finished ? 'Результат' : 'Открыть', icon('chevron'))));
+  },
+
+  auction(state, roundId, isNewRoute) {
+    const round = AuctionManager.getRound(state, roundId);
+    if (!round) { NavigationController.go('home', { replace: true }); return null; }
+    if (round.status === 'Completed' || round.status === 'Cancelled') {
+      NavigationController.go('result/' + round.id, { replace: true }); return null;
+    }
+    const now = Utils.now();
+    const card = CardManager.get(round.cardId);
+    const visible = AuctionManager.visibleParticipants(round, now);
+    const chance = visible.length ? 100 / visible.length : 0;
+    const joined = AuctionManager.isUserIn(round);
+    const open = AuctionManager.isOpen(round, now);
+    const anim = isNewRoute ? 'fade-up ' : '';
+
+    const rows = visible.map((p) => {
+      const isMe = p.id === CONFIG.USER_ID;
+      return h('div', { class: 'p-row' + (isMe ? ' me' : '') + (!isNewRoute && now - p.joinedAt < 1200 ? ' enter' : '') },
+        People.avatar(state, p.id, 40),
+        h('div', { class: 'p-name' }, People.displayName(state, p.id),
+          isMe ? h('span', { class: 'tag-demo tag-me', text: 'вы' }) : h('span', { class: 'tag-demo', text: 'демо' })),
+        h('span', { class: 'p-chance mono', text: Utils.formatPercent(chance) }));
+    });
+
+    let ctaLabel = 'Участвовать бесплатно', ctaClass = 'btn btn-primary btn-block', disabled = false;
+    if (joined) { ctaLabel = 'Вы участвуете'; ctaClass += ' joined'; disabled = true; }
+    else if (!open) { ctaLabel = 'Регистрация закрыта'; disabled = true; }
+
+    const cta = h('button', {
+      class: ctaClass, type: 'button', disabled,
+      onClick: () => {
+        const res = AuctionManager.join(round.id);
+        if (res === 'joined') { SoundManager.tap(); TelegramBridge.haptic('success'); UI.toast('Вы зарегистрированы в розыгрыше'); }
+        else if (res === 'already') UI.toast('Вы уже участвуете в этом раунде');
+        else if (res === 'closed') UI.toast('Регистрация уже закрыта');
+      },
+    }, joined ? icon('check') : null, ctaLabel);
+
+    return h('div', { class: 'page sub' },
+      View.subbar(card.name, View.statusChip(round, now), () => NavigationController.back('home')),
+      h('div', { class: 'card-stage' }, View.cardArt(card.id, { enter: isNewRoute, tilt: true })),
+      h('div', { class: 'card-facts ' + anim + 'd1' },
+        h('div', null, h('div', { class: 'fact-label', text: 'Редкость' }), h('div', { class: 'fact-value' }, View.rarity(card))),
+        h('div', null, h('div', { class: 'fact-label', text: 'ID' }), h('div', { class: 'fact-value mono', text: '#' + card.id })),
+        h('div', null, h('div', { class: 'fact-label', text: 'Тираж' }), h('div', { class: 'fact-value mono', text: card.edition }))),
+      h('div', { class: 'timer-block ' + anim + 'd2', dataset: { urgentScope: '' } },
+        h('div', { class: 'timer-top' },
+          h('span', { class: 'timer-label', text: open ? 'До завершения' : 'Определяем победителя' }),
+          h('span', { class: 'round-code mono', text: 'Раунд ' + round.id })),
+        h('div', { class: 'timer-value mono', dataset: { countdown: round.id }, role: 'timer', text: Utils.formatTimer(AuctionManager.remaining(round, now)) }),
+        h('div', { class: 'progress', 'aria-hidden': 'true' }, h('i', { dataset: { progress: round.id } }))),
+      h('section', { class: 'participants ' + anim + 'd3' },
+        h('div', { class: 'section-head' },
+          h('h2', { class: 'section-title', text: 'Участники · ' + visible.length }),
+          h('span', { class: 'section-note', text: 'Шанс у всех равный' })),
+        h('div', { class: 'p-list' }, rows)),
+      h('div', { class: 'cta-bar' }, cta,
+        h('p', { class: 'cta-note', text: joined ? 'Итоги появятся автоматически, когда таймер дойдёт до нуля' : 'Бесплатно · одна регистрация на раунд' })));
+  },
+
+  result(state, roundId) {
+    const round = AuctionManager.getRound(state, roundId);
+    if (!round) { NavigationController.go('home', { replace: true }); return null; }
+    if (!round.result) { NavigationController.go('auction/' + round.id, { replace: true }); return null; }
+    const card = CardManager.get(round.cardId);
+    const res = round.result;
+    const n = res.order.length;
+    const shouldAnimate = !res.revealed && !Motion.reduced() && !res.cancelled && n > 0;
+
+    const close = () => { UI.activeRoulette = null; RevealQueue.next('home'); };
+    const root = h('div', { class: 'result', role: 'dialog', 'aria-label': 'Результат розыгрыша' },
+      h('div', { class: 'result-top' },
+        h('span', { class: 'label' }, 'Розыгрыш · ', card.name, ' ', h('span', { class: 'mono', text: '#' + card.id })),
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Закрыть', onClick: () => { if (UI.activeRoulette) UI.activeRoulette.skip(); else close(); } }, trustedSvg('<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>'))));
+
+    const makeTile = (i) => {
+      const id = res.order[i];
+      const isMe = id === CONFIG.USER_ID;
+      return h('div', { class: 'r-tile' }, People.avatar(state, id, 44),
+        h('span', { class: 'r-name', text: isMe ? 'Вы' : People.displayName(state, id) }),
+        h('span', { class: 'r-tag', text: isMe ? state.profile.name : 'демо' }));
+    };
+
+    const head = h('div', null,
+      h('h2', { class: 'result-title', text: res.cancelled ? 'Раунд отменён' : (shouldAnimate ? 'Определяем победителя' : 'Итоги розыгрыша') }),
+      h('p', { class: 'result-sub', text: res.cancelled ? res.reason : n + ' ' + Utils.plural(n, 'участник', 'участника', 'участников') + ' · шанс каждого ' + Utils.formatPercent(100 / n) }));
+    root.appendChild(head);
+
+    const roulette = h('div', { class: 'roulette', 'aria-hidden': 'true' }, h('div', { class: 'roulette-pointer' }));
+    const note = h('p', { class: 'roulette-note', text: 'Победитель определён до анимации · crypto.getRandomValues' });
+    if (!res.cancelled) root.append(roulette, note);
+
+    const showReveal = (animated) => {
+      head.querySelector('.result-title').textContent = 'Итоги розыгрыша';
+      const isMe = res.winnerId === CONFIG.USER_ID;
+      const winnerName = res.cancelled ? '' : People.displayName(state, res.winnerId);
+      const reveal = h('div', { class: 'reveal' },
+        View.cardArt(card.id, { enter: animated }),
+        res.cancelled
+          ? h('p', { class: 'result-sub', text: 'Карточка остаётся без владельца.' })
+          : [
+            h('h3', { class: 'result-title fade-up d1', text: isMe ? 'Поздравляем!' : 'Победитель — ' + winnerName }),
+            h('p', { class: 'result-sub fade-up d2', text: isMe ? 'Вы получили ' + card.name + ' #' + card.id : 'Карточка ' + card.name + ' #' + card.id + ' передана демо-участнику ' + winnerName }),
+            h('div', { class: 'winner-chip fade-up d3' }, People.avatar(state, res.winnerId, 32), isMe ? state.profile.name : winnerName, isMe ? null : h('span', { class: 'tag-demo', text: 'демо' })),
+          ]);
+      const actions = h('div', { class: 'result-actions fade-up d4' },
+        isMe
+          ? [h('button', { class: 'btn btn-primary btn-block', type: 'button', text: 'Открыть коллекцию', onClick: () => { UI.activeRoulette = null; RevealQueue.next('collection'); } }),
+             h('button', { class: 'btn btn-ghost btn-block', type: 'button', text: 'На главную', onClick: close })]
+          : [h('button', { class: 'btn btn-secondary btn-block', type: 'button', text: 'Продолжить', onClick: close })]);
+      root.append(reveal, actions);
+      if (!res.revealed) {
+        if (isMe) { SoundManager.win(); TelegramBridge.haptic('success'); } else if (!res.cancelled) SoundManager.lose();
+        AuctionManager.markRevealed(round.id);
+      }
+    };
+
+    if (shouldAnimate) {
+      // Start after the element is in the DOM so tile widths can be measured.
+      requestAnimationFrame(() => {
+        if (!root.isConnected) return;
+        UI.activeRoulette = RouletteController.play({
+          host: roulette, makeTile, count: n, winnerIndex: res.winnerIndex, duration: CONFIG.ROULETTE_MS,
+          onDone: () => { UI.activeRoulette = null; if (root.isConnected) showReveal(true); },
+        });
+      });
+    } else {
+      if (!res.cancelled) {
+        // Static strip already resting on the winner.
+        requestAnimationFrame(() => {
+          if (!root.isConnected) return;
+          const strip = h('div', { class: 'roulette-strip' });
+          const tiles = [];
+          for (let c = 0; c < 5; c++) for (let i = 0; i < n; i++) { const t = makeTile(i); tiles.push(t); strip.appendChild(t); }
+          roulette.appendChild(strip);
+          const idx = 2 * n + res.winnerIndex;
+          const pitch = tiles[1] ? tiles[1].offsetLeft - tiles[0].offsetLeft : 102;
+          strip.style.transform = 'translate3d(' + (roulette.clientWidth / 2 - (idx * pitch + tiles[0].offsetWidth / 2)) + 'px,0,0)';
+          tiles[idx].classList.add('is-winner');
+        });
+      }
+      showReveal(false);
+    }
+    return root;
+  },
+
+  collection(state) {
+    const owned = CardManager.ownedBy(state, CONFIG.USER_ID);
+    const body = owned.length
+      ? h('div', { class: 'collection-grid' }, owned.map((c) => {
+          const card = CardManager.get(c.id);
+          return h('button', { class: 'coll-item', type: 'button', 'aria-label': card.name, onClick: () => NavigationController.go('card/' + card.id) },
+            h('div', { class: 'thumb' }, CardArt.render(card.id)),
+            h('div', { class: 'name', text: card.name }),
+            h('div', { class: 'meta' }, h('span', { class: 'mono', text: '#' + card.id }), ' · ', View.rarity(card)));
+        }))
+      : h('div', { class: 'empty-state' },
+          trustedSvg('<svg class="illu" viewBox="0 0 148 120" fill="none" aria-hidden="true">' +
+            '<rect x="22" y="22" width="56" height="78" rx="8" transform="rotate(-10 50 61)" stroke="#292935" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+            '<rect x="70" y="22" width="56" height="78" rx="8" transform="rotate(10 98 61)" stroke="#292935" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+            '<rect x="46" y="14" width="56" height="80" rx="8" fill="#15151D" stroke="#3A3A4A" stroke-width="1.5"/>' +
+            '<path d="M74 40l4.2 11.4L90 55.6l-11.8 4.2L74 71.2l-4.2-11.4L58 55.6l11.8-4.2z" stroke="#A855F7" stroke-width="1.5" stroke-linejoin="round"/>' +
+            '<path d="M58 82h32" stroke="#292935" stroke-width="1.5" stroke-linecap="round"/></svg>'),
+          h('h2', { text: 'Ваша коллекция пока пуста' }),
+          h('p', { text: 'Участвуйте в розыгрышах, чтобы получить первую карточку.' }),
+          h('button', { class: 'btn btn-primary', type: 'button', text: 'Смотреть аукционы', onClick: () => NavigationController.go('home', { replace: true }) }));
+    return h('div', { class: 'page' },
+      View.topbar(state, 'Коллекция'),
+      owned.length ? h('p', { class: 'muted small', style: 'margin-top:14px', text: owned.length + ' ' + Utils.plural(owned.length, 'карточка', 'карточки', 'карточек') + ' · каждая в единственном экземпляре' }) : null,
+      body);
+  },
+
+  cardDetail(state, cardId, isNewRoute) {
+    const card = CardManager.get(cardId);
+    const own = card && state.cards[cardId];
+    const back = () => NavigationController.back('collection');
+    if (!card || !own || own.ownerId !== CONFIG.USER_ID) {
+      return h('div', { class: 'page sub' }, View.subbar('Карточка', null, back),
+        h('div', { class: 'empty-state' }, h('h2', { text: 'Карточка недоступна' }), h('p', { text: 'Эта карточка отсутствует в вашей коллекции.' })));
+    }
+    const round = AuctionManager.getRound(state, own.roundId);
+    const anim = isNewRoute ? 'fade-up ' : '';
+    const timeline = [];
+    if (round) {
+      const me = round.participants.find(p => p.id === CONFIG.USER_ID);
+      timeline.push({ at: round.createdAt, text: 'Открыт раунд ' + round.id });
+      if (me) timeline.push({ at: me.joinedAt, text: 'Вы зарегистрировались в розыгрыше' });
+      timeline.push({ at: round.closedAt || round.endAt, text: 'Регистрация закрыта · ' + round.participants.length + ' ' + Utils.plural(round.participants.length, 'участник', 'участника', 'участников') });
+      timeline.push({ at: round.result.drawnAt, text: 'Победитель определён · шанс ' + Utils.formatPercent(round.result.chance) });
+    }
+    own.history.forEach(e => timeline.push({ at: e.at, text: 'Карточка передана вам', hl: true }));
+
+    return h('div', { class: 'page sub', style: 'padding-bottom:calc(var(--safe-bottom) + 40px)' },
+      View.subbar(card.name, null, back),
+      h('div', { class: 'card-stage' }, View.cardArt(card.id, { enter: isNewRoute, tilt: true })),
+      h('div', { class: 'card-facts ' + anim + 'd1' },
+        h('div', null, h('div', { class: 'fact-label', text: 'Редкость' }), h('div', { class: 'fact-value' }, View.rarity(card))),
+        h('div', null, h('div', { class: 'fact-label', text: 'ID' }), h('div', { class: 'fact-value mono', text: '#' + card.id })),
+        h('div', null, h('div', { class: 'fact-label', text: 'Тираж' }), h('div', { class: 'fact-value mono', text: card.edition }))),
+      h('div', { class: 'list ' + anim + 'd2', style: 'margin-top:14px' },
+        h('div', { class: 'list-row' }, h('div', { class: 'grow' }, h('div', { class: 'sub', text: 'Получена' }), h('div', { class: 'title', text: Utils.formatDateTime(own.acquiredAt) }))),
+        h('div', { class: 'list-row' }, h('div', { class: 'grow' }, h('div', { class: 'sub', text: 'Тема' }), h('div', { class: 'title', text: card.theme })))),
+      h('section', { class: 'section ' + anim + 'd3' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'История получения' })),
+        h('div', { class: 'timeline' }, timeline.map(t => h('div', { class: 'tl-item' + (t.hl ? ' hl' : '') },
+          h('div', { class: 'tl-text', text: t.text }), h('div', { class: 'tl-time', text: Utils.formatDateTime(t.at) }))))));
+  },
+
+  rating(state) {
+    const rows = ProfileManager.leaderboard(state);
+    const me = rows.find(r => r.isMe);
+    return h('div', { class: 'page' },
+      View.topbar(state, 'Рейтинг'),
+      h('div', { class: 'my-rank' },
+        h('span', { class: 'pos mono', text: String(me.position) }),
+        People.avatar(state, CONFIG.USER_ID, 40),
+        h('div', { class: 'grow', style: 'flex:1;min-width:0' },
+          h('div', { style: 'font-weight:600', text: 'Ваша позиция' }),
+          h('div', { class: 'muted small', text: me.cards + ' ' + Utils.plural(me.cards, 'карточка', 'карточки', 'карточек') }))),
+      h('section', { class: 'section' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'Топ коллекционеров' }), h('span', { class: 'section-note', text: 'Демо-данные' })),
+        h('div', { class: 'list' }, rows.filter(r => !r.isMe || r.position <= 10).slice(0, 10).map(r =>
+          h('div', { class: 'list-row rank-row' + (r.isMe ? ' is-me' : '') },
+            h('span', { class: 'pos mono' + (r.position <= 3 ? ' top' : ''), text: String(r.position) }),
+            People.avatar(state, r.id, 32),
+            h('div', { class: 'grow' }, h('div', { class: 'title' }, r.name, h('span', { class: 'tag-demo' + (r.isMe ? ' tag-me' : ''), text: r.isMe ? 'вы' : 'демо' }))),
+            h('span', { class: 'count mono' }, icon('cards'), String(r.cards)))))),
+      h('p', { class: 'demo-footnote', text: 'Все участники рейтинга, кроме вас, — вымышленные демонстрационные профили.' }));
+  },
+
+  profile(state) {
+    const st = ProfileManager.stats(state);
+    const history = ProfileManager.drawHistory(state);
+    const achievements = ProfileManager.achievements(state);
+    const reduced = state.settings.motion === 'reduced';
+
+    const toggleRow = (ic, title, sub, on, onToggle) => h('button', { class: 'list-row', type: 'button', role: 'switch', 'aria-checked': on ? 'true' : 'false', onClick: onToggle },
+      icon(ic), h('div', { class: 'grow' }, h('div', { class: 'title', text: title }), sub ? h('div', { class: 'sub', text: sub }) : null),
+      h('span', { class: 'switch' + (on ? ' on' : ''), 'aria-hidden': 'true' }));
+
+    return h('div', { class: 'page' },
+      View.topbar(state, 'Профиль'),
+      h('div', { class: 'profile-head' },
+        People.avatar(state, CONFIG.USER_ID, 64),
+        h('div', { style: 'min-width:0' },
+          h('div', { class: 'name', text: state.profile.name }),
+          h('div', { class: 'muted small', text: 'Тестовый профиль' }),
+          h('div', { class: 'balance', style: 'margin-top:8px' }, coinGlyph(), h('span', { class: 'mono', text: String(state.balance) }), h('span', { class: 'muted', style: 'font-weight:400', text: 'тестовых монет' })))),
+      h('div', { class: 'stats' },
+        h('div', null, h('div', { class: 'v mono', text: String(st.participations) }), h('div', { class: 'l', text: 'Участий' })),
+        h('div', null, h('div', { class: 'v mono', text: String(st.wins) }), h('div', { class: 'l', text: 'Побед' })),
+        h('div', null, h('div', { class: 'v mono', text: String(st.cards) }), h('div', { class: 'l', text: 'Карточек' }))),
+
+      h('section', { class: 'section' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'История розыгрышей' })),
+        history.length
+          ? h('div', { class: 'list' }, history.map(it => h('button', { class: 'list-row', type: 'button', onClick: () => {
+              const r = AuctionManager.getRound(state, it.roundId);
+              NavigationController.go((r && r.result ? 'result/' : 'auction/') + it.roundId);
+            } },
+              h('div', { class: 'grow' }, h('div', { class: 'title', text: it.title }), h('div', { class: 'sub', text: Utils.formatDateTime(it.at) })),
+              h('span', { class: 'end' + (it.kind ? ' ' + it.kind : ''), text: it.outcome }))))
+          : h('p', { class: 'muted small', text: 'Вы ещё не участвовали в розыгрышах.' })),
+
+      h('section', { class: 'section' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'Достижения' }), h('span', { class: 'section-note', text: achievements.filter(a => a.done).length + ' из ' + achievements.length })),
+        h('div', { class: 'list' }, achievements.map(a => h('div', { class: 'list-row' },
+          h('span', { class: 'ach-icon' + (a.done ? ' on' : '') }, icon(a.done ? a.icon : 'lock')),
+          h('div', { class: 'grow' }, h('div', { class: 'title', text: a.title }), h('div', { class: 'sub', text: a.desc })),
+          a.done ? h('span', { class: 'end win' }, icon('check')) : null)))),
+
+      h('section', { class: 'section' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'Операции' }), h('span', { class: 'section-note', text: 'Тестовые монеты' })),
+        h('div', { class: 'list' }, state.ledger.slice().reverse().map(tx => h('div', { class: 'list-row' },
+          h('div', { class: 'grow' }, h('div', { class: 'title', text: tx.label }), h('div', { class: 'sub', text: Utils.formatDateTime(tx.at) })),
+          h('span', { class: 'end mono' + (tx.amount > 0 ? ' plus' : ''), text: (tx.amount > 0 ? '+' : '') + tx.amount })))),
+        h('p', { class: 'demo-footnote', style: 'margin-top:10px', text: 'Монеты не нужны для участия, их нельзя купить или вывести.' })),
+
+      h('section', { class: 'section' },
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title', text: 'Настройки' })),
+        h('div', { class: 'list' },
+          toggleRow('sound', 'Звук', null, state.settings.sound, () => ProfileManager.setSetting('sound', !state.settings.sound)),
+          h('div', { class: 'list-row' }, icon('motion'),
+            h('div', { class: 'grow' }, h('div', { class: 'title', text: 'Анимации' }), h('div', { class: 'sub', text: reduced ? 'Итоги показываются сразу' : 'Рулетка и переходы' })),
+            h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Анимации' },
+              h('button', { type: 'button', role: 'radio', 'aria-checked': String(!reduced), class: !reduced ? 'on' : '', text: 'Вкл', onClick: () => ProfileManager.setSetting('motion', 'full') }),
+              h('button', { type: 'button', role: 'radio', 'aria-checked': String(reduced), class: reduced ? 'on' : '', text: 'Меньше', onClick: () => ProfileManager.setSetting('motion', 'reduced') }))),
+          h('button', { class: 'list-row', type: 'button', onClick: Screens.confirmReset }, icon('reset'),
+            h('div', { class: 'grow' }, h('div', { class: 'title', style: 'color:var(--danger)', text: 'Сбросить демо' }), h('div', { class: 'sub', text: 'Баланс, коллекция и раунды вернутся к началу' }))),
+          h('button', { class: 'list-row', type: 'button', onClick: Screens.showAbout }, icon('info'),
+            h('div', { class: 'grow' }, h('div', { class: 'title', text: 'О приложении' })), icon('chevron')))));
+  },
+
+  confirmReset() {
+    UI.sheet({
+      title: 'Сбросить демо?',
+      text: 'Коллекция, история и результаты будут удалены. Баланс снова станет 500 монет, оба аукциона начнутся заново с новыми раундами. Настройки сохранятся.',
+      actions: [
+        { label: 'Сбросить', kind: 'btn-danger', onClick: () => { StateManager.reset(); NavigationController.go('home', { replace: true }); UI.toast('Демо сброшено'); } },
+        { label: 'Отмена', kind: 'btn-secondary' },
+      ],
+    });
+  },
+
+  showAbout() {
+    UI.sheet({
+      title: 'CardArena ' + CONFIG.APP_VERSION,
+      text: [
+        'Демонстрационный прототип коллекционной платформы для Telegram Mini Apps.',
+        'Всё работает локально: без сервера, без платежей и без сетевых запросов. Соперники и рейтинг — демонстрационные.',
+        'Победитель выбирается через crypto.getRandomValues с равными шансами. Данные хранятся в localStorage этого устройства и не защищены от изменения — для настоящей защиты нужен сервер.',
+      ],
+      actions: [{ label: 'Понятно', kind: 'btn-secondary' }],
+    });
+  },
+};
+
+/* =====================================================================
+   APP BOOTSTRAP
+   ===================================================================== */
+const App = {
+  tickTimer: 0,
+
+  supportsRequired() {
+    return !!(window.crypto && typeof window.crypto.getRandomValues === 'function' &&
+      window.JSON && window.requestAnimationFrame && document.querySelector && window.history && window.history.replaceState &&
+      Array.prototype.find && window.Uint32Array && 'classList' in document.documentElement);
+  },
+
+  fatal(title, text) {
+    const app = document.getElementById('app');
+    app.replaceChildren(h('div', { class: 'fatal' }, h('h1', { text: title }), h('p', { text })));
+  },
+
+  start() {
+    if (!this.supportsRequired()) {
+      this.fatal('Браузер не поддерживается', 'Для CardArena нужен современный браузер с поддержкой Web Crypto API. Обновите Chrome или Telegram и попробуйте снова.');
+      return;
+    }
+    TelegramBridge.init();
+    StateManager.load();
+    Motion.apply();
+    if (Motion.mq && Motion.mq.addEventListener) Motion.mq.addEventListener('change', () => { Motion.apply(); });
+    UI.init();
+
+    const banner = document.getElementById('banner');
+    if (!StorageManager.isPersistent()) {
+      banner.textContent = 'Хранилище браузера недоступно — прогресс не сохранится после закрытия.';
+      banner.hidden = false;
+    }
+
+    // Settle rounds that ended while the app was closed BEFORE first render,
+    // so the user lands on the correct screen (Scenario G).
+    AuctionManager.tick(Utils.now());
+
+    StateManager.subscribe((reason) => UI.onStateChange(reason));
+    // popstate covers Android/browser back; hashchange covers manual edits.
+    window.addEventListener('popstate', () => UI.render());
+    window.addEventListener('hashchange', () => UI.render());
+    window.addEventListener('storage', (e) => { if (e.key === CONFIG.STORAGE_KEY) StateManager.handleExternalChange(); });
+    document.addEventListener('pointerdown', () => SoundManager.unlock(), { passive: true });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this.loop(); });
+
+    // A refresh on the result route of an unseen result just replays it;
+    // otherwise jump to any pending result first.
+    const route = NavigationController.current();
+    if (route.name !== 'result' && AuctionManager.pendingReveals(StateManager.get()).length) RevealQueue.next();
+    else UI.render();
+
+    if (StateManager.wasRecovered()) UI.toast('Сохранённые данные были повреждены — демо создано заново');
+    this.tickTimer = setInterval(() => this.loop(), 250);
+  },
+
+  loop() {
+    const now = Utils.now();
+    const finished = AuctionManager.tick(now);
+    if (finished.length) RevealQueue.handleFinished(finished);
+    UI.onTick(now);
+  },
+};
+
+// Read-only diagnostics hook (handy in DevTools; does not expose mutations).
+window.CardArena = Object.freeze({
+  version: CONFIG.APP_VERSION,
+  snapshot: () => Utils.deepClone(StateManager.get()),
+});
+
+try { App.start(); }
+catch (err) {
+  console.error(err);
+  App.fatal('Не удалось запустить CardArena', 'Произошла ошибка при запуске. Попробуйте обновить страницу. Если проблема повторится, сбросьте данные сайта в настройках браузера.');
+}
+</script>
+</body>
+</html>
