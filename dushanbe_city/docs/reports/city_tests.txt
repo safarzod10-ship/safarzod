@@ -1,4 +1,4 @@
-PASS city loaded in 1579 ms: 36 city chunks (+57 coast chunks)
+PASS city loaded in 1759 ms: 36 city chunks (+57 coast chunks)
 PASS colliders 1521, trees 7540, props 5138, multimeshes 5521
 PASS all categories resolve to assets (missing: [])
 PASS player spawned
@@ -18,7 +18,7 @@ PASS embankment has stairs (6), a ramp (1) and railings (108 segments)
 PASS walk down the stairs to the beach: 25.1 m towards the sea, 1.58 m lower
 PASS railing at the drop keeps the walker on the promenade (moved 0.99 m towards the edge, railing at ~1.85 m)
 PASS into the sea: shallow true, medium true (deep wading speed 0.60 m/s < run), swimming true
-PASS swims at the (wavy) surface: feet 1.30 m below the local wave height ±0.01, never on/under the sea bed: true
+PASS swims at the (wavy) surface: feet 1.08 m below the local wave height ±0.01, never on/under the sea bed: true
 PASS swam out to z=447 (well beyond the wading line ~370-410) and stopped at the swimming boundary
 PASS swims back and walks out onto the beach: mode 0 (0 = dry), on floor true, z=400
 PASS sea sounds: surf + coastal wind playing near the shore (shore 15 m)
