@@ -95,6 +95,26 @@ func _ready() -> void:
 		for n in get_tree().get_nodes_in_group(&"time_of_day"):
 			n.call("set_hour", x))
 	v.add_child(s)
+	# touch controls (stage 4): size of the buttons / joystick and camera swipe sensitivity
+	for t in [["Размер кнопок управления", 0.75, 1.35, "ui_scale"], ["Чувствительность камеры", 0.4, 2.5, "look_scale"]]:
+		_section(v, t[0])
+		var sl := HSlider.new()
+		sl.min_value = t[1]
+		sl.max_value = t[2]
+		sl.step = 0.05
+		sl.value = PlayerInput.ui_scale if t[3] == "ui_scale" else PlayerInput.look_scale
+		sl.custom_minimum_size = Vector2(600, 52)
+		var which: String = t[3]
+		sl.value_changed.connect(func(x: float) -> void:
+			if which == "ui_scale":
+				PlayerInput.ui_scale = x
+				for ts in get_tree().root.find_children("*", "Control", true, false):
+					if ts.has_method("_unit"):
+						(ts as Control).queue_redraw()
+			else:
+				PlayerInput.look_scale = x
+			PlayerInput.save_settings())
+		v.add_child(sl)
 	btn.pressed.connect(func() -> void:
 		_panel.visible = not _panel.visible
 		_layout()

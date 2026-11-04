@@ -47,7 +47,7 @@ func setup(p: CharacterBody3D, sk: Skeleton3D, city: Dictionary) -> void:
 		var bi := sk.find_bone(b)
 		if bi >= 0:
 			_bones.append(bi)
-			_foot[bi] = {"prev": 0.0, "down": false, "armed": true}
+			_foot[bi] = {"prev": 0.0, "down": false, "armed": true, "low": 0.0}
 
 
 func surface_at(pos: Vector3, collider: Object) -> String:
@@ -76,13 +76,17 @@ func update(on_floor: bool, speed: float, floor_collider: Object, wading: bool) 
 		var st: Dictionary = _foot[bi]
 		var p := skeleton.global_transform * skeleton.get_bone_global_pose(bi).origin
 		var h := p.y - base_y
-		var moving_down: bool = h < float(st["prev"]) - 0.0005
-		# contact: ankle comes down to <= 0.11 m over the floor (rest ankle height ~0.08 m)
-		if bool(st["armed"]) and h < 0.11 and moving_down and on_floor and speed > 0.15 and not wading:
+		var prev: float = st["prev"]
+		# touchdown = the foot stops coming down (local minimum of its height) while low: heel strike
+		var was_down: bool = st["down"]
+		var going_down := h < prev - 0.0008
+		if bool(st["armed"]) and was_down and not going_down and h < 0.22 and on_floor and speed > 0.15 and not wading:
 			_play_step(p, floor_collider, clampf(speed / 4.5, 0.0, 1.0))
 			st["armed"] = false
-		elif h > 0.15:
-			st["armed"] = true                  # foot lifted again: next touchdown is a new step
+			st["low"] = h
+		if not bool(st["armed"]) and h > float(st.get("low", h)) + 0.05:
+			st["armed"] = true                  # foot lifted again: the next touchdown is a new step
+		st["down"] = going_down
 		st["prev"] = h
 
 
