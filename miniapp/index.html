@@ -169,10 +169,10 @@ nav button.on svg{filter:drop-shadow(0 0 6px rgba(120,160,255,.5))}
 
 /* ---------- home scene: farm + pet ---------- */
 .scene{display:flex;align-items:flex-end;justify-content:center}
-.scene .farm-img{position:absolute;left:54%;top:50%;width:min(92%,400px);max-height:78%;transform:translate(-50%,-58%);z-index:1;
+.scene .farm-img{position:absolute;left:56%;top:50%;width:min(94%,410px);max-height:72%;transform:translate(-50%,-62%);z-index:1;
   filter:drop-shadow(0 10px 18px rgba(0,0,0,.5))}
-.scene .pet-img{position:absolute;left:2%;bottom:6%;width:min(54%,250px);max-height:52%;object-fit:contain;object-position:left bottom;z-index:2;animation:bob 2.6s ease-in-out infinite;
-  filter:drop-shadow(0 8px 12px rgba(0,0,0,.55))}
+.scene .pet-stage{position:absolute;left:0;bottom:9%;width:56%;height:44%;z-index:2;pointer-events:none}
+.pet-art{position:relative;overflow:hidden}
 .scene .tag{position:absolute;z-index:3;font-size:12px;font-weight:800;padding:4px 10px;border-radius:9px;background:rgba(20,24,52,.82);
   border:1px solid var(--line2);color:#dfe3ff;white-space:nowrap}
 .scene .tag.pet{left:4%;bottom:2%}
@@ -347,7 +347,8 @@ nav button.on svg{filter:drop-shadow(0 0 6px rgba(120,160,255,.5))}
 </nav>
 </div>
 
-<script>
+<script type="module">
+import { PetView } from './js/petview.js';
 const tg = window.Telegram && Telegram.WebApp;
 const inTg = !!(tg && tg.initData);
 if (inTg) {
@@ -519,16 +520,22 @@ async function runOnboarding() {
 
 // ---------- render the chosen pet + farm across the app
 let state = null;
+let homePet = null, portraitPet = null;
 function applyState() {
   const pet = byId(PETS, state.pet) || PETS[0];
   const farm = byId(FARMS, state.farm) || FARMS[0];
   document.getElementById('scene').innerHTML =
     `<span class="tag pet">${pet.name}</span>` +
-    `<img class="farm-img" src="${farm.img}" alt="${farm.name}"><img class="pet-img" src="${pet.img}" alt="${pet.name}">`;
+    `<img class="farm-img" src="${farm.img}" alt="${farm.name}"><div class="pet-stage" id="petStage"></div>`;
+  // live idle pet next to the farm (shared scale: sizes stay natural vs. the farm)
+  homePet && homePet.destroy();
+  homePet = new PetView(document.getElementById('petStage'), pet.id, { fit: 'shared', maxUnits: 430 });
   document.getElementById('farmTitle').textContent = farm.name;
   document.getElementById('rate').textContent = `+${FARM_RATE}/м`;
   const art = document.getElementById('petArt');
-  art.classList.add('filled'); art.innerHTML = `<img class="art-img" src="${pet.img}" alt="${pet.name}">`;
+  art.classList.add('filled'); art.innerHTML = '';
+  portraitPet && portraitPet.destroy();
+  portraitPet = new PetView(art, pet.id, { fit: 'self', shadow: true });
   document.getElementById('petName').textContent = pet.name;
   document.getElementById('petAttack').textContent = 'Атака: ' + pet.attack;
   const inv = document.getElementById('invPet');
