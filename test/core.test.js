@@ -320,3 +320,54 @@ test('админ добавляет задание: ссылка → награ�
   await bot.handleUpdate(adminTap(`adm:taskdel:${task.id}`));
   assert.equal(store.activeTasks().length, 1);
 });
+
+// ---------- Рефералы ----------
+function refBot(store, members = new Set()) {
+  const bot = fakeBot(store);
+  bot.refChannel = '@safroulette';
+  bot.refReward = 1;
+  const base = bot.api;
+  bot.api = async (method, payload) => {
+    if (method === 'getChatMember') return { status: members.has(payload.user_id) ? 'member' : 'left' };
+    return base(method, payload);
+  };
+  bot.upload = async () => ({ photo: [{ file_id: 'F' }] });
+  return bot;
+}
+const startFrom = (id, text) => ({ message: { message_id: 1, chat: { id, type: 'private' }, from: { id, first_name: `F${id}` }, text } });
+
+test('реферал: новый пользователь по ссылке привязывается; старый и сам себя — нет', async () => {
+  const store = storeWith(0); // пригласивший — id 1
+  const bot = refBot(store);
+  await bot.handleUpdate(startFrom(50, '/start ref_1'));
+  assert.equal(store.getUser(50).referrer_id, 1);
+  await wait(20); // уведомление пригласившему уходит в фоне
+  assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /Новый друг/.test(c.payload.text ?? '')));
+  await bot.handleUpdate(startFrom(50, '/start ref_2')); // повторно — не перепривязывается
+  assert.equal(store.getUser(50).referrer_id, 1);
+  store.upsertUser({ id: 60, first_name: 'Old' });
+  await bot.handleUpdate(startFrom(60, '/start ref_1')); // уже был в базе
+  assert.equal(store.getUser(60).referrer_id, null);
+  await bot.handleUpdate(startFrom(1, '/start ref_1'));
+  assert.equal(store.getUser(1).referrer_id, null);
+  assert.equal(store.friends(1).n, 1);
+});
+
+test('реферал: +1 ⭐ только после подписки и только один раз; событие канала награждает сразу', async () => {
+  const store = storeWith(0);
+  const members = new Set();
+  const bot = refBot(store, members);
+  await bot.handleUpdate(startFrom(50, '/start ref_1'));
+  assert.equal(await bot.checkReferral(50), false);
+  assert.equal(store.getUser(1).balance, 0);
+  members.add(50);
+  await bot.handleUpdate({
+    chat_member: { chat: { id: -1, username: 'SafRoulette' }, new_chat_member: { status: 'member', user: { id: 50 } } },
+  });
+  assert.equal(store.getUser(1).balance, 1);
+  assert.equal(await bot.checkReferral(50), false);
+  assert.equal(store.getUser(1).balance, 1);
+  assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /теперь в канале/.test(c.payload.text ?? '')));
+  const f = store.friends(1);
+  assert.deepEqual([f.n, f.rewarded, f.list[0].ref_rewarded], [1, 1, 1]);
+});

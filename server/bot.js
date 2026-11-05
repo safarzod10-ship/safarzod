@@ -21,7 +21,7 @@ const btn = (text, data) => ({ text, callback_data: data });
 const link = (text, url) => ({ text, url });
 
 export class Bot {
-  constructor({ token, webAppUrl, adminId, supportUsername, channelUrl, chatUrl, bannerPath, limits, store }) {
+  constructor({ token, webAppUrl, adminId, supportUsername, channelUrl, chatUrl, bannerPath, refChannel, refReward = 1, limits, store }) {
     this.token = token;
     this.webAppUrl = webAppUrl;
     this.adminId = adminId;
@@ -29,6 +29,8 @@ export class Bot {
     this.channelUrl = channelUrl;
     this.chatUrl = chatUrl;
     this.bannerPath = bannerPath;
+    this.refChannel = refChannel;
+    this.refReward = refReward;
     this.bannerFileId = null; // после первой загрузки баннер отправляется по file_id, без повторной загрузки
     this.limits = limits;
     this.store = store;
@@ -113,7 +115,8 @@ export class Bot {
         const updates = await this.api('getUpdates', {
           offset: this.offset,
           timeout: 50,
-          allowed_updates: ['message', 'callback_query', 'pre_checkout_query'],
+          // chat_member — новые подписчики канала (приходят, если бот — админ канала)
+          allowed_updates: ['message', 'callback_query', 'pre_checkout_query', 'chat_member'],
         });
         backoff = 1000;
         for (const u of updates) {
@@ -165,12 +168,18 @@ export class Bot {
   async handleUpdate(update) {
     if (update.callback_query) return this.#onCallback(update.callback_query);
     if (update.pre_checkout_query) return this.#onPreCheckout(update.pre_checkout_query);
+    if (update.chat_member) return this.#onChatMember(update.chat_member);
     const msg = update.message;
     if (!msg || msg.chat.type !== 'private') return;
     if (msg.successful_payment) return this.#onPaid(msg);
 
+    const isNew = !this.store.getUser(msg.from.id);
     const user = this.store.upsertUser(msg.from); // все, кто писал боту, попадают в рассылку
     const text = msg.text ?? '';
+    const ref = text.match(/^\/start\s+ref_(\d{1,15})$/);
+    if (ref && isNew && this.store.setReferrer(user.id, Number(ref[1]))) {
+      this.#onInvited(this.store.getUser(user.id)).catch(() => {}); // свежие данные: уже с referrer_id
+    }
     const admin = this.#isAdmin(msg.from.id);
 
     if (admin && this.pending.has(msg.chat.id) && !text.startsWith('/')) return this.#onAdminInput(msg);
@@ -228,6 +237,55 @@ export class Bot {
     if (scope !== 'wd' && scope !== 'adm') return answer();
     if (!this.#isAdmin(cq.from.id)) return answer('Недоступно', true);
     return scope === 'wd' ? this.#onWithdrawalButton(cq, answer) : this.#onAdminButton(cq, answer);
+  }
+
+  // ====================== Рефералы ======================
+
+  referralLink(userId) {
+    return `https://t.me/${this.username}?start=ref_${userId}`;
+  }
+
+  async #onInvited(friend) {
+    const inviter = this.store.getUser(friend.referrer_id);
+    if (!inviter) return;
+    await this.#send(
+      inviter.id,
+      `👋 Новый друг по вашей ссылке: <b>${esc(fullName(friend))}</b>.\n` +
+        `Когда друг подпишется на канал, вы получите <b>+${fmt(this.refReward)} ⭐</b>.`,
+    ).catch(() => {});
+    setTimeout(() => this.checkReferral(friend.id).catch(() => {}), 3000).unref?.(); // вдруг уже подписан
+  }
+
+  /** Проверяет подписку приглашённого друга и награждает пригласившего (один раз). */
+  async checkReferral(friendId) {
+    const friend = this.store.getUser(friendId);
+    if (!friend?.referrer_id || friend.ref_rewarded || !this.refChannel) return false;
+    let member = false;
+    try {
+      member = await this.isMember(this.refChannel, friendId);
+    } catch {
+      return false; // бот не админ канала или Telegram недоступен — проверим позже
+    }
+    if (!member) return false;
+    const inviter = this.store.rewardReferral(friendId, this.refReward);
+    if (!inviter) return false;
+    this.onBalance(inviter);
+    await this.#send(
+      inviter.id,
+      `🎉 Друг <b>${esc(fullName(friend))}</b> теперь в канале — вам <b>+${fmt(this.refReward)} ⭐</b>`,
+      this.playButton('Открыть игру'),
+    ).catch(() => {});
+    return true;
+  }
+
+  /** Telegram сообщает о новом подписчике канала — награда приходит сразу. */
+  async #onChatMember(upd) {
+    const ref = (this.refChannel ?? '').replace(/^@/, '').toLowerCase();
+    if (!ref || upd.chat?.username?.toLowerCase() !== ref) return;
+    const st = upd.new_chat_member?.status;
+    if (['member', 'administrator', 'creator'].includes(st) || (st === 'restricted' && upd.new_chat_member.is_member)) {
+      await this.checkReferral(upd.new_chat_member.user.id);
+    }
   }
 
   // ====================== Админ-панель ======================

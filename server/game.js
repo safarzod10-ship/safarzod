@@ -19,18 +19,24 @@ export class Game extends EventEmitter {
     this.random = random;
     this.timer = null;
     this.round = null;
-    this.history = [];
+    this.lastGame = null;
+    this.topToday = null;
   }
 
+  /** «Последняя игра» и «Топ игра дня» для карточек над колесом. */
   #loadHistory() {
-    this.history = this.store.recentWinners(12).map((r) => ({
-      round: r.id,
-      id: r.user_id,
-      name: displayName(r),
-      photo: r.photo_url || '',
-      bank: r.bank,
-      chance: r.total ? Math.round((r.stake / r.total) * 100) : 0,
-    }));
+    const card = (r) =>
+      r && {
+        round: r.id,
+        id: r.user_id,
+        name: displayName(r),
+        username: r.username || '',
+        photo: r.photo_url || '',
+        bank: r.bank,
+        chance: r.total ? Math.round((r.stake / r.total) * 10000) / 100 : 0,
+      };
+    this.lastGame = card(this.store.recentWinners(1)[0]);
+    this.topToday = card(this.store.topWinSince(Date.now() - 86_400_000));
   }
 
   start() {
@@ -153,8 +159,8 @@ export class Game extends EventEmitter {
       bank: r.status === 'spinning' || r.status === 'finished' ? r.bank : bankOf(total, this.s.houseCut),
       landing: r.landing,
       winnerId: r.winnerId,
-      // Последние победители — показываются, когда текущий раунд уже закончился
-      history: r.status === 'finished' ? this.history : this.history.filter((h) => h.round !== r.id),
+      lastGame: this.lastGame,
+      topToday: this.topToday,
       players: players.map((p) => ({
         id: p.user.id,
         name: displayName(p.user),

@@ -92,6 +92,10 @@ export function openDb(dataDir) {
 function migrate(db) {
   const columns = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
   if (!columns.has('blocked')) db.exec('ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0');
+  // Рефералы: кто пригласил и выдана ли уже награда за этого друга
+  if (!columns.has('referrer_id')) db.exec('ALTER TABLE users ADD COLUMN referrer_id INTEGER');
+  if (!columns.has('ref_rewarded')) db.exec('ALTER TABLE users ADD COLUMN ref_rewarded INTEGER NOT NULL DEFAULT 0');
+  db.exec('CREATE INDEX IF NOT EXISTS users_referrer ON users(referrer_id)');
   db.exec(`
     CREATE INDEX IF NOT EXISTS users_username ON users(lower(username));
     CREATE INDEX IF NOT EXISTS users_created ON users(created_at);
@@ -171,6 +175,16 @@ class Store {
                     WHERE t.active = 1 ORDER BY done, t.id DESC`),
       disableTask: q('UPDATE tasks SET active = 0 WHERE id = ?'),
       completeTask: q('INSERT INTO task_completions (task_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'),
+      topWinSince: q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
+                          (SELECT SUM(amount) FROM bets b WHERE b.round_id = r.id AND b.user_id = r.winner_id) AS stake
+                        FROM rounds r JOIN users u ON u.id = r.winner_id
+                        WHERE r.status = 'finished' AND r.finished_at >= ? ORDER BY r.bank DESC, r.id DESC LIMIT 1`),
+      setReferrer: q('UPDATE users SET referrer_id = ? WHERE id = ? AND referrer_id IS NULL AND id <> ?'),
+      friends: q(`SELECT id, first_name, last_name, username, photo_url, ref_rewarded, created_at
+                  FROM users WHERE referrer_id = ? ORDER BY id DESC LIMIT 200`),
+      friendsCount: q('SELECT COUNT(*) AS n, COALESCE(SUM(ref_rewarded), 0) AS rewarded FROM users WHERE referrer_id = ?'),
+      pendingFriends: q('SELECT id FROM users WHERE referrer_id = ? AND ref_rewarded = 0 ORDER BY id DESC LIMIT ?'),
+      markRefRewarded: q('UPDATE users SET ref_rewarded = 1 WHERE id = ? AND ref_rewarded = 0 AND referrer_id IS NOT NULL'),
       recentWinners: q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
                           (SELECT SUM(amount) FROM bets b WHERE b.round_id = r.id AND b.user_id = r.winner_id) AS stake
                         FROM rounds r JOIN users u ON u.id = r.winner_id
@@ -291,6 +305,37 @@ class Store {
       if (this.q.completeTask.run(taskId, userId, Date.now()).changes !== 1) return null;
       this.#credit(userId, task.reward, 'task', taskId);
       return this.getUser(userId);
+    });
+  }
+
+  topWinSince(since) {
+    return this.q.topWinSince.get(since) ?? null;
+  }
+
+  // ---------- Рефералы ----------
+
+  /** Привязка к пригласившему — только один раз и не к самому себе. */
+  setReferrer(userId, referrerId) {
+    if (!this.getUser(referrerId)) return false;
+    return this.q.setReferrer.run(referrerId, userId, referrerId).changes === 1;
+  }
+
+  friends(userId) {
+    return { list: this.q.friends.all(userId), ...this.q.friendsCount.get(userId) };
+  }
+
+  pendingFriends(userId, limit = 20) {
+    return this.q.pendingFriends.all(userId, limit).map((r) => r.id);
+  }
+
+  /** Награда пригласившему за друга (один раз за каждого). Возвращает пригласившего или null. */
+  rewardReferral(friendId, amount) {
+    return this.tx(() => {
+      const friend = this.getUser(friendId);
+      if (!friend?.referrer_id) return null;
+      if (this.q.markRefRewarded.run(friendId).changes !== 1) return null;
+      this.#credit(friend.referrer_id, amount, 'referral', friendId);
+      return this.getUser(friend.referrer_id);
     });
   }
 

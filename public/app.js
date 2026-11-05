@@ -147,6 +147,7 @@ function go(view) {
   if (supports('6.1')) view === 'roulette' ? tg.BackButton.hide() : tg.BackButton.show();
   if (view === 'withdraw' || view === 'profile') refreshMe();
   if (view === 'tasks') loadTasks();
+  if (view === 'friends') loadFriends();
   haptic.tap();
 }
 
@@ -337,7 +338,7 @@ function onRound(round) {
   renderCenter();
   renderStatus();
   renderPlayers();
-  renderWinners();
+  renderFeats();
   updateBetButton();
 
   const wheelEl = $('wheel');
@@ -356,26 +357,24 @@ function onRound(round) {
   }
 }
 
-/** Лента последних победителей. */
-let winnersKey = '';
-function renderWinners() {
-  const list = state.round.history ?? [];
-  const key = list.map((h) => h.round).join(',');
-  if (key === winnersKey) return;
-  const isUpdate = winnersKey !== '';
-  winnersKey = key;
-  if (!list.length) return ($('winners').innerHTML = '');
-  $('winners').innerHTML =
-    '<h2>Последние победители</h2><div class="h-strip">' +
-    list
-      .map(
-        (h, i) => `<div class="h-card${isUpdate && i === 0 ? ' fresh' : ''}">${avatarHtml(h, 'sm')}
-          <div class="h-name">${h.id === state.me?.id ? 'Вы' : esc(h.name)}</div>
-          <div class="h-bank num">+${fmt(h.bank)}${STAR}</div>
-          <div class="h-chance">шанс ${h.chance}%</div></div>`,
-      )
-      .join('') +
-    '</div>';
+/** Карточки «Последняя игра» и «Топ игра дня». */
+let featsKey = '';
+function renderFeats() {
+  const { lastGame, topToday } = state.round;
+  const key = `${lastGame?.round}:${topToday?.round}`;
+  if (key === featsKey) return;
+  const fresh = featsKey !== '';
+  featsKey = key;
+  const card = (g, cls, icon, label) => {
+    const who = g
+      ? `<div class="f-row">${avatarHtml(g, 'sm')}<div class="f-who">
+          <div class="f-name">${g.id === state.me?.id ? 'Вы' : esc(g.username ? `@${g.username}` : g.name)}</div>
+          <div class="f-chance num">${g.chance}%</div></div>
+          <div class="f-bank num">+${fmt(g.bank)}${STAR}</div></div>`
+      : '<div class="f-empty">Пока нет игр</div>';
+    return `<div class="feat ${cls}${fresh ? ' fresh' : ''}"><div class="f-label"><svg><use href="#${icon}"/></svg>${label}</div>${who}</div>`;
+  };
+  $('feats').innerHTML = card(lastGame, 'f-last', 'i-clock', 'Последняя игра') + card(topToday, 'f-top', 'i-trophy', 'Топ игра дня');
 }
 
 /** Праздничный дождь из звёзд при победе. Лёгкий: один canvas, ~1.8 секунды. */
@@ -435,20 +434,37 @@ function confetti() {
   requestAnimationFrame(frame);
 }
 
+/** Банк над колесом и содержимое центра колеса для каждого этапа раунда. */
+let centerKey = '';
 function renderCenter() {
   const r = state.round;
   const bankEl = $('bank');
   const prevBank = Number(bankEl.dataset.v || 0);
-  animateNumber(bankEl, prevBank, r.bank, 500);
+  if (prevBank !== r.bank) animateNumber(bankEl, prevBank, r.bank, 500);
   bankEl.dataset.v = r.bank;
+
   const n = r.players.length;
-  if (r.status === 'finished') {
-    const w = r.players.find((p) => p.id === r.winnerId);
-    $('wc-caption').textContent = 'Победитель';
-    $('wc-sub').textContent = w?.id === state.me?.id ? 'Вы' : w?.name ?? '';
+  const inRound = r.players.some((p) => p.id === state.me?.id);
+  const key = `${r.id}:${r.status}:${r.status === 'waiting' ? `${n}:${inRound}` : ''}`;
+  if (key === centerKey) return;
+  centerKey = key;
+  const wc = $('wc');
+  $('wheel').classList.remove('hot', 'beat');
+
+  if (r.status === 'waiting' && n === 0) {
+    wc.innerHTML = '<div class="wc-title">Ставь<br>первым</div>';
+  } else if (r.status === 'waiting') {
+    wc.innerHTML = `<svg class="wc-icon"><use href="#i-hourglass"/></svg>
+      <div class="wc-title">Ждём<br>соперника</div>`;
+  } else if (r.status === 'countdown') {
+    wc.innerHTML = '<div class="wc-timer" id="wc-timer">15</div><div class="wc-sub">секунд</div>';
+    tickCountdown();
+  } else if (r.status === 'spinning') {
+    wc.innerHTML = '<svg class="wc-icon"><use href="#i-roulette"/></svg><div class="wc-title">Крутим…</div>';
   } else {
-    $('wc-caption').textContent = 'Банк раунда';
-    $('wc-sub').textContent = n === 0 ? 'Нет ставок' : `${n} ${plural(n, 'игрок', 'игрока', 'игроков')}`;
+    const w = r.players.find((p) => p.id === r.winnerId) ?? {};
+    wc.innerHTML = `${avatarHtml(w)}<div class="wc-name">${w.id === state.me?.id ? 'Вы победили!' : esc(w.name)}</div>
+      <div class="wc-prize num">+${fmt(r.bank)}${STAR}</div>`;
   }
 }
 
@@ -467,49 +483,28 @@ function myChance(r) {
   return i < 0 ? null : percents(segs.map((x) => x.frac))[i];
 }
 
-let statusKey = '';
+/** Строка под колесом: подсказка или ваш шанс. */
 function renderStatus() {
   const r = state.round;
-  const el = $('status');
   const chance = myChance(r);
-  const chanceText = chance === null ? '' : `Ваш шанс — ${chance < 1 ? '<1' : chance}%`;
-  const key = `${r.id}:${r.status}`;
-  if (key === statusKey) {
-    const sub = $('st-sub');
-    if (sub && (r.status === 'countdown' || r.status === 'waiting')) sub.textContent = chanceText || sub.dataset.default;
-    return;
+  const pct = chance === null ? '' : `Ваш шанс — <b>${chance < 1 ? '<1' : chance}%</b>`;
+  const n = r.players.length;
+  let html = '';
+  if (r.status === 'waiting') html = pct ? 'Вы в игре · ждём второго игрока' : 'Раунд начнётся после второй ставки';
+  else if (r.status === 'countdown') html = pct || `${n} ${plural(n, 'игрок', 'игрока', 'игроков')} · успейте сделать ставку`;
+  else if (r.status === 'spinning') html = 'Определяем победителя…';
+  else {
+    const w = r.players.find((p) => p.id === r.winnerId);
+    html = w?.id === state.me?.id ? '<b>Банк ваш!</b> Новый раунд скоро' : `<b>${esc(w?.name ?? '')}</b> забирает банк · новый раунд скоро`;
   }
-  statusKey = key;
-  el.className = 'status card';
+  $('caption').innerHTML = html;
   if (r.status !== 'countdown') $('cd-ring').style.strokeDashoffset = CD_LEN;
-
-  if (r.status === 'waiting') {
-    const def = 'Раунд начнётся после второй ставки';
-    el.innerHTML = `<div class="st-row"><div class="st-icon"><svg><use href="#i-hourglass"/></svg></div>
-      <div><div class="st-title">Ожидание игроков</div><div class="st-sub" id="st-sub" data-default="${def}">${chance === null ? def : 'Вы в игре · ждём соперника'}</div></div></div>`;
-  } else if (r.status === 'countdown') {
-    const def = 'Успейте сделать ставку';
-    el.innerHTML = `<div class="st-row"><div><div class="st-title">До конца раунда</div>
-      <div class="st-sub" id="st-sub" data-default="${def}">${chanceText || def}</div></div><div class="st-timer num" id="timer">00:15</div></div>
-      <div class="progress"><i id="timer-bar"></i></div>`;
-    tickCountdown();
-  } else if (r.status === 'spinning') {
-    el.classList.add('spin');
-    el.innerHTML = `<div class="st-row"><div class="st-icon"><svg><use href="#i-roulette"/></svg></div>
-      <div><div class="st-title">Розыгрыш</div><div class="st-sub">Определяем победителя</div></div></div>`;
-  } else {
-    const w = r.players.find((p) => p.id === r.winnerId) ?? {};
-    const isMe = w.id === state.me?.id;
-    el.innerHTML = `<div class="st-row">${avatarHtml(w, 'sm')}
-      <div style="min-width:0"><div class="st-title">${isMe ? 'Вы забираете банк' : `${esc(w.name)} забирает банк`}</div>
-      <div class="st-sub">Новый раунд скоро</div></div>
-      <div class="st-prize num">+${fmt(r.bank)}${STAR}</div></div>`;
-  }
 }
 
-const CD_LEN = 2 * Math.PI * 61; // длина кольца отсчёта вокруг банка
+const CD_LEN = 2 * Math.PI * 61; // длина кольца отсчёта вокруг центра
 let countdownLoop = false;
 let lastSecond = null;
+/** Отсчёт в центре колеса; последние 5 секунд — красные цифры с «сердцебиением». */
 function tickCountdown() {
   if (countdownLoop) return;
   countdownLoop = true;
@@ -517,18 +512,28 @@ function tickCountdown() {
     const r = state.round;
     if (r?.status !== 'countdown') {
       countdownLoop = false;
+      lastSecond = null;
       return;
     }
     const left = Math.max(0, r.countdownEndsAt - serverNow());
     const sec = Math.ceil(left / 1000);
-    const share = left / r.countdownMs;
-    const t = $('timer');
-    const bar = $('timer-bar');
-    if (t) t.textContent = `00:${String(sec).padStart(2, '0')}`;
-    if (bar) bar.style.transform = `scaleX(${share})`;
-    $('cd-ring').style.strokeDashoffset = CD_LEN * (1 - share);
-    if (sec !== lastSecond && sec <= 3 && sec > 0) haptic.impact('light'); // последние секунды ощущаются
-    lastSecond = sec;
+    $('cd-ring').style.strokeDashoffset = CD_LEN * (1 - left / r.countdownMs);
+    const t = $('wc-timer');
+    if (t && sec !== lastSecond) {
+      t.textContent = sec;
+      const hot = sec <= 5 && sec > 0;
+      t.classList.toggle('hot', hot);
+      $('wheel').classList.toggle('hot', hot);
+      if (hot) {
+        for (const el of [t, $('wheel')]) {
+          el.classList.remove('beat');
+          void el.offsetWidth; // перезапуск анимации ровно на смене секунды
+          el.classList.add('beat');
+        }
+        haptic.impact(sec <= 2 ? 'medium' : 'light');
+      }
+      lastSecond = sec;
+    }
     if (left > 0) requestAnimationFrame(frame);
     else countdownLoop = false;
   };
@@ -812,6 +817,62 @@ async function onTaskAction(btn) {
   renderTasks();
 }
 
+// ---------- Друзья ----------
+async function loadFriends() {
+  try {
+    const res = await api('/api/friends', {});
+    state.friends = res;
+    applyProfile(res);
+    renderFriends();
+  } catch {}
+}
+
+function renderFriends() {
+  const f = state.friends;
+  if (!f) return;
+  $('ref-reward-title').textContent = `+${fmt(f.reward)}`;
+  $('ref-link-text').textContent = f.link.replace(/^https:\/\//, '') || 'Ссылка появится после запуска бота';
+  $('ref-count').textContent = fmt(f.count);
+  $('ref-earned').textContent = fmt(f.earned);
+  $('friends-title').hidden = false;
+  $('friends').innerHTML = f.friends.length
+    ? f.friends
+        .map(
+          (fr) => `<div class="friend">${avatarHtml(fr, 'sm')}
+            <div class="fr-main"><div class="fr-name">${esc(fr.name)}</div>
+            <div class="fr-nick">${fr.username ? `@${esc(fr.username)}` : '&nbsp;'}</div></div>
+            ${fr.rewarded ? `<span class="chip sent num">+${fmt(f.reward)} ⭐</span>` : '<span class="chip pending">Ждём подписку</span>'}
+          </div>`,
+        )
+        .join('')
+    : '<div class="friends-empty">Пока никого. Отправьте ссылку друзьям — звёзды придут, когда они подпишутся на канал.</div>';
+}
+
+async function copyRefLink() {
+  const link = state.friends?.link;
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+  } catch {
+    const ta = Object.assign(document.createElement('textarea'), { value: link });
+    document.body.append(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  haptic.ok();
+  toast('Ссылка скопирована');
+}
+
+function shareRefLink() {
+  const link = state.friends?.link;
+  if (!link) return;
+  const text = 'Залетай в Roulette Arena 🎰 Крути рулетку, обгоняй соперников и забирай весь банк!';
+  const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+  haptic.tap();
+  supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
+}
+
 // ---------- Запуск ----------
 function connectStream() {
   const es = new EventSource('/api/stream');
@@ -834,6 +895,8 @@ function bindUi() {
   $('bet-plus').addEventListener('click', () => stepBet(1));
   $('bet-input').addEventListener('input', updateBetButton);
   $('bet-chips').addEventListener('click', (e) => e.target.dataset.chip && chooseChip(e.target.dataset.chip));
+  $('ref-link').addEventListener('click', copyRefLink);
+  $('ref-share').addEventListener('click', shareRefLink);
   $('tasks').addEventListener('click', (e) => {
     const b = e.target.closest('[data-task]');
     if (b) onTaskAction(b);
