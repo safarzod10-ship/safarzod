@@ -6,7 +6,7 @@ import { Game } from '../server/game.js';
 import { Bot } from '../server/bot.js';
 
 const TOKEN = '123456:TEST-token';
-const settings = { countdownMs: 30, spinMs: 30, resultMs: 30, houseCut: 0.1, houseFreeUpTo: 10, minBet: 1 };
+const settings = { countdownMs: 30, spinMs: 30, resultMs: 30, houseCut: 0.1, houseFreeUpTo: 9, minBet: 1 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function until(fn, ms = 2000) {
   const t0 = Date.now();
@@ -266,16 +266,17 @@ test('/start: баннер с подписью, синяя «Играть», к�
   assert.equal(second.body.photo, 'BIG', 'повторно — по file_id, без загрузки');
 });
 
-test('банк: до 10 включительно без комиссии, больше — минус 10% с округлением в пользу игрока', async () => {
+test('банк: до 9 включительно без комиссии, от 10 — минус 10%', async () => {
   const { bankOf } = await import('../server/game.js');
   assert.equal(bankOf(2, 0.1), 2); // 1 + 1 — победитель забирает всё
-  assert.equal(bankOf(10, 0.1), 10);
-  assert.equal(bankOf(11, 0.1), 10);
+  assert.equal(bankOf(8, 0.1), 8);
+  assert.equal(bankOf(9, 0.1), 9);
+  assert.equal(bankOf(10, 0.1), 9); // пример: ставки 10 → банк 9
   assert.equal(bankOf(15, 0.1), 14);
   assert.equal(bankOf(20, 0.1), 18);
   assert.equal(bankOf(500, 0.1), 450);
   assert.equal(bankOf(1800, 0.1), 1620);
-  for (let t = 11; t < 5000; t++) assert.equal(bankOf(t, 0.1), t - Math.floor(t / 10));
+  for (let t = 10; t < 5000; t++) assert.equal(bankOf(t, 0.1), t - Math.floor(t / 10));
 });
 
 test('задания: награда один раз, удалённое задание недоступно', () => {

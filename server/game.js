@@ -174,11 +174,11 @@ export class Game extends EventEmitter {
 }
 
 /**
- * Сколько получает победитель. Банк до freeUpTo включительно (по умолчанию 10) — целиком,
- * без комиссии. Больше — минус комиссия 10%, округлённая вниз в пользу игрока:
- * 11 → 10, 15 → 14, 20 → 18, 500 → 450.
+ * Сколько получает победитель. Общие ставки до 9 включительно — целиком, без комиссии.
+ * От 10 — минус комиссия 10% (дробная часть округляется вниз, в пользу игрока):
+ * 8 → 8, 9 → 9, 10 → 9, 15 → 14, 20 → 18, 500 → 450.
  */
-export function bankOf(total, houseCut, freeUpTo = 10) {
+export function bankOf(total, houseCut, freeUpTo = 9) {
   if (total <= freeUpTo) return total;
   const feePercent = Math.round(houseCut * 100); // целые проценты — без ошибок округления дробей
   return total - Math.floor((total * feePercent) / 100);

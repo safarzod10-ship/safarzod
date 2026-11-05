@@ -22,7 +22,7 @@ export const config = Object.freeze({
     spinMs: Number(env('SPIN_MS', '7000')), // анимация вращения
     resultMs: Number(env('RESULT_MS', '5000')), // показ победителя перед новым раундом
     houseCut: 0.1, // удержание из банка раунда
-    houseFreeUpTo: Number(env('HOUSE_FREE_UP_TO', '10')), // банк до этой суммы включительно — без комиссии
+    houseFreeUpTo: Number(env('HOUSE_FREE_UP_TO', '9')), // банк до 9 включительно — без комиссии, от 10 — 10%
     minBet: 1,
   }),
 
