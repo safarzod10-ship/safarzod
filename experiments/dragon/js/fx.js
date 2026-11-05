@@ -6,11 +6,11 @@ import { TAU, clamp, lerp, rng } from './util.js';
 
 const FLAME_LAYERS = [
   // [colour, radius factor fn(heat)]  drawn back-to-front => cel-shaded flame
-  ['#c8231c', (h) => clamp(h * 2.6) * (0.55 + 0.45 * h)],
-  ['#ff5a1f', (h) => Math.min(clamp(h * 2.6) * (0.55 + 0.45 * h) * 0.9, clamp(h * 1.25 + 0.05))],
-  ['#ffa42a', (h) => clamp(h * 1.45 - 0.22)],
-  ['#ffe066', (h) => clamp(h * 1.7 - 0.62)],
-  ['#fffbe0', (h) => clamp(h * 2.1 - 1.25)],
+  ['#1a2fb8', (h) => clamp(h * 2.6) * (0.55 + 0.45 * h)],
+  ['#2a6bff', (h) => Math.min(clamp(h * 2.6) * (0.55 + 0.45 * h) * 0.9, clamp(h * 1.25 + 0.05))],
+  ['#3fb2ff', (h) => clamp(h * 1.45 - 0.22)],
+  ['#9eeaff', (h) => clamp(h * 1.7 - 0.62)],
+  ['#f2fdff', (h) => clamp(h * 2.1 - 1.25)],
 ];
 
 export class FX {
@@ -139,13 +139,13 @@ export class FX {
     ctx.globalCompositeOperation = 'lighter';
     const flick = 0.85 + 0.15 * Math.sin(this.time * 31) * Math.sin(this.time * 17);
     let g = ctx.createRadialGradient(cx, cy, 10, cx, cy, 330);
-    g.addColorStop(0, `rgba(255,150,50,${0.32 * I * flick})`);
-    g.addColorStop(0.5, `rgba(255,90,30,${0.12 * I * flick})`);
-    g.addColorStop(1, 'rgba(255,60,20,0)');
+    g.addColorStop(0, `rgba(60,140,255,${0.36 * I * flick})`);
+    g.addColorStop(0.5, `rgba(80,60,255,${0.14 * I * flick})`);
+    g.addColorStop(1, 'rgba(60,40,255,0)');
     ctx.fillStyle = g; ctx.fillRect(cx - 340, cy - 340, 680, 680);
     g = ctx.createRadialGradient(mouth.x, mouth.y, 2, mouth.x, mouth.y, 90);
-    g.addColorStop(0, `rgba(255,230,140,${0.55 * I * flick})`);
-    g.addColorStop(1, 'rgba(255,140,40,0)');
+    g.addColorStop(0, `rgba(170,230,255,${0.6 * I * flick})`);
+    g.addColorStop(1, 'rgba(60,140,255,0)');
     ctx.fillStyle = g; ctx.fillRect(mouth.x - 100, mouth.y - 100, 200, 200);
     ctx.restore();
   }
@@ -190,7 +190,7 @@ export class FX {
     for (const s of this.sparks) {
       const k = s.age / s.life;
       const a = 1 - k;
-      ctx.strokeStyle = k < 0.4 ? `rgba(255,245,190,${a})` : `rgba(255,${(200 - k * 120) | 0},60,${a})`;
+      ctx.strokeStyle = k < 0.4 ? `rgba(220,245,255,${a})` : `rgba(${(120 - k * 60) | 0},${(200 - k * 80) | 0},255,${a})`;
       ctx.lineWidth = s.size * (1 - k * 0.5);
       ctx.beginPath();
       ctx.moveTo(s.px ?? s.x, s.py ?? s.y);
@@ -208,7 +208,7 @@ export class FX {
       const r = lerp(m.r0, m.r1, 1 - Math.pow(1 - k, 2));
       const a = Math.sin(Math.PI * Math.min(1, k * 1.6)) * (m.dark ? 0.3 : 0.62) * (1 - k * 0.7);
       if (a <= 0.01) continue;
-      const c = m.dark ? '150,140,138' : '214,214,220';
+      const c = m.dark ? '110,100,140' : '200,196,222';
       const g = ctx.createRadialGradient(m.x - r * 0.25, m.y - r * 0.3, r * 0.1, m.x, m.y, r);
       g.addColorStop(0, `rgba(250,250,252,${a})`);
       g.addColorStop(0.45, `rgba(${c},${a * 0.9})`);

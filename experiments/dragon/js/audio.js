@@ -110,7 +110,15 @@ export function scheduleDragonSound(ac, out, t0) {
     auto(lp.frequency, t0, [[2.2, 400], [2.48, 2600], [3.6, 2200], [3.95, 500]]);
     const f1 = filt('peaking', 650, 1.4, 7), f2 = filt('peaking', 1150, 2, 5), f3 = filt('peaking', 2500, 2.5, 4);
     const g = gain(0);
-    am.connect(drive); drive.connect(lp); lp.connect(f1); f1.connect(f2); f2.connect(f3); f3.connect(g); g.connect(bus);
+    // robot voice: ring modulation + a short metallic comb resonance
+    const ring = gain(0.6), rOsc = osc('sine', 155), rDepth = gain(0.4);
+    rOsc.connect(rDepth); rDepth.connect(ring.gain);
+    auto(rOsc.frequency, t0, [[2.2, 120], [2.6, 175], [3.8, 140]]);
+    const comb = ac.createDelay(0.05); comb.delayTime.value = 0.0042;
+    const fb = gain(0.62), wetC = gain(0.55);
+    am.connect(drive); drive.connect(lp); lp.connect(f1); f1.connect(f2); f2.connect(f3); f3.connect(ring);
+    ring.connect(g); ring.connect(comb); comb.connect(fb); fb.connect(comb); comb.connect(wetC); wetC.connect(g);
+    g.connect(bus);
     auto(g.gain, t0, [[0, 0], [2.25, 0], [2.48, 0.42], [2.7, 0.38], [3.4, 0.34], [3.75, 0.28], [4.02, 0]]);
     // sub thump at the roar onset
     const sub = osc('sine', 60), sg = gain(0);
@@ -159,9 +167,47 @@ export function scheduleDragonSound(ac, out, t0) {
 
   // ---------- 5) smoke puffs after the fire
   {
-    const n = noise(0.7); const lp = filt('lowpass', 900, 0.6); const g = gain(0);
-    auto(g.gain, t0, [[0, 0], [6.35, 0], [6.5, 0.22], [6.75, 0.06], [6.9, 0.16], [7.3, 0]]);
-    n.connect(lp); lp.connect(g); g.connect(bus);
+    const n = noise(1.3); const hp = filt('highpass', 2500, 0.7); const bp = filt('bandpass', 5200, 0.8); const g = gain(0);
+    auto(g.gain, t0, [[0, 0], [6.35, 0], [6.45, 0.5], [6.75, 0.14], [6.9, 0.34], [7.35, 0]]);
+    n.connect(hp); hp.connect(bp); bp.connect(g); g.connect(bus);
+  }
+  // ---------- 6) robot mechanics: servo whines, metal clanks, charge-up whine
+  const servo = (ts, dur, f0, f1, vol) => {
+    const o = osc('sawtooth', f0), o2 = osc('square', f0 * 1.5);
+    const vib = osc('sine', 23), vg = gain(f0 * 0.012); vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+    auto(o.frequency, t0, [[ts, f0], [ts + dur * 0.5, f1], [ts + dur, f1 * 0.92]]);
+    auto(o2.frequency, t0, [[ts, f0 * 1.5], [ts + dur * 0.5, f1 * 1.5], [ts + dur, f1 * 1.38]]);
+    const bp = filt('bandpass', 1400, 1.6), og = gain(0.35), g = gain(0);
+    o2.connect(og); o.connect(bp); og.connect(bp); bp.connect(g); g.connect(bus);
+    auto(g.gain, t0, [[0, 0], [ts, 0], [ts + 0.06, vol], [ts + dur - 0.08, vol * 0.8], [ts + dur, 0]]);
+  };
+  servo(1.0, 0.75, 420, 760, 0.09);   // head goes back
+  servo(1.3, 0.95, 300, 620, 0.08);   // wings unfold
+  servo(3.9, 0.45, 520, 900, 0.07);   // head pulls back for the inhale
+  servo(6.7, 1.2, 700, 380, 0.08);    // everything returns to rest
+  const clank = (ts, f, vol, decay = 0.35) => {
+    [1, 2.76, 5.4, 8.93].forEach((m, i) => {
+      const o = osc(i % 2 ? 'triangle' : 'sine', f * m), g = gain(0);
+      auto(g.gain, t0, [[0, 0], [ts, 0], [ts + 0.003, vol / (i + 1)], [ts + decay / (1 + i * 0.6), 0]]);
+      o.connect(g); g.connect(bus);
+    });
+    const n = noise(1.5), hp = filt('highpass', 3000), g = gain(0);
+    auto(g.gain, t0, [[0, 0], [ts, 0], [ts + 0.002, vol * 0.8], [ts + 0.04, 0]]);
+    n.connect(hp); hp.connect(g); g.connect(bus);
+  };
+  clank(2.3, 190, 0.32);              // wings lock open
+  clank(T.jawOpen + 0.05, 240, 0.28); // jaw latch
+  clank(4.08, 260, 0.22, 0.25);       // jaw half-closes
+  clank(4.5, 900, 0.16, 0.12);        // igniter click
+  clank(7.55, 210, 0.26);             // jaw shuts
+  clank(7.85, 170, 0.2);              // wings fold home
+  // charge-up whine while the reactor heats before the fire
+  {
+    const o = osc('sine', 300), o2 = osc('sine', 603), g = gain(0);
+    auto(o.frequency, t0, [[T.inhale, 300], [4.5, 2200]]);
+    auto(o2.frequency, t0, [[T.inhale, 603], [4.5, 4410]]);
+    auto(g.gain, t0, [[0, 0], [T.inhale, 0], [4.4, 0.08], [4.56, 0]]);
+    o.connect(g); o2.connect(g); g.connect(bus);
   }
   return nodes;
 }

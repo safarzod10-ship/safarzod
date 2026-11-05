@@ -13,16 +13,18 @@ import path from 'node:path';
 import { serve } from './serve.mjs';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
-const out = path.resolve(process.argv[2] || 'media/dragon_demo.mp4');
+const args = process.argv.slice(2);
+const TRANSPARENT = args.includes('--transparent'); // character only, alpha channel (VP9 WebM)
+const out = path.resolve(args.find((a) => !a.startsWith('--')) || (TRANSPARENT ? 'media/robodragon_alpha.webm' : 'media/dragon_demo.mp4'));
 const FPS = 60, LEAD = 1.2, TAIL = 1.0, PRESS = 0.18;
 
 const { url, close } = await serve();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFactor: 2 });
 page.on('pageerror', (e) => console.error('[pageerror]', e.message));
-await page.goto(url + '/index.html?capture=1');
+await page.goto(url + '/index.html?capture=1' + (TRANSPARENT ? '&transparent=1' : ''));
 await page.waitForFunction(() => window.__capture);
-await page.addStyleTag({ content: '#play{transition:none!important}' });
+await page.addStyleTag({ content: '#play{transition:none!important}' + (TRANSPARENT ? 'html,body{background:transparent!important}.stage-wrap{box-shadow:none!important}#play{display:none!important}' : '') });
 const duration = await page.evaluate(() => window.__capture.duration);
 await page.evaluate(() => window.__capture.reset());
 
@@ -38,8 +40,10 @@ const ff = spawn('ffmpeg', [
   '-y', '-loglevel', 'error',
   '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
   '-i', wavPath,
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
-  '-c:a', 'aac', '-b:a', '192k', '-shortest', out,
+  ...(TRANSPARENT
+    ? ['-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-b:v', '0', '-crf', '30', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', '-auto-alt-ref', '0', '-c:a', 'libopus', '-b:a', '128k']
+    : ['-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k']),
+  '-shortest', out,
 ], { stdio: ['pipe', 'inherit', 'inherit'] });
 
 const stage = page.locator('.stage-wrap');
@@ -47,7 +51,7 @@ const t0 = Date.now();
 for (let f = 0; f < total; f++) {
   if (f === startFrame - Math.round(PRESS * FPS)) await page.evaluate(() => window.__capture.pressVisual(true));
   if (f === startFrame) await page.evaluate(() => { window.__capture.pressVisual(false); window.__capture.start(); });
-  const png = await stage.screenshot({ type: 'png' });
+  const png = await stage.screenshot({ type: 'png', omitBackground: TRANSPARENT });
   if (!ff.stdin.write(png)) await new Promise((r) => ff.stdin.once('drain', r));
   await page.evaluate((dt) => window.__capture.advance(dt), 1 / FPS);
   if (f % 60 === 0) process.stdout.write(`frame ${f}/${total}  (${((Date.now() - t0) / 1000).toFixed(0)} s)\n`);

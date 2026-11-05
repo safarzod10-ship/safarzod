@@ -9,6 +9,9 @@ const W = 540, H = 960;          // logical stage size (9:16)
 const STEP = 1 / 120;            // fixed simulation step
 const PLACE = new Mat().translate(222, 800).scale(0.9); // dragon space -> stage
 
+const params = new URLSearchParams(location.search);
+// ?transparent : no scenery, only the character + a soft ground shadow (for compositing in a game)
+const TRANSPARENT = params.has('transparent');
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 const button = document.getElementById('play');
@@ -67,49 +70,53 @@ function advance(dt) {
 function drawBackground() {
   const fire = scene.fx.intensity;
   let g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#9fcfdc');
-  g.addColorStop(0.55, '#e4efe2');
-  g.addColorStop(0.8, '#f6e9cf');
+  g.addColorStop(0, '#1c0f33');
+  g.addColorStop(0.55, '#3b2066');
+  g.addColorStop(0.8, '#4a2a7a');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   // soft sun disc behind the dragon
   g = ctx.createRadialGradient(270, 480, 20, 270, 480, 330);
-  g.addColorStop(0, 'rgba(255,252,236,0.95)');
-  g.addColorStop(0.55, 'rgba(255,248,225,0.45)');
-  g.addColorStop(1, 'rgba(255,248,225,0)');
+  g.addColorStop(0, 'rgba(200,140,255,0.55)');
+  g.addColorStop(0.55, 'rgba(160,90,240,0.25)');
+  g.addColorStop(1, 'rgba(120,60,220,0)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   // distant hills
-  ctx.fillStyle = 'rgba(120,170,150,0.28)';
+  ctx.fillStyle = 'rgba(30,14,60,0.45)';
   ctx.beginPath(); ctx.moveTo(0, 760);
   ctx.bezierCurveTo(90, 690, 170, 700, 250, 735); ctx.bezierCurveTo(330, 765, 420, 680, 540, 720);
   ctx.lineTo(540, 800); ctx.lineTo(0, 800); ctx.fill();
-  ctx.fillStyle = 'rgba(105,160,135,0.32)';
+  ctx.fillStyle = 'rgba(24,10,48,0.5)';
   ctx.beginPath(); ctx.moveTo(0, 780);
   ctx.bezierCurveTo(120, 740, 220, 760, 300, 772); ctx.bezierCurveTo(400, 786, 470, 750, 540, 760);
   ctx.lineTo(540, 820); ctx.lineTo(0, 820); ctx.fill();
   // ground
   g = ctx.createLinearGradient(0, 775, 0, H);
-  g.addColorStop(0, '#e9d7b2'); g.addColorStop(1, '#d6bd92');
+  g.addColorStop(0, '#2e1952'); g.addColorStop(1, '#170b2b');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.moveTo(0, 790); ctx.quadraticCurveTo(270, 770, 540, 790); ctx.lineTo(540, H); ctx.lineTo(0, H); ctx.fill();
   // a few floating motes
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillStyle = 'rgba(230,170,255,0.6)';
   for (let i = 0; i < 14; i++) {
     const x = (i * 97.3 + scene.time * (6 + (i % 3) * 3)) % (W + 40) - 20;
     const y = 140 + ((i * 211.7) % 520) + Math.sin(scene.time * 0.7 + i) * 10;
     ctx.beginPath(); ctx.arc(x, y, 1.2 + (i % 3) * 0.7, 0, TAU); ctx.fill();
   }
-  // contact shadow
-  ctx.fillStyle = 'rgba(90,70,40,0.22)';
-  ctx.beginPath(); ctx.ellipse(250, 797, 175, 15, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(90,70,40,0.18)';
-  ctx.beginPath(); ctx.ellipse(250, 797, 120, 9, 0, 0, TAU); ctx.fill();
+  drawShadow();
   // warm light from the fire on the ground
   if (fire > 0.01) {
     const m = scene.mouth;
     g = ctx.createRadialGradient(m.x + 120, 790, 10, m.x + 120, 790, 300);
-    g.addColorStop(0, `rgba(255,150,60,${0.28 * fire})`); g.addColorStop(1, 'rgba(255,150,60,0)');
+    g.addColorStop(0, `rgba(80,150,255,${0.3 * fire})`); g.addColorStop(1, 'rgba(80,150,255,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
+}
+
+function drawShadow() {
+  // contact shadow
+  ctx.fillStyle = 'rgba(8,2,20,0.4)';
+  ctx.beginPath(); ctx.ellipse(250, 797, 175, 15, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(8,2,20,0.3)';
+  ctx.beginPath(); ctx.ellipse(250, 797, 120, 9, 0, 0, TAU); ctx.fill();
 }
 
 function drawRings() {
@@ -130,7 +137,7 @@ function drawRings() {
 function render() {
   const view = new Mat(dpr, 0, 0, dpr, 0, 0);
   view.set(ctx);
-  drawBackground();
+  if (TRANSPARENT) { ctx.clearRect(0, 0, W, H); drawShadow(); } else drawBackground();
   scene.dragon.draw(ctx, view.mul(PLACE), dpr * PLACE.a);
   view.set(ctx);
   scene.fx.drawGlow(ctx, scene.mouth);
@@ -140,7 +147,7 @@ function render() {
   drawRings();
   // subtle warm flash over the whole stage while breathing fire
   const I = scene.fx.intensity;
-  if (I > 0.01) { ctx.fillStyle = `rgba(255,140,40,${0.07 * I})`; ctx.fillRect(0, 0, W, H); }
+  if (I > 0.01 && !TRANSPARENT) { ctx.fillStyle = `rgba(60,130,255,${0.07 * I})`; ctx.fillRect(0, 0, W, H); }
 }
 
 // ---------------------------------------------------------------- control
@@ -158,7 +165,7 @@ function onSequenceEnd() {
 }
 button.addEventListener('click', () => { if (scene.seqStart == null) start(true); });
 
-const capture = new URLSearchParams(location.search).has('capture');
+const capture = params.has('capture');
 if (!capture) {
   resize();
   window.addEventListener('resize', () => resize());

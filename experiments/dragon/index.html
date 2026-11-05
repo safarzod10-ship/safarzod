@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Дракон — демо анимации</title>
+<title>Робо-дракон — демо анимации</title>
 <style>
-  :root { --bg: #1b2a2f; --btn: #f3b23c; --btn-ink: #3a2306; }
+  :root { --bg: #12091f; --btn: #a24bf0; --btn-ink: #ffffff; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -24,21 +24,21 @@
     position: absolute; left: 50%; bottom: 5.2%; transform: translateX(-50%);
     font: 700 clamp(15px, 3.2vh, 22px)/1 inherit; font-family: inherit;
     padding: 0.95em 1.9em; border: 0; border-radius: 999px;
-    color: var(--btn-ink); background: linear-gradient(#ffd36e, var(--btn));
-    box-shadow: 0 0.35em 0 #c47a1c, 0 0.6em 1.4em rgba(80,40,0,.35);
+    color: var(--btn-ink); background: linear-gradient(#d18bff, var(--btn));
+    box-shadow: 0 0.35em 0 #5d1f9e, 0 0.6em 1.4em rgba(120,40,220,.45);
     cursor: pointer; white-space: nowrap; letter-spacing: .01em;
     transition: transform .08s, box-shadow .08s, opacity .25s, filter .25s;
     -webkit-tap-highlight-color: transparent;
   }
   #play:hover { filter: brightness(1.05); }
-  #play:active, #play.pressed { transform: translateX(-50%) translateY(0.25em); box-shadow: 0 0.1em 0 #c47a1c, 0 0.3em 0.8em rgba(80,40,0,.35); }
+  #play:active, #play.pressed { transform: translateX(-50%) translateY(0.25em); box-shadow: 0 0.1em 0 #5d1f9e, 0 0.3em 0.8em rgba(120,40,220,.45); }
   #play:disabled { opacity: .55; cursor: default; filter: saturate(.6); }
   #play:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 </style>
 </head>
 <body>
   <div class="stage-wrap">
-    <canvas id="stage" width="540" height="960" aria-label="Мультяшный дракон"></canvas>
+    <canvas id="stage" width="540" height="960" aria-label="Мультяшный робо-дракон"></canvas>
     <button id="play" type="button">Запустить анимацию</button>
   </div>
   <script type="module" src="js/main.js"></script>
