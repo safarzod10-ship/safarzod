@@ -97,6 +97,22 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS users_created ON users(created_at);
     CREATE INDEX IF NOT EXISTS payments_created ON payments(created_at);
     CREATE INDEX IF NOT EXISTS rounds_finished ON rounds(status, finished_at);
+    CREATE TABLE IF NOT EXISTS tasks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind        TEXT NOT NULL,                -- subscribe (бот проверяет подписку) | link (переход по ссылке)
+      title       TEXT NOT NULL,
+      url         TEXT NOT NULL,
+      chat_ref    TEXT NOT NULL DEFAULT '',     -- @username канала/чата для проверки подписки
+      reward      INTEGER NOT NULL CHECK (reward > 0),
+      active      INTEGER NOT NULL DEFAULT 1,
+      created_at  INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS task_completions (
+      task_id     INTEGER NOT NULL REFERENCES tasks(id),
+      user_id     INTEGER NOT NULL REFERENCES users(id),
+      created_at  INTEGER NOT NULL,
+      PRIMARY KEY (task_id, user_id)
+    );
   `);
 }
 
@@ -145,6 +161,20 @@ class Store {
       userDeposits: q('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
       userWithdrawn: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE user_id = ? AND status = 'sent'"),
       broadcastIds: q('SELECT id FROM users WHERE blocked = 0 ORDER BY id'),
+      // --- задания ---
+      addTask: q('INSERT INTO tasks (kind, title, url, chat_ref, reward, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+      getTask: q('SELECT * FROM tasks WHERE id = ?'),
+      activeTasks: q(`SELECT t.*, (SELECT COUNT(*) FROM task_completions c WHERE c.task_id = t.id) AS done_count
+                      FROM tasks t WHERE active = 1 ORDER BY id DESC`),
+      userTasks: q(`SELECT t.id, t.kind, t.title, t.url, t.reward, (c.user_id IS NOT NULL) AS done
+                    FROM tasks t LEFT JOIN task_completions c ON c.task_id = t.id AND c.user_id = ?
+                    WHERE t.active = 1 ORDER BY done, t.id DESC`),
+      disableTask: q('UPDATE tasks SET active = 0 WHERE id = ?'),
+      completeTask: q('INSERT INTO task_completions (task_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'),
+      recentWinners: q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
+                          (SELECT SUM(amount) FROM bets b WHERE b.round_id = r.id AND b.user_id = r.winner_id) AS stake
+                        FROM rounds r JOIN users u ON u.id = r.winner_id
+                        WHERE r.status = 'finished' ORDER BY r.id DESC LIMIT ?`),
     };
   }
 
@@ -228,6 +258,44 @@ class Store {
       deposits: { ...this.q.userDeposits.get(id) },
       withdrawn: this.q.userWithdrawn.get(id).sum,
     };
+  }
+
+  // ---------- Задания ----------
+
+  addTask({ kind, title, url, chatRef = '', reward }) {
+    const id = Number(this.q.addTask.run(kind, title, url, chatRef, reward, Date.now()).lastInsertRowid);
+    return this.getTask(id);
+  }
+
+  getTask(id) {
+    return this.q.getTask.get(id) ?? null;
+  }
+
+  activeTasks() {
+    return this.q.activeTasks.all();
+  }
+
+  userTasks(userId) {
+    return this.q.userTasks.all(userId).map((t) => ({ ...t, done: !!t.done }));
+  }
+
+  disableTask(id) {
+    return this.q.disableTask.run(id).changes === 1;
+  }
+
+  /** Награда за задание — один раз на пользователя. Возвращает null, если уже получена. */
+  completeTask(taskId, userId) {
+    return this.tx(() => {
+      const task = this.getTask(taskId);
+      if (!task?.active) throw new AppError('TASK_GONE', 'Задание больше недоступно', 404);
+      if (this.q.completeTask.run(taskId, userId, Date.now()).changes !== 1) return null;
+      this.#credit(userId, task.reward, 'task', taskId);
+      return this.getUser(userId);
+    });
+  }
+
+  recentWinners(limit = 12) {
+    return this.q.recentWinners.all(limit);
   }
 
   broadcastIds() {

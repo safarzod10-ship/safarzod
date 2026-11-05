@@ -265,3 +265,58 @@ test('/start: баннер с подписью, синяя «Играть», к�
   assert.equal(kb[2][0].url, 'https://t.me/bob_proger');
   assert.equal(second.body.photo, 'BIG', 'повторно — по file_id, без загрузки');
 });
+
+test('банк считается без ошибок округления (500 → 450, 1 → 0, 7 → 6)', async () => {
+  const { bankOf } = await import('../server/game.js');
+  assert.equal(bankOf(500, 0.1), 450);
+  assert.equal(bankOf(1, 0.1), 0);
+  assert.equal(bankOf(7, 0.1), 6);
+  assert.equal(bankOf(1800, 0.1), 1620);
+  for (let t = 1; t < 5000; t++) assert.equal(bankOf(t, 0.1), Math.floor((t * 9) / 10));
+});
+
+test('задания: награда один раз, удалённое задание недоступно', () => {
+  const store = storeWith(0);
+  const t = store.addTask({ kind: 'link', title: 'Перейти', url: 'https://example.com', reward: 10 });
+  assert.equal(store.userTasks(1)[0].done, false);
+  assert.equal(store.completeTask(t.id, 1).balance, 10);
+  assert.equal(store.completeTask(t.id, 1), null);
+  assert.equal(store.getUser(1).balance, 10);
+  assert.equal(store.userTasks(1)[0].done, true);
+  store.disableTask(t.id);
+  assert.equal(store.userTasks(1).length, 0);
+  assert.throws(() => store.completeTask(t.id, 1), /недоступно/);
+});
+
+test('админ добавляет задание: ссылка → награда; канал без прав бота → засчитывается за переход', async () => {
+  const store = storeWith(0);
+  const bot = fakeBot(store);
+  bot.botId = 777;
+  const base = bot.api;
+  bot.api = async (method, payload) => {
+    if (method === 'getChat') return { id: -100, type: 'channel', title: 'Мой канал' };
+    if (method === 'getChatMember') return { status: payload.user_id === 777 ? 'administrator' : 'left' };
+    return base(method, payload);
+  };
+  await bot.handleUpdate(adminTap('adm:taskadd'));
+  await bot.handleUpdate(adminMsg('https://t.me/my_channel'));
+  assert.match(lastText(bot), /Подписаться на «Мой канал»[\s\S]*проверяться автоматически/);
+  await bot.handleUpdate(adminMsg('25'));
+  const [task] = store.activeTasks();
+  assert.deepEqual([task.kind, task.chat_ref, task.reward], ['subscribe', '@my_channel', 25]);
+  assert.equal(await bot.isMember('@my_channel', 1), false);
+
+  bot.api = async (method, payload) => {
+    if (method === 'getChat') return { id: -100, type: 'channel', title: 'Чужой' };
+    if (method === 'getChatMember') return { status: 'left' };
+    return base(method, payload);
+  };
+  await bot.handleUpdate(adminTap('adm:taskadd'));
+  await bot.handleUpdate(adminMsg('@other_chan'));
+  assert.match(lastText(bot), /не администратор канала/);
+  await bot.handleUpdate(adminMsg('5'));
+  assert.equal(store.activeTasks()[0].kind, 'link');
+
+  await bot.handleUpdate(adminTap(`adm:taskdel:${task.id}`));
+  assert.equal(store.activeTasks().length, 1);
+});

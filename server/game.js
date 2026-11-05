@@ -19,11 +19,24 @@ export class Game extends EventEmitter {
     this.random = random;
     this.timer = null;
     this.round = null;
+    this.history = [];
+  }
+
+  #loadHistory() {
+    this.history = this.store.recentWinners(12).map((r) => ({
+      round: r.id,
+      id: r.user_id,
+      name: displayName(r),
+      photo: r.photo_url || '',
+      bank: r.bank,
+      chance: r.total ? Math.round((r.stake / r.total) * 100) : 0,
+    }));
   }
 
   start() {
     const refunded = this.store.refundOpenRounds();
     if (refunded) console.log(`Возвращены ставки незавершённых раундов: ${refunded}`);
+    this.#loadHistory();
     this.#newRound();
   }
 
@@ -113,6 +126,7 @@ export class Game extends EventEmitter {
     });
     r.status = 'finished';
     r.resultEndsAt = Date.now() + this.s.resultMs;
+    this.#loadHistory();
     this.#emit();
     this.timer = setTimeout(() => this.#newRound(), this.s.resultMs);
   }
@@ -139,6 +153,8 @@ export class Game extends EventEmitter {
       bank: r.status === 'spinning' || r.status === 'finished' ? r.bank : bankOf(total, this.s.houseCut),
       landing: r.landing,
       winnerId: r.winnerId,
+      // Последние победители — показываются, когда текущий раунд уже закончился
+      history: r.status === 'finished' ? this.history : this.history.filter((h) => h.round !== r.id),
       players: players.map((p) => ({
         id: p.user.id,
         name: displayName(p.user),
@@ -152,7 +168,9 @@ export class Game extends EventEmitter {
 }
 
 export function bankOf(total, houseCut) {
-  return Math.floor(total * (1 - houseCut));
+  // Целочисленно: 500 × 0.9 в дробях даёт 449.999…, а должно быть ровно 450.
+  const keepPercent = Math.round((1 - houseCut) * 100);
+  return Math.floor((total * keepPercent) / 100);
 }
 
 export function displayName(u) {

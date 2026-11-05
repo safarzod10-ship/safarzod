@@ -94,6 +94,8 @@ function amountOf(body, min) {
 }
 
 const lastAction = new Map(); // защита от случайных двойных нажатий
+const taskOpened = new Map(); // `${userId}:${taskId}` → когда игрок открыл ссылку задания
+const publicTask = (t) => ({ id: t.id, kind: t.kind, title: t.title, url: t.url, reward: t.reward, done: t.done });
 function throttle(userId, ms = 400) {
   const now = Date.now();
   if (now - (lastAction.get(userId) ?? 0) < ms) throw new AppError('TOO_FAST', 'Слишком часто', 429);
@@ -159,6 +161,41 @@ const routes = {
     }
     if (!bot) throw new AppError('NO_BOT', 'Оплата недоступна', 503);
     return { link: await bot.createDepositLink(user.id, amount) };
+  },
+
+  'POST /api/tasks': (req) => ({ tasks: store.userTasks(authenticate(req).id).map(publicTask) }),
+
+  // Игрок открыл ссылку задания — запоминаем время (для заданий без автоматической проверки)
+  'POST /api/tasks/open': async (req) => {
+    const user = authenticate(req);
+    const { id } = await readJson(req);
+    taskOpened.set(`${user.id}:${Number(id)}`, Date.now());
+    return { ok: true };
+  },
+
+  'POST /api/tasks/check': async (req) => {
+    const user = authenticate(req);
+    const { id } = await readJson(req);
+    throttle(user.id, 1500);
+    const task = store.getTask(Number(id));
+    if (!task?.active) throw new AppError('TASK_GONE', 'Задание больше недоступно', 404);
+    if (task.kind === 'subscribe') {
+      let member = false;
+      try {
+        member = bot ? await bot.isMember(task.chat_ref, user.id) : config.devMode;
+      } catch {
+        throw new AppError('CHECK_FAILED', 'Не удалось проверить подписку. Попробуйте через минуту', 503);
+      }
+      if (!member) throw new AppError('NOT_DONE', 'Подписка не найдена. Подпишитесь и нажмите «Проверить»');
+    } else {
+      const opened = taskOpened.get(`${user.id}:${task.id}`);
+      if (!opened) throw new AppError('NOT_DONE', 'Сначала откройте ссылку задания');
+      if (Date.now() - opened < 5000) throw new AppError('NOT_DONE', 'Загляните по ссылке и нажмите «Проверить» через пару секунд');
+    }
+    const updated = store.completeTask(task.id, user.id);
+    if (!updated) throw new AppError('ALREADY', 'Награда за это задание уже получена', 409);
+    broadcast('balance', { id: user.id });
+    return { reward: task.reward, ...profile(updated), tasks: store.userTasks(user.id).map(publicTask) };
   },
 
   'POST /api/withdraw': async (req) => {

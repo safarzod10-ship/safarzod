@@ -76,6 +76,7 @@ export class Bot {
   async start() {
     const me = await this.api('getMe');
     this.username = me.username;
+    this.botId = me.id;
     await this.api('deleteWebhook', { drop_pending_updates: false });
     const commands = [
       { command: 'start', description: 'Открыть Roulette Arena' },
@@ -235,7 +236,7 @@ export class Bot {
     return {
       inline_keyboard: [
         [btn('🔎 Найти игрока', 'adm:find'), btn('📣 Рассылка', 'adm:bcast')],
-        [btn('🔄 Обновить', 'adm:stats')],
+        [btn('📋 Задания', 'adm:tasks'), btn('🔄 Обновить', 'adm:stats')],
       ],
     };
   }
@@ -357,12 +358,99 @@ export class Bot {
         return;
       }
 
+      case 'tasks':
+        await this.#edit(cq.message, this.#tasksText(), this.#tasksKeyboard());
+        return answer();
+
+      case 'taskadd':
+        await answer();
+        return this.#ask(
+          chatId,
+          { kind: 'taskLink' },
+          '➕ <b>Новое задание</b>\n\nПришлите ссылку: канал или чат (<code>https://t.me/name</code> или <code>@name</code>) ' +
+            'либо любую другую ссылку.\n\nДля каналов и чатов бот сам проверяет подписку — для этого он должен быть ' +
+            '<b>администратором</b> канала (в чате достаточно быть участником).',
+          'https://t.me/channel',
+        );
+
+      case 'taskdel':
+        this.store.disableTask(id);
+        await this.#edit(cq.message, this.#tasksText(), this.#tasksKeyboard());
+        return answer('Задание удалено');
+
       case 'bcancel':
         this.pending.delete(chatId);
         await this.#edit(cq.message, '✖️ Рассылка отменена.');
         return answer();
     }
     return answer();
+  }
+
+  // ---------- Задания ----------
+
+  #tasksText() {
+    const tasks = this.store.activeTasks();
+    if (!tasks.length) return '📋 <b>Задания</b>\n\nЗаданий пока нет. Добавьте первое 👇';
+    const lines = tasks.map(
+      (t) =>
+        `<b>#${t.id}</b> ${t.kind === 'subscribe' ? '✅' : '🔗'} ${esc(t.title)}\n` +
+        `    +${fmt(t.reward)} ⭐ · выполнили: ${fmt(t.done_count)} · <a href="${esc(t.url)}">ссылка</a>`,
+    );
+    return `📋 <b>Задания (${tasks.length})</b>\n✅ — подписка проверяется, 🔗 — засчитывается за переход\n\n${lines.join('\n\n')}`;
+  }
+
+  #tasksKeyboard() {
+    const rows = this.store.activeTasks().map((t) => [btn(`🗑 Удалить #${t.id}`, `adm:taskdel:${t.id}`)]);
+    rows.push([btn('➕ Добавить задание', 'adm:taskadd')]);
+    rows.push([btn('« Панель', 'adm:stats')]);
+    return { inline_keyboard: rows };
+  }
+
+  /** Разбирает ссылку и выясняет, может ли бот проверять подписку. */
+  async #describeTaskLink(raw) {
+    let url = raw.trim();
+    if (/^@[A-Za-z0-9_]{4,}$/.test(url)) url = `https://t.me/${url.slice(1)}`;
+    if (/^t\.me\//i.test(url)) url = `https://${url}`;
+    let parsed;
+    try {
+      parsed = new URL(url);
+      if (!/^https?:$/.test(parsed.protocol)) throw new Error();
+    } catch {
+      return null;
+    }
+    const tg = /^(t\.me|telegram\.me)$/i.test(parsed.hostname) ? parsed.pathname.match(/^\/([A-Za-z0-9_]{4,})\/?$/) : null;
+    if (!tg) return { kind: 'link', url, title: `Перейти на ${parsed.hostname.replace(/^www\./, '')}`, note: '' };
+
+    const ref = `@${tg[1]}`;
+    let chat;
+    try {
+      chat = await this.api('getChat', { chat_id: ref });
+    } catch {
+      return {
+        kind: 'link', url, title: `Перейти в ${ref}`,
+        note: `⚠️ Не нашёл ${esc(ref)} — задание будет засчитываться за переход по ссылке.`,
+      };
+    }
+    const isChannel = chat.type === 'channel';
+    const title = isChannel ? `Подписаться на «${chat.title}»` : `Вступить в чат «${chat.title}»`;
+    let canCheck = false;
+    try {
+      const m = await this.api('getChatMember', { chat_id: ref, user_id: this.botId });
+      canCheck = m.status === 'administrator' || (!isChannel && m.status === 'member');
+    } catch {}
+    if (canCheck) return { kind: 'subscribe', url, chatRef: ref, title, note: '✅ Подписка будет проверяться автоматически.' };
+    return {
+      kind: 'link', url, title,
+      note:
+        `⚠️ Бот не ${isChannel ? 'администратор канала' : 'участник чата'} ${esc(ref)}, поэтому подписку проверить нельзя — ` +
+        'задание засчитывается за переход. Чтобы включить проверку, добавьте бота и создайте задание заново.',
+    };
+  }
+
+  /** Состоит ли пользователь в канале/чате задания. */
+  async isMember(chatRef, userId) {
+    const m = await this.api('getChatMember', { chat_id: chatRef, user_id: userId });
+    return ['creator', 'administrator', 'member'].includes(m.status) || (m.status === 'restricted' && m.is_member);
   }
 
   /** Ответы админа на вопросы бота: ник для поиска, сумма, причина отмены, сообщение для рассылки. */
@@ -374,6 +462,39 @@ export class Bot {
     if (state.kind === 'cancelReason') {
       this.pending.delete(chatId);
       return this.#finishCancel(msg, state);
+    }
+
+    if (state.kind === 'taskLink') {
+      const draft = await this.#describeTaskLink(text);
+      if (!draft) {
+        return this.#send(chatId, 'Это не похоже на ссылку. Пришлите <code>https://…</code> или <code>@name</code>.', {
+          force_reply: true,
+          input_field_placeholder: 'https://t.me/channel',
+        });
+      }
+      return this.#ask(
+        chatId,
+        { kind: 'taskReward', draft },
+        `${esc(draft.title)}\n${draft.note ? `${draft.note}\n` : ''}\n💰 Сколько звёзд дать за выполнение?`,
+        'Например 10',
+      );
+    }
+
+    if (state.kind === 'taskReward') {
+      const reward = Number(text.replace(/\s/g, ''));
+      if (!Number.isSafeInteger(reward) || reward < 1 || reward > 1_000_000) {
+        return this.#send(chatId, 'Нужно целое число больше нуля, например <code>10</code>.', {
+          force_reply: true,
+          input_field_placeholder: 'Например 10',
+        });
+      }
+      this.pending.delete(chatId);
+      const t = this.store.addTask({ ...state.draft, reward });
+      return this.#send(
+        chatId,
+        `✅ <b>Задание #${t.id} добавлено</b>\n${esc(t.title)}\nНаграда: <b>+${fmt(t.reward)} ⭐</b>\n\nИгроки уже видят его в разделе «Задания».`,
+        { inline_keyboard: [[btn('📋 Все задания', 'adm:tasks'), btn('« Панель', 'adm:stats')]] },
+      );
     }
 
     if (state.kind === 'find') {
