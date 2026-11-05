@@ -113,7 +113,7 @@ export class Game extends EventEmitter {
     r.landing = (winnerStart + winner.amount * inside) / total;
 
     r.winnerId = winner.user.id;
-    r.bank = bankOf(total, this.s.houseCut);
+    r.bank = bankOf(total, this.s.houseCut, this.s.houseFreeUpTo);
     r.status = 'spinning';
     r.spinStartedAt = Date.now();
     r.spinEndsAt = r.spinStartedAt + this.s.spinMs;
@@ -156,7 +156,7 @@ export class Game extends EventEmitter {
       spinStartedAt: r.spinStartedAt,
       spinEndsAt: r.spinEndsAt,
       resultEndsAt: r.resultEndsAt,
-      bank: r.status === 'spinning' || r.status === 'finished' ? r.bank : bankOf(total, this.s.houseCut),
+      bank: r.status === 'spinning' || r.status === 'finished' ? r.bank : bankOf(total, this.s.houseCut, this.s.houseFreeUpTo),
       landing: r.landing,
       winnerId: r.winnerId,
       lastGame: this.lastGame,
@@ -173,10 +173,15 @@ export class Game extends EventEmitter {
   }
 }
 
-export function bankOf(total, houseCut) {
-  // Целочисленно: 500 × 0.9 в дробях даёт 449.999…, а должно быть ровно 450.
-  const keepPercent = Math.round((1 - houseCut) * 100);
-  return Math.floor((total * keepPercent) / 100);
+/**
+ * Сколько получает победитель. Банк до freeUpTo включительно (по умолчанию 10) — целиком,
+ * без комиссии. Больше — минус комиссия 10%, округлённая вниз в пользу игрока:
+ * 11 → 10, 15 → 14, 20 → 18, 500 → 450.
+ */
+export function bankOf(total, houseCut, freeUpTo = 10) {
+  if (total <= freeUpTo) return total;
+  const feePercent = Math.round(houseCut * 100); // целые проценты — без ошибок округления дробей
+  return total - Math.floor((total * feePercent) / 100);
 }
 
 export function displayName(u) {
