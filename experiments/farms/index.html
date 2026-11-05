@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Фермы HomeBeast</title>
+<style>html,body{margin:0;background:#161a33}canvas{display:block}body.t{background:transparent}</style></head>
+<body><canvas id="c" width="1280" height="1120" style="width:640px;height:560px"></canvas>
+<script type="module">
+import { Iso } from './js/iso.js';
+import { FARMS } from './js/farms.js';
+const q = new URLSearchParams(location.search);
+const id = q.get('farm') || 'crystal';
+if (q.has('transparent')) document.body.classList.add('t');
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const I = new Iso(ctx, 640, 640, 2);
+FARMS[id](I);
+window.__done = true;
+</script></body></html>
