@@ -573,7 +573,7 @@ body.kb .nav { display: none; }
 .caption b { color: var(--text); }
 
 /* ===== Друзья ===== */
-.invite { padding: 16px; display: grid; gap: 14px;
+.invite { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px;
   background: radial-gradient(120% 100% at 100% 0%, var(--accent-soft), transparent 60%), var(--surface); }
 .inv-head { display: flex; gap: 12px; align-items: center; }
 .inv-icon { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; color: var(--accent); background: var(--accent-soft); }
@@ -587,7 +587,11 @@ body.kb .nav { display: none; }
   transition: transform 0.15s var(--ease);
 }
 .inv-link:active { transform: scale(0.98); }
-.inv-link span { flex: 1; min-width: 0; font-size: 13.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inv-link { width: 100%; min-width: 0; overflow: hidden; }
+.inv-link .inv-text { flex: 1; min-width: 0; display: flex; font-size: 13.5px; color: var(--text-2); white-space: nowrap; }
+/* Длинная ссылка сокращается посередине: начало с многоточием, конец (ref_…) виден всегда */
+.inv-link .il-head { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inv-link .il-tail { flex: none; color: var(--text); }
 .inv-link svg { width: 18px; height: 18px; color: var(--accent); flex: none; }
 .ref-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .friends { display: grid; gap: 8px; }

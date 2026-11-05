@@ -1004,7 +1004,10 @@ function renderFriends() {
   const f = state.friends;
   if (!f) return;
   $('ref-reward-title').textContent = `+${fmt(f.reward)}`;
-  $('ref-link-text').textContent = f.link.replace(/^https:\/\//, '') || 'Ссылка появится после запуска бота';
+  const short = f.link.replace(/^https:\/\//, '');
+  const cut = short.indexOf('ref_');
+  $('ref-link-head').textContent = short ? (cut > 0 ? short.slice(0, cut) : short) : 'Ссылка появится после запуска бота';
+  $('ref-link-tail').textContent = cut > 0 ? short.slice(cut) : '';
   $('ref-count').textContent = fmt(f.count);
   $('ref-earned').textContent = fmt(f.earned);
   $('friends-title').hidden = false;
