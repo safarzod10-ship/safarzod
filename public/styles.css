@@ -129,8 +129,6 @@ svg { display: block; }
 }
 .wheel.spinning .wheel-glow { opacity: 0.9; }
 .wheel.won .wheel-glow { opacity: 1; }
-.ticks line { stroke: var(--text-3); stroke-width: 0.7; stroke-linecap: round; opacity: 0.55; }
-.ticks line.major { stroke: var(--text-2); stroke-width: 1.1; opacity: 0.8; }
 .cd-track { fill: none; stroke: var(--line); stroke-width: 2.4; }
 .cd-ring {
   fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linecap: round;
@@ -156,8 +154,6 @@ svg { display: block; }
 }
 .pointer path { fill: var(--gold); }
 .pointer circle { fill: var(--gold-ink); opacity: 0.85; }
-.wheel.spinning .pointer { animation: pointer-tick 0.14s ease-in-out infinite alternate; }
-@keyframes pointer-tick { to { transform: translateX(-50%) rotate(-7deg); } }
 
 .wheel-center {
   position: absolute; inset: 21%;
@@ -607,3 +603,50 @@ body.kb .nav { display: none; }
   .f-row .avatar { display: none; }
 }
 .wc .wc-sub { max-width: none; overflow: visible; }
+
+/* ===== Обод с огоньками ===== */
+.wheel { --bulb: var(--gold); }
+.wheel.hot { --bulb: #ff5d6c; }
+.bulbs circle { fill: var(--surface-3); transition: fill 0.12s, opacity 0.12s; }
+.bulbs circle.on { fill: var(--bulb); filter: drop-shadow(0 0 2.2px var(--bulb)); }
+
+/* ===== Аватарки на секторах ===== */
+#labels { transition: opacity 0.15s linear; }
+.sav { transition: opacity 0.5s var(--ease); }
+.sav.dim { opacity: 0.3; }
+.sav-ring { fill: none; stroke: rgba(11, 11, 16, 0.85); stroke-width: 2.6; }
+.sav-bg { fill: var(--surface-3); }
+.sav-ini { font-size: 8.5px; font-weight: 700; fill: var(--text); text-anchor: middle; dominant-baseline: central; }
+.sav-pct rect { fill: rgba(11, 11, 16, 0.88); stroke: var(--c); stroke-width: 0.6; }
+.sav-pct text { font-size: 5.6px; font-weight: 750; fill: #fff; text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; }
+
+/* ===== Стрелка «цепляет» границы ===== */
+.pointer { transform-origin: 50% 30%; }
+.wheel .pointer.flick { animation: flick 0.16s ease-out; }
+@keyframes flick {
+  0% { transform: translateX(-50%) rotate(0); }
+  35% { transform: translateX(-50%) rotate(-16deg); }
+  100% { transform: translateX(-50%) rotate(0); }
+}
+#sectors circle { transition: opacity 0.6s var(--ease); }
+
+/* ===== Всплывающие ставки ===== */
+.bubbles { position: absolute; left: 50%; top: 30%; width: 0; height: 0; z-index: 3; pointer-events: none; }
+.bubble {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, 0);
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  padding: 4px 10px 4px 4px; border-radius: 999px;
+  background: rgba(21, 21, 29, 0.92); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  font-size: 13px; animation: bubble-up 1.9s var(--ease) forwards;
+}
+.bubble b { color: var(--gold); font-weight: 750; }
+.bubble .star { width: 12px; height: 12px; }
+.bubble span { color: var(--text-2); max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+.avatar.xs { --size: 22px; font-size: 10px; box-shadow: 0 0 0 1.5px var(--c); }
+@keyframes bubble-up {
+  0% { opacity: 0; transform: translate(-50%, 14px) scale(0.85); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  75% { opacity: 1; transform: translate(-50%, -26px); }
+  100% { opacity: 0; transform: translate(-50%, -44px); }
+}

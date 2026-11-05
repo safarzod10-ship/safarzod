@@ -194,6 +194,12 @@ const wheel = {
   tween: null,
   spin: null, // { roundId, from, to, start, duration }
   roundId: null,
+  flash: new Map(), // seat → время вспышки сектора (новая ставка)
+  fade: 1, // прозрачность аватарок (размытие на скорости)
+  pointerSector: null,
+  lastHaptic: 0,
+  wonAt: null,
+  bulbs: [],
 };
 
 function sharesOf(round) {
@@ -217,37 +223,122 @@ function inkFor(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#16130a' : '#ffffff';
 }
 
+const SVGNS = 'http://www.w3.org/2000/svg';
+const AV_R = 10.5; // радиус аватарки на секторе (единицы viewBox; толщина кольца — 28)
+const avatarNodes = new Map(); // id игрока → <g> с аватаркой и процентом
+
+function initialsOf(u) {
+  const name = u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || '?';
+  return name.replace(/^@/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+/** Аватарка игрока для сектора: создаётся один раз, дальше только двигается. */
+function avatarNode(p) {
+  let g = avatarNodes.get(p.id);
+  if (g) return g;
+  g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('class', 'sav');
+  g.innerHTML =
+    `<circle class="sav-ring" r="${AV_R + 1.3}"/><circle class="sav-bg" r="${AV_R}"/>` +
+    `<text class="sav-ini">${esc(initialsOf(p))}</text>` +
+    (p.photo
+      ? `<image href="${esc(p.photo)}" x="${-AV_R}" y="${-AV_R}" width="${AV_R * 2}" height="${AV_R * 2}" clip-path="url(#avclip)" preserveAspectRatio="xMidYMid slice"/>`
+      : '') +
+    `<g class="sav-pct"><rect y="${AV_R - 3.2}" height="7.6" rx="3.8"/><text y="${AV_R + 0.75}"></text></g>`;
+  g.querySelector('image')?.addEventListener('error', (e) => e.target.remove());
+  avatarNodes.set(p.id, g);
+  return g;
+}
+
+/** Номер сектора под стрелкой (для «щелчков» стрелки на границах). */
+function sectorUnderPointer(segs, shownTotal) {
+  const pos = ((((-wheel.rot) % 360) + 360) % 360) / 360;
+  let acc = 0;
+  for (let i = 0; i < segs.length; i++) {
+    acc += (wheel.shown.get(segs[i].seat) ?? 0) / shownTotal;
+    if (pos < acc) return i;
+  }
+  return segs.length - 1;
+}
+
 function drawWheel() {
   const round = state.round;
   const segs = round ? sharesOf(round) : [];
   const finished = round?.status === 'finished';
-  const sectors = $('sectors');
-  const labels = $('labels');
   const n = segs.length;
   const gap = n > 1 ? 1.4 : 0;
   const pcts = percents(segs.map((s) => s.frac));
   const shownTotal = segs.reduce((a, s) => a + (wheel.shown.get(s.seat) ?? 0), 0) || 1;
+  const now = performance.now();
+  // Сектор победителя «выдвигается» наружу после остановки
+  const pop = finished && wheel.wonAt ? Math.min(1, (now - wheel.wonAt) / 450) : 0;
+  const popE = 1 - (1 - pop) ** 3;
 
   let start = 0;
   let svg = '';
-  let text = '';
+  let flashes = '';
+  const visible = new Set();
+  const labels = $('labels');
   segs.forEach((s, i) => {
     const f = (wheel.shown.get(s.seat) ?? 0) / shownTotal;
     if (f <= 0) return;
-    const len = Math.max(0, f * C - gap);
-    const dim = finished && s.id !== round.winnerId ? ' class="dim"' : '';
-    const cls = finished && s.id === round.winnerId ? ` class="win" style="--c:${s.color}"` : dim;
-    svg += `<circle r="${R}" stroke="${s.color}" stroke-dasharray="${len} ${C}" transform="rotate(${-90 + start * 360 + (gap / C) * 180})"${cls}/>`;
-    if (f >= 0.055) {
+    const isWin = finished && s.id === round.winnerId;
+    const r = isWin ? R + 2.5 * popE : R;
+    const width = isWin ? 28 + 5 * popE : 28;
+    const circ = 2 * Math.PI * r;
+    const len = Math.max(0, f * circ - gap);
+    const rot = -90 + start * 360 + (gap / circ) * 180;
+    const cls = finished ? (isWin ? ` class="win" style="--c:${s.color}"` : ' class="dim"') : '';
+    svg += `<circle r="${r}" stroke-width="${width}" stroke="${s.color}" stroke-dasharray="${len} ${circ}" transform="rotate(${rot})"${cls}/>`;
+    // Вспышка сектора при новой ставке
+    const flashT = wheel.flash.get(s.seat);
+    if (flashT && now - flashT < 900) {
+      const k = 1 - (now - flashT) / 900;
+      flashes += `<circle r="${R}" stroke-width="28" stroke="#fff" opacity="${(0.55 * k * k).toFixed(3)}" stroke-dasharray="${len} ${C}" transform="rotate(${rot})"/>`;
+    }
+    // Аватарка игрока в середине сектора (подписи не вращаются — всегда ровно)
+    if (f >= 0.07) {
       const a = ((start + f / 2) * 360 - 90 + wheel.rot) * (Math.PI / 180);
+      const g = avatarNode(s);
       const label = pcts[i] < 1 ? '<1%' : `${pcts[i]}%`;
-      text += `<text x="${(R * Math.cos(a)).toFixed(2)}" y="${(R * Math.sin(a)).toFixed(2)}" fill="${inkFor(s.color)}"${dim}>${label}</text>`;
+      const txt = g.querySelector('.sav-pct text');
+      if (txt.textContent !== label) {
+        txt.textContent = label;
+        const w = 5 + label.length * 3.9;
+        const rect = g.querySelector('.sav-pct rect');
+        rect.setAttribute('x', -w / 2);
+        rect.setAttribute('width', w);
+      }
+      g.style.setProperty('--c', s.color);
+      g.setAttribute('transform', `translate(${(r * Math.cos(a)).toFixed(2)} ${(r * Math.sin(a)).toFixed(2)})`);
+      g.classList.toggle('dim', finished && !isWin);
+      if (g.parentNode !== labels) labels.append(g);
+      visible.add(s.id);
     }
     start += f;
   });
-  sectors.innerHTML = svg;
-  labels.innerHTML = text; // подписи не вращаются вместе с колесом — всегда читаемы
+  $('sectors').innerHTML = svg;
+  $('flashes').innerHTML = flashes;
+  for (const [id, g] of avatarNodes) if (!visible.has(id)) g.remove();
+  labels.style.opacity = wheel.fade;
   $('wheel-rot').setAttribute('transform', `rotate(${wheel.rot})`);
+
+  // Стрелка «цепляет» границы секторов во время вращения
+  if (wheel.spin?.from !== undefined && n > 1) {
+    const idx = sectorUnderPointer(segs, shownTotal);
+    if (wheel.pointerSector !== null && idx !== wheel.pointerSector) {
+      const ptr = document.querySelector('.pointer');
+      ptr.classList.remove('flick');
+      void ptr.getBoundingClientRect();
+      ptr.classList.add('flick');
+      if (now - wheel.lastHaptic > 70) {
+        haptic.impact('soft');
+        wheel.lastHaptic = now;
+      }
+    }
+    wheel.pointerSector = idx;
+  }
+  if (pop > 0 && pop < 1) requestAnimationFrame(drawWheel);
 }
 
 /** Плавное перераспределение секторов при новых ставках. */
@@ -257,33 +348,95 @@ function tweenShares() {
   const from = new Map(wheel.shown);
   for (const seat of target.keys()) if (!from.has(seat)) from.set(seat, 0);
   const t0 = performance.now();
-  const ms = from.size ? 550 : 0;
+  const ms = from.size ? 650 : 0;
   cancelAnimationFrame(wheel.tween);
   const step = (t) => {
     const p = ms ? Math.min(1, (t - t0) / ms) : 1;
     const e = 1 - (1 - p) ** 3;
     wheel.shown = new Map([...target].map(([seat, f]) => [seat, (from.get(seat) ?? 0) + (f - (from.get(seat) ?? 0)) * e]));
     drawWheel();
-    if (p < 1) wheel.tween = requestAnimationFrame(step);
+    if (p < 1 || [...wheel.flash.values()].some((t2) => t - t2 < 900)) wheel.tween = requestAnimationFrame(step);
   };
   wheel.tween = requestAnimationFrame(step);
 }
 
-/** Деления по краю колеса — рисуются один раз и не вращаются. */
-function drawTicks() {
+// ---------- Обод с огоньками ----------
+const BULBS = 40;
+function drawBulbs() {
   let html = '';
-  for (let i = 0; i < 72; i++) {
-    const major = i % 9 === 0;
-    const a = (i * 5 - 90) * (Math.PI / 180);
-    const r1 = major ? 96.5 : 97.5;
-    const r2 = 99.5;
-    html += `<line${major ? ' class="major"' : ''} x1="${(r1 * Math.cos(a)).toFixed(2)}" y1="${(r1 * Math.sin(a)).toFixed(2)}" x2="${(r2 * Math.cos(a)).toFixed(2)}" y2="${(r2 * Math.sin(a)).toFixed(2)}"/>`;
+  for (let i = 0; i < BULBS; i++) {
+    const a = ((i * 360) / BULBS - 90) * (Math.PI / 180);
+    html += `<circle r="1.7" cx="${(98.6 * Math.cos(a)).toFixed(2)}" cy="${(98.6 * Math.sin(a)).toFixed(2)}"/>`;
   }
-  $('ticks').innerHTML = html;
+  $('bulbs').innerHTML = html;
+  wheel.bulbs = [...$('bulbs').children];
+  setInterval(bulbsTick, 60);
+}
+
+/** Узор огоньков зависит от этапа: перелив → бегущие огни → пульс → мерцание → победа. */
+function bulbsTick() {
+  const r = state.round;
+  if (!r || document.hidden || state.view !== 'roulette') return;
+  const t = performance.now();
+  let on;
+  if (r.status === 'waiting') {
+    const step = Math.floor(t / 380);
+    on = (i) => (i + step) % 5 === 0; // медленный перелив
+  } else if (r.status === 'countdown') {
+    const left = r.countdownEndsAt - serverNow();
+    if (left <= 5000) {
+      const beat = left % 1000; // как сердцебиение: два коротких удара в начале каждой секунды
+      const lit = beat > 860 || (beat > 640 && beat < 760);
+      on = () => lit;
+    } else {
+      const step = Math.floor(t / 90);
+      on = (i) => (i + step) % 8 < 2;
+    }
+  } else if (r.status === 'spinning') {
+    const step = Math.floor(t / 70);
+    on = (i) => (i + step) % 2 === 0;
+  } else {
+    const since = t - (wheel.wonAt ?? t);
+    on = () => since > 1300 || Math.floor(since / 160) % 2 === 0; // мигают и загораются цветом победителя
+  }
+  wheel.bulbs.forEach((b, i) => {
+    const v = on(i);
+    if (b._on !== v) {
+      b._on = v;
+      b.classList.toggle('on', v);
+    }
+  });
+}
+
+// ---------- Всплывающие ставки ----------
+function betBubble(p, amount, delay) {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'bubble';
+    el.style.setProperty('--c', PALETTE[p.seat % PALETTE.length]);
+    el.innerHTML = `${avatarHtml(p, 'xs')}<b class="num">+${fmt(amount)}</b>${STAR}<span>${p.id === state.me?.id ? 'вы' : esc(p.name)}</span>`;
+    $('bubbles').append(el);
+    el.addEventListener('animationend', () => el.remove());
+  }, delay);
 }
 
 const serverNow = () => Date.now() + state.clockOffset;
-const easeSpin = (p) => 1 - (1 - p) ** 4; // быстрый старт и долгое мягкое торможение
+
+/**
+ * Траектория вращения: замах назад → разгон → долгое торможение с небольшим перелётом →
+ * мягкое возвращение точно в точку, выбранную сервером (у всех игроков одинаково).
+ */
+const WIND = 0.06; // доля времени на замах
+const SETTLE = 0.13; // доля времени на возврат после перелёта
+const OVER = 3.2; // градусы перелёта
+function spinAngle(s, p) {
+  if (p < WIND) return s.from - 14 * Math.sin((Math.PI * p) / WIND);
+  const q = (p - WIND) / (1 - WIND);
+  const main = 1 - SETTLE;
+  if (q < main) return s.from + (s.to + OVER - s.from) * (1 - (1 - q / main) ** 4);
+  const k = (q - main) / SETTLE;
+  return s.to + (OVER * (1 + Math.cos(Math.PI * k))) / 2;
+}
 
 function runSpin() {
   const r = state.round;
@@ -294,22 +447,26 @@ function runSpin() {
   const baseMod = ((base % 360) + 360) % 360;
   const to = base + 360 * 6 + ((targetMod - baseMod + 360) % 360);
   wheel.spin = { roundId: r.id, from: base, to, start: r.spinStartedAt, duration: r.spinMs };
+  wheel.pointerSector = null;
   $('wheel').classList.add('spinning');
-  let lastTick = 0;
+  let prev = base;
   const frame = () => {
     const s = wheel.spin;
     if (!s || s.roundId !== state.round?.id) return;
     const p = Math.min(1, Math.max(0, (serverNow() - s.start) / s.duration));
-    wheel.rot = s.from + (s.to - s.from) * easeSpin(p);
+    wheel.rot = spinAngle(s, p);
+    // На большой скорости аватарки «смазываются» — прозрачнеют
+    const speed = Math.abs(wheel.rot - prev);
+    prev = wheel.rot;
+    const targetFade = speed > 9 ? 0.12 : speed > 5 ? 0.45 : 1;
+    wheel.fade += (targetFade - wheel.fade) * 0.25;
     drawWheel();
-    // Лёгкая вибрация при прохождении границ — затихает к концу
-    const sector = Math.floor(wheel.rot / 30);
-    if (sector !== lastTick && p < 0.85 && p > 0.02) {
-      lastTick = sector;
-      if (p > 0.45) haptic.impact('soft');
-    }
     if (p < 1) requestAnimationFrame(frame);
-    else $('wheel').classList.remove('spinning');
+    else {
+      wheel.fade = 1;
+      $('wheel').classList.remove('spinning');
+      drawWheel();
+    }
   };
   requestAnimationFrame(frame);
 }
@@ -325,8 +482,23 @@ function onRound(round) {
     wheel.rot = 0;
     wheel.shown = new Map();
     wheel.spin = null;
+    wheel.wonAt = null;
+    wheel.flash.clear();
     $('wheel').classList.remove('spinning');
   }
+  // Новые ставки: вспышка сектора и всплывающее «+сумма»
+  if (prev?.id === round.id) {
+    const before = new Map(prev.players.map((p) => [p.id, p.amount]));
+    let k = 0;
+    for (const p of round.players) {
+      const delta = p.amount - (before.get(p.id) ?? 0);
+      if (delta > 0) {
+        wheel.flash.set(p.seat, performance.now());
+        betBubble(p, delta, k++ * 280);
+      }
+    }
+  }
+  if (round.status === 'finished' && !wheel.wonAt) wheel.wonAt = performance.now();
   if (round.status === 'spinning' || round.status === 'finished') {
     if (round.status === 'finished' && !wheel.spin) {
       // Подключились после окончания вращения — сразу ставим колесо в итоговую позицию.
@@ -345,6 +517,7 @@ function onRound(round) {
   const winner = round.status === 'finished' ? sharesOf(round).find((p) => p.id === round.winnerId) : null;
   wheelEl.classList.toggle('won', !!winner);
   wheelEl.style.setProperty('--glow', winner?.color ?? 'var(--accent)');
+  wheelEl.style.setProperty('--bulb', winner?.color ?? 'var(--gold)');
 
   const me = state.me?.id;
   if (prev?.status === 'spinning' && round.status === 'finished' && round.players.some((p) => p.id === me)) {
@@ -963,7 +1136,7 @@ async function main() {
   $('app').hidden = false;
   document.body.dataset.view = 'roulette';
   document.querySelector('#view-roulette').classList.add('active');
-  drawTicks();
+  drawBulbs();
   connectStream();
   loadTasks();
   updateWithdrawForm();
