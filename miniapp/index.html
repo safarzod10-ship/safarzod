@@ -169,14 +169,13 @@ nav button.on svg{filter:drop-shadow(0 0 6px rgba(120,160,255,.5))}
 
 /* ---------- home scene: farm + pet ---------- */
 .scene{display:flex;align-items:flex-end;justify-content:center}
-.scene .farm-img{position:absolute;left:50%;bottom:9%;width:min(78%,340px);transform:translateX(-50%);z-index:1;
+.scene .farm-img{position:absolute;left:54%;top:50%;width:min(92%,400px);max-height:78%;transform:translate(-50%,-58%);z-index:1;
   filter:drop-shadow(0 10px 18px rgba(0,0,0,.5))}
-.scene .pet-img{position:absolute;left:4%;bottom:3%;width:min(46%,210px);z-index:2;animation:bob 2.6s ease-in-out infinite;
+.scene .pet-img{position:absolute;left:2%;bottom:6%;width:min(54%,250px);max-height:52%;object-fit:contain;object-position:left bottom;z-index:2;animation:bob 2.6s ease-in-out infinite;
   filter:drop-shadow(0 8px 12px rgba(0,0,0,.55))}
 .scene .tag{position:absolute;z-index:3;font-size:12px;font-weight:800;padding:4px 10px;border-radius:9px;background:rgba(20,24,52,.82);
   border:1px solid var(--line2);color:#dfe3ff;white-space:nowrap}
-.scene .tag.farm{right:5%;top:6%}
-.scene .tag.pet{left:5%;top:6%}
+.scene .tag.pet{left:4%;bottom:2%}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .pet-name{font-size:18px;font-weight:900;margin:2px 0 4px}
 .pet-sub{font-size:13px;color:var(--muted)}
@@ -524,7 +523,7 @@ function applyState() {
   const pet = byId(PETS, state.pet) || PETS[0];
   const farm = byId(FARMS, state.farm) || FARMS[0];
   document.getElementById('scene').innerHTML =
-    `<span class="tag pet">${pet.name}</span><span class="tag farm">${farm.name}</span>` +
+    `<span class="tag pet">${pet.name}</span>` +
     `<img class="farm-img" src="${farm.img}" alt="${farm.name}"><img class="pet-img" src="${pet.img}" alt="${pet.name}">`;
   document.getElementById('farmTitle').textContent = farm.name;
   document.getElementById('rate').textContent = `+${FARM_RATE}/м`;
@@ -550,10 +549,11 @@ setInterval(() => { if (state) { renderBalance(); saveState(state); } }, 5000);
 setInterval(() => { if (state) renderBalance(); }, 1000);
 
 (async () => {
-  if (new URLSearchParams(location.search).has('reset')) { try { localStorage.removeItem(KEY); } catch (e) {} if (cloud) cloud.removeItem(KEY, () => {}); }
+  const reset = new URLSearchParams(location.search).has('reset'); // dev: ?reset shows the roulettes again
+  if (reset) { try { localStorage.removeItem(KEY); } catch (e) {} if (cloud) cloud.removeItem(KEY, () => {}); }
   // preload art so the reel never shows empty cards
   [...PETS, ...FARMS].forEach((x) => { const i = new Image(); i.src = x.img; });
-  state = await loadState();
+  state = reset ? null : await loadState();
   if (!state || !byId(PETS, state.pet) || !byId(FARMS, state.farm)) state = await runOnboarding();
   applyState();
 })();
