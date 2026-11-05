@@ -15,6 +15,7 @@ uniform float paint = 0.0;           // 1 = body paint (gloss + scratches show p
 uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;
 uniform float alpha_cut = 0.0;       // > 0: alpha-tested decals (grille, badges)
+uniform vec2 side_gain = vec2(1.0);  // emission on the car's left (x < 0) / right side: turn signals
 
 void vertex() {
 	vec3 cpos;
@@ -42,5 +43,7 @@ void fragment() {
 	ROUGHNESS = rough;
 	METALLIC = met;
 	SPECULAR = specular;
-	EMISSION = emission_color * emission_energy;
+	// lamps: per-side gain (indicators), a smashed lamp (strong dent here) goes dark
+	float side = v_carpos.x < 0.0 ? side_gain.x : side_gain.y;
+	EMISSION = emission_color * emission_energy * side * (1.0 - smoothstep(0.45, 0.8, v_damage));
 }

@@ -42,9 +42,19 @@ const MODEL := "res://assets/vehicles/prado/prado.glb"
 @export var tyre_B := 7.5                ## Pacejka-style stiffness (peak at ~8-9 deg)
 @export var tyre_C := 1.45
 @export var rolling_resistance := 0.013
-@export var easy_drift := false          ## game option: easier slides (base model untouched)
+@export var easy_drift := false          ## = ARCADE ASSIST drive mode (same physics, assists on top)
+## drive modes on ONE physical model: REALISTIC = pure tyre / drivetrain model; ARCADE = assists
+## (easier, longer slides, yaw damping helps the counter-steer catch, stability on lift-off)
+enum DriveMode { REALISTIC, ARCADE }
+var drive_mode: DriveMode:
+	get: return DriveMode.ARCADE if easy_drift else DriveMode.REALISTIC
+	set(v): easy_drift = v == DriveMode.ARCADE
+var wetness := 0.0                        ## 0..1 water on the roads (Weather): less grip on hard surfaces
+var wetness_override := -1.0              ## tests: >= 0 replaces the weather's wetness
+var surface_override := -1                ## tests: >= 0 = CityWorld.Surface under every tyre
+var _wet_poll := 0.0
 @export_group("Drivetrain")
-@export var max_power_kw := 170.0        ## game configuration
+@export var max_power_kw := 150.0        ## 1GD-FTV 2.8 (204 hp, 2020+ facelift)
 @export var max_torque := 500.0          ## N m (1GD-FTV)
 @export var top_speed_kmh := 200.0       ## game limiter
 @export var final_drive := 3.909
@@ -53,7 +63,7 @@ const MODEL := "res://assets/vehicles/prado/prado.glb"
 @export var front_split := 0.40
 @export var brake_force := 26000.0       ## total N at full pedal (ABS keeps it under the grip limit)
 @export var brake_front := 0.65
-@export var cd_a := 1.15                 ## drag area Cd*A (m^2)
+@export var cd_a := 1.02                 ## drag area Cd*A (m^2): Cd 0.35 x 2.9 m^2
 
 # --- state readable by UI / audio / camera / tests
 var throttle := 0.0
@@ -63,6 +73,7 @@ var handbrake := false
 var gear := 1                             ## -1 reverse, 0 neutral, 1..6
 var rpm := 800.0
 var engine_load := 0.0
+var engine_brake_force := 0.0             ## N at the wheels while coasting (tests)
 var speed_kmh := 0.0                      ## |v| of the physical body in km/h (speedometer)
 var forward_speed := 0.0                  ## m/s along the car (signed)
 var health := 100.0
@@ -71,8 +82,11 @@ var wheels: Array[Dictionary] = []
 var slip_amount := 0.0                    ## 0..1 tyre slip (audio / smoke)
 var wheels_on_ground := 0
 var last_impact := 0.0                    ## m/s of the last hit (audio)
+var last_impact_material := "concrete"    ## what was hit: metal / concrete / wood / ground / soft
 
 var model: Node3D
+var lights: VehicleLights
+var cabin_view := false                   ## interior camera: cabin meshes forced visible (also on Low)
 var _reverse_timer := 0.0
 var _shift_timer := 0.0
 var _materials: Array[ShaderMaterial] = []
@@ -86,6 +100,7 @@ var _prev_v := Vector3.ZERO
 var _impact_acc := 0.0
 var _impact_point := Vector3.ZERO
 var _impact_normal := Vector3.ZERO
+var _impact_obj: Object
 var _impact_steps := 0
 var _part_rest := {}                      ## node -> rest Transform3D (repair)
 var _steering_wheel: Node3D
@@ -106,6 +121,7 @@ func _ready() -> void:
 	linear_damp = 0.0
 	angular_damp = 0.15
 	add_to_group(&"vehicle")
+	easy_drift = easy_drift or PlayerInput.arcade_assist
 	_build_model()
 	_build_collision()
 	var cg_z := _wheel_z(true) + (1.0 - front_weight) * (_wheel_z(false) - _wheel_z(true))
@@ -126,6 +142,10 @@ func _ready() -> void:
 	fx.name = "FX"
 	fx.car = self
 	add_child(fx)
+	lights = VehicleLights.new()
+	lights.name = "Lights"
+	add_child(lights)
+	lights.setup(self)
 
 
 # ------------------------------------------------------------------------------------------- model
@@ -347,8 +367,12 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		var surf := CityWorld.Surface.PAVED
 		if hit.collider is StaticBody3D and String((hit.collider as Node).name) == "TerrainBody" and CityWorld.instance:
 			surf = CityWorld.instance.surface_at(contact.x, contact.z)
+		if surface_override >= 0:
+			surf = surface_override
 		w["surface"] = surf
-		w["surface_mu"] = [0.74, 0.62, 0.85, 0.72, 1.0, 1.0][surf]
+		# grip by surface (dry asphalt 1.0); wet: asphalt / paving ~0.72, rock 0.7, earth turns to mud
+		var wet_k: float = [0.9, 1.0, 0.82, 0.75, 0.72, 0.72][surf]
+		w["surface_mu"] = [0.74, 0.62, 0.85, 0.72, 1.0, 1.0][surf] * lerpf(1.0, wet_k, wetness)
 	wheels_on_ground = on
 	# anti-roll bars: left/right offset difference per axle
 	var arb := {true: 0.0, false: 0.0}
@@ -368,7 +392,19 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	_update_gearbox(dt, wheel_omega)
 	var ratio := (gears[gear - 1] if gear >= 1 else (reverse_ratio if gear == -1 else 0.0)) * final_drive
 	var eng_omega := maxf(wheel_omega * ratio, 800.0 * TAU / 60.0)
-	rpm = lerpf(rpm, eng_omega * 60.0 / TAU, 0.25)
+	# torque converter: at low road speed the engine is not tied to the wheels; with the pedal down it
+	# runs up towards the stall speed (~2100 rpm) and the converter multiplies its torque
+	var stall := lerpf(800.0, 2100.0, throttle) * TAU / 60.0
+	var coupled := smoothstep(0.0, 1.0, (wheel_omega * ratio) / maxf(stall, 1.0)) if ratio != 0.0 else 0.0
+	eng_omega = maxf(eng_omega, lerpf(stall, eng_omega, coupled * coupled))
+	rpm = lerpf(rpm, minf(eng_omega * 60.0 / TAU, 4450.0), 0.25)
+	_wet_poll -= dt
+	if _wet_poll <= 0.0:
+		_wet_poll = 0.5
+		var wn := get_tree().get_first_node_in_group(&"weather")
+		wetness = float(wn.get("wetness")) if wn else 0.0
+		if wetness_override >= 0.0:
+			wetness = wetness_override
 	# turbo: boost builds with throttle and rpm (lag ~0.7 s), off-boost torque ~60 %
 	var boost_target := clampf((rpm - 1100.0) / 900.0, 0.0, 1.0) * throttle
 	_boost = move_toward(_boost, boost_target, dt * (1.4 if boost_target > _boost else 3.0))
@@ -376,13 +412,24 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	var torque: float = minf(max_torque * _torque_curve(rpm) * lerpf(0.6, 1.0, _boost), power_cap / maxf(eng_omega, 1.0)) * float(dmg["power"])
 	if _shift_timer > 0.15:
 		torque *= 0.25                         # torque interruption while the automatic shifts
-	var converter := lerpf(1.2, 1.0, clampf(absf(forward_speed) / 5.0, 0.0, 1.0)) if gear == 1 or gear == -1 else 1.0
+	var converter := lerpf(1.45, 1.0, coupled) if gear == 1 or gear == -1 else 1.0
+	if rpm > 4400.0:
+		torque = 0.0                           # fuel cut (rev limiter)
 	var limit: float = (top_speed_kmh if gear >= 1 else 25.0) * float(dmg["vmax"]) / MPS_TO_KMH
 	var drive_total: float = torque * converter * ratio * 0.90 / 0.398 * throttle
+	# rotating inertia (engine + converter ~0.3 kg m^2 through the gearbox, 4 wheels 1.2 kg m^2 each):
+	# the same torque accelerates the car less in low gears (equivalent mass +17 % in 1st)
+	drive_total /= 1.0 + (0.3 * ratio * ratio + 4.8) / (0.398 * 0.398 * mass)
 	if absf(forward_speed) > limit:
 		drive_total = 0.0
 	drive_total *= signf(ratio) if gear >= 1 else -1.0
-	engine_load = throttle * (0.0 if absf(forward_speed) > limit else 1.0)
+	# engine braking: pumping + friction torque of the diesel through the gearbox when lifting off
+	# (~30 N m at idle .. ~90 N m at 4000 rpm), only while the converter is coupled
+	if throttle < 0.05 and gear != 0 and absf(forward_speed) > 1.0:
+		var fric := (30.0 + 0.017 * maxf(rpm - 800.0, 0.0)) * absf(ratio) * 0.9 / 0.398 * coupled
+		drive_total -= signf(forward_speed) * fric * (1.0 - throttle * 20.0)
+	engine_brake_force = absf(drive_total) if throttle < 0.05 else 0.0
+	engine_load = throttle * (0.0 if absf(forward_speed) > limit or rpm > 4400.0 else 1.0)
 
 	# ---- tyre forces
 	var total_slip := 0.0
@@ -532,6 +579,7 @@ func _process(delta: float) -> void:
 		_steering_wheel.transform = Transform3D(_steering_rest.basis * Basis(Vector3.BACK, steer * deg_to_rad(240.0)), _steering_rest.origin)
 	if _driver and _driver.visible:
 		_driver.pose(steer)
+	_update_doors(delta)
 
 
 # ------------------------------------------------------------------------------------------- damage
@@ -568,6 +616,7 @@ func _collect_impacts(state: PhysicsDirectBodyState3D) -> void:
 				best = imp
 				_impact_point = pos
 				_impact_normal = state.get_contact_local_normal(i)
+				_impact_obj = state.get_contact_collider_object(i)
 		if best >= 0.0:
 			_impact_acc += jump
 			_impact_steps = 4
@@ -585,6 +634,8 @@ func _add_damage(p_world: Vector3, n_world: Vector3, dv: float) -> void:
 	## dent at the contact, pushed along the contact normal (into the body), size and depth
 	## from the hit strength; health drops with (impact speed - 6 km/h)^1.5
 	last_impact = dv
+	last_impact_material = impact_material(_impact_obj)
+	_impact_obj = null
 	var inv := model.global_transform.affine_inverse()
 	var p := inv * p_world
 	var dir := (inv.basis * n_world).normalized()
@@ -600,6 +651,25 @@ func _add_damage(p_world: Vector3, n_world: Vector3, dv: float) -> void:
 	_push_dents()
 	health = maxf(0.0, health - pow(maxf(dv - 1.6, 0.0), 1.5) * 0.9)   # 30 km/h wall ~ -15 %, 55 km/h ~ -45 %
 	damaged.emit(health)
+
+
+## sound material of a collider (names given by CityWorld: Tree_*, Prop_<catalog id>, Colliders =
+## buildings / walls, TerrainBody / GroundCollision = the ground)
+static func impact_material(o: Object) -> String:
+	if o == null or not (o is Node):
+		return "concrete"
+	var n := String((o as Node).name).to_lower()
+	if n == "terrainbody" or n == "groundcollision":
+		return "ground"
+	if n.begins_with("tree_") or n.contains("wood") or n.contains("tapchan"):
+		return "wood"
+	if n.contains("cardboard") or n.contains("plastic") or n.contains("trash_bag") or n.contains("aloe") or n.contains("clay"):
+		return "soft"
+	if n.contains("concrete") or n.contains("brick") or n.contains("wall") or n.contains("planter") or n == "colliders":
+		return "concrete"
+	if n.begins_with("prop_") or o is RigidBody3D or o is VehicleBody3D:
+		return "metal"
+	return "concrete"
 
 
 func _merge_oldest_dents() -> void:
@@ -640,6 +710,23 @@ func _push_dents() -> void:
 		m.set_shader_parameter("dent_pos", ps)
 		m.set_shader_parameter("dent_dir", ds)
 		m.set_shader_parameter("dent_count", _dents.size())
+
+
+func set_cabin_view(on: bool) -> void:
+	if cabin_view != on:
+		cabin_view = on
+		apply_quality()
+	if _driver:
+		_driver.hide_head = on                     # the camera sits in the driver's head
+		_driver.pose(steer)
+
+
+## world eye point of the driver (cabin camera); falls back to the seat + 0.7 m
+func driver_eye() -> Vector3:
+	if _driver:
+		return _driver.eye_position()
+	var seat: Node3D = model.find_child("ped_frontseat", true, false)
+	return seat.global_position + global_transform.basis.y * 0.75 - global_transform.basis.x * 0.83
 
 
 ## Full repair: dents and scratches gone (the geometry itself was never modified), suspension,
@@ -698,7 +785,7 @@ func apply_quality() -> void:
 		m.lod_bias = bias
 		var interior := String(m.name).begins_with("int") or m.name == "steeringwheel"
 		if interior:
-			m.visible = not low
+			m.visible = not low or cabin_view
 		elif String(m.name).begins_with("wheel") or m.name == "windscreen" or m.name == "fari":
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if low else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 
@@ -710,11 +797,60 @@ var _driver: SeatedDriver
 
 ## Seated player character (visible while somebody drives). Driver's seat = the model's front-seat
 ## point mirrored to the steering-wheel side (left-hand drive).
-## door sound (getting in / out on foot): open = true -> door opening
+## door sound (getting in / out on foot): close = false -> door opening
 func audio_door(close: bool) -> void:
 	var a := get_node_or_null("Audio")
 	if a and a.has_method("play_door"):
 		a.call("play_door", close)
+
+
+func audio_call(method: String) -> void:
+	var a := get_node_or_null("Audio")
+	if a and a.has_method(method):
+		a.call(method)
+
+
+## Doors are separate parts of the model (door_*_dummy = hinge at the front edge). open 0..1;
+## the driver's door swings out to 65 deg (left side: negative yaw about the hinge).
+const DOOR_MAX := deg_to_rad(65.0)
+var door_open := {}                        ## dummy name -> current 0..1
+var _door_target := {}
+
+
+func set_door(dummy: String, open: bool) -> void:
+	_door_target[dummy] = 1.0 if open else 0.0
+	if not door_open.has(dummy):
+		door_open[dummy] = 0.0
+
+
+## animate a door to fully open / closed (await: returns when the swing is finished)
+func swing_door(dummy: String, open: bool, time := 0.55) -> void:
+	set_door(dummy, open)
+	var t := 0.0
+	while absf(float(door_open[dummy]) - float(_door_target[dummy])) > 0.001 and t < time + 0.5:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+
+
+func _update_doors(delta: float) -> void:
+	for d in _door_target:
+		var cur: float = door_open[d]
+		var tgt: float = _door_target[d]
+		if cur == tgt:
+			continue
+		cur = move_toward(cur, tgt, delta / 0.55)
+		door_open[d] = cur
+		var n: Node3D = model.find_child(d, true, false)
+		if n == null:
+			continue
+		if not _part_rest.has(n):
+			_part_rest[n] = n.transform
+		var rest: Transform3D = _part_rest[n]
+		var side := -1.0 if d.contains("_l") else 1.0
+		# ease: a real door accelerates out of the latch and slows at the check strap
+		var a := side * DOOR_MAX * smoothstep(0.0, 1.0, cur)
+		n.transform = Transform3D(rest.basis * Basis(Vector3.UP, a), rest.origin)
+		_update_part_uniforms()                # dents stay attached to the swinging door
 
 
 func set_driver_visible(on: bool) -> void:

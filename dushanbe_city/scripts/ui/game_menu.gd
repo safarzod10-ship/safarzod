@@ -115,6 +115,18 @@ func _ready() -> void:
 				PlayerInput.look_scale = x
 			PlayerInput.save_settings())
 		v.add_child(sl)
+	_section(v, "Prado: режим вождения")
+	var am := CheckButton.new()
+	am.text = "Аркадная помощь (выкл. = реалистичный)"
+	am.add_theme_font_size_override("font_size", 22)
+	am.custom_minimum_size = Vector2(600, 52)
+	am.button_pressed = PlayerInput.arcade_assist
+	am.toggled.connect(func(on: bool) -> void:
+		PlayerInput.arcade_assist = on
+		for c in get_tree().get_nodes_in_group(&"vehicle"):
+			c.set("easy_drift", on)
+		PlayerInput.save_settings())
+	v.add_child(am)
 	btn.pressed.connect(func() -> void:
 		_panel.visible = not _panel.visible
 		_layout()

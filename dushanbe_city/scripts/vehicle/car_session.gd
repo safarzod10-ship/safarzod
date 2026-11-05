@@ -21,6 +21,7 @@ var _exit_requested := false
 var _font: Font
 var busy := false                       ## animated get-in / get-out running
 var door: CarDoorInteractable
+const DOOR := "door_lf_dummy"              ## driver's door part of the model (LHD)
 
 
 func _ready() -> void:
@@ -39,7 +40,10 @@ func _ready() -> void:
 	_layer.add_child(controls)
 	controls.exit_pressed.connect(func() -> void: _exit_requested = true)
 	controls.repair_pressed.connect(func() -> void: car.repair())
-	controls.orbit_toggled.connect(func() -> void: cam.orbit_mode = controls.orbit_on)
+	controls.orbit_toggled.connect(func() -> void: cam.cycle())
+	controls.lights_pressed.connect(func() -> void: car.lights.cycle_beam())
+	controls.turn_pressed.connect(func(d: int) -> void: car.lights.set_turn(d))
+	controls.hazard_pressed.connect(func() -> void: car.lights.toggle_hazard())
 	_prompt = Control.new()
 	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_prompt.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -83,8 +87,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif driving and event.is_action_pressed(&"car_repair"):
 		car.repair()
 	elif driving and event.is_action_pressed(&"car_camera"):
-		controls.orbit_on = not controls.orbit_on
-		cam.orbit_mode = controls.orbit_on
+		cam.cycle()
+	elif driving and event.is_action_pressed(&"car_lights"):
+		car.lights.cycle_beam()
+	elif driving and event.is_action_pressed(&"car_turn_left"):
+		car.lights.set_turn(-1)
+	elif driving and event.is_action_pressed(&"car_turn_right"):
+		car.lights.set_turn(1)
+	elif driving and event.is_action_pressed(&"car_hazard"):
+		car.lights.toggle_hazard()
 
 
 func _input(event: InputEvent) -> void:
@@ -94,6 +105,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(_d: float) -> void:
+	if driving:
+		controls.camera_label = VehicleCamera.NAMES[cam.mode]
 	var vs := _prompt.get_viewport_rect().size
 	if _prompt.size != vs:
 		_prompt.position = Vector2.ZERO
@@ -143,8 +156,12 @@ func enter_animated() -> void:
 	var bx := car.global_transform.basis.x
 	var face := atan2(-bx.x, -bx.z)                 # looking at the car's left side
 	await player.walk_to(door_pt, face, 2.5)
+	# reach for the handle, the door swings open (real hinge animation + recorded sounds)
+	car.audio_call("play_handle")
+	player.play_action("interact", 0.75)            # runs on its own; the door follows the hand
+	await get_tree().create_timer(0.2).timeout
 	car.audio_door(false)
-	await player.play_action("interact", 0.65)
+	await car.swing_door(DOOR, true)
 	var start := player.global_position
 	var seat := car.driver_door_point(-0.45)
 	seat.y = start.y + 0.42                          # the sitting clip lowers the hips onto a 0.85 m seat
@@ -164,9 +181,12 @@ func enter_animated() -> void:
 	player.collision_mask = 1
 	player.set_physics_process(true)
 	player.end_sequence()
+	enter()
+	# seated: pull the door shut
+	await car.swing_door(DOOR, false, 0.4)
+	car.audio_door(true)
 	player.interaction.busy = false
 	busy = false
-	enter()
 
 
 ## Animated get-out: the car must be (nearly) stopped; a free spot next to the door is found first;
@@ -185,6 +205,10 @@ func exit_animated() -> void:
 	player.set_physics_process(false)
 	player.global_position = seat
 	player.seq_active = true
+	player.anim.travel(&"sit_idle")
+	car.audio_call("play_handle")
+	car.audio_door(false)
+	await car.swing_door(DOOR, true)
 	player.anim.travel(&"sit_exit")
 	var T := 0.9
 	var t := 0.0
@@ -197,8 +221,14 @@ func exit_animated() -> void:
 	player.collision_mask = 1
 	player.set_physics_process(true)
 	player.end_sequence()
+	# close the door behind, central lock a moment later
+	await car.swing_door(DOOR, false, 0.45)
+	car.audio_door(true)
 	player.interaction.busy = false
 	busy = false
+	await get_tree().create_timer(0.9).timeout
+	if not driving:
+		car.audio_call("play_lock")
 
 
 func exit() -> void:
@@ -217,6 +247,10 @@ func exit() -> void:
 	player.teleport(spot, yaw)
 	player.set_camera_angles(car.global_rotation.y, player.cam_pitch)
 	player.get_camera().make_current()
+	cam.set_mode(VehicleCamera.Mode.CHASE)
+	car.lights.turn = 0
+	if car.lights.beam != VehicleLights.Beam.OFF:
+		car.lights.beam = VehicleLights.Beam.OFF
 	_set_walk_ui(true)
 	Minimap.focus = null
 	Minimap.focus_camera = null

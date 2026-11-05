@@ -4,17 +4,23 @@ extends Control
 ## steering and handbrake can be held together):
 ##   bottom-left  : steer LEFT / RIGHT arrows (the car's steering returns to centre when released)
 ##   bottom-right : GAS pedal (tall), BRAKE pedal (brake at standstill = reverse), HANDBRAKE
-##   top centre   : ОБЗОР (orbit camera), ВОССТАНОВИТЬ (repair), ВЫЙТИ (leave the car)
-##   bottom centre: speedometer (real body speed, km/h), gear, condition
+##   top centre   : КАМЕРА (3rd person / cabin / orbit), ВОССТАНОВИТЬ (repair), ВЫЙТИ (leave the car)
+##   above the arrows: ◄ left indicator, ФАРЫ (off / dipped / main beam), АВАР. (hazards), ► right
+##   HUD (right, above the pedals): speedometer (real body speed, km/h), tachometer, gear,
+##   condition %, telltales: indicators (blinking), dipped / main beam, handbrake (P), check engine
 ## Free drags elsewhere orbit the camera.
 
 signal exit_pressed
 signal repair_pressed
-signal orbit_toggled
+signal orbit_toggled          ## camera button (cycles the camera modes)
+signal lights_pressed
+signal turn_pressed(dir: int)
+signal hazard_pressed
 
 const FONT_PATH := "res://assets/fonts/DejaVuSans-Bold.ttf"
 var car: VehiclePrado
 var orbit_on := false
+var camera_label := "3-Е ЛИЦО"
 var touch_mode := true        ## false on desktop: only the speedometer is drawn
 var _font: Font
 var _fingers := {}          # finger index -> control name
@@ -43,6 +49,10 @@ func _rects() -> Dictionary:
 		"orbit": Rect2(w * 0.5 - 4.9 * u, 0.35 * u, 3.0 * u, 0.95 * u),
 		"repair": Rect2(w * 0.5 - 1.7 * u, 0.35 * u, 3.4 * u, 0.95 * u),
 		"exit": Rect2(w * 0.5 + 1.9 * u, 0.35 * u, 3.0 * u, 0.95 * u),
+		"tleft": Rect2(0.5 * u, h - 4.45 * u, 1.05 * u, 1.0 * u),
+		"lights": Rect2(1.7 * u, h - 4.45 * u, 1.5 * u, 1.0 * u),
+		"hazard": Rect2(3.35 * u, h - 4.45 * u, 1.05 * u, 1.0 * u),
+		"tright": Rect2(4.55 * u, h - 4.45 * u, 1.05 * u, 1.0 * u),
 	}
 
 
@@ -66,8 +76,15 @@ func _input(event: InputEvent) -> void:
 			_fingers[event.index] = k
 			match k:
 				"orbit":
-					orbit_on = not orbit_on
 					orbit_toggled.emit()
+				"lights":
+					lights_pressed.emit()
+				"tleft":
+					turn_pressed.emit(-1)
+				"tright":
+					turn_pressed.emit(1)
+				"hazard":
+					hazard_pressed.emit()
 				"repair":
 					repair_pressed.emit()
 				"exit":
@@ -122,7 +139,7 @@ func _draw() -> void:
 	var held := _fingers.values()
 	if not touch_mode:
 		if car:
-			_speedometer(_gauge_center(), 1.3 * u)
+			_hud(_gauge_center(), 1.3 * u)
 		return
 	var base := Color(0, 0, 0, 0.34)
 	var on := Color(1, 1, 1, 0.32)
@@ -138,11 +155,19 @@ func _draw() -> void:
 	_pedal(r["brake"], "ТОРМОЗ", Color(0.85, 0.25, 0.2, 0.55) if held.has("brake") else base)
 	_pedal(r["handbrake"], "РУЧНИК", Color(1.0, 0.6, 0.1, 0.6) if held.has("handbrake") else base)
 	# top buttons
-	_button(r["orbit"], "ОБЗОР", Color(0.2, 0.45, 0.85, 0.6) if orbit_on else base)
+	_button(r["orbit"], "КАМЕРА: " + camera_label, base)
 	_button(r["repair"], "ВОССТАНОВИТЬ", base)
 	_button(r["exit"], "ВЫЙТИ", base)
+	if car and car.lights:
+		var L := car.lights
+		var amber := Color(1.0, 0.6, 0.1, 0.65)
+		_button(r["tleft"], "◄", amber if L.turn < 0 else base)
+		var bl: String = ["ФАРЫ", "БЛИЖН.", "ДАЛЬН."][L.beam]
+		_button(r["lights"], bl, Color(0.2, 0.7, 0.3, 0.6) if L.beam == 1 else (Color(0.2, 0.4, 0.95, 0.65) if L.beam == 2 else base))
+		_button(r["hazard"], "АВАР.", Color(0.9, 0.2, 0.15, 0.6) if L.hazard else base)
+		_button(r["tright"], "►", amber if L.turn > 0 else base)
 	if car:
-		_speedometer(_gauge_center(), 1.3 * u)
+		_hud(_gauge_center(), 1.3 * u)
 
 
 func _gauge_center() -> Vector2:
@@ -171,6 +196,50 @@ func _text(t: String, c: Vector2, fs: int) -> void:
 	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
 	draw_string_outline(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.8))
 	draw_string(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+
+
+func _hud(c: Vector2, rad: float) -> void:
+	_speedometer(c, rad)
+	_tachometer(c + Vector2(-rad * 2.25, rad * 0.25), rad * 0.72)
+	_telltales(c + Vector2(-rad * 1.15, rad * 1.25), rad)
+
+
+func _tachometer(c: Vector2, rad: float) -> void:
+	## 0..5000 rpm, red zone from the 4400 rpm fuel cut
+	draw_circle(c, rad * 1.05, Color(0, 0, 0, 0.45))
+	var a0 := PI * 0.8
+	var a1 := PI * 2.2
+	draw_arc(c, rad * 0.92, a0, a1, 40, Color(1, 1, 1, 0.3), 3.0)
+	draw_arc(c, rad * 0.92, lerpf(a0, a1, 4400.0 / 5000.0), a1, 8, Color(0.95, 0.15, 0.1, 0.9), 5.0)
+	for k in 6:
+		var a := lerpf(a0, a1, k / 5.0)
+		var d := Vector2(cos(a), sin(a))
+		draw_line(c + d * rad * 0.74, c + d * rad * 0.92, Color(1, 1, 1, 0.75), 2.0)
+		_text("%d" % k, c + d * rad * 0.56, int(rad * 0.2))
+	var an := lerpf(a0, a1, clampf(car.rpm / 5000.0, 0.0, 1.0))
+	draw_line(c, c + Vector2(cos(an), sin(an)) * rad * 0.86, Color(1.0, 0.35, 0.2), 3.0)
+	draw_circle(c, rad * 0.08, Color(0.9, 0.9, 0.9))
+	_text("об/мин ×1000", c + Vector2(0, rad * 0.45), int(rad * 0.15))
+
+
+func _telltales(c: Vector2, rad: float) -> void:
+	## indicator arrows (blink), beam, handbrake, damage warning
+	var fs := int(rad * 0.3)
+	var L := car.lights
+	var dim := Color(1, 1, 1, 0.18)
+	var x := c.x
+	var items := [
+		["◄", Color(0.2, 1.0, 0.3) if L and L.blink_on and (L.turn < 0 or L.hazard) else dim],
+		["►", Color(0.2, 1.0, 0.3) if L and L.blink_on and (L.turn > 0 or L.hazard) else dim],
+		["≡D", (Color(0.3, 0.5, 1.0) if L.beam == 2 else Color(0.3, 1.0, 0.4)) if L and L.beam > 0 else dim],
+		["(P)", Color(1.0, 0.2, 0.15) if car.handbrake else dim],
+		["!", Color(1.0, 0.7, 0.1) if car.health < 50.0 else dim],
+	]
+	for it in items:
+		var w := _font.get_string_size(it[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string_outline(_font, Vector2(x, c.y), it[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.7))
+		draw_string(_font, Vector2(x, c.y), it[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, it[1])
+		x += w + rad * 0.22
 
 
 func _speedometer(c: Vector2, rad: float) -> void:

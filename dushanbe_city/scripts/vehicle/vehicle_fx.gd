@@ -9,6 +9,8 @@ extends Node
 ## * SKID MARKS - dark tyre-width strips laid while a tyre slides on asphalt (earth-coloured ruts on
 ##   the terrain), opacity ∝ slip; one MultiMesh ring buffer (MAX_MARKS segments, 1 draw call).
 ## * DUST - on unpaved ground (terrain collider): kicked up by speed and slip, sandy colour.
+## * WATER - wheels in the sea (contact below the sea level): splashes ∝ speed and depth, entry
+##   splash sound (CC0 sea recordings); on wet roads (rain) a thin spray behind the tyres ∝ speed.
 
 const MAX_MARKS := 900
 const MARK_STEP := 0.30          ## m between mark segments
@@ -23,6 +25,11 @@ var _next_mark := 0
 var marks_laid := 0              ## total segments laid (tests)
 var smoke_level := 0.0           ## 0..1 strongest smoke emitter this frame (tests / debug)
 var dust_level := 0.0
+var water_level := 0.0           ## 0..1 strongest water splash (tests)
+var _water: Array[CPUParticles3D] = []
+var _wsfx: AudioStreamPlayer3D
+var _in_water := false
+var _wstep := 0.0
 
 
 func _ready() -> void:
@@ -30,7 +37,15 @@ func _ready() -> void:
 	for i in car.wheels.size():
 		_smoke.append(_emitter(puff, Color(0.86, 0.86, 0.86), 44, 2.4, 0.5, 3.6, -0.35))
 		_dust.append(_emitter(puff, Color(0.66, 0.58, 0.44), 36, 1.8, 0.6, 3.0, 0.4))
+		var wp := _emitter(puff, Color(0.86, 0.92, 0.97), 40, 0.9, 0.25, 1.1, 9.8)
+		wp.direction = Vector3(0, 1, 0)
+		wp.spread = 35.0
+		_water.append(wp)
 		_last.append(null)
+	_wsfx = AudioStreamPlayer3D.new()
+	_wsfx.unit_size = 8.0
+	_wsfx.bus = &"Vehicle"
+	add_child(_wsfx)
 	_mm = MultiMesh.new()
 	_mm.transform_format = MultiMesh.TRANSFORM_3D
 	_mm.use_colors = true
@@ -126,6 +141,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	smoke_level = 0.0
 	dust_level = 0.0
+	water_level = 0.0
 	var spd := car.linear_velocity.length()
 	for i in car.wheels.size():
 		var w: Dictionary = car.wheels[i]
@@ -147,6 +163,23 @@ func _physics_process(_delta: float) -> void:
 			du = clampf(base + ss / 6.0 * maxf(k, 0.35), 0.0, 1.0)
 		_drive(_dust[i], du, cp + Vector3.UP * 0.2)
 		dust_level = maxf(dust_level, du)
+		# water: depth of the sea at the tyre (hub below the surface counts even without ground contact)
+		var hub: Vector3 = (w["node"] as Node3D).global_position
+		var depth := PlayerWater.SEA_LEVEL - (hub.y - 0.4)
+		var wa := 0.0
+		if depth > 0.03:
+			wa = clampf(spd / 10.0, 0.0, 1.0) * clampf(0.35 + depth * 1.5, 0.0, 1.0)
+			_water[i].initial_velocity_min = 1.0 + spd * 0.25
+			_water[i].initial_velocity_max = 2.0 + spd * 0.45
+			_drive(_water[i], wa, Vector3(hub.x, PlayerWater.SEA_LEVEL + 0.05, hub.z))
+		elif contact and paved and car.wetness > 0.3 and spd > 8.0 and not w["front"]:
+			wa = clampf((spd - 8.0) / 25.0, 0.0, 1.0) * car.wetness * 0.45     # road spray in the rain
+			_water[i].initial_velocity_min = 0.8
+			_water[i].initial_velocity_max = 2.0
+			_drive(_water[i], wa, cp + Vector3.UP * 0.15)
+		else:
+			_drive(_water[i], 0.0, cp)
+		water_level = maxf(water_level, wa if depth > 0.03 else 0.0)
 		# skid marks
 		if contact and ss > 2.0:
 			var nrm: Vector3 = w["normal"]
@@ -159,6 +192,31 @@ func _physics_process(_delta: float) -> void:
 				_last[i] = p
 		else:
 			_last[i] = null
+
+
+func _process(delta: float) -> void:
+	# splash sounds: entering the water, then wading splashes ∝ speed
+	if car == null:
+		return
+	var wet := water_level > 0.02
+	var spd := car.linear_velocity.length()
+	if wet and not _in_water and spd > 2.0:
+		_ws("res://assets/audio/sea/splash_big.ogg" if spd > 6.0 else "res://assets/audio/sea/splash_entry.ogg", lerpf(-8.0, 2.0, clampf(spd / 12.0, 0.0, 1.0)))
+	_in_water = wet
+	if wet and spd > 1.0:
+		_wstep += delta * (0.8 + spd * 0.25)
+		if _wstep > 1.0:
+			_wstep = 0.0
+			_ws("res://assets/audio/sea/step_water_%d.ogg" % (1 + randi() % 3), lerpf(-10.0, 0.0, clampf(spd / 10.0, 0.0, 1.0)))
+
+
+func _ws(path: String, db: float) -> void:
+	if not ResourceLoader.exists(path):
+		return
+	_wsfx.stream = load(path)
+	_wsfx.volume_db = db
+	_wsfx.pitch_scale = randf_range(0.8, 0.95)
+	_wsfx.play()
 
 
 func _drive(p: CPUParticles3D, level: float, at: Vector3) -> void:

@@ -20,7 +20,8 @@ static func ensure_actions() -> void:
 	_ready = true
 	var keys := {&"car_gas": [KEY_W, KEY_UP], &"car_brake": [KEY_S, KEY_DOWN], &"car_left": [KEY_A, KEY_LEFT],
 		&"car_right": [KEY_D, KEY_RIGHT], &"car_handbrake": [KEY_SPACE], &"car_enter": [KEY_E],
-		&"car_repair": [KEY_R], &"car_camera": [KEY_C]}
+		&"car_repair": [KEY_R], &"car_camera": [KEY_C],
+		&"car_lights": [KEY_L], &"car_turn_left": [KEY_Q], &"car_turn_right": [KEY_Z], &"car_hazard": [KEY_H]}
 	for a in keys:
 		if InputMap.has_action(a):
 			continue

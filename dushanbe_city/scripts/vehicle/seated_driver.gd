@@ -10,6 +10,7 @@ const MODEL := "res://assets/characters/player/player.glb"
 var skel: Skeleton3D
 var model: Node3D
 var _base := {}            ## bone -> global target basis (straight wheel)
+var hide_head := false     ## cabin camera sits in the driver's head: the head is scaled away, arms stay
 
 ## body-frame directions per bone (bone -> child), tuned on real screenshots of the cabin
 const AIM := {
@@ -57,6 +58,17 @@ func pose(steer: float) -> void:
 		if b == "UpperChest":
 			dir = dir.rotated(Vector3.UP, -steer * 0.12)
 		_aim(bi, String(CHILD[b]), dir.normalized())
+	if hide_head:
+		var h := skel.find_bone("Head")
+		if h >= 0:
+			skel.set_bone_pose_scale(h, Vector3.ONE * 0.001)
+
+
+## eye point (car model space) for the cabin camera: between the eyes of the seated driver
+func eye_position() -> Vector3:
+	var h := skel.find_bone("Head")
+	var p := skel.global_transform * skel.get_bone_global_pose(h).origin
+	return p + Vector3.UP * 0.09
 
 
 func _aim(bi: int, child: String, want: Vector3) -> void:

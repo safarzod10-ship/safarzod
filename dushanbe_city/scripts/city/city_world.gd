@@ -318,6 +318,7 @@ func _tree_colliders(parent: Node3D, id: String, xfs: Array) -> void:
 	if r == null or float(r) <= 0.0:
 		return
 	var body := StaticBody3D.new()
+	body.name = "Tree_" + id                 # impact sound material (VehiclePrado.impact_material)
 	parent.add_child(body)
 	var shape := CylinderShape3D.new()
 	shape.radius = float(r)
@@ -350,6 +351,7 @@ func _prop_colliders(parent: Node3D, id: String, xfs: Array) -> void:
 	else:
 		return
 	var body := StaticBody3D.new()
+	body.name = "Prop_" + id
 	parent.add_child(body)
 	for xf in xfs:
 		var cs := CollisionShape3D.new()

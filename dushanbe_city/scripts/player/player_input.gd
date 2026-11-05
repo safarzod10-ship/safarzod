@@ -18,6 +18,8 @@ static var touch_active := false
 ## UI settings (user://controls.cfg): size of the touch controls and camera swipe sensitivity
 static var ui_scale := 1.0
 static var look_scale := 1.0
+## car: Arcade Assist drive mode (stage 5); same physics, assists on top
+static var arcade_assist := false
 static var _action_queued := false
 static var _jump_queued := false
 static var _punch_queued := false
@@ -92,12 +94,14 @@ static func load_settings() -> void:
 	if c.load("user://controls.cfg") == OK:
 		ui_scale = clampf(float(c.get_value("touch", "ui_scale", 1.0)), 0.75, 1.35)
 		look_scale = clampf(float(c.get_value("touch", "look_scale", 1.0)), 0.4, 2.5)
+		arcade_assist = bool(c.get_value("car", "arcade_assist", false))
 
 
 static func save_settings() -> void:
 	var c := ConfigFile.new()
 	c.set_value("touch", "ui_scale", ui_scale)
 	c.set_value("touch", "look_scale", look_scale)
+	c.set_value("car", "arcade_assist", arcade_assist)
 	c.save("user://controls.cfg")
 
 
