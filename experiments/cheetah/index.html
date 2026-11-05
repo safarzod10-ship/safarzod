@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Робо-гепард — демо анимации</title>
+<style>
+  :root { --bg: #0e1126; --btn: #f59e0b; --btn-ink: #2a1404; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  /* 9:16 stage that always fits the viewport */
+  .stage-wrap {
+    position: relative;
+    height: min(100vh, calc(100vw * 16 / 9));
+    height: min(100dvh, calc(100vw * 16 / 9));
+    aspect-ratio: 9 / 16;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: 0 10px 50px rgba(0,0,0,.45);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  #play {
+    position: absolute; left: 50%; bottom: 5.2%; transform: translateX(-50%);
+    font: 700 clamp(15px, 3.2vh, 22px)/1 inherit; font-family: inherit;
+    padding: 0.95em 1.9em; border: 0; border-radius: 999px;
+    color: var(--btn-ink); background: linear-gradient(#ffd479, var(--btn));
+    box-shadow: 0 0.35em 0 #a8620a, 0 0.6em 1.4em rgba(200,120,20,.45);
+    cursor: pointer; white-space: nowrap; letter-spacing: .01em;
+    transition: transform .08s, box-shadow .08s, opacity .25s, filter .25s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #play:hover { filter: brightness(1.05); }
+  #play:active, #play.pressed { transform: translateX(-50%) translateY(0.25em); box-shadow: 0 0.1em 0 #a8620a, 0 0.3em 0.8em rgba(200,120,20,.45); }
+  #play:disabled { opacity: .55; cursor: default; filter: saturate(.6); }
+  #play:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+</style>
+</head>
+<body>
+  <div class="stage-wrap">
+    <canvas id="stage" width="540" height="960" aria-label="Мультяшный робо-гепард"></canvas>
+    <button id="play" type="button">Запустить анимацию</button>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
