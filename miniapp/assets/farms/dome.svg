@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200">
+<style>
+.k{stroke:#0b1a26;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.core{transform-origin:120px 128px;animation:p 1.8s ease-in-out infinite}@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.halo{animation:h 1.8s ease-in-out infinite}@keyframes h{0%,100%{opacity:.5}50%{opacity:1}}
+.orb{transform-origin:120px 128px;animation:o 3s linear infinite}@keyframes o{to{transform:rotate(360deg)}}
+.b{animation:b 1.2s infinite}@keyframes b{0%,100%{opacity:1}50%{opacity:.25}}
+</style>
+<defs>
+<radialGradient id="glass" cx=".5" cy=".85" r=".9"><stop offset="0" stop-color="#7ff7e8" stop-opacity=".55"/><stop offset="1" stop-color="#2bb3c9" stop-opacity=".18"/></radialGradient>
+<radialGradient id="hal" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#8ffcf0" stop-opacity=".9"/><stop offset="1" stop-color="#8ffcf0" stop-opacity="0"/></radialGradient>
+<linearGradient id="crys" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9fffb"/><stop offset=".5" stop-color="#5fe8d8"/><stop offset="1" stop-color="#159aa8"/></linearGradient>
+<linearGradient id="cell" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4c7dff"/><stop offset="1" stop-color="#1f3aa8"/></linearGradient>
+</defs>
+<ellipse cx="120" cy="184" rx="108" ry="11" fill="#000" opacity=".35"/>
+<path class="k" d="M18 128 L44 116 L60 140 L34 152 Z" fill="url(#cell)"/>
+<path d="M31 122 L47 146 M18 128 L60 140" stroke="#facc15" stroke-width="2" opacity=".9"/>
+<path class="k" d="M40 150 V176" fill="none"/>
+<path class="k" d="M222 128 L196 116 L180 140 L206 152 Z" fill="url(#cell)"/>
+<path d="M209 122 L193 146 M222 128 L180 140" stroke="#facc15" stroke-width="2" opacity=".9"/>
+<path class="k" d="M200 150 V176" fill="none"/>
+<rect class="k" x="36" y="164" width="168" height="16" rx="6" fill="#20586e"/>
+<path d="M44 168 H196" stroke="#5fe8d8" stroke-width="2" opacity=".6"/>
+<circle cx="120" cy="128" r="40" fill="url(#hal)" class="halo"/>
+<g class="core"><path class="k" d="M120 96 L138 122 L128 156 L112 156 L102 122 Z" fill="url(#crys)" stroke-width="2.5"/>
+<path d="M120 96 L120 156 M102 122 L138 122" stroke="#ffffff" stroke-width="1.5" opacity=".7"/></g>
+<g class="orb"><circle cx="160" cy="128" r="3.5" fill="#facc15"/><circle cx="80" cy="128" r="2.5" fill="#8ffcf0"/></g>
+<path class="k" d="M40 166 A80 80 0 0 1 200 166 Z" fill="url(#glass)"/>
+<g stroke="#bff8f1" stroke-width="1.6" fill="none" opacity=".6"><path d="M120 86 V166"/><path d="M120 86 C90 100 78 130 80 166"/><path d="M120 86 C150 100 162 130 160 166"/><path d="M48 136 H192"/><path d="M68 108 H172"/></g>
+<path d="M56 140 C60 112 82 94 106 90" stroke="#fff" stroke-width="4" fill="none" opacity=".55" stroke-linecap="round"/>
+<circle class="k b" cx="120" cy="84" r="4" fill="#facc15" stroke-width="2"/>
+</svg>

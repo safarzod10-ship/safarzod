@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200">
+<style>
+.k{stroke:#140c30;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.b{animation:b 1s infinite}.b2{animation:b .7s .2s infinite}.b3{animation:b 1.3s .5s infinite}
+@keyframes b{0%,100%{opacity:1}50%{opacity:.2}}
+.ring{stroke-dasharray:18 10;animation:r 1.6s linear infinite}@keyframes r{to{stroke-dashoffset:-56}}
+.tip{animation:t 1.2s ease-in-out infinite}@keyframes t{0%,100%{opacity:.4}50%{opacity:1}}
+</style>
+<defs>
+<linearGradient id="tw" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7b55e8"/><stop offset=".5" stop-color="#5a36c4"/><stop offset="1" stop-color="#3b218c"/></linearGradient>
+<linearGradient id="wing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b3cc0"/><stop offset="1" stop-color="#36207e"/></linearGradient>
+<radialGradient id="halo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#c49bff" stop-opacity=".7"/><stop offset="1" stop-color="#c49bff" stop-opacity="0"/></radialGradient>
+</defs>
+<ellipse cx="120" cy="184" rx="96" ry="11" fill="#000" opacity=".35"/>
+<circle cx="120" cy="14" r="16" fill="url(#halo)" class="tip"/>
+<path class="k" d="M120 34 V14" fill="none"/>
+<circle class="k tip" cx="120" cy="12" r="5" fill="#f0abff"/>
+<rect class="k" x="48" y="104" width="34" height="76" rx="6" fill="url(#wing)"/>
+<rect class="k" x="158" y="104" width="34" height="76" rx="6" fill="url(#wing)"/>
+<g fill="#2a1760" stroke="#140c30" stroke-width="1.5"><rect x="54" y="114" width="22" height="10" rx="2"/><rect x="54" y="130" width="22" height="10" rx="2"/><rect x="54" y="146" width="22" height="10" rx="2"/><rect x="164" y="114" width="22" height="10" rx="2"/><rect x="164" y="130" width="22" height="10" rx="2"/><rect x="164" y="146" width="22" height="10" rx="2"/></g>
+<g fill="#f0abff"><circle class="b" cx="71" cy="119" r="2"/><circle class="b2" cx="71" cy="135" r="2"/><circle class="b3" cx="71" cy="151" r="2"/><circle class="b2" cx="181" cy="119" r="2"/><circle class="b3" cx="181" cy="135" r="2"/><circle class="b" cx="181" cy="151" r="2"/></g>
+<rect class="k" x="80" y="32" width="80" height="148" rx="8" fill="url(#tw)"/>
+<path d="M88 40 V172" stroke="#b79bff" stroke-width="3" opacity=".6" stroke-linecap="round"/>
+<g fill="#2a1760" stroke="#140c30" stroke-width="2">
+<rect x="92" y="44" width="56" height="16" rx="3"/><rect x="92" y="66" width="56" height="16" rx="3"/><rect x="92" y="88" width="56" height="16" rx="3"/><rect x="92" y="110" width="56" height="16" rx="3"/><rect x="92" y="132" width="56" height="16" rx="3"/></g>
+<g fill="#5ff0ff">
+<circle class="b" cx="100" cy="52" r="2.2"/><circle class="b2" cx="108" cy="52" r="2.2"/><circle class="b3" cx="116" cy="52" r="2.2"/>
+<circle class="b3" cx="100" cy="74" r="2.2"/><circle class="b" cx="108" cy="74" r="2.2"/><circle class="b2" cx="116" cy="74" r="2.2"/>
+<circle class="b2" cx="100" cy="96" r="2.2"/><circle class="b3" cx="108" cy="96" r="2.2"/><circle class="b" cx="116" cy="96" r="2.2"/>
+<circle class="b" cx="100" cy="118" r="2.2"/><circle class="b2" cx="108" cy="118" r="2.2"/><circle class="b3" cx="116" cy="118" r="2.2"/>
+<circle class="b3" cx="100" cy="140" r="2.2"/><circle class="b" cx="108" cy="140" r="2.2"/><circle class="b2" cx="116" cy="140" r="2.2"/></g>
+<g stroke="#7a5ad8" stroke-width="2"><path d="M126 52 H142 M126 74 H142 M126 96 H142 M126 118 H142 M126 140 H142"/></g>
+<rect class="k" x="100" y="154" width="40" height="26" rx="4" fill="#1d1050"/>
+<rect x="106" y="160" width="28" height="4" rx="2" fill="#f0abff" class="b"/>
+<ellipse cx="120" cy="96" rx="78" ry="16" fill="none" stroke="#f0abff" stroke-width="3" class="ring" opacity=".85"/>
+</svg>

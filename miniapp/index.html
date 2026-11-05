@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#161a33">
+<title>HomeBeast</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#161a33; --bg2:#1d2142; --panel:#232849; --panel2:#2a3056; --line:#363d68; --line2:#454d80;
+  --text:#f2f4ff; --muted:#a2a8cc; --dim:#6f769f;
+  --blue:#3d8bfd; --blue2:#2f6fe0; --bar:#4d8eff; --violet:#8b5cf6; --violet2:#7044e0;
+  --red:#e8454f; --red2:#c42f3a; --green:#4ade80; --gem:#5ec8ff; --gold:#facc15;
+  --rare:#2f8ff0; --epic:#9b5cf6; --common:#8c93b8;
+  --st:max(var(--tg-safe-area-inset-top,0px),env(safe-area-inset-top,0px));
+  --sb:max(var(--tg-safe-area-inset-bottom,0px),env(safe-area-inset-bottom,0px));
+  --ct:var(--tg-content-safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden;
+  font:600 15px/1.3 "Inter","SF Pro Text","Segoe UI",system-ui,Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.app{position:fixed;inset:0;display:flex;flex-direction:column;background:radial-gradient(120% 50% at 50% 0%,#232a55,transparent 70%),var(--bg)}
+@media (min-width:520px){.app{max-width:440px;margin:0 auto;border-inline:1px solid var(--line)}}
+main{flex:1;position:relative;overflow:hidden}
+
+/* screens */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateY(12px);pointer-events:none;
+  transition:opacity .22s,transform .22s}
+.screen.on{opacity:1;transform:none;pointer-events:auto}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 14px 16px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.sheet-head{position:relative;display:flex;align-items:center;justify-content:center;
+  padding:calc(var(--st) + var(--ct) + 14px) 52px 14px;font-size:20px;font-weight:800}
+.x{position:absolute;right:10px;bottom:8px;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--muted)}
+.x:active{background:var(--panel)}
+.x svg{width:22px;height:22px}
+
+/* common blocks */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+.gem{display:inline-block;width:.9em;height:.9em;vertical-align:-.08em;margin-left:3px;
+  background:linear-gradient(135deg,#bdf0ff,#5ec8ff 45%,#2a8fe0);clip-path:polygon(50% 100%,0 38%,22% 6%,78% 6%,100% 38%)}
+.bar{height:6px;border-radius:9px;background:#141834;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--blue2),var(--bar))}
+.bar.lg{height:9px}
+.btn{height:44px;border-radius:12px;padding:0 16px;font-weight:800;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  background:linear-gradient(180deg,#4b95ff,var(--blue2));box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 14px rgba(61,139,253,.25);transition:transform .1s,filter .1s}
+.btn:active{transform:scale(.97);filter:brightness(.92)}
+.btn.violet{background:linear-gradient(180deg,#9d74ff,var(--violet2));box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 14px rgba(139,92,246,.3)}
+.btn.red{background:linear-gradient(180deg,#f45b64,var(--red2));box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 16px rgba(232,69,79,.3)}
+.btn.grey{background:#4a5078;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.btn.sm{height:34px;font-size:14px;border-radius:10px;padding:0 14px}
+.btn.block{width:100%}
+.pill{height:30px;padding:0 14px;border-radius:9px;background:#343a62;color:#dfe3ff;font-size:14px;font-weight:700;display:inline-flex;align-items:center}
+.slot{border-radius:14px;background:radial-gradient(70% 60% at 50% 55%,rgba(139,92,246,.18),transparent 70%),#1b1f3d;border:1px dashed var(--line2)}
+
+/* ---------- HOME ---------- */
+.hud{display:flex;align-items:center;gap:10px;padding:calc(var(--st) + var(--ct) + 12px) 14px 10px}
+.ava{width:44px;height:44px;border-radius:50%;flex:none;background:linear-gradient(135deg,#4b5590,#2b3160);border:2px solid #5a64a6;
+  display:grid;place-items:center;color:#c8cdf0}
+.ava svg{width:26px;height:26px}
+.hud-main{flex:1;min-width:0}
+.hud-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.hud-row b{font-size:17px}
+.hud-row span{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.farm{flex:1;display:flex;flex-direction:column;align-items:center;padding:6px 14px 10px;min-height:0}
+.farm h3{font-size:18px;font-weight:700;color:#e3e6ff;margin-top:4px}
+.rate{margin:8px 0 10px;padding:6px 18px;border-radius:14px;font-size:28px;font-weight:900;letter-spacing:.3px;
+  background:linear-gradient(180deg,#3a2f74,#2a2357);border:1px solid #5b4bb0;box-shadow:0 0 24px rgba(139,92,246,.35),inset 0 1px 0 rgba(255,255,255,.12)}
+.scene{flex:1;width:100%;min-height:200px;border-radius:20px;position:relative;
+  background:radial-gradient(60% 30% at 50% 88%,rgba(139,92,246,.25),transparent 70%)}
+.scene::after{content:"";position:absolute;left:10%;right:10%;bottom:6%;height:14%;border-radius:50%;background:radial-gradient(closest-side,#262c55,transparent)}
+
+/* ---------- PET ---------- */
+.pet-top{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;margin-bottom:12px}
+.stats{display:flex;flex-direction:column;gap:12px;padding-top:12px}
+.stat .l{display:flex;align-items:center;gap:7px;font-size:15px;margin-bottom:5px}
+.stat .l svg{width:17px;height:17px;color:#7fb0ff;flex:none}
+.stat .l em{margin-left:auto;font-style:normal;font-variant-numeric:tabular-nums}
+.pet-art{aspect-ratio:1/1.05}
+.feed{display:flex;align-items:center;gap:10px;margin-top:12px}
+.bowl{width:46px;height:40px;flex:none}
+.feed .btn{flex:1}
+.up-title{font-size:16px;font-weight:800;margin-bottom:10px}
+.up-row{display:flex;align-items:center;gap:8px;font-size:15px;padding:4px 0}
+.up-row svg{width:22px;height:22px;color:#7fb0ff}
+.up-row .g{color:var(--green)}
+.up-row .p{margin-left:auto}
+.up-row+.up-row{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.mb{margin-bottom:12px}
+
+/* ---------- RAID ---------- */
+.raid-top{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:center}
+.wheel-wrap{position:relative;padding-top:10px}
+.pointer{position:absolute;left:50%;top:0;transform:translateX(-50%);width:0;height:0;z-index:2;
+  border-left:11px solid transparent;border-right:11px solid transparent;border-top:18px solid var(--red);filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.wheel{position:relative;aspect-ratio:1;border-radius:50%;border:5px solid #3a4170;
+  background:repeating-conic-gradient(from -22.5deg,#232849 0 44deg,#3a4170 44deg 45deg);
+  box-shadow:0 0 0 3px #1b1f3d,0 10px 30px rgba(0,0,0,.4);transition:transform 3.6s cubic-bezier(.12,.75,.12,1)}
+.wheel .hub{position:absolute;inset:36%;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3c4373,#262b50);border:4px solid #3a4170}
+.wheel .seg{position:absolute;left:50%;top:50%;width:21%;aspect-ratio:1;margin:-10.5% 0 0 -10.5%;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,#3a3f75,#1c2042);border:2px solid #4d5590}
+.wheel .seg.hit{border-color:var(--red);box-shadow:0 0 12px rgba(232,69,79,.6)}
+.target{border-radius:14px;padding:8px;background:linear-gradient(180deg,#2c3a73,#243063);border:2px solid #4d7cff;box-shadow:0 0 18px rgba(77,124,255,.3)}
+.target .art{aspect-ratio:1/1.05;border-radius:10px;margin-bottom:8px}
+.target h4{text-align:center;font-size:14px;margin-bottom:6px}
+.kv{display:flex;justify-content:space-between;font-size:14px;color:#dfe3ff;padding:1px 4px}
+.raid-mid{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:end;margin:14px 0 12px}
+.big-red{height:58px;flex-direction:column;gap:0;font-size:17px;letter-spacing:.3px}
+.big-red small{font-size:12px;font-weight:600;opacity:.85}
+.timer-l{text-align:center;font-size:14px;color:#dfe3ff;margin-bottom:6px}
+.timer{height:40px;border-radius:10px;background:#1b1f3d;border:1px solid var(--line);display:grid;place-items:center;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.counter{text-align:center;font-size:14px;color:#dfe3ff}
+.counter b{display:block;font-size:15px;margin-bottom:3px}
+.counter .neg{color:var(--red)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;height:34px;padding:0 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:#cfd4f5;font-size:14px;font-weight:700}
+.tabs button.on{background:#3d4472;border-color:var(--line2);color:#fff}
+
+/* ---------- INVENTORY ---------- */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.item{position:relative;border-radius:14px;padding:10px 10px 12px;text-align:center;border:2px solid var(--line);
+  background:linear-gradient(180deg,#262c50,#20254a)}
+.item .n{position:absolute;left:10px;top:6px;font-size:14px;font-weight:800;color:#cfd4f5}
+.item .art{aspect-ratio:1.25;border-radius:10px;margin:14px 6px 8px}
+.item h5{font-size:15px;font-weight:700}
+.item .rar{font-size:13px;margin:1px 0 8px;color:var(--common)}
+.item .btn{width:100%}
+.item.rare{border-color:#2f7fe0;background:linear-gradient(180deg,#1f3a72,#1d2c5c)}
+.item.rare .rar{color:#6fb3ff}
+.item.epic{border-color:#9b5cf6;background:linear-gradient(180deg,#43307e,#2f2563)}
+.item.epic .rar{color:#c4a3ff}
+.item .qty{position:absolute;right:16px;top:58%;font-size:15px;font-weight:900;text-shadow:0 2px 4px #000}
+
+/* ---------- SHOP ---------- */
+.list{display:flex;flex-direction:column;gap:10px}
+.row-item{position:relative;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 10px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.row-item .n{position:absolute;left:8px;top:4px;font-size:13px;font-weight:800;color:#cfd4f5;z-index:1}
+.row-item .art{width:74px;height:74px;flex:none;border-radius:12px}
+.row-item .info{flex:1;min-width:0}
+.row-item h5{font-size:16px;font-weight:700;margin-bottom:10px}
+.row-item .price{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:18px;font-weight:800}
+
+/* ---------- NFT ---------- */
+.nft{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px 30px;
+  background:radial-gradient(80% 50% at 50% 35%,rgba(139,92,246,.22),transparent 70%)}
+.nft .card{width:96px;height:126px;border-radius:12px;background:linear-gradient(180deg,#5a618f,#3b4170);border:3px solid #7f86b5;
+  display:grid;place-items:center;font-size:44px;font-weight:900;color:#dfe3ff;transform:rotate(-6deg);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.nft .lock{width:52px;height:60px;margin:34px 0 18px;color:#c9cde6}
+.nft h2{font-size:20px;font-weight:900;letter-spacing:.3px;margin-bottom:10px}
+.nft p{color:var(--muted);font-size:14px;line-height:1.4;max-width:290px}
+.nft .btn{margin-top:22px;opacity:.5;pointer-events:none}
+
+/* ---------- NAV ---------- */
+nav{display:grid;grid-template-columns:repeat(6,1fr);padding:6px 4px calc(6px + var(--sb));background:#14182f;border-top:1px solid var(--line)}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--dim);font-size:10.5px;font-weight:700;min-height:50px;border-radius:12px;transition:color .2s}
+nav svg{width:24px;height:24px}
+nav button.on{color:#fff}
+nav button.on svg{filter:drop-shadow(0 0 6px rgba(120,160,255,.5))}
+@media (max-width:360px){nav button{font-size:9.5px}.rate{font-size:24px}}
+
+/* ---------- filled art slots ---------- */
+.slot.filled{border-style:solid;border-color:transparent}
+.art-img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+
+/* ---------- home scene: farm + pet ---------- */
+.scene{display:flex;align-items:flex-end;justify-content:center}
+.scene .farm-img{position:absolute;left:50%;bottom:9%;width:min(78%,340px);transform:translateX(-50%);z-index:1;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.5))}
+.scene .pet-img{position:absolute;left:4%;bottom:3%;width:min(46%,210px);z-index:2;animation:bob 2.6s ease-in-out infinite;
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.55))}
+.scene .tag{position:absolute;z-index:3;font-size:12px;font-weight:800;padding:4px 10px;border-radius:9px;background:rgba(20,24,52,.82);
+  border:1px solid var(--line2);color:#dfe3ff;white-space:nowrap}
+.scene .tag.farm{right:5%;top:6%}
+.scene .tag.pet{left:5%;top:6%}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.pet-name{font-size:18px;font-weight:900;margin:2px 0 4px}
+.pet-sub{font-size:13px;color:var(--muted)}
+
+/* ---------- onboarding roulette ---------- */
+.onb{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;
+  padding:calc(var(--st) + var(--ct) + 18px) 16px calc(var(--sb) + 18px);
+  background:radial-gradient(90% 45% at 50% 35%,rgba(139,92,246,.28),transparent 70%),var(--bg);
+  transition:opacity .35s, transform .35s}
+.onb.hide{opacity:0;transform:scale(1.04);pointer-events:none}
+.onb-step{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--violet);
+  background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.4);padding:4px 10px;border-radius:999px}
+.onb h2{font-size:24px;font-weight:900;margin:12px 0 4px;text-align:center}
+.onb p.sub{color:var(--muted);font-size:14px;text-align:center;max-width:300px}
+.reel{position:relative;width:100%;height:178px;margin:26px 0 18px;border-radius:18px;overflow:hidden;
+  background:linear-gradient(180deg,#1b1f3d,#151933);border:1px solid var(--line);box-shadow:inset 0 0 30px rgba(0,0,0,.4)}
+.reel-track{position:absolute;left:0;top:14px;display:flex;gap:10px;will-change:transform}
+.reel-card{flex:none;width:118px;height:150px;border-radius:14px;padding:8px 6px 6px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  background:radial-gradient(80% 60% at 50% 40%,var(--c,#8b5cf6) 0%,transparent 75%),#22274a;border:2px solid rgba(255,255,255,.08);
+  box-shadow:inset 0 -18px 30px rgba(0,0,0,.25)}
+.reel-card img{width:100%;height:104px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.reel-card b{font-size:12px;font-weight:800;color:#e9ecff;text-align:center;line-height:1.1}
+.reel-card.win{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 26px rgba(250,204,21,.55);animation:winpop .5s ease-out}
+@keyframes winpop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+.reel-pointer{position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;z-index:3;background:linear-gradient(180deg,var(--gold),rgba(250,204,21,.2));
+  box-shadow:0 0 12px rgba(250,204,21,.7)}
+.reel-pointer::before,.reel-pointer::after{content:"";position:absolute;left:50%;transform:translateX(-50%);border:9px solid transparent}
+.reel-pointer::before{top:0;border-top-color:var(--gold)}
+.reel-pointer::after{bottom:0;border-bottom-color:var(--gold)}
+.reel-fade{position:absolute;top:0;bottom:0;width:22%;z-index:2;pointer-events:none}
+.reel-fade.l{left:0;background:linear-gradient(90deg,#151933,transparent)}
+.reel-fade.r{right:0;background:linear-gradient(-90deg,#151933,transparent)}
+.onb-result{width:100%;min-height:150px;display:flex;flex-direction:column;align-items:center;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .35s,transform .35s}
+.onb-result.on{opacity:1;transform:none}
+.onb-result .big{width:150px;height:118px;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+.onb-result h3{font-size:20px;font-weight:900;margin:6px 0 2px}
+.onb-result .meta{font-size:14px;color:var(--muted)}
+.onb-result .meta b{color:#fff}
+.onb-btn{margin-top:auto;max-width:360px}
+.onb-btn:disabled{opacity:.55;filter:saturate(.6);pointer-events:none}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- FIRST LAUNCH: pet roulette -> farm roulette -->
+<section class="onb hide" id="onb" aria-live="polite">
+  <div class="onb-step" id="onbStep">Шаг 1 из 2</div>
+  <h2 id="onbTitle">Твой первый питомец</h2>
+  <p class="sub" id="onbSub">Рулетка выберет стартового питомца</p>
+  <div class="reel"><div class="reel-track" id="reelTrack"></div><div class="reel-fade l"></div><div class="reel-fade r"></div><div class="reel-pointer"></div></div>
+  <div class="onb-result" id="onbResult"></div>
+  <button class="btn violet block onb-btn" id="onbBtn" disabled>Крутится…</button>
+</section>
+<main>
+
+  <!-- HOME -->
+  <section class="screen on" data-s="home">
+    <div class="hud">
+      <div class="ava"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="9" r="4.5"/><path d="M3.5 21a8.5 8.5 0 0 1 17 0z"/></svg></div>
+      <div class="hud-main">
+        <div class="hud-row"><b>Level 1</b><span><b id="balance">500</b><i class="gem"></i></span></div>
+        <div class="bar lg"><i style="width:0%"></i></div>
+      </div>
+    </div>
+    <div class="farm">
+      <h3 id="farmTitle">Майнинг-ферма</h3>
+      <div class="rate" id="rate">+0/м</div>
+      <div class="scene" id="scene"></div>
+    </div>
+  </section>
+
+  <!-- PET -->
+  <section class="screen" data-s="pet">
+    <div class="sheet-head">Питомец<button class="x" data-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="scroll">
+      <div class="pet-top">
+        <div>
+          <div class="pet-name" id="petName">—</div>
+          <div class="pet-sub" id="petAttack"></div>
+          <button class="pill" style="margin-top:10px">Сменить питомца</button>
+          <div class="stats">
+            <div class="stat"><div class="l"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 3 9 14l1 1-6 6-1-1 6-6 1 1L21 4z"/></svg>Сила<em>0</em></div><div class="bar"><i style="width:0%"></i></div></div>
+            <div class="stat"><div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M13 4h5l2 5-4 3M4 12h7M2 16h8M6 8h6"/></svg>Скорость<em>0</em></div><div class="bar"><i style="width:0%"></i></div></div>
+            <div class="stat"><div class="l"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/></svg>Защита<em>0</em></div><div class="bar"><i style="width:0%"></i></div></div>
+          </div>
+        </div>
+        <div class="slot pet-art" id="petArt"></div>
+      </div>
+      <div class="panel mb">
+        <div class="stat"><div class="l" style="font-size:16px">Сытость 0%</div><div class="bar lg"><i style="width:0%"></i></div></div>
+        <div class="feed"><div class="slot bowl"></div><button class="btn violet">Кормить (50<i class="gem"></i>)</button></div>
+      </div>
+      <div class="panel">
+        <div class="up-title">Улучшения</div>
+        <div class="up-row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/></svg>Броня <span class="g">+10%</span><span class="p">за 500<i class="gem"></i></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RAID -->
+  <section class="screen" data-s="raid">
+    <div class="sheet-head">Рейд<button class="x" data-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="scroll">
+      <div class="raid-top">
+        <div class="wheel-wrap"><div class="pointer"></div><div class="wheel" id="wheel"><div class="hub"></div></div></div>
+        <div class="target">
+          <div class="slot art"></div>
+          <h4>Цель не выбрана</h4>
+          <div class="kv"><span>БМ:</span><b>—</b></div>
+          <div class="kv"><span>Шанс:</span><b>—</b></div>
+        </div>
+      </div>
+      <div class="raid-mid">
+        <button class="btn red big-red block" id="spin">НАЧАТЬ РЕЙД<small>(0/1 в день)</small></button>
+        <div><div class="timer-l">Доступно сейчас!</div><div class="timer">00:00</div></div>
+      </div>
+      <div class="panel counter"><b>Контррейды:</b>Пока никто не нападал</div>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section class="screen" data-s="inv">
+    <div class="sheet-head">Инвентарь<button class="x" data-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="scroll">
+      <div class="tabs"><button>Фермы</button><button class="on">Питомцы</button><button>Расходники</button><button>Бусты</button></div>
+      <div class="grid">
+        <div class="item rare" id="invPet"><span class="n">1</span><div class="slot art"></div><h5>Пусто</h5><div class="rar">Редкий</div><button class="btn sm">Экипировать</button></div>
+        <div class="item epic"><span class="n">2</span><div class="slot art"></div><h5>Пусто</h5><div class="rar">Эпический</div><button class="btn violet sm">Экипировать</button></div>
+        <div class="item"><span class="n">3</span><div class="slot art"></div><h5>Пусто</h5><div class="rar">Обычный</div><button class="btn grey sm">Использовать</button></div>
+        <div class="item rare"><span class="n">4</span><div class="slot art"></div><h5>Пусто</h5><div class="rar">Редкий</div><button class="btn sm">Использовать</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOP -->
+  <section class="screen" data-s="shop">
+    <div class="sheet-head">Магазин<button class="x" data-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="scroll">
+      <div class="tabs"><button>Фермы</button><button>Питомцы</button><button class="on">Еда</button><button>Апгрейды</button></div>
+      <div class="list">
+        <div class="row-item"><span class="n">1</span><div class="slot art"></div><div class="info"><h5>Товар</h5><div class="price"><span>0<i class="gem"></i></span><button class="btn sm">Купить</button></div></div></div>
+        <div class="row-item"><span class="n">2</span><div class="slot art"></div><div class="info"><h5>Товар</h5><div class="price"><span>0<i class="gem"></i></span><button class="btn sm">Купить</button></div></div></div>
+        <div class="row-item"><span class="n">3</span><div class="slot art"></div><div class="info"><h5>Товар</h5><div class="price"><span>0<i class="gem"></i></span><button class="btn sm">Купить</button></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NFT -->
+  <section class="screen" data-s="nft">
+    <div class="sheet-head">&nbsp;<button class="x" data-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="nft">
+      <div class="card">?</div>
+      <svg class="lock" viewBox="0 0 24 28" fill="currentColor"><path d="M6 11V8a6 6 0 0 1 12 0v3h1.5A1.5 1.5 0 0 1 21 12.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 25.5v-13A1.5 1.5 0 0 1 4.5 11zm3 0h6V8a3 3 0 0 0-6 0zm3 5a2 2 0 0 0-1 3.7V22h2v-2.3a2 2 0 0 0-1-3.7"/></svg>
+      <h2>СЕЗОН ЕЩЁ НЕ НАЧАЛСЯ!</h2>
+      <p>Продолжайте играть, чтобы открыть механику в следующем сезоне</p>
+      <button class="btn grey">Минт недоступен</button>
+    </div>
+  </section>
+
+</main>
+
+<nav>
+  <button class="on" data-t="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 11.5h3V21h5v-6h4v6h5v-9.5h3z"/></svg>Главная</button>
+  <button data-t="pet"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="10" r="2.3"/><circle cx="9.5" cy="5.8" r="2.3"/><circle cx="14.5" cy="5.8" r="2.3"/><circle cx="18.5" cy="10" r="2.3"/><path d="M12 11c-3 0-6.5 4.5-6.5 7a2.5 2.5 0 0 0 3.5 2.3c1-.4 2-.8 3-.8s2 .4 3 .8a2.5 2.5 0 0 0 3.5-2.3c0-2.5-3.5-7-6.5-7"/></svg>Питомец</button>
+  <button data-t="raid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 4l11 11M20 4 9 15M13 17l4 4M11 17l-4 4M6 13l-2 2 2 2M18 13l2 2-2 2"/></svg>Рейд</button>
+  <button data-t="inv"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 4h8a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1V6a2 2 0 0 1 2-2m0 3h8V6H8zm2 5v2h4v-2z"/></svg>Инвентарь</button>
+  <button data-t="shop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 3h16l1.5 6a3 3 0 0 1-5.2 2 3 3 0 0 1-4.3 0 3 3 0 0 1-4.3 0A3 3 0 0 1 2.5 9zM4 13.3V21h6v-5h4v5h6v-7.7a5 5 0 0 1-3.7-.5 5 5 0 0 1-4.3.4 5 5 0 0 1-4.3-.4 5 5 0 0 1-3.7.5"/></svg>Магазин</button>
+  <button data-t="nft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 20.5 7v10L12 22l-8.5-5V7z"/><path d="M12 7l4.3 2.5v5L12 17l-4.3-2.5v-5z"/></svg>NFT</button>
+</nav>
+</div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+const inTg = !!(tg && tg.initData);
+if (inTg) {
+  tg.ready(); tg.expand();
+  try { tg.setHeaderColor('#161a33'); tg.setBackgroundColor('#161a33'); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}
+}
+const haptic = () => inTg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged();
+
+function go(t) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.dataset.s === t));
+  if (inTg && tg.BackButton) t === 'home' ? tg.BackButton.hide() : tg.BackButton.show();
+  haptic();
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.t));
+document.querySelectorAll('[data-home]').forEach(b => b.onclick = () => go('home'));
+if (inTg && tg.BackButton) tg.BackButton.onClick(() => go('home'));
+
+document.querySelectorAll('.tabs').forEach(g => g.querySelectorAll('button').forEach(b => b.onclick = () => {
+  g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); haptic();
+}));
+
+// wheel: 8 empty slots
+const wheel = document.getElementById('wheel');
+for (let i = 0; i < 8; i++) {
+  const s = document.createElement('div'); s.className = 'seg';
+  s.style.transform = `rotate(${i * 45}deg) translateY(-148%) rotate(${-i * 45}deg)`;
+  wheel.appendChild(s);
+}
+let turn = 0, busy = false;
+document.getElementById('spin').onclick = () => {
+  if (busy) return; busy = true;
+  wheel.querySelectorAll('.seg').forEach(s => s.classList.remove('hit'));
+  const idx = Math.floor(Math.random() * 8);
+  turn += 360 * 4 + ((360 - idx * 45 - (turn % 360)) % 360 + 360) % 360;
+  wheel.style.transform = `rotate(${turn}deg)`;
+  setTimeout(() => { wheel.querySelectorAll('.seg')[idx].classList.add('hit'); busy = false;
+    inTg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); }, 3700);
+};
+
+// =====================================================================
+// Game data. All farms earn the same — they only look different.
+// Pets: 3 of the planned 5 are ready (add new ones to this list).
+// =====================================================================
+const FARM_RATE = 5; // coins per minute, same for every farm
+const PETS = [
+  { id: 'dragon',  name: 'Робо-дракон', img: 'assets/pets/robodragon.webp',  color: '#8b5cf6', attack: 'Огненное дыхание' },
+  { id: 'dog',     name: 'Робо-пёс',    img: 'assets/pets/robodog.webp',     color: '#3d8bfd', attack: 'Лазеры из глаз' },
+  { id: 'cheetah', name: 'Робо-гепард', img: 'assets/pets/robocheetah.webp', color: '#f59e0b', attack: 'Удар лапой' },
+];
+const FARMS = [
+  { id: 'garage', name: 'Гараж-ферма',      img: 'assets/farms/garage.svg', color: '#3d8bfd' },
+  { id: 'tower',  name: 'Серверная башня',  img: 'assets/farms/tower.svg',  color: '#9b5cf6' },
+  { id: 'dome',   name: 'Солнечный купол',  img: 'assets/farms/dome.svg',   color: '#2dd4bf' },
+];
+const byId = (list, id) => list.find((x) => x.id === id);
+
+// ---------- persistence: Telegram CloudStorage (per user) with localStorage fallback
+const KEY = 'hb_state_v1';
+const cloud = inTg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null;
+function loadState() {
+  return new Promise((resolve) => {
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+    if (!cloud) return resolve(local);
+    cloud.getItem(KEY, (err, val) => {
+      if (err || !val) return resolve(local);
+      try { resolve(JSON.parse(val)); } catch (e) { resolve(local); }
+    });
+  });
+}
+function saveState(st) {
+  const v = JSON.stringify(st);
+  try { localStorage.setItem(KEY, v); } catch (e) {}
+  if (cloud) cloud.setItem(KEY, v, () => {});
+}
+
+// ---------- roulette (case-opening strip)
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const onb = document.getElementById('onb');
+const reelTrack = document.getElementById('reelTrack');
+const onbBtn = document.getElementById('onbBtn');
+const onbResult = document.getElementById('onbResult');
+const randInt = (n) => {
+  if (window.crypto && crypto.getRandomValues) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+  return Math.floor(Math.random() * n);
+};
+const tickHaptic = () => inTg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
+
+function spinReel(items) {
+  return new Promise((resolve) => {
+    const winner = items[randInt(items.length)];
+    const N = 42, W = 34;                                   // cards in the strip, winner position
+    reelTrack.style.transition = 'none';
+    reelTrack.style.transform = 'translateX(0)';
+    reelTrack.innerHTML = '';
+    let prev = -1;
+    for (let i = 0; i < N; i++) {
+      let it = i === W ? winner : items[randInt(items.length)];
+      if (i !== W && it === prev && items.length > 1) it = items[(items.indexOf(it) + 1) % items.length]; // no identical neighbours
+      prev = it;
+      const c = document.createElement('div');
+      c.className = 'reel-card'; c.style.setProperty('--c', it.color + '66');
+      c.innerHTML = `<img src="${it.img}" alt=""><b>${it.name}</b>`;
+      reelTrack.appendChild(c);
+    }
+    const card = reelTrack.children[0].getBoundingClientRect().width;
+    const step = card + 10;
+    const view = reelTrack.parentElement.clientWidth;
+    const jitter = (randInt(1000) / 1000 - 0.5) * card * 0.6;  // land somewhere inside the winning card
+    const target = W * step + card / 2 - view / 2 + jitter;
+    reelTrack.getBoundingClientRect(); // reflow
+    const dur = 5200;
+    reelTrack.style.transition = `transform ${dur}ms cubic-bezier(.08,.62,.1,1)`;
+    reelTrack.style.transform = `translateX(${-target}px)`;
+    // haptic "ticks" as cards pass the pointer
+    let last = -1;
+    const t0 = performance.now();
+    const tick = () => {
+      const m = new DOMMatrixReadOnly(getComputedStyle(reelTrack).transform);
+      const idx = Math.floor((-m.m41 + view / 2) / step);
+      if (idx !== last) { last = idx; tickHaptic(); }
+      if (performance.now() - t0 < dur) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    setTimeout(() => {
+      reelTrack.children[W].classList.add('win');
+      inTg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success');
+      resolve(winner);
+    }, dur + 80);
+  });
+}
+
+function waitButton(label) {
+  onbBtn.textContent = label;
+  onbBtn.disabled = false;
+  return new Promise((r) => { onbBtn.onclick = () => { onbBtn.disabled = true; haptic(); r(); }; });
+}
+
+async function runOnboarding() {
+  onb.classList.remove('hide');
+  // step 1: pet
+  const setHead = (step, title, sub) => {
+    document.getElementById('onbStep').textContent = step;
+    document.getElementById('onbTitle').textContent = title;
+    document.getElementById('onbSub').textContent = sub;
+  };
+  setHead('Шаг 1 из 2', 'Твой первый питомец', 'Рулетка выберет стартового питомца');
+  onbResult.classList.remove('on'); onbBtn.disabled = true; onbBtn.textContent = 'Крутится…';
+  await sleep(700);
+  const pet = await spinReel(PETS);
+  onbResult.innerHTML = `<img class="big" src="${pet.img}" alt=""><h3>${pet.name}</h3><div class="meta">Атака: <b>${pet.attack}</b></div>`;
+  onbResult.classList.add('on');
+  await waitButton('Дальше');
+  // step 2: farm
+  onbResult.classList.remove('on');
+  setHead('Шаг 2 из 2', 'Твоя ферма', 'Все фермы приносят одинаково — отличается только вид');
+  onbBtn.textContent = 'Крутится…';
+  await sleep(450);
+  const farm = await spinReel(FARMS);
+  onbResult.innerHTML = `<img class="big" src="${farm.img}" alt=""><h3>${farm.name}</h3><div class="meta">Доход: <b>+${FARM_RATE}/м</b></div>`;
+  onbResult.classList.add('on');
+  await waitButton('В игру!');
+  const st = { pet: pet.id, farm: farm.id, balance: 500, ts: Date.now(), created: Date.now() };
+  saveState(st);
+  onb.classList.add('hide');
+  return st;
+}
+
+// ---------- render the chosen pet + farm across the app
+let state = null;
+function applyState() {
+  const pet = byId(PETS, state.pet) || PETS[0];
+  const farm = byId(FARMS, state.farm) || FARMS[0];
+  document.getElementById('scene').innerHTML =
+    `<span class="tag pet">${pet.name}</span><span class="tag farm">${farm.name}</span>` +
+    `<img class="farm-img" src="${farm.img}" alt="${farm.name}"><img class="pet-img" src="${pet.img}" alt="${pet.name}">`;
+  document.getElementById('farmTitle').textContent = farm.name;
+  document.getElementById('rate').textContent = `+${FARM_RATE}/м`;
+  const art = document.getElementById('petArt');
+  art.classList.add('filled'); art.innerHTML = `<img class="art-img" src="${pet.img}" alt="${pet.name}">`;
+  document.getElementById('petName').textContent = pet.name;
+  document.getElementById('petAttack').textContent = 'Атака: ' + pet.attack;
+  const inv = document.getElementById('invPet');
+  const slot = inv.querySelector('.slot');
+  slot.classList.add('filled'); slot.innerHTML = `<img class="art-img" src="${pet.img}" alt="">`;
+  inv.querySelector('h5').textContent = pet.name;
+  inv.querySelector('.rar').textContent = 'Стартовый';
+  renderBalance();
+}
+// passive income (client-side placeholder: the real economy must be computed on the server)
+function renderBalance() {
+  const now = Date.now();
+  const mins = Math.min((now - state.ts) / 60000, 8 * 60); // offline cap 8 h
+  state.balance += mins * FARM_RATE; state.ts = now;
+  document.getElementById('balance').textContent = Math.floor(state.balance).toLocaleString('ru-RU');
+}
+setInterval(() => { if (state) { renderBalance(); saveState(state); } }, 5000);
+setInterval(() => { if (state) renderBalance(); }, 1000);
+
+(async () => {
+  if (new URLSearchParams(location.search).has('reset')) { try { localStorage.removeItem(KEY); } catch (e) {} if (cloud) cloud.removeItem(KEY, () => {}); }
+  // preload art so the reel never shows empty cards
+  [...PETS, ...FARMS].forEach((x) => { const i = new Image(); i.src = x.img; });
+  state = await loadState();
+  if (!state || !byId(PETS, state.pet) || !byId(FARMS, state.farm)) state = await runOnboarding();
+  applyState();
+})();
+</script>
+</body>
+</html>
