@@ -229,3 +229,39 @@ test('рассылка: предпросмотр → подтверждение 
   assert.deepEqual(copies.map((c) => c.payload.chat_id).sort(), [1, 2, 999]);
   assert.ok(copies.every((c) => c.payload.message_id === 555));
 });
+
+test('/start: баннер с подписью, синяя «Играть», канал, чат, поддержка; баннер загружается один раз', async () => {
+  const store = storeWith(0);
+  const bot = new Bot({
+    token: TOKEN, webAppUrl: 'https://x.test/', adminId: '999', supportUsername: 'bob_proger',
+    channelUrl: 'https://t.me/safroulette', chatUrl: 'https://t.me/safroulette_chat',
+    bannerPath: new URL('../public/banner.jpg', import.meta.url).pathname, limits: { minDeposit: 1, maxAmount: 1e6 }, store,
+  });
+  // перехватываем сеть: проверяем настоящий multipart-запрос, который ушёл бы в Telegram
+  const sent = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const method = url.split('/').pop();
+    const body = init.body instanceof FormData ? Object.fromEntries(init.body) : JSON.parse(init.body);
+    sent.push({ method, body });
+    const result = method === 'sendPhoto' ? { message_id: 1, chat: { id: 1 }, photo: [{ file_id: 'small' }, { file_id: 'BIG' }] } : true;
+    return { json: async () => ({ ok: true, result }) };
+  };
+  try {
+    const start = { message: { message_id: 1, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/start' } };
+    await bot.handleUpdate(start);
+    await bot.handleUpdate(start);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.equal(sent.length, 2);
+  const [first, second] = sent;
+  assert.equal(first.method, 'sendPhoto');
+  assert.ok(first.body.photo instanceof Blob && first.body.photo.size > 50_000, 'картинка загружена файлом');
+  assert.match(first.body.caption, /ROULETTE ARENA<\/b> — рулетка в Telegram!/);
+  const kb = JSON.parse(first.body.reply_markup).inline_keyboard;
+  assert.deepEqual(kb[0][0], { text: '🎮 Играть', web_app: { url: 'https://x.test/' }, style: 'primary' });
+  assert.deepEqual(kb[1].map((b) => b.url), ['https://t.me/safroulette', 'https://t.me/safroulette_chat']);
+  assert.equal(kb[2][0].url, 'https://t.me/bob_proger');
+  assert.equal(second.body.photo, 'BIG', 'повторно — по file_id, без загрузки');
+});

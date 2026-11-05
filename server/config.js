@@ -7,6 +7,8 @@ export const config = Object.freeze({
   publicUrl: env('PUBLIC_URL'), // https://… — адрес, по которому открывается мини-апп
   supportUsername: env('SUPPORT_USERNAME').replace(/^@/, ''),
   adminId: env('ADMIN_ID'), // Telegram ID администратора: ему приходят заявки на вывод
+  channelUrl: env('CHANNEL_URL', 'https://t.me/safroulette'),
+  chatUrl: env('CHAT_URL', 'https://t.me/safroulette_chat'),
   port: Number(env('PORT', '3000')),
   dataDir: env('DATA_DIR', './data'),
   // Только для локальной разработки: пускает без Telegram. На сервере всегда выключено.

@@ -2,19 +2,34 @@
 // Работает через long polling, поэтому не требует отдельного адреса для вебхука.
 // Документация: https://core.telegram.org/bots/api
 
+import { readFile } from 'node:fs/promises';
+import { basename } from 'node:path';
+
+const WELCOME =
+  '🎲 <b>ROULETTE ARENA</b> — рулетка в Telegram!\n\n' +
+  '⭐ Участвуй в раундах, соревнуйся с другими игроками и побеждай!\n\n' +
+  '🎯 Чем больше твоя доля, тем выше шанс на победу.\n' +
+  '🏆 Испытай удачу и стань победителем!\n\n' +
+  '👇 Жми «Играть», чтобы начать!';
+
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const dateFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 const fullName = (u) => [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Игрок';
 const btn = (text, data) => ({ text, callback_data: data });
+const link = (text, url) => ({ text, url });
 
 export class Bot {
-  constructor({ token, webAppUrl, adminId, supportUsername, limits, store }) {
+  constructor({ token, webAppUrl, adminId, supportUsername, channelUrl, chatUrl, bannerPath, limits, store }) {
     this.token = token;
     this.webAppUrl = webAppUrl;
     this.adminId = adminId;
     this.supportUsername = supportUsername;
+    this.channelUrl = channelUrl;
+    this.chatUrl = chatUrl;
+    this.bannerPath = bannerPath;
+    this.bannerFileId = null; // после первой загрузки баннер отправляется по file_id, без повторной загрузки
     this.limits = limits;
     this.store = store;
     this.onBalance = () => {}; // баланс изменился — мини-апп игрока обновится сам
@@ -41,6 +56,21 @@ export class Bot {
       }
       throw new Error(`${method}: ${data.error_code} ${data.description}`);
     }
+  }
+
+  /** Отправка файла (multipart). Используется один раз для баннера, дальше — file_id. */
+  async upload(method, payload, field, filePath) {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(payload)) form.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    form.append(field, new Blob([await readFile(filePath)]), basename(filePath));
+    const res = await fetch(`https://api.telegram.org/bot${this.token}/${method}`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(65_000),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(`${method}: ${data.error_code} ${data.description}`);
+    return data.result;
   }
 
   async start() {
@@ -101,8 +131,34 @@ export class Bot {
     return !!this.adminId && String(id) === String(this.adminId);
   }
 
+  /** Синяя кнопка мини-аппа (style: primary, Bot API 9.4+). */
   playButton(text = '🎮 Играть') {
-    return { inline_keyboard: [[{ text, web_app: { url: this.webAppUrl } }]] };
+    return { inline_keyboard: [[{ text, web_app: { url: this.webAppUrl }, style: 'primary' }]] };
+  }
+
+  #welcomeKeyboard() {
+    const rows = [[{ text: '🎮 Играть', web_app: { url: this.webAppUrl }, style: 'primary' }]];
+    const community = [];
+    if (this.channelUrl) community.push(link('📢 Канал', this.channelUrl));
+    if (this.chatUrl) community.push(link('💬 Чат', this.chatUrl));
+    if (community.length) rows.push(community);
+    if (this.supportUsername) rows.push([link('🛟 Поддержка', `https://t.me/${this.supportUsername}`)]);
+    return { inline_keyboard: rows };
+  }
+
+  async #sendWelcome(chatId) {
+    const payload = { chat_id: chatId, caption: WELCOME, parse_mode: 'HTML', reply_markup: this.#welcomeKeyboard() };
+    try {
+      if (this.bannerFileId) return await this.api('sendPhoto', { ...payload, photo: this.bannerFileId });
+      if (this.bannerPath) {
+        const msg = await this.upload('sendPhoto', payload, 'photo', this.bannerPath);
+        this.bannerFileId = msg.photo?.at(-1)?.file_id ?? null;
+        return msg;
+      }
+    } catch (e) {
+      console.error('Баннер не отправился, отправляю текстом:', e.message);
+    }
+    return this.#send(chatId, WELCOME, this.#welcomeKeyboard());
   }
 
   async handleUpdate(update) {
@@ -132,19 +188,7 @@ export class Bot {
         `Вопросы по оплате и выводу — напишите ${contact}.\nВаш ID: <code>${msg.from.id}</code>`,
       );
     }
-    return this.#send(msg.chat.id, this.#welcomeText(msg.from), this.playButton());
-  }
-
-  #welcomeText(from) {
-    return (
-      `🎰 <b>Roulette Arena</b>\n\n` +
-      `Привет, ${esc(from.first_name || 'игрок')}! Здесь крутится колесо, а банк забирает один.\n\n` +
-      `• Делайте ставку звёздами — чем она больше, тем шире ваш сектор\n` +
-      `• Раунд стартует, как только в игре двое, — 15 секунд на ставки\n` +
-      `• Победитель забирает весь банк раунда\n` +
-      `• Пополнение — звёздами Telegram, вывод — от ${fmt(this.limits.minWithdraw ?? 50)} ⭐\n\n` +
-      `Жмите «Играть» 👇`
-    );
+    return this.#sendWelcome(msg.chat.id);
   }
 
   #send(chatId, html, replyMarkup, extra = {}) {

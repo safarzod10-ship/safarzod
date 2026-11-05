@@ -31,6 +31,9 @@ const bot = config.botToken
       webAppUrl: config.publicUrl,
       adminId: config.adminId,
       supportUsername: config.supportUsername,
+      channelUrl: config.channelUrl,
+      chatUrl: config.chatUrl,
+      bannerPath: fileURLToPath(new URL('../public/banner.jpg', import.meta.url)),
       limits: config.limits,
       store,
     })
