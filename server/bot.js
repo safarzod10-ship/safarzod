@@ -89,9 +89,9 @@ export class Bot {
         scope: { type: 'chat', chat_id: Number(this.adminId) },
       }).catch((e) => console.warn('Меню админа:', e.message));
     }
-    await this.api('setChatMenuButton', {
-      menu_button: { type: 'web_app', text: 'Играть', web_app: { url: this.webAppUrl } },
-    });
+    // Кнопка «Играть» у поля ввода не нужна — игра открывается синей кнопкой под приветствием.
+    // Возвращаем стандартную кнопку меню (список команд).
+    await this.api('setChatMenuButton', { menu_button: { type: 'default' } });
     await this.api('setMyShortDescription', {
       short_description: 'Roulette Arena — рулетка на звёзды: победитель забирает весь банк.',
     }).catch(() => {});
