@@ -1,0 +1,13 @@
+{
+  "name": "roulette-arena",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Roulette Arena — Telegram Mini App и бот",
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "DEV_MODE=1 DATA_DIR=./data-dev node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  }
+}

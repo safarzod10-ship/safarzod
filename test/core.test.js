@@ -1,0 +1,151 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { openDb } from '../server/db.js';
+import { validateInitData, signInitData } from '../server/auth.js';
+import { Game } from '../server/game.js';
+import { Bot } from '../server/bot.js';
+
+const TOKEN = '123456:TEST-token';
+const settings = { countdownMs: 30, spinMs: 30, resultMs: 30, houseCut: 0.1, minBet: 1 };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const user = (id, name = `U${id}`) => ({ id, first_name: name, username: `u${id}` });
+
+function storeWith(...balances) {
+  const store = openDb(':memory:');
+  balances.forEach((b, i) => {
+    store.upsertUser(user(i + 1));
+    if (b) store.creditPayment({ chargeId: `seed-${i}`, userId: i + 1, amount: b, payload: 'seed' });
+  });
+  return store;
+}
+
+test('initData: верная подпись принимается, подделка и устаревшие данные — нет', () => {
+  const now = Date.now();
+  const fields = { auth_date: String(Math.floor(now / 1000)), query_id: 'AAE', signature: 'sig', user: JSON.stringify(user(42)) };
+  const data = signInitData(fields, TOKEN);
+  assert.equal(validateInitData(data, TOKEN).id, 42);
+  assert.equal(validateInitData(data, 'other:token'), null);
+  assert.equal(validateInitData(data.replace('%2242%22', '%2243%22').replace('42', '43'), TOKEN), null);
+  const old = signInitData({ ...fields, auth_date: String(Math.floor(now / 1000) - 2 * 86400) }, TOKEN);
+  assert.equal(validateInitData(old, TOKEN), null);
+  assert.equal(validateInitData('', TOKEN), null);
+});
+
+test('раунд: ожидание → отсчёт → вращение → банк 90% победителю, статистика', async () => {
+  const store = storeWith(1000, 1000);
+  const game = new Game(store, settings, { random: (n) => (n === 10_000 ? 5000 : 0) }); // билет 0 → первый игрок
+  game.start();
+  game.placeBet(store.getUser(1), 300);
+  assert.equal(game.publicState().status, 'waiting');
+  game.placeBet(store.getUser(2), 700);
+  const s = game.publicState();
+  assert.equal(s.status, 'countdown');
+  assert.equal(s.bank, 900);
+  await wait(45);
+  assert.equal(game.publicState().status, 'spinning');
+  assert.throws(() => game.placeBet(store.getUser(2), 1), /розыгрыш/);
+  const landing = game.publicState().landing;
+  assert.ok(landing > 0 && landing < 0.3, 'стрелка внутри сектора победителя (0..0.3)');
+  await wait(45);
+  assert.equal(game.publicState().status, 'finished');
+  const u1 = store.getUser(1);
+  const u2 = store.getUser(2);
+  assert.equal(u1.balance, 1000 - 300 + 900);
+  assert.equal(u2.balance, 300);
+  assert.deepEqual([u1.games, u1.wins, u1.losses, u2.games, u2.wins, u2.losses], [1, 1, 0, 1, 0, 1]);
+  await wait(45);
+  assert.equal(game.publicState().status, 'waiting');
+  assert.equal(game.publicState().players.length, 0);
+  game.stop();
+});
+
+test('ставка больше баланса отклоняется и не попадает в раунд', () => {
+  const store = storeWith(50);
+  const game = new Game(store, settings);
+  game.start();
+  assert.throws(() => game.placeBet(store.getUser(1), 51), /Недостаточно/);
+  assert.equal(game.publicState().players.length, 0);
+  assert.equal(store.getUser(1).balance, 50);
+  game.stop();
+});
+
+test('после перезапуска ставки незавершённого раунда возвращаются', () => {
+  const store = storeWith(100);
+  const game = new Game(store, settings);
+  game.start();
+  game.placeBet(store.getUser(1), 40);
+  game.stop();
+  assert.equal(store.getUser(1).balance, 60);
+  assert.equal(store.refundOpenRounds(), 1);
+  assert.equal(store.getUser(1).balance, 100);
+});
+
+test('оплата звёздами зачисляется ровно один раз', () => {
+  const store = storeWith(0);
+  assert.equal(store.creditPayment({ chargeId: 'ch1', userId: 1, amount: 250, payload: 'dep:1:250:1' }).balance, 250);
+  assert.equal(store.creditPayment({ chargeId: 'ch1', userId: 1, amount: 250, payload: 'dep:1:250:1' }), null);
+  assert.equal(store.getUser(1).balance, 250);
+});
+
+function fakeBot(store) {
+  const bot = new Bot({ token: TOKEN, webAppUrl: 'https://x.test/', adminId: '999', limits: { minDeposit: 1, maxAmount: 1e6 }, store });
+  bot.calls = [];
+  bot.api = async (method, payload) => {
+    bot.calls.push({ method, payload });
+    return method === 'sendMessage' ? { message_id: bot.calls.length, chat: { id: payload.chat_id } } : true;
+  };
+  return bot;
+}
+
+test('вывод: админ нажимает «Отправлено» → статус успешный, игрок получает сообщение', async () => {
+  const store = storeWith(100);
+  const bot = fakeBot(store);
+  const { withdrawal } = store.withdraw(1, 50, 5);
+  assert.equal(store.getUser(1).balance, 45);
+  await bot.notifyWithdrawal(withdrawal, store.getUser(1));
+  const card = bot.calls.find((c) => c.method === 'sendMessage');
+  assert.equal(card.payload.chat_id, '999');
+  assert.match(card.payload.text, /@u1/);
+  assert.match(card.payload.text, /50/);
+
+  await bot.handleUpdate({ callback_query: { id: 'q', from: { id: 999 }, data: `wd:sent:${withdrawal.id}`, message: { chat: { id: 999 }, message_id: 1 } } });
+  assert.equal(store.getWithdrawal(withdrawal.id).status, 'sent');
+  assert.ok(bot.calls.some((c) => c.method === 'sendMessage' && c.payload.chat_id === 1 && /выполнен/.test(c.payload.text)));
+  // повторное нажатие ничего не меняет
+  await bot.handleUpdate({ callback_query: { id: 'q2', from: { id: 999 }, data: `wd:sent:${withdrawal.id}`, message: { chat: { id: 999 }, message_id: 1 } } });
+  assert.equal(store.getUser(1).balance, 45);
+});
+
+test('вывод: «Отмена» → админ пишет причину → звёзды возвращаются, игрок видит причину', async () => {
+  const store = storeWith(100);
+  const bot = fakeBot(store);
+  const { withdrawal } = store.withdraw(1, 50, 5);
+  await bot.notifyWithdrawal(withdrawal, store.getUser(1));
+  await bot.handleUpdate({ callback_query: { id: 'q', from: { id: 999 }, data: `wd:cancel:${withdrawal.id}`, message: { chat: { id: 999 }, message_id: 1 } } });
+  assert.equal(store.getWithdrawal(withdrawal.id).status, 'pending', 'до причины заявка не закрыта');
+  await bot.handleUpdate({ message: { message_id: 5, chat: { id: 999, type: 'private' }, from: { id: 999 }, text: 'Неверный ник' } });
+  const w = store.getWithdrawal(withdrawal.id);
+  assert.equal(w.status, 'cancelled');
+  assert.equal(w.reason, 'Неверный ник');
+  assert.equal(store.getUser(1).balance, 100);
+  assert.equal(store.userWithdrawals(1)[0].reason, 'Неверный ник');
+  assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /Неверный ник/.test(c.payload.text)));
+});
+
+test('чужой пользователь не может обработать заявку', async () => {
+  const store = storeWith(100);
+  const bot = fakeBot(store);
+  const { withdrawal } = store.withdraw(1, 50, 5);
+  await bot.handleUpdate({ callback_query: { id: 'q', from: { id: 1 }, data: `wd:sent:${withdrawal.id}`, message: { chat: { id: 1 }, message_id: 1 } } });
+  assert.equal(store.getWithdrawal(withdrawal.id).status, 'pending');
+});
+
+test('pre_checkout: принимается только корректный счёт XTR своего пользователя', async () => {
+  const bot = fakeBot(storeWith(0));
+  const q = (over) => ({ pre_checkout_query: { id: 'p', from: { id: 1 }, currency: 'XTR', total_amount: 100, invoice_payload: 'dep:1:100:1', ...over } });
+  await bot.handleUpdate(q({}));
+  await bot.handleUpdate(q({ total_amount: 99 }));
+  await bot.handleUpdate(q({ from: { id: 2 } }));
+  const answers = bot.calls.filter((c) => c.method === 'answerPreCheckoutQuery').map((c) => c.payload.ok);
+  assert.deepEqual(answers, [true, false, false]);
+});

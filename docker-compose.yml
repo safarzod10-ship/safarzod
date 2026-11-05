@@ -1,0 +1,42 @@
+# Roulette Arena: приложение + веб-сервер с HTTPS.
+# restart: unless-stopped — всё поднимается само после сбоя и после перезагрузки сервера (24/7).
+
+name: roulette-arena
+
+services:
+  app:
+    build: .
+    image: roulette-arena
+    restart: unless-stopped
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:?запустите ./setup.sh}
+      ADMIN_ID: ${ADMIN_ID:?запустите ./setup.sh}
+      SUPPORT_USERNAME: ${SUPPORT_USERNAME:-}
+      PUBLIC_URL: https://${DOMAIN:?запустите ./setup.sh}/
+    volumes:
+      - app_data:/data            # база игроков, балансов и заявок
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # HTTPS-сертификаты
+      - caddy_config:/config
+    depends_on:
+      - app
+    logging: *logging
+
+volumes:
+  app_data:
+  caddy_data:
+  caddy_config:

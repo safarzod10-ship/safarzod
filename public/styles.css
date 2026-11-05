@@ -1,0 +1,382 @@
+/* Roulette Arena — визуальная система.
+   Тёмная графитовая база, один фирменный акцент (фиолетовый) и золото только для валюты и главной кнопки. */
+
+:root {
+  --bg: #0b0b10;
+  --surface: #15151d;
+  --surface-2: #1d1d27;
+  --surface-3: #262632;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.1);
+  --text: #f4f3f8;
+  --text-2: #a09eb0;
+  --text-3: #6b697b;
+  --accent: #8b6cff;
+  --accent-soft: rgba(139, 108, 255, 0.14);
+  --gold: #f5bf4f;
+  --gold-2: #e9a83a;
+  --gold-ink: #1f1606;
+  --green: #3dd68c;
+  --red: #ff6b6b;
+  --amber: #f5bf4f;
+
+  --radius: 20px;
+  --radius-sm: 14px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --safe-top: max(env(safe-area-inset-top), var(--tg-safe-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom), var(--tg-safe-bottom, 0px));
+  --nav-h: 64px;
+  --dock-h: 56px;
+  --gutter: 16px;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); }
+body {
+  color: var(--text);
+  font: 400 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input { font: inherit; color: inherit; }
+svg { display: block; }
+[hidden] { display: none !important; }
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.star { width: 1em; height: 1em; color: var(--gold); flex: none; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- Каркас ---------- */
+.app { min-height: 100%; }
+.views {
+  padding: calc(var(--safe-top) + 72px) var(--gutter) calc(var(--nav-h) + var(--safe-bottom) + var(--dock-h) + 32px);
+}
+.view { display: none; }
+.view.active { display: block; animation: view-in 0.32s var(--ease); }
+@keyframes view-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Шапка ---------- */
+.top {
+  position: fixed; inset: 0 0 auto; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(var(--safe-top) + 12px) var(--gutter) 12px;
+  background: linear-gradient(var(--bg) 70%, rgba(11, 11, 16, 0));
+}
+.me { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.me-text { min-width: 0; }
+.me-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-nick { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.balance {
+  display: flex; align-items: center; gap: 6px; flex: none;
+  height: 38px; padding: 0 14px 0 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  font-weight: 650; font-size: 15px;
+  transition: transform 0.2s var(--ease);
+}
+.balance:active { transform: scale(0.96); }
+.balance .star { width: 17px; height: 17px; }
+.balance.bump { animation: bump 0.5s var(--ease); }
+@keyframes bump { 40% { transform: scale(1.08); } }
+
+/* ---------- Аватары ---------- */
+.avatar {
+  --size: 40px;
+  width: var(--size); height: var(--size); flex: none;
+  border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center;
+  background: var(--surface-3); color: var(--text);
+  font-weight: 600; font-size: calc(var(--size) * 0.38);
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar.sm { --size: 36px; }
+.avatar.xl { --size: 96px; box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--line-strong); }
+
+/* ---------- Рулетка ---------- */
+.wheel {
+  position: relative;
+  width: min(78vw, 320px, calc(100dvh - 420px));
+  min-width: 220px;
+  aspect-ratio: 1;
+  margin: 8px auto 20px;
+}
+.wheel-svg { width: 100%; height: 100%; overflow: visible; }
+.wheel-track { fill: none; stroke: var(--surface-2); stroke-width: 28; }
+.wheel-rim { fill: none; stroke: var(--line-strong); stroke-width: 1; }
+.wheel-rim.inner { stroke: var(--line); }
+#sectors circle { fill: none; stroke-width: 28; transition: opacity 0.6s var(--ease); }
+#sectors circle.dim { opacity: 0.22; }
+#labels text {
+  font-size: 9px; font-weight: 700; text-anchor: middle; dominant-baseline: central;
+  font-variant-numeric: tabular-nums; transition: opacity 0.4s var(--ease);
+}
+#labels text.dim { opacity: 0.3; }
+.pointer {
+  position: absolute; left: 50%; top: -6%;
+  width: 9.5%; transform: translateX(-50%);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+  z-index: 2;
+}
+.pointer path { fill: var(--gold); }
+.pointer circle { fill: var(--gold-ink); opacity: 0.85; }
+.wheel.spinning .pointer { animation: pointer-tick 0.14s ease-in-out infinite alternate; }
+@keyframes pointer-tick { to { transform: translateX(-50%) rotate(-7deg); } }
+
+.wheel-center {
+  position: absolute; inset: 21%;
+  border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  background: radial-gradient(circle at 50% 35%, var(--surface-2), var(--surface) 70%);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.wc-caption { font-size: 12px; color: var(--text-2); letter-spacing: 0.02em; }
+.wc-bank {
+  display: flex; align-items: center; gap: 6px; margin: 2px 0 4px;
+  font-size: clamp(26px, 9vw, 36px); font-weight: 700; letter-spacing: -0.02em;
+}
+.wc-bank .star { width: 0.72em; height: 0.72em; }
+.wc-sub { font-size: 13px; color: var(--text-2); max-width: 82%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Статус раунда */
+.status { padding: 14px 16px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+.st-row { display: flex; align-items: center; gap: 12px; }
+.st-icon {
+  width: 36px; height: 36px; flex: none; border-radius: 12px;
+  display: grid; place-items: center; background: var(--surface-2); color: var(--text-2);
+}
+.st-icon svg { width: 20px; height: 20px; }
+.st-title { font-weight: 600; }
+.st-sub { font-size: 13px; color: var(--text-2); }
+.st-timer { margin-left: auto; font-size: 22px; font-weight: 700; color: var(--accent); }
+.progress { height: 4px; margin-top: 12px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 100%; background: var(--accent); border-radius: inherit; transform-origin: left; }
+.status.spin .st-title { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.5; } }
+.st-prize { margin-left: auto; display: flex; align-items: center; gap: 5px; font-weight: 700; color: var(--gold); font-size: 17px; }
+.st-prize .star { width: 15px; height: 15px; }
+
+/* Участники */
+.players { margin-top: 12px; display: grid; gap: 8px; }
+.player {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px 10px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  transition: opacity 0.5s var(--ease), border-color 0.5s var(--ease);
+  animation: row-in 0.4s var(--ease);
+}
+@keyframes row-in { from { opacity: 0; transform: translateY(6px); } }
+.player.dim { opacity: 0.45; }
+.player.winner { border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+.player .avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--c); }
+.p-main { min-width: 0; flex: 1; }
+.p-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-name small { color: var(--text-3); font-weight: 500; font-size: 12px; margin-left: 4px; }
+.p-amount { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); }
+.p-amount .star { width: 12px; height: 12px; }
+.p-pct {
+  min-width: 54px; text-align: center; padding: 5px 9px; border-radius: 10px;
+  font-weight: 700; font-size: 14px;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+/* ---------- Нижняя панель действий (рядом с большим пальцем) ---------- */
+.dock {
+  position: fixed; left: 0; right: 0; z-index: 15;
+  bottom: calc(var(--nav-h) + var(--safe-bottom));
+  display: flex; gap: 10px;
+  padding: 10px var(--gutter);
+  background: linear-gradient(rgba(11, 11, 16, 0), var(--bg) 30%);
+}
+body.kb .dock { bottom: 0; padding-bottom: calc(10px + var(--safe-bottom)); }
+body.kb .toast { bottom: calc(var(--dock-h) + var(--safe-bottom) + 30px); }
+.view:not(.active) .dock { display: none; }
+
+.stepper {
+  display: flex; align-items: center; flex: 1 1 0; min-width: 0;
+  height: var(--dock-h); padding: 4px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+}
+.step {
+  width: 40px; height: 100%; flex: none; border-radius: 12px;
+  display: grid; place-items: center; color: var(--text-2); background: var(--surface-2);
+  transition: transform 0.15s var(--ease), background 0.15s;
+}
+.step:active { transform: scale(0.92); background: var(--surface-3); }
+.step svg { width: 18px; height: 18px; }
+.step-value { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.step-value input {
+  width: 100%; min-width: 0; border: 0; outline: 0; background: none; text-align: right;
+  font-size: 17px; font-weight: 700; padding: 0;
+}
+.step-value .star { width: 15px; height: 15px; margin-right: 6px; }
+
+.btn {
+  height: var(--dock-h); padding: 0 20px; border-radius: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 650; font-size: 16px; white-space: nowrap;
+  transition: transform 0.15s var(--ease), opacity 0.2s, background 0.2s;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { cursor: default; }
+.btn.primary { background: var(--gold); color: var(--gold-ink); }
+.btn.primary:disabled:not(.loading) { background: var(--surface-2); color: var(--text-3); }
+.btn.primary:active:not(:disabled) { background: var(--gold-2); }
+.btn.secondary { background: var(--surface-2); color: var(--text); }
+.btn.block { width: 100%; }
+#bet-btn { flex: 1 1 0; min-width: 0; padding: 0 12px; }
+.btn.loading { pointer-events: none; color: transparent; position: relative; }
+.btn.loading::after {
+  content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--gold-ink); border-right-color: transparent; animation: spin 0.7s linear infinite;
+}
+
+/* ---------- Формы ---------- */
+.title { margin: 8px 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.lead { margin: 0 0 20px; color: var(--text-2); }
+.field {
+  display: flex; align-items: center; gap: 10px;
+  height: 64px; padding: 0 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  transition: border-color 0.2s;
+}
+.field:focus-within { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.field input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 26px; font-weight: 700; }
+.field input::placeholder { color: var(--text-3); }
+.field .star { width: 22px; height: 22px; }
+.hint { margin: 10px 4px 0; font-size: 13px; color: var(--text-3); min-height: 18px; }
+.hint.error { color: var(--red); }
+
+.summary { margin-top: 12px; padding: 4px 16px; }
+.summary .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; color: var(--text-2); }
+.summary .row + .row { border-top: 1px solid var(--line); }
+.summary .row b { color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.summary .row.total span { color: var(--text); font-weight: 600; }
+.summary .row.total b { font-size: 17px; font-weight: 700; }
+.summary .row b .star { width: 14px; height: 14px; }
+
+.history { margin-top: 24px; display: grid; gap: 8px; }
+.history h2 { margin: 0 4px 4px; font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.wd { padding: 12px 14px; display: grid; gap: 4px; }
+.wd-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wd-amount { display: flex; align-items: center; gap: 5px; font-weight: 650; }
+.wd-amount .star { width: 14px; height: 14px; }
+.wd-meta { font-size: 12px; color: var(--text-3); }
+.wd-reason { font-size: 13px; color: var(--text-2); }
+.chip { padding: 4px 9px; border-radius: 8px; font-size: 12px; font-weight: 650; }
+.chip.pending { color: var(--amber); background: rgba(245, 191, 79, 0.12); }
+.chip.sent { color: var(--green); background: rgba(61, 214, 140, 0.12); }
+.chip.cancelled { color: var(--red); background: rgba(255, 107, 107, 0.12); }
+
+/* ---------- Заглушка / профиль ---------- */
+.placeholder, .gate {
+  min-height: calc(100dvh - 220px);
+  display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.placeholder.active { display: flex; }
+.gate { display: flex; min-height: 100dvh; padding: 24px; }
+.gate .btn { margin-top: 8px; text-decoration: none; }
+.ph-icon {
+  width: 76px; height: 76px; border-radius: 24px; margin-bottom: 18px;
+  display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--accent);
+}
+.ph-icon svg { width: 34px; height: 34px; }
+.ph-title { font-size: 18px; font-weight: 650; margin-bottom: 6px; }
+
+.profile-head { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 12px 0 24px; }
+.profile-head .avatar { margin-bottom: 14px; }
+.pf-name { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.pf-nick { color: var(--text-2); margin-top: 2px; }
+.pf-id {
+  margin-top: 12px; padding: 6px 12px; border-radius: 10px;
+  font-size: 13px; color: var(--text-2); background: var(--surface); border: 1px solid var(--line);
+}
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.stat b { font-size: 22px; font-weight: 700; }
+.stat span { font-size: 13px; color: var(--text-2); }
+.row-btn {
+  width: 100%; margin-top: 12px; padding: 0 14px 0 12px; height: 60px;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  transition: transform 0.15s var(--ease), background 0.15s;
+}
+.row-btn:active { transform: scale(0.98); background: var(--surface-2); }
+.rb-icon { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.rb-icon svg { width: 20px; height: 20px; }
+.rb-text { flex: 1; font-weight: 600; }
+.rb-chevron { width: 18px; height: 18px; color: var(--text-3); }
+
+/* ---------- Нижнее меню ---------- */
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  height: calc(var(--nav-h) + var(--safe-bottom));
+  padding: 0 4px var(--safe-bottom);
+  background: rgba(15, 15, 21, 0.92);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--line);
+}
+body.kb .nav { display: none; }
+.nav button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-size: 11px; font-weight: 550; color: var(--text-3);
+  transition: color 0.2s;
+}
+.nav .ni {
+  width: 52px; height: 30px; border-radius: 15px; display: grid; place-items: center;
+  transition: background 0.25s var(--ease), transform 0.2s var(--ease);
+}
+.nav svg { width: 22px; height: 22px; }
+.nav button.active { color: var(--text); }
+.nav button.active .ni { background: var(--accent-soft); color: var(--accent); }
+.nav button:active .ni { transform: scale(0.9); }
+
+/* ---------- Уведомление ---------- */
+.toast {
+  position: fixed; left: var(--gutter); right: var(--gutter); z-index: 40;
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--dock-h) + 30px);
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 14px;
+  background: var(--surface-3); border: 1px solid var(--line-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  font-weight: 550;
+  opacity: 0; transform: translateY(8px) scale(0.98); pointer-events: none;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.toast.show { opacity: 1; transform: none; }
+.toast svg { width: 20px; height: 20px; flex: none; }
+.toast.ok svg { color: var(--green); }
+.toast.err svg { color: var(--red); }
+.toast.win svg { color: var(--gold); }
+
+/* ---------- Загрузка ---------- */
+.boot { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 50; transition: opacity 0.3s; }
+.boot.hide { opacity: 0; pointer-events: none; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--surface-3); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Невысокие экраны */
+@media (max-height: 640px) {
+  .wheel { width: min(64vw, 260px); margin-bottom: 14px; }
+  .title { font-size: 22px; }
+}
+@media (max-width: 350px) {
+  :root { --gutter: 12px; }
+  .nav button { font-size: 10px; }
+  .nav .ni { width: 44px; }
+  #bet-btn { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
