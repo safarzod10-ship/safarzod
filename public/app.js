@@ -18,6 +18,7 @@ const state = {
   round: null,
   clockOffset: 0,
   view: 'roulette',
+  backTo: 'roulette',
   shownBalance: 0,
 };
 
@@ -42,7 +43,7 @@ function setupTelegram() {
   applyInsets();
   tg.onEvent('safeAreaChanged', applyInsets);
   tg.onEvent('contentSafeAreaChanged', applyInsets);
-  if (at('6.1')) tg.BackButton.onClick(() => go('roulette'));
+  if (at('6.1')) tg.BackButton.onClick(goBack);
 }
 
 const supports = (v) => !!tg?.isVersionAtLeast?.(v);
@@ -61,6 +62,7 @@ async function api(path, body) {
   else if (state.devUser) headers['x-dev-user'] = encodeURIComponent(JSON.stringify(state.devUser));
   const res = await fetch(path, { method: body === undefined ? 'GET' : 'POST', headers, body: body && JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
+  if (data.error === 'BLOCKED') showBlocked();
   if (!res.ok) throw Object.assign(new Error(data.message || 'Ошибка сети'), { code: data.error });
   return data;
 }
@@ -129,15 +131,25 @@ const digits = (input) => {
 };
 
 // ---------- Навигация ----------
+// Вкладки меню: рулетка, бонусы, профиль. Пополнение и вывод — подстраницы:
+// открываются из профиля или кнопкой «+» у баланса, «назад» возвращает туда, откуда пришли.
+const SUBPAGES = new Set(['deposit', 'withdraw']);
+
 function go(view) {
   if (view === state.view) return;
+  if (SUBPAGES.has(view) && !SUBPAGES.has(state.view)) state.backTo = state.view;
   state.view = view;
+  const tab = SUBPAGES.has(view) ? state.backTo : view;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === view));
-  document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('active', b.dataset.go === view));
+  document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('active', b.dataset.go === tab));
   window.scrollTo({ top: 0 });
   if (supports('6.1')) view === 'roulette' ? tg.BackButton.hide() : tg.BackButton.show();
   if (view === 'withdraw' || view === 'profile') refreshMe();
   haptic.tap();
+}
+
+function goBack() {
+  go(SUBPAGES.has(state.view) ? state.backTo || 'roulette' : 'roulette');
 }
 
 // ---------- Шапка и профиль ----------
@@ -591,7 +603,13 @@ function connectStream() {
 }
 
 function bindUi() {
-  document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+  document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', goBack));
+  $('gate-link').addEventListener('click', (e) => {
+    if (!supports('6.1')) return;
+    e.preventDefault();
+    tg.openTelegramLink(e.currentTarget.href);
+  });
   $('balance-btn').addEventListener('click', () => go('deposit'));
   $('bet-minus').addEventListener('click', () => stepBet(-1));
   $('bet-plus').addEventListener('click', () => stepBet(1));
@@ -629,6 +647,7 @@ async function main() {
     state.config = { ...state.config, ...(await api('/api/config')) };
   } catch {}
   $('wd-min').textContent = fmt(state.config.minWithdraw);
+  $('wb-withdraw-sub').textContent = `От ${fmt(state.config.minWithdraw)} ⭐`;
   $('wd-fee-pct').textContent = Math.round(state.config.withdrawFee * 100);
   $('dep-hint').textContent = `Минимум ${fmt(state.config.minDeposit)} · 1 звезда = 1 на балансе`;
   $('support-btn').hidden = !state.config.supportUsername;
@@ -647,6 +666,7 @@ async function main() {
   try {
     applyProfile(await api('/api/me', {}));
   } catch (e) {
+    if (e.code === 'BLOCKED') return showBlocked();
     toast(e.message, 'err');
   }
   $('app').hidden = false;
@@ -655,6 +675,19 @@ async function main() {
   updateWithdrawForm();
   updateDepositForm();
   requestAnimationFrame(() => $('boot').classList.add('hide'));
+}
+
+function showBlocked() {
+  $('app').hidden = true;
+  $('gate-title').textContent = 'Аккаунт заблокирован';
+  $('gate-text').textContent = 'Если это ошибка, напишите в поддержку';
+  if (state.config.supportUsername) {
+    $('gate-link').textContent = 'Поддержка';
+    $('gate-link').href = `https://t.me/${state.config.supportUsername}`;
+    $('gate-link').hidden = false;
+  }
+  $('gate').hidden = false;
+  $('boot').classList.add('hide');
 }
 
 main();

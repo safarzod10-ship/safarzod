@@ -24,6 +24,7 @@
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-hourglass" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10M7 20.5h10M8 3.5v2.3c0 1.6.8 3 2.1 3.9L12 11l1.9-1.3A4.7 4.7 0 0016 5.8V3.5M8 20.5v-2.3c0-1.6.8-3 2.1-3.9L12 13l1.9 1.3a4.7 4.7 0 012.1 3.9v2.3"/></g></symbol>
     <symbol id="i-telegram" viewBox="0 0 24 24"><path d="M20.7 4.3L3.6 10.9c-1.2.5-1.1 1.2-.2 1.5l4.4 1.4 1.7 5.2c.2.6.4.8.8.8.4 0 .6-.2.9-.5l2.1-2 4.4 3.2c.8.4 1.4.2 1.6-.8l2.9-13.6c.3-1.2-.4-1.7-1.5-1.3zM9 13.4l8.4-5.3c.4-.2.7-.1.4.2l-7 6.4-.3 3-1.5-4.3z" fill="currentColor"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4 4 9-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v5M12 16.2v.1"/></g></symbol>
@@ -39,9 +40,10 @@
           <div class="me-nick" id="me-nick"></div>
         </div>
       </div>
-      <button class="balance" id="balance-btn" aria-label="Баланс, пополнить">
+      <button class="balance" id="balance-btn" aria-label="Баланс. Пополнить">
         <svg class="star"><use href="#i-star"/></svg>
         <span id="balance" class="num">0</span>
+        <span class="balance-add" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
       </button>
     </header>
 
@@ -87,7 +89,7 @@
 
       <!-- Пополнение -->
       <section class="view form-view" id="view-deposit" data-view="deposit">
-        <h1 class="title">Пополнение</h1>
+        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Пополнение</h1></div>
         <p class="lead">Оплата звёздами с баланса Telegram</p>
         <label class="field">
           <input id="dep-input" class="num" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Количество звёзд">
@@ -101,7 +103,7 @@
 
       <!-- Вывод -->
       <section class="view form-view" id="view-withdraw" data-view="withdraw">
-        <h1 class="title">Вывод</h1>
+        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Вывод</h1></div>
         <p class="lead">Минимальная сумма — <span id="wd-min" class="num">50</span></p>
         <label class="field">
           <input id="wd-input" class="num" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Сумма вывода">
@@ -138,6 +140,18 @@
           <div class="stat card"><b class="num" id="st-wins">0</b><span>Победы</span></div>
           <div class="stat card"><b class="num" id="st-losses">0</b><span>Поражения</span></div>
         </div>
+        <div class="wallet">
+          <button class="wallet-btn card gold" data-go="deposit">
+            <span class="wb-icon"><svg><use href="#i-deposit"/></svg></span>
+            <span class="wb-title">Пополнить</span>
+            <span class="wb-sub">Звёздами Telegram</span>
+          </button>
+          <button class="wallet-btn card violet" data-go="withdraw">
+            <span class="wb-icon"><svg><use href="#i-withdraw"/></svg></span>
+            <span class="wb-title">Вывести</span>
+            <span class="wb-sub" id="wb-withdraw-sub">От 50 ⭐</span>
+          </button>
+        </div>
         <button class="row-btn card" id="support-btn">
           <span class="rb-icon"><svg><use href="#i-telegram"/></svg></span>
           <span class="rb-text">Поддержка</span>
@@ -148,8 +162,6 @@
 
     <nav class="nav" id="nav">
       <button data-go="roulette" class="active"><span class="ni"><svg><use href="#i-roulette"/></svg></span>Рулетка</button>
-      <button data-go="deposit"><span class="ni"><svg><use href="#i-deposit"/></svg></span>Пополнение</button>
-      <button data-go="withdraw"><span class="ni"><svg><use href="#i-withdraw"/></svg></span>Вывод</button>
       <button data-go="bonuses"><span class="ni"><svg><use href="#i-gift"/></svg></span>Бонусы</button>
       <button data-go="profile"><span class="ni"><svg><use href="#i-user"/></svg></span>Профиль</button>
     </nav>
@@ -160,8 +172,8 @@
   <!-- Открыто не из Telegram -->
   <div class="gate" id="gate" hidden>
     <div class="ph-icon"><svg><use href="#i-roulette"/></svg></div>
-    <div class="ph-title">Roulette Arena</div>
-    <p class="lead">Откройте приложение через Telegram-бота</p>
+    <div class="ph-title" id="gate-title">Roulette Arena</div>
+    <p class="lead" id="gate-text">Откройте приложение через Telegram-бота</p>
     <a class="btn primary" id="gate-link" hidden>Открыть в Telegram</a>
   </div>
 

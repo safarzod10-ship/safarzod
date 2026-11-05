@@ -81,13 +81,21 @@ svg { display: block; }
 .me-nick { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .balance {
   display: flex; align-items: center; gap: 6px; flex: none;
-  height: 38px; padding: 0 14px 0 12px;
+  height: 40px; padding: 0 4px 0 12px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
   font-weight: 650; font-size: 15px;
   transition: transform 0.2s var(--ease);
 }
 .balance:active { transform: scale(0.96); }
 .balance .star { width: 17px; height: 17px; }
+.balance-add {
+  width: 30px; height: 30px; margin-left: 4px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--gold); color: var(--gold-ink);
+  transition: transform 0.2s var(--ease);
+}
+.balance-add svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.balance:active .balance-add { transform: scale(0.88); }
 .balance.bump { animation: bump 0.5s var(--ease); }
 @keyframes bump { 40% { transform: scale(1.08); } }
 
@@ -279,6 +287,40 @@ body.kb .toast { bottom: calc(var(--dock-h) + var(--safe-bottom) + 30px); }
 .chip.sent { color: var(--green); background: rgba(61, 214, 140, 0.12); }
 .chip.cancelled { color: var(--red); background: rgba(255, 107, 107, 0.12); }
 
+/* Заголовок подстраницы с кнопкой «назад» */
+.page-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 4px -6px; }
+.page-head .title { margin: 0; }
+.back {
+  width: 40px; height: 40px; flex: none; border-radius: 12px;
+  display: grid; place-items: center; color: var(--text-2);
+  transition: background 0.15s, transform 0.15s var(--ease);
+}
+.back:active { background: var(--surface-2); transform: scale(0.92); }
+.back svg { width: 22px; height: 22px; }
+.form-view .lead { margin-top: 6px; }
+
+/* Кошелёк в профиле */
+.wallet { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.wallet-btn {
+  --tone: var(--gold);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 16px; text-align: left;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tone) 12%, transparent), transparent 60%),
+    var(--surface);
+  transition: transform 0.15s var(--ease), border-color 0.2s;
+}
+.wallet-btn.violet { --tone: var(--accent); }
+.wallet-btn:active { transform: scale(0.97); border-color: color-mix(in srgb, var(--tone) 40%, transparent); }
+.wb-icon {
+  width: 40px; height: 40px; border-radius: 13px; margin-bottom: 12px;
+  display: grid; place-items: center;
+  color: var(--tone); background: color-mix(in srgb, var(--tone) 15%, transparent);
+}
+.wb-icon svg { width: 22px; height: 22px; }
+.wb-title { font-weight: 650; font-size: 16px; }
+.wb-sub { font-size: 13px; color: var(--text-2); }
+
 /* ---------- Заглушка / профиль ---------- */
 .placeholder, .gate {
   min-height: calc(100dvh - 220px);
@@ -320,9 +362,9 @@ body.kb .toast { bottom: calc(var(--dock-h) + var(--safe-bottom) + 30px); }
 /* ---------- Нижнее меню ---------- */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(3, 1fr);
   height: calc(var(--nav-h) + var(--safe-bottom));
-  padding: 0 4px var(--safe-bottom);
+  padding: 0 12px var(--safe-bottom);
   background: rgba(15, 15, 21, 0.92);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--line);
@@ -334,7 +376,7 @@ body.kb .nav { display: none; }
   transition: color 0.2s;
 }
 .nav .ni {
-  width: 52px; height: 30px; border-radius: 15px; display: grid; place-items: center;
+  width: 60px; height: 30px; border-radius: 15px; display: grid; place-items: center;
   transition: background 0.25s var(--ease), transform 0.2s var(--ease);
 }
 .nav svg { width: 22px; height: 22px; }
@@ -373,8 +415,7 @@ body.kb .nav { display: none; }
 }
 @media (max-width: 350px) {
   :root { --gutter: 12px; }
-  .nav button { font-size: 10px; }
-  .nav .ni { width: 44px; }
+  .wallet-btn { padding: 14px 12px; }
   #bet-btn { font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {

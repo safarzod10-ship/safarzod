@@ -84,7 +84,20 @@ export function openDb(dataDir) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;');
   db.exec(SCHEMA);
+  migrate(db);
   return new Store(db);
+}
+
+/** Обновление базы, созданной прошлыми версиями: только добавляет, ничего не удаляет. */
+function migrate(db) {
+  const columns = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
+  if (!columns.has('blocked')) db.exec('ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0');
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS users_username ON users(lower(username));
+    CREATE INDEX IF NOT EXISTS users_created ON users(created_at);
+    CREATE INDEX IF NOT EXISTS payments_created ON payments(created_at);
+    CREATE INDEX IF NOT EXISTS rounds_finished ON rounds(status, finished_at);
+  `);
 }
 
 class Store {
@@ -120,6 +133,18 @@ class Store {
       closeWithdrawal: q(`UPDATE withdrawals SET status = :status, reason = :reason, processed_at = :now
                           WHERE id = :id AND status = 'pending'`),
       setAdminMessage: q('UPDATE withdrawals SET admin_chat_id = ?, admin_message_id = ? WHERE id = ?'),
+      // --- админ-панель ---
+      findByUsername: q("SELECT * FROM users WHERE lower(username) = lower(?) AND username <> '' LIMIT 1"),
+      setBlocked: q('UPDATE users SET blocked = ? WHERE id = ?'),
+      countUsers: q('SELECT COUNT(*) AS n FROM users'),
+      newUsers: q('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?'),
+      deposits: q("SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE created_at >= ?"),
+      games: q(`SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS turnover, COALESCE(SUM(total - bank), 0) AS income
+                FROM rounds WHERE status = 'finished' AND finished_at >= ?`),
+      pendingWithdrawals: q("SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE status = 'pending'"),
+      userDeposits: q('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
+      userWithdrawn: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE user_id = ? AND status = 'sent'"),
+      broadcastIds: q('SELECT id FROM users WHERE blocked = 0 ORDER BY id'),
     };
   }
 
@@ -149,6 +174,64 @@ class Store {
 
   getUser(id) {
     return this.q.getUser.get(id) ?? null;
+  }
+
+  // ---------- Админ-панель ----------
+
+  /** Поиск по нику (с @ или без) или по Telegram ID. */
+  findUser(query) {
+    const q = String(query ?? '').trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
+    if (/^\d{1,15}$/.test(q)) return this.getUser(Number(q)); // ник в Telegram не может быть из одних цифр
+    return q ? (this.q.findByUsername.get(q) ?? null) : null;
+  }
+
+  setBlocked(id, blocked) {
+    this.q.setBlocked.run(blocked ? 1 : 0, id);
+    return this.getUser(id);
+  }
+
+  /**
+   * Ручное изменение баланса. delta > 0 — начислить, delta < 0 — списать,
+   * но не больше, чем есть (с нулевого баланса ничего не списывается).
+   */
+  adjustBalance(id, delta) {
+    return this.tx(() => {
+      const user = this.getUser(id);
+      if (!user) throw new AppError('NOT_FOUND', 'Пользователь не найден', 404);
+      let applied = 0;
+      if (delta > 0) {
+        this.#credit(id, delta, 'admin', null);
+        applied = delta;
+      } else if (delta < 0) {
+        const take = Math.min(-delta, user.balance);
+        if (take > 0) this.#debit(id, take, 'admin', null);
+        applied = -take;
+      }
+      return { user: this.getUser(id), applied };
+    });
+  }
+
+  stats(now = Date.now()) {
+    const periods = { day: now - 86_400_000, week: now - 7 * 86_400_000, month: now - 30 * 86_400_000 };
+    const by = (fn) => Object.fromEntries(Object.entries(periods).map(([k, since]) => [k, fn(since)]));
+    return {
+      users: this.q.countUsers.get().n,
+      newUsers: by((t) => this.q.newUsers.get(t).n),
+      deposits: by((t) => ({ ...this.q.deposits.get(t) })),
+      games: by((t) => ({ ...this.q.games.get(t) })),
+      pending: { ...this.q.pendingWithdrawals.get() },
+    };
+  }
+
+  userSummary(id) {
+    return {
+      deposits: { ...this.q.userDeposits.get(id) },
+      withdrawn: this.q.userWithdrawn.get(id).sum,
+    };
+  }
+
+  broadcastIds() {
+    return this.q.broadcastIds.all().map((r) => r.id);
   }
 
   /** Списание внутри уже открытой транзакции. */

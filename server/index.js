@@ -78,7 +78,9 @@ function authenticate(req) {
   if (header.startsWith('tma ')) tgUser = validateInitData(header.slice(4), config.botToken);
   else if (config.devMode && req.headers['x-dev-user']) tgUser = JSON.parse(decodeURIComponent(req.headers['x-dev-user']));
   if (!tgUser) throw new AppError('UNAUTHORIZED', 'Откройте приложение через Telegram', 401);
-  return store.upsertUser(tgUser);
+  const user = store.upsertUser(tgUser);
+  if (user.blocked) throw new AppError('BLOCKED', 'Ваш аккаунт заблокирован', 403);
+  return user;
 }
 
 function amountOf(body, min) {
