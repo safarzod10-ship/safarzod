@@ -178,7 +178,7 @@ export class Bot {
     const text = msg.text ?? '';
     const ref = text.match(/^\/start\s+ref_(\d{1,15})$/);
     if (ref && isNew && this.store.setReferrer(user.id, Number(ref[1]))) {
-      this.#onInvited(this.store.getUser(user.id)).catch(() => {}); // свежие данные: уже с referrer_id
+      this.onInvited(this.store.getUser(user.id)).catch(() => {}); // свежие данные: уже с referrer_id
     }
     const admin = this.#isAdmin(msg.from.id);
 
@@ -241,11 +241,12 @@ export class Bot {
 
   // ====================== Рефералы ======================
 
+  /** Ссылка сразу открывает мини-апп (нужен Main Mini App в @BotFather). */
   referralLink(userId) {
-    return `https://t.me/${this.username}?start=ref_${userId}`;
+    return `https://t.me/${this.username}?startapp=ref_${userId}`;
   }
 
-  async #onInvited(friend) {
+  async onInvited(friend) {
     const inviter = this.store.getUser(friend.referrer_id);
     if (!inviter) return;
     await this.#send(

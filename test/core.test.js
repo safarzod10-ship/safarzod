@@ -371,3 +371,12 @@ test('реферал: +1 ⭐ только после подписки и тол�
   const f = store.friends(1);
   assert.deepEqual([f.n, f.rewarded, f.list[0].ref_rewarded], [1, 1, 1]);
 });
+
+test('startapp: параметр из подписанного initData доступен серверу, подделка ломает подпись', () => {
+  const fields = { auth_date: String(Math.floor(Date.now() / 1000)), start_param: 'ref_1', user: JSON.stringify(user(77)) };
+  const data = signInitData(fields, TOKEN);
+  const u = validateInitData(data, TOKEN);
+  assert.deepEqual([u.id, u.startParam], [77, 'ref_1']);
+  assert.equal(validateInitData(data.replace('ref_1', 'ref_2'), TOKEN), null);
+  assert.equal(validateInitData(signInitData({ ...fields, start_param: undefined }, TOKEN).replace('start_param=undefined&', ''), TOKEN), null);
+});

@@ -30,7 +30,8 @@ export function validateInitData(initData, botToken, { maxAgeSec = MAX_AGE_SEC, 
   try {
     const user = JSON.parse(params.get('user') ?? 'null');
     if (!user || !Number.isSafeInteger(user.id)) return null;
-    return user;
+    // start_param — из ссылки t.me/<бот>?startapp=…; входит в подпись, подделать нельзя
+    return { ...user, startParam: params.get('start_param') ?? '' };
   } catch {
     return null;
   }

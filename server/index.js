@@ -83,7 +83,14 @@ function authenticate(req) {
   if (header.startsWith('tma ')) tgUser = validateInitData(header.slice(4), config.botToken);
   else if (config.devMode && req.headers['x-dev-user']) tgUser = JSON.parse(decodeURIComponent(req.headers['x-dev-user']));
   if (!tgUser) throw new AppError('UNAUTHORIZED', 'Откройте приложение через Telegram', 401);
-  const user = store.upsertUser(tgUser);
+  const isNew = !store.getUser(tgUser.id);
+  let user = store.upsertUser(tgUser);
+  // Новый игрок пришёл по реферальной ссылке t.me/<бот>?startapp=ref_<id>
+  const ref = /^ref_(\d{1,15})$/.exec(tgUser.startParam ?? '');
+  if (isNew && ref && store.setReferrer(user.id, Number(ref[1]))) {
+    user = store.getUser(user.id);
+    bot?.onInvited(user).catch(() => {});
+  }
   if (user.blocked) throw new AppError('BLOCKED', 'Ваш аккаунт заблокирован', 403);
   return user;
 }
@@ -166,7 +173,7 @@ const routes = {
     }
     const { list, n, rewarded } = store.friends(user.id);
     return {
-      link: bot?.username ? bot.referralLink(user.id) : config.devMode ? `https://t.me/roulette_bot?start=ref_${user.id}` : '',
+      link: bot?.username ? bot.referralLink(user.id) : config.devMode ? `https://t.me/roulette_bot?startapp=ref_${user.id}` : '',
       reward: config.refReward,
       channelUrl: config.channelUrl,
       count: n,
