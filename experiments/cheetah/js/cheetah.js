@@ -114,20 +114,20 @@ export class Cheetah {
     }
 
     // legs (+ stretch in the air, + front paw strikes)
-    const raise = (pw, sh) => ({ x: sh.x + 62, y: sh.y - 6 });
+    const raise = (pw, sh) => ({ x: sh.x + 58, y: sh.y - 70 }); // paw lifted high in front of the face
     const leg = (hip, hock, paw, dx, dy) => ({ hip, hock: { x: hock.x + dx, y: hock.y + dy }, paw: { x: paw.x + dx, y: paw.y + dy } });
     const shN = { x: Cc.x - 6, y: Cc.y + 26 }, shF = { x: Cc.x + 10, y: Cc.y + 22 };
     const legs = {
       hindNear: leg({ x: H.x + 6, y: H.y + 14 }, { x: -96, y: -40 }, { x: -84, y: -9 }, -46 * e, -32 * e),
       hindFar: leg({ x: H.x + 22, y: H.y + 10 }, { x: -76, y: -42 }, { x: -64, y: -10 }, -40 * e, -28 * e),
-      frontNear: leg(shN, { x: 58, y: -22 }, { x: 66, y: -9 }, 44 * e, -50 * e),
-      frontFar: leg(shF, { x: 80, y: -24 }, { x: 88, y: -10 }, 40 * e, -44 * e),
+      frontNear: leg(shN, { x: 58, y: -22 }, { x: 66, y: -9 }, 44 * e + 26 * p.reach, -50 * e),
+      frontFar: leg(shF, { x: 80, y: -24 }, { x: 88, y: -10 }, 40 * e + 24 * p.reach, -44 * e),
     };
-    for (const [key, k] of [['frontNear', p.paw1], ['frontFar', p.paw2]]) {
+    for (const [key, k] of [['frontNear', Math.max(p.paw1, p.paw2)]]) {
       if (k <= 0.001) continue;
       const L = legs[key], up = raise(k, L.hip);
       L.hock = { x: lerp(L.hock.x, up.x, k), y: lerp(L.hock.y, up.y, k) };
-      L.paw = { x: lerp(L.paw.x, up.x + 16, k), y: lerp(L.paw.y, up.y + 6, k) };
+      L.paw = { x: lerp(L.paw.x, up.x + 14, k), y: lerp(L.paw.y, up.y - 8, k) };
       L.strike = k;
     }
     return { root, spine, headMat, headAng, jawAng, tail, legs, H, M, Cc };
@@ -144,8 +144,10 @@ export class Cheetah {
     this.drawFrontLeg(ctx, b, R.legs.frontFar, true);
     this.drawBody(ctx, b);
     this.drawHindLeg(ctx, b, R.legs.hindNear, false);
-    this.drawFrontLeg(ctx, b, R.legs.frontNear, false);
+    const swat = (R.legs.frontNear.strike || 0) > 0.02 || this.pose.reach > 0.05;
+    if (!swat) this.drawFrontLeg(ctx, b, R.legs.frontNear, false);
     this.drawHead(ctx, b);
+    if (swat) this.drawFrontLeg(ctx, b, R.legs.frontNear, false); // the swatting paw passes in front of the face
     this.drawArcs(ctx, b);
   }
 
@@ -330,7 +332,7 @@ export class Cheetah {
     const [er, eg, eb] = this.energy();
     for (const [dx, dy] of [[12, 0], [15, 5], [9, 7]]) {
       ctx.save(); ctx.translate(x + dx, y + dy); ctx.rotate(0.5);
-      inkFill(ctx, (c) => { c.moveTo(0, -2.5); c.quadraticCurveTo(9 * k, -3, 12 * k, 3); c.quadraticCurveTo(6 * k, 2.5, 0, 2.5); c.closePath(); }, `rgb(${er | 0},${eg | 0},${eb | 0})`, C.ink, 1.2);
+      inkFill(ctx, (c) => { c.moveTo(0, -2.5); c.quadraticCurveTo(14 * k, -4, 19 * k, 4); c.quadraticCurveTo(9 * k, 3, 0, 2.5); c.closePath(); }, `rgb(${er | 0},${eg | 0},${eb | 0})`, C.ink, 1.2);
       ctx.restore();
     }
   }

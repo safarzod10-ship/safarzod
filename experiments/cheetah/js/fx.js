@@ -10,7 +10,8 @@ export class FX {
   reset() {
     this.rand = rng(909);
     this.time = 0;
-    this.slashes = []; this.sparks = []; this.dust = []; this.lines = []; this.rings = [];
+    this.slashes = []; this.sparks = []; this.dust = []; this.lines = []; this.rings = []; this.waves = [];
+    this.shake = 0;
     this.flash = 0;
     this.lineAcc = 0; this.ringAcc = 0;
   }
@@ -19,13 +20,15 @@ export class FX {
   slash(x, y, flip = false) {
     const R = this.rand;
     for (let i = 0; i < 3; i++) {
-      this.slashes.push({ x: x + 148 + i * 20, y: y - 190 + i * 10, len: 200 - Math.abs(i - 1) * 26, ang: (flip ? 2.0 : 1.82) + (i - 1) * 0.05, age: -i * 0.03, life: 0.7, bend: R.range(16, 24) });
+      this.slashes.push({ x: x + 104 + i * 26, y: y - 245 + i * 10, len: 260 - Math.abs(i - 1) * 30, ang: (flip ? 1.38 : 1.48) + (i - 1) * 0.05, age: -i * 0.03, life: 0.7, bend: R.range(16, 24) });
     }
     for (let i = 0; i < 46; i++) {
       const a = R.range(-2.6, 0.4), sp = R.range(120, 520);
-      this.sparks.push({ x: x + 165 + R.range(-30, 30), y: y - 70 + R.range(-60, 50), vx: Math.cos(a) * sp + 80, vy: Math.sin(a) * sp, age: 0, life: R.range(0.25, 0.6), size: R.range(1.2, 2.6) });
+      this.sparks.push({ x: x + 120 + R.range(-30, 30), y: y - 40 + R.range(-80, 40), vx: Math.cos(a) * sp + 80, vy: Math.sin(a) * sp, age: 0, life: R.range(0.25, 0.6), size: R.range(1.2, 2.6) });
     }
     this.flash = 1;
+    this.shake = 1;
+    this.waves.push({ x: x + 120, age: 0 });
   }
   kick(x, n = 18, dir = 1) {
     const R = this.rand;
@@ -38,6 +41,9 @@ export class FX {
     const R = this.rand;
     this.time += dt;
     this.flash = Math.max(0, this.flash - dt * 6);
+    this.shake = Math.max(0, this.shake - dt * 4);
+    for (const w of this.waves) w.age += dt;
+    this.waves = this.waves.filter((w) => w.age < 0.5);
     for (const s of this.slashes) s.age += dt;
     this.slashes = this.slashes.filter((s) => s.age < s.life);
     for (const s of this.sparks) { s.age += dt; s.vy += 700 * dt; s.vx *= Math.exp(-dt * 2); s.px = s.x; s.py = s.y; s.x += s.vx * dt; s.y += s.vy * dt; }
@@ -96,7 +102,7 @@ export class FX {
         const b = Math.sin(u * Math.PI) * s.bend;
         pts.push([s.x + dx * s.len * u + nx * b, s.y + dy * s.len * u + ny * b, Math.sin(Math.PI * (i / N))]);
       }
-      for (const [w, col] of [[26, `rgba(60,200,255,${0.22 * fade})`], [12, `rgba(120,235,255,${0.65 * fade})`], [4.5, `rgba(245,255,255,${fade})`]]) {
+      for (const [w, col] of [[38, `rgba(60,200,255,${0.22 * fade})`], [18, `rgba(120,235,255,${0.65 * fade})`], [6.5, `rgba(245,255,255,${fade})`]]) {
         ctx.beginPath();
         pts.forEach(([x, y, t], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x + nx * w * t * 0.5, y + ny * w * t * 0.5));
         for (let i = pts.length - 1; i >= 0; i--) { const [x, y, t] = pts[i]; ctx.lineTo(x - nx * w * t * 0.5, y - ny * w * t * 0.5); }
@@ -108,6 +114,14 @@ export class FX {
       ctx.strokeStyle = k < 0.35 ? `rgba(235,255,255,${1 - k})` : `rgba(120,${(230 - k * 60) | 0},255,${1 - k})`;
       ctx.lineWidth = s.size * (1 - k * 0.5);
       ctx.beginPath(); ctx.moveTo(s.px ?? s.x, s.py ?? s.y); ctx.lineTo(s.x, s.y); ctx.stroke();
+    }
+    ctx.restore();
+    // ground shockwave under each strike
+    ctx.save(); ctx.lineCap = 'round';
+    for (const w of this.waves) {
+      const k = w.age / 0.5;
+      ctx.strokeStyle = `rgba(140,235,255,${0.8 * (1 - k)})`; ctx.lineWidth = 5 * (1 - k) + 1;
+      ctx.beginPath(); ctx.ellipse(w.x, GROUND_Y, 20 + k * 150, 4 + k * 16, 0, 0, TAU); ctx.stroke();
     }
     ctx.restore();
     // roar rings

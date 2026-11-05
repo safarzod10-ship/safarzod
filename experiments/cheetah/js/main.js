@@ -44,7 +44,7 @@ function step(dt) {
   if (crossed(ps, s, T.pounce)) fx.kick(a.root[0] - 60, 22, 1);
   if (crossed(ps, s, T.land)) fx.kick(a.root[0] + 30, 16, -1);
   if (crossed(ps, s, T.slash1)) fx.slash(a.pawNear[0], a.pawNear[1]);
-  if (crossed(ps, s, T.slash2)) fx.slash(a.pawFar[0] + 8, a.pawFar[1] - 6, true);
+  if (crossed(ps, s, T.slash2)) fx.slash(a.pawNear[0] + 6, a.pawNear[1], true);
   if (crossed(ps, s, T.dashBack)) fx.kick(a.root[0] + 40, 16, -1);
   if (crossed(ps, s, T.home)) fx.kick(a.root[0], 14, 1);
   scene.prevS = s;
@@ -95,7 +95,11 @@ function drawShadow() {
 }
 
 function render() {
-  const view = new Mat(dpr, 0, 0, dpr, 0, 0);
+  // camera shake on paw strikes
+  const sh = scene.fx.shake * scene.fx.shake * 9;
+  const view = new Mat(dpr, 0, 0, dpr, Math.sin(scene.time * 91) * sh * dpr, Math.cos(scene.time * 77) * sh * dpr);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (sh > 0.01) { ctx.clearRect(0, 0, canvas.width, canvas.height); }
   view.set(ctx);
   if (TRANSPARENT) ctx.clearRect(0, 0, W, H); else drawBackground();
   drawShadow();

@@ -2,7 +2,7 @@
 //   node tools/export_png.mjs [outDir] [scale]
 // Writes <outDir>/robocheetah.png (transparent, cropped to the character, idle pose),
 //        <outDir>/robocheetah_bg.png (same frame on the demo background)
-//        <outDir>/robocheetah_poses.png (idle / stalk / pounce / slash key poses side by side).
+//        <outDir>/robocheetah_poses.png (idle / paw wind-up / paw strike key poses side by side).
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,7 +38,7 @@ fs.mkdirSync(outDir, { recursive: true });
 await shot(true, -1, path.join(outDir, 'robocheetah.png'));
 await shot(false, -1, path.join(outDir, 'robocheetah_bg.png'));
 const tmp = [];
-for (const [i, t] of [-1, 2.2, 3.2].entries()) { const f = path.join(outDir, `.pose${i}.png`); await shot(false, t, f); tmp.push(f); }
+for (const [i, t] of [-1, 3.15, 3.32].entries()) { const f = path.join(outDir, `.pose${i}.png`); await shot(false, t, f); tmp.push(f); }
 await browser.close();
 close();
 console.log(JSON.stringify(tmp));
