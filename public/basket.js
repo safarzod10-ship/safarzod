@@ -734,44 +734,60 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   // ---------- Кольцо, щит, сетка ----------
 
+  /** Щит — вид спереди, кольцо ровно по центру под ним, без стойки и креплений (как в аркадах). */
   function drawBoard(ctx, h) {
     const sc = s.view.scale;
-    const x0 = X(h.x - 0.42);
-    const x1 = X(h.x + WORLD.BOARD_X + 0.1);
+    const x0 = X(h.x - WORLD.BOARD_HALF);
+    const x1 = X(h.x + WORLD.BOARD_HALF);
     const y0 = Y(h.y + WORLD.BOARD_TOP);
-    const y1 = Y(h.y + WORLD.BOARD_BOTTOM);
-    // мягкое свечение вокруг щита
-    const glow = ctx.createRadialGradient((x0 + x1) / 2, (y0 + y1) / 2, 0, (x0 + x1) / 2, (y0 + y1) / 2, sc * 2.2);
-    glow.addColorStop(0, 'rgba(170,130,255,0.22)');
+    const y1 = Y(h.y - 0.12);
+    const w = x1 - x0;
+    const hh = y1 - y0;
+    // мягкая подсветка зала за щитом
+    const glow = ctx.createRadialGradient((x0 + x1) / 2, (y0 + y1) / 2, 0, (x0 + x1) / 2, (y0 + y1) / 2, sc * 2);
+    glow.addColorStop(0, 'rgba(170,130,255,0.18)');
     glow.addColorStop(1, 'rgba(170,130,255,0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(x0 - sc * 2, y0 - sc * 2, x1 - x0 + sc * 4, y1 - y0 + sc * 4);
-    // стекло щита
-    const glass = ctx.createLinearGradient(x0, y0, x1, y1);
-    glass.addColorStop(0, 'rgba(240,236,255,0.95)');
-    glass.addColorStop(1, 'rgba(205,195,240,0.92)');
-    ctx.fillStyle = glass;
-    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, sc * 0.08);
+    ctx.fillRect(x0 - sc * 2, y0 - sc * 2, w + sc * 4, hh + sc * 4);
+    // тень и рамка
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    roundRect(ctx, x0 + 3, y0 + 5, w, hh, sc * 0.06);
     ctx.fill();
-    ctx.strokeStyle = '#2c1a4d';
+    ctx.fillStyle = '#2a2140';
+    roundRect(ctx, x0, y0, w, hh, sc * 0.06);
+    ctx.fill();
+    // стекло щита
+    const inset = Math.max(3, sc * 0.07);
+    const glass = ctx.createLinearGradient(x0, y0, x1, y1);
+    glass.addColorStop(0, '#f6f4ff');
+    glass.addColorStop(1, '#d9e4f2');
+    ctx.fillStyle = glass;
+    roundRect(ctx, x0 + inset, y0 + inset, w - inset * 2, hh - inset * 2, sc * 0.03);
+    ctx.fill();
+    // блик на стекле
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(x0 + inset, y0 + inset);
+    ctx.lineTo(x0 + w * 0.45, y0 + inset);
+    ctx.lineTo(x0 + w * 0.2, y1 - inset);
+    ctx.lineTo(x0 + inset, y1 - inset);
+    ctx.closePath();
+    ctx.globalAlpha = 0.35;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // квадрат-мишень по центру над кольцом
+    const qw = sc * 0.62;
+    const qh = sc * 0.5;
+    ctx.strokeStyle = '#2a2140';
     ctx.lineWidth = Math.max(2, sc * 0.06);
-    ctx.stroke();
-    // квадрат-мишень над кольцом
-    const qx0 = X(h.x - 0.18);
-    const qx1 = X(h.x + 0.46);
-    ctx.strokeStyle = '#ff6a2b';
-    ctx.lineWidth = Math.max(2, sc * 0.055);
-    ctx.strokeRect(qx0, Y(h.y + 0.62), qx1 - qx0, sc * 0.6);
-    // крепление кольца к щиту
-    ctx.fillStyle = '#3a2a55';
-    ctx.fillRect(X(h.x + WORLD.RIM_HALF - 0.02), Y(h.y) - sc * 0.05, X(h.x + WORLD.BOARD_X) - X(h.x + WORLD.RIM_HALF - 0.02), sc * 0.1);
+    ctx.strokeRect(X(h.x) - qw / 2, Y(h.y) - qh - sc * 0.06, qw, qh);
   }
 
-  const RIM_RY = 0.13; // «глубина» кольца в перспективе
+  const RIM_RY = 0.075; // «глубина» кольца — почти плоское, как на виде спереди
   function drawRimBack(ctx, h) {
     const sc = s.view.scale;
-    ctx.strokeStyle = '#c4501d';
-    ctx.lineWidth = Math.max(2.5, sc * 0.075);
+    ctx.strokeStyle = '#b8321e';
+    ctx.lineWidth = Math.max(2.5, sc * 0.07);
     ctx.beginPath();
     ctx.ellipse(X(h.x), Y(h.y), WORLD.RIM_HALF * sc, RIM_RY * sc, 0, Math.PI, Math.PI * 2);
     ctx.stroke();
@@ -779,37 +795,44 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   function drawRimFront(ctx, h) {
     const sc = s.view.scale;
-    ctx.strokeStyle = '#ff7a2f';
+    ctx.strokeStyle = '#ff4a2e';
     ctx.lineWidth = Math.max(3, sc * 0.09);
     ctx.beginPath();
     ctx.ellipse(X(h.x), Y(h.y), WORLD.RIM_HALF * sc, RIM_RY * sc, 0, 0, Math.PI);
     ctx.stroke();
+    // крючки сетки по дужке
+    ctx.fillStyle = '#ffd8cc';
+    for (let i = 0; i <= 6; i++) {
+      const a = Math.PI * (i / 6);
+      ctx.beginPath();
+      ctx.arc(X(h.x) + Math.cos(a) * WORLD.RIM_HALF * sc, Y(h.y) + Math.sin(a) * RIM_RY * sc, Math.max(1, sc * 0.025), 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
+  /** Сетка висит ровно под кольцом; при попадании растягивается и качается. */
   function drawNet(ctx, h, t) {
     const sc = s.view.scale;
     const cx = X(h.x);
     const ry = Y(h.y);
     const top = WORLD.RIM_HALF * sc;
-    const bottom = top * 0.55;
-    const depth = sc * 0.72 * (1 + s.net * 0.3);
-    const sway = s.net * Math.sin(t / 50) * sc * 0.06;
+    const bottom = top * 0.58;
+    const depth = sc * 0.78 * (1 + s.net * 0.35);
+    const sway = s.net * Math.sin(t / 45) * sc * 0.05;
     s.net *= 0.95;
     if (s.net < 0.01) s.net = 0;
-    ctx.strokeStyle = 'rgba(245,240,255,0.85)';
-    ctx.lineWidth = 1.1;
-    const cols = 7;
+    ctx.strokeStyle = 'rgba(250,248,255,0.9)';
+    ctx.lineWidth = Math.max(1, sc * 0.022);
+    const cols = 8;
     const rowsN = 4;
     const pt = (i, j) => {
       const v = j / rowsN;
       const w = top + (bottom - top) * v;
-      const u = i / cols;
-      return [cx - w + 2 * w * u + sway * v, ry + RIM_RY * sc * 0.6 + depth * v];
+      return [cx - w + (2 * w * i) / cols + sway * v, ry + RIM_RY * sc * 0.5 + depth * v];
     };
     ctx.beginPath();
     for (let j = 0; j < rowsN; j++) {
       for (let i = 0; i < cols; i++) {
-        // ромбы: диагонали между соседними узлами
         const [ax, ay] = pt(i, j);
         const [bx, by] = pt(i + 1, j + 1);
         const [cx2, cy2] = pt(i + 1, j);

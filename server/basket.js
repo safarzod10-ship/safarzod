@@ -232,7 +232,8 @@ export class BasketService extends EventEmitter {
   #hoopAt(game, index) {
     const hoops = JSON.parse(game.hoops);
     if (hoops.length > index) return hoops[index];
-    while (hoops.length <= index) hoops.push(nextHoop(hoops.at(-1), this.rnd));
+    // index = счёт игрока: чем больше очков, тем дальше и разнообразнее кольцо
+    while (hoops.length <= index) hoops.push(nextHoop(hoops.at(-1), this.rnd, hoops.length));
     this.q.setHoops.run(JSON.stringify(hoops), game.id);
     game.hoops = JSON.stringify(hoops);
     return hoops[index];

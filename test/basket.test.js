@@ -57,7 +57,7 @@ function finishTime(ctx, uid) {
 }
 
 // ---------- физика ----------
-test('физика: полёт совпадает с формулой параболы, детерминирован, есть отскоки от дужки и щита', () => {
+test('физика: полёт совпадает с формулой параболы, детерминирован; препятствий нет — только дужки кольца', () => {
   const far = simulateShot({ x: 50, y: 50 }, 6, 9, { frames: true });
   for (const n of [12, 60, 90]) {
     const t = n * WORLD.DT;
@@ -69,9 +69,14 @@ test('физика: полёт совпадает с формулой параб
   const hoop = { x: 7, y: 5 };
   const s = findShot(hoop, 'made');
   assert.deepEqual(simulateShot(hoop, s.vx / QUANT, s.vy / QUANT, { frames: true }).frames, simulateShot(hoop, s.vx / QUANT, s.vy / QUANT, { frames: true }).frames);
-  let board = false;
-  for (let vy = 8; vy < 13 && !board; vy += 0.1) board = simulateShot(hoop, 9.5, vy).contacts.some(([k]) => k === 'board');
-  assert.ok(board);
+  // мяч, пролетевший над кольцом, ни во что не врезается (щит — только картинка)
+  const over = simulateShot(hoop, 8.5, 9.5);
+  assert.equal(over.made, false);
+  assert.deepEqual([...new Set(over.contacts.map(([k]) => k))].filter((k) => k !== 'floor'), []);
+  // но от дужки мяч отскакивает
+  let rim = false;
+  for (let vy = 6; vy < 12 && !rim; vy += 0.05) rim = simulateShot(hoop, 6.2, vy).contacts.some(([k]) => k === 'rim');
+  assert.ok(rim);
   assert.equal(simulateShot(hoop, 8, 4).made, false);
 });
 
@@ -82,7 +87,7 @@ test('кольцо: все позиции достижимы; новая поз�
   const seen = new Set();
   const moves = { closer: 0, farther: 0, higher: 0, lower: 0 };
   for (let i = 0; i < 200; i++) {
-    const h = nextHoop(prev, Math.random);
+    const h = nextHoop(prev, Math.random, 12);
     assert.ok(h.x >= B.xMin && h.x <= B.xMax && h.y >= B.yMin && h.y <= B.yMax);
     if (prev) {
       assert.ok(Math.hypot(h.x - prev.x, h.y - prev.y) >= 1.1);
@@ -94,6 +99,23 @@ test('кольцо: все позиции достижимы; новая поз�
   }
   assert.ok(seen.size > 190);
   for (const k in moves) assert.ok(moves[k] > 30, k);
+});
+
+test('сложность: первое кольцо в центре; с очками кольцо уходит дальше и больше не подходит близко', () => {
+  for (let i = 0; i < 50; i++) {
+    const first = nextHoop(null, Math.random, 0);
+    assert.ok(first.x >= 4.6 && first.x <= 5.4 && first.y >= 4.2 && first.y <= 4.9, 'старт — по центру экрана');
+  }
+  const minX = (level) => {
+    let m = Infinity;
+    let prev = { x: 6, y: 5 };
+    for (let i = 0; i < 80; i++) m = Math.min(m, (prev = nextHoop(prev, Math.random, level)).x);
+    return m;
+  };
+  assert.ok(minX(1) < 5.3, 'в начале кольцо бывает близко');
+  assert.ok(minX(12) >= 7.1, 'с 12 очков — только далеко');
+  assert.ok(minX(30) >= 7.1);
+  assert.ok(minX(6) > minX(1) - 0.01);
 });
 
 // ---------- матчи ----------
