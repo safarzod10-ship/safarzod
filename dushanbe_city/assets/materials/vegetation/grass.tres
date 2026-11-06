@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/grass.gdshader" id="s"]
+
+[resource]
+resource_name = "grass"
+shader = ExtResource("s")
+shader_parameter/use_instance_custom = true

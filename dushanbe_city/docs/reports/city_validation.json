@@ -1,0 +1,11 @@
+{
+ "pedestrian_components": 1,
+ "pedestrian_main_share": 1.0,
+ "building_conflicts": [],
+ "reserved_violations": [],
+ "on_road": [],
+ "chunks": [
+  36,
+  36
+ ]
+}

@@ -1,0 +1,29 @@
+PASS  1. walk forward 1.00 m/s (1.0), clip blend (0.0, 1.0)
+PASS  2. walk backward 0.56 m/s (0.55) with walk_back clip, body keeps facing the camera (turned 0 deg)
+PASS  3. side steps right 0.59 / left 0.59 m/s (0.6) with strafe clips (blend x 1.00 / -1.00)
+PASS  4. diagonal forward-right 0.75 m/s, travel (0.71, 0.0, -0.71), blend (0.71, 0.71) (forward + side)
+PASS  5. run 4.51 m/s (4.5 configurable), accelerated (speed after 2 s 4.51)
+PASS  7. smooth stops: run -> stop_run in 1.60 s over 2.6 m; walk -> stop_walk in 1.90 s
+PASS  6. turn on the spot: stepping turn seen true, turned 180 deg, moved 0.31 m meanwhile
+PASS  8. standing jump: 0.73 m high, phases [&"jump_start", &"air", &"jump_land", &"ground"], stays in place (0.00 m), ends 'ground'
+PASS  9. running jump keeps momentum: 4.51 m/s before, >= 4.50 in the air, 4.51 after, state 'ground'
+PASS 10. landing after walking off a 1.2 m ledge: fall true -> land true -> ground, on floor true
+PASS 11. auto step-up 0.20 m (no jump button): y = 0.201
+PASS 11. auto step-up 0.30 m (no jump button): y = 0.301
+PASS 11. 0.40 m ledge (> 0.30 limit) is NOT climbed automatically: y = 0.001
+PASS 12. stairs up 12 x 0.17 m: reached 2.04 m, no jump/fall states (false)
+PASS 13. stairs down: back at y = 0.00, no landing animation (false), feet adapted (IK error 0.000 m)
+PASS 14. 20 deg slope walkable: climbed to the top y = 2.72 (2.74), foot IK active (pelvis drop up to 0.156 m)
+PASS 14. 50 deg slope (> 40 deg limit) not climbable: y = 0.00
+PASS 15. walking into a wall: stopped at z = -11.50 (wall at -11.8), real speed 0.00 m/s, walk-blend 0.00 (legs stop)
+PASS 21. camera rotates from a swipe: yaw +95 deg, pitch -27 deg (limits -65..30)
+PASS 22. camera at a wall: pulled in to 0.54 m (normal 3.6), view not through the wall (true); back out smoothly to 3.60 (max step 0.000 m/frame)
+PASS 23. multitouch: walking (moved 0.75 m) + camera swipe (56 deg) + JUMP (true) at the same time
+PASS 16. into the water: shallow true -> medium true (slowed to 0.78 m/s) -> swimming true, splashes true
+PASS 17. swimming: state 'swim', turns while swimming (27 deg), rides the waves (±0.01 m), camera above water (0.44 > -1.60)
+PASS 18. back out of the water: mode 0 (0 dry), on floor true, no teleport (max 0.02 m/frame)
+PASS 26. footsteps by surface on real foot contact: asphalt:asphalt 4 steps/3 s (idle 0, y 2.12), grass:grass 4 steps/3 s (idle 0, y 0.70), sand:sand 4 steps/3 s (idle 0, y -0.23)
+PASS 19. get in: ACTION label «СЕСТЬ», walked to the door, door anim true, sit-down anim true, driving true after 2.7 s, no jump through the body (max 0.08 m/frame)
+PASS 20. get out: car stopped, get-up anim true, on foot beside the door (1.4 m), on floor true, not inside the car/wall (0 overlaps), walker camera true
+PASS 24. arms outside the body in every locomotion clip (run, stop_run, stop_walk, strafe_left, strafe_right, walk, walk_back + idle): worst clearance -0.003 m, max 1.1 % frames touching (run arms swing closest)
+PASS 25. cost of the walking character (controller + AnimationTree + foot IK 2 rays + camera cast + audio): 0.05 ms per physics frame on this CPU (target < 1.5 ms; Android device not available)

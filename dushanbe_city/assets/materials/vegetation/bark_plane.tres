@@ -1,0 +1,15 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/bark.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/bark_plane/albedo.jpg" id="t0"]
+[ext_resource type="Texture2D" path="res://assets/textures/bark_plane/normal.png" id="t1"]
+[ext_resource type="Texture2D" path="res://assets/textures/bark_plane/orm.png" id="t2"]
+
+[resource]
+resource_name = "bark_plane"
+shader = ExtResource("s")
+shader_parameter/albedo_tex = ExtResource("t0")
+shader_parameter/normal_tex = ExtResource("t1")
+shader_parameter/orm_tex = ExtResource("t2")
+shader_parameter/whitewash_chance = 0.55
+shader_parameter/use_instance_custom = true

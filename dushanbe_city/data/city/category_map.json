@@ -1,0 +1,223 @@
+{
+ "_note": "Категории плана города -> id ассетов из data/vegetation_catalog.json и data/props_catalog.json. Несколько id = случайный выбор по позиции.",
+ "aircon": [
+  "ph_aircon_outdoor_unit",
+  "ph_aircon_outdoor_unit",
+  "ph_aircon_outdoor_unit_rusted"
+ ],
+ "aircon_roof": [
+  "ph_aircon_outdoor_unit"
+ ],
+ "ambulance_canopy": [
+  "canopy_porch_metal"
+ ],
+ "avenue_tree": [
+  "chinar_mature",
+  "chinar_middle",
+  "chinar_middle",
+  "elm_a",
+  "elm_b"
+ ],
+ "bench_courtyard": [
+  "bench_courtyard"
+ ],
+ "bench_entrance": [
+  "bench_courtyard",
+  "bench_concrete_slats"
+ ],
+ "bench_park": [
+  "bench_park_soviet",
+  "bench_park_soviet",
+  "bench_modern_metal"
+ ],
+ "bench_street": [
+  "bench_modern_metal",
+  "bench_concrete_slats"
+ ],
+ "bike_rack": [
+  "bike_rack_5"
+ ],
+ "boulder": [
+  "boulder_a",
+  "boulder_b",
+  "boulder_c"
+ ],
+ "bus_stop": [
+  "bus_stop_shelter"
+ ],
+ "carpet_bar": [
+  "carpet_beating_bar"
+ ],
+ "chinar": [
+  "chinar_mature",
+  "chinar_middle"
+ ],
+ "container_site": [
+  "container_site"
+ ],
+ "courtyard_tree": [
+  "chinar_mature",
+  "elm_a",
+  "elm_b",
+  "mulberry",
+  "acacia",
+  "poplar_a"
+ ],
+ "drying_poles": [
+  "clothes_drying_poles"
+ ],
+ "elm": [
+  "elm_a",
+  "elm_b"
+ ],
+ "fence_hospital": [
+  "fence_decorative_15"
+ ],
+ "fence_lawn_park": [
+  "fence_lawn_hoop_white"
+ ],
+ "fence_low": [
+  "fence_lawn_hoop_green",
+  "fence_lawn_hoop_white"
+ ],
+ "fence_median": [
+  "fence_lawn_hoop_white"
+ ],
+ "fence_school": [
+  "fence_school_brick"
+ ],
+ "flagpole": [],
+ "flowers": [
+  "flowers_marigold",
+  "flowers_petunia",
+  "flowers_salvia"
+ ],
+ "fruit": [
+  "mulberry",
+  "acacia",
+  "mulberry"
+ ],
+ "goal": [],
+ "grape_trellis": [],
+ "havli_gate": [
+  "gate_havli_blue",
+  "gate_havli_green"
+ ],
+ "horizontal_bar": [
+  "playground_hbar"
+ ],
+ "kiosk": [
+  "electrical_cabinet"
+ ],
+ "lamp_avenue": [
+  "light_avenue_double"
+ ],
+ "lamp_park": [
+  "light_park_4m"
+ ],
+ "lamp_street": [
+  "light_street_single"
+ ],
+ "median_shrub": [
+  "thuja_oval",
+  "shrub_lilac",
+  "rose_bush",
+  "thuja_cone"
+ ],
+ "metal_garage": [],
+ "mulberry": [
+  "mulberry"
+ ],
+ "park_tree": [
+  "chinar_mature",
+  "chinar_middle",
+  "elm_a",
+  "elm_b",
+  "acacia",
+  "mulberry"
+ ],
+ "poplar": [
+  "poplar_a",
+  "poplar_b"
+ ],
+ "power_pole": [
+  "utility_pole_concrete",
+  "utility_pole_wood"
+ ],
+ "rose": [
+  "rose_bush"
+ ],
+ "sandbox": [
+  "playground_sandbox_mushroom"
+ ],
+ "sat_dish": [
+  "satellite_dish_060",
+  "satellite_dish_090"
+ ],
+ "school_sign": [],
+ "shrub": [
+  "shrub_lilac",
+  "shrub_lilac",
+  "thuja_oval",
+  "rose_bush"
+ ],
+ "sign_bus_stop": [
+  "sign_5_16"
+ ],
+ "sign_crossing": [
+  "sign_5_19_1"
+ ],
+ "sign_parking": [
+  "sign_6_4"
+ ],
+ "slide": [
+  "playground_slide"
+ ],
+ "street_tree": [
+  "elm_a",
+  "elm_b",
+  "chinar_middle",
+  "acacia",
+  "elm_a",
+  "sapling"
+ ],
+ "swing": [
+  "playground_swing"
+ ],
+ "table_benches": [
+  "courtyard_table_benches"
+ ],
+ "tapchan": [
+  "tapchan"
+ ],
+ "thuja": [
+  "thuja_cone",
+  "thuja_oval"
+ ],
+ "traffic_light": [
+  "traffic_light_pole"
+ ],
+ "traffic_light_ped": [
+  "traffic_light_ped"
+ ],
+ "tree_grate": [],
+ "urn": [
+  "urn_concrete_round",
+  "urn_tilting",
+  "bin_modern_steel"
+ ],
+ "coast_tree": [
+  "acacia",
+  "elm_a",
+  "mulberry"
+ ],
+ "hill_tree": [
+  "elm_b",
+  "poplar_a",
+  "chinar_middle"
+ ],
+ "coast_shrub": [
+  "shrub_lilac",
+  "thuja_oval"
+ ]
+}

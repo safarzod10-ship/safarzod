@@ -1,0 +1,14 @@
+PASS idle: lowest foot/toe joint height 0.035 m (0.0..0.12)
+PASS walk 1.00 m/s: contact-point slide 0.017 m/s (2% of speed, < 5%)
+PASS feet on the ground: idle ankle 0.091 m (rest 0.090 ± 0.025)
+PASS run 4.00 m/s: contact-point slide 0.080 m/s (2% of speed, < 5%)
+PASS curb 0.15 m climbed: y=0.151, z=-16.70
+PASS step 0.30 m climbed: y=0.301
+PASS jump height 0.73 m (0.6..0.85, human standing jump)
+PASS landed on floor: y=0.000
+PASS jump states ["jump_start", "air", "jump_land", "ground"]
+PASS take-off after the mocap push-off: body leaves ground at 0.25 s (0.2..0.3)
+PASS punch standing: active=true, alternates jab/cross=true, feet still (moved 0.002 m)
+PASS punch mashing does not stack (queue is a single flag)
+PASS punch while walking: punching=true, keeps walking at 1.00 m/s
+PASS running jump: 4.00 m/s before, >= 4.00 m/s in the air, state after landing 'ground'

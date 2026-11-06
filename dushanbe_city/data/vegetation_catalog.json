@@ -1,0 +1,338 @@
+{
+ "assets": [
+  {
+   "crown_radius": 16.9516716003418,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/chinar_mature_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/chinar_mature_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/chinar_mature_lod1.res"
+   },
+   "height": 25.9874134063721,
+   "id": "chinar_mature",
+   "kind": "tree",
+   "latin": "Platanus orientalis",
+   "ru": "чинар (платан восточный), взрослый",
+   "trunk_radius": 0.62,
+   "visibility": {
+    "far_end": 700,
+    "lod0_end": 70,
+    "lod1_end": 180
+   }
+  },
+  {
+   "crown_radius": 8.75069904327393,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/chinar_middle_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/chinar_middle_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/chinar_middle_lod1.res"
+   },
+   "height": 18.3751773834229,
+   "id": "chinar_middle",
+   "kind": "tree",
+   "latin": "Platanus orientalis",
+   "ru": "чинар, средний",
+   "trunk_radius": 0.42,
+   "visibility": {
+    "far_end": 650,
+    "lod0_end": 60,
+    "lod1_end": 160
+   }
+  },
+  {
+   "crown_radius": 5.64066696166992,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/elm_a_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/elm_a_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/elm_a_lod1.res"
+   },
+   "height": 13.7708539962769,
+   "id": "elm_a",
+   "kind": "tree",
+   "latin": "Ulmus pumila",
+   "ru": "карагач (вяз приземистый)",
+   "trunk_radius": 0.32,
+   "visibility": {
+    "far_end": 600,
+    "lod0_end": 55,
+    "lod1_end": 150
+   }
+  },
+  {
+   "crown_radius": 5.25953769683838,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/elm_b_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/elm_b_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/elm_b_lod1.res"
+   },
+   "height": 11.6798553466797,
+   "id": "elm_b",
+   "kind": "tree",
+   "latin": "Ulmus densa",
+   "ru": "карагач густой",
+   "trunk_radius": 0.28,
+   "visibility": {
+    "far_end": 600,
+    "lod0_end": 55,
+    "lod1_end": 150
+   }
+  },
+  {
+   "crown_radius": 3.61863803863525,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/poplar_a_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/poplar_a_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/poplar_a_lod1.res"
+   },
+   "height": 23.5380115509033,
+   "id": "poplar_a",
+   "kind": "tree",
+   "latin": "Populus nigra 'Italica'",
+   "ru": "тополь пирамидальный",
+   "trunk_radius": 0.35,
+   "visibility": {
+    "far_end": 700,
+    "lod0_end": 60,
+    "lod1_end": 170
+   }
+  },
+  {
+   "crown_radius": 2.85129594802856,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/poplar_b_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/poplar_b_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/poplar_b_lod1.res"
+   },
+   "height": 19.0473537445068,
+   "id": "poplar_b",
+   "kind": "tree",
+   "latin": "Populus nigra 'Italica'",
+   "ru": "тополь пирамидальный, молодой",
+   "trunk_radius": 0.28,
+   "visibility": {
+    "far_end": 650,
+    "lod0_end": 60,
+    "lod1_end": 160
+   }
+  },
+  {
+   "crown_radius": 6.29894924163818,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/acacia_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/acacia_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/acacia_lod1.res"
+   },
+   "height": 13.4550771713257,
+   "id": "acacia",
+   "kind": "tree",
+   "latin": "Robinia pseudoacacia",
+   "ru": "акация белая",
+   "trunk_radius": 0.3,
+   "visibility": {
+    "far_end": 600,
+    "lod0_end": 55,
+    "lod1_end": 150
+   }
+  },
+  {
+   "crown_radius": 4.76120948791504,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/mulberry_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/mulberry_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/mulberry_lod1.res"
+   },
+   "height": 8.15241718292236,
+   "id": "mulberry",
+   "kind": "tree",
+   "latin": "Morus alba",
+   "ru": "тутовник (шелковица белая)",
+   "trunk_radius": 0.3,
+   "visibility": {
+    "far_end": 450,
+    "lod0_end": 45,
+    "lod1_end": 120
+   }
+  },
+  {
+   "crown_radius": 1.4168713092804,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/sapling_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/sapling_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/sapling_lod1.res"
+   },
+   "height": 3.99797773361206,
+   "id": "sapling",
+   "kind": "tree",
+   "latin": "Ulmus sp.",
+   "ru": "саженец с опорами",
+   "trunk_radius": 0.06,
+   "visibility": {
+    "far_end": 250,
+    "lod0_end": 35,
+    "lod1_end": 90
+   }
+  },
+  {
+   "crown_radius": 1.84639191627502,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/thuja_cone_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/thuja_cone_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/thuja_cone_lod1.res"
+   },
+   "height": 6.09464740753174,
+   "id": "thuja_cone",
+   "kind": "tree",
+   "latin": "Platycladus orientalis",
+   "ru": "туя восточная, коническая",
+   "trunk_radius": 0.12,
+   "visibility": {
+    "far_end": 400,
+    "lod0_end": 40,
+    "lod1_end": 110
+   }
+  },
+  {
+   "crown_radius": 1.84567666053772,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/thuja_oval_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/thuja_oval_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/thuja_oval_lod1.res"
+   },
+   "height": 3.86580467224121,
+   "id": "thuja_oval",
+   "kind": "tree",
+   "latin": "Platycladus orientalis",
+   "ru": "туя восточная, овальная",
+   "trunk_radius": 0.12,
+   "visibility": {
+    "far_end": 400,
+    "lod0_end": 40,
+    "lod1_end": 110
+   }
+  },
+  {
+   "crown_radius": 1.70363831520081,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/shrub_lilac_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/shrub_lilac_lod0.res",
+    "lod1": "res://assets/models/vegetation/meshes/shrub_lilac_lod1.res"
+   },
+   "height": 2.72155284881592,
+   "id": "shrub_lilac",
+   "kind": "shrub",
+   "latin": "Syringa vulgaris",
+   "ru": "сирень",
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 220,
+    "lod0_end": 35,
+    "lod1_end": 90
+   }
+  },
+  {
+   "crown_radius": 0.856152236461639,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/rose_bush_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/rose_bush_lod0.res"
+   },
+   "height": 1.15322363376617,
+   "id": "rose_bush",
+   "kind": "shrub",
+   "latin": "Rosa hybrida",
+   "ru": "роза",
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 150,
+    "lod0_end": 30,
+    "lod1_end": 70
+   }
+  },
+  {
+   "crown_radius": 1.20922815799713,
+   "files": {
+    "far": "res://assets/models/vegetation/meshes/hedge_privet_far.res",
+    "lod0": "res://assets/models/vegetation/meshes/hedge_privet_lod0.res"
+   },
+   "height": 1.14019680023193,
+   "id": "hedge_privet",
+   "kind": "hedge",
+   "latin": "Ligustrum vulgare",
+   "ru": "живая изгородь (бирючина)",
+   "segment_length": 2.0,
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 250,
+    "lod0_end": 50,
+    "lod1_end": 120
+   }
+  },
+  {
+   "crown_radius": 0.272745668888092,
+   "files": {
+    "lod0": "res://assets/models/vegetation/meshes/flowers_marigold_lod0.res"
+   },
+   "height": 0.30651992559433,
+   "id": "flowers_marigold",
+   "kind": "flower",
+   "latin": "Tagetes",
+   "ru": "бархатцы",
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 45,
+    "lod0_end": 30,
+    "lod1_end": 45
+   }
+  },
+  {
+   "crown_radius": 0.315742194652557,
+   "files": {
+    "lod0": "res://assets/models/vegetation/meshes/flowers_petunia_lod0.res"
+   },
+   "height": 0.185673907399178,
+   "id": "flowers_petunia",
+   "kind": "flower",
+   "latin": "Petunia",
+   "ru": "петуния",
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 45,
+    "lod0_end": 30,
+    "lod1_end": 45
+   }
+  },
+  {
+   "crown_radius": 0.233663767576218,
+   "files": {
+    "lod0": "res://assets/models/vegetation/meshes/flowers_salvia_lod0.res"
+   },
+   "height": 0.358227372169495,
+   "id": "flowers_salvia",
+   "kind": "flower",
+   "latin": "Salvia splendens",
+   "ru": "сальвия",
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 45,
+    "lod0_end": 30,
+    "lod1_end": 45
+   }
+  },
+  {
+   "crown_radius": 0.154647976160049,
+   "files": {
+    "lod0": "res://assets/models/vegetation/meshes/grass_clump_a_lod0.res"
+   },
+   "height": 0.290195733308792,
+   "id": "grass_clump_a",
+   "kind": "grass",
+   "latin": "Poa / Lolium",
+   "ru": "газонная трава",
+   "trunk_radius": null,
+   "visibility": {
+    "far_end": 30,
+    "lod0_end": 30,
+    "lod1_end": 30
+   }
+  }
+ ],
+ "version": 1
+}

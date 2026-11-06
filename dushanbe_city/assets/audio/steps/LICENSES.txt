@@ -1,0 +1,9 @@
+Footstep sounds — all CC0 1.0, from OpenGameArt.org, converted to mono Ogg (filters noted):
+
+asphalt_1..6   "Fantozzi's Footsteps (Grass/Sand & Stone)" — Stone L1-3/R1-3 — https://opengameart.org/content/fantozzis-footsteps-grasssand-stone — CC0
+tiles_1..6     same Stone takes, high-pass 300 Hz (harder, brighter paving tiles)
+sand_1..6      same pack — Sand L1-3/R1-3
+grass_1..6     same Sand takes, low-pass 2.5 kHz, -3 dB (soft ground / lawn; no dedicated grass recording in the pack)
+earth_1..6     "42 snow and gravel footsteps" (Corsica_S, extracted by Iwan Gabovitch) — gravel takes 01-06, trimmed 0.45 s
+               https://opengameart.org/content/42-snow-and-gravel-footsteps — CC0
+hard_1..6      "Footsteps" — https://opengameart.org/content/footsteps-0 — CC0 (stairs, promenade, indoor-like hard floors)

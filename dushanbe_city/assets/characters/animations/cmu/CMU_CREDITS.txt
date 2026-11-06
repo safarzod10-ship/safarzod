@@ -1,0 +1,12 @@
+Motion capture data: CMU Graphics Lab Motion Capture Database, http://mocap.cs.cmu.edu
+"The data used in this project was obtained from mocap.cs.cmu.edu.
+The database was created with funding from NSF EIA-0196217."
+BVH conversion: cgspeed (Bruce Hahne), mirrored at https://github.com/Shriinivas/cmubvh.
+Terms: free to use for any purpose, including commercial products; credit to CMU requested.
+
+Clips used in player_mocap.res (stage 4):
+  16_16 walk (forward)            09_09 run                 16_01 standing jump + idle
+  136_25 normal walk backwards    113_18 walk sideways (right, then left)
+  16_33 slow walk, stop           127_05 run to quick stop
+Evaluated, not used: 07_12, 35_17, 16_15, 16_35, 16_36, 16_46, 16_55, 132_17, 132_18, 91_17, 81_04,
+  35_18, 35_01, 09_01-09_11, 113_01, 39_11, 16_17, 16_19, 113_19, 127_03, 139_10.

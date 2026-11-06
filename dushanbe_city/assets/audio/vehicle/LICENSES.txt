@@ -1,0 +1,57 @@
+Prado sounds (stage 5). Every file is a cut / filtered / level-matched piece of a REAL recording.
+Nothing is synthesised. Cutting tool: dushanbe_city_src/tools/vehicle/cut_prado_audio.py
+(the raw downloads are kept in dushanbe_city_src/raw/sounds/car5/<freesound id>_*.mp3).
+All Freesound sounds below are CC0 1.0 (public domain dedication, verified on each sound's page,
+2026-11-05). Attribution is not required but is given.
+
+HONEST NOTE ABOUT THE ENGINE: no freely licensed recording of a Toyota Land Cruiser Prado J150
+engine was found. The idle / 1330 rpm layers, the start and the stop are a recording of a
+Toyota Hilux diesel (the Hilux and the Prado 150 share the KD / 1GD-FTV 4-cylinder turbo-diesel
+families; the exact engine of the recorded Hilux is not stated by the author). The 1880 rpm and
+3800 rpm layers are a 1.5 l 4-cylinder diesel (Peugeot 3008 BlueHDi), i.e. a REPLACEMENT of the
+same engine type (4-cylinder common-rail turbo-diesel), not a Prado.
+
+engine (WAV loops, 32 kHz mono; *_off = same recording low-passed 650 Hz, -5 dB: lift-off layer)
+  eng_idle(.wav, _off)   Hilux diesel idle, firing 24.5 Hz (~735 rpm)      379914, 29.55-31.45 s
+  eng_low (.wav, _off)   Hilux diesel ~1330 rpm, firing 44.35 Hz            379914, 54.90-57.55 s
+  eng_mid (.wav, _off)   4-cyl 1.5 diesel ~1880 rpm, firing 62.65 Hz         865222, 13.00-13.86 s
+  eng_high(.wav, _off)   4-cyl 1.5 diesel ~3850 rpm, firing 128.2 Hz         865222, 16.95-17.76 s
+  engine_start.ogg       Hilux starter + catch                               379914, 22.20-25.00 s
+  engine_stop.ogg        Hilux shut-down                                     379914, 33.45-35.60 s
+    379914 "4WD Engine & Rev" by Alex_hears_things   https://freesound.org/s/379914/  CC0
+    865222 "3008gtrevving.wav" by Mihacappy          https://freesound.org/s/865222/  CC0
+           (the author asks that the sound not be used to train AI models; it is used only as game audio)
+
+doors / lock
+  door_open.ogg    556690 "Car Door open and close 3.wav" by NachtmahrTV   https://freesound.org/s/556690/  CC0
+  door_close.ogg   379912 "Close Car Door in Shed.wav" by Alex_hears_things (Hilux) https://freesound.org/s/379912/ CC0
+  door_handle.ogg  50697  "Car Door Handle.wav" by RutgerMuller            https://freesound.org/s/50697/   CC0
+  door_lock.ogg    433590 "Car locking" by jackthemurray                   https://freesound.org/s/433590/  CC0
+
+collisions
+  crash_medium.ogg 420356 "Crash.wav" by CogFireStudios                    https://freesound.org/s/420356/  CC0
+  crash_heavy.ogg  237375 "Car Crash" by squareal                          https://freesound.org/s/237375/  CC0
+  crash_glass.ogg  592388 "Car Crash (with Glass)" by magnuswaker          https://freesound.org/s/592388/  CC0
+  hit_metal_*.ogg, bump_*.ogg, glass_hit.ogg (light knocks, suspension bumps)
+                   "75 CC0 breaking / falling / hit sfx" — OpenGameArt, CC0
+                   (https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx)
+
+tyres / road
+  tyre_squeal.wav  71739  "Chrysler LHS tire squeal 04" by audible-edge     https://freesound.org/s/71739/   CC0
+  tyre_skid.ogg    71741  "Nissan Maxima handbrake turn" by audible-edge    https://freesound.org/s/71741/   CC0
+  roll_gravel.wav  341069 "gravel road" by seth-m                           https://freesound.org/s/341069/  CC0
+  roll_sand.wav    same recording as roll_gravel, low-passed 1.3 kHz (soft loose sand)
+  roll_asphalt.wav 495795 "Car driving ambience" by priesjensen             https://freesound.org/s/495795/  CC0
+  road_interior.wav 237374 "Car Driving Interior" by squareal              https://freesound.org/s/237374/  CC0
+
+other
+  parking_brake.ogg "Car Sound Effects Pack (low quality)" — OpenGameArt, CC0
+                    (https://opengameart.org/content/car-sound-effects-pack-low-quality)
+
+Downloaded but not used in the game (kept as raw sources for later stages): 810717 land cruiser
+drive past (geoffvt), 443319 diesel start-idle-revs (DAVESTALKER), 610771 Ram Cummins (Therancher01),
+874835 car over gravel (loganzsound), 558146 / 86232 doors, 396448 lock (hz37), 401558, 250009,
+519577, 637914 — all CC0.
+Removed in stage 5: the OpenGameArt "racing car engine sound loops" (petrol racing engine, wrong
+type), the generated road_noise.wav (not a recording) and qubodup's CC-BY squeal (replaced by a
+CC0 recording).

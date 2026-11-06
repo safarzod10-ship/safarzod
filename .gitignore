@@ -37,3 +37,7 @@ Thumbs.db
 # Temporary renders (keep curated docs/screenshots only)
 renders/
 tmp/
+# city stage: raw downloads are re-fetchable by scripts
+dushanbe_city_src/raw/
+dushanbe_city/assets/city/test/
+dushanbe_city_src/build/

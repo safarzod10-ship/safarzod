@@ -1,0 +1,24 @@
+PASS step 0.10 m climbed walking: y=0.101
+PASS step 0.10 m climbed running: y=0.101
+PASS step 0.20 m climbed walking: y=0.201
+PASS step 0.20 m climbed running: y=0.201
+PASS step 0.25 m climbed walking: y=0.251
+PASS step 0.25 m climbed running: y=0.251
+PASS step 0.30 m climbed walking: y=0.301
+PASS step 0.30 m climbed running: y=0.301
+PASS step 0.40 m (above the 0.30 m limit) blocked: y=0.001, z=-2.70
+PASS staircase up (12 × 0.17 m): top y=2.041, 12 step-ups
+PASS staircase up: model moves smoothly, max 0.045 m per frame (a pop would be 0.17)
+PASS staircase up: camera moves smoothly, max vertical speed 1.10 m/s (a pop would be ~10)
+PASS staircase up: no jump/landing states, states seen ["ground"]
+PASS jump on the stairs: +0.73 m
+PASS staircase down: bottom y=0.000
+PASS staircase down: model max 0.050 m per frame, camera max 0.73 m/s
+PASS staircase down: no landing animation, states seen ["ground"]
+PASS step down 0.30 m: y=0.000, model max 0.003 m per frame, camera max 0.00 m/s, states ["ground"]
+PASS 20° ramp walkable: y=2.72
+PASS 50° ramp (> 40° limit) not climbed: y=0.00
+PASS 1.2 m wall blocks: y=0.000, z=-2.70
+PASS narrow 4 cm edge is not used as a step: y=0.001
+PASS step under a low ceiling (1.5 m clear) not climbed: y=0.001, z=-2.70
+PASS running jump onto a 0.5 m box: y=0.501

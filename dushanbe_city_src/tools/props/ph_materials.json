@@ -1,0 +1,232 @@
+{
+ "materials": {
+  "exterior_aircon_unit_01": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "exterior_aircon_unit_01_albedo.jpg",
+   "normal": "exterior_aircon_unit_01_normal.jpg",
+   "orm": "exterior_aircon_unit_01_orm.jpg"
+  },
+  "exterior_aircon_unit_02": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "scissor",
+   "albedo": "exterior_aircon_unit_02_albedo.png",
+   "normal": "exterior_aircon_unit_02_normal.jpg",
+   "orm": "exterior_aircon_unit_02_orm.jpg"
+  },
+  "exterior_aircon_unit_rusted_01": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "exterior_aircon_unit_rusted_01_albedo.jpg",
+   "normal": "exterior_aircon_unit_rusted_01_normal.jpg",
+   "orm": "exterior_aircon_unit_rusted_01_orm.jpg"
+  },
+  "exterior_aircon_unit_rusted_02": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "scissor",
+   "albedo": "exterior_aircon_unit_rusted_02_albedo.png",
+   "normal": "exterior_aircon_unit_rusted_02_normal.jpg",
+   "orm": "exterior_aircon_unit_rusted_02_orm.jpg"
+  },
+  "plastic_monobloc_chair_01": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "plastic_monobloc_chair_01_albedo.jpg",
+   "normal": "plastic_monobloc_chair_01_normal.jpg",
+   "orm": "plastic_monobloc_chair_01_orm.jpg"
+  },
+  "concrete_road_barrier_02": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "concrete_road_barrier_02_albedo.jpg",
+   "normal": "concrete_road_barrier_02_normal.jpg",
+   "orm": "concrete_road_barrier_02_orm.jpg"
+  },
+  "plastic_crate_02": {
+   "albedo_color": [
+    1,
+    0.40816283226013184,
+    0,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1.0,
+   "double_sided": false,
+   "alpha": "opaque",
+   "albedo": "plastic_crate_02_albedo.jpg",
+   "normal": "plastic_crate_02_normal.jpg",
+   "orm": "plastic_crate_02_orm.jpg"
+  },
+  "barrel_03": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "barrel_03_albedo.jpg",
+   "normal": "barrel_03_normal.jpg",
+   "orm": "barrel_03_orm.jpg"
+  },
+  "trashbag": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "trashbag_albedo.jpg",
+   "normal": "trashbag_normal.jpg",
+   "orm": "trashbag_orm.jpg"
+  },
+  "rollershutter_door": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "rollershutter_door_albedo.jpg",
+   "normal": "rollershutter_door_normal.jpg",
+   "orm": "rollershutter_door_orm.jpg"
+  },
+  "rollershutter_window_01": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "rollershutter_window_01_albedo.jpg",
+   "normal": "rollershutter_window_01_normal.jpg",
+   "orm": "rollershutter_window_01_orm.jpg"
+  },
+  "security_camera_02": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "security_camera_02_albedo.jpg",
+   "normal": "security_camera_02_normal.jpg",
+   "orm": "security_camera_02_orm.jpg"
+  },
+  "planter_pot_clay": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "planter_pot_clay_albedo.jpg",
+   "normal": "planter_pot_clay_normal.jpg",
+   "orm": "planter_pot_clay_orm.jpg"
+  },
+  "potted_plant_04": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "potted_plant_04_albedo.jpg",
+   "normal": "potted_plant_04_normal.jpg",
+   "orm": "potted_plant_04_orm.jpg"
+  },
+  "cardboard_box_01": {
+   "albedo_color": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "metallic": 0,
+   "roughness": 1.0,
+   "double_sided": true,
+   "alpha": "opaque",
+   "albedo": "cardboard_box_01_albedo.jpg",
+   "normal": "cardboard_box_01_normal.jpg",
+   "orm": "cardboard_box_01_orm.jpg"
+  }
+ },
+ "remap": {
+  "security_camera_02_glass": "glass"
+ }
+}
