@@ -36,6 +36,16 @@ export const config = Object.freeze({
     expireMs: Number(env('BASKET_EXPIRE_MS', String(60 * 60 * 1000))), // час на сбор троих
   }),
 
+  // Racket Crash: лимиты и перевес (значения по умолчанию — из моделирования, см. README)
+  crash: Object.freeze({
+    houseEdge: Number(env('CRASH_HOUSE_EDGE', '0.05')),
+    minBet: Number(env('CRASH_MIN_BET', '5')),
+    maxBet: Number(env('CRASH_MAX_BET', '100')),
+    maxWin: Number(env('CRASH_MAX_WIN', '1500')),
+    maxRoundPayout: Number(env('CRASH_MAX_ROUND_PAYOUT', '4000')),
+    bettingMs: Number(env('CRASH_BETTING_MS', '8000')),
+  }),
+
   limits: Object.freeze({
     maxAmount: 1_000_000,
     minDeposit: 1,

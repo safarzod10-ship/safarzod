@@ -293,8 +293,24 @@ export class Bot {
       `24 часа: ${games('day')}\n` +
       `7 дней: ${games('week')}\n` +
       `30 дней: ${games('month')}\n\n` +
+      this.#crashText() +
       `⏳ Заявки на вывод: <b>${fmt(s.pending.n)}</b>` +
       (s.pending.n ? ` на ${fmt(s.pending.sum)} ⭐` : '')
+    );
+  }
+
+  /** Racket Crash: оборот, выплаты и доход казино за 24 ч / 7 / 30 дней. */
+  #crashText() {
+    if (!this.crashStats) return '';
+    const now = Date.now();
+    const line = (label, ms) => {
+      const c = this.crashStats(now - ms);
+      const sign = c.profit >= 0 ? '+' : '−';
+      return `${label}: оборот ${fmt(c.staked)} ⭐ · доход <b>${sign}${fmt(Math.abs(c.profit))} ⭐</b>`;
+    };
+    return (
+      `🚀 <b>Racket Crash</b>\n` +
+      `${line('24 часа', 86_400_000)}\n${line('7 дней', 7 * 86_400_000)}\n${line('30 дней', 30 * 86_400_000)}\n\n`
     );
   }
 

@@ -10,6 +10,7 @@ import { validateInitData } from './auth.js';
 import { Game } from './game.js';
 import { Bot } from './bot.js';
 import { BasketService } from './basket.js';
+import { CrashService } from './crash.js';
 
 assertProductionConfig();
 
@@ -27,6 +28,7 @@ const MIME = {
 const store = openDb(config.dataDir);
 const game = new Game(store, config.game);
 const basket = new BasketService(store, config.basket);
+const crash = new CrashService(store, config.crash);
 const bot = config.botToken
   ? new Bot({
       token: config.botToken,
@@ -45,6 +47,9 @@ const bot = config.botToken
 // ---------- SSE: состояние раунда всем подключённым клиентам ----------
 const streams = new Set();
 game.on('update', (state) => broadcast('round', state));
+crash.on('update', (state) => broadcast('crash', state));
+crash.on('balance', (id) => broadcast('balance', { id }));
+if (bot) bot.crashStats = (since) => crash.stats(since);
 if (bot) bot.onBalance = (user) => broadcast('balance', { id: user.id }); // клиент сам запросит /api/me
 
 function broadcast(event, data) {
@@ -230,6 +235,25 @@ const routes = {
   },
 
   // ---------- Basketball Rush ----------
+  // ---------- Racket Crash ----------
+  'GET /api/crash': () => crash.publicState(),
+  'GET /api/crash/fair': () => ({ edge: config.crash.houseEdge, rounds: crash.fairness(30) }),
+  'POST /api/crash/bet': async (req) => {
+    const user = authenticate(req);
+    const { amount, auto } = await readJson(req);
+    throttle(user.id, 300);
+    return { ...crash.placeBet(user, amount, auto), ...profile(store.getUser(user.id)) };
+  },
+  'POST /api/crash/cancel': (req) => {
+    const user = authenticate(req);
+    return { ...crash.cancelBet(user.id), ...profile(store.getUser(user.id)) };
+  },
+  'POST /api/crash/cashout': (req) => {
+    const user = authenticate(req);
+    return { ...crash.cashout(user.id), ...profile(store.getUser(user.id)) };
+  },
+  'POST /api/crash/my': (req) => ({ bets: crash.myBets(authenticate(req).id) }),
+
   'POST /api/basket/state': (req) => basket.state(authenticate(req).id),
   'POST /api/basket/play': async (req) => {
     const user = authenticate(req);

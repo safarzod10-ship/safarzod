@@ -2,6 +2,7 @@
 // Всё состояние раунда приходит с сервера (SSE). Клиент только рисует и анимирует.
 
 import { createBasket } from './basket.js';
+import { createCrash } from './crash.js';
 
 const tg = window.Telegram?.WebApp;
 const $ = (id) => document.getElementById(id);
@@ -45,6 +46,14 @@ function setupTelegram() {
   applyInsets();
   tg.onEvent('safeAreaChanged', applyInsets);
   tg.onEvent('contentSafeAreaChanged', applyInsets);
+  // Полноэкранный режим (как у топовых мини-аппов): Telegram рисует компактные кнопки «Закрыть» и ⌄ ⋯ поверх,
+  // контент начинается ниже них — отступ берётся из safeAreaInset + contentSafeAreaInset.
+  tg.onEvent('fullscreenChanged', () => {
+    applyInsets();
+    document.body.classList.toggle('tg-fullscreen', !!tg.isFullscreen);
+    requestAnimationFrame(moveNavIndicator);
+  });
+  document.body.classList.toggle('tg-fullscreen', !!tg.isFullscreen);
   if (at('6.1')) tg.BackButton.onClick(goBack);
 }
 
@@ -135,7 +144,7 @@ const digits = (input) => {
 // ---------- Навигация ----------
 // Вкладки меню: рулетка, игры, задания, друзья, профиль. Остальное — подстраницы со стеком «назад»:
 // «+» у баланса → пополнение; профиль → пополнение/вывод; игры → страница игры → история.
-const SUBPAGES = new Set(['deposit', 'withdraw', 'basket', 'basket-history']);
+const SUBPAGES = new Set(['deposit', 'withdraw', 'basket', 'basket-history', 'crash']);
 const GAME_VIEWS = new Set(['games', 'basket', 'basket-history']);
 
 function go(view, { back = false } = {}) {
@@ -156,6 +165,8 @@ function go(view, { back = false } = {}) {
   if (view === 'tasks') loadTasks();
   if (GAME_VIEWS.has(view)) basket.show();
   else basket.hide();
+  if (view === 'crash') crash.show();
+  else crash.hide();
   moveNavIndicator();
   if (view === 'friends') loadFriends();
   haptic.tap();
@@ -1068,6 +1079,19 @@ function shareRefLink() {
   supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
 }
 
+// ---------- Racket Crash ----------
+const crash = createCrash({
+  api, haptic, toast, avatarHtml, esc, go,
+  me: () => state.me,
+  onProfile: (res) => res.user && applyProfile(res),
+});
+function updateCrashBadge() {
+  const n = crash.players();
+  const b = $('gc-crash-badge');
+  b.hidden = false;
+  b.textContent = n ? `● ${n} в раунде` : '● LIVE';
+}
+
 // ---------- Basketball Rush ----------
 const basket = createBasket({
   api, haptic, toast, avatarHtml, esc, supports, tg, go,
@@ -1085,7 +1109,10 @@ function moveNavIndicator() {
   const nr = nav.getBoundingClientRect();
   const ar = active.getBoundingClientRect();
   ind.style.opacity = '1';
-  ind.style.transform = `translateX(${ar.left - nr.left + ar.width / 2 - ind.offsetWidth / 2}px)`;
+  // подложка охватывает и иконку, и подпись активной вкладки
+  const w = Math.min(ar.width - 6, 76);
+  ind.style.width = `${w}px`;
+  ind.style.transform = `translateX(${ar.left - nr.left + ar.width / 2 - w / 2}px)`;
 }
 window.addEventListener('resize', moveNavIndicator);
 
@@ -1093,6 +1120,10 @@ window.addEventListener('resize', moveNavIndicator);
 function connectStream() {
   const es = new EventSource('/api/stream');
   es.addEventListener('round', (e) => onRound(JSON.parse(e.data)));
+  es.addEventListener('crash', (e) => {
+    crash.onState(JSON.parse(e.data));
+    updateCrashBadge();
+  });
   es.addEventListener('balance', (e) => {
     if (JSON.parse(e.data).id === state.me?.id) refreshMe();
   });
@@ -1112,6 +1143,8 @@ function bindUi() {
   $('bet-input').addEventListener('input', updateBetButton);
   $('bet-chips').addEventListener('click', (e) => e.target.dataset.chip && chooseChip(e.target.dataset.chip));
   basket.bind();
+  crash.bind();
+  document.querySelector('[data-game="crash"]').addEventListener('click', () => go('crash'));
   $('ref-link').addEventListener('click', copyRefLink);
   $('ref-share').addEventListener('click', shareRefLink);
   $('tasks').addEventListener('click', (e) => {
@@ -1152,6 +1185,7 @@ async function main() {
       photo_url: params.get('photo') || '',
     };
   }
+  bootStep(0.12, 'Подключаемся…');
   try {
     state.config = { ...state.config, ...(await api('/api/config')) };
   } catch {}
@@ -1179,21 +1213,49 @@ async function main() {
     if (e.code === 'BLOCKED') return showBlocked();
     toast(e.message, 'err');
   }
+  // Предзагрузка: картинки игр, звуки, данные всех разделов — чтобы дальше ничего не подвисало
+  bootStep(0.35, 'Загружаем игры…');
+  const preload = [
+    ...['/games/racket-crash.webp', '/games/basketball-rush.webp'].map(loadImage),
+    ...['bounce', 'throw', 'crowd'].map((n) => fetch(`/sounds/${n}.mp3`).catch(() => {})),
+    crash.load().then(updateCrashBadge),
+    loadTasks(),
+    basket.resume(),
+  ];
+  let done = 0;
+  preload.forEach((p) => p.finally(() => bootStep(0.35 + (0.6 * ++done) / preload.length)));
+  const [resumed] = await Promise.all([preload.at(-1), Promise.allSettled(preload), new Promise((r) => setTimeout(r, 900))]);
+  bootStep(1, 'Готово');
+
   $('app').hidden = false;
   document.body.dataset.view = 'roulette';
   document.querySelector('#view-roulette').classList.add('active');
   drawBulbs();
   connectStream();
-  loadTasks();
   requestAnimationFrame(moveNavIndicator);
   // Незавершённая игра (обрыв связи, перезапуск Telegram) — сразу возвращаем в неё
-  if (await basket.resume()) {
+  if (resumed) {
     go('games');
     go('basket');
   }
   updateWithdrawForm();
   updateDepositForm();
-  requestAnimationFrame(() => $('boot').classList.add('hide'));
+  setTimeout(() => $('boot').classList.add('hide'), 250);
+  setTimeout(() => $('boot').remove(), 900);
+}
+
+function bootStep(progress, text) {
+  const bar = $('boot-bar');
+  if (bar) bar.style.transform = `scaleX(${Math.max(0.04, Math.min(1, progress))})`;
+  if (text && $('boot-sub')) $('boot-sub').textContent = text;
+}
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = img.onerror = () => resolve();
+    img.src = src;
+  });
 }
 
 function showBlocked() {
