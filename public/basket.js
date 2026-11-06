@@ -22,7 +22,8 @@ const shotsText = (n) => `${fmt(n)} ${plural(n, 'бросок', 'броска', 
 const potOf = (total) => (total <= 9 ? total : total - Math.floor(total / 10));
 
 // ====================== Звук (Web Audio, реальные записи из /sounds) ======================
-const SOUNDS = ['crowd', 'crowd_big', 'swish', 'rim', 'board', 'bounce', 'buzzer', 'tick'];
+// Три звука: удар мяча об пол, бросок, толпа.
+const SOUNDS = ['bounce', 'throw', 'crowd'];
 function createAudio() {
   const a = { ctx: null, buf: {}, on: true };
   try {
@@ -130,6 +131,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   // ====================== Вкладка «Игры» ======================
 
+  /** Страница игры, бейдж на карточке и «История». */
   function renderGamesTab() {
     const st = s.st;
     if (!st) return;
@@ -138,9 +140,31 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     $('gs-wins').textContent = fmt(stats.wins ?? 0);
     $('gs-best').textContent = fmt(stats.best ?? 0);
     $('gs-won').textContent = fmt(stats.won ?? 0);
-    const games = (st.games ?? []).filter((g) => g.me?.status !== 'playing');
-    $('mg-title').hidden = !games.length;
-    $('my-games').innerHTML = games.map(gameCard).join('');
+    const games = st.games ?? [];
+    const active = games.find((g) => g.id === st.activeGameId && g.me?.status !== 'playing');
+    const playing = !!st.session;
+
+    // бейдж на карточке в списке игр
+    const badge = $('gc-badge');
+    badge.hidden = !(playing || active);
+    badge.textContent = playing ? 'Идёт игра' : 'Ждём итогов';
+
+    // кнопка «Играть» и активная игра на странице игры
+    const play = $('gc-play');
+    if (playing) play.innerHTML = '<svg><use href="#i-ball"/></svg>Продолжить игру';
+    else if (active) play.innerHTML = 'Ждём итогов';
+    else play.innerHTML = '<svg><use href="#i-ball"/></svg>Играть';
+    play.classList.toggle('waiting', !!active && !playing);
+    $('bb-active').hidden = !active;
+    $('bb-active').innerHTML = active ? gameCard(active) : '';
+
+    // история
+    $('hist-active').innerHTML = active
+      ? gameCard(active)
+      : `<div class="hist-empty">${playing ? 'Игра идёт прямо сейчас' : 'Нет активной игры'}</div>`;
+    const past = games.filter((g) => g.status !== 'open');
+    $('hist-past-title').hidden = false;
+    $('hist-past').innerHTML = past.length ? past.map(gameCard).join('') : '<div class="hist-empty">Пока нет сыгранных игр</div>';
   }
 
   function gameCard(g) {
@@ -366,6 +390,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     if (!a?.valid || !ballReady()) return;
     const aimMs = Math.round(performance.now() - a.t0);
     if (aimMs < 150) return;
+    s.lastPower = a.power;
     throwBall(a.vx, a.vy, aimMs, a.samples);
   }
 
@@ -379,6 +404,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     };
     s.throwAt = performance.now();
     s.pendingShot = { seq, vx: ivx, vy: ivy, aimMs, samples };
+    audio.play('throw', 0.5 + 0.5 * (s.lastPower ?? 0.5));
     haptic.impact('light');
     sendShot(s.pendingShot, 0);
   }
@@ -414,8 +440,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       pill.classList.remove('bump');
       void pill.offsetWidth;
       pill.classList.add('bump');
-      audio.play('swish', r.swish ? 1 : 0.75);
-      audio.play(r.swish ? 'crowd_big' : 'crowd', r.swish ? 0.95 : 0.55);
+      audio.play('crowd', r.swish ? 1 : 0.55, r.swish ? 1.04 : 1); // чистое попадание — трибуны громче
       haptic.ok();
     }
     if (r.hoop.x !== s.hoop.x || r.hoop.y !== s.hoop.y) setTimeout(() => setHoop(r.hoop, true), 350);
@@ -437,7 +462,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       sub = `Итоги матча · банк ${fmt(g.bank)} ⭐`;
     } else if (g.status === 'refunded') {
       title = 'Ставка возвращена';
-      sub = 'Матч не собрал троих за 12 часов';
+      sub = 'Матч не собрал троих за час';
     } else {
       title = `Ваш результат: ${fmt(g.me.score)}`;
       sub = `Ставка ${fmt(g.stake)} ⭐ · банк ${fmt(g.bank)} ⭐`;
@@ -458,8 +483,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
         : '';
     const html = `<div class="res-title">${title}</div><div class="res-sub">${sub}</div>
       <div class="res-list">${rows.join('')}</div>${waiting}
-      <div class="dock-row"><button class="btn secondary" data-res="close">Готово</button>
-      <button class="btn primary" data-res="again" style="flex:1">Ещё раз</button></div>`;
+      <div class="dock-row"><button class="btn secondary" data-res="history">История</button>
+      <button class="btn primary" data-res="close" style="flex:1">Готово</button></div>`;
     if (el.dataset.html !== html) {
       el.dataset.html = html;
       el.innerHTML = html;
@@ -499,11 +524,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       };
       while (f.contacts.length && f.contacts[0][1] <= el) {
         const [kind] = f.contacts.shift();
-        if (kind === 'rim') {
-          audio.play('rim', 0.7, 0.95 + Math.random() * 0.1);
-          haptic.impact('soft');
-        } else if (kind === 'board') audio.play('board', 0.6);
-        else if (kind === 'floor') audio.play('bounce', 0.5);
+        if (kind === 'floor') audio.play('bounce', 0.55);
+        else haptic.impact('soft');
       }
       if (!f.popped && f.made && el >= f.madeT && s.serverShot?.seq === f.seq) {
         f.popped = true;
@@ -1032,17 +1054,13 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
         ov.dataset.k = `c${n}`;
         ov.innerHTML = `<div class="bb-count">${n}</div><div class="bb-count-sub">Приготовьтесь</div>`;
         ov.hidden = false;
-        audio.play('tick', 0.6);
         haptic.impact('light');
       }
       return;
     }
     const left = timeLeft();
     const sec = Math.ceil(left / 1000);
-    if (sec !== lastSec && sec <= 5 && sec > 0 && !s.ended) {
-      audio.play('tick', 0.7);
-      haptic.impact('light');
-    }
+    if (sec !== lastSec && sec <= 5 && sec > 0 && !s.ended) haptic.impact('light');
     lastSec = sec;
     const over = (left <= 0 || s.ended) && !s.flight && !s.pendingShot;
     if (over) {
@@ -1051,7 +1069,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
         ov.innerHTML = `<div class="bb-done-title">Время вышло</div><div class="bb-done-score num">${s.score}</div>
           <div class="bb-count-sub">Подводим итоги…</div>`;
         ov.hidden = false;
-        audio.play('buzzer', 0.8);
         haptic.impact('heavy');
         s.ended = true;
         s.endShownAt = performance.now();
@@ -1067,8 +1084,20 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
   // ====================== Привязка ======================
 
   function bind() {
-    $('gc-play').addEventListener('click', openStakes);
-    $('gc-basket').addEventListener('click', openStakes);
+    document.querySelector('[data-game="basket"]').addEventListener('click', () => {
+      audio.unlock();
+      go('basket');
+    });
+    $('bb-history-btn').addEventListener('click', () => go('basket-history'));
+    $('gc-play').addEventListener('click', () => {
+      if (s.st?.session) return apply(s.st); // вернуться в идущую игру
+      if (s.st?.activeGameId) {
+        haptic.err();
+        toast('Дождитесь итогов текущей игры', 'err');
+        return go('basket-history');
+      }
+      openStakes();
+    });
     $('stakes').addEventListener('click', (e) => {
       const b = e.target.closest('[data-stake]');
       if (!b) return;
@@ -1081,9 +1110,9 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     $('bb-result').addEventListener('click', (e) => {
       const act = e.target.closest('[data-res]')?.dataset.res;
       if (act === 'close') closeGame();
-      if (act === 'again') {
+      if (act === 'history') {
         closeGame();
-        setTimeout(openStakes, 250);
+        go('basket-history');
       }
     });
     $('bb-sound').addEventListener('click', () => {

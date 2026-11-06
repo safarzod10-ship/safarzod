@@ -316,7 +316,7 @@ basket.on('closed', ({ game, entries, refunded }) => {
     broadcast('balance', { id: e.user_id });
     if (!bot) continue;
     if (refunded) {
-      bot.notifyUser(e.user_id, `🏀 Матч #${game.id} не собрал троих за 12 часов — ставка <b>${game.stake} ⭐</b> возвращена на баланс.`);
+      bot.notifyUser(e.user_id, `🏀 Матч #${game.id} не собрал троих за час — ставка <b>${game.stake} ⭐</b> возвращена на баланс.`);
     } else {
       const table = [...entries]
         .sort((a, b) => a.place - b.place)

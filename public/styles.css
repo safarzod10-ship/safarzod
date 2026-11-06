@@ -683,7 +683,7 @@ body.kb .nav { display: none; }
 
 /* ===================== Игры ===================== */
 .game-card {
-  display: block; width: 100%; margin-top: 4px; padding: 0; border-radius: 6.2% / 11.4%;
+  display: block; width: 100%; padding: 0; border-radius: 6.2% / 11.4%;
   filter: drop-shadow(0 14px 30px rgba(110, 60, 220, 0.28));
   transition: transform 0.3s var(--ease), filter 0.3s;
   animation: card-in 0.6s var(--ease);
@@ -700,7 +700,17 @@ body.kb .nav { display: none; }
 .gc-stats div { display: flex; flex-direction: column; align-items: center; padding: 10px 0 8px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .gc-stats b { font-size: 18px; font-weight: 750; }
 .gc-stats span { font-size: 11px; color: var(--text-3); }
-#view-games .section-title { margin: 22px 4px 10px; }
+#view-basket-history .section-title { margin: 18px 4px 10px; }
+.games-list { display: grid; gap: 14px; margin-top: 4px; }
+.game-card { position: relative; }
+.game-card.static { cursor: default; animation: none; }
+.game-card.static:active { transform: none; }
+.gc-badge { position: absolute; right: 7%; top: 9%; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  color: #1f1606; background: var(--gold); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+.gc-rules { margin: 2px 4px 0; font-size: 13px; line-height: 1.45; color: var(--text-3); text-align: center; }
+.active-game { margin-top: 14px; }
+.hist-empty { padding: 18px 12px; text-align: center; color: var(--text-3); font-size: 14px; border-radius: 16px; border: 1px dashed var(--line-strong); }
+#view-basket .dock-row .btn.secondary { padding: 0 20px; }
 .btn-play { gap: 8px; font-size: 17px; }
 .btn-play svg { width: 22px; height: 22px; }
 
@@ -819,3 +829,5 @@ body.bb-playing { overflow: hidden; }
 .res-wait { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; color: var(--text-2); margin-bottom: 14px; }
 .res-wait i { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); animation: pulse 1.2s infinite; }
 .res-prize { color: var(--green); font-weight: 750; }
+.btn-play.waiting { background: var(--surface-2); color: var(--text-2); }
+#view-basket .dock-row { width: 100%; }

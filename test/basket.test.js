@@ -113,14 +113,19 @@ test('«Играть»: сразу своя игра; второй и трети
   assert.throws(() => ctx.svc.play(ctx.users[0], 7), /Нет такой ставки/);
 });
 
-test('нельзя сесть второй раз в свой же матч; пока играешь — «Играть» возвращает в текущую игру', () => {
+test('одна игра за раз: пока матч не закрыт — новую не начать; после итогов — можно, в новый матч', () => {
   const ctx = setup();
   const a = play(ctx, 1, 20);
   assert.equal(play(ctx, 1, 20).gameId, a.gameId, 'вернули в ту же игру, ставка не списана повторно');
   assert.equal(ctx.store.getUser(1).balance, 980);
   finishTime(ctx, 1);
-  const again = play(ctx, 1, 20);
-  assert.notEqual(again.gameId, a.gameId, 'в свой матч второй раз не попасть');
+  assert.equal(ctx.svc.state(1).activeGameId, a.gameId);
+  assert.throws(() => ctx.svc.play(ctx.users[0], 20), (e) => e.code === 'WAIT_RESULT');
+  assert.throws(() => ctx.svc.play(ctx.users[0], 5), (e) => e.code === 'WAIT_RESULT', 'и с другой ставкой тоже');
+  assert.equal(ctx.store.getUser(1).balance, 980);
+  for (const uid of [2, 3]) { play(ctx, uid, 20); finishTime(ctx, uid); }
+  assert.equal(ctx.svc.state(1).activeGameId, null, 'итоги подведены');
+  assert.notEqual(play(ctx, 1, 20).gameId, a.gameId, 'новая игра — в новом матче');
 });
 
 test('ставка больше баланса — отказ без следов', () => {
@@ -148,7 +153,7 @@ test('равные условия: у всех в матче одна после
   const ctx = setup();
   const a = play(ctx, 1);
   const r1 = shot(ctx, 1, 'made');
-  ctx.clock.t += 3_600_000; // второй пришёл через час
+  ctx.clock.t += 30 * 60_000; // второй пришёл через полчаса
   const b = play(ctx, 2);
   assert.deepEqual(b.hoop, a.hoop);
   shot(ctx, 2, 'made');
@@ -208,16 +213,20 @@ test('банк до 9 без комиссии; ничья за 1-е место �
   for (const uid of [1, 2, 3]) assert.equal(ctx.store.getUser(uid).balance, 1000 - 5 + 4);
   const P = (id, score, shots, quality) => ({ user_id: id, score, shots, quality });
   assert.deepEqual(BasketService.rank([P(1, 3, 5, 2.4), P(2, 3, 4, 1.5), P(3, 3, 5, 2.7)]).map((x) => [x.user_id, x.place]), [[2, 1], [3, 2], [1, 3]]);
+  assert.deepEqual(BasketService.rank([P(1, 0, 4, 0), P(2, 0, 0, 0), P(3, 0, 1, 0)]).map((x) => x.place), [1, 1, 1], '0 очков у всех — общее место');
 });
 
-test('12 часов без троих — матч закрывается, ставки возвращаются; игрок посреди игры не мешает возврату позже', () => {
+test('час без троих — матч закрывается, ставки возвращаются; игрок посреди игры не мешает возврату позже', () => {
   const ctx = setup();
   const notices = [];
   ctx.svc.on('closed', (c) => notices.push(c));
   play(ctx, 1, 50); finishTime(ctx, 1);
   play(ctx, 2, 50);
   assert.equal(ctx.store.getUser(1).balance, 950);
-  ctx.clock.t += 12 * 3600_000 + 1;
+  ctx.clock.t += 59 * 60_000;
+  ctx.svc.tick();
+  assert.equal(notices.length, 0, 'через 59 минут ещё ждём');
+  ctx.clock.t += 60_000 + 1;
   ctx.svc.tick();
   assert.equal(notices.length, 1);
   assert.equal(notices[0].refunded, true);

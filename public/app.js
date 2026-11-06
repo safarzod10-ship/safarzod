@@ -20,7 +20,7 @@ const state = {
   round: null,
   clockOffset: 0,
   view: 'roulette',
-  backTo: 'roulette',
+  stack: [], // откуда пришли на подстраницу (для «назад»)
   shownBalance: 0,
 };
 
@@ -133,23 +133,28 @@ const digits = (input) => {
 };
 
 // ---------- Навигация ----------
-// Вкладки меню: рулетка, бонусы, профиль. Пополнение и вывод — подстраницы:
-// открываются из профиля или кнопкой «+» у баланса, «назад» возвращает туда, откуда пришли.
-const SUBPAGES = new Set(['deposit', 'withdraw']);
+// Вкладки меню: рулетка, игры, задания, друзья, профиль. Остальное — подстраницы со стеком «назад»:
+// «+» у баланса → пополнение; профиль → пополнение/вывод; игры → страница игры → история.
+const SUBPAGES = new Set(['deposit', 'withdraw', 'basket', 'basket-history']);
+const GAME_VIEWS = new Set(['games', 'basket', 'basket-history']);
 
-function go(view) {
+function go(view, { back = false } = {}) {
   if (view === state.view) return;
-  if (SUBPAGES.has(view) && !SUBPAGES.has(state.view)) state.backTo = state.view;
+  if (!back) {
+    if (SUBPAGES.has(view)) state.stack.push(state.view);
+    else state.stack = [];
+  }
   state.view = view;
   document.body.dataset.view = view;
-  const tab = SUBPAGES.has(view) ? state.backTo : view;
+  // подсвечиваем вкладку, из которой открыта подстраница
+  const tab = SUBPAGES.has(view) ? state.stack.find((v) => !SUBPAGES.has(v)) ?? 'roulette' : view;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === view));
   document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('active', b.dataset.go === tab));
   window.scrollTo({ top: 0 });
   if (supports('6.1')) view === 'roulette' ? tg.BackButton.hide() : tg.BackButton.show();
   if (view === 'withdraw' || view === 'profile') refreshMe();
   if (view === 'tasks') loadTasks();
-  if (view === 'games') basket.show();
+  if (GAME_VIEWS.has(view)) basket.show();
   else basket.hide();
   moveNavIndicator();
   if (view === 'friends') loadFriends();
@@ -157,7 +162,7 @@ function go(view) {
 }
 
 function goBack() {
-  go(SUBPAGES.has(state.view) ? state.backTo || 'roulette' : 'roulette');
+  go(state.stack.pop() ?? 'roulette', { back: true });
 }
 
 // ---------- Шапка и профиль ----------
@@ -1182,7 +1187,10 @@ async function main() {
   loadTasks();
   requestAnimationFrame(moveNavIndicator);
   // Незавершённая игра (обрыв связи, перезапуск Telegram) — сразу возвращаем в неё
-  if (await basket.resume()) go('games');
+  if (await basket.resume()) {
+    go('games');
+    go('basket');
+  }
   updateWithdrawForm();
   updateDepositForm();
   requestAnimationFrame(() => $('boot').classList.add('hide'));

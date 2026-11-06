@@ -2,8 +2,9 @@
 //
 // «Играть» → выбор суммы → сервер ищет открытый матч с этой ставкой, где есть свободное место
 // и где игрока ещё нет; если такого нет — создаёт новый. Игра начинается сразу, ждать никого не нужно.
-// Когда сыграли трое — подводятся итоги и выплачивается банк. Если за 12 часов набралось меньше трёх
-// игроков — матч закрывается и ставки возвращаются.
+// Когда сыграли трое — подводятся итоги и выплачивается банк. Если за час набралось меньше трёх
+// игроков — матч закрывается и ставки возвращаются. Одновременно у игрока может быть только одна
+// незакрытая игра: новую можно начать, когда подведены итоги предыдущей.
 //
 // Сервер — единственный источник правды:
 //  • клиент присылает только скорость броска; попал ли мяч и было ли касание кольца, сервер считает
@@ -34,7 +35,7 @@ export const BASKET_DEFAULTS = Object.freeze({
   shotTolMs: 150,
   minAimMs: 120,
   minSamples: 3,
-  expireMs: 12 * 60 * 60 * 1000, // матч ждёт троих не дольше 12 часов
+  expireMs: 60 * 60 * 1000, // матч ждёт троих не дольше часа
   houseCut: 0.1, // комиссия с банка (как в рулетке)
   houseFreeUpTo: 9, // банк до 9 включительно — без комиссии
 });
@@ -89,6 +90,8 @@ export class BasketService extends EventEmitter {
     const q = (sql) => db.prepare(sql);
     this.q = {
       active: q("SELECT * FROM basket_entries WHERE user_id = ? AND status = 'playing' LIMIT 1"),
+      openOfUser: q(`SELECT e.game_id FROM basket_entries e JOIN basket_games g ON g.id = e.game_id
+                     WHERE e.user_id = ? AND g.status = 'open' LIMIT 1`),
       findOpen: q(`SELECT g.* FROM basket_games g
                    WHERE g.status = 'open' AND g.stake = :stake
                      AND (SELECT COUNT(*) FROM basket_entries e WHERE e.game_id = g.id) < :players
@@ -129,6 +132,9 @@ export class BasketService extends EventEmitter {
     if (!STAKES.includes(stake)) throw new AppError('BAD_STAKE', 'Нет такой ставки');
     this.tick();
     if (this.q.active.get(user.id)) return this.state(user.id); // уже играет — вернём в игру
+    if (this.q.openOfUser.get(user.id)) {
+      throw new AppError('WAIT_RESULT', 'Дождитесь итогов текущей игры — потом можно сыграть снова', 409);
+    }
     const t = this.now();
     this.store.tx(() => {
       let game = this.q.findOpen.get({ stake, players: this.o.players, user: user.id });
@@ -247,11 +253,12 @@ export class BasketService extends EventEmitter {
   }
 
   /**
-   * Места: больше очков → меньше бросков → точнее в центр кольца; полное равенство — общее место.
+   * Места: больше очков → меньше бросков → точнее в центр кольца; полное равенство (и 0 очков) — общее место.
    * Скорость интернета на результат не влияет.
    */
   static rank(entries) {
-    const key = (p) => [p.score, -p.shots, p.score ? Math.round((p.quality / p.score) * 1e6) : 0];
+    // число бросков сравниваем только при ненулевом счёте: 0 очков — это 0 очков, сколько ни бросай
+    const key = (p) => [p.score, p.score ? -p.shots : 0, p.score ? Math.round((p.quality / p.score) * 1e6) : 0];
     const cmp = (a, b) => {
       const ka = key(a);
       const kb = key(b);
@@ -334,6 +341,7 @@ export class BasketService extends EventEmitter {
         expireMs: this.o.expireMs,
       },
       session,
+      activeGameId: this.q.openOfUser.get(userId)?.game_id ?? null, // незакрытая игра: новую начать нельзя
       games: this.q.myGames.all(userId, 15).map((g) => this.#publicGame(g, userId)),
       stats: { ...this.q.stats.get(userId) },
     };

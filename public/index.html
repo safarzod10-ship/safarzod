@@ -122,13 +122,22 @@
         </div>
       </section>
 
-      <!-- Игры -->
+      <!-- Игры: список игр (карточки) -->
       <section class="view" id="view-games" data-view="games">
         <h1 class="title">Игры</h1>
         <p class="lead">Соревнуйтесь с другими игроками</p>
-        <button class="game-card" id="gc-basket" aria-label="Basketball Rush — играть">
-          <img src="/games/basketball-rush.webp" alt="Basketball Rush" width="1100" height="602" decoding="async">
-        </button>
+        <div class="games-list">
+          <button class="game-card" data-game="basket" aria-label="Открыть Basketball Rush">
+            <img src="/games/basketball-rush.webp" alt="Basketball Rush" width="1100" height="602" decoding="async">
+            <span class="gc-badge" id="gc-badge" hidden></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Basketball Rush: страница игры -->
+      <section class="view" id="view-basket" data-view="basket">
+        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Basketball Rush</h1></div>
+        <div class="game-card static"><img src="/games/basketball-rush.webp" alt="" width="1100" height="602" decoding="async"></div>
         <div class="gc-info">
           <div class="gc-chips">
             <span class="gc-chip"><svg><use href="#i-users"/></svg>3 игрока</span>
@@ -141,10 +150,24 @@
             <div><b class="num" id="gs-best">0</b><span>Рекорд</span></div>
             <div><b class="num" id="gs-won">0</b><span>Выиграно ⭐</span></div>
           </div>
+          <p class="gc-rules">Потяните назад и отпустите. Попадание — +1 очко и +3 секунды, чистое попадание без касания кольца — +5 секунд. Победитель матча из трёх игроков забирает банк.</p>
         </div>
-        <div class="section-title" id="mg-title" hidden>Мои матчи</div>
-        <div class="my-games" id="my-games"></div>
-        <div class="dock"><button class="btn primary block btn-play" id="gc-play"><svg><use href="#i-ball"/></svg>Играть</button></div>
+        <div class="active-game" id="bb-active" hidden></div>
+        <div class="dock">
+          <div class="dock-row">
+            <button class="btn secondary" id="bb-history-btn">История</button>
+            <button class="btn primary btn-play" id="gc-play" style="flex:1"><svg><use href="#i-ball"/></svg>Играть</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Basketball Rush: история -->
+      <section class="view" id="view-basket-history" data-view="basket-history">
+        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">История</h1></div>
+        <div class="section-title">Активная игра</div>
+        <div class="my-games" id="hist-active"></div>
+        <div class="section-title" id="hist-past-title">Прошлые игры</div>
+        <div class="my-games" id="hist-past"></div>
       </section>
 
       <!-- Задания -->
