@@ -230,16 +230,13 @@ const routes = {
   },
 
   // ---------- Basketball Rush ----------
-  'POST /api/basket/state': (req) => {
+  'POST /api/basket/state': (req) => basket.state(authenticate(req).id),
+  'POST /api/basket/play': async (req) => {
     const user = authenticate(req);
-    return { ...basket.state(user.id), stats: basket.stats(user.id) };
+    const { stake } = await readJson(req);
+    throttle(user.id, 800);
+    return { ...basket.play(user, stake), ...profile(store.getUser(user.id)) };
   },
-  'POST /api/basket/join': async (req) => {
-    const user = authenticate(req);
-    const { category } = await readJson(req);
-    return basket.join(user, category);
-  },
-  'POST /api/basket/leave': (req) => basket.leave(authenticate(req).id),
   'POST /api/basket/shot': async (req) => basket.shoot(authenticate(req).id, await readJson(req)),
 
   'POST /api/withdraw': async (req) => {
@@ -304,15 +301,32 @@ const server = createServer(async (req, res) => {
 });
 
 game.start();
-setInterval(() => basket.tick(), 500).unref(); // завершение матчей, где у всех вышло время
-basket.on('flag', ({ match, user, score, shots, sd }) => {
-  console.warn(`Basketball Rush: подозрительная серия у ${user.id} (матч ${match.id})`);
+setInterval(() => basket.tick(), 1000).unref(); // доигранные попытки, итоги, возвраты через 12 часов
+basket.on('balance', (id) => broadcast('balance', { id }));
+basket.on('flag', ({ gameId, userId, score, shots }) => {
+  console.warn(`Basketball Rush: подозрительная серия у ${userId} (матч ${gameId})`);
+  const u = store.getUser(userId);
   bot?.notifyAdmin(
-    `🏀 <b>Basketball Rush: проверьте игрока</b>\n${user.username ? '@' + user.username + ' · ' : ''}ID <code>${user.id}</code>\n` +
-      `Матч #${match.id}: ${score} из ${shots}, время реакции почти одинаковое (σ ≈ ${sd} мс). Результат помечен.`,
+    `🏀 <b>Basketball Rush: проверьте игрока</b>\n${u?.username ? '@' + u.username + ' · ' : ''}ID <code>${userId}</code>\n` +
+      `Матч #${gameId}: ${score} из ${shots}, время реакции почти одинаковое. Результат помечен.`,
   );
 });
-server.listen(config.port, () => console.log(`Сервер слушает порт ${config.port}${config.devMode ? ' (DEV_MODE)' : ''}`));
+basket.on('closed', ({ game, entries, refunded }) => {
+  for (const e of entries) {
+    broadcast('balance', { id: e.user_id });
+    if (!bot) continue;
+    if (refunded) {
+      bot.notifyUser(e.user_id, `🏀 Матч #${game.id} не собрал троих за 12 часов — ставка <b>${game.stake} ⭐</b> возвращена на баланс.`);
+    } else {
+      const table = [...entries]
+        .sort((a, b) => a.place - b.place)
+        .map((x) => `${['🥇', '🥈', '🥉'][x.place - 1] ?? x.place} ${x.user_id === e.user_id ? '<b>Вы</b>' : 'Игрок'} — ${x.score}`)
+        .join('\n');
+      const head = e.prize > 0 ? `🏆 Победа! <b>+${e.prize} ⭐</b>` : `Итог: ${e.place}-е место`;
+      bot.notifyUser(e.user_id, `🏀 <b>Basketball Rush · матч #${game.id}</b>\n${head}\n\n${table}`);
+    }
+  }
+});server.listen(config.port, () => console.log(`Сервер слушает порт ${config.port}${config.devMode ? ' (DEV_MODE)' : ''}`));
 bot?.start().catch((e) => {
   console.error('Бот не запустился:', e.message);
   process.exit(1); // Docker перезапустит контейнер

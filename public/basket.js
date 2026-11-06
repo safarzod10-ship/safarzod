@@ -1,46 +1,105 @@
-// Basketball Rush — клиент: лобби, ожидание трёх игроков, игра на canvas, итоговая таблица.
-// Клиент только рисует и прицеливается. Попадание, очки и время решает сервер (та же физика),
-// а клиент показывает полёт мяча той же детерминированной симуляцией — анимация совпадает с проверкой.
+// Basketball Rush — клиент: вкладка «Игры», выбор ставки, игра на canvas, итоги матча.
+// Клиент только рисует, звучит и прицеливается. Попадание, бонусы, очки и время решает сервер
+// (та же детерминированная физика) — анимация совпадает с серверной проверкой.
 
 import { WORLD, QUANT, validLaunch, simulateShot, previewPath } from './basket-physics.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
-const STAR_MEDALS = ['🥇', '🥈', '🥉'];
-const POLL_MS = 1000;
+const MEDALS = ['🥇', '🥈', '🥉'];
+const STAR = '<svg class="star"><use href="#i-star"/></svg>';
+const TOP = 10; // видимая высота мира над полом
 
-export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports, tg }) {
+/** Тот же расчёт банка, что на сервере: до 9 — без комиссии, от 10 — минус 10% (вниз). */
+const plural = (n, one, few, many) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+};
+const shotsText = (n) => `${fmt(n)} ${plural(n, 'бросок', 'броска', 'бросков')}`;
+const potOf = (total) => (total <= 9 ? total : total - Math.floor(total / 10));
+
+// ====================== Звук (Web Audio, реальные записи из /sounds) ======================
+const SOUNDS = ['crowd', 'crowd_big', 'swish', 'rim', 'board', 'bounce', 'buzzer', 'tick'];
+function createAudio() {
+  const a = { ctx: null, buf: {}, on: true };
+  try {
+    a.on = localStorage.getItem('bb-sound') !== '0';
+  } catch {}
+  a.unlock = () => {
+    if (a.ctx) return a.ctx.state === 'suspended' && a.ctx.resume();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    a.ctx = new AC();
+    for (const name of SOUNDS) {
+      fetch(`/sounds/${name}.mp3`)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((b) => a.ctx.decodeAudioData(b))
+        .then((d) => (a.buf[name] = d))
+        .catch(() => {}); // нет файла — просто без этого звука
+    }
+  };
+  a.play = (name, volume = 1, rate = 1) => {
+    if (!a.on || !a.ctx || !a.buf[name]) return;
+    const src = a.ctx.createBufferSource();
+    const g = a.ctx.createGain();
+    src.buffer = a.buf[name];
+    src.playbackRate.value = rate;
+    g.gain.value = volume;
+    src.connect(g).connect(a.ctx.destination);
+    src.start();
+  };
+  a.toggle = () => {
+    a.on = !a.on;
+    try {
+      localStorage.setItem('bb-sound', a.on ? '1' : '0');
+    } catch {}
+    return a.on;
+  };
+  return a;
+}
+
+export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports, tg, go, onProfile }) {
+  const audio = createAudio();
   const s = {
-    st: null, // последнее состояние с сервера
-    offset: 0, // serverNow − Date.now()
-    category: 5,
+    st: null,
+    offset: 0,
+    stake: 10,
     poll: null,
-    active: false, // вкладка открыта или идёт игра
-    // игра
+    pollMs: 0,
+    active: false,
+    // текущая игра
+    gameId: null,
+    startAt: 0,
     hoop: null,
     hoopFrom: null,
     hoopAnimAt: 0,
     score: 0,
-    shots: 0,
     seq: 0,
     deadline: 0,
     nextShotAt: 0,
-    flight: null, // { frames, start, settleT, made, madeT, seq, popped }
-    aim: null, // { x0, y0, x, y, t0, samples, vx, vy, valid }
+    flight: null,
+    aim: null,
     pendingShot: null,
-    net: 0, // раскачка сетки
+    serverShot: null,
+    net: 0,
+    flash: 0,
     popups: [],
+    throwAt: -1e9,
+    ended: false,
     raf: 0,
     view: { cw: 0, ch: 0, dpr: 1, scale: 1, ox: 0, oy: 0 },
-    lastFrame: 0,
+    bg: null,
   };
   const serverNow = () => Date.now() + s.offset;
   if (/[?&]dev=/.test(location.search)) window.__bb = s; // отладка только в режиме разработки
 
-  // ====================== Связь с сервером ======================
+  // ====================== Сервер ======================
 
   async function refresh() {
-    if (s.refreshing) return; // не плодим параллельные запросы
+    if (s.refreshing) return;
     s.refreshing = true;
     try {
       apply(await api('/api/basket/state', {}));
@@ -52,131 +111,155 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   function apply(st) {
     if (st.serverNow) s.offset = st.serverNow - Date.now();
-    const prevStage = s.st?.stage;
     s.st = st;
-    if (st.stats) s.stats = st.stats;
-    const m = st.match;
-    if (m && (st.stage === 'countdown' || st.stage === 'playing')) {
-      syncMe(m.me);
-      openGame();
-    } else if (prevStage === 'playing' || prevStage === 'countdown') {
-      closeGame();
+    if (st.session) {
+      startSession(st.session);
+    } else if (s.gameId && !$('bb-game').hidden && !s.ended) {
+      s.ended = true; // время вышло, сервер уже закрыл попытку
     }
-    renderScreens();
-    renderHud();
-    if (st.stage === 'results' && prevStage && prevStage !== 'results') {
-      const mine = m.results.find((r) => r.userId === me()?.id);
-      if (mine?.place === 1) haptic.ok();
-    }
+    renderGamesTab();
+    if (!$('bb-result').hidden || (s.ended && s.endShownAt && performance.now() - s.endShownAt > 1500)) renderResultSheet();
   }
 
-  /** Сверка своего состояния с сервером (после переподключения или ошибки). */
-  function syncMe(srv) {
-    if (s.pendingShot) return; // бросок в пути — дождёмся ответа
-    s.score = srv.score;
-    s.shots = srv.shots;
-    s.deadline = srv.deadline;
-    s.nextShotAt = srv.nextShotAt;
-    if (srv.seq !== s.seq || !s.hoop) {
-      s.seq = srv.seq;
-      if (!s.flight) setHoop(srv.hoop, false);
-    }
-    if (!s.flight && (s.hoop?.x !== srv.hoop.x || s.hoop?.y !== srv.hoop.y)) setHoop(srv.hoop, true);
-  }
-
-  function startPolling() {
-    if (s.poll) return;
-    refresh();
-    s.poll = setInterval(refresh, POLL_MS);
-  }
-  function stopPolling() {
+  function setPoll(ms) {
+    if (s.pollMs === ms) return;
     clearInterval(s.poll);
-    s.poll = null;
+    s.pollMs = ms;
+    s.poll = ms ? setInterval(refresh, ms) : null;
   }
 
-  // ====================== Лобби, ожидание, итоги ======================
+  // ====================== Вкладка «Игры» ======================
 
-  function renderScreens() {
+  function renderGamesTab() {
     const st = s.st;
     if (!st) return;
-    const stage = st.stage;
-    $('bb-lobby').hidden = stage !== 'lobby';
-    $('bb-queue').hidden = stage !== 'queue';
-    $('bb-results').hidden = stage !== 'results';
-    const stats = s.stats ?? { games: 0, wins: 0, best: 0 };
-    $('bb-st-games').textContent = fmt(stats.games);
-    $('bb-st-wins').textContent = fmt(stats.wins);
-    $('bb-st-best').textContent = fmt(stats.best);
-
-    if (stage === 'lobby') {
-      $('bb-cats').innerHTML = st.categories
-        .map(
-          (c) => `<button class="bb-cat${c === s.category ? ' on' : ''}" data-cat="${c}">
-            <b class="num">${c}</b><span>${st.queues[c] ? `ищут: ${st.queues[c]}` : 'уровень'}</span></button>`,
-        )
-        .join('');
-    }
-    if (stage === 'queue') {
-      const q = st.queue;
-      $('bb-q-cat').textContent = q.category;
-      const slots = [0, 1, 2].map((i) => {
-        const p = q.players[i];
-        return p
-          ? `<div class="bb-slot filled">${avatarHtml(p)}<span>${p.id === me()?.id ? 'Вы' : esc(p.name)}</span></div>`
-          : '<div class="bb-slot"><div class="bb-slot-empty"></div><span>Ожидание…</span></div>';
-      });
-      $('bb-slots').innerHTML = slots.join('');
-      $('bb-q-count').textContent = `${q.players.length} из 3`;
-    }
-    if (stage === 'results') renderResults(st.match);
+    const stats = st.stats ?? {};
+    $('gs-games').textContent = fmt(stats.games ?? 0);
+    $('gs-wins').textContent = fmt(stats.wins ?? 0);
+    $('gs-best').textContent = fmt(stats.best ?? 0);
+    $('gs-won').textContent = fmt(stats.won ?? 0);
+    const games = (st.games ?? []).filter((g) => g.me?.status !== 'playing');
+    $('mg-title').hidden = !games.length;
+    $('my-games').innerHTML = games.map(gameCard).join('');
   }
 
-  function renderResults(m) {
+  function gameCard(g) {
     const myId = me()?.id;
-    const mine = m.results.find((r) => r.userId === myId);
-    $('bb-res-title').textContent =
-      mine?.place === 1 ? 'Победа!' : mine ? `${mine.place}-е место` : 'Итоги матча';
-    $('bb-res-sub').textContent = `Уровень ${m.category} · ${mine ? `ваш счёт ${mine.score}` : ''}`;
-    $('bb-res-table').innerHTML = m.results
+    let status;
+    if (g.status === 'open') {
+      const left = g.expiresAt - serverNow();
+      const h = Math.max(0, Math.floor(left / 3_600_000));
+      const m = Math.max(0, Math.floor((left % 3_600_000) / 60_000));
+      const need = 3 - g.players.length;
+      status = `<span class="mg-status open">${need > 0 ? `Ждём ${need} · ${h ? `${h} ч ` : ''}${m} мин` : 'Доигрывают'}</span>`;
+    } else if (g.status === 'refunded') status = '<span class="mg-status refunded">Ставка возвращена</span>';
+    else if (g.me?.prize > 0) status = `<span class="mg-status win">${g.me.place}-е место · +${fmt(g.me.prize)} ⭐</span>`;
+    else status = `<span class="mg-status lose">${g.me?.place ?? '—'}-е место</span>`;
+
+    const slots = [0, 1, 2].map((i) => {
+      const p = g.players[i];
+      if (!p) return '<div class="mg-p empty">свободно</div>';
+      const score = p.score === null ? '…' : fmt(p.score);
+      return `<div class="mg-p${p.id === myId ? ' me' : ''}${p.place === 1 ? ' first' : ''}">${avatarHtml(p, 'xs')}
+        <div><span>${p.id === myId ? 'Вы' : esc(p.name)}</span><b class="num">${score}</b></div></div>`;
+    });
+    return `<div class="mg"><div class="mg-top"><span class="mg-stake num">${STAR}${fmt(g.stake)}</span>
+      <span class="mg-bank">банк ${fmt(g.bank)} ⭐</span>${status}</div>
+      <div class="mg-players">${slots.join('')}</div></div>`;
+  }
+
+  // ====================== Выбор ставки ======================
+
+  function openStakes() {
+    haptic.tap();
+    audio.unlock();
+    const stakes = s.st?.stakes ?? [5, 10, 20, 50, 100];
+    const balance = me()?.balance ?? 0;
+    if (!stakes.includes(s.stake)) s.stake = stakes[1];
+    $('stakes').innerHTML = stakes
       .map(
-        (r) => `<div class="bb-row${r.userId === myId ? ' me' : ''} p${r.place}">
-          <div class="bb-place">${STAR_MEDALS[r.place - 1] ?? r.place}</div>
-          ${avatarHtml({ name: r.name, photo: r.photo }, 'sm')}
-          <div class="bb-who"><div class="bb-name">${r.userId === myId ? 'Вы' : esc(r.name)}</div>
-            <div class="bb-meta">${fmt(r.shots)} ${plural(r.shots, 'бросок', 'броска', 'бросков')} · точность ${Math.round(
-              (r.score / Math.max(1, r.shots)) * 100,
-            )}%</div></div>
-          <div class="bb-score num">${fmt(r.score)}</div></div>`,
+        (v) => `<button class="stake${v === s.stake ? ' on' : ''}${v > balance ? ' poor' : ''}" data-stake="${v}">
+          <b class="num">${fmt(v)}${STAR}</b><span>до ${fmt(potOf(v * 3))}</span></button>`,
       )
       .join('');
+    renderStakeNote();
+    const w = $('stake-sheet');
+    w.classList.remove('closing');
+    w.hidden = false;
   }
 
-  function plural(n, one, few, many) {
-    const m10 = n % 10;
-    const m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-    return many;
-  }
-
-  async function join(category = s.category) {
-    try {
-      haptic.impact('light');
-      apply(await api('/api/basket/join', { category }));
-    } catch (e) {
-      toast(e.message, 'err');
+  function renderStakeNote() {
+    const balance = me()?.balance ?? 0;
+    const note = $('stake-note');
+    const btn = $('stake-go');
+    document.querySelectorAll('#stakes .stake').forEach((b) => b.classList.toggle('on', Number(b.dataset.stake) === s.stake));
+    if (s.stake > balance) {
+      note.innerHTML = `Не хватает ${fmt(s.stake - balance)} ⭐ — пополните баланс`;
+      note.classList.add('error');
+      btn.textContent = 'Пополнить баланс';
+    } else {
+      note.innerHTML = `Выигрыш победителю — <b>${fmt(potOf(s.stake * 3))} ⭐</b>`;
+      note.classList.remove('error');
+      btn.textContent = `Играть за ${fmt(s.stake)} ⭐`;
     }
   }
 
-  async function leave() {
+  function closeStakes() {
+    const w = $('stake-sheet');
+    if (w.hidden) return;
+    w.classList.add('closing');
+    setTimeout(() => (w.hidden = true), 240);
+  }
+
+  async function startGame() {
+    if (s.stake > (me()?.balance ?? 0)) {
+      closeStakes();
+      return go('deposit');
+    }
+    const btn = $('stake-go');
+    btn.classList.add('loading');
     try {
-      apply(await api('/api/basket/leave', {}));
+      const res = await api('/api/basket/play', { stake: s.stake });
+      onProfile(res);
+      closeStakes();
+      haptic.impact('medium');
+      apply(res);
     } catch (e) {
+      haptic.err();
       toast(e.message, 'err');
+    } finally {
+      btn.classList.remove('loading');
     }
   }
 
-  // ====================== Экран игры ======================
+  // ====================== Игровая сессия ======================
+
+  function startSession(sess) {
+    const fresh = s.gameId !== sess.gameId;
+    if (fresh) {
+      s.gameId = sess.gameId;
+      s.ended = false;
+      s.endShownAt = 0;
+      s.flight = null;
+      s.pendingShot = null;
+      s.serverShot = sess.lastShot;
+      s.popups = [];
+      s.hoop = null;
+      $('bb-result').hidden = true;
+      $('bb-hint').classList.remove('hide');
+    }
+    s.startAt = sess.startAt;
+    $('bb-stake').textContent = fmt(sess.stake);
+    if (!s.pendingShot) {
+      s.score = sess.score;
+      s.deadline = sess.deadline;
+      s.nextShotAt = sess.nextShotAt;
+      s.seq = sess.seq;
+      if (!s.flight && (!s.hoop || s.hoop.x !== sess.hoop.x || s.hoop.y !== sess.hoop.y)) setHoop(sess.hoop, !!s.hoop);
+    }
+    $('bb-score').textContent = s.score;
+    openGame();
+  }
 
   function openGame() {
     const el = $('bb-game');
@@ -184,6 +267,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     el.hidden = false;
     document.body.classList.add('bb-playing');
     if (supports('6.1')) tg.BackButton.hide();
+    setPoll(3000);
     resize();
     cancelAnimationFrame(s.raf);
     s.raf = requestAnimationFrame(frame);
@@ -191,13 +275,16 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   function closeGame() {
     $('bb-game').hidden = true;
+    $('bb-result').hidden = true;
     document.body.classList.remove('bb-playing');
     cancelAnimationFrame(s.raf);
+    s.gameId = null;
     s.flight = null;
     s.aim = null;
-    s.pendingShot = null;
     s.hoop = null;
-    s.seq = 0;
+    setPoll(s.active ? 5000 : 0);
+    if (supports('6.1')) tg.BackButton.show();
+    refresh();
   }
 
   function resize() {
@@ -210,57 +297,50 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     v.cw = r.width;
     v.ch = r.height;
     v.dpr = dpr;
-    // Мир по высоте 0…TOP помещается целиком; пол — как можно ниже, под ним паркет площадки
-    const TOP = 10;
-    v.scale = Math.min(r.width / WORLD.W, (r.height - 70) / TOP);
+    v.scale = Math.min(r.width / WORLD.W, (r.height - 90) / TOP);
     v.ox = (r.width - WORLD.W * v.scale) / 2;
-    v.oy = Math.min(r.height - 60, Math.max(18 + TOP * v.scale, r.height * 0.76)); // линия пола
+    v.oy = Math.min(r.height - 70, Math.max(70 + TOP * v.scale, r.height * 0.76));
+    s.bg = renderArena(v);
   }
 
   const X = (x) => s.view.ox + x * s.view.scale;
   const Y = (y) => s.view.oy - y * s.view.scale;
 
   function setHoop(h, animate) {
-    if (animate && s.hoop) {
-      s.hoopFrom = { ...s.hoop };
-      s.hoopAnimAt = performance.now();
-    } else s.hoopFrom = null;
+    s.hoopFrom = animate && s.hoop ? { ...s.hoop } : null;
+    s.hoopAnimAt = performance.now();
     s.hoop = { ...h };
   }
 
   function hoopNow(t) {
     if (!s.hoopFrom) return s.hoop;
-    const p = Math.min(1, (t - s.hoopAnimAt) / 420);
-    if (p >= 1) {
-      s.hoopFrom = null;
-      return s.hoop;
-    }
-    const e = 1 - (1 - p) ** 3;
+    const p = Math.min(1, (t - s.hoopAnimAt) / 520);
+    if (p >= 1) return (s.hoopFrom = null), s.hoop;
+    const e = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
     return { x: s.hoopFrom.x + (s.hoop.x - s.hoopFrom.x) * e, y: s.hoopFrom.y + (s.hoop.y - s.hoopFrom.y) * e };
   }
 
   const timeLeft = () => Math.max(0, s.deadline - serverNow());
-  const ballReady = () =>
-    s.st?.stage === 'playing' && !s.flight && !s.pendingShot && timeLeft() > 0 && serverNow() >= s.nextShotAt - 120;
+  const started = () => serverNow() >= s.startAt;
+  const ballReady = () => started() && !s.ended && !s.flight && !s.pendingShot && timeLeft() > 0 && serverNow() >= s.nextShotAt - 120;
 
   // ---------- Прицеливание: потяните назад и отпустите ----------
 
   function onDown(e) {
+    audio.unlock();
     if (!ballReady()) return;
     e.preventDefault();
     $('bb-canvas').setPointerCapture?.(e.pointerId);
-    s.aim = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), samples: 0, valid: false };
+    s.aim = { x0: e.clientX, y0: e.clientY, t0: performance.now(), samples: 0, valid: false, power: 0 };
     $('bb-hint').classList.add('hide');
   }
 
   function onMove(e) {
     const a = s.aim;
     if (!a) return;
-    a.x = e.clientX;
-    a.y = e.clientY;
     a.samples++;
-    const dx = a.x0 - a.x; // тянем назад — бросок вперёд
-    const dy = a.y - a.y0; // вниз по экрану — бросок вверх
+    const dx = a.x0 - e.clientX;
+    const dy = e.clientY - a.y0;
     const len = Math.sqrt(dx * dx + dy * dy);
     const maxDrag = Math.min(s.view.cw, s.view.ch) * 0.42;
     const power = Math.min(1, len / maxDrag);
@@ -269,12 +349,13 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       return;
     }
     const speed = WORLD.VMIN + power * (WORLD.VMAX - WORLD.VMIN);
-    a.vx = Math.round(((dx / len) * speed) * QUANT);
-    a.vy = Math.round(((dy / len) * speed) * QUANT);
+    a.vx = Math.round((dx / len) * speed * QUANT);
+    a.vy = Math.round((dy / len) * speed * QUANT);
     a.power = power;
     a.valid = validLaunch(a.vx / QUANT, a.vy / QUANT);
-    if (a.valid && a.lastPowerStep !== Math.round(power * 8)) {
-      a.lastPowerStep = Math.round(power * 8);
+    const step = Math.round(power * 8);
+    if (a.valid && a.step !== step) {
+      a.step = step;
       haptic.tap();
     }
   }
@@ -288,13 +369,15 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     throwBall(a.vx, a.vy, aimMs, a.samples);
   }
 
-  // ---------- Бросок ----------
-
   function throwBall(ivx, ivy, aimMs, samples) {
     const seq = s.seq + 1;
-    const hoop = { ...s.hoop };
-    const sim = simulateShot(hoop, ivx / QUANT, ivy / QUANT, { frames: true });
-    s.flight = { frames: sim.frames, start: performance.now(), settleT: sim.settleT, made: sim.made, madeT: sim.madeT, seq, popped: false, contacts: sim.contacts.slice() };
+    const sim = simulateShot({ ...s.hoop }, ivx / QUANT, ivy / QUANT, { frames: true });
+    const rimBefore = sim.contacts.some(([k, t]) => k === 'rim' && t <= sim.madeT);
+    s.flight = {
+      frames: sim.frames, start: performance.now(), settleT: sim.settleT, made: sim.made, madeT: sim.madeT,
+      swish: sim.made && !rimBefore, seq, popped: false, contacts: sim.contacts.slice(),
+    };
+    s.throwAt = performance.now();
     s.pendingShot = { seq, vx: ivx, vy: ivy, aimMs, samples };
     haptic.impact('light');
     sendShot(s.pendingShot, 0);
@@ -306,273 +389,573 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       if (r.serverNow) s.offset = r.serverNow - Date.now();
       s.pendingShot = null;
       s.seq = r.seq;
-      s.shots = r.shots;
       s.nextShotAt = r.nextShotAt;
       s.serverShot = r;
-      // Результат решает сервер; анимация совпадает, но если вдруг нет — верим серверу
-      if (s.flight && s.flight.seq === r.seq) s.flight.serverMade = r.made;
-      else applyShotResult(r);
+      if (!(s.flight && s.flight.seq === r.seq)) applyShotResult(r);
     } catch (e) {
-      if (e.code === undefined && attempt < 4) {
-        // Сеть оборвалась: повторяем тот же бросок (сервер не начислит дважды)
-        return setTimeout(() => sendShot(body, attempt + 1), 600 * (attempt + 1));
-      }
+      if (e.code === undefined && attempt < 4) return setTimeout(() => sendShot(body, attempt + 1), 600 * (attempt + 1));
       s.pendingShot = null;
       if (s.flight?.seq === body.seq) s.flight.rejected = true;
-      if (e.code !== 'TIME_UP') toast(e.message, 'err');
+      if (e.code !== 'TIME_UP' && e.code !== 'NO_MATCH') toast(e.message, 'err');
       refresh();
     }
   }
 
-  /** Итог броска показывается, когда мяч долетел (и сервер подтвердил). */
+  /** Итог броска — в момент попадания (решение сервера). */
   function applyShotResult(r) {
     s.score = r.score;
     s.deadline = r.deadline;
+    $('bb-score').textContent = s.score;
     if (r.made) {
       s.net = 1;
-      s.popups.push({ t: performance.now(), x: r.shotHoop.x, y: r.shotHoop.y });
+      s.flash = 1;
+      s.popups.push({ t: performance.now(), x: r.shotHoop.x, y: r.shotHoop.y, swish: r.swish, bonus: r.bonusMs / 1000 });
+      const pill = $('bb-score').parentElement;
+      pill.classList.remove('bump');
+      void pill.offsetWidth;
+      pill.classList.add('bump');
+      audio.play('swish', r.swish ? 1 : 0.75);
+      audio.play(r.swish ? 'crowd_big' : 'crowd', r.swish ? 0.95 : 0.55);
       haptic.ok();
     }
-    if (r.hoop.x !== s.hoop.x || r.hoop.y !== s.hoop.y) setHoop(r.hoop, true);
+    if (r.hoop.x !== s.hoop.x || r.hoop.y !== s.hoop.y) setTimeout(() => setHoop(r.hoop, true), 350);
+  }
+
+  // ====================== Итог моей игры ======================
+
+  function renderResultSheet() {
+    const g = s.st?.games?.find((x) => x.id === s.gameId);
+    if (!g || g.me?.status === 'playing') return;
+    const el = $('bb-result');
+    const myId = me()?.id;
+    const done = g.players.filter((p) => p.status !== 'playing');
+    const need = 3 - g.players.length;
+    let title;
+    let sub;
+    if (g.status === 'finished') {
+      title = g.me.prize > 0 ? `Победа! +${fmt(g.me.prize)} ⭐` : `${g.me.place}-е место`;
+      sub = `Итоги матча · банк ${fmt(g.bank)} ⭐`;
+    } else if (g.status === 'refunded') {
+      title = 'Ставка возвращена';
+      sub = 'Матч не собрал троих за 12 часов';
+    } else {
+      title = `Ваш результат: ${fmt(g.me.score)}`;
+      sub = `Ставка ${fmt(g.stake)} ⭐ · банк ${fmt(g.bank)} ⭐`;
+    }
+    const ranked = [...g.players].sort((a, b) => (a.place ?? 9) - (b.place ?? 9) || (b.score ?? -1) - (a.score ?? -1));
+    const rows = ranked.map((p) => {
+      const isMe = p.id === myId;
+      const place = p.place ? MEDALS[p.place - 1] ?? p.place : '';
+      const meta = p.status === 'playing' ? 'играет…' : `${shotsText(p.shots ?? 0)}${p.prize ? ` · <span class="res-prize">+${fmt(p.prize)} ⭐</span>` : ''}`;
+      return `<div class="res-row${isMe ? ' me' : ''}"><div class="res-place">${place}</div>${avatarHtml(p, 'sm')}
+        <div class="res-who"><div class="res-name">${isMe ? 'Вы' : esc(p.name)}</div><div class="res-meta">${meta}</div></div>
+        <div class="res-score num">${p.score === null ? '…' : fmt(p.score)}</div></div>`;
+    });
+    for (let i = 0; i < need; i++) rows.push('<div class="res-row empty">Свободное место</div>');
+    const waiting =
+      g.status === 'open'
+        ? `<div class="res-wait"><i></i>${need > 0 ? `Ожидание ${need === 1 ? '3-го участника' : 'ещё 2 участников'} для подведения итогов` : 'Соперники доигрывают…'}</div>`
+        : '';
+    const html = `<div class="res-title">${title}</div><div class="res-sub">${sub}</div>
+      <div class="res-list">${rows.join('')}</div>${waiting}
+      <div class="dock-row"><button class="btn secondary" data-res="close">Готово</button>
+      <button class="btn primary" data-res="again" style="flex:1">Ещё раз</button></div>`;
+    if (el.dataset.html !== html) {
+      el.dataset.html = html;
+      el.innerHTML = html;
+    }
+    if (el.hidden) {
+      el.hidden = false;
+      $('bb-overlay').hidden = true;
+      if (g.status === 'finished' && g.me.prize > 0) haptic.ok();
+    }
   }
 
   // ====================== Отрисовка ======================
 
   function frame(t) {
     s.raf = requestAnimationFrame(frame);
-    const c = $('bb-canvas');
-    const ctx = c.getContext('2d');
     const v = s.view;
+    const ctx = $('bb-canvas').getContext('2d');
     ctx.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
-    ctx.clearRect(0, 0, v.cw, v.ch);
-    drawCourt(ctx);
+    if (s.bg) ctx.drawImage(s.bg, 0, 0, v.cw, v.ch);
     if (!s.hoop) return;
+    drawScoreboard(ctx, t);
 
-    // полёт мяча
-    let ball = { x: WORLD.START.x, y: WORLD.START.y, rot: 0 };
-    let flying = false;
+    // мяч в полёте
+    let ball = null;
     const f = s.flight;
     if (f) {
-      // кадр мог начаться на долю мс раньше броска — время полёта не бывает отрицательным
       const el = Math.max(0, (t - f.start) / 1000);
-      const idx = Math.min(f.frames.length / 2 - 1, el / WORLD.DT);
+      const n = f.frames.length / 2 - 1;
+      const idx = Math.min(n, el / WORLD.DT);
       const i0 = Math.floor(idx);
-      const i1 = Math.min(f.frames.length / 2 - 1, i0 + 1);
+      const i1 = Math.min(n, i0 + 1);
       const k = idx - i0;
       ball = {
         x: f.frames[2 * i0] + (f.frames[2 * i1] - f.frames[2 * i0]) * k,
         y: f.frames[2 * i0 + 1] + (f.frames[2 * i1 + 1] - f.frames[2 * i0 + 1]) * k,
+        rot: el * 9,
       };
-      ball.rot = el * 9;
-      flying = true;
       while (f.contacts.length && f.contacts[0][1] <= el) {
-        f.contacts.shift();
-        haptic.impact('soft');
+        const [kind] = f.contacts.shift();
+        if (kind === 'rim') {
+          audio.play('rim', 0.7, 0.95 + Math.random() * 0.1);
+          haptic.impact('soft');
+        } else if (kind === 'board') audio.play('board', 0.6);
+        else if (kind === 'floor') audio.play('bounce', 0.5);
       }
       if (!f.popped && f.made && el >= f.madeT && s.serverShot?.seq === f.seq) {
         f.popped = true;
         applyShotResult(s.serverShot);
       }
       if (el >= f.settleT) {
-        if (!f.popped && s.serverShot?.seq === f.seq) applyShotResult(s.serverShot);
+        if (!f.popped && s.serverShot?.seq === f.seq) {
+          f.popped = true;
+          applyShotResult(s.serverShot);
+        }
         if (!s.pendingShot || f.rejected) s.flight = null;
       }
     }
 
-    if (flying) readySince = 0; // следующий мяч снова «появится» в руках
-    drawHoop(ctx, hoopNow(t), t);
-    drawPlayer(ctx, flying);
-    if (flying || ballReady()) drawBall(ctx, ball.x, ball.y, ball.rot ?? 0, flying ? 1 : spawnScale(t));
+    const h = hoopNow(t);
+    drawBoard(ctx, h);
+    drawRimBack(ctx, h);
+    if (ball) drawBall(ctx, ball.x, ball.y, ball.rot, 1);
+    drawNet(ctx, h, t);
+    drawRimFront(ctx, h);
+    drawPlayer(ctx, t, !ball);
     if (s.aim?.valid) drawAim(ctx);
     drawPopups(ctx, t);
-    renderTimer();
+    if (s.flash > 0) {
+      ctx.fillStyle = `rgba(245,191,79,${(s.flash * 0.12).toFixed(3)})`;
+      ctx.fillRect(0, 0, v.cw, v.ch);
+      s.flash = Math.max(0, s.flash - 0.04);
+    }
+    tickClock();
   }
 
-  let readySince = 0;
-  function spawnScale(t) {
-    if (!readySince) readySince = t;
-    return Math.min(1, 0.6 + (t - readySince) / 400);
-  }
+  // ---------- Арена (рисуется один раз на размер экрана) ----------
 
-  function drawCourt(ctx) {
-    const v = s.view;
-    const fy = Y(0);
-    // зал: тёмная стена с мягким светом сверху
-    const g = ctx.createLinearGradient(0, 0, 0, fy);
-    g.addColorStop(0, '#0c0b12');
-    g.addColorStop(1, '#16141f');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, v.cw, fy);
-    for (const [x, w] of [[0.22, 0.18], [0.62, 0.22]]) {
-      const lg = ctx.createLinearGradient(0, 0, 0, fy);
-      lg.addColorStop(0, 'rgba(139,108,255,0.07)');
-      lg.addColorStop(1, 'rgba(139,108,255,0)');
-      ctx.fillStyle = lg;
-      ctx.beginPath();
-      ctx.moveTo(v.cw * x, 0);
-      ctx.lineTo(v.cw * (x + w), 0);
-      ctx.lineTo(v.cw * (x + w * 1.8), fy);
-      ctx.lineTo(v.cw * (x - w * 0.6), fy);
-      ctx.closePath();
-      ctx.fill();
+  function renderArena(v) {
+    const c = document.createElement('canvas');
+    c.width = Math.round(v.cw * v.dpr);
+    c.height = Math.round(v.ch * v.dpr);
+    const g = c.getContext('2d');
+    g.scale(v.dpr, v.dpr);
+    const fy = v.oy;
+    const sc = v.scale;
+    // стена зала
+    const wall = g.createLinearGradient(0, 0, 0, fy);
+    wall.addColorStop(0, '#120a24');
+    wall.addColorStop(0.55, '#1d1036');
+    wall.addColorStop(1, '#2a1546');
+    g.fillStyle = wall;
+    g.fillRect(0, 0, v.cw, fy);
+    // фермы под потолком
+    g.strokeStyle = 'rgba(160,120,255,0.08)';
+    g.lineWidth = 2;
+    const trussY = v.ch * 0.07;
+    g.beginPath();
+    g.moveTo(0, trussY);
+    g.lineTo(v.cw, trussY);
+    g.moveTo(0, trussY + 16);
+    g.lineTo(v.cw, trussY + 16);
+    for (let x = 0; x < v.cw + 20; x += 24) {
+      g.moveTo(x, trussY);
+      g.lineTo(x + 12, trussY + 16);
+      g.lineTo(x + 24, trussY);
     }
-    // мягкое пятно света вокруг кольца
-    if (s.hoop) {
-      const rg = ctx.createRadialGradient(X(s.hoop.x), Y(s.hoop.y), 4, X(s.hoop.x), Y(s.hoop.y), v.scale * 3);
-      rg.addColorStop(0, 'rgba(255,122,47,0.08)');
-      rg.addColorStop(1, 'rgba(255,122,47,0)');
-      ctx.fillStyle = rg;
-      ctx.fillRect(0, 0, v.cw, fy);
+    g.stroke();
+    // прожекторы и лучи
+    for (const lx of [0.18, 0.5, 0.82]) {
+      const x = v.cw * lx;
+      const beam = g.createLinearGradient(0, trussY, 0, fy);
+      beam.addColorStop(0, 'rgba(190,150,255,0.16)');
+      beam.addColorStop(1, 'rgba(190,150,255,0)');
+      g.fillStyle = beam;
+      g.beginPath();
+      g.moveTo(x - 6, trussY + 18);
+      g.lineTo(x + 6, trussY + 18);
+      g.lineTo(x + v.cw * 0.2, fy);
+      g.lineTo(x - v.cw * 0.2, fy);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(235,220,255,0.9)';
+      g.beginPath();
+      g.arc(x, trussY + 20, 3.2, 0, Math.PI * 2);
+      g.fill();
+      const glow = g.createRadialGradient(x, trussY + 20, 0, x, trussY + 20, 26);
+      glow.addColorStop(0, 'rgba(200,170,255,0.45)');
+      glow.addColorStop(1, 'rgba(200,170,255,0)');
+      g.fillStyle = glow;
+      g.fillRect(x - 26, trussY - 6, 52, 52);
     }
-    // паркет: вид чуть сверху — доски сужаются к линии пола
-    const fg = ctx.createLinearGradient(0, fy, 0, v.ch);
-    fg.addColorStop(0, '#3a2a22');
-    fg.addColorStop(1, '#1d1620');
-    ctx.fillStyle = fg;
-    ctx.fillRect(0, fy, v.cw, v.ch - fy);
-    ctx.strokeStyle = 'rgba(255,255,255,0.045)';
-    ctx.lineWidth = 1;
+    // трибуны: ряды болельщиков-силуэтов (детерминированный «шум», без мерцания между кадрами)
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const standTop = fy - sc * 4.6;
+    const rows = 7;
+    for (let r = 0; r < rows; r++) {
+      const y = standTop + (r / rows) * (fy - sc * 0.7 - standTop);
+      const size = sc * (0.2 + (r / rows) * 0.12);
+      const shade = 22 + r * 5;
+      for (let x = -size + (r % 2) * size; x < v.cw + size; x += size * 2.1) {
+        const jx = x + (rnd() - 0.5) * size * 0.6;
+        const jy = y + (rnd() - 0.5) * size * 0.5;
+        const hue = rnd() < 0.15 ? `rgb(${shade + 40},${shade + 10},${shade + 70})` : `rgb(${shade + 14},${shade},${shade + 36})`;
+        g.fillStyle = hue;
+        g.beginPath();
+        g.arc(jx, jy, size * 0.55, 0, Math.PI * 2); // голова
+        g.fill();
+        g.beginPath();
+        g.ellipse(jx, jy + size * 1.25, size * 0.95, size * 0.75, 0, Math.PI, 0); // плечи
+        g.fill();
+        if (rnd() < 0.06) {
+          g.fillStyle = 'rgba(255,235,180,0.75)'; // вспышки телефонов
+          g.fillRect(jx + size * 0.4, jy - size * 0.2, 2, 3);
+        }
+      }
+    }
+    // рекламный бортик со светящейся надписью
+    const bandH = sc * 0.62;
+    const by = fy - bandH;
+    const band = g.createLinearGradient(0, by, 0, fy);
+    band.addColorStop(0, '#2b1658');
+    band.addColorStop(1, '#170b30');
+    g.fillStyle = band;
+    g.fillRect(0, by, v.cw, bandH);
+    g.fillStyle = 'rgba(245,191,79,0.85)';
+    g.fillRect(0, by, v.cw, 2);
+    g.font = `800 ${Math.round(bandH * 0.42)}px -apple-system, Roboto, sans-serif`;
+    g.textBaseline = 'middle';
+    let tx = 10;
+    let k = 0;
+    while (tx < v.cw) {
+      const text = k++ % 2 ? '★' : 'ROULETTE ARENA';
+      g.fillStyle = k % 2 ? 'rgba(220,200,255,0.92)' : 'rgba(245,191,79,0.95)';
+      g.fillText(text, tx, by + bandH / 2 + 1);
+      tx += g.measureText(text).width + 16;
+    }
+    // паркет с отражением
+    const floor = g.createLinearGradient(0, fy, 0, v.ch);
+    floor.addColorStop(0, '#5a3524');
+    floor.addColorStop(0.35, '#3b2219');
+    floor.addColorStop(1, '#170e14');
+    g.fillStyle = floor;
+    g.fillRect(0, fy, v.cw, v.ch - fy);
+    const refl = g.createLinearGradient(0, fy, 0, fy + bandH * 1.4);
+    refl.addColorStop(0, 'rgba(160,110,255,0.22)');
+    refl.addColorStop(1, 'rgba(160,110,255,0)');
+    g.fillStyle = refl;
+    g.fillRect(0, fy, v.cw, bandH * 1.4);
+    g.strokeStyle = 'rgba(255,220,180,0.06)';
+    g.lineWidth = 1;
     const depth = v.ch - fy;
-    for (let i = 1; i < 7; i++) {
-      const yy = fy + depth * (i / 7) ** 1.6;
-      ctx.beginPath();
-      ctx.moveTo(0, yy);
-      ctx.lineTo(v.cw, yy);
-      ctx.stroke();
+    for (let i = 1; i < 8; i++) {
+      const yy = fy + depth * (i / 8) ** 1.5;
+      g.beginPath();
+      g.moveTo(0, yy);
+      g.lineTo(v.cw, yy);
+      g.stroke();
     }
-    // разметка: линия штрафного под кольцом
-    ctx.strokeStyle = 'rgba(245,191,79,0.28)';
-    ctx.lineWidth = 2;
+    g.strokeStyle = 'rgba(255,255,255,0.35)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, fy + 1);
+    g.lineTo(v.cw, fy + 1);
+    g.stroke();
+    // виньетка
+    const vig = g.createRadialGradient(v.cw / 2, v.ch * 0.45, v.ch * 0.25, v.cw / 2, v.ch * 0.45, v.ch * 0.8);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.45)');
+    g.fillStyle = vig;
+    g.fillRect(0, 0, v.cw, v.ch);
+    return c;
+  }
+
+  // ---------- Табло с временем ----------
+
+  let lastSec = null;
+  function drawScoreboard(ctx, t) {
+    const v = s.view;
+    const left = s.ended ? 0 : started() ? timeLeft() : (s.deadline - s.startAt);
+    const sec = Math.ceil(left / 1000);
+    const hot = started() && sec <= 5 && !s.ended;
+    const w = Math.min(118, v.cw * 0.3);
+    const h = w * 0.56;
+    const x = 14;
+    const y = v.ch * 0.19;
+    ctx.fillStyle = 'rgba(10,6,20,0.85)';
+    roundRect(ctx, x, y, w, h, 10);
+    ctx.fill();
+    ctx.strokeStyle = hot ? 'rgba(255,93,108,0.7)' : 'rgba(160,120,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = `700 ${Math.round(h * 0.17)}px -apple-system, Roboto, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('ВРЕМЯ', x + w / 2, y + h * 0.27);
+    const pulse = hot ? 1 + 0.12 * Math.max(0, 1 - ((t % 1000) / 300)) : 1;
+    ctx.save();
+    ctx.translate(x + w / 2, y + h * 0.78);
+    ctx.scale(pulse, pulse);
+    ctx.fillStyle = hot ? '#ff5d6c' : '#ffd36a';
+    ctx.shadowColor = hot ? 'rgba(255,93,108,0.8)' : 'rgba(255,200,90,0.6)';
+    ctx.shadowBlur = 14;
+    ctx.font = `800 ${Math.round(h * 0.56)}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+    ctx.fillText(String(Math.max(0, sec)).padStart(2, '0'), 0, 0);
+    ctx.restore();
+    ctx.textAlign = 'left';
+  }
+
+  // ---------- Кольцо, щит, сетка ----------
+
+  function drawBoard(ctx, h) {
+    const sc = s.view.scale;
+    const x0 = X(h.x - 0.42);
+    const x1 = X(h.x + WORLD.BOARD_X + 0.1);
+    const y0 = Y(h.y + WORLD.BOARD_TOP);
+    const y1 = Y(h.y + WORLD.BOARD_BOTTOM);
+    // мягкое свечение вокруг щита
+    const glow = ctx.createRadialGradient((x0 + x1) / 2, (y0 + y1) / 2, 0, (x0 + x1) / 2, (y0 + y1) / 2, sc * 2.2);
+    glow.addColorStop(0, 'rgba(170,130,255,0.22)');
+    glow.addColorStop(1, 'rgba(170,130,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x0 - sc * 2, y0 - sc * 2, x1 - x0 + sc * 4, y1 - y0 + sc * 4);
+    // стекло щита
+    const glass = ctx.createLinearGradient(x0, y0, x1, y1);
+    glass.addColorStop(0, 'rgba(240,236,255,0.95)');
+    glass.addColorStop(1, 'rgba(205,195,240,0.92)');
+    ctx.fillStyle = glass;
+    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, sc * 0.08);
+    ctx.fill();
+    ctx.strokeStyle = '#2c1a4d';
+    ctx.lineWidth = Math.max(2, sc * 0.06);
+    ctx.stroke();
+    // квадрат-мишень над кольцом
+    const qx0 = X(h.x - 0.18);
+    const qx1 = X(h.x + 0.46);
+    ctx.strokeStyle = '#ff6a2b';
+    ctx.lineWidth = Math.max(2, sc * 0.055);
+    ctx.strokeRect(qx0, Y(h.y + 0.62), qx1 - qx0, sc * 0.6);
+    // крепление кольца к щиту
+    ctx.fillStyle = '#3a2a55';
+    ctx.fillRect(X(h.x + WORLD.RIM_HALF - 0.02), Y(h.y) - sc * 0.05, X(h.x + WORLD.BOARD_X) - X(h.x + WORLD.RIM_HALF - 0.02), sc * 0.1);
+  }
+
+  const RIM_RY = 0.13; // «глубина» кольца в перспективе
+  function drawRimBack(ctx, h) {
+    const sc = s.view.scale;
+    ctx.strokeStyle = '#c4501d';
+    ctx.lineWidth = Math.max(2.5, sc * 0.075);
     ctx.beginPath();
-    ctx.moveTo(0, fy + 1);
-    ctx.lineTo(v.cw, fy + 1);
+    ctx.ellipse(X(h.x), Y(h.y), WORLD.RIM_HALF * sc, RIM_RY * sc, 0, Math.PI, Math.PI * 2);
     ctx.stroke();
   }
 
-  function drawHoop(ctx, h, t) {
+  function drawRimFront(ctx, h) {
     const sc = s.view.scale;
-    const bx = X(h.x + WORLD.BOARD_X);
-    // стойка
-    ctx.strokeStyle = '#3a3346';
-    ctx.lineWidth = Math.max(3, sc * 0.12);
-    ctx.beginPath();
-    ctx.moveTo(bx + sc * 0.18, Y(0));
-    ctx.lineTo(bx + sc * 0.18, Y(h.y + WORLD.BOARD_BOTTOM + 0.2));
-    ctx.lineTo(bx, Y(h.y + WORLD.BOARD_BOTTOM + 0.2));
-    ctx.stroke();
-    // щит
-    const top = Y(h.y + WORLD.BOARD_TOP);
-    const bottom = Y(h.y + WORLD.BOARD_BOTTOM);
-    ctx.fillStyle = 'rgba(235,235,245,0.95)';
-    roundRect(ctx, bx - sc * 0.08, top, sc * 0.16, bottom - top, 3);
-    ctx.fill();
-    ctx.fillStyle = '#ff7a2f';
-    ctx.fillRect(bx - sc * 0.08, Y(h.y + 0.55), sc * 0.04, sc * 0.5); // квадрат-мишень на щите
-    // сетка
-    const fx = X(h.x - WORLD.RIM_HALF);
-    const kx = X(h.x + WORLD.RIM_HALF);
-    const ry = Y(h.y);
-    const sway = s.net * Math.sin(t / 45) * sc * 0.08;
-    s.net *= 0.94;
-    if (s.net < 0.01) s.net = 0;
-    const depth = sc * 0.62 * (1 + s.net * 0.25);
-    ctx.strokeStyle = 'rgba(240,240,250,0.75)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 5; i++) {
-      const u = i / 5;
-      const x0 = fx + (kx - fx) * u;
-      const x1 = fx + sc * 0.14 + (kx - fx - sc * 0.28) * u + sway;
-      ctx.beginPath();
-      ctx.moveTo(x0, ry);
-      ctx.lineTo(x1, ry + depth);
-      ctx.stroke();
-    }
-    for (let j = 1; j <= 2; j++) {
-      const yy = ry + (depth * j) / 2.4;
-      const shrink = (sc * 0.14 * j) / 2.4;
-      ctx.beginPath();
-      ctx.moveTo(fx + shrink + sway * j * 0.4, yy);
-      ctx.lineTo(kx - shrink + sway * j * 0.4, yy);
-      ctx.stroke();
-    }
-    // дужка кольца
     ctx.strokeStyle = '#ff7a2f';
     ctx.lineWidth = Math.max(3, sc * 0.09);
-    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(fx, ry);
-    ctx.lineTo(bx - sc * 0.06, ry);
+    ctx.ellipse(X(h.x), Y(h.y), WORLD.RIM_HALF * sc, RIM_RY * sc, 0, 0, Math.PI);
     ctx.stroke();
-    ctx.lineCap = 'butt';
   }
 
-  function drawPlayer(ctx, threw) {
+  function drawNet(ctx, h, t) {
     const sc = s.view.scale;
-    const x = X(0.95);
-    const footY = Y(0);
-    const h = sc * 2.35; // рост
-    ctx.save();
-    // ноги
-    ctx.strokeStyle = '#2b2a3a';
-    ctx.lineWidth = sc * 0.2;
-    ctx.lineCap = 'round';
+    const cx = X(h.x);
+    const ry = Y(h.y);
+    const top = WORLD.RIM_HALF * sc;
+    const bottom = top * 0.55;
+    const depth = sc * 0.72 * (1 + s.net * 0.3);
+    const sway = s.net * Math.sin(t / 50) * sc * 0.06;
+    s.net *= 0.95;
+    if (s.net < 0.01) s.net = 0;
+    ctx.strokeStyle = 'rgba(245,240,255,0.85)';
+    ctx.lineWidth = 1.1;
+    const cols = 7;
+    const rowsN = 4;
+    const pt = (i, j) => {
+      const v = j / rowsN;
+      const w = top + (bottom - top) * v;
+      const u = i / cols;
+      return [cx - w + 2 * w * u + sway * v, ry + RIM_RY * sc * 0.6 + depth * v];
+    };
     ctx.beginPath();
-    ctx.moveTo(x - sc * 0.12, footY - sc * 0.04);
-    ctx.lineTo(x - sc * 0.05, footY - h * 0.45);
-    ctx.moveTo(x + sc * 0.16, footY - sc * 0.04);
-    ctx.lineTo(x + sc * 0.07, footY - h * 0.45);
+    for (let j = 0; j < rowsN; j++) {
+      for (let i = 0; i < cols; i++) {
+        // ромбы: диагонали между соседними узлами
+        const [ax, ay] = pt(i, j);
+        const [bx, by] = pt(i + 1, j + 1);
+        const [cx2, cy2] = pt(i + 1, j);
+        const [dx, dy] = pt(i, j + 1);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.moveTo(cx2, cy2);
+        ctx.lineTo(dx, dy);
+      }
+    }
     ctx.stroke();
-    // корпус (форма в цвет приложения)
-    ctx.fillStyle = '#8b6cff';
-    roundRect(ctx, x - sc * 0.26, footY - h * 0.82, sc * 0.52, h * 0.4, sc * 0.16);
+  }
+
+  // ---------- Игрок: ведёт мяч, прицеливается, бросает ----------
+
+  function drawPlayer(ctx, t, holdsBall) {
+    const sc = s.view.scale;
+    const baseX = 0.95;
+    const aiming = !!s.aim;
+    const sinceThrow = (t - s.throwAt) / 1000;
+    const throwing = sinceThrow < 0.45;
+    const idle = holdsBall && !aiming && !throwing;
+    const P = (x, y) => [X(x), Y(y)];
+
+    // ведение мяча: ~2 удара в секунду, мяч разгоняется к полу
+    const period = 0.56;
+    const ph = ((t / 1000) % period) / period;
+    const hand = 1.08;
+    const dribY = idle ? hand - (hand - WORLD.BALL_R) * (ph < 0.5 ? (ph * 2) ** 2 : (2 - ph * 2) ** 2) : 0;
+    if (idle) {
+      const hit = ph >= 0.5 && s.lastPh < 0.5;
+      if (hit && ballReady()) audio.play('bounce', 0.28);
+      s.lastPh = ph;
+    }
+    const bob = idle ? Math.sin(ph * Math.PI * 2) * 0.03 : aiming ? -0.04 : 0;
+    const crouch = aiming ? 0.08 + (s.aim?.power ?? 0) * 0.08 : 0;
+
+    const hip = 1.0 - crouch + bob;
+    const shoulder = 1.72 - crouch + bob;
+    const headY = 2.05 - crouch + bob;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // тень
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(X(baseX), Y(0) + 2, sc * 0.42, sc * 0.08, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = `700 ${Math.round(sc * 0.22)}px -apple-system, Roboto, sans-serif`;
+    // ноги + кроссовки
+    const knee = 0.5 - crouch * 0.4;
+    for (const [fx, kx, c] of [[-0.14, -0.06, '#d9a77e'], [0.16, 0.1, '#e6b58a']]) {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = sc * 0.15;
+      ctx.beginPath();
+      ctx.moveTo(...P(baseX + fx * 0.6, hip));
+      ctx.lineTo(...P(baseX + kx + crouch * 0.4, knee));
+      ctx.lineTo(...P(baseX + fx, 0.12));
+      ctx.stroke();
+      ctx.fillStyle = '#f2f2f7';
+      ctx.beginPath();
+      ctx.ellipse(X(baseX + fx + 0.06), Y(0.06), sc * 0.15, sc * 0.075, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#8b6cff';
+      ctx.fillRect(X(baseX + fx - 0.06), Y(0.14), sc * 0.14, sc * 0.03);
+    }
+    // шорты
+    ctx.fillStyle = '#3b2a78';
+    roundRect(ctx, X(baseX - 0.27), Y(hip + 0.16), sc * 0.56, sc * 0.42, sc * 0.08);
+    ctx.fill();
+    // майка
+    const jersey = ctx.createLinearGradient(X(baseX - 0.3), 0, X(baseX + 0.3), 0);
+    jersey.addColorStop(0, '#7a5cf0');
+    jersey.addColorStop(1, '#9d84ff');
+    ctx.fillStyle = jersey;
+    roundRect(ctx, X(baseX - 0.28), Y(shoulder + 0.05), sc * 0.56, sc * (shoulder - hip + 0.05), sc * 0.16);
+    ctx.fill();
+    ctx.strokeStyle = '#f5bf4f';
+    ctx.lineWidth = Math.max(1.5, sc * 0.03);
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = `800 ${Math.round(sc * 0.26)}px -apple-system, Roboto, sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText('7', x, footY - h * 0.62);
-    // голова
-    ctx.fillStyle = '#e9b48a';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('7', X(baseX), Y((shoulder + hip) / 2 + 0.06));
+    // голова: волосы, повязка
+    ctx.fillStyle = '#e6b58a';
     ctx.beginPath();
-    ctx.arc(x, footY - h * 0.92, sc * 0.2, 0, Math.PI * 2);
+    ctx.arc(X(baseX + 0.02), Y(headY), sc * 0.2, 0, Math.PI * 2);
     ctx.fill();
-    // руки: тянутся к мячу, после броска — вверх-вперёд
-    const sx = x + sc * 0.12;
-    const sy = footY - h * 0.75;
-    const hand = threw ? { x: X(1.75), y: Y(3.05) } : { x: X(WORLD.START.x) - sc * 0.12, y: Y(WORLD.START.y) + sc * 0.12 };
-    ctx.strokeStyle = '#e9b48a';
-    ctx.lineWidth = sc * 0.13;
+    ctx.fillStyle = '#231a2e';
     ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(hand.x, hand.y);
+    ctx.arc(X(baseX + 0.0), Y(headY + 0.06), sc * 0.205, Math.PI * 0.95, Math.PI * 2.05);
+    ctx.fill();
+    ctx.fillStyle = '#f5bf4f';
+    ctx.fillRect(X(baseX - 0.19), Y(headY + 0.09), sc * 0.42, sc * 0.06);
+
+    // руки и мяч
+    const sh = P(baseX + 0.08, shoulder - 0.05);
+    let ballPos = null;
+    let handPos;
+    if (aiming) {
+      // естественная поза броска: мяч над головой, локти вперёд
+      ballPos = { x: WORLD.START.x, y: WORLD.START.y };
+      handPos = P(WORLD.START.x - 0.1, WORLD.START.y - 0.1);
+    } else if (throwing) {
+      const a = Math.min(1, sinceThrow / 0.15);
+      handPos = P(baseX + 0.45 + 0.35 * a, shoulder + 0.55 + 0.4 * a); // сопровождение броска
+    } else if (holdsBall) {
+      ballPos = { x: baseX + 0.48, y: dribY };
+      handPos = P(baseX + 0.46, hand + 0.12 + (idle ? 0.05 * Math.sin(ph * Math.PI * 2) : 0));
+    } else {
+      handPos = P(baseX + 0.3, hip + 0.25);
+    }
+    // дальняя рука
+    ctx.strokeStyle = '#d9a77e';
+    ctx.lineWidth = sc * 0.12;
+    ctx.beginPath();
+    ctx.moveTo(sh[0] - sc * 0.12, sh[1]);
+    ctx.lineTo((sh[0] + handPos[0]) / 2 - sc * 0.05, (sh[1] + handPos[1]) / 2 + sc * 0.05);
+    ctx.lineTo(handPos[0] - sc * 0.12, handPos[1] + sc * 0.02);
+    ctx.stroke();
+    if (ballPos && holdsBall) drawBall(ctx, ballPos.x, ballPos.y, t / 260, ballReady() ? spawn(t) : 1);
+    // ближняя рука поверх мяча
+    ctx.strokeStyle = '#e6b58a';
+    ctx.beginPath();
+    ctx.moveTo(...sh);
+    ctx.lineTo((sh[0] + handPos[0]) / 2 + sc * 0.04, (sh[1] + handPos[1]) / 2 + sc * 0.08);
+    ctx.lineTo(...handPos);
     ctx.stroke();
     ctx.restore();
+    if (!holdsBall) s.readySince = 0;
+  }
+
+  function spawn(t) {
+    if (!s.readySince) s.readySince = t;
+    return Math.min(1, 0.55 + (t - s.readySince) / 380);
   }
 
   function drawBall(ctx, x, y, rot, scale) {
     const r = WORLD.BALL_R * s.view.scale * scale;
     const cx = X(x);
     const cy = Y(y);
-    const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
-    g.addColorStop(0, '#ffa35c');
-    g.addColorStop(1, '#d9541e');
+    const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+    g.addColorStop(0, '#ffb070');
+    g.addColorStop(0.6, '#f0702c');
+    g.addColorStop(1, '#b4431a');
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
     ctx.translate(cx, cy);
     ctx.rotate(rot);
-    ctx.strokeStyle = 'rgba(40,16,4,0.75)';
-    ctx.lineWidth = Math.max(1, r * 0.09);
+    ctx.strokeStyle = 'rgba(40,14,4,0.8)';
+    ctx.lineWidth = Math.max(1, r * 0.1);
     ctx.beginPath();
     ctx.moveTo(-r, 0);
     ctx.lineTo(r, 0);
     ctx.moveTo(0, -r);
     ctx.lineTo(0, r);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(-r * 1.25, 0, r * 0.95, -0.75, 0.75);
-    ctx.arc(r * 1.25, 0, r * 0.95, Math.PI - 0.75, Math.PI + 0.75);
+    ctx.moveTo(-r * 0.35, -r);
+    ctx.quadraticCurveTo(-r * 0.85, 0, -r * 0.35, r);
+    ctx.moveTo(r * 0.35, -r);
+    ctx.quadraticCurveTo(r * 0.85, 0, r * 0.35, r);
     ctx.stroke();
     ctx.restore();
   }
@@ -582,38 +965,49 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     const pts = previewPath(a.vx / QUANT, a.vy / QUANT, 0.8, 0.045);
     pts.forEach(([x, y], i) => {
       const k = 1 - i / pts.length;
-      ctx.fillStyle = `rgba(255,255,255,${(0.2 + 0.7 * k).toFixed(3)})`;
+      ctx.fillStyle = `rgba(255,255,255,${(0.18 + 0.75 * k).toFixed(3)})`;
       ctx.beginPath();
-      ctx.arc(X(x), Y(y), 1.6 + 2.2 * k, 0, Math.PI * 2);
+      ctx.arc(X(x), Y(y), 1.5 + 2.4 * k, 0, Math.PI * 2);
       ctx.fill();
     });
-    // сила броска — дуга вокруг мяча
     const cx = X(WORLD.START.x);
     const cy = Y(WORLD.START.y);
-    const r = WORLD.BALL_R * s.view.scale + 7;
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 3;
+    const r = WORLD.BALL_R * s.view.scale + 8;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI * 1.5);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
     ctx.strokeStyle = a.power > 0.85 ? '#ff7a6b' : '#f5bf4f';
     ctx.beginPath();
     ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * a.power);
     ctx.stroke();
+    ctx.lineCap = 'butt';
   }
 
   function drawPopups(ctx, t) {
-    s.popups = s.popups.filter((p) => t - p.t < 1100);
+    s.popups = s.popups.filter((p) => t - p.t < 1300);
     for (const p of s.popups) {
-      const k = (t - p.t) / 1100;
-      ctx.globalAlpha = 1 - k;
-      ctx.fillStyle = '#f5bf4f';
-      ctx.font = `800 ${Math.round(s.view.scale * 0.5)}px -apple-system, Roboto, sans-serif`;
+      const k = (t - p.t) / 1300;
+      const rise = (1 - (1 - k) ** 3) * 0.9;
+      ctx.globalAlpha = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
       ctx.textAlign = 'center';
-      ctx.fillText('+1', X(p.x), Y(p.y + 1.4 + k * 0.8));
+      ctx.textBaseline = 'alphabetic';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 8;
+      if (p.swish) {
+        ctx.fillStyle = '#ffd36a';
+        ctx.font = `900 ${Math.round(s.view.scale * 0.42)}px -apple-system, Roboto, sans-serif`;
+        ctx.fillText('ЧИСТО!', X(p.x), Y(p.y + 1.85 + rise));
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `900 ${Math.round(s.view.scale * 0.55)}px -apple-system, Roboto, sans-serif`;
+      ctx.fillText('+1', X(p.x), Y(p.y + 1.3 + rise));
       ctx.fillStyle = '#3dd68c';
-      ctx.font = `700 ${Math.round(s.view.scale * 0.32)}px -apple-system, Roboto, sans-serif`;
-      ctx.fillText('+5 сек', X(p.x), Y(p.y + 0.95 + k * 0.8));
+      ctx.font = `800 ${Math.round(s.view.scale * 0.32)}px -apple-system, Roboto, sans-serif`;
+      ctx.fillText(`+${p.bonus} сек`, X(p.x), Y(p.y + 0.92 + rise));
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     }
   }
@@ -628,39 +1022,41 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.closePath();
   }
 
-  // ====================== HUD ======================
+  // ---------- Отсчёт, последние секунды, конец ----------
 
-  let lastSec = null;
-  function renderTimer() {
-    const st = s.st;
-    if (!st?.match) return;
+  function tickClock() {
     const ov = $('bb-overlay');
-    if (st.stage === 'countdown') {
-      const n = Math.max(1, Math.ceil((st.match.startAt - serverNow()) / 1000));
+    if (!started()) {
+      const n = Math.max(1, Math.ceil((s.startAt - serverNow()) / 1000));
       if (ov.dataset.k !== `c${n}`) {
         ov.dataset.k = `c${n}`;
         ov.innerHTML = `<div class="bb-count">${n}</div><div class="bb-count-sub">Приготовьтесь</div>`;
         ov.hidden = false;
+        audio.play('tick', 0.6);
         haptic.impact('light');
       }
-      if (serverNow() >= st.match.startAt) refresh();
-      $('bb-time').textContent = '0:30';
       return;
     }
     const left = timeLeft();
     const sec = Math.ceil(left / 1000);
-    const tEl = $('bb-time');
-    tEl.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-    tEl.classList.toggle('hot', sec <= 5 && sec > 0);
-    if (sec !== lastSec && sec <= 5 && sec > 0) haptic.impact('light');
+    if (sec !== lastSec && sec <= 5 && sec > 0 && !s.ended) {
+      audio.play('tick', 0.7);
+      haptic.impact('light');
+    }
     lastSec = sec;
-    $('bb-score').textContent = s.score;
-    if (left <= 0 && !s.flight && !s.pendingShot) {
+    const over = (left <= 0 || s.ended) && !s.flight && !s.pendingShot;
+    if (over) {
       if (ov.dataset.k !== 'done') {
         ov.dataset.k = 'done';
         ov.innerHTML = `<div class="bb-done-title">Время вышло</div><div class="bb-done-score num">${s.score}</div>
-          <div class="bb-count-sub">Ждём, пока доиграют соперники…</div>`;
+          <div class="bb-count-sub">Подводим итоги…</div>`;
         ov.hidden = false;
+        audio.play('buzzer', 0.8);
+        haptic.impact('heavy');
+        s.ended = true;
+        s.endShownAt = performance.now();
+        setTimeout(refresh, 1200);
+        setTimeout(refresh, 2600);
       }
     } else if (ov.dataset.k !== 'none') {
       ov.dataset.k = 'none';
@@ -668,33 +1064,35 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     }
   }
 
-  function renderHud() {
-    const m = s.st?.match;
-    if (!m) return;
-    $('bb-hud-cat').textContent = `Уровень ${m.category}`;
-    $('bb-opps').innerHTML = m.players
-      .map((p) => {
-        const isMe = p.id === me()?.id;
-        const score = isMe ? s.score : p.score;
-        return `<div class="bb-opp${isMe ? ' me' : ''}${p.done ? ' done' : ''}">${avatarHtml(p, 'xs')}<b class="num">${score}</b></div>`;
-      })
-      .join('');
-  }
-
   // ====================== Привязка ======================
 
   function bind() {
-    $('bb-cats').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-cat]');
+    $('gc-play').addEventListener('click', openStakes);
+    $('gc-basket').addEventListener('click', openStakes);
+    $('stakes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-stake]');
       if (!b) return;
-      s.category = Number(b.dataset.cat);
+      s.stake = Number(b.dataset.stake);
       haptic.tap();
-      renderScreens();
+      renderStakeNote();
     });
-    $('bb-find').addEventListener('click', () => join());
-    $('bb-cancel').addEventListener('click', leave);
-    $('bb-again').addEventListener('click', () => join(s.st?.match?.category ?? s.category));
-    $('bb-back-lobby').addEventListener('click', leave);
+    $('stake-go').addEventListener('click', startGame);
+    $('stake-sheet').addEventListener('click', (e) => e.target.matches('[data-close]') && closeStakes());
+    $('bb-result').addEventListener('click', (e) => {
+      const act = e.target.closest('[data-res]')?.dataset.res;
+      if (act === 'close') closeGame();
+      if (act === 'again') {
+        closeGame();
+        setTimeout(openStakes, 250);
+      }
+    });
+    $('bb-sound').addEventListener('click', () => {
+      audio.unlock();
+      const on = audio.toggle();
+      $('bb-sound').innerHTML = `<svg><use href="#i-${on ? 'sound' : 'mute'}"/></svg>`;
+      haptic.tap();
+    });
+    $('bb-sound').innerHTML = `<svg><use href="#i-${audio.on ? 'sound' : 'mute'}"/></svg>`;
     const c = $('bb-canvas');
     c.addEventListener('pointerdown', onDown);
     c.addEventListener('pointermove', onMove);
@@ -702,30 +1100,31 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     c.addEventListener('pointercancel', () => (s.aim = null));
     window.addEventListener('resize', () => !$('bb-game').hidden && resize());
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && s.active) refresh(); // вернулись — сверяемся с сервером
+      if (document.visibilityState === 'visible' && (s.active || s.gameId)) refresh();
     });
   }
 
   return {
     bind,
-    /** Вкладка открыта. */
     show() {
       s.active = true;
-      startPolling();
+      refresh();
+      if (!s.gameId) setPoll(5000);
     },
     hide() {
-      if (!$('bb-game').hidden) return; // идёт матч — опрос продолжается
       s.active = false;
-      stopPolling();
+      if (!s.gameId) setPoll(0);
     },
-    /** При запуске приложения: если есть незавершённый матч — вернуть в игру. */
+    /** При запуске: незавершённая игра — сразу вернуть в неё. */
     async resume() {
       try {
         const st = await api('/api/basket/state', {});
-        if (st.stage === 'countdown' || st.stage === 'playing' || st.stage === 'queue') return st.stage;
+        if (st.session) {
+          apply(st);
+          return true;
+        }
       } catch {}
-      return null;
+      return false;
     },
-    onPlayersPoll: renderHud,
   };
 }

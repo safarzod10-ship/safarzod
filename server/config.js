@@ -30,8 +30,10 @@ export const config = Object.freeze({
   // Basketball Rush (значения по ТЗ; переопределять имеет смысл только для тестов)
   basket: Object.freeze({
     baseMs: Number(env('BASKET_BASE_MS', '30000')),
-    bonusMs: Number(env('BASKET_BONUS_MS', '5000')),
-    countdownMs: Number(env('BASKET_COUNTDOWN_MS', '3500')),
+    bonusMs: Number(env('BASKET_BONUS_MS', '3000')),
+    swishBonusMs: Number(env('BASKET_SWISH_BONUS_MS', '5000')),
+    countdownMs: Number(env('BASKET_COUNTDOWN_MS', '3000')),
+    expireMs: Number(env('BASKET_EXPIRE_MS', String(12 * 60 * 60 * 1000))),
   }),
 
   limits: Object.freeze({

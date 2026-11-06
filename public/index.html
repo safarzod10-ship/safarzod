@@ -32,6 +32,9 @@
     <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g></symbol>
     <symbol id="i-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5h9v4.5a4.5 4.5 0 01-9 0V4.5zM12 13.5V17M8.5 19.5h7M7.5 6.5H5a2.5 2.5 0 002.7 3.5M16.5 6.5H19a2.5 2.5 0 01-2.7 3.5"/></g></symbol>
     <symbol id="i-ball" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5v17M6 6c2.4 2.6 2.4 9.4 0 12M18 6c-2.4 2.6-2.4 9.4 0 12"/></g></symbol>
+    <symbol id="i-games" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 7h9a4.5 4.5 0 014.4 5.5l-1 4.4a2.3 2.3 0 01-4 .9L14.3 16H9.7l-1.6 1.8a2.3 2.3 0 01-4-.9l-1-4.4A4.5 4.5 0 017.5 7z"/><path d="M8 10.2v3M6.5 11.7h3"/><circle cx="15.6" cy="10.6" r=".6" fill="currentColor"/><circle cx="17.2" cy="12.4" r=".6" fill="currentColor"/></g></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5h3l4-3.5v12l-4-3.5h-3z"/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11"/></g></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5h3l4-3.5v12l-4-3.5h-3z"/><path d="M16 10l4 4M20 10l-4 4"/></g></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4 4 9-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -119,54 +122,29 @@
         </div>
       </section>
 
-      <!-- Basketball Rush -->
-      <section class="view" id="view-basket" data-view="basket">
-        <div id="bb-lobby">
-          <div class="bb-hero card">
-            <div class="bb-hero-top">
-              <div class="bb-hero-icon"><svg><use href="#i-ball"/></svg></div>
-              <div>
-                <div class="bb-hero-title">Basketball Rush</div>
-                <div class="bb-hero-sub">Матч на троих · 30 секунд · +5 секунд за попадание</div>
-              </div>
-            </div>
-            <div class="bb-stats">
-              <div><b class="num" id="bb-st-games">0</b><span>Матчей</span></div>
-              <div><b class="num" id="bb-st-wins">0</b><span>Побед</span></div>
-              <div><b class="num" id="bb-st-best">0</b><span>Рекорд</span></div>
-            </div>
+      <!-- Игры -->
+      <section class="view" id="view-games" data-view="games">
+        <h1 class="title">Игры</h1>
+        <p class="lead">Соревнуйтесь с другими игроками</p>
+        <button class="game-card" id="gc-basket" aria-label="Basketball Rush — играть">
+          <img src="/games/basketball-rush.webp" alt="Basketball Rush" width="1100" height="602" decoding="async">
+        </button>
+        <div class="gc-info">
+          <div class="gc-chips">
+            <span class="gc-chip"><svg><use href="#i-users"/></svg>3 игрока</span>
+            <span class="gc-chip"><svg><use href="#i-clock"/></svg>30 сек</span>
+            <span class="gc-chip"><svg><use href="#i-trophy"/></svg>Банк победителю</span>
           </div>
-          <div class="section-title">Уровень матча</div>
-          <div class="bb-cats" id="bb-cats"></div>
-          <p class="hint">Уровни — соревнование на очки, без ставок и призов. Побеждает тот, кто забросит больше.</p>
-          <div class="dock"><button class="btn primary block" id="bb-find">Найти соперников</button></div>
-        </div>
-
-        <div id="bb-queue" hidden>
-          <div class="bb-wait">
-            <div class="bb-wait-ball"><svg><use href="#i-ball"/></svg></div>
-            <div class="bb-wait-title">Ищем соперников</div>
-            <div class="bb-wait-sub">Уровень <b id="bb-q-cat">5</b> · <span id="bb-q-count">1 из 3</span></div>
-            <div class="bb-slots" id="bb-slots"></div>
-            <p class="hint">Матч начнётся, как только соберутся трое. Не закрывайте приложение: без связи поиск отменится через 15 секунд.</p>
-          </div>
-          <div class="dock"><button class="btn secondary block" id="bb-cancel">Отменить поиск</button></div>
-        </div>
-
-        <div id="bb-results" hidden>
-          <div class="bb-res-head">
-            <div class="bb-res-title" id="bb-res-title">Итоги</div>
-            <div class="bb-res-sub" id="bb-res-sub"></div>
-          </div>
-          <div class="bb-table" id="bb-res-table"></div>
-          <p class="hint">При равенстве очков выше тот, кто сделал меньше бросков, затем — у кого попадания точнее в центр кольца.</p>
-          <div class="dock">
-            <div class="dock-row">
-              <button class="btn secondary" id="bb-back-lobby">К уровням</button>
-              <button class="btn primary" id="bb-again" style="flex:1">Ещё матч</button>
-            </div>
+          <div class="gc-stats">
+            <div><b class="num" id="gs-games">0</b><span>Матчей</span></div>
+            <div><b class="num" id="gs-wins">0</b><span>Побед</span></div>
+            <div><b class="num" id="gs-best">0</b><span>Рекорд</span></div>
+            <div><b class="num" id="gs-won">0</b><span>Выиграно ⭐</span></div>
           </div>
         </div>
+        <div class="section-title" id="mg-title" hidden>Мои матчи</div>
+        <div class="my-games" id="my-games"></div>
+        <div class="dock"><button class="btn primary block btn-play" id="gc-play"><svg><use href="#i-ball"/></svg>Играть</button></div>
       </section>
 
       <!-- Задания -->
@@ -275,8 +253,9 @@
     </main>
 
     <nav class="nav" id="nav">
+      <span class="nav-ind" id="nav-ind" aria-hidden="true"></span>
       <button data-go="roulette" class="active"><span class="ni"><svg><use href="#i-roulette"/></svg></span>Рулетка</button>
-      <button data-go="basket"><span class="ni"><svg><use href="#i-ball"/></svg></span>Баскет</button>
+      <button data-go="games"><span class="ni"><svg><use href="#i-games"/></svg></span>Игры</button>
       <button data-go="tasks"><span class="ni"><svg><use href="#i-tasks"/></svg><i class="badge" id="tasks-badge" hidden></i></span>Задания</button>
       <button data-go="friends"><span class="ni"><svg><use href="#i-users"/></svg></span>Друзья</button>
       <button data-go="profile"><span class="ni"><svg><use href="#i-user"/></svg></span>Профиль</button>
@@ -287,14 +266,28 @@
     <!-- Basketball Rush: экран игры -->
     <div class="bb-game" id="bb-game" hidden>
       <div class="bb-hud">
-        <div class="bb-hud-time"><span class="bb-label">Время</span><b class="num" id="bb-time">0:30</b></div>
-        <div class="bb-hud-score"><span class="bb-label" id="bb-hud-cat">Уровень</span><b class="num" id="bb-score">0</b></div>
-        <div class="bb-opps" id="bb-opps"></div>
+        <div class="bb-pill"><span class="bb-label">Счёт</span><b class="num" id="bb-score">0</b></div>
+        <div class="bb-pill bb-stake"><svg class="star"><use href="#i-star"/></svg><b class="num" id="bb-stake">10</b></div>
+        <button class="bb-icon-btn" id="bb-sound" aria-label="Звук"><svg><use href="#i-sound"/></svg></button>
       </div>
       <div class="bb-stage">
         <canvas id="bb-canvas"></canvas>
         <div class="bb-hint" id="bb-hint">Потяните назад и отпустите</div>
         <div class="bb-overlay" id="bb-overlay" hidden></div>
+      </div>
+      <div class="bb-sheet" id="bb-result" hidden></div>
+    </div>
+
+    <!-- Выбор ставки -->
+    <div class="sheet-wrap" id="stake-sheet" hidden>
+      <div class="sheet-backdrop" data-close></div>
+      <div class="sheet">
+        <div class="sheet-grip"></div>
+        <div class="sheet-title">Выберите ставку</div>
+        <div class="sheet-sub">Банк — три ставки. Победитель забирает банк</div>
+        <div class="stakes" id="stakes"></div>
+        <div class="stake-note" id="stake-note"></div>
+        <button class="btn primary block" id="stake-go">Играть</button>
       </div>
     </div>
     <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>

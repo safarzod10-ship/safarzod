@@ -149,8 +149,9 @@ function go(view) {
   if (supports('6.1')) view === 'roulette' ? tg.BackButton.hide() : tg.BackButton.show();
   if (view === 'withdraw' || view === 'profile') refreshMe();
   if (view === 'tasks') loadTasks();
-  if (view === 'basket') basket.show();
+  if (view === 'games') basket.show();
   else basket.hide();
+  moveNavIndicator();
   if (view === 'friends') loadFriends();
   haptic.tap();
 }
@@ -1063,7 +1064,25 @@ function shareRefLink() {
 }
 
 // ---------- Basketball Rush ----------
-const basket = createBasket({ api, haptic, toast, avatarHtml, esc, me: () => state.me, supports, tg });
+const basket = createBasket({
+  api, haptic, toast, avatarHtml, esc, supports, tg, go,
+  me: () => state.me,
+  onProfile: (res) => res.user && applyProfile(res),
+});
+
+/** Подложка активной вкладки плавно переезжает под нужную иконку. */
+function moveNavIndicator() {
+  const nav = $('nav');
+  const ind = $('nav-ind');
+  const active = nav?.querySelector('button.active');
+  if (!ind) return;
+  if (!active) return (ind.style.opacity = '0');
+  const nr = nav.getBoundingClientRect();
+  const ar = active.getBoundingClientRect();
+  ind.style.opacity = '1';
+  ind.style.transform = `translateX(${ar.left - nr.left + ar.width / 2 - ind.offsetWidth / 2}px)`;
+}
+window.addEventListener('resize', moveNavIndicator);
 
 // ---------- Запуск ----------
 function connectStream() {
@@ -1161,8 +1180,9 @@ async function main() {
   drawBulbs();
   connectStream();
   loadTasks();
-  // Незавершённый матч или поиск (обрыв связи, перезапуск Telegram) — сразу возвращаем в игру
-  if (await basket.resume()) go('basket');
+  requestAnimationFrame(moveNavIndicator);
+  // Незавершённая игра (обрыв связи, перезапуск Telegram) — сразу возвращаем в неё
+  if (await basket.resume()) go('games');
   updateWithdrawForm();
   updateDepositForm();
   requestAnimationFrame(() => $('boot').classList.add('hide'));

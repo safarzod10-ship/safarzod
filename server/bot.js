@@ -767,6 +767,11 @@ export class Bot {
     return this.#send(this.adminId, html).catch(() => {});
   }
 
+  /** Сообщение игроку с кнопкой «Открыть игру» (из других модулей). */
+  notifyUser(userId, html) {
+    return this.#notifyUser(userId, html);
+  }
+
   async #notifyUser(userId, html) {
     // Игрок мог не запускать бота или заблокировать его — статус всё равно виден в приложении.
     await this.#send(userId, html, this.playButton('Открыть игру')).catch(() => {});

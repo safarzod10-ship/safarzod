@@ -109,6 +109,7 @@ export function simulateShot(hoop, vx, vy, { frames = false } = {}) {
     let floor = false;
     if (b.y - W.BALL_R < 0) {
       b.y = W.BALL_R;
+      if (b.vy < -0.8) contacts.push(['floor', t]); // для звука отскока; на результат не влияет
       if (b.vy < 0) b.vy = -b.vy * W.E_FLOOR;
       b.vx *= 0.8;
       floor = true;

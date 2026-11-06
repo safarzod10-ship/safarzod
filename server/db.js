@@ -181,12 +181,6 @@ class Store {
       userDeposits: q('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
       userWithdrawn: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE user_id = ? AND status = 'sent'"),
       broadcastIds: q('SELECT id FROM users WHERE blocked = 0 ORDER BY id'),
-      // --- Basketball Rush ---
-      addBasketMatch: q('INSERT INTO basket_matches (category, started_at, finished_at) VALUES (?, ?, ?)'),
-      addBasketResult: q(`INSERT INTO basket_results (match_id, user_id, place, score, shots, quality, flagged)
-                          VALUES (?, ?, ?, ?, ?, ?, ?)`),
-      basketStats: q(`SELECT COUNT(*) AS games, COALESCE(SUM(place = 1), 0) AS wins, COALESCE(MAX(score), 0) AS best
-                      FROM basket_results WHERE user_id = ?`),
       // --- задания ---
       addTask: q('INSERT INTO tasks (kind, title, url, chat_ref, reward, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       getTask: q('SELECT * FROM tasks WHERE id = ?'),
@@ -373,21 +367,16 @@ class Store {
     return this.q.recentWinners.all(limit);
   }
 
-  // ---------- Basketball Rush ----------
+  // ---------- Операции для игровых модулей (только внутри store.tx) ----------
 
-  /** Итоги матча: одна транзакция на матч и всех участников. */
-  saveBasketMatch({ category, startedAt, finishedAt, results }) {
-    return this.tx(() => {
-      const id = Number(this.q.addBasketMatch.run(category, startedAt, finishedAt).lastInsertRowid);
-      for (const r of results) {
-        this.q.addBasketResult.run(id, r.userId, r.place, r.score, r.shots, r.quality, r.flagged ? 1 : 0);
-      }
-      return id;
-    });
+  /** Списание с записью в журнал. Бросает INSUFFICIENT_FUNDS, если звёзд мало. */
+  ledgerDebit(userId, amount, kind, ref) {
+    this.#debit(userId, amount, kind, ref);
   }
 
-  basketStats(userId) {
-    return { ...this.q.basketStats.get(userId) };
+  /** Начисление с записью в журнал. */
+  ledgerCredit(userId, amount, kind, ref) {
+    this.#credit(userId, amount, kind, ref);
   }
 
   broadcastIds() {
