@@ -10,7 +10,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 const STAR = '<svg class="star"><use href="#i-star"/></svg>';
 const TOP = 10; // видимая высота мира над полом
 
-/** Тот же расчёт банка, что на сервере: до 9 — без комиссии, от 10 — минус 10% (вниз). */
+/** Выигрыш победителя — ставка × 2 (как на сервере). */
 const plural = (n, one, few, many) => {
   const m10 = n % 10;
   const m100 = n % 100;
@@ -19,7 +19,7 @@ const plural = (n, one, few, many) => {
   return many;
 };
 const shotsText = (n) => `${fmt(n)} ${plural(n, 'бросок', 'броска', 'бросков')}`;
-const potOf = (total) => (total <= 9 ? total : total - Math.floor(total / 10));
+const prizeOf = (stake) => stake * 2;
 
 // ====================== Звук (Web Audio, реальные записи из /sounds) ======================
 // Три звука: удар мяча об пол, бросок, толпа.
@@ -188,7 +188,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
         <div><span>${p.id === myId ? 'Вы' : esc(p.name)}</span><b class="num">${score}</b></div></div>`;
     });
     return `<div class="mg"><div class="mg-top"><span class="mg-stake num">${STAR}${fmt(g.stake)}</span>
-      <span class="mg-bank">банк ${fmt(g.bank)} ⭐</span>${status}</div>
+      <span class="mg-bank">приз ${fmt(g.prize)} ⭐</span>${status}</div>
       <div class="mg-players">${slots.join('')}</div></div>`;
   }
 
@@ -203,7 +203,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     $('stakes').innerHTML = stakes
       .map(
         (v) => `<button class="stake${v === s.stake ? ' on' : ''}${v > balance ? ' poor' : ''}" data-stake="${v}">
-          <b class="num">${fmt(v)}${STAR}</b><span>до ${fmt(potOf(v * 3))}</span></button>`,
+          <b class="num">${fmt(v)}${STAR}</b><span>приз ${fmt(prizeOf(v))}</span></button>`,
       )
       .join('');
     renderStakeNote();
@@ -222,7 +222,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       note.classList.add('error');
       btn.textContent = 'Пополнить баланс';
     } else {
-      note.innerHTML = `Выигрыш победителю — <b>${fmt(potOf(s.stake * 3))} ⭐</b>`;
+      note.innerHTML = `Победитель получает ×2 — <b>${fmt(prizeOf(s.stake))} ⭐</b>`;
       note.classList.remove('error');
       btn.textContent = `Играть за ${fmt(s.stake)} ⭐`;
     }
@@ -459,13 +459,13 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     let sub;
     if (g.status === 'finished') {
       title = g.me.prize > 0 ? `Победа! +${fmt(g.me.prize)} ⭐` : `${g.me.place}-е место`;
-      sub = `Итоги матча · банк ${fmt(g.bank)} ⭐`;
+      sub = `Итоги матча · ставка ${fmt(g.stake)} ⭐ · приз ${fmt(g.prize)} ⭐`;
     } else if (g.status === 'refunded') {
       title = 'Ставка возвращена';
       sub = 'Матч не собрал троих за час';
     } else {
       title = `Ваш результат: ${fmt(g.me.score)}`;
-      sub = `Ставка ${fmt(g.stake)} ⭐ · банк ${fmt(g.bank)} ⭐`;
+      sub = `Ставка ${fmt(g.stake)} ⭐ · победитель получает ${fmt(g.prize)} ⭐`;
     }
     const ranked = [...g.players].sort((a, b) => (a.place ?? 9) - (b.place ?? 9) || (b.score ?? -1) - (a.score ?? -1));
     const rows = ranked.map((p) => {

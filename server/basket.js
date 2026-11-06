@@ -2,7 +2,7 @@
 //
 // «Играть» → выбор суммы → сервер ищет открытый матч с этой ставкой, где есть свободное место
 // и где игрока ещё нет; если такого нет — создаёт новый. Игра начинается сразу, ждать никого не нужно.
-// Когда сыграли трое — подводятся итоги и выплачивается банк. Если за час набралось меньше трёх
+// Когда сыграли трое — подводятся итоги: победитель получает ставку × 2. Если за час набралось меньше трёх
 // игроков — матч закрывается и ставки возвращаются. Одновременно у игрока может быть только одна
 // незакрытая игра: новую можно начать, когда подведены итоги предыдущей.
 //
@@ -20,7 +20,7 @@ import { EventEmitter } from 'node:events';
 import { randomInt } from 'node:crypto';
 import { QUANT, validLaunch, simulateShot, nextHoop } from '../public/basket-physics.js';
 import { AppError } from './db.js';
-import { bankOf, displayName } from './game.js';
+import { displayName } from './game.js';
 
 export const STAKES = Object.freeze([5, 10, 20, 50, 100]);
 
@@ -36,8 +36,7 @@ export const BASKET_DEFAULTS = Object.freeze({
   minAimMs: 120,
   minSamples: 3,
   expireMs: 60 * 60 * 1000, // матч ждёт троих не дольше часа
-  houseCut: 0.1, // комиссия с банка (как в рулетке)
-  houseFreeUpTo: 9, // банк до 9 включительно — без комиссии
+  winMultiplier: 2, // победитель получает ставку × 2; ничья за 1-е место — каждому возврат ставки
 });
 
 const SCHEMA = `
@@ -281,9 +280,9 @@ export class BasketService extends EventEmitter {
       const game = this.q.game.get(gameId);
       if (game.status !== 'open') return;
       const ranked = BasketService.rank(this.q.entries.all(gameId));
-      const pot = bankOf(game.stake * ranked.length, this.o.houseCut, this.o.houseFreeUpTo);
       const winners = ranked.filter((r) => r.place === 1);
-      const share = Math.floor(pot / winners.length); // ничья за 1-е место — банк делится поровну
+      // Один победитель — ставка × 2. Ничья за 1-е место — каждому из них просто возвращается ставка.
+      const share = winners.length === 1 ? game.stake * this.o.winMultiplier : game.stake;
       for (const r of ranked) {
         const prize = r.place === 1 ? share : 0;
         if (prize > 0) this.store.ledgerCredit(r.user_id, prize, 'basket_win', gameId);
@@ -355,7 +354,8 @@ export class BasketService extends EventEmitter {
       id: g.id,
       stake: g.stake,
       status: g.status,
-      bank: g.status === 'finished' ? g.bank : bankOf(g.stake * this.o.players, this.o.houseCut, this.o.houseFreeUpTo),
+      prize: g.stake * this.o.winMultiplier, // выигрыш победителя
+      bank: g.bank, // сколько выплачено по итогам (0, пока матч открыт)
       createdAt: g.created_at,
       expiresAt: g.created_at + this.o.expireMs,
       me: mine && { score: mine.score, status: mine.status, place: mine.place, prize: mine.prize },

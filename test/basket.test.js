@@ -204,7 +204,7 @@ test('защита: повтор запроса, пропуск номера, у
   assert.equal(ctx.svc.state(1).games[0].me.score, 1, 'ни одна попытка не изменила счёт');
 });
 
-test('итоги: соперники видны после своей игры; когда сыграли трое — места, банк победителю (−10%)', () => {
+test('итоги: соперники видны после своей игры; когда сыграли трое — места, победителю ставка × 2', () => {
   const ctx = setup();
   play(ctx, 1, 10); shot(ctx, 1, 'made'); shot(ctx, 1, 'made'); shot(ctx, 1, 'miss'); finishTime(ctx, 1); // 2 очка, 3 броска
   let g = ctx.svc.state(1).games[0];
@@ -219,20 +219,28 @@ test('итоги: соперники видны после своей игры; 
   g = ctx.svc.state(1).games[0];
   assert.equal(g.status, 'finished');
   assert.deepEqual(g.players.map((p) => [p.id, p.place]).sort(), [[1, 2], [2, 1], [3, 3]]);
-  assert.equal(g.bank, 27, 'банк 30 − 10%');
-  assert.equal(ctx.store.getUser(2).balance, 1000 - 10 + 27);
+  assert.equal(g.prize, 20);
+  assert.equal(g.bank, 20, 'выплачено: ставка 10 × 2');
+  assert.equal(ctx.store.getUser(2).balance, 1000 - 10 + 20);
   assert.equal(ctx.store.getUser(1).balance, 990);
   assert.equal(ctx.store.getUser(3).balance, 990);
-  assert.deepEqual(ctx.svc.state(2).stats, { games: 1, wins: 1, best: 2, won: 27 });
+  assert.deepEqual(ctx.svc.state(2).stats, { games: 1, wins: 1, best: 2, won: 20 });
 });
 
-test('банк до 9 без комиссии; ничья за 1-е место делит банк поровну', () => {
+test('×2 на всех ставках; ничья за 1-е место — каждому из победителей возврат ставки', () => {
+  for (const stake of [5, 10, 20, 50, 100]) {
+    const ctx = setup();
+    play(ctx, 1, stake); shot(ctx, 1, 'made'); finishTime(ctx, 1);
+    for (const uid of [2, 3]) { play(ctx, uid, stake); shot(ctx, uid, 'miss'); finishTime(ctx, uid); }
+    assert.equal(ctx.store.getUser(1).balance, 1000 - stake + stake * 2, `ставка ${stake} → ×2`);
+    assert.equal(ctx.store.getUser(2).balance, 1000 - stake);
+  }
   const ctx = setup();
   for (const uid of [1, 2, 3]) { play(ctx, uid, 5); shot(ctx, uid, 'miss'); finishTime(ctx, uid); }
   const g = ctx.svc.state(1).games[0];
   assert.deepEqual(g.players.map((p) => p.place), [1, 1, 1], 'все промахнулись одинаково — общее место');
-  assert.equal(g.bank, 12, 'банк 15 − 10% (с 10) = 14 → по 4 каждому, остаток не делится');
-  for (const uid of [1, 2, 3]) assert.equal(ctx.store.getUser(uid).balance, 1000 - 5 + 4);
+  assert.equal(g.bank, 15, 'каждому вернули ставку 5');
+  for (const uid of [1, 2, 3]) assert.equal(ctx.store.getUser(uid).balance, 1000);
   const P = (id, score, shots, quality) => ({ user_id: id, score, shots, quality });
   assert.deepEqual(BasketService.rank([P(1, 3, 5, 2.4), P(2, 3, 4, 1.5), P(3, 3, 5, 2.7)]).map((x) => [x.user_id, x.place]), [[2, 1], [3, 2], [1, 3]]);
   assert.deepEqual(BasketService.rank([P(1, 0, 4, 0), P(2, 0, 0, 0), P(3, 0, 1, 0)]).map((x) => x.place), [1, 1, 1], '0 очков у всех — общее место');
