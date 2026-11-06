@@ -433,7 +433,8 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 	# ---- tyre forces
 	var total_slip := 0.0
-	var s_max := deg_to_rad(lerpf(34.0, 7.0, smoothstep(0.0, 45.0, absf(forward_speed))))
+	# speed-sensitive steering (game assist): full lock 34 deg when parking, ~11 deg at 100 km/h
+	var s_max := deg_to_rad(lerpf(34.0, 5.0, smoothstep(0.0, 40.0, absf(forward_speed))))
 	for w in wheels:
 		var front: bool = w["front"]
 		# Ackermann: inner wheel steers more

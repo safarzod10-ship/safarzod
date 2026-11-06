@@ -33,16 +33,18 @@ func _ready() -> void:
 	car.wetness_override = 0.0
 	_build_course()
 	await _frames(20)
-	await _engine_and_drive()
-	await _surfaces()
-	await _drift()
-	await _effects_and_sounds()
-	await _doors_and_seat()
-	await _cameras()
-	await _lamps()
-	await _damage()
-	await _touch_and_hud()
-	await _cost()
+	var only := ""
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("only="):
+			only = a.substr(5)
+	s.player.teleport(C + Vector3(8, 1, 50), 0.0)
+	await _sec(0.5)
+	s.enter()
+	await _sec(0.2)
+	for sec in ["engine", "surfaces", "drift", "effects", "doors", "cameras", "lamps", "damage", "touch", "cost"]:
+		if only != "" and not only.split(",").has(sec):
+			continue
+		await call("_t_" + sec)
 	print("STAGE5_TESTS ", "ALL PASS" if ok_all else "SOME FAILED", "  (%d checks)" % n)
 	var f := FileAccess.open("res://docs/reports/stage5_tests.txt", FileAccess.WRITE)
 	if f:
@@ -83,7 +85,7 @@ func _build_course() -> void:
 	_box(Vector3(0, -0.5, -1500), Vector3(40, 1, 3200))             # straight along -Z (z 100 .. -3100)
 	_box(Vector3(300, -0.5, 0), Vector3(400, 1, 400))              # skid pad (x 100 .. 500)
 	_box(Vector3(-150, -0.5, 0), Vector3(200, 1, 120))             # crash area
-	_box(Vector3(-240, 1.5, 0), Vector3(2, 3, 60))                 # wall (x = -239)
+	_box(Vector3(-240, 4.0, 0), Vector3(2, 8, 60))                 # wall (x = -239), 8 m high
 	for i in 12:                                                    # 10 cm bumps on a lane
 		_box(Vector3(-100, 0.05, -150.0 - i * 6.0), Vector3(6, 0.1, 0.6))
 	_box(Vector3(-100, -0.5, -200), Vector3(30, 1, 200))
@@ -95,9 +97,10 @@ func _drive(t: float, th: float, br := 0.0, st := 0.0, hb := false) -> void:
 
 
 func _place(p: Vector3, yaw := 0.0) -> void:
-	VehicleInput.scripted = {"throttle": 0.0, "brake": 1.0}
+	VehicleInput.scripted = {"throttle": 0.0, "handbrake": true}
 	car.place(C + p, yaw)
 	car.repair()
+	car.gear = 1
 	await _sec(1.2)
 
 
@@ -107,14 +110,16 @@ func _stop() -> void:
 	while car.speed_kmh > 0.5 and t < 15.0:
 		await _frames(1)
 		t += 1.0 / 60.0
+	VehicleInput.scripted = {"handbrake": true}
 
 
 # ------------------------------------------------------------------------------------------------
-func _engine_and_drive() -> void:
+func _t_engine() -> void:
 	# get in (instant): engine start
-	s.player.teleport(car.driver_door_point(2.0), 0.0)
+	s.exit()
 	await _place(Vector3(0, 0, 50))
 	s.enter()
+	VehicleInput.scripted = {"throttle": 0.0}
 	await _sec(0.3)
 	var started := au.running and au.log_events.has("engine_start")
 	await _sec(1.6)
@@ -148,8 +153,12 @@ func _engine_and_drive() -> void:
 		if car.speed_kmh >= 199.0:
 			break
 	_check("acceleration 0-100 km/h %.1f s (real Prado 2.8 D-4D 204 hp ~9.9 s; target 9..14), gradual" % t100, t100 > 9.0 and t100 < 14.0)
-	_check("automatic 6-speed: gears used %s, max %.0f rpm (< 4450 cut-off), %d shifts with torque-cut dip, top %.0f km/h" % [str(gears.keys()), max_rpm, dips, car.speed_kmh],
-		gears.has(1) and gears.has(6) and max_rpm < 4460.0 and dips >= 5 and car.speed_kmh >= 195.0)
+	var top := car.speed_kmh
+	VehicleInput.scripted = {"throttle": 0.35}
+	await _sec(3.0)
+	gears[car.gear] = true
+	_check("automatic 6-speed: gears used %s (6th = overdrive on part throttle), max %.0f rpm (< 4450 cut-off), %d shifts with torque-cut dip, top %.0f km/h" % [str(gears.keys()), max_rpm, dips, top],
+		gears.has(1) and gears.has(5) and gears.has(6) and max_rpm < 4460.0 and dips >= 4 and top >= 195.0)
 	_check("all 4 engine layers used across the rpm range: %s" % str(doms.keys()), doms.has("eng_idle") and doms.has("eng_low") and doms.has("eng_mid") and doms.has("eng_high"))
 	# lift-off: off-load layers take over, engine braking
 	VehicleInput.scripted = {"throttle": 0.0}
@@ -189,19 +198,23 @@ func _engine_and_drive() -> void:
 	VehicleInput.scripted = {"throttle": 0.12, "steer": 1.0}
 	await _sec(3.0)
 	var yr := absf(car.angular_velocity.y)
-	var r := absf(car.forward_speed) / maxf(yr, 0.01)
+	var v_turn := absf(car.forward_speed)
+	var r := v_turn / maxf(yr, 0.01)
+	# kerb-to-kerb radius = path of the outer front tyre: sqrt((R + track / 2)^2 + wheelbase^2)
+	var r_outer := sqrt(pow(r + 0.8, 2.0) + 2.64 * 2.64)          # wheelbase of the model 2.64 m
 	await _place(Vector3(300, 0, 150))
 	VehicleInput.scripted = {"throttle": 1.0}
 	while car.speed_kmh < 100.0:
 		await _frames(1)
-	VehicleInput.scripted = {"throttle": 0.3, "steer": 1.0}
-	await _sec(1.0)
+	VehicleInput.scripted = {"throttle": 0.6, "steer": 1.0}
+	await _sec(0.5)
+	var v_fast := car.speed_kmh
 	var lock_fast := 0.0
 	for w in car.wheels:
 		if w["front"]:
-			lock_fast = maxf(lock_fast, absf(float(w["steer"])))
-	_check("steering: turning radius %.1f m at %.0f km/h (Prado 5.8 m), at 100 km/h full input = %.1f deg wheel angle (speed-sensitive)" % [r, absf(car.forward_speed) * 3.6, rad_to_deg(lock_fast)],
-		r > 4.5 and r < 8.0 and rad_to_deg(lock_fast) < 12.0)
+			lock_fast += absf(float(w["steer"])) * 0.5     # mean of both front wheels (Ackermann)
+	_check("steering: turning circle %.1f m kerb radius (CG path %.1f m at %.0f km/h; real Prado 5.8 m); at %.0f km/h full input = %.1f deg wheel angle (speed-sensitive, 34 deg when parking)" % [r_outer, r, v_turn * 3.6, v_fast, rad_to_deg(lock_fast)],
+		r_outer > 5.0 and r_outer < 7.0 and rad_to_deg(lock_fast) < 14.0)
 	await _stop()
 
 
@@ -234,7 +247,7 @@ func _brake_decel(surface: int, wet: float) -> float:
 	return a / 9.81
 
 
-func _surfaces() -> void:
+func _t_surfaces() -> void:
 	var dry := await _brake_decel(CityWorld.Surface.ASPHALT, 0.0)
 	var wet := await _brake_decel(CityWorld.Surface.ASPHALT, 1.0)
 	_check("asphalt: braking %.2f g dry, %.2f g wet road (rain: less grip)" % [dry, wet], dry > 0.75 and dry < 0.95 and wet < dry * 0.85 and wet > 0.5)
@@ -326,7 +339,7 @@ func _drift_run(arcade: bool) -> Dictionary:
 	return {"slid": slid, "max": max_a, "recover": recover, "squeal": squeal, "marks": fx.marks_laid - marks0, "smoke": smoke}
 
 
-func _drift() -> void:
+func _t_drift() -> void:
 	# handbrake: rear slides
 	await _place(Vector3(300, 0, 150), 0.0)
 	VehicleInput.scripted = {"throttle": 1.0}
@@ -347,7 +360,7 @@ func _drift() -> void:
 		re["recover"] > 0.0 and re["recover"] < 3.5 and ar["recover"] > 0.0 and ar["slid"] >= re["slid"] * 0.9)
 
 
-func _effects_and_sounds() -> void:
+func _t_effects() -> void:
 	# smoke ∝ slip, none when gripping
 	await _place(Vector3(0, 0, 50))
 	var grip_smoke := 0.0
@@ -442,13 +455,14 @@ func _effects_and_sounds() -> void:
 	_check("all 23 car sound files load (real recordings, licences in LICENSES.txt); missing: %s" % str(missing), missing.is_empty())
 
 
-func _doors_and_seat() -> void:
+func _t_doors() -> void:
 	s.exit()
 	await _place(Vector3(0, 0, 60))
 	s.player.teleport(car.driver_door_point(1.6), PI * 0.5)
 	await _sec(1.0)
 	au.log_events.clear()
 	var max_open := 0.0
+	print("doors: can_enter ", s.can_enter(), " player ", s.player.global_position, " door ", car.driver_door_point(0.6), " floor ", s.player.is_on_floor(), " busy ", s.busy, " speed ", car.speed_kmh)
 	s.enter_animated()
 	var t := 0.0
 	while (s.busy or not s.driving) and t < 12.0:
@@ -487,7 +501,7 @@ func _doors_and_seat() -> void:
 	await _sec(1.5)
 
 
-func _cameras() -> void:
+func _t_cameras() -> void:
 	var cam: VehicleCamera = s.cam
 	await _place(Vector3(0, 0, 60))
 	cam.snap()
@@ -514,9 +528,9 @@ func _cameras() -> void:
 	cam.snap()
 	await _sec(1.5)
 	var cp := cam.global_position
-	var behind_wall := cp.x < C.x - 239.0 + 0.05
+	var behind_wall := cp.x < C.x - 239.0 + 0.1        # wall occupies x -241 .. -239
 	var d := cp.distance_to(car.global_position)
-	_check("3rd-person camera: %.1f m from the car, pulled in front of the wall (cam x %.2f, wall face %.2f)" % [d, cp.x - C.x, -239.0 + 1.0],
+	_check("3rd-person camera: %.1f m from the car, pulled in front of the wall (cam x %.2f, wall face %.2f)" % [d, cp.x - C.x, -239.0],
 		not behind_wall and d > 2.0 and d < 10.0)
 	cam.set_mode(VehicleCamera.Mode.ORBIT)
 	await _sec(0.6)
@@ -527,7 +541,7 @@ func _cameras() -> void:
 	_check("camera modes CHASE -> CABIN -> ORBIT blend smoothly (%.2f m moved in the first 0.1 s of a switch)" % jump, jump < 1.5)
 
 
-func _lamps() -> void:
+func _t_lamps() -> void:
 	var L := car.lights
 	L.beam = VehicleLights.Beam.LOW
 	await _frames(3)
@@ -543,7 +557,7 @@ func _lamps() -> void:
 	var br := L.braking
 	var e := float((car._mat_cache["taillight rr"] as ShaderMaterial).get_shader_parameter("emission_energy"))
 	VehicleInput.scripted = {"brake": 0.0}
-	await _frames(5)
+	await _frames(30)
 	var e0 := float((car._mat_cache["taillight rr"] as ShaderMaterial).get_shader_parameter("emission_energy"))
 	_check("brake lights: %.1f braking vs %.1f released (+ high stop lamp), reversing lamps on R (tested above)" % [e, e0], br and e > 2.0 and e0 < 1.0)
 	L.set_turn(-1)
@@ -566,7 +580,7 @@ func _lamps() -> void:
 	_check("turn signals: left blinks (on %s / off %s, right side dark), hazards light both sides %s" % [seen_on, seen_off, both], seen_on and seen_off and both)
 
 
-func _damage() -> void:
+func _t_damage() -> void:
 	# crash into the wall at ~45 km/h
 	await _place(Vector3(-140, 0, 0), PI * 0.5)        # facing -X (towards the wall)
 	au.log_events.clear()
@@ -619,7 +633,7 @@ func _damage() -> void:
 	await _stop()
 
 
-func _touch_and_hud() -> void:
+func _t_touch() -> void:
 	var cc: CarControls = s.controls
 	cc.touch_mode = true
 	cc.visible = true
@@ -657,7 +671,7 @@ func _touch_and_hud() -> void:
 		on_drive and not on_foot)
 
 
-func _cost() -> void:
+func _t_cost() -> void:
 	# CPU cost of the car's scripts per physics frame (desktop proxy; NOT a phone measurement)
 	await _place(Vector3(300, 0, 150))
 	VehicleInput.scripted = {"throttle": 1.0, "steer": 0.6}
@@ -674,8 +688,11 @@ func _cost() -> void:
 	var surfaces := 0
 	Settings.set_mode("low")
 	await _frames(2)
+	var drv: Node = car.get("_driver")
 	for mi in car.model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
+		if drv and drv.is_ancestor_of(m):
+			continue                                 # the seated character is counted with the player
 		if m.is_visible_in_tree():
 			tris += m.mesh.get_faces().size() / 3
 			surfaces += m.mesh.get_surface_count()

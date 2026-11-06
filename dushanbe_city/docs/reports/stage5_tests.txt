@@ -1,0 +1,15 @@
+PASS  1. engine start: starter + catch one-shot (real Hilux recording), loops fade in (idle gain 0.25)
+PASS  2. idle: 800 rpm at standstill, dominant layer eng_idle
+PASS  3. acceleration 0-100 km/h 9.3 s (real Prado 2.8 D-4D 204 hp ~9.9 s; target 9..14), gradual
+PASS  4. automatic 6-speed: gears used [1, 2, 3, 4, 5, 6] (6th = overdrive on part throttle), max 3895 rpm (< 4450 cut-off), 4 shifts with torque-cut dip, top 199 km/h
+PASS  5. all 4 engine layers used across the rpm range: ["eng_idle", "eng_low", "eng_mid", "eng_high"]
+PASS  6. lift-off: off-load layers 0.74 > on-load 0.00, engine braking 323 N (coast decel 0.96 m/s2)
+PASS  7. braking 100-0 km/h: 47.6 m with ABS (Prado ~42-48 m), tyres sing (squeal 0.40), no lock
+PASS  8. reverse: hold brake at standstill -> R, 25.2 km/h backwards (limit 25), reversing lamp true
+PASS  9. steering: turning circle 5.8 m kerb radius (CG path 4.3 m at 6 km/h; real Prado 5.8 m); at 99 km/h full input = 11.8 deg wheel angle (speed-sensitive, 34 deg when parking)
+PASS 10. interior view: camera at the driver's eye (-0.43, 0.63, -0.13) (inside the cabin), wheel in view true, cabin meshes on Low true, wheel turned 120 deg with the front wheels, muffled sound true
+PASS 11. 3rd-person camera: 6.2 m from the car, pulled in front of the wall (cam x -238.59, wall face -239.00)
+PASS 12. camera modes CHASE -> CABIN -> ORBIT blend smoothly (0.11 m moved in the first 0.1 s of a switch)
+PASS 13. headlights: dipped (spot true, lamp energy 2.2) -> main beam (energy 4.0, range 75 m), one shadowless spot light
+PASS 14. brake lights: 3.5 braking vs 0.0 released (+ high stop lamp), reversing lamps on R (tested above)
+PASS 15. turn signals: left blinks (on true / off true, right side dark), hazards light both sides true

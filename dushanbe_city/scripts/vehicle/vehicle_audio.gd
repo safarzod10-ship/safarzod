@@ -143,7 +143,11 @@ func _process(delta: float) -> void:
 		start_engine()
 	elif not car.driven and running:
 		stop_engine()
-	AudioServer.set_bus_effect_enabled(AudioServer.get_bus_index(BUS), 0, interior)
+	# cabin: closed doors / glass / insulation: low-pass + about -9 dB (the listener sits at the engine
+	# instead of 6 m away, so without this the cabin would be louder than outside)
+	var bi := AudioServer.get_bus_index(BUS)
+	AudioServer.set_bus_effect_enabled(bi, 0, interior)
+	AudioServer.set_bus_volume_db(bi, -9.0 if interior else 0.0)
 	_engine(delta)
 	_tyres(delta)
 	_suspension()

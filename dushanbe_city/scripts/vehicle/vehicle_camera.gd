@@ -12,7 +12,7 @@ extends Camera3D
 ## Every switch blends position / rotation / FOV over 0.45 s (no jump cut).
 
 enum Mode { CHASE, CABIN, ORBIT }
-const NAMES := ["3-Е ЛИЦО", "САЛОН", "ОБЗОР"]
+const NAMES := ["3-Е ЛИЦО", "САЛОН", "ОБЗОР"]   ## shown on the «ВИД» button
 const BLEND_T := 0.45
 
 var car: VehiclePrado

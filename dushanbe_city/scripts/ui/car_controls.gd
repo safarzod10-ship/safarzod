@@ -155,7 +155,7 @@ func _draw() -> void:
 	_pedal(r["brake"], "ТОРМОЗ", Color(0.85, 0.25, 0.2, 0.55) if held.has("brake") else base)
 	_pedal(r["handbrake"], "РУЧНИК", Color(1.0, 0.6, 0.1, 0.6) if held.has("handbrake") else base)
 	# top buttons
-	_button(r["orbit"], "КАМЕРА: " + camera_label, base)
+	_button(r["orbit"], "ВИД: " + camera_label, base)
 	_button(r["repair"], "ВОССТАНОВИТЬ", base)
 	_button(r["exit"], "ВЫЙТИ", base)
 	if car and car.lights:
