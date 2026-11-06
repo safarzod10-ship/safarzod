@@ -328,8 +328,7 @@ test('админ добавляет задание: ссылка → награ�
 // ---------- Рефералы ----------
 function refBot(store, members = new Set()) {
   const bot = fakeBot(store);
-  bot.refChannel = '@safroulette';
-  bot.refReward = 1;
+  bot.refPercent = 15;
   const base = bot.api;
   bot.api = async (method, payload) => {
     if (method === 'getChatMember') return { status: members.has(payload.user_id) ? 'member' : 'left' };
@@ -357,23 +356,49 @@ test('реферал: новый пользователь по ссылке пр
   assert.equal(store.friends(1).n, 1);
 });
 
-test('реферал: +1 ⭐ только после подписки и только один раз; событие канала награждает сразу', async () => {
+test('реферал: 15% с каждого пополнения друга, дробные части копятся, повтор платежа не удваивает', async () => {
+  const store = storeWith(0); // пригласивший — id 1
+  const bot = refBot(store);
+  await bot.handleUpdate(startFrom(50, '/start ref_1'));
+  const pay = (id, amount) =>
+    bot.handleUpdate({
+      message: {
+        message_id: 9, chat: { id: 50, type: 'private' }, from: { id: 50, first_name: 'F50' },
+        successful_payment: { currency: 'XTR', total_amount: amount, telegram_payment_charge_id: id, invoice_payload: `dep:50:${amount}:1` },
+      },
+    });
+  await pay('c1', 100);
+  assert.equal(store.getUser(1).balance, 15);
+  assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /пополнил баланс — вам <b>\+15 ⭐/.test(c.payload.text ?? '')));
+  await pay('c1', 100); // тот же платёж повторно
+  assert.equal(store.getUser(1).balance, 15);
+  await pay('c2', 3); // 103 × 15% = 15.45 → пока ничего
+  assert.equal(store.getUser(1).balance, 15);
+  await pay('c3', 4); // 107 × 15% = 16.05 → +1
+  assert.equal(store.getUser(1).balance, 16);
+  assert.equal(store.getUser(50).balance, 107, 'друг получает пополнение полностью');
+  const f = store.friends(1);
+  assert.deepEqual([f.n, f.earned, f.list[0].earned], [1, 16, 16]);
+});
+
+test('реферал: пополнение без пригласившего никому ничего не начисляет', () => {
+  const store = storeWith(0, 0);
+  const u = store.creditPayment({ chargeId: 'x', userId: 2, amount: 100, payload: 'dep', refPercent: 15 });
+  assert.equal(u.referral, null);
+  assert.equal(store.getUser(1).balance, 0);
+});
+
+test('вывод: без подписки на канал — понятная ошибка; с подпиской — можно; сбой проверки — не пускает', async () => {
   const store = storeWith(0);
   const members = new Set();
   const bot = refBot(store, members);
-  await bot.handleUpdate(startFrom(50, '/start ref_1'));
-  assert.equal(await bot.checkReferral(50), false);
-  assert.equal(store.getUser(1).balance, 0);
-  members.add(50);
-  await bot.handleUpdate({
-    chat_member: { chat: { id: -1, username: 'SafRoulette' }, new_chat_member: { status: 'member', user: { id: 50 } } },
-  });
-  assert.equal(store.getUser(1).balance, 1);
-  assert.equal(await bot.checkReferral(50), false);
-  assert.equal(store.getUser(1).balance, 1);
-  assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /теперь в канале/.test(c.payload.text ?? '')));
-  const f = store.friends(1);
-  assert.deepEqual([f.n, f.rewarded, f.list[0].ref_rewarded], [1, 1, 1]);
+  await assert.rejects(bot.assertSubscribed('@safroulette', 1), (e) => e.code === 'NOT_SUBSCRIBED' && /@safroulette/.test(e.message));
+  members.add(1);
+  await bot.assertSubscribed('@safroulette', 1);
+  bot.api = async () => {
+    throw new Error('400 Bad Request: member list is inaccessible');
+  };
+  await assert.rejects(bot.assertSubscribed('@safroulette', 1), (e) => e.code === 'CHECK_FAILED');
 });
 
 test('startapp: параметр из подписанного initData доступен серверу, подделка ломает подпись', () => {

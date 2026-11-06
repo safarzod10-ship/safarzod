@@ -3,6 +3,7 @@
 // Документация: https://core.telegram.org/bots/api
 
 import { readFile } from 'node:fs/promises';
+import { AppError } from './db.js';
 import { basename } from 'node:path';
 
 const WELCOME =
@@ -21,7 +22,7 @@ const btn = (text, data) => ({ text, callback_data: data });
 const link = (text, url) => ({ text, url });
 
 export class Bot {
-  constructor({ token, webAppUrl, adminId, supportUsername, channelUrl, chatUrl, bannerPath, refChannel, refReward = 1, limits, store }) {
+  constructor({ token, webAppUrl, adminId, supportUsername, channelUrl, chatUrl, bannerPath, refPercent = 15, limits, store }) {
     this.token = token;
     this.webAppUrl = webAppUrl;
     this.adminId = adminId;
@@ -29,8 +30,7 @@ export class Bot {
     this.channelUrl = channelUrl;
     this.chatUrl = chatUrl;
     this.bannerPath = bannerPath;
-    this.refChannel = refChannel;
-    this.refReward = refReward;
+    this.refPercent = refPercent;
     this.bannerFileId = null; // после первой загрузки баннер отправляется по file_id, без повторной загрузки
     this.limits = limits;
     this.store = store;
@@ -115,8 +115,7 @@ export class Bot {
         const updates = await this.api('getUpdates', {
           offset: this.offset,
           timeout: 50,
-          // chat_member — новые подписчики канала (приходят, если бот — админ канала)
-          allowed_updates: ['message', 'callback_query', 'pre_checkout_query', 'chat_member'],
+          allowed_updates: ['message', 'callback_query', 'pre_checkout_query'],
         });
         backoff = 1000;
         for (const u of updates) {
@@ -168,7 +167,6 @@ export class Bot {
   async handleUpdate(update) {
     if (update.callback_query) return this.#onCallback(update.callback_query);
     if (update.pre_checkout_query) return this.#onPreCheckout(update.pre_checkout_query);
-    if (update.chat_member) return this.#onChatMember(update.chat_member);
     const msg = update.message;
     if (!msg || msg.chat.type !== 'private') return;
     if (msg.successful_payment) return this.#onPaid(msg);
@@ -252,41 +250,20 @@ export class Bot {
     await this.#send(
       inviter.id,
       `👋 Новый друг по вашей ссылке: <b>${esc(fullName(friend))}</b>.\n` +
-        `Когда друг подпишется на канал, вы получите <b>+${fmt(this.refReward)} ⭐</b>.`,
+        `Вы будете получать <b>${fmt(this.refPercent)}%</b> с каждого пополнения друга.`,
     ).catch(() => {});
-    setTimeout(() => this.checkReferral(friend.id).catch(() => {}), 3000).unref?.(); // вдруг уже подписан
   }
 
-  /** Проверяет подписку приглашённого друга и награждает пригласившего (один раз). */
-  async checkReferral(friendId) {
-    const friend = this.store.getUser(friendId);
-    if (!friend?.referrer_id || friend.ref_rewarded || !this.refChannel) return false;
-    let member = false;
-    try {
-      member = await this.isMember(this.refChannel, friendId);
-    } catch {
-      return false; // бот не админ канала или Telegram недоступен — проверим позже
-    }
-    if (!member) return false;
-    const inviter = this.store.rewardReferral(friendId, this.refReward);
-    if (!inviter) return false;
+  /** Пригласившему — уведомление о доходе с пополнения друга. */
+  async #notifyReferralIncome(friend, referral) {
+    const inviter = this.store.getUser(referral.inviterId);
+    if (!inviter) return;
     this.onBalance(inviter);
     await this.#send(
       inviter.id,
-      `🎉 Друг <b>${esc(fullName(friend))}</b> теперь в канале — вам <b>+${fmt(this.refReward)} ⭐</b>`,
+      `💸 Друг <b>${esc(fullName(friend))}</b> пополнил баланс — вам <b>+${fmt(referral.amount)} ⭐</b> (${fmt(this.refPercent)}%)`,
       this.playButton('Открыть игру'),
     ).catch(() => {});
-    return true;
-  }
-
-  /** Telegram сообщает о новом подписчике канала — награда приходит сразу. */
-  async #onChatMember(upd) {
-    const ref = (this.refChannel ?? '').replace(/^@/, '').toLowerCase();
-    if (!ref || upd.chat?.username?.toLowerCase() !== ref) return;
-    const st = upd.new_chat_member?.status;
-    if (['member', 'administrator', 'creator'].includes(st) || (st === 'restricted' && upd.new_chat_member.is_member)) {
-      await this.checkReferral(upd.new_chat_member.user.id);
-    }
   }
 
   // ====================== Админ-панель ======================
@@ -506,6 +483,19 @@ export class Bot {
     };
   }
 
+  /** Вывод доступен только подписчикам канала. Бросает понятную игроку ошибку. */
+  async assertSubscribed(channel, userId) {
+    if (!channel) return;
+    let member;
+    try {
+      member = await this.isMember(channel, userId);
+    } catch (e) {
+      console.error(`Проверка подписки на ${channel} не удалась (бот — админ канала?):`, e.message);
+      throw new AppError('CHECK_FAILED', 'Не удалось проверить подписку. Попробуйте через минуту', 503);
+    }
+    if (!member) throw new AppError('NOT_SUBSCRIBED', `Для вывода подпишитесь на канал ${channel}`, 403);
+  }
+
   /** Состоит ли пользователь в канале/чате задания. */
   async isMember(chatRef, userId) {
     const m = await this.api('getChatMember', { chat_id: chatRef, user_id: userId });
@@ -679,10 +669,12 @@ export class Bot {
       userId: msg.from.id,
       amount: p.total_amount,
       payload: p.invoice_payload,
+      refPercent: this.refPercent,
     });
     if (!user) return; // уже зачислено
     this.onBalance(user);
     await this.#send(msg.chat.id, `Баланс пополнен на <b>${fmt(p.total_amount)} ⭐</b>`, this.playButton('Открыть игру'));
+    if (user.referral) await this.#notifyReferralIncome(user, user.referral);
   }
 
   // ====================== Заявки на вывод ======================

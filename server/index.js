@@ -33,8 +33,7 @@ const bot = config.botToken
       supportUsername: config.supportUsername,
       channelUrl: config.channelUrl,
       chatUrl: config.chatUrl,
-      refChannel: config.refChannel,
-      refReward: config.refReward,
+      refPercent: config.refPercent,
       bannerPath: fileURLToPath(new URL('../public/banner.jpg', import.meta.url)),
       limits: config.limits,
       store,
@@ -104,14 +103,6 @@ function amountOf(body, min) {
 
 const lastAction = new Map(); // защита от случайных двойных нажатий
 const taskOpened = new Map(); // `${userId}:${taskId}` → когда игрок открыл ссылку задания
-const onceTimes = new Map();
-/** true не чаще одного раза в ms для данного ключа (ограничение частоты проверок в Telegram). */
-function once(key, ms) {
-  const now = Date.now();
-  if (now - (onceTimes.get(key) ?? 0) < ms) return false;
-  onceTimes.set(key, now);
-  return true;
-}
 const publicTask = (t) => ({ id: t.id, kind: t.kind, title: t.title, url: t.url, reward: t.reward, done: t.done });
 function throttle(userId, ms = 400) {
   const now = Date.now();
@@ -148,6 +139,8 @@ function profile(user) {
 const routes = {
   'GET /api/config': () => ({
     supportUsername: config.supportUsername,
+    channelUrl: config.channelUrl,
+    withdrawChannel: config.withdrawChannel,
     botUsername: bot?.username ?? '',
     minBet: config.game.minBet,
     minDeposit: config.limits.minDeposit,
@@ -158,33 +151,22 @@ const routes = {
 
   'GET /api/round': () => game.publicState(),
 
-  'POST /api/me': (req) => {
-    const user = authenticate(req);
-    // Приглашённый открыл приложение — заодно проверим, не подписался ли он на канал
-    if (user.referrer_id && !user.ref_rewarded && once(`ref:${user.id}`, 60_000)) bot?.checkReferral(user.id).catch(() => {});
-    return profile(user);
-  },
+  'POST /api/me': (req) => profile(authenticate(req)),
 
   'POST /api/friends': async (req) => {
     const user = authenticate(req);
-    if (bot && once(`friends:${user.id}`, 30_000)) {
-      // Проверяем подписку друзей, которые ещё не принесли награду (не чаще раза в 30 секунд)
-      await Promise.allSettled(store.pendingFriends(user.id, 20).map((id) => bot.checkReferral(id)));
-    }
-    const { list, n, rewarded } = store.friends(user.id);
+    const { list, n, earned } = store.friends(user.id);
     return {
       link: bot?.username ? bot.referralLink(user.id) : config.devMode ? `https://t.me/roulette_bot?startapp=ref_${user.id}` : '',
-      reward: config.refReward,
-      channelUrl: config.channelUrl,
+      percent: config.refPercent,
       count: n,
-      rewarded,
-      earned: rewarded * config.refReward,
+      earned,
       friends: list.map((f) => ({
         id: f.id,
         name: [f.first_name, f.last_name].filter(Boolean).join(' ') || (f.username ? `@${f.username}` : 'Игрок'),
         username: f.username,
         photo: f.photo_url,
-        rewarded: !!f.ref_rewarded,
+        earned: f.earned,
       })),
       ...profile(store.getUser(user.id)),
     };
@@ -203,7 +185,7 @@ const routes = {
     const amount = amountOf(await readJson(req), config.limits.minDeposit);
     if (!bot && config.devMode) {
       // Локальная разработка без бота: зачисляем сразу, чтобы можно было проверить интерфейс.
-      store.creditPayment({ chargeId: `dev-${Date.now()}-${Math.random()}`, userId: user.id, amount, payload: 'dev' });
+      store.creditPayment({ chargeId: `dev-${Date.now()}-${Math.random()}`, userId: user.id, amount, payload: 'dev', refPercent: config.refPercent });
       return { dev: true, ...profile(store.getUser(user.id)) };
     }
     if (!bot) throw new AppError('NO_BOT', 'Оплата недоступна', 503);
@@ -249,6 +231,7 @@ const routes = {
     const user = authenticate(req);
     const amount = amountOf(await readJson(req), config.limits.minWithdraw);
     throttle(user.id, 1500);
+    await bot?.assertSubscribed(config.withdrawChannel, user.id); // вывод — только подписчикам канала
     const fee = Math.ceil(amount * config.limits.withdrawFee);
     const { withdrawal } = store.withdraw(user.id, amount, fee);
     bot?.notifyWithdrawal(withdrawal, store.getUser(user.id)).catch((e) => console.error('Заявка админу:', e.message));

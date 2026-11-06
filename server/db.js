@@ -180,11 +180,14 @@ class Store {
                         FROM rounds r JOIN users u ON u.id = r.winner_id
                         WHERE r.status = 'finished' AND r.finished_at >= ? ORDER BY r.bank DESC, r.id DESC LIMIT 1`),
       setReferrer: q('UPDATE users SET referrer_id = ? WHERE id = ? AND referrer_id IS NULL AND id <> ?'),
-      friends: q(`SELECT id, first_name, last_name, username, photo_url, ref_rewarded, created_at
-                  FROM users WHERE referrer_id = ? ORDER BY id DESC LIMIT 200`),
-      friendsCount: q('SELECT COUNT(*) AS n, COALESCE(SUM(ref_rewarded), 0) AS rewarded FROM users WHERE referrer_id = ?'),
-      pendingFriends: q('SELECT id FROM users WHERE referrer_id = ? AND ref_rewarded = 0 ORDER BY id DESC LIMIT ?'),
-      markRefRewarded: q('UPDATE users SET ref_rewarded = 1 WHERE id = ? AND ref_rewarded = 0 AND referrer_id IS NOT NULL'),
+      friends: q(`SELECT u.id, u.first_name, u.last_name, u.username, u.photo_url, u.created_at,
+                    (SELECT COALESCE(SUM(l.amount), 0) FROM ledger l
+                      WHERE l.user_id = :inviter AND l.ref = u.id AND l.kind IN ('referral', 'ref_deposit')) AS earned
+                  FROM users u WHERE u.referrer_id = :inviter ORDER BY earned DESC, u.id DESC LIMIT 200`),
+      friendsCount: q('SELECT COUNT(*) AS n FROM users WHERE referrer_id = ?'),
+      refEarned: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND kind IN ('referral', 'ref_deposit')"),
+      userPaid: q('SELECT COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
+      refPaidFor: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND ref = ? AND kind = 'ref_deposit'"),
       recentWinners: q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
                           (SELECT SUM(amount) FROM bets b WHERE b.round_id = r.id AND b.user_id = r.winner_id) AS stake
                         FROM rounds r JOIN users u ON u.id = r.winner_id
@@ -321,22 +324,27 @@ class Store {
   }
 
   friends(userId) {
-    return { list: this.q.friends.all(userId), ...this.q.friendsCount.get(userId) };
+    return {
+      list: this.q.friends.all({ inviter: userId }),
+      n: this.q.friendsCount.get(userId).n,
+      earned: this.q.refEarned.get(userId).sum,
+    };
   }
 
-  pendingFriends(userId, limit = 20) {
-    return this.q.pendingFriends.all(userId, limit).map((r) => r.id);
-  }
-
-  /** Награда пригласившему за друга (один раз за каждого). Возвращает пригласившего или null. */
-  rewardReferral(friendId, amount) {
-    return this.tx(() => {
-      const friend = this.getUser(friendId);
-      if (!friend?.referrer_id) return null;
-      if (this.q.markRefRewarded.run(friendId).changes !== 1) return null;
-      this.#credit(friend.referrer_id, amount, 'referral', friendId);
-      return this.getUser(friend.referrer_id);
-    });
+  /**
+   * Доля пригласившего с пополнений друга (внутри транзакции оплаты).
+   * Считается от суммы ВСЕХ пополнений друга, поэтому дробные части не теряются:
+   * 3 ⭐ + 4 ⭐ → 15% от 7 = 1 ⭐. Возвращает { inviterId, amount } или null.
+   */
+  #payReferralShare(friendId, percent) {
+    const friend = this.getUser(friendId);
+    if (!friend?.referrer_id || !(percent > 0)) return null;
+    const owed = Math.floor((this.q.userPaid.get(friendId).sum * percent) / 100);
+    const paid = this.q.refPaidFor.get(friend.referrer_id, friendId).sum;
+    const amount = owed - paid;
+    if (amount <= 0) return null;
+    this.#credit(friend.referrer_id, amount, 'ref_deposit', friendId);
+    return { inviterId: friend.referrer_id, amount };
   }
 
   recentWinners(limit = 12) {
@@ -359,13 +367,18 @@ class Store {
     this.q.ledger.run(userId, kind, amount, ref, Date.now());
   }
 
-  /** Зачисление оплаченных звёзд. Повторное уведомление о том же платеже игнорируется. */
-  creditPayment({ chargeId, userId, amount, payload }) {
+  /**
+   * Зачисление оплаченных звёзд (повторное уведомление о том же платеже игнорируется)
+   * и, если игрока пригласили, — доля refPercent % пригласившему.
+   * Возвращает игрока с полем referral: { inviterId, amount } | null.
+   */
+  creditPayment({ chargeId, userId, amount, payload, refPercent = 0 }) {
     return this.tx(() => {
       const { changes } = this.q.addPayment.run(chargeId, userId, amount, payload, Date.now());
       if (changes !== 1) return null;
       this.#credit(userId, amount, 'deposit', null);
-      return this.getUser(userId);
+      const referral = this.#payReferralShare(userId, refPercent);
+      return { ...this.getUser(userId), referral };
     });
   }
 

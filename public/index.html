@@ -153,6 +153,14 @@
           <div class="row total"><span>К списанию</span><b class="num" id="wd-total">0</b></div>
         </div>
         <p class="hint" id="wd-hint"></p>
+        <div class="sub-notice card" id="wd-sub" hidden>
+          <div class="sn-icon"><svg><use href="#i-telegram"/></svg></div>
+          <div class="sn-main">
+            <div class="sn-title">Нужна подписка на канал</div>
+            <div class="sn-text">Вывод доступен подписчикам <b id="wd-sub-ch">@safroulette</b></div>
+          </div>
+          <button class="t-btn" id="wd-sub-btn">Подписаться</button>
+        </div>
         <div class="history" id="wd-history"></div>
         <div class="dock">
           <button class="btn primary block" id="wd-btn" disabled>Вывести</button>
@@ -167,8 +175,8 @@
           <div class="inv-head">
             <div class="inv-icon"><svg><use href="#i-users"/></svg></div>
             <div>
-              <div class="inv-title"><span id="ref-reward-title">+1</span> <svg class="star"><use href="#i-star"/></svg> за каждого друга</div>
-              <div class="inv-sub">Друг переходит по вашей ссылке и подписывается на канал</div>
+              <div class="inv-title"><span id="ref-percent-title">15%</span> с пополнений друзей</div>
+              <div class="inv-sub">Друг переходит по вашей ссылке — и вы получаете звёзды с каждого его пополнения</div>
             </div>
           </div>
           <button class="inv-link" id="ref-link" aria-label="Скопировать ссылку"><span class="inv-text num"><span class="il-head" id="ref-link-head">…</span><span class="il-tail" id="ref-link-tail"></span></span><svg><use href="#i-copy"/></svg></button>

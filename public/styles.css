@@ -654,3 +654,16 @@ body.kb .nav { display: none; }
   75% { opacity: 1; transform: translate(-50%, -26px); }
   100% { opacity: 0; transform: translate(-50%, -44px); }
 }
+
+/* Вывод: нужна подписка на канал */
+.sub-notice { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 12px 12px 12px 14px;
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent); animation: row-in 0.35s var(--ease); }
+.sn-icon { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; color: var(--accent); background: var(--accent-soft); }
+.sn-icon svg { width: 22px; height: 22px; }
+.sn-main { flex: 1; min-width: 0; }
+.sn-title { font-weight: 650; }
+.sn-text { font-size: 13px; color: var(--text-2); }
+.sn-text b { color: var(--text); font-weight: 600; }
+.fr-earned { display: flex; align-items: center; gap: 3px; font-weight: 700; color: var(--green); font-size: 14px; }
+.fr-earned .star { width: 12px; height: 12px; }
+.fr-none { font-size: 12.5px; color: var(--text-3); }

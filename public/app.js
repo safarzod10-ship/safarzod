@@ -898,10 +898,19 @@ async function withdraw() {
   } catch (e) {
     haptic.err();
     toast(e.message, 'err');
+    $('wd-sub').hidden = e.code !== 'NOT_SUBSCRIBED';
   } finally {
     busy(btn, false);
     updateWithdrawForm();
   }
+}
+
+function openChannel() {
+  const url = state.config.channelUrl || `https://t.me/${(state.config.withdrawChannel || '').replace(/^@/, '')}`;
+  haptic.tap();
+  supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
+  // После возвращения игрок просто нажимает «Вывести» ещё раз
+  setTimeout(() => ($('wd-sub').hidden = true), 1500);
 }
 
 const STATUS = { pending: 'В обработке', sent: 'Отправлено', cancelled: 'Отменено' };
@@ -1003,7 +1012,7 @@ async function loadFriends() {
 function renderFriends() {
   const f = state.friends;
   if (!f) return;
-  $('ref-reward-title').textContent = `+${fmt(f.reward)}`;
+  $('ref-percent-title').textContent = `${fmt(f.percent)}%`;
   const short = f.link.replace(/^https:\/\//, '');
   const cut = short.indexOf('ref_');
   $('ref-link-head').textContent = short ? (cut > 0 ? short.slice(0, cut) : short) : 'Ссылка появится после запуска бота';
@@ -1017,11 +1026,11 @@ function renderFriends() {
           (fr) => `<div class="friend">${avatarHtml(fr, 'sm')}
             <div class="fr-main"><div class="fr-name">${esc(fr.name)}</div>
             <div class="fr-nick">${fr.username ? `@${esc(fr.username)}` : '&nbsp;'}</div></div>
-            ${fr.rewarded ? `<span class="chip sent num">+${fmt(f.reward)} ⭐</span>` : '<span class="chip pending">Ждём подписку</span>'}
+            ${fr.earned > 0 ? `<span class="fr-earned num">+${fmt(fr.earned)}${STAR}</span>` : '<span class="fr-none">пока без пополнений</span>'}
           </div>`,
         )
         .join('')
-    : '<div class="friends-empty">Пока никого. Отправьте ссылку друзьям — звёзды придут, когда они подпишутся на канал.</div>';
+    : `<div class="friends-empty">Пока никого. Отправьте ссылку друзьям — вы будете получать ${fmt(f.percent)}% с каждого их пополнения.</div>`;
 }
 
 async function copyRefLink() {
@@ -1082,6 +1091,7 @@ function bindUi() {
   $('dep-btn').addEventListener('click', deposit);
   $('wd-input').addEventListener('input', updateWithdrawForm);
   $('wd-btn').addEventListener('click', withdraw);
+  $('wd-sub-btn').addEventListener('click', openChannel);
   $('support-btn').addEventListener('click', () => {
     const url = `https://t.me/${state.config.supportUsername}`;
     supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
@@ -1114,6 +1124,7 @@ async function main() {
     state.config = { ...state.config, ...(await api('/api/config')) };
   } catch {}
   $('wd-min').textContent = fmt(state.config.minWithdraw);
+  if (state.config.withdrawChannel) $('wd-sub-ch').textContent = state.config.withdrawChannel;
   $('wb-withdraw-sub').textContent = `От ${fmt(state.config.minWithdraw)} ⭐`;
   $('wd-fee-pct').textContent = Math.round(state.config.withdrawFee * 100);
   $('dep-hint').textContent = `Минимум ${fmt(state.config.minDeposit)} · 1 звезда = 1 на балансе`;
