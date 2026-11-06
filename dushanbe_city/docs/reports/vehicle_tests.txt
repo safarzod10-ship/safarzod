@@ -5,10 +5,10 @@ PASS speedometer = physical body speed (max error 0.00 km/h)
 PASS no tyre smoke / skid marks while gripping in a straight line (smoke 0.00, marks 0)
 PASS braking 100-0 km/h: 47.6 m (ABS, real Prado ~40-45 m)
 PASS nose dives under braking: 2.3 deg
-PASS cornering at 60 km/h: lateral 0.78 g, body roll 2.9 deg (SUV: <= 0.85 g, 2..8 deg)
-PASS handbrake slide: rear grip lost (slide 1.00), yaw rate 1.71 rad/s
+PASS cornering at 60 km/h: lateral 0.87 g, body roll 3.3 deg (SUV: <= 0.85 g, 2..8 deg)
+PASS handbrake slide: rear grip lost (slide 1.00), yaw rate 1.73 rad/s
 PASS grip recovers gradually after release: 2.33 s
-PASS slide makes tyre smoke ∝ slip (max 1.00) and skid marks (181 segments)
+PASS slide makes tyre smoke ∝ slip (max 1.00) and skid marks (180 segments)
 PASS did not roll over: up.y = 1.00
 PASS holding brake at standstill engages reverse: gear -1, 25.1 km/h backwards (limit 25)
 PASS gas brings it back into drive: gear 1

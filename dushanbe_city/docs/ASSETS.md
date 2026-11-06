@@ -13,9 +13,11 @@
 | Персонаж | артефакт проекта (модель автора), риг добавлен | проект | `assets/characters/player/` |
 | Анимации ходьбы, бега, прыжка, стойки | CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), BVH: cgspeed; клипы 16_16 (ходьба), 09_09 (бег), 16_01 (прыжок, стойка), 136_25 (ходьба назад), 113_18 (шаги вбок), 16_33 (остановка после ходьбы), 127_05 (остановка после бега); зеркало BVH: github.com/Shriinivas/cmubvh | свободно, включая коммерческое; указание источника | `assets/characters/animations/cmu/`, `player_mocap.res` |
 | Toyota Land Cruiser Prado J150 (модель) | загружена автором проекта (`prado-2021-no-plates.glb`); подготовлена в Blender | по условиям автора проекта | `assets/vehicles/prado/` |
-| Звук двигателя (6 петель) | OpenGameArt «racing car engine sound loops» | CC0 | `assets/audio/vehicle/engine_*.wav` |
-| Визг шин | OpenGameArt «car tire squeal skid loop», qubodup | **CC-BY 3.0** (указание автора: qubodup) | `assets/audio/vehicle/tyre_squeal.wav` |
-| Удары, стекло, стук подвески | OpenGameArt «crash collision» (qubodup), «75 CC0 breaking/falling/hit sfx» | CC0 | `assets/audio/vehicle/*.ogg` |
+| Звук двигателя Prado (4 петли × нагрузка/сброс, пуск, остановка) | Freesound 379914 «4WD Engine & Rev» (Toyota Hilux дизель, Alex_hears_things) + 865222 (4-цил. 1.5 дизель, Mihacappy) — **замена: не запись Prado** | CC0 | `assets/audio/vehicle/eng_*.wav`, `engine_*.ogg` |
+| Двери, ручка, замок | Freesound 556690, 379912, 50697, 433590 | CC0 | `assets/audio/vehicle/door_*.ogg` |
+| Удары средний / тяжёлый / со стеклом | Freesound 420356, 237375, 592388 | CC0 | `assets/audio/vehicle/crash_*.ogg` |
+| Шины, дорога, салон | Freesound 71739, 71741, 341069, 495795, 237374 | CC0 | `assets/audio/vehicle/tyre_*`, `roll_*`, `road_interior.wav` |
+| Лёгкие удары, стекло, стук подвески | «75 CC0 breaking/falling/hit sfx» | CC0 | `assets/audio/vehicle/*.ogg` |
 | Анимации удара (jab, cross), плавания (Swim_Fwd / Swim_Idle), двери и посадки (Interact, Sitting_Enter / Exit / Idle), PickUp | Quaternius, Universal Animation Library [Standard], OpenGameArt | CC0 1.0 | `assets/characters/animations/` (`UAL_LICENSE.txt`) |
 | Звуки шагов: асфальт, плитка, песок, трава (по камню и песку Fantozzi), грунт (гравий Corsica_S), твёрдый пол | OpenGameArt: «Fantozzi's Footsteps», «42 snow and gravel footsteps», «Footsteps» | CC0 1.0 | `assets/audio/steps/` (`LICENSES.txt`) |
 
