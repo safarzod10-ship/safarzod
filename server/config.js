@@ -27,6 +27,13 @@ export const config = Object.freeze({
     minBet: 1,
   }),
 
+  // Basketball Rush (значения по ТЗ; переопределять имеет смысл только для тестов)
+  basket: Object.freeze({
+    baseMs: Number(env('BASKET_BASE_MS', '30000')),
+    bonusMs: Number(env('BASKET_BONUS_MS', '5000')),
+    countdownMs: Number(env('BASKET_COUNTDOWN_MS', '3500')),
+  }),
+
   limits: Object.freeze({
     maxAmount: 1_000_000,
     minDeposit: 1,

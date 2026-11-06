@@ -761,6 +761,12 @@ export class Bot {
     ).catch((e) => console.error('editMessageText:', e.message));
   }
 
+  /** Служебное сообщение администратору. */
+  notifyAdmin(html) {
+    if (!this.adminId) return Promise.resolve();
+    return this.#send(this.adminId, html).catch(() => {});
+  }
+
   async #notifyUser(userId, html) {
     // Игрок мог не запускать бота или заблокировать его — статус всё равно виден в приложении.
     await this.#send(userId, html, this.playButton('Открыть игру')).catch(() => {});

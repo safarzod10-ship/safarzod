@@ -111,6 +111,22 @@ function migrate(db) {
       active      INTEGER NOT NULL DEFAULT 1,
       created_at  INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS basket_matches (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      category    INTEGER NOT NULL,             -- уровень матча: 5 | 10 | 20 | 50 | 100 (без денежной стоимости)
+      started_at  INTEGER NOT NULL,
+      finished_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS basket_results (
+      match_id    INTEGER NOT NULL REFERENCES basket_matches(id),
+      user_id     INTEGER NOT NULL REFERENCES users(id),
+      place       INTEGER NOT NULL,
+      score       INTEGER NOT NULL,
+      shots       INTEGER NOT NULL,
+      quality     REAL NOT NULL,
+      flagged     INTEGER NOT NULL DEFAULT 0,   -- подозрение на автоматизацию — для проверки админом
+      PRIMARY KEY (match_id, user_id)
+    );
     CREATE TABLE IF NOT EXISTS task_completions (
       task_id     INTEGER NOT NULL REFERENCES tasks(id),
       user_id     INTEGER NOT NULL REFERENCES users(id),
@@ -165,6 +181,12 @@ class Store {
       userDeposits: q('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
       userWithdrawn: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE user_id = ? AND status = 'sent'"),
       broadcastIds: q('SELECT id FROM users WHERE blocked = 0 ORDER BY id'),
+      // --- Basketball Rush ---
+      addBasketMatch: q('INSERT INTO basket_matches (category, started_at, finished_at) VALUES (?, ?, ?)'),
+      addBasketResult: q(`INSERT INTO basket_results (match_id, user_id, place, score, shots, quality, flagged)
+                          VALUES (?, ?, ?, ?, ?, ?, ?)`),
+      basketStats: q(`SELECT COUNT(*) AS games, COALESCE(SUM(place = 1), 0) AS wins, COALESCE(MAX(score), 0) AS best
+                      FROM basket_results WHERE user_id = ?`),
       // --- задания ---
       addTask: q('INSERT INTO tasks (kind, title, url, chat_ref, reward, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       getTask: q('SELECT * FROM tasks WHERE id = ?'),
@@ -349,6 +371,23 @@ class Store {
 
   recentWinners(limit = 12) {
     return this.q.recentWinners.all(limit);
+  }
+
+  // ---------- Basketball Rush ----------
+
+  /** Итоги матча: одна транзакция на матч и всех участников. */
+  saveBasketMatch({ category, startedAt, finishedAt, results }) {
+    return this.tx(() => {
+      const id = Number(this.q.addBasketMatch.run(category, startedAt, finishedAt).lastInsertRowid);
+      for (const r of results) {
+        this.q.addBasketResult.run(id, r.userId, r.place, r.score, r.shots, r.quality, r.flagged ? 1 : 0);
+      }
+      return id;
+    });
+  }
+
+  basketStats(userId) {
+    return { ...this.q.basketStats.get(userId) };
   }
 
   broadcastIds() {

@@ -9,6 +9,7 @@ import { openDb, AppError } from './db.js';
 import { validateInitData } from './auth.js';
 import { Game } from './game.js';
 import { Bot } from './bot.js';
+import { BasketService } from './basket.js';
 
 assertProductionConfig();
 
@@ -25,6 +26,7 @@ const MIME = {
 
 const store = openDb(config.dataDir);
 const game = new Game(store, config.game);
+const basket = new BasketService(store, config.basket);
 const bot = config.botToken
   ? new Bot({
       token: config.botToken,
@@ -227,6 +229,19 @@ const routes = {
     return { reward: task.reward, ...profile(updated), tasks: store.userTasks(user.id).map(publicTask) };
   },
 
+  // ---------- Basketball Rush ----------
+  'POST /api/basket/state': (req) => {
+    const user = authenticate(req);
+    return { ...basket.state(user.id), stats: basket.stats(user.id) };
+  },
+  'POST /api/basket/join': async (req) => {
+    const user = authenticate(req);
+    const { category } = await readJson(req);
+    return basket.join(user, category);
+  },
+  'POST /api/basket/leave': (req) => basket.leave(authenticate(req).id),
+  'POST /api/basket/shot': async (req) => basket.shoot(authenticate(req).id, await readJson(req)),
+
   'POST /api/withdraw': async (req) => {
     const user = authenticate(req);
     const amount = amountOf(await readJson(req), config.limits.minWithdraw);
@@ -289,6 +304,14 @@ const server = createServer(async (req, res) => {
 });
 
 game.start();
+setInterval(() => basket.tick(), 500).unref(); // завершение матчей, где у всех вышло время
+basket.on('flag', ({ match, user, score, shots, sd }) => {
+  console.warn(`Basketball Rush: подозрительная серия у ${user.id} (матч ${match.id})`);
+  bot?.notifyAdmin(
+    `🏀 <b>Basketball Rush: проверьте игрока</b>\n${user.username ? '@' + user.username + ' · ' : ''}ID <code>${user.id}</code>\n` +
+      `Матч #${match.id}: ${score} из ${shots}, время реакции почти одинаковое (σ ≈ ${sd} мс). Результат помечен.`,
+  );
+});
 server.listen(config.port, () => console.log(`Сервер слушает порт ${config.port}${config.devMode ? ' (DEV_MODE)' : ''}`));
 bot?.start().catch((e) => {
   console.error('Бот не запустился:', e.message);

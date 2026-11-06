@@ -1,6 +1,8 @@
 // Roulette Arena — клиент мини-аппа.
 // Всё состояние раунда приходит с сервера (SSE). Клиент только рисует и анимирует.
 
+import { createBasket } from './basket.js';
+
 const tg = window.Telegram?.WebApp;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
@@ -147,6 +149,8 @@ function go(view) {
   if (supports('6.1')) view === 'roulette' ? tg.BackButton.hide() : tg.BackButton.show();
   if (view === 'withdraw' || view === 'profile') refreshMe();
   if (view === 'tasks') loadTasks();
+  if (view === 'basket') basket.show();
+  else basket.hide();
   if (view === 'friends') loadFriends();
   haptic.tap();
 }
@@ -1058,6 +1062,9 @@ function shareRefLink() {
   supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
 }
 
+// ---------- Basketball Rush ----------
+const basket = createBasket({ api, haptic, toast, avatarHtml, esc, me: () => state.me, supports, tg });
+
 // ---------- Запуск ----------
 function connectStream() {
   const es = new EventSource('/api/stream');
@@ -1080,6 +1087,7 @@ function bindUi() {
   $('bet-plus').addEventListener('click', () => stepBet(1));
   $('bet-input').addEventListener('input', updateBetButton);
   $('bet-chips').addEventListener('click', (e) => e.target.dataset.chip && chooseChip(e.target.dataset.chip));
+  basket.bind();
   $('ref-link').addEventListener('click', copyRefLink);
   $('ref-share').addEventListener('click', shareRefLink);
   $('tasks').addEventListener('click', (e) => {
@@ -1153,6 +1161,8 @@ async function main() {
   drawBulbs();
   connectStream();
   loadTasks();
+  // Незавершённый матч или поиск (обрыв связи, перезапуск Telegram) — сразу возвращаем в игру
+  if (await basket.resume()) go('basket');
   updateWithdrawForm();
   updateDepositForm();
   requestAnimationFrame(() => $('boot').classList.add('hide'));
