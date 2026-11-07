@@ -1,8 +1,3 @@
-// Проверка пользователя Telegram Mini App.
-// Клиент присылает Telegram.WebApp.initData; подпись проверяется токеном бота, поэтому
-// подделать ID, имя или аватар пользователя нельзя.
-// https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
-
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const MAX_AGE_SEC = 24 * 60 * 60;
@@ -30,14 +25,12 @@ export function validateInitData(initData, botToken, { maxAgeSec = MAX_AGE_SEC, 
   try {
     const user = JSON.parse(params.get('user') ?? 'null');
     if (!user || !Number.isSafeInteger(user.id)) return null;
-    // start_param — из ссылки t.me/<бот>?startapp=…; входит в подпись, подделать нельзя
-    return { ...user, startParam: params.get('start_param') ?? '' };
+    return { ...user, startParam: params.get('start_param') ?? '', authDate };
   } catch {
     return null;
   }
 }
 
-/** Подписывает initData так же, как Telegram. Нужна для тестов и локальной разработки. */
 export function signInitData(fields, botToken) {
   const params = new URLSearchParams(fields);
   const dataCheckString = [...params.entries()]

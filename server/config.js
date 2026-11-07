@@ -1,44 +1,37 @@
-// Все настройки приложения в одном месте. Секреты берутся из окружения (.env), не из кода.
-
 const env = (name, fallback = '') => (process.env[name] ?? fallback).trim();
 
 export const config = Object.freeze({
   botToken: env('BOT_TOKEN'),
-  publicUrl: env('PUBLIC_URL'), // https://… — адрес, по которому открывается мини-апп
+  publicUrl: env('PUBLIC_URL'),
   supportUsername: env('SUPPORT_USERNAME').replace(/^@/, ''),
-  adminId: env('ADMIN_ID'), // Telegram ID администратора: ему приходят заявки на вывод
+  adminId: env('ADMIN_ID'),
   channelUrl: env('CHANNEL_URL', 'https://t.me/safroulette'),
   chatUrl: env('CHAT_URL', 'https://t.me/safroulette_chat'),
-  // Рефералы: пригласивший получает этот % с каждого пополнения друга
   refPercent: Number(env('REF_PERCENT', '15')),
-  // Для вывода нужна подписка на этот канал (бот должен быть его администратором)
   withdrawChannel: env('WITHDRAW_CHANNEL', env('REF_CHANNEL', '@safroulette')),
   port: Number(env('PORT', '3000')),
   dataDir: env('DATA_DIR', './data'),
-  // Только для локальной разработки: пускает без Telegram. На сервере всегда выключено.
   devMode: env('DEV_MODE') === '1',
 
   game: Object.freeze({
-    countdownMs: Number(env('COUNTDOWN_MS', '15000')), // приём ставок после второго игрока
-    spinMs: Number(env('SPIN_MS', '7000')), // анимация вращения
-    resultMs: Number(env('RESULT_MS', '5000')), // показ победителя перед новым раундом
-    houseCut: 0.1, // удержание из банка раунда
-    houseFreeUpTo: Number(env('HOUSE_FREE_UP_TO', '9')), // банк до 9 включительно — без комиссии, от 10 — 10%
+    countdownMs: Number(env('COUNTDOWN_MS', '15000')),
+    spinMs: Number(env('SPIN_MS', '7000')),
+    resultMs: Number(env('RESULT_MS', '5000')),
+    houseCut: 0.1,
+    houseFreeUpTo: Number(env('HOUSE_FREE_UP_TO', '9')),
     minBet: 1,
   }),
 
-  // Basketball Rush (значения по ТЗ; переопределять имеет смысл только для тестов)
   basket: Object.freeze({
     baseMs: Number(env('BASKET_BASE_MS', '30000')),
     bonusMs: Number(env('BASKET_BONUS_MS', '3000')),
     swishBonusMs: Number(env('BASKET_SWISH_BONUS_MS', '5000')),
     countdownMs: Number(env('BASKET_COUNTDOWN_MS', '3000')),
-    price: Number(env('BASKET_PRICE', '5')), // стоимость попытки
-    dailyPrize: Number(env('BASKET_DAILY_PRIZE', '50')), // приз 1-му месту дня
-    tzOffsetMin: Number(env('BASKET_TZ_OFFSET_MIN', '180')), // день турнира по Москве (UTC+3)
+    price: Number(env('BASKET_PRICE', '5')),
+    dailyPrize: Number(env('BASKET_DAILY_PRIZE', '50')),
+    tzOffsetMin: Number(env('BASKET_TZ_OFFSET_MIN', '180')),
   }),
 
-  // Racket Crash: лимиты и перевес (значения по умолчанию — из моделирования, см. README)
   crash: Object.freeze({
     houseEdge: Number(env('CRASH_HOUSE_EDGE', '0.05')),
     minBet: Number(env('CRASH_MIN_BET', '5')),
@@ -48,7 +41,6 @@ export const config = Object.freeze({
     bettingMs: Number(env('CRASH_BETTING_MS', '8000')),
   }),
 
-  // Оборот перед выводом: пополнение × WAGER_DEPOSIT, бонусы (рефералы, задания) × WAGER_BONUS (по умолчанию тоже ×3)
   wager: Object.freeze({
     deposit: Number(env('WAGER_DEPOSIT', '3')),
     bonus: Number(env('WAGER_BONUS', '3')),

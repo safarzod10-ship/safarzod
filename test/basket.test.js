@@ -2,9 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb } from '../server/db.js';
 import { BasketService } from '../server/basket.js';
-import { WORLD, HOOP_BOUNDS, QUANT, simulateShot, previewPath, isReachable, nextHoop, validLaunch } from '../public/basket-physics.js';
+import {
+  WORLD,
+  HOOP_BOUNDS,
+  QUANT,
+  simulateShot,
+  previewPath,
+  isReachable,
+  nextHoop,
+  validLaunch,
+} from '../public/basket-physics.js';
 
-// ---------- помощники ----------
 function setup(opts = {}, balance = 1000) {
   const store = openDb(':memory:');
   const users = [1, 2, 3, 4, 5].map((id) => {
@@ -17,7 +25,6 @@ function setup(opts = {}, balance = 1000) {
   return { store, users, clock, svc };
 }
 
-/** Бросок в целых тысячных: попадание / промах / чистое попадание / попадание с касанием дужки. */
 function findShot(hoop, want) {
   for (let speed = WORLD.VMIN; speed <= WORLD.VMAX; speed += 0.04) {
     for (let k = 0; k < 220; k++) {
@@ -49,31 +56,35 @@ function shot(ctx, uid, want, extra = {}) {
   return ctx.svc.shoot(uid, { seq: s.seq + 1, ...findShot(s.hoop, want), aimMs: 400, samples: 10, ...extra });
 }
 
-/** Доиграть: время игрока истекает. */
 function finishTime(ctx, uid) {
   const s = ctx.svc.state(uid).session;
   ctx.clock.t = Math.max(ctx.clock.t, s.deadline + 400);
   ctx.svc.tick();
 }
 
-// ---------- физика ----------
 test('физика: полёт совпадает с формулой параболы, детерминирован; препятствий нет — только дужки кольца', () => {
   const far = simulateShot({ x: 50, y: 50 }, 6, 9, { frames: true });
   for (const n of [12, 60, 90]) {
     const t = n * WORLD.DT;
     const y = WORLD.START.y + 9 * t - (WORLD.G * WORLD.DT * WORLD.DT * (n * (n + 1))) / 2;
-    assert.ok(Math.abs(far.frames[2 * n] - (WORLD.START.x + 6 * t)) < 1e-9 && Math.abs(far.frames[2 * n + 1] - y) < 1e-9);
+    assert.ok(
+      Math.abs(far.frames[2 * n] - (WORLD.START.x + 6 * t)) < 1e-9 && Math.abs(far.frames[2 * n + 1] - y) < 1e-9,
+    );
   }
   const [px, py] = previewPath(6, 9, 0.5, 0.5)[0];
   assert.ok(Math.abs(px - far.frames[120]) < 1e-9 && Math.abs(py - far.frames[121]) < 0.06);
   const hoop = { x: 7, y: 5 };
   const s = findShot(hoop, 'made');
-  assert.deepEqual(simulateShot(hoop, s.vx / QUANT, s.vy / QUANT, { frames: true }).frames, simulateShot(hoop, s.vx / QUANT, s.vy / QUANT, { frames: true }).frames);
-  // мяч, пролетевший над кольцом, ни во что не врезается (щит — только картинка)
+  assert.deepEqual(
+    simulateShot(hoop, s.vx / QUANT, s.vy / QUANT, { frames: true }).frames,
+    simulateShot(hoop, s.vx / QUANT, s.vy / QUANT, { frames: true }).frames,
+  );
   const over = simulateShot(hoop, 8.5, 9.5);
   assert.equal(over.made, false);
-  assert.deepEqual([...new Set(over.contacts.map(([k]) => k))].filter((k) => k !== 'floor'), []);
-  // но от дужки мяч отскакивает
+  assert.deepEqual(
+    [...new Set(over.contacts.map(([k]) => k))].filter((k) => k !== 'floor'),
+    [],
+  );
   let rim = false;
   for (let vy = 6; vy < 12 && !rim; vy += 0.05) rim = simulateShot(hoop, 6.2, vy).contacts.some(([k]) => k === 'rim');
   assert.ok(rim);
@@ -82,7 +93,8 @@ test('физика: полёт совпадает с формулой параб
 
 test('кольцо: все позиции достижимы; новая позиция случайна, в кадре, не повторяется', () => {
   const B = HOOP_BOUNDS;
-  for (let x = B.xMin; x <= B.xMax + 1e-9; x += 0.68) for (let y = B.yMin; y <= B.yMax + 1e-9; y += 1) assert.ok(isReachable({ x, y }));
+  for (let x = B.xMin; x <= B.xMax + 1e-9; x += 0.68)
+    for (let y = B.yMin; y <= B.yMax + 1e-9; y += 1) assert.ok(isReachable({ x, y }));
   let prev = null;
   const seen = new Set();
   const moves = { closer: 0, farther: 0, higher: 0, lower: 0 };
@@ -118,8 +130,6 @@ test('сложность: первое кольцо в центре; с очка
   assert.ok(minX(6) > minX(1) - 0.01);
 });
 
-// ---------- ежедневный турнир ----------
-// Часы: 2026-11-07 10:00 по Москве (07:00 UTC)
 const T0 = Date.UTC(2026, 10, 7, 7, 0, 0);
 
 function playScore(ctx, uid, score, misses = 0) {
@@ -165,11 +175,18 @@ test('таблица дня: в зачёт лучшая попытка игро�
   const ctx = setup();
   ctx.clock.t = T0;
   playScore(ctx, 1, 2);
-  playScore(ctx, 2, 3, 1); // 3 очка за 4 броска
-  playScore(ctx, 1, 4); // лучшая попытка игрока 1 — 4
-  playScore(ctx, 3, 3); // 3 очка за 3 броска — выше игрока 2
+  playScore(ctx, 2, 3, 1);
+  playScore(ctx, 1, 4);
+  playScore(ctx, 3, 3);
   const st = ctx.svc.state(2);
-  assert.deepEqual(st.today.top.map((r) => [r.id, r.place, r.score]), [[1, 1, 4], [3, 2, 3], [2, 3, 3]]);
+  assert.deepEqual(
+    st.today.top.map((r) => [r.id, r.place, r.score]),
+    [
+      [1, 1, 4],
+      [3, 2, 3],
+      [2, 3, 3],
+    ],
+  );
   assert.deepEqual(st.today.me, { place: 3, score: 3, shots: 4 });
   assert.equal(st.today.players, 3);
   assert.equal(st.stats.games, 1);
@@ -197,17 +214,20 @@ test('конец дня (00:00 МСК): первое место получает
   const st = ctx.svc.state(1);
   assert.equal(st.today.top.length, 0, 'новый день — пустая таблица');
   assert.equal(st.lastWinner.id, 2);
-  assert.deepEqual(st.stats.wins === undefined ? null : [ctx.svc.state(2).stats.wins, ctx.svc.state(2).stats.won], [1, 50]);
+  assert.deepEqual(
+    st.stats.wins === undefined ? null : [ctx.svc.state(2).stats.wins, ctx.svc.state(2).stats.won],
+    [1, 50],
+  );
 });
 
 test('попытка, начатая до полуночи, засчитывается в свой день; итоги ждут, пока она закончится', () => {
   const ctx = setup();
   const closed = [];
   ctx.svc.on('dayClosed', (c) => closed.push(c));
-  ctx.clock.t = Date.UTC(2026, 10, 7, 20, 59, 50); // 23:59:50 МСК
+  ctx.clock.t = Date.UTC(2026, 10, 7, 20, 59, 50);
   play(ctx, 1);
   shot(ctx, 1, 'made');
-  ctx.clock.t = Date.UTC(2026, 10, 7, 21, 0, 5); // уже следующий день, но попытка ещё идёт
+  ctx.clock.t = Date.UTC(2026, 10, 7, 21, 0, 5);
   ctx.svc.tick();
   assert.equal(closed.length, 0);
   finishTime(ctx, 1);
@@ -234,18 +254,36 @@ test('защита: повтор запроса, пропуск номера, у
   const ctx = setup();
   const s = play(ctx, 1);
   const good = findShot(s.hoop, 'made');
-  assert.throws(() => ctx.svc.shoot(1, { seq: 1, ...good, aimMs: 300, samples: 8 }), (e) => e.code === 'NOT_STARTED');
+  assert.throws(
+    () => ctx.svc.shoot(1, { seq: 1, ...good, aimMs: 300, samples: 8 }),
+    (e) => e.code === 'NOT_STARTED',
+  );
   ctx.clock.t = s.startAt + 1;
   const body = { seq: 1, ...good, aimMs: 300, samples: 8 };
   assert.equal(ctx.svc.shoot(1, body).score, 1);
   assert.deepEqual([ctx.svc.shoot(1, body).score, ctx.svc.shoot(1, body).replay], [1, true]);
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 3 }), (e) => e.code === 'BAD_SEQ');
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2 }), (e) => e.code === 'TOO_FAST');
+  assert.throws(
+    () => ctx.svc.shoot(1, { ...body, seq: 3 }),
+    (e) => e.code === 'BAD_SEQ',
+  );
+  assert.throws(
+    () => ctx.svc.shoot(1, { ...body, seq: 2 }),
+    (e) => e.code === 'TOO_FAST',
+  );
   ctx.clock.t = ctx.svc.state(1).session.nextShotAt;
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2, aimMs: 10 }), (e) => e.code === 'BAD_AIM');
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2, vx: 40_000, vy: 40_000 }), (e) => e.code === 'BAD_SHOT');
+  assert.throws(
+    () => ctx.svc.shoot(1, { ...body, seq: 2, aimMs: 10 }),
+    (e) => e.code === 'BAD_AIM',
+  );
+  assert.throws(
+    () => ctx.svc.shoot(1, { ...body, seq: 2, vx: 40_000, vy: 40_000 }),
+    (e) => e.code === 'BAD_SHOT',
+  );
   ctx.clock.t = ctx.svc.state(1).session.deadline + 301;
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2 }), (e) => e.code === 'NO_MATCH' || e.code === 'TIME_UP');
+  assert.throws(
+    () => ctx.svc.shoot(1, { ...body, seq: 2 }),
+    (e) => e.code === 'NO_MATCH' || e.code === 'TIME_UP',
+  );
   assert.equal(ctx.svc.state(1).attempts[0].score, 1);
 });
 
@@ -274,7 +312,8 @@ test('переход со старой версии: незакрытые мат
   const store = openDb(':memory:');
   store.upsertUser({ id: 1, first_name: 'A' });
   store.creditPayment({ chargeId: 's', userId: 1, amount: 100, payload: 'seed' });
-  store.db.exec(`CREATE TABLE basket_games (id INTEGER PRIMARY KEY, stake INTEGER, status TEXT, hoops TEXT, bank INTEGER DEFAULT 0, created_at INTEGER, closed_at INTEGER);
+  store.db
+    .exec(`CREATE TABLE basket_games (id INTEGER PRIMARY KEY, stake INTEGER, status TEXT, hoops TEXT, bank INTEGER DEFAULT 0, created_at INTEGER, closed_at INTEGER);
                  CREATE TABLE basket_entries (game_id INTEGER, user_id INTEGER, status TEXT);
                  INSERT INTO basket_games VALUES (7, 20, 'open', '[]', 0, 1, NULL);
                  INSERT INTO basket_entries VALUES (7, 1, 'done');`);
@@ -283,6 +322,6 @@ test('переход со старой версии: незакрытые мат
   const svc = new BasketService(store, {}, { now: () => 5 });
   svc.on('legacyRefund', (r) => refunds.push(r));
   assert.equal(store.getUser(1).balance, 100);
-  new BasketService(store, {}, { now: () => 6 }); // повторный запуск — без второго возврата
+  new BasketService(store, {}, { now: () => 6 });
   assert.equal(store.getUser(1).balance, 100);
 });

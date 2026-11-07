@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Roulette Arena — установка на сервер одной командой:
-#   sudo ./setup.sh
-# Повторный запуск безопасен: уже сделанное пропускается, настройки сохраняются.
 set -euo pipefail
 cd "$(dirname "$0")"
 ENV_FILE=.env
@@ -14,17 +11,15 @@ die()  { echo; echo "  ${R}✖ $*${N}"; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "Запустите с sudo:  sudo ./setup.sh"
 
-# ---------- 1. Docker ----------
 step "1/4  Docker"
 if ! command -v docker >/dev/null 2>&1; then
   echo "  Устанавливаю Docker (официальный скрипт get.docker.com)…"
   curl -fsSL https://get.docker.com | sh
 fi
-systemctl enable --now docker >/dev/null 2>&1 || true   # автозапуск после перезагрузки сервера
+systemctl enable --now docker >/dev/null 2>&1 || true
 docker compose version >/dev/null 2>&1 || die "Нет docker compose. Обновите Docker: curl -fsSL https://get.docker.com | sh"
 ok "$(docker --version)"
 
-# ---------- 2. Настройки ----------
 step "2/4  Настройки"
 # shellcheck disable=SC1090
 [ -f "$ENV_FILE" ] && . "./$ENV_FILE"
@@ -72,7 +67,6 @@ DOMAIN=$DOMAIN
 EOF
 ok "Сохранено в .env (доступ только у root)"
 
-# ---------- 3. Порты ----------
 step "3/4  Порты 80 и 443"
 busy=$(ss -Hltnp '( sport = :80 or sport = :443 )' 2>/dev/null | grep -v docker-proxy || true)
 if [ -n "$busy" ]; then
@@ -85,7 +79,6 @@ if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
 fi
 ok "Свободны"
 
-# ---------- 4. Запуск ----------
 step "4/4  Сборка и запуск (1–3 минуты)"
 docker compose up -d --build
 echo "  Жду, пока заработает HTTPS…"

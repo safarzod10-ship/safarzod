@@ -1,16 +1,11 @@
-// Basketball Rush — клиент: вкладка «Игры», выбор ставки, игра на canvas, итоги матча.
-// Клиент только рисует, звучит и прицеливается. Попадание, бонусы, очки и время решает сервер
-// (та же детерминированная физика) — анимация совпадает с серверной проверкой.
-
 import { WORLD, QUANT, validLaunch, simulateShot, previewPath } from './basket-physics.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
 const MEDALS = ['🥇', '🥈', '🥉'];
 const STAR = '<svg class="star"><use href="#i-star"/></svg>';
-const TOP = 10; // видимая высота мира над полом
+const TOP = 10;
 
-/** Выигрыш победителя — ставка × 2 (как на сервере). */
 const plural = (n, one, few, many) => {
   const m10 = n % 10;
   const m100 = n % 100;
@@ -21,8 +16,6 @@ const plural = (n, one, few, many) => {
 const shotsText = (n) => `${fmt(n)} ${plural(n, 'бросок', 'броска', 'бросков')}`;
 const TUTOR_KEY = 'bb-tutorial-v1';
 
-// ====================== Звук (Web Audio, реальные записи из /sounds) ======================
-// Три звука: удар мяча об пол, бросок, толпа.
 const SOUNDS = ['bounce', 'throw', 'crowd'];
 function createAudio() {
   const a = { ctx: null, buf: {}, on: true };
@@ -39,7 +32,7 @@ function createAudio() {
         .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
         .then((b) => a.ctx.decodeAudioData(b))
         .then((d) => (a.buf[name] = d))
-        .catch(() => {}); // нет файла — просто без этого звука
+        .catch(() => {});
     }
   };
   a.play = (name, volume = 1, rate = 1) => {
@@ -70,7 +63,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     poll: null,
     pollMs: 0,
     active: false,
-    // текущая игра
     gameId: null,
     startAt: 0,
     hoop: null,
@@ -94,9 +86,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     bg: null,
   };
   const serverNow = () => Date.now() + s.offset;
-  if (/[?&]dev=/.test(location.search)) window.__bb = s; // отладка только в режиме разработки
-
-  // ====================== Сервер ======================
+  if (/[?&]dev=/.test(location.search)) window.__bb = s;
 
   async function refresh() {
     if (s.refreshing) return;
@@ -115,10 +105,11 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     if (st.session) {
       startSession(st.session);
     } else if (s.gameId && !$('bb-game').hidden && !s.ended) {
-      s.ended = true; // время вышло, сервер уже закрыл попытку
+      s.ended = true;
     }
     renderGamesTab();
-    if (!$('bb-result').hidden || (s.ended && s.endShownAt && performance.now() - s.endShownAt > 1500)) renderResultSheet();
+    if (!$('bb-result').hidden || (s.ended && s.endShownAt && performance.now() - s.endShownAt > 1500))
+      renderResultSheet();
   }
 
   function setPoll(ms) {
@@ -127,8 +118,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     s.pollMs = ms;
     s.poll = ms ? setInterval(refresh, ms) : null;
   }
-
-  // ====================== Страница игры: турнир дня ======================
 
   const placeMark = (p) => (p <= 3 ? MEDALS[p - 1] : `<span class="lb-n">${p}</span>`);
 
@@ -151,12 +140,10 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     $('gs-wins').textContent = fmt(stats.wins ?? 0);
     $('gs-won').textContent = fmt(stats.won ?? 0);
 
-    // бейдж на карточке в списке игр
     const badge = $('gc-badge');
     badge.hidden = !(st.session || t.me);
     badge.textContent = st.session ? 'Идёт игра' : t.me ? `Вы #${t.me.place} сегодня` : '';
 
-    // приз дня и моё место
     $('bt-prize').textContent = fmt(t.prize);
     $('bt-players').textContent = `${fmt(t.players)} ${plural(t.players, 'игрок', 'игрока', 'игроков')} сегодня`;
     $('bt-me').innerHTML = t.me
@@ -164,33 +151,49 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       : 'Наберите хотя бы 1 очко, чтобы попасть в таблицу';
     tickDay();
 
-    // таблица дня
     const rows = t.top.map((r) => lbRow(r, myId));
     if (t.me && !t.top.some((r) => r.id === myId)) {
-      rows.push('<div class="lb-gap">···</div>' + lbRow({ id: myId, name: 'Вы', photo: me()?.photo, place: t.me.place, score: t.me.score, shots: t.me.shots }, myId));
+      rows.push(
+        '<div class="lb-gap">···</div>' +
+          lbRow(
+            { id: myId, name: 'Вы', photo: me()?.photo, place: t.me.place, score: t.me.score, shots: t.me.shots },
+            myId,
+          ),
+      );
     }
-    $('bt-top').innerHTML = rows.length ? rows.join('') : '<div class="hist-empty">Сегодня ещё никто не играл — станьте первым</div>';
+    $('bt-top').innerHTML = rows.length
+      ? rows.join('')
+      : '<div class="hist-empty">Сегодня ещё никто не играл — станьте первым</div>';
     const lw = st.lastWinner;
     $('bt-last').hidden = !lw;
-    if (lw) $('bt-last').innerHTML = `🏆 Победитель ${lw.day.slice(8, 10)}.${lw.day.slice(5, 7)}: <b>${lw.id === myId ? 'вы' : esc(lw.name)}</b> — ${fmt(lw.score)} очков, +${fmt(lw.prize)} ⭐`;
+    if (lw)
+      $('bt-last').innerHTML =
+        `🏆 Победитель ${lw.day.slice(8, 10)}.${lw.day.slice(5, 7)}: <b>${lw.id === myId ? 'вы' : esc(lw.name)}</b> — ${fmt(lw.score)} очков, +${fmt(lw.prize)} ⭐`;
 
     const play = $('gc-play');
     play.innerHTML = st.session
       ? '<svg><use href="#i-ball"/></svg>Продолжить игру'
       : `<svg><use href="#i-ball"/></svg>Играть за ${fmt(st.price)} ⭐`;
 
-    // история попыток
-    const date = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const date = new Intl.DateTimeFormat('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
     const list = (st.attempts ?? []).filter((a) => a.status === 'done');
     $('hist-past').innerHTML = list.length
       ? list
-          .map((a) => `<div class="att"><div><b class="num">${fmt(a.score)}</b><span>${plural(a.score, 'очко', 'очка', 'очков')}</span></div>
-            <small>${shotsText(a.shots)}${a.swishes ? ` · ${a.swishes} чист.` : ''}</small><time>${date.format(a.created_at)}</time></div>`)
+          .map(
+            (
+              a,
+            ) => `<div class="att"><div><b class="num">${fmt(a.score)}</b><span>${plural(a.score, 'очко', 'очка', 'очков')}</span></div>
+            <small>${shotsText(a.shots)}${a.swishes ? ` · ${a.swishes} чист.` : ''}</small><time>${date.format(a.created_at)}</time></div>`,
+          )
           .join('')
       : '<div class="hist-empty">Пока нет сыгранных попыток</div>';
   }
 
-  /** Обратный отсчёт до итогов дня. */
   function tickDay() {
     const t = s.st?.today;
     if (!t) return;
@@ -198,11 +201,10 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     const h = Math.floor(left / 3_600_000);
     const m = Math.floor((left % 3_600_000) / 60_000);
     const sec = Math.floor((left % 60_000) / 1000);
-    $('bt-left').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    $('bt-left').textContent =
+      `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   }
   setInterval(() => s.active && tickDay(), 1000);
-
-  // ====================== Обучение для новичков ======================
 
   const tutorSeen = () => {
     try {
@@ -240,8 +242,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     if (play) startGame();
   }
 
-  // ====================== Начать попытку ======================
-
   async function startGame() {
     const price = s.st?.price ?? 5;
     if (price > (me()?.balance ?? 0)) {
@@ -263,8 +263,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       btn.classList.remove('loading');
     }
   }
-
-  // ====================== Игровая сессия ======================
 
   function startSession(sess) {
     const fresh = s.gameId !== sess.gameId;
@@ -347,16 +345,15 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
   function hoopNow(t) {
     if (!s.hoopFrom) return s.hoop;
     const p = Math.min(1, (t - s.hoopAnimAt) / 520);
-    if (p >= 1) return (s.hoopFrom = null), s.hoop;
+    if (p >= 1) return ((s.hoopFrom = null), s.hoop);
     const e = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
     return { x: s.hoopFrom.x + (s.hoop.x - s.hoopFrom.x) * e, y: s.hoopFrom.y + (s.hoop.y - s.hoopFrom.y) * e };
   }
 
   const timeLeft = () => Math.max(0, s.deadline - serverNow());
   const started = () => serverNow() >= s.startAt;
-  const ballReady = () => started() && !s.ended && !s.flight && !s.pendingShot && timeLeft() > 0 && serverNow() >= s.nextShotAt - 120;
-
-  // ---------- Прицеливание: потяните назад и отпустите ----------
+  const ballReady = () =>
+    started() && !s.ended && !s.flight && !s.pendingShot && timeLeft() > 0 && serverNow() >= s.nextShotAt - 120;
 
   function onDown(e) {
     audio.unlock();
@@ -407,8 +404,15 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     const sim = simulateShot({ ...s.hoop }, ivx / QUANT, ivy / QUANT, { frames: true });
     const rimBefore = sim.contacts.some(([k, t]) => k === 'rim' && t <= sim.madeT);
     s.flight = {
-      frames: sim.frames, start: performance.now(), settleT: sim.settleT, made: sim.made, madeT: sim.madeT,
-      swish: sim.made && !rimBefore, seq, popped: false, contacts: sim.contacts.slice(),
+      frames: sim.frames,
+      start: performance.now(),
+      settleT: sim.settleT,
+      made: sim.made,
+      madeT: sim.madeT,
+      swish: sim.made && !rimBefore,
+      seq,
+      popped: false,
+      contacts: sim.contacts.slice(),
     };
     s.throwAt = performance.now();
     s.pendingShot = { seq, vx: ivx, vy: ivy, aimMs, samples };
@@ -427,7 +431,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       s.serverShot = r;
       if (!(s.flight && s.flight.seq === r.seq)) applyShotResult(r);
     } catch (e) {
-      if (e.code === undefined && attempt < 4) return setTimeout(() => sendShot(body, attempt + 1), 600 * (attempt + 1));
+      if (e.code === undefined && attempt < 4)
+        return setTimeout(() => sendShot(body, attempt + 1), 600 * (attempt + 1));
       s.pendingShot = null;
       if (s.flight?.seq === body.seq) s.flight.rejected = true;
       if (e.code !== 'TIME_UP' && e.code !== 'NO_MATCH') toast(e.message, 'err');
@@ -435,7 +440,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     }
   }
 
-  /** Итог броска — в момент попадания (решение сервера). */
   function applyShotResult(r) {
     s.score = r.score;
     s.deadline = r.deadline;
@@ -443,20 +447,23 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     if (r.made) {
       s.net = 1;
       s.flash = 1;
-      s.popups.push({ t: performance.now(), x: r.shotHoop.x, y: r.shotHoop.y, swish: r.swish, bonus: r.bonusMs / 1000 });
+      s.popups.push({
+        t: performance.now(),
+        x: r.shotHoop.x,
+        y: r.shotHoop.y,
+        swish: r.swish,
+        bonus: r.bonusMs / 1000,
+      });
       const pill = $('bb-score').parentElement;
       pill.classList.remove('bump');
       void pill.offsetWidth;
       pill.classList.add('bump');
-      audio.play('crowd', r.swish ? 1 : 0.55, r.swish ? 1.04 : 1); // чистое попадание — трибуны громче
+      audio.play('crowd', r.swish ? 1 : 0.55, r.swish ? 1.04 : 1);
       haptic.ok();
     }
     if (r.hoop.x !== s.hoop.x || r.hoop.y !== s.hoop.y) setTimeout(() => setHoop(r.hoop, true), 350);
   }
 
-  // ====================== Итог моей игры ======================
-
-  /** Итог попытки: счёт, лучший результат дня, место и топ-3. */
   function renderResultSheet() {
     const st = s.st;
     const att = st?.attempts?.find((a) => a.id === s.gameId);
@@ -470,7 +477,12 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       : 'Наберите хотя бы 1 очко, чтобы попасть в таблицу дня';
     const html = `<div class="res-title">${fmt(att.score)} ${plural(att.score, 'очко', 'очка', 'очков')}</div>
       <div class="res-sub">${best ? '🔥 Ваш лучший результат дня! ' : ''}${sub}</div>
-      <div class="res-list">${t.top.slice(0, 3).map((r) => lbRow(r, myId)).join('') || ''}</div>
+      <div class="res-list">${
+        t.top
+          .slice(0, 3)
+          .map((r) => lbRow(r, myId))
+          .join('') || ''
+      }</div>
       <div class="res-wait">🏆 Первое место в 00:00 МСК получает <b>${fmt(t.prize)} ⭐</b></div>
       <div class="dock-row"><button class="btn secondary" data-res="close">Готово</button>
       <button class="btn primary" data-res="again" style="flex:1">Ещё раз · ${fmt(st.price)} ⭐</button></div>`;
@@ -485,8 +497,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     }
   }
 
-  // ====================== Отрисовка ======================
-
   function frame(t) {
     s.raf = requestAnimationFrame(frame);
     const v = s.view;
@@ -496,7 +506,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     if (!s.hoop) return;
     drawScoreboard(ctx, t);
 
-    // мяч в полёте
     let ball = null;
     const f = s.flight;
     if (f) {
@@ -546,8 +555,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     tickClock();
   }
 
-  // ---------- Арена (рисуется один раз на размер экрана) ----------
-
   function renderArena(v) {
     const c = document.createElement('canvas');
     c.width = Math.round(v.cw * v.dpr);
@@ -556,14 +563,12 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     g.scale(v.dpr, v.dpr);
     const fy = v.oy;
     const sc = v.scale;
-    // стена зала
     const wall = g.createLinearGradient(0, 0, 0, fy);
     wall.addColorStop(0, '#120a24');
     wall.addColorStop(0.55, '#1d1036');
     wall.addColorStop(1, '#2a1546');
     g.fillStyle = wall;
     g.fillRect(0, 0, v.cw, fy);
-    // фермы под потолком
     g.strokeStyle = 'rgba(160,120,255,0.08)';
     g.lineWidth = 2;
     const trussY = v.ch * 0.07;
@@ -578,7 +583,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       g.lineTo(x + 24, trussY);
     }
     g.stroke();
-    // прожекторы и лучи
     for (const lx of [0.18, 0.5, 0.82]) {
       const x = v.cw * lx;
       const beam = g.createLinearGradient(0, trussY, 0, fy);
@@ -602,9 +606,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       g.fillStyle = glow;
       g.fillRect(x - 26, trussY - 6, 52, 52);
     }
-    // трибуны: ряды болельщиков-силуэтов (детерминированный «шум», без мерцания между кадрами)
     let seed = 7;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     const standTop = fy - sc * 4.6;
     const rows = 7;
     for (let r = 0; r < rows; r++) {
@@ -614,21 +617,21 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       for (let x = -size + (r % 2) * size; x < v.cw + size; x += size * 2.1) {
         const jx = x + (rnd() - 0.5) * size * 0.6;
         const jy = y + (rnd() - 0.5) * size * 0.5;
-        const hue = rnd() < 0.15 ? `rgb(${shade + 40},${shade + 10},${shade + 70})` : `rgb(${shade + 14},${shade},${shade + 36})`;
+        const hue =
+          rnd() < 0.15 ? `rgb(${shade + 40},${shade + 10},${shade + 70})` : `rgb(${shade + 14},${shade},${shade + 36})`;
         g.fillStyle = hue;
         g.beginPath();
-        g.arc(jx, jy, size * 0.55, 0, Math.PI * 2); // голова
+        g.arc(jx, jy, size * 0.55, 0, Math.PI * 2);
         g.fill();
         g.beginPath();
-        g.ellipse(jx, jy + size * 1.25, size * 0.95, size * 0.75, 0, Math.PI, 0); // плечи
+        g.ellipse(jx, jy + size * 1.25, size * 0.95, size * 0.75, 0, Math.PI, 0);
         g.fill();
         if (rnd() < 0.06) {
-          g.fillStyle = 'rgba(255,235,180,0.75)'; // вспышки телефонов
+          g.fillStyle = 'rgba(255,235,180,0.75)';
           g.fillRect(jx + size * 0.4, jy - size * 0.2, 2, 3);
         }
       }
     }
-    // рекламный бортик со светящейся надписью
     const bandH = sc * 0.62;
     const by = fy - bandH;
     const band = g.createLinearGradient(0, by, 0, fy);
@@ -648,7 +651,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       g.fillText(text, tx, by + bandH / 2 + 1);
       tx += g.measureText(text).width + 16;
     }
-    // паркет с отражением
     const floor = g.createLinearGradient(0, fy, 0, v.ch);
     floor.addColorStop(0, '#5a3524');
     floor.addColorStop(0.35, '#3b2219');
@@ -676,7 +678,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     g.moveTo(0, fy + 1);
     g.lineTo(v.cw, fy + 1);
     g.stroke();
-    // виньетка
     const vig = g.createRadialGradient(v.cw / 2, v.ch * 0.45, v.ch * 0.25, v.cw / 2, v.ch * 0.45, v.ch * 0.8);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
     vig.addColorStop(1, 'rgba(0,0,0,0.45)');
@@ -685,12 +686,10 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     return c;
   }
 
-  // ---------- Табло с временем ----------
-
   let lastSec = null;
   function drawScoreboard(ctx, t) {
     const v = s.view;
-    const left = s.ended ? 0 : started() ? timeLeft() : (s.deadline - s.startAt);
+    const left = s.ended ? 0 : started() ? timeLeft() : s.deadline - s.startAt;
     const sec = Math.ceil(left / 1000);
     const hot = started() && sec <= 5 && !s.ended;
     const w = Math.min(118, v.cw * 0.3);
@@ -708,7 +707,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText('ВРЕМЯ', x + w / 2, y + h * 0.27);
-    const pulse = hot ? 1 + 0.12 * Math.max(0, 1 - ((t % 1000) / 300)) : 1;
+    const pulse = hot ? 1 + 0.12 * Math.max(0, 1 - (t % 1000) / 300) : 1;
     ctx.save();
     ctx.translate(x + w / 2, y + h * 0.78);
     ctx.scale(pulse, pulse);
@@ -721,9 +720,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.textAlign = 'left';
   }
 
-  // ---------- Кольцо, щит, сетка ----------
-
-  /** Щит — вид спереди, кольцо ровно по центру под ним, без стойки и креплений (как в аркадах). */
   function drawBoard(ctx, h) {
     const sc = s.view.scale;
     const x0 = X(h.x - WORLD.BOARD_HALF);
@@ -732,20 +728,17 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     const y1 = Y(h.y - 0.12);
     const w = x1 - x0;
     const hh = y1 - y0;
-    // мягкая подсветка зала за щитом
     const glow = ctx.createRadialGradient((x0 + x1) / 2, (y0 + y1) / 2, 0, (x0 + x1) / 2, (y0 + y1) / 2, sc * 2);
     glow.addColorStop(0, 'rgba(170,130,255,0.18)');
     glow.addColorStop(1, 'rgba(170,130,255,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(x0 - sc * 2, y0 - sc * 2, w + sc * 4, hh + sc * 4);
-    // тень и рамка
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     roundRect(ctx, x0 + 3, y0 + 5, w, hh, sc * 0.06);
     ctx.fill();
     ctx.fillStyle = '#2a2140';
     roundRect(ctx, x0, y0, w, hh, sc * 0.06);
     ctx.fill();
-    // стекло щита
     const inset = Math.max(3, sc * 0.07);
     const glass = ctx.createLinearGradient(x0, y0, x1, y1);
     glass.addColorStop(0, '#f6f4ff');
@@ -753,7 +746,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.fillStyle = glass;
     roundRect(ctx, x0 + inset, y0 + inset, w - inset * 2, hh - inset * 2, sc * 0.03);
     ctx.fill();
-    // блик на стекле
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath();
     ctx.moveTo(x0 + inset, y0 + inset);
@@ -764,7 +756,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.globalAlpha = 0.35;
     ctx.fill();
     ctx.globalAlpha = 1;
-    // квадрат-мишень по центру над кольцом
     const qw = sc * 0.62;
     const qh = sc * 0.5;
     ctx.strokeStyle = '#2a2140';
@@ -772,7 +763,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.strokeRect(X(h.x) - qw / 2, Y(h.y) - qh - sc * 0.06, qw, qh);
   }
 
-  const RIM_RY = 0.075; // «глубина» кольца — почти плоское, как на виде спереди
+  const RIM_RY = 0.075;
   function drawRimBack(ctx, h) {
     const sc = s.view.scale;
     ctx.strokeStyle = '#b8321e';
@@ -789,17 +780,21 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.beginPath();
     ctx.ellipse(X(h.x), Y(h.y), WORLD.RIM_HALF * sc, RIM_RY * sc, 0, 0, Math.PI);
     ctx.stroke();
-    // крючки сетки по дужке
     ctx.fillStyle = '#ffd8cc';
     for (let i = 0; i <= 6; i++) {
       const a = Math.PI * (i / 6);
       ctx.beginPath();
-      ctx.arc(X(h.x) + Math.cos(a) * WORLD.RIM_HALF * sc, Y(h.y) + Math.sin(a) * RIM_RY * sc, Math.max(1, sc * 0.025), 0, Math.PI * 2);
+      ctx.arc(
+        X(h.x) + Math.cos(a) * WORLD.RIM_HALF * sc,
+        Y(h.y) + Math.sin(a) * RIM_RY * sc,
+        Math.max(1, sc * 0.025),
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
     }
   }
 
-  /** Сетка висит ровно под кольцом; при попадании растягивается и качается. */
   function drawNet(ctx, h, t) {
     const sc = s.view.scale;
     const cx = X(h.x);
@@ -835,8 +830,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.stroke();
   }
 
-  // ---------- Игрок: ведёт мяч, прицеливается, бросает ----------
-
   function drawPlayer(ctx, t, holdsBall) {
     const sc = s.view.scale;
     const baseX = 0.95;
@@ -846,7 +839,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     const idle = holdsBall && !aiming && !throwing;
     const P = (x, y) => [X(x), Y(y)];
 
-    // ведение мяча: ~2 удара в секунду, мяч разгоняется к полу
     const period = 0.56;
     const ph = ((t / 1000) % period) / period;
     const hand = 1.08;
@@ -866,14 +858,15 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // тень
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(X(baseX), Y(0) + 2, sc * 0.42, sc * 0.08, 0, 0, Math.PI * 2);
     ctx.fill();
-    // ноги + кроссовки
     const knee = 0.5 - crouch * 0.4;
-    for (const [fx, kx, c] of [[-0.14, -0.06, '#d9a77e'], [0.16, 0.1, '#e6b58a']]) {
+    for (const [fx, kx, c] of [
+      [-0.14, -0.06, '#d9a77e'],
+      [0.16, 0.1, '#e6b58a'],
+    ]) {
       ctx.strokeStyle = c;
       ctx.lineWidth = sc * 0.15;
       ctx.beginPath();
@@ -888,11 +881,9 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       ctx.fillStyle = '#8b6cff';
       ctx.fillRect(X(baseX + fx - 0.06), Y(0.14), sc * 0.14, sc * 0.03);
     }
-    // шорты
     ctx.fillStyle = '#3b2a78';
     roundRect(ctx, X(baseX - 0.27), Y(hip + 0.16), sc * 0.56, sc * 0.42, sc * 0.08);
     ctx.fill();
-    // майка
     const jersey = ctx.createLinearGradient(X(baseX - 0.3), 0, X(baseX + 0.3), 0);
     jersey.addColorStop(0, '#7a5cf0');
     jersey.addColorStop(1, '#9d84ff');
@@ -907,7 +898,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('7', X(baseX), Y((shoulder + hip) / 2 + 0.06));
-    // голова: волосы, повязка
     ctx.fillStyle = '#e6b58a';
     ctx.beginPath();
     ctx.arc(X(baseX + 0.02), Y(headY), sc * 0.2, 0, Math.PI * 2);
@@ -919,24 +909,21 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.fillStyle = '#f5bf4f';
     ctx.fillRect(X(baseX - 0.19), Y(headY + 0.09), sc * 0.42, sc * 0.06);
 
-    // руки и мяч
     const sh = P(baseX + 0.08, shoulder - 0.05);
     let ballPos = null;
     let handPos;
     if (aiming) {
-      // естественная поза броска: мяч над головой, локти вперёд
       ballPos = { x: WORLD.START.x, y: WORLD.START.y };
       handPos = P(WORLD.START.x - 0.1, WORLD.START.y - 0.1);
     } else if (throwing) {
       const a = Math.min(1, sinceThrow / 0.15);
-      handPos = P(baseX + 0.45 + 0.35 * a, shoulder + 0.55 + 0.4 * a); // сопровождение броска
+      handPos = P(baseX + 0.45 + 0.35 * a, shoulder + 0.55 + 0.4 * a);
     } else if (holdsBall) {
       ballPos = { x: baseX + 0.48, y: dribY };
       handPos = P(baseX + 0.46, hand + 0.12 + (idle ? 0.05 * Math.sin(ph * Math.PI * 2) : 0));
     } else {
       handPos = P(baseX + 0.3, hip + 0.25);
     }
-    // дальняя рука
     ctx.strokeStyle = '#d9a77e';
     ctx.lineWidth = sc * 0.12;
     ctx.beginPath();
@@ -945,7 +932,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.lineTo(handPos[0] - sc * 0.12, handPos[1] + sc * 0.02);
     ctx.stroke();
     if (ballPos && holdsBall) drawBall(ctx, ballPos.x, ballPos.y, t / 260, ballReady() ? spawn(t) : 1);
-    // ближняя рука поверх мяча
     ctx.strokeStyle = '#e6b58a';
     ctx.beginPath();
     ctx.moveTo(...sh);
@@ -1056,8 +1042,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     ctx.closePath();
   }
 
-  // ---------- Отсчёт, последние секунды, конец ----------
-
   function tickClock() {
     const ov = $('bb-overlay');
     if (!started()) {
@@ -1093,8 +1077,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     }
   }
 
-  // ====================== Привязка ======================
-
   function bind() {
     document.querySelector('[data-game="basket"]').addEventListener('click', () => {
       audio.unlock();
@@ -1103,8 +1085,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     $('bb-history-btn').addEventListener('click', () => go('basket-history'));
     $('bb-howto').addEventListener('click', () => openTutorial(false));
     $('gc-play').addEventListener('click', () => {
-      if (s.st?.session) return apply(s.st); // вернуться в идущую игру
-      if (!tutorSeen()) return openTutorial(true); // новичку — сначала как играть
+      if (s.st?.session) return apply(s.st);
+      if (!tutorSeen()) return openTutorial(true);
       startGame();
     });
     $('tutor-next').addEventListener('click', () => {
@@ -1153,7 +1135,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       s.active = false;
       if (!s.gameId) setPoll(0);
     },
-    /** При запуске: незавершённая игра — сразу вернуть в неё. */
     async resume() {
       try {
         const st = await api('/api/basket/state', {});

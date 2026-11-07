@@ -4,6 +4,8 @@ import { openDb } from '../server/db.js';
 import { validateInitData, signInitData } from '../server/auth.js';
 import { Game } from '../server/game.js';
 import { Bot } from '../server/bot.js';
+import { createAdminRoutes } from '../server/admin.js';
+import { AppError } from '../server/db.js';
 
 const TOKEN = '123456:TEST-token';
 const settings = { countdownMs: 30, spinMs: 30, resultMs: 30, houseCut: 0.1, houseFreeUpTo: 9, minBet: 1 };
@@ -28,7 +30,12 @@ function storeWith(...balances) {
 
 test('initData: верная подпись принимается, подделка и устаревшие данные — нет', () => {
   const now = Date.now();
-  const fields = { auth_date: String(Math.floor(now / 1000)), query_id: 'AAE', signature: 'sig', user: JSON.stringify(user(42)) };
+  const fields = {
+    auth_date: String(Math.floor(now / 1000)),
+    query_id: 'AAE',
+    signature: 'sig',
+    user: JSON.stringify(user(42)),
+  };
   const data = signInitData(fields, TOKEN);
   assert.equal(validateInitData(data, TOKEN).id, 42);
   assert.equal(validateInitData(data, 'other:token'), null);
@@ -40,7 +47,7 @@ test('initData: верная подпись принимается, поддел
 
 test('раунд: ожидание → отсчёт → вращение → банк 90% победителю, статистика', async () => {
   const store = storeWith(1000, 1000);
-  const game = new Game(store, settings, { random: (n) => (n === 10_000 ? 5000 : 0) }); // билет 0 → первый игрок
+  const game = new Game(store, settings, { random: (n) => (n === 10_000 ? 5000 : 0) });
   game.start();
   game.placeBet(store.getUser(1), 300);
   assert.equal(game.publicState().status, 'waiting');
@@ -92,7 +99,13 @@ test('оплата звёздами зачисляется ровно один �
 });
 
 function fakeBot(store) {
-  const bot = new Bot({ token: TOKEN, webAppUrl: 'https://x.test/', adminId: '999', limits: { minDeposit: 1, maxAmount: 1e6 }, store });
+  const bot = new Bot({
+    token: TOKEN,
+    webAppUrl: 'https://x.test/',
+    adminId: '999',
+    limits: { minDeposit: 1, maxAmount: 1e6 },
+    store,
+  });
   bot.calls = [];
   bot.api = async (method, payload) => {
     bot.calls.push({ method, payload });
@@ -112,11 +125,26 @@ test('вывод: админ нажимает «Отправлено» → ст�
   assert.match(card.payload.text, /@u1/);
   assert.match(card.payload.text, /50/);
 
-  await bot.handleUpdate({ callback_query: { id: 'q', from: { id: 999 }, data: `wd:sent:${withdrawal.id}`, message: { chat: { id: 999 }, message_id: 1 } } });
+  await bot.handleUpdate({
+    callback_query: {
+      id: 'q',
+      from: { id: 999 },
+      data: `wd:sent:${withdrawal.id}`,
+      message: { chat: { id: 999 }, message_id: 1 },
+    },
+  });
   assert.equal(store.getWithdrawal(withdrawal.id).status, 'sent');
-  assert.ok(bot.calls.some((c) => c.method === 'sendMessage' && c.payload.chat_id === 1 && /выполнен/.test(c.payload.text)));
-  // повторное нажатие ничего не меняет
-  await bot.handleUpdate({ callback_query: { id: 'q2', from: { id: 999 }, data: `wd:sent:${withdrawal.id}`, message: { chat: { id: 999 }, message_id: 1 } } });
+  assert.ok(
+    bot.calls.some((c) => c.method === 'sendMessage' && c.payload.chat_id === 1 && /выполнен/.test(c.payload.text)),
+  );
+  await bot.handleUpdate({
+    callback_query: {
+      id: 'q2',
+      from: { id: 999 },
+      data: `wd:sent:${withdrawal.id}`,
+      message: { chat: { id: 999 }, message_id: 1 },
+    },
+  });
   assert.equal(store.getUser(1).balance, 45);
 });
 
@@ -125,9 +153,18 @@ test('вывод: «Отмена» → админ пишет причину → 
   const bot = fakeBot(store);
   const { withdrawal } = store.withdraw(1, 50, 5);
   await bot.notifyWithdrawal(withdrawal, store.getUser(1));
-  await bot.handleUpdate({ callback_query: { id: 'q', from: { id: 999 }, data: `wd:cancel:${withdrawal.id}`, message: { chat: { id: 999 }, message_id: 1 } } });
+  await bot.handleUpdate({
+    callback_query: {
+      id: 'q',
+      from: { id: 999 },
+      data: `wd:cancel:${withdrawal.id}`,
+      message: { chat: { id: 999 }, message_id: 1 },
+    },
+  });
   assert.equal(store.getWithdrawal(withdrawal.id).status, 'pending', 'до причины заявка не закрыта');
-  await bot.handleUpdate({ message: { message_id: 5, chat: { id: 999, type: 'private' }, from: { id: 999 }, text: 'Неверный ник' } });
+  await bot.handleUpdate({
+    message: { message_id: 5, chat: { id: 999, type: 'private' }, from: { id: 999 }, text: 'Неверный ник' },
+  });
   const w = store.getWithdrawal(withdrawal.id);
   assert.equal(w.status, 'cancelled');
   assert.equal(w.reason, 'Неверный ник');
@@ -140,13 +177,29 @@ test('чужой пользователь не может обработать �
   const store = storeWith(100);
   const bot = fakeBot(store);
   const { withdrawal } = store.withdraw(1, 50, 5);
-  await bot.handleUpdate({ callback_query: { id: 'q', from: { id: 1 }, data: `wd:sent:${withdrawal.id}`, message: { chat: { id: 1 }, message_id: 1 } } });
+  await bot.handleUpdate({
+    callback_query: {
+      id: 'q',
+      from: { id: 1 },
+      data: `wd:sent:${withdrawal.id}`,
+      message: { chat: { id: 1 }, message_id: 1 },
+    },
+  });
   assert.equal(store.getWithdrawal(withdrawal.id).status, 'pending');
 });
 
 test('pre_checkout: принимается только корректный счёт XTR своего пользователя', async () => {
   const bot = fakeBot(storeWith(0));
-  const q = (over) => ({ pre_checkout_query: { id: 'p', from: { id: 1 }, currency: 'XTR', total_amount: 100, invoice_payload: 'dep:1:100:1', ...over } });
+  const q = (over) => ({
+    pre_checkout_query: {
+      id: 'p',
+      from: { id: 1 },
+      currency: 'XTR',
+      total_amount: 100,
+      invoice_payload: 'dep:1:100:1',
+      ...over,
+    },
+  });
   await bot.handleUpdate(q({}));
   await bot.handleUpdate(q({ total_amount: 99 }));
   await bot.handleUpdate(q({ from: { id: 2 } }));
@@ -154,101 +207,161 @@ test('pre_checkout: принимается только корректный с�
   assert.deepEqual(answers, [true, false, false]);
 });
 
-// ---------- Админ-панель ----------
-const adminMsg = (text, id = 100) => ({ message: { message_id: id, chat: { id: 999, type: 'private' }, from: { id: 999, first_name: 'Admin' }, text } });
-const adminTap = (data) => ({ callback_query: { id: 'cb', from: { id: 999 }, data, message: { chat: { id: 999 }, message_id: 77 } } });
+const adminMsg = (text, id = 100) => ({
+  message: { message_id: id, chat: { id: 999, type: 'private' }, from: { id: 999, first_name: 'Admin' }, text },
+});
+const adminTap = (data) => ({
+  callback_query: { id: 'cb', from: { id: 999 }, data, message: { chat: { id: 999 }, message_id: 77 } },
+});
 const lastText = (bot) => [...bot.calls].reverse().find((c) => c.payload.text)?.payload.text ?? '';
 
-test('/admin отвечает только администратору и показывает статистику', async () => {
+function adminApi(store, bot) {
+  const routes = createAdminRoutes({
+    store,
+    bot,
+    config: { wager: { deposit: 3, bonus: 3 }, limits: { maxAmount: 1e6 } },
+    crash: { stats: () => ({ staked: 0, profit: 0 }) },
+    readJson: async (req) => req.body ?? {},
+    requireAdmin: (req) => {
+      if (req.userId !== 999) throw new AppError('FORBIDDEN', 'Недоступно', 403);
+      return { id: 999 };
+    },
+    notifyBalance: () => {},
+  });
+  return (path, body, userId = 999) => routes[`POST /api/admin/${path}`]({ body, userId });
+}
+
+test('/admin в боте открывает админ-панель мини-аппа только администратору', async () => {
   const store = storeWith(100);
-  store.creditPayment({ chargeId: 'p1', userId: 1, amount: 40, payload: 'dep:1:40:1' });
   const bot = fakeBot(store);
-  await bot.handleUpdate({ message: { message_id: 1, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/admin' } });
+  await bot.handleUpdate({
+    message: { message_id: 1, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/admin' },
+  });
   assert.doesNotMatch(lastText(bot), /Админ-панель/);
   await bot.handleUpdate(adminMsg('/admin'));
-  const text = lastText(bot);
-  assert.match(text, /Админ-панель/);
-  assert.match(text, /Пользователи: 2/); // игрок + сам админ
-  assert.match(text, /24 часа: 2 · <b>140 ⭐/);
+  const call = bot.calls.at(-1);
+  assert.equal(call.payload.reply_markup.inline_keyboard[0][0].web_app.url, 'https://x.test/#admin');
 });
 
-test('поиск по нику → карточка; баланс: +5 добавляет, −N не уходит ниже нуля', async () => {
+test('админ API: чужой пользователь получает отказ', async () => {
+  const api = adminApi(storeWith(5), fakeBot(storeWith(0)));
+  await assert.rejects(() => api('users', {}, 1), /Недоступно/);
+  await assert.rejects(() => api('balance', { id: 1, delta: 100 }, 1), /Недоступно/);
+});
+
+test('админ API: игроки по балансу от большего, поиск по нику и ID', async () => {
+  const store = storeWith(5, 50, 20);
+  const api = adminApi(store, fakeBot(store));
+  const { users, total } = await api('users', {});
+  assert.equal(total, 3);
+  assert.deepEqual(
+    users.map((u) => u.id),
+    [2, 3, 1],
+  );
+  assert.deepEqual(
+    (await api('users', { query: '@u3' })).users.map((u) => u.id),
+    [3],
+  );
+  assert.deepEqual(
+    (await api('users', { query: '1' })).users.map((u) => u.id),
+    [1],
+  );
+});
+
+test('админ API: карточка игрока — пополнения, игры, журнал и сверка баланса', async () => {
+  const store = storeWith(0);
+  store.creditPayment({ chargeId: 'a', userId: 1, amount: 100, payload: 'x' });
+  store.creditPayment({ chargeId: 'b', userId: 1, amount: 50, payload: 'x' });
+  store.tx(() => {
+    store.ledgerDebit(1, 30, 'crash_bet', 1);
+    store.ledgerCredit(1, 60, 'crash_win', 1);
+    store.ledgerDebit(1, 5, 'basket_entry', 1);
+  });
+  const d = await adminApi(store, fakeBot(store))('user', { id: 1 });
+  assert.deepEqual(d.money.deposits.n, 2);
+  assert.equal(d.money.deposits.sum, 150);
+  assert.deepEqual(d.games.crash, { bets: 1, staked: 30, wins: 1, won: 60, net: 30 });
+  assert.equal(d.games.basket.net, -5);
+  assert.equal(d.user.balance, 175);
+  assert.deepEqual(d.integrity, { ok: true, ledger: 175 });
+  assert.deepEqual(
+    d.ledger.map((l) => l.kind),
+    ['basket_entry', 'crash_win', 'crash_bet', 'deposit', 'deposit'],
+  );
+});
+
+test('админ API: баланс +/−, списание не уходит ниже нуля, блокировка закрывает бота и оплату', async () => {
   const store = storeWith(2);
   const bot = fakeBot(store);
-  await bot.handleUpdate(adminTap('adm:find'));
-  await bot.handleUpdate(adminMsg('@U1'));
-  assert.match(lastText(bot), /ID: <code>1<\/code>/);
+  const api = adminApi(store, bot);
+  assert.equal((await api('balance', { id: 1, delta: 5 })).user.balance, 7);
+  const r = await api('balance', { id: 1, delta: -10 });
+  assert.equal(r.applied, -7);
+  assert.equal(r.user.balance, 0);
+  await assert.rejects(() => api('balance', { id: 1, delta: 0 }), /нулевой/);
+  await assert.rejects(() => api('balance', { id: 1, delta: 1.5 }), /Некорректное/);
 
-  await bot.handleUpdate(adminTap('adm:bal:1'));
-  await bot.handleUpdate(adminMsg('5'));
-  assert.equal(store.getUser(1).balance, 7);
-  await bot.handleUpdate(adminTap('adm:bal:1'));
-  await bot.handleUpdate(adminMsg('-10'));
-  assert.equal(store.getUser(1).balance, 0);
-  assert.ok(bot.calls.some((c) => /Списано <b>7/.test(c.payload.text ?? '')));
-  await bot.handleUpdate(adminTap('adm:bal:1'));
-  await bot.handleUpdate(adminMsg('-5'));
-  assert.equal(store.getUser(1).balance, 0);
-  assert.ok(bot.calls.some((c) => /Баланс нулевой/.test(c.payload.text ?? '')));
-});
-
-test('неизвестный ник — понятный ответ, поиск продолжается', async () => {
-  const bot = fakeBot(storeWith(0));
-  await bot.handleUpdate(adminTap('adm:find'));
-  await bot.handleUpdate(adminMsg('@nobody'));
-  assert.match(lastText(bot), /Не нашёл/);
-  await bot.handleUpdate(adminMsg('1'));
-  assert.match(lastText(bot), /ID: <code>1<\/code>/);
-});
-
-test('блокировка: кнопка меняется, бот и оплата закрыты для игрока, разблокировка возвращает доступ', async () => {
-  const store = storeWith(10);
-  const bot = fakeBot(store);
-  await bot.handleUpdate(adminTap('adm:block:1'));
-  assert.equal(store.getUser(1).blocked, 1);
-  const edit = [...bot.calls].reverse().find((c) => c.method === 'editMessageText');
-  assert.ok(JSON.stringify(edit.payload.reply_markup).includes('Разблокировать'));
-  await bot.handleUpdate({ message: { message_id: 2, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/start' } });
+  assert.equal((await api('block', { id: 1, blocked: true })).user.blocked, true);
+  await bot.handleUpdate({
+    message: { message_id: 2, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/start' },
+  });
   assert.match(lastText(bot), /заблокирован/);
-  await bot.handleUpdate({ pre_checkout_query: { id: 'p', from: { id: 1 }, currency: 'XTR', total_amount: 5, invoice_payload: 'dep:1:5:1' } });
+  await bot.handleUpdate({
+    pre_checkout_query: { id: 'p', from: { id: 1 }, currency: 'XTR', total_amount: 5, invoice_payload: 'dep:1:5:1' },
+  });
   assert.equal(bot.calls.at(-1).payload.ok, false);
-  await bot.handleUpdate(adminTap('adm:unblock:1'));
-  assert.equal(store.getUser(1).blocked, 0);
+  assert.equal((await api('block', { id: 1, blocked: false })).user.blocked, false);
 });
 
-test('рассылка: предпросмотр → подтверждение → копия всем незаблокированным', async () => {
+test('админ API: личное сообщение и рассылка текстом всем незаблокированным', async () => {
   const store = storeWith(0, 0, 0);
   store.setBlocked(3, true);
   const bot = fakeBot(store);
-  await bot.handleUpdate(adminTap('adm:bcast'));
-  await bot.handleUpdate(adminMsg('Новый турнир сегодня!', 555));
-  assert.match(lastText(bot), /Отправить/);
-  await bot.handleUpdate(adminTap('adm:bsend'));
-  await until(() => !bot.broadcasting && bot.calls.some((c) => /Рассылка завершена/.test(c.payload.text ?? '')));
-  const copies = bot.calls.filter((c) => c.method === 'copyMessage');
-  assert.deepEqual(copies.map((c) => c.payload.chat_id).sort(), [1, 2, 999]);
-  assert.ok(copies.every((c) => c.payload.message_id === 555));
+  const api = adminApi(store, bot);
+  await api('message', { id: 2, text: 'Привет <b>' });
+  const dm = bot.calls.at(-1);
+  assert.equal(dm.payload.chat_id, 2);
+  assert.equal(dm.payload.text, 'Привет &lt;b&gt;');
+  await assert.rejects(() => api('message', { id: 2, text: '   ' }), /Заполните/);
+
+  const st = await api('broadcast', { text: 'Новый турнир сегодня!' });
+  assert.equal(st.total, 2);
+  await until(() => !bot.broadcastStatus().running);
+  const sent = bot.calls.filter((c) => c.payload.text === 'Новый турнир сегодня!').map((c) => c.payload.chat_id);
+  assert.deepEqual(sent.sort(), [1, 2]);
+  assert.equal(bot.broadcastStatus().sent, 2);
+  await assert.rejects(() => api('broadcast', { text: 'x', photo: 'data:text/html;base64,PGI+' }), /JPEG/);
 });
 
 test('/start: баннер с подписью, синяя «Играть», канал, чат, поддержка; баннер загружается один раз', async () => {
   const store = storeWith(0);
   const bot = new Bot({
-    token: TOKEN, webAppUrl: 'https://x.test/', adminId: '999', supportUsername: 'bob_proger',
-    channelUrl: 'https://t.me/safroulette', chatUrl: 'https://t.me/safroulette_chat',
-    bannerPath: new URL('../public/banner.jpg', import.meta.url).pathname, limits: { minDeposit: 1, maxAmount: 1e6 }, store,
+    token: TOKEN,
+    webAppUrl: 'https://x.test/',
+    adminId: '999',
+    supportUsername: 'bob_proger',
+    channelUrl: 'https://t.me/safroulette',
+    chatUrl: 'https://t.me/safroulette_chat',
+    bannerPath: new URL('../public/banner.jpg', import.meta.url).pathname,
+    limits: { minDeposit: 1, maxAmount: 1e6 },
+    store,
   });
-  // перехватываем сеть: проверяем настоящий multipart-запрос, который ушёл бы в Telegram
   const sent = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     const method = url.split('/').pop();
     const body = init.body instanceof FormData ? Object.fromEntries(init.body) : JSON.parse(init.body);
     sent.push({ method, body });
-    const result = method === 'sendPhoto' ? { message_id: 1, chat: { id: 1 }, photo: [{ file_id: 'small' }, { file_id: 'BIG' }] } : true;
+    const result =
+      method === 'sendPhoto'
+        ? { message_id: 1, chat: { id: 1 }, photo: [{ file_id: 'small' }, { file_id: 'BIG' }] }
+        : true;
     return { json: async () => ({ ok: true, result }) };
   };
   try {
-    const start = { message: { message_id: 1, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/start' } };
+    const start = {
+      message: { message_id: 1, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/start' },
+    };
     await bot.handleUpdate(start);
     await bot.handleUpdate(start);
   } finally {
@@ -261,17 +374,20 @@ test('/start: баннер с подписью, синяя «Играть», к�
   assert.match(first.body.caption, /ROULETTE ARENA<\/b> — рулетка в Telegram!/);
   const kb = JSON.parse(first.body.reply_markup).inline_keyboard;
   assert.deepEqual(kb[0][0], { text: '🎮 Играть', web_app: { url: 'https://x.test/' }, style: 'primary' });
-  assert.deepEqual(kb[1].map((b) => b.url), ['https://t.me/safroulette', 'https://t.me/safroulette_chat']);
+  assert.deepEqual(
+    kb[1].map((b) => b.url),
+    ['https://t.me/safroulette', 'https://t.me/safroulette_chat'],
+  );
   assert.equal(kb[2][0].url, 'https://t.me/bob_proger');
   assert.equal(second.body.photo, 'BIG', 'повторно — по file_id, без загрузки');
 });
 
 test('банк: до 9 включительно без комиссии, от 10 — минус 10%', async () => {
   const { bankOf } = await import('../server/game.js');
-  assert.equal(bankOf(2, 0.1), 2); // 1 + 1 — победитель забирает всё
+  assert.equal(bankOf(2, 0.1), 2);
   assert.equal(bankOf(8, 0.1), 8);
   assert.equal(bankOf(9, 0.1), 9);
-  assert.equal(bankOf(10, 0.1), 9); // пример: ставки 10 → банк 9
+  assert.equal(bankOf(10, 0.1), 9);
   assert.equal(bankOf(15, 0.1), 14);
   assert.equal(bankOf(20, 0.1), 18);
   assert.equal(bankOf(500, 0.1), 450);
@@ -292,7 +408,7 @@ test('задания: награда один раз, удалённое зад�
   assert.throws(() => store.completeTask(t.id, 1), /недоступно/);
 });
 
-test('админ добавляет задание: ссылка → награда; канал без прав бота → засчитывается за переход', async () => {
+test('админ добавляет задание: канал с правами бота — проверка подписки, без прав — за переход', async () => {
   const store = storeWith(0);
   const bot = fakeBot(store);
   bot.botId = 777;
@@ -302,12 +418,12 @@ test('админ добавляет задание: ссылка → награ�
     if (method === 'getChatMember') return { status: payload.user_id === 777 ? 'administrator' : 'left' };
     return base(method, payload);
   };
-  await bot.handleUpdate(adminTap('adm:taskadd'));
-  await bot.handleUpdate(adminMsg('https://t.me/my_channel'));
-  assert.match(lastText(bot), /Подписаться на «Мой канал»[\s\S]*проверяться автоматически/);
-  await bot.handleUpdate(adminMsg('25'));
-  const [task] = store.activeTasks();
-  assert.deepEqual([task.kind, task.chat_ref, task.reward], ['subscribe', '@my_channel', 25]);
+  const api = adminApi(store, bot);
+  const { task } = await api('tasks/add', { url: 'https://t.me/my_channel', reward: 25 });
+  assert.deepEqual(
+    [task.kind, task.chat_ref, task.reward, task.title],
+    ['subscribe', '@my_channel', 25, 'Подписаться на «Мой канал»'],
+  );
   assert.equal(await bot.isMember('@my_channel', 1), false);
 
   bot.api = async (method, payload) => {
@@ -315,17 +431,16 @@ test('админ добавляет задание: ссылка → награ�
     if (method === 'getChatMember') return { status: 'left' };
     return base(method, payload);
   };
-  await bot.handleUpdate(adminTap('adm:taskadd'));
-  await bot.handleUpdate(adminMsg('@other_chan'));
-  assert.match(lastText(bot), /не администратор канала/);
-  await bot.handleUpdate(adminMsg('5'));
-  assert.equal(store.activeTasks()[0].kind, 'link');
+  const other = await api('tasks/add', { url: '@other_chan', reward: 5, title: 'Свой текст' });
+  assert.equal(other.task.kind, 'link');
+  assert.equal(other.task.title, 'Свой текст');
+  assert.match(other.note, /не администратор канала/);
+  await assert.rejects(() => api('tasks/add', { url: 'https://t.me/x', reward: 0 }), /награда/);
 
-  await bot.handleUpdate(adminTap(`adm:taskdel:${task.id}`));
-  assert.equal(store.activeTasks().length, 1);
+  const { tasks } = await api('tasks/delete', { id: task.id });
+  assert.equal(tasks.length, 1);
 });
 
-// ---------- Рефералы ----------
 function refBot(store, members = new Set()) {
   const bot = fakeBot(store);
   bot.refPercent = 15;
@@ -337,19 +452,21 @@ function refBot(store, members = new Set()) {
   bot.upload = async () => ({ photo: [{ file_id: 'F' }] });
   return bot;
 }
-const startFrom = (id, text) => ({ message: { message_id: 1, chat: { id, type: 'private' }, from: { id, first_name: `F${id}` }, text } });
+const startFrom = (id, text) => ({
+  message: { message_id: 1, chat: { id, type: 'private' }, from: { id, first_name: `F${id}` }, text },
+});
 
 test('реферал: новый пользователь по ссылке привязывается; старый и сам себя — нет', async () => {
-  const store = storeWith(0); // пригласивший — id 1
+  const store = storeWith(0);
   const bot = refBot(store);
   await bot.handleUpdate(startFrom(50, '/start ref_1'));
   assert.equal(store.getUser(50).referrer_id, 1);
-  await wait(20); // уведомление пригласившему уходит в фоне
+  await wait(20);
   assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /Новый друг/.test(c.payload.text ?? '')));
-  await bot.handleUpdate(startFrom(50, '/start ref_2')); // повторно — не перепривязывается
+  await bot.handleUpdate(startFrom(50, '/start ref_2'));
   assert.equal(store.getUser(50).referrer_id, 1);
   store.upsertUser({ id: 60, first_name: 'Old' });
-  await bot.handleUpdate(startFrom(60, '/start ref_1')); // уже был в базе
+  await bot.handleUpdate(startFrom(60, '/start ref_1'));
   assert.equal(store.getUser(60).referrer_id, null);
   await bot.handleUpdate(startFrom(1, '/start ref_1'));
   assert.equal(store.getUser(1).referrer_id, null);
@@ -357,24 +474,33 @@ test('реферал: новый пользователь по ссылке пр
 });
 
 test('реферал: 15% с каждого пополнения друга, дробные части копятся, повтор платежа не удваивает', async () => {
-  const store = storeWith(0); // пригласивший — id 1
+  const store = storeWith(0);
   const bot = refBot(store);
   await bot.handleUpdate(startFrom(50, '/start ref_1'));
   const pay = (id, amount) =>
     bot.handleUpdate({
       message: {
-        message_id: 9, chat: { id: 50, type: 'private' }, from: { id: 50, first_name: 'F50' },
-        successful_payment: { currency: 'XTR', total_amount: amount, telegram_payment_charge_id: id, invoice_payload: `dep:50:${amount}:1` },
+        message_id: 9,
+        chat: { id: 50, type: 'private' },
+        from: { id: 50, first_name: 'F50' },
+        successful_payment: {
+          currency: 'XTR',
+          total_amount: amount,
+          telegram_payment_charge_id: id,
+          invoice_payload: `dep:50:${amount}:1`,
+        },
       },
     });
   await pay('c1', 100);
   assert.equal(store.getUser(1).balance, 15);
-  assert.ok(bot.calls.some((c) => c.payload.chat_id === 1 && /пополнил баланс — вам <b>\+15 ⭐/.test(c.payload.text ?? '')));
-  await pay('c1', 100); // тот же платёж повторно
+  assert.ok(
+    bot.calls.some((c) => c.payload.chat_id === 1 && /пополнил баланс — вам <b>\+15 ⭐/.test(c.payload.text ?? '')),
+  );
+  await pay('c1', 100);
   assert.equal(store.getUser(1).balance, 15);
-  await pay('c2', 3); // 103 × 15% = 15.45 → пока ничего
+  await pay('c2', 3);
   assert.equal(store.getUser(1).balance, 15);
-  await pay('c3', 4); // 107 × 15% = 16.05 → +1
+  await pay('c3', 4);
   assert.equal(store.getUser(1).balance, 16);
   assert.equal(store.getUser(50).balance, 107, 'друг получает пополнение полностью');
   const f = store.friends(1);
@@ -392,7 +518,10 @@ test('вывод: без подписки на канал — понятная �
   const store = storeWith(0);
   const members = new Set();
   const bot = refBot(store, members);
-  await assert.rejects(bot.assertSubscribed('@safroulette', 1), (e) => e.code === 'NOT_SUBSCRIBED' && /@safroulette/.test(e.message));
+  await assert.rejects(
+    bot.assertSubscribed('@safroulette', 1),
+    (e) => e.code === 'NOT_SUBSCRIBED' && /@safroulette/.test(e.message),
+  );
   members.add(1);
   await bot.assertSubscribed('@safroulette', 1);
   bot.api = async () => {
@@ -402,29 +531,60 @@ test('вывод: без подписки на канал — понятная �
 });
 
 test('startapp: параметр из подписанного initData доступен серверу, подделка ломает подпись', () => {
-  const fields = { auth_date: String(Math.floor(Date.now() / 1000)), start_param: 'ref_1', user: JSON.stringify(user(77)) };
+  const fields = {
+    auth_date: String(Math.floor(Date.now() / 1000)),
+    start_param: 'ref_1',
+    user: JSON.stringify(user(77)),
+  };
   const data = signInitData(fields, TOKEN);
   const u = validateInitData(data, TOKEN);
   assert.deepEqual([u.id, u.startParam], [77, 'ref_1']);
   assert.equal(validateInitData(data.replace('ref_1', 'ref_2'), TOKEN), null);
-  assert.equal(validateInitData(signInitData({ ...fields, start_param: undefined }, TOKEN).replace('start_param=undefined&', ''), TOKEN), null);
+  assert.equal(
+    validateInitData(
+      signInitData({ ...fields, start_param: undefined }, TOKEN).replace('start_param=undefined&', ''),
+      TOKEN,
+    ),
+    null,
+  );
 });
 
 test('оборот перед выводом: после пополнения на 100 нужно поставить 300, отмена ставки не засчитывается', () => {
   const store = storeWith(0);
   const opts = { deposit: 3, bonus: 3 };
-  store.tx(() => store.ledgerCredit(1, 1000, 'admin', null)); // начисление админа — без оборота
-  store.tx(() => store.ledgerDebit(1, 500, 'crash_bet', 1)); // ставки ДО пополнения не идут в оборот
+  store.tx(() => store.ledgerCredit(1, 1000, 'admin', null));
+  store.tx(() => store.ledgerDebit(1, 500, 'crash_bet', 1));
   assert.deepEqual(store.wager(1, opts), { required: 0, done: 0, left: 0 });
   store.creditPayment({ chargeId: 'p1', userId: 1, amount: 100, payload: 'x' });
   assert.deepEqual(store.wager(1, opts), { required: 300, done: 0, left: 300 });
   store.tx(() => store.ledgerDebit(1, 50, 'crash_bet', 2));
-  store.tx(() => store.ledgerCredit(1, 50, 'crash_refund', 2)); // отменил ставку — не считается
+  store.tx(() => store.ledgerCredit(1, 50, 'crash_refund', 2));
   store.tx(() => store.ledgerDebit(1, 5, 'basket_entry', 7));
   store.tx(() => store.ledgerDebit(1, 100, 'bet', 3));
   assert.deepEqual(store.wager(1, opts), { required: 300, done: 105, left: 195 });
-  store.tx(() => store.ledgerDebit(1, 400, 'bet', 4)); // перебор не копится впрок
+  store.tx(() => store.ledgerDebit(1, 400, 'bet', 4));
   assert.deepEqual(store.wager(1, opts), { required: 300, done: 300, left: 0 });
   store.creditPayment({ chargeId: 'p2', userId: 1, amount: 10, payload: 'x' });
   assert.deepEqual(store.wager(1, opts), { required: 30, done: 0, left: 30 });
+});
+
+test('вывод: вторая заявка, пока первая в обработке, и больше 3 заявок в сутки — отклоняются', () => {
+  const store = storeWith(1000);
+  const { withdrawal } = store.withdraw(1, 50, 5);
+  assert.throws(() => store.withdraw(1, 50, 5), /уже есть заявка/);
+  assert.equal(store.getUser(1).balance, 945);
+  store.markWithdrawalSent(withdrawal.id);
+  store.markWithdrawalSent(store.withdraw(1, 50, 5).withdrawal.id);
+  store.cancelWithdrawal(store.withdraw(1, 50, 5).withdrawal.id, 'тест');
+  assert.throws(() => store.withdraw(1, 50, 5), /Слишком много заявок/);
+});
+
+test('initData с чужой подписью и пустые данные не проходят', () => {
+  const now = Date.now();
+  const good = signInitData({ user: JSON.stringify({ id: 5 }), auth_date: String(Math.floor(now / 1000)) }, TOKEN);
+  assert.equal(validateInitData(good, TOKEN).id, 5);
+  assert.equal(validateInitData(good, '999:other'), null);
+  assert.equal(validateInitData(good.replace('id%22%3A5', 'id%22%3A6'), TOKEN), null);
+  assert.equal(validateInitData('', TOKEN), null);
+  assert.equal(validateInitData('x'.repeat(5000), TOKEN), null);
 });

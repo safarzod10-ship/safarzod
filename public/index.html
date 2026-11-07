@@ -1,455 +1,940 @@
 <!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0B0B10">
-  <meta name="format-detection" content="telephone=no">
-  <title>Roulette Arena</title>
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/styles.css">
-  <style>
-    /* Экран загрузки — встроен, чтобы появиться мгновенно. Крупный знак по центру, название и тонкая светящаяся полоса. */
-    html, body { background: #0e1015; margin: 0; }
-    .boot { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: radial-gradient(circle at 50% 46%, rgba(124,92,255,.09), rgba(124,92,255,0) 55vmin), #0e1015; transition: opacity .45s ease; }
-    .boot.hide { opacity: 0; pointer-events: none; }
-    .boot-mark { width: min(42vw, 168px); height: auto; filter: drop-shadow(0 0 28px rgba(124,92,255,.28)); animation: boot-in .7s cubic-bezier(.2,.8,.2,1) both; }
-    .boot-mark .arc { transform-origin: 50% 50%; animation: boot-spin 1.4s cubic-bezier(.5,.15,.5,.85) infinite; }
-    .boot-mark .glyph { transform-origin: 50% 50%; animation: boot-pulse 1.8s ease-in-out infinite; }
-    .boot-name { margin-top: 30px; font: 600 15px/1 Inter, system-ui, sans-serif; letter-spacing: .42em; text-indent: .42em; color: #eef0f4; opacity: .92; animation: boot-in .7s .1s cubic-bezier(.2,.8,.2,1) both; }
-    .boot-bar { margin-top: 26px; width: min(52vw, 210px); height: 2px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; animation: boot-in .7s .2s both; }
-    .boot-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #7c5cff, #b9a8ff); box-shadow: 0 0 10px rgba(124,92,255,.8);
-      transform: scaleX(.04); transform-origin: left; transition: transform .35s cubic-bezier(.2,.8,.2,1); }
-    @keyframes boot-spin { to { transform: rotate(360deg); } }
-    @keyframes boot-pulse { 50% { transform: scale(.94); opacity: .85; } }
-    @keyframes boot-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
-  </style>
-  <script src="https://telegram.org/js/telegram-web-app.js?64"></script>
-  <script>
-    // Как можно раньше: убрать заглушку Telegram, развернуть приложение на весь экран (Bot API 8.0+, телефоны)
-    (function () {
-      var t = window.Telegram && window.Telegram.WebApp;
-      if (!t) return;
-      try {
-        t.ready();
-        t.expand();
-        if (t.isVersionAtLeast('6.1')) { t.setHeaderColor('#0b0b10'); t.setBackgroundColor('#0b0b10'); }
-        if (t.isVersionAtLeast('7.7')) t.disableVerticalSwipes();
-        if (t.isVersionAtLeast('7.10')) t.setBottomBarColor('#0f0f15');
-        if (t.isVersionAtLeast('8.0') && /^(android|ios)$/.test(t.platform)) {
-          if (!t.isFullscreen) t.requestFullscreen();
-          t.lockOrientation();
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0B0B10" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Roulette Arena</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      html,
+      body {
+        background: #0e1015;
+        margin: 0;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 46%, rgba(124, 92, 255, 0.09), rgba(124, 92, 255, 0) 55vmin), #0e1015;
+        transition: opacity 0.45s ease;
+      }
+      .boot.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot-mark {
+        width: min(42vw, 168px);
+        height: auto;
+        filter: drop-shadow(0 0 28px rgba(124, 92, 255, 0.28));
+        animation: boot-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+      .boot-mark .arc {
+        transform-origin: 50% 50%;
+        animation: boot-spin 1.4s cubic-bezier(0.5, 0.15, 0.5, 0.85) infinite;
+      }
+      .boot-mark .glyph {
+        transform-origin: 50% 50%;
+        animation: boot-pulse 1.8s ease-in-out infinite;
+      }
+      .boot-name {
+        margin-top: 30px;
+        font:
+          600 15px/1 Inter,
+          system-ui,
+          sans-serif;
+        letter-spacing: 0.42em;
+        text-indent: 0.42em;
+        color: #eef0f4;
+        opacity: 0.92;
+        animation: boot-in 0.7s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+      .boot-bar {
+        margin-top: 26px;
+        width: min(52vw, 210px);
+        height: 2px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        animation: boot-in 0.7s 0.2s both;
+      }
+      .boot-bar i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #7c5cff, #b9a8ff);
+        box-shadow: 0 0 10px rgba(124, 92, 255, 0.8);
+        transform: scaleX(0.04);
+        transform-origin: left;
+        transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
         }
-      } catch (e) {}
-    })();
-  </script>
-  <script type="module" src="/app.js"></script>
-</head>
-<body>
-  <div class="boot" id="boot" role="progressbar" aria-label="Загрузка">
-    <svg class="boot-mark" viewBox="0 0 120 120" aria-hidden="true">
-      <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="4"/>
-      <circle class="arc" cx="60" cy="60" r="52" fill="none" stroke="#7c5cff" stroke-width="4" stroke-linecap="round" stroke-dasharray="70 257"/>
-      <circle cx="60" cy="60" r="38" fill="rgba(124,92,255,.08)" stroke="rgba(255,255,255,.08)" stroke-width="1.5"/>
-      <path class="glyph" d="M60 39l6.4 13 14.3 2.1-10.35 10.1 2.45 14.25L60 71.7l-12.8 6.75 2.45-14.25L39.3 54.1 53.6 52z" fill="#eef0f4"/>
+      }
+      @keyframes boot-pulse {
+        50% {
+          transform: scale(0.94);
+          opacity: 0.85;
+        }
+      }
+      @keyframes boot-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.97);
+        }
+      }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js?64"></script>
+    <script>
+      (function () {
+        var t = window.Telegram && window.Telegram.WebApp;
+        if (!t) return;
+        try {
+          t.ready();
+          t.expand();
+          if (t.isVersionAtLeast('6.1')) {
+            t.setHeaderColor('#0b0b10');
+            t.setBackgroundColor('#0b0b10');
+          }
+          if (t.isVersionAtLeast('7.7')) t.disableVerticalSwipes();
+          if (t.isVersionAtLeast('7.10')) t.setBottomBarColor('#0f0f15');
+          if (t.isVersionAtLeast('8.0') && /^(android|ios)$/.test(t.platform)) {
+            if (!t.isFullscreen) t.requestFullscreen();
+            t.lockOrientation();
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="boot" id="boot" role="progressbar" aria-label="Загрузка">
+      <svg class="boot-mark" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="4" />
+        <circle
+          class="arc"
+          cx="60"
+          cy="60"
+          r="52"
+          fill="none"
+          stroke="#7c5cff"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-dasharray="70 257"
+        />
+        <circle cx="60" cy="60" r="38" fill="rgba(124,92,255,.08)" stroke="rgba(255,255,255,.08)" stroke-width="1.5" />
+        <path
+          class="glyph"
+          d="M60 39l6.4 13 14.3 2.1-10.35 10.1 2.45 14.25L60 71.7l-12.8 6.75 2.45-14.25L39.3 54.1 53.6 52z"
+          fill="#eef0f4"
+        />
+      </svg>
+      <div class="boot-name">ROULETTE ARENA</div>
+      <div class="boot-bar"><i id="boot-bar"></i></div>
+    </div>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-star" viewBox="0 0 24 24">
+        <path
+          d="M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9L12 2.8z"
+          fill="currentColor"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-roulette" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3.5V9M12 15v5.5M3.5 12H9M15 12h5.5M6 6l3.9 3.9M14.1 14.1L18 18M18 6l-3.9 3.9M9.9 14.1L6 18" />
+        </g>
+      </symbol>
+      <symbol id="i-deposit" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v10M7.5 9.5L12 14l4.5-4.5" />
+          <path d="M4 14.5v2.5a3 3 0 003 3h10a3 3 0 003-3v-2.5" />
+        </g>
+      </symbol>
+      <symbol id="i-withdraw" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 14V4M7.5 8.5L12 4l4.5 4.5" />
+          <path d="M4 14.5v2.5a3 3 0 003 3h10a3 3 0 003-3v-2.5" />
+        </g>
+      </symbol>
+      <symbol id="i-gift" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3.5" y="8" width="17" height="4" rx="1.2" />
+          <path d="M5 12v6.5A1.5 1.5 0 006.5 20h11a1.5 1.5 0 001.5-1.5V12M12 8v12" />
+          <path d="M12 8S10.6 4 8.3 4C6.9 4 6 4.9 6 6s.9 2 2.3 2M12 8s1.4-4 3.7-4C17.1 4 18 4.9 18 6s-.9 2-2.3 2" />
+        </g>
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="8.5" r="3.8" />
+          <path d="M4.8 19.6c1.3-3.2 4-4.8 7.2-4.8s5.9 1.6 7.2 4.8" />
+        </g>
+      </symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24">
+        <path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M6 12h12M12 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-hourglass" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M7 3.5h10M7 20.5h10M8 3.5v2.3c0 1.6.8 3 2.1 3.9L12 11l1.9-1.3A4.7 4.7 0 0016 5.8V3.5M8 20.5v-2.3c0-1.6.8-3 2.1-3.9L12 13l1.9 1.3a4.7 4.7 0 012.1 3.9v2.3"
+          />
+        </g>
+      </symbol>
+      <symbol id="i-telegram" viewBox="0 0 24 24">
+        <path
+          d="M20.7 4.3L3.6 10.9c-1.2.5-1.1 1.2-.2 1.5l4.4 1.4 1.7 5.2c.2.6.4.8.8.8.4 0 .6-.2.9-.5l2.1-2 4.4 3.2c.8.4 1.4.2 1.6-.8l2.9-13.6c.3-1.2-.4-1.7-1.5-1.3zM9 13.4l8.4-5.3c.4-.2.7-.1.4.2l-7 6.4-.3 3-1.5-4.3z"
+          fill="currentColor"
+        />
+      </symbol>
+      <symbol id="i-tasks" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="3.5" width="16" height="17" rx="3.5" />
+          <path d="M8 9l1.5 1.5L12.5 7.5M8 15l1.5 1.5 3-3M15 9.5h1.5M15 15.5h1.5" />
+        </g>
+      </symbol>
+      <symbol id="i-link" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1" />
+          <path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1" />
+        </g>
+      </symbol>
+      <symbol id="i-crown" viewBox="0 0 24 24">
+        <path d="M4 8l4.5 3.5L12 5l3.5 6.5L20 8l-1.6 9.2a1 1 0 01-1 .8H6.6a1 1 0 01-1-.8L4 8z" fill="currentColor" />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="9" cy="8.5" r="3.5" />
+          <path d="M2.8 19.5c1.1-3 3.4-4.5 6.2-4.5s5.1 1.5 6.2 4.5" />
+          <path d="M15.5 5.2a3.4 3.4 0 010 6.6M17.6 14.8c1.7.6 2.9 2.2 3.6 4.4" />
+        </g>
+      </symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+          <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" />
+          <path d="M15.5 8.5V6.5A2 2 0 0013.5 4.5h-7a2 2 0 00-2 2v7a2 2 0 002 2h2" />
+        </g>
+      </symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" />
+        </g>
+      </symbol>
+      <symbol id="i-trophy" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M7.5 4.5h9v4.5a4.5 4.5 0 01-9 0V4.5zM12 13.5V17M8.5 19.5h7M7.5 6.5H5a2.5 2.5 0 002.7 3.5M16.5 6.5H19a2.5 2.5 0 01-2.7 3.5"
+          />
+        </g>
+      </symbol>
+      <symbol id="i-ball" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M3.5 12h17M12 3.5v17M6 6c2.4 2.6 2.4 9.4 0 12M18 6c-2.4 2.6-2.4 9.4 0 12" />
+        </g>
+      </symbol>
+      <symbol id="i-games" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M7.5 7h9a4.5 4.5 0 014.4 5.5l-1 4.4a2.3 2.3 0 01-4 .9L14.3 16H9.7l-1.6 1.8a2.3 2.3 0 01-4-.9l-1-4.4A4.5 4.5 0 017.5 7z"
+          />
+          <path d="M8 10.2v3M6.5 11.7h3" />
+          <circle cx="15.6" cy="10.6" r=".6" fill="currentColor" />
+          <circle cx="17.2" cy="12.4" r=".6" fill="currentColor" />
+        </g>
+      </symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4.5 9.5h3l4-3.5v12l-4-3.5h-3z" />
+          <path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" />
+        </g>
+      </symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4.5 9.5h3l4-3.5v12l-4-3.5h-3z" />
+          <path d="M16 10l4 4M20 10l-4 4" />
+        </g>
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3.5l7 2.6v5.4c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9V6.1z" />
+          <path d="M8.8 12.2l2.2 2.2 4.3-4.4" />
+        </g>
+      </symbol>
+      <symbol id="i-back" viewBox="0 0 24 24">
+        <path
+          d="M14.5 6l-6 6 6 6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24">
+        <path
+          d="M9.5 6l6 6-6 6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path
+          d="M5.5 12.5l4 4 9-9"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.8v5M12 16.2v.1" />
+        </g>
+      </symbol>
     </svg>
-    <div class="boot-name">ROULETTE ARENA</div>
-    <div class="boot-bar"><i id="boot-bar"></i></div>
-  </div>
-  <!-- Общие иконки -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9L12 2.8z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
-    <symbol id="i-roulette" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/><path d="M12 3.5V9M12 15v5.5M3.5 12H9M15 12h5.5M6 6l3.9 3.9M14.1 14.1L18 18M18 6l-3.9 3.9M9.9 14.1L6 18"/></g></symbol>
-    <symbol id="i-deposit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10M7.5 9.5L12 14l4.5-4.5"/><path d="M4 14.5v2.5a3 3 0 003 3h10a3 3 0 003-3v-2.5"/></g></symbol>
-    <symbol id="i-withdraw" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 14.5v2.5a3 3 0 003 3h10a3 3 0 003-3v-2.5"/></g></symbol>
-    <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="4" rx="1.2"/><path d="M5 12v6.5A1.5 1.5 0 006.5 20h11a1.5 1.5 0 001.5-1.5V12M12 8v12"/><path d="M12 8S10.6 4 8.3 4C6.9 4 6 4.9 6 6s.9 2 2.3 2M12 8s1.4-4 3.7-4C17.1 4 18 4.9 18 6s-.9 2-2.3 2"/></g></symbol>
-    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.8 19.6c1.3-3.2 4-4.8 7.2-4.8s5.9 1.6 7.2 4.8"/></g></symbol>
-    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-hourglass" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10M7 20.5h10M8 3.5v2.3c0 1.6.8 3 2.1 3.9L12 11l1.9-1.3A4.7 4.7 0 0016 5.8V3.5M8 20.5v-2.3c0-1.6.8-3 2.1-3.9L12 13l1.9 1.3a4.7 4.7 0 012.1 3.9v2.3"/></g></symbol>
-    <symbol id="i-telegram" viewBox="0 0 24 24"><path d="M20.7 4.3L3.6 10.9c-1.2.5-1.1 1.2-.2 1.5l4.4 1.4 1.7 5.2c.2.6.4.8.8.8.4 0 .6-.2.9-.5l2.1-2 4.4 3.2c.8.4 1.4.2 1.6-.8l2.9-13.6c.3-1.2-.4-1.7-1.5-1.3zM9 13.4l8.4-5.3c.4-.2.7-.1.4.2l-7 6.4-.3 3-1.5-4.3z" fill="currentColor"/></symbol>
-    <symbol id="i-tasks" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="3.5"/><path d="M8 9l1.5 1.5L12.5 7.5M8 15l1.5 1.5 3-3M15 9.5h1.5M15 15.5h1.5"/></g></symbol>
-    <symbol id="i-link" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1"/></g></symbol>
-    <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 8l4.5 3.5L12 5l3.5 6.5L20 8l-1.6 9.2a1 1 0 01-1 .8H6.6a1 1 0 01-1-.8L4 8z" fill="currentColor"/></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.8 19.5c1.1-3 3.4-4.5 6.2-4.5s5.1 1.5 6.2 4.5"/><path d="M15.5 5.2a3.4 3.4 0 010 6.6M17.6 14.8c1.7.6 2.9 2.2 3.6 4.4"/></g></symbol>
-    <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6.5A2 2 0 0013.5 4.5h-7a2 2 0 00-2 2v7a2 2 0 002 2h2"/></g></symbol>
-    <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g></symbol>
-    <symbol id="i-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5h9v4.5a4.5 4.5 0 01-9 0V4.5zM12 13.5V17M8.5 19.5h7M7.5 6.5H5a2.5 2.5 0 002.7 3.5M16.5 6.5H19a2.5 2.5 0 01-2.7 3.5"/></g></symbol>
-    <symbol id="i-ball" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5v17M6 6c2.4 2.6 2.4 9.4 0 12M18 6c-2.4 2.6-2.4 9.4 0 12"/></g></symbol>
-    <symbol id="i-games" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 7h9a4.5 4.5 0 014.4 5.5l-1 4.4a2.3 2.3 0 01-4 .9L14.3 16H9.7l-1.6 1.8a2.3 2.3 0 01-4-.9l-1-4.4A4.5 4.5 0 017.5 7z"/><path d="M8 10.2v3M6.5 11.7h3"/><circle cx="15.6" cy="10.6" r=".6" fill="currentColor"/><circle cx="17.2" cy="12.4" r=".6" fill="currentColor"/></g></symbol>
-    <symbol id="i-sound" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5h3l4-3.5v12l-4-3.5h-3z"/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11"/></g></symbol>
-    <symbol id="i-mute" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5h3l4-3.5v12l-4-3.5h-3z"/><path d="M16 10l4 4M20 10l-4 4"/></g></symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l7 2.6v5.4c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9V6.1z"/><path d="M8.8 12.2l2.2 2.2 4.3-4.4"/></g></symbol>
-    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4 4 9-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v5M12 16.2v.1"/></g></symbol>
-  </svg>
 
-  <div class="app" id="app" hidden>
-    <!-- Шапка: аватар, имя, ник, баланс -->
-    <header class="top">
-      <div class="me">
-        <div class="avatar" id="me-avatar"></div>
-        <div class="me-text">
-          <div class="me-name" id="me-name"></div>
-          <div class="me-nick" id="me-nick"></div>
-        </div>
-      </div>
-      <div class="online" id="online" title="Сейчас в приложении"><i></i><span class="num" id="online-n">1</span> онлайн</div>
-      <button class="balance" id="balance-btn" aria-label="Баланс. Пополнить">
-        <svg class="star"><use href="#i-star"/></svg>
-        <span id="balance" class="num">0</span>
-        <span class="balance-add" aria-hidden="true"><svg><use href="#i-plus"/></svg></span>
-      </button>
-    </header>
-
-    <main class="views">
-      <!-- Рулетка -->
-      <section class="view" id="view-roulette" data-view="roulette">
-        <div class="feats" id="feats"></div>
-
-        <div class="bank-pill">
-          <span class="bp-label">Всего в банке</span>
-          <span class="bp-value"><svg class="star"><use href="#i-star"/></svg><span id="bank" class="num">0</span></span>
-        </div>
-
-        <div class="wheel" id="wheel">
-          <svg class="wheel-svg" viewBox="-100 -100 200 200" aria-hidden="true">
-            <defs>
-              <clipPath id="avclip" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5"/></clipPath>
-            </defs>
-            <circle class="wheel-track" r="80"/>
-            <g id="wheel-rot">
-              <g id="sectors"></g>
-              <g id="flashes"></g>
-            </g>
-            <g id="labels"></g>
-            <circle class="wheel-rim" r="94.5"/>
-            <circle class="wheel-rim inner" r="65.5"/>
-            <circle class="cd-track" r="61"/>
-            <circle class="cd-ring" id="cd-ring" r="61" transform="rotate(-90)"/>
-          </svg>
-          <svg class="pointer" viewBox="0 0 20 18" aria-hidden="true">
-            <path d="M10 17L1.5 2.6C1 1.8 1.6.8 2.5.8h15c.9 0 1.5 1 1 1.8z"/>
-          </svg>
-          <div class="wheel-center"><div class="wc" id="wc"></div></div>
-          <div class="bubbles" id="bubbles" aria-live="polite"></div>
-        </div>
-
-        <div class="caption" id="caption"></div>
-        <div class="players" id="players"></div>
-
-        <div class="dock dock-bet">
-          <div class="chips" id="bet-chips">
-            <button data-chip="10">10</button><button data-chip="50">50</button><button data-chip="100">100</button>
-            <button data-chip="500">500</button><button data-chip="max">Макс</button>
-          </div>
-          <div class="dock-row">
-          <div class="stepper">
-            <button class="step" id="bet-minus" aria-label="Уменьшить ставку"><svg><use href="#i-minus"/></svg></button>
-            <label class="step-value">
-              <input id="bet-input" class="num" inputmode="numeric" autocomplete="off" value="10" aria-label="Сумма ставки">
-              <svg class="star"><use href="#i-star"/></svg>
-            </label>
-            <button class="step" id="bet-plus" aria-label="Увеличить ставку"><svg><use href="#i-plus"/></svg></button>
-          </div>
-          <button class="btn primary" id="bet-btn">Сделать ставку</button>
+    <div class="app" id="app" hidden>
+      <header class="top">
+        <div class="me">
+          <div class="avatar" id="me-avatar"></div>
+          <div class="me-text">
+            <div class="me-name" id="me-name"></div>
+            <div class="me-nick" id="me-nick"></div>
           </div>
         </div>
-      </section>
-
-      <!-- Игры: список игр (карточки) -->
-      <section class="view" id="view-games" data-view="games">
-        <h1 class="title">Игры</h1>
-        <p class="lead">Соревнуйтесь с другими игроками</p>
-        <div class="games-list">
-          <button class="game-card" data-game="crash" aria-label="Открыть Racket Crash">
-            <img src="/games/racket-crash.webp" alt="Racket Crash" width="1100" height="615" decoding="async">
-            <span class="gc-badge live" id="gc-crash-badge" hidden></span>
-          </button>
-          <button class="game-card" data-game="basket" aria-label="Открыть Basketball Rush">
-            <img src="/games/basketball-rush.webp" alt="Basketball Rush" width="1100" height="602" decoding="async">
-            <span class="gc-badge" id="gc-badge" hidden></span>
-          </button>
+        <div class="online" id="online" title="Сейчас в приложении">
+          <i></i><span class="num" id="online-n">1</span> онлайн
         </div>
-      </section>
-
-      <!-- Racket Crash -->
-      <section class="view" id="view-crash" data-view="crash">
-        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Racket Crash</h1>
-          <button class="fair-btn" id="cr-fair-btn"><svg><use href="#i-shield"/></svg>Честно</button></div>
-        <div class="cr-history" id="cr-history"></div>
-        <div class="cr-stage">
-          <canvas id="cr-canvas"></canvas>
-          <div class="cr-center" id="cr-center"></div>
-        </div>
-        <div class="cr-panel card" id="cr-panel">
-          <div class="cr-row">
-            <span class="cr-label">Ставка</span>
-            <div class="cr-amount">
-              <button class="step" id="cr-minus" aria-label="Меньше"><svg><use href="#i-minus"/></svg></button>
-              <label><input id="cr-amount" class="num" inputmode="numeric" value="10"><svg class="star"><use href="#i-star"/></svg></label>
-              <button class="step" id="cr-plus" aria-label="Больше"><svg><use href="#i-plus"/></svg></button>
-            </div>
-          </div>
-          <div class="cr-chips" id="cr-chips"></div>
-          <div class="cr-row">
-            <button class="cr-switch" id="cr-auto-toggle" aria-label="Автовывод"><i></i>Автовывод</button>
-            <label class="cr-auto"><span>×</span><input id="cr-auto" class="num" inputmode="decimal" value="2.00"></label>
-          </div>
-          <div class="cr-chips" id="cr-auto-chips"></div>
-        </div>
-        <div class="cr-bets-head"><span>Ставки раунда</span><span id="cr-count"></span></div>
-        <div class="cr-bets" id="cr-bets"></div>
-        <p class="hint cr-limits" id="cr-limits"></p>
-        <div class="dock dock-crash">
-          <button class="btn primary block cr-main" id="cr-main"><span>Поставить</span></button>
-          <div class="cr-main-sub" id="cr-main-sub"></div>
-        </div>
-      </section>
-
-      <!-- Basketball Rush: страница игры -->
-      <section class="view" id="view-basket" data-view="basket">
-        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Basketball Rush</h1></div>
-        <div class="game-card static"><img src="/games/basketball-rush.webp" alt="" width="1100" height="602" decoding="async"></div>
-        <div class="gc-info">
-          <div class="gc-chips">
-            <span class="gc-chip"><svg class="star"><use href="#i-star"/></svg>5 за попытку</span>
-            <span class="gc-chip"><svg><use href="#i-clock"/></svg>30 сек</span>
-            <span class="gc-chip"><svg><use href="#i-trophy"/></svg>Топ-1 дня — 50 ⭐</span>
-          </div>
-        </div>
-
-        <!-- Турнир дня -->
-        <div class="bt-card">
-          <div class="bt-head">
-            <div>
-              <div class="bt-label">Приз дня</div>
-              <div class="bt-prize"><svg class="star"><use href="#i-star"/></svg><b class="num" id="bt-prize">50</b></div>
-            </div>
-            <div class="bt-timer">
-              <div class="bt-label">До итогов</div>
-              <b class="num" id="bt-left">--:--:--</b>
-            </div>
-          </div>
-          <div class="bt-me" id="bt-me"></div>
-          <div class="bt-sub"><span id="bt-players"></span><button class="link-btn" id="bb-howto">Как играть?</button></div>
-        </div>
-        <div class="section-title">Таблица дня</div>
-        <div class="lb" id="bt-top"></div>
-        <div class="bt-last" id="bt-last" hidden></div>
-
-        <div class="gc-stats">
-          <div><b class="num" id="gs-games">0</b><span>Попыток</span></div>
-          <div><b class="num" id="gs-best">0</b><span>Рекорд</span></div>
-          <div><b class="num" id="gs-wins">0</b><span>Побед дня</span></div>
-          <div><b class="num" id="gs-won">0</b><span>Выиграно ⭐</span></div>
-        </div>
-        <p class="gc-rules">Каждая попытка стоит 5 ⭐. Играйте сколько угодно — в таблицу идёт лучший результат. В 00:00 по Москве игрок на первом месте получает 50 ⭐. При равных очках выше тот, кто сделал меньше бросков.</p>
-        <div class="dock">
-          <div class="dock-row">
-            <button class="btn secondary" id="bb-history-btn">Мои игры</button>
-            <button class="btn primary btn-play" id="gc-play" style="flex:1"><svg><use href="#i-ball"/></svg>Играть за 5 ⭐</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Basketball Rush: мои попытки -->
-      <section class="view" id="view-basket-history" data-view="basket-history">
-        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Мои игры</h1></div>
-        <div class="atts" id="hist-past"></div>
-      </section>
-
-      <!-- Задания -->
-      <section class="view" id="view-tasks" data-view="tasks">
-        <h1 class="title">Задания</h1>
-        <p class="lead">Выполняйте задания и получайте звёзды</p>
-        <div class="tasks" id="tasks"></div>
-      </section>
-
-      <!-- Пополнение -->
-      <section class="view form-view" id="view-deposit" data-view="deposit">
-        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Пополнение</h1></div>
-        <p class="lead">Оплата звёздами с баланса Telegram</p>
-        <label class="field">
-          <input id="dep-input" class="num" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Количество звёзд">
-          <svg class="star"><use href="#i-star"/></svg>
-        </label>
-        <p class="hint" id="dep-hint">Минимум 1</p>
-        <div class="dock">
-          <button class="btn primary block" id="dep-btn" disabled>Продолжить</button>
-        </div>
-      </section>
-
-      <!-- Вывод -->
-      <section class="view form-view" id="view-withdraw" data-view="withdraw">
-        <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Вывод</h1></div>
-        <p class="lead">Минимальная сумма — <span id="wd-min" class="num">50</span></p>
-        <div class="wager card" id="wd-wager" hidden>
-          <div class="wg-top"><span>Оборот для вывода</span><b class="num" id="wg-val">0 / 0</b></div>
-          <div class="wg-bar"><i id="wg-bar"></i></div>
-          <div class="wg-text" id="wg-text"></div>
-        </div>
-        <label class="field">
-          <input id="wd-input" class="num" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Сумма вывода">
-          <svg class="star"><use href="#i-star"/></svg>
-        </label>
-        <div class="summary card">
-          <div class="row"><span>Сумма вывода</span><b class="num" id="wd-amount">0</b></div>
-          <div class="row"><span>Комиссия <span id="wd-fee-pct">10</span>%</span><b class="num" id="wd-fee">0</b></div>
-          <div class="row total"><span>К списанию</span><b class="num" id="wd-total">0</b></div>
-        </div>
-        <p class="hint" id="wd-hint"></p>
-        <div class="sub-notice card" id="wd-sub" hidden>
-          <div class="sn-icon"><svg><use href="#i-telegram"/></svg></div>
-          <div class="sn-main">
-            <div class="sn-title">Нужна подписка на канал</div>
-            <div class="sn-text">Вывод доступен подписчикам <b id="wd-sub-ch">@safroulette</b></div>
-          </div>
-          <button class="t-btn" id="wd-sub-btn">Подписаться</button>
-        </div>
-        <div class="history" id="wd-history"></div>
-        <div class="dock">
-          <button class="btn primary block" id="wd-btn" disabled>Вывести</button>
-        </div>
-      </section>
-
-      <!-- Друзья -->
-      <section class="view" id="view-friends" data-view="friends">
-        <h1 class="title">Друзья</h1>
-        <p class="lead">Приглашайте друзей и получайте звёзды</p>
-        <div class="invite card">
-          <div class="inv-head">
-            <div class="inv-icon"><svg><use href="#i-users"/></svg></div>
-            <div>
-              <div class="inv-title"><span id="ref-percent-title">15%</span> с пополнений друзей</div>
-              <div class="inv-sub">Друг переходит по вашей ссылке — и вы получаете звёзды с каждого его пополнения</div>
-            </div>
-          </div>
-          <button class="inv-link" id="ref-link" aria-label="Скопировать ссылку"><span class="inv-text num"><span class="il-head" id="ref-link-head">…</span><span class="il-tail" id="ref-link-tail"></span></span><svg><use href="#i-copy"/></svg></button>
-          <button class="btn primary block" id="ref-share">Пригласить друга</button>
-        </div>
-        <div class="ref-stats">
-          <div class="stat card"><b class="num" id="ref-count">0</b><span>Друзей</span></div>
-          <div class="stat card"><b class="num" id="ref-earned">0</b><span>Заработано ⭐</span></div>
-        </div>
-        <div class="section-title" id="friends-title" hidden>Ваши друзья</div>
-        <div class="friends" id="friends"></div>
-      </section>
-
-      <!-- Профиль -->
-      <section class="view" id="view-profile" data-view="profile">
-        <div class="profile-head">
-          <div class="avatar xl" id="pf-avatar"></div>
-          <div class="pf-name" id="pf-name"></div>
-          <div class="pf-nick" id="pf-nick"></div>
-          <div class="pf-id num" id="pf-id"></div>
-        </div>
-        <div class="stats">
-          <div class="stat card"><b class="num" id="st-games">0</b><span>Игры</span></div>
-          <div class="stat card"><b class="num" id="st-wins">0</b><span>Победы</span></div>
-          <div class="stat card"><b class="num" id="st-losses">0</b><span>Поражения</span></div>
-        </div>
-        <div class="wallet">
-          <button class="wallet-btn card gold" data-go="deposit">
-            <span class="wb-icon"><svg><use href="#i-deposit"/></svg></span>
-            <span class="wb-title">Пополнить</span>
-            <span class="wb-sub">Звёздами Telegram</span>
-          </button>
-          <button class="wallet-btn card violet" data-go="withdraw">
-            <span class="wb-icon"><svg><use href="#i-withdraw"/></svg></span>
-            <span class="wb-title">Вывести</span>
-            <span class="wb-sub" id="wb-withdraw-sub">От 50 ⭐</span>
-          </button>
-        </div>
-        <button class="row-btn card" id="support-btn">
-          <span class="rb-icon"><svg><use href="#i-telegram"/></svg></span>
-          <span class="rb-text">Поддержка</span>
-          <svg class="rb-chevron"><use href="#i-chevron"/></svg>
+        <button class="balance" id="balance-btn" aria-label="Баланс. Пополнить">
+          <svg class="star"><use href="#i-star" /></svg>
+          <span id="balance" class="num">0</span>
+          <span class="balance-add" aria-hidden="true"
+            ><svg><use href="#i-plus" /></svg
+          ></span>
         </button>
-      </section>
-    </main>
+      </header>
 
-    <nav class="nav" id="nav">
-      <span class="nav-ind" id="nav-ind" aria-hidden="true"></span>
-      <button data-go="roulette" class="active"><span class="ni"><svg><use href="#i-roulette"/></svg></span>Рулетка</button>
-      <button data-go="games"><span class="ni"><svg><use href="#i-games"/></svg></span>Игры</button>
-      <button data-go="tasks"><span class="ni"><svg><use href="#i-tasks"/></svg><i class="badge" id="tasks-badge" hidden></i></span>Задания</button>
-      <button data-go="friends"><span class="ni"><svg><use href="#i-users"/></svg></span>Друзья</button>
-      <button data-go="profile"><span class="ni"><svg><use href="#i-user"/></svg></span>Профиль</button>
-    </nav>
+      <main class="views">
+        <section class="view" id="view-roulette" data-view="roulette">
+          <div class="feats" id="feats"></div>
 
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-    <!-- Basketball Rush: экран игры -->
-    <div class="bb-game" id="bb-game" hidden>
-      <div class="bb-hud">
-        <div class="bb-pill"><span class="bb-label">Счёт</span><b class="num" id="bb-score">0</b></div>
-        <div class="bb-pill bb-stake"><svg class="star"><use href="#i-star"/></svg><b class="num" id="bb-stake">5</b></div>
-        <button class="bb-icon-btn" id="bb-sound" aria-label="Звук"><svg><use href="#i-sound"/></svg></button>
-      </div>
-      <div class="bb-stage">
-        <canvas id="bb-canvas"></canvas>
-        <div class="bb-hint" id="bb-hint">Потяните назад и отпустите</div>
-        <div class="bb-overlay" id="bb-overlay" hidden></div>
-      </div>
-      <div class="bb-sheet" id="bb-result" hidden></div>
-    </div>
-
-    <!-- Racket Crash: честная игра -->
-    <div class="sheet-wrap" id="cr-fair" hidden>
-      <div class="sheet-backdrop" data-close></div>
-      <div class="sheet">
-        <div class="sheet-grip"></div>
-        <div class="sheet-title">Честная игра</div>
-        <div class="fair-body" id="cr-fair-body"></div>
-        <button class="btn secondary block" data-close>Понятно</button>
-      </div>
-    </div>
-
-    <!-- Basketball Rush: обучение для новичков -->
-    <div class="sheet-wrap tutor" id="bb-tutor" hidden>
-      <div class="sheet-backdrop" data-close></div>
-      <div class="sheet">
-        <div class="sheet-grip"></div>
-        <div class="tutor-slides">
-          <div class="tutor-slide">
-            <div class="tutor-pic t-drag"><span class="t-ball"></span><span class="t-line"></span><span class="t-hand"></span></div>
-            <div class="sheet-title">Потяните и отпустите</div>
-            <div class="sheet-sub">Коснитесь экрана, потяните палец <b>назад и вниз</b> — как рогатку — и отпустите. Чем длиннее линия, тем сильнее бросок.</div>
+          <div class="bank-pill">
+            <span class="bp-label">Всего в банке</span>
+            <span class="bp-value"
+              ><svg class="star"><use href="#i-star" /></svg><span id="bank" class="num">0</span></span
+            >
           </div>
-          <div class="tutor-slide">
-            <div class="tutor-pic t-arc"><span class="t-hoop"></span><span class="t-dot d1"></span><span class="t-dot d2"></span><span class="t-dot d3"></span><span class="t-dot d4"></span><span class="t-dot d5"></span><span class="t-ball fly"></span></div>
-            <div class="sheet-title">Цельтесь по пунктиру</div>
-            <div class="sheet-sub">Пунктир показывает начало полёта. После каждого попадания кольцо перемещается, и с каждым очком попасть сложнее.</div>
+
+          <div class="wheel" id="wheel">
+            <svg class="wheel-svg" viewBox="-100 -100 200 200" aria-hidden="true">
+              <defs>
+                <clipPath id="avclip" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5" /></clipPath>
+              </defs>
+              <circle class="wheel-track" r="80" />
+              <g id="wheel-rot">
+                <g id="sectors"></g>
+                <g id="flashes"></g>
+              </g>
+              <g id="labels"></g>
+              <circle class="wheel-rim" r="94.5" />
+              <circle class="wheel-rim inner" r="65.5" />
+              <circle class="cd-track" r="61" />
+              <circle class="cd-ring" id="cd-ring" r="61" transform="rotate(-90)" />
+            </svg>
+            <svg class="pointer" viewBox="0 0 20 18" aria-hidden="true">
+              <path d="M10 17L1.5 2.6C1 1.8 1.6.8 2.5.8h15c.9 0 1.5 1 1 1.8z" />
+            </svg>
+            <div class="wheel-center"><div class="wc" id="wc"></div></div>
+            <div class="bubbles" id="bubbles" aria-live="polite"></div>
           </div>
-          <div class="tutor-slide">
-            <div class="tutor-pic t-score"><div><b>+1</b><span>очко</span></div><div><b>+3 с</b><span>попадание</span></div><div class="gold"><b>+5 с</b><span>чистое</span></div></div>
-            <div class="sheet-title">Набирайте очки на время</div>
-            <div class="sheet-sub">На старте 30 секунд. Попадание даёт +3 секунды, чистое (без касания кольца) — +5. Лучший результат дня получает <b>50 ⭐</b>.</div>
+
+          <div class="caption" id="caption"></div>
+          <div class="players" id="players"></div>
+
+          <div class="dock dock-bet">
+            <div class="chips" id="bet-chips">
+              <button data-chip="10">10</button><button data-chip="50">50</button><button data-chip="100">100</button>
+              <button data-chip="500">500</button><button data-chip="max">Макс</button>
+            </div>
+            <div class="dock-row">
+              <div class="stepper">
+                <button class="step" id="bet-minus" aria-label="Уменьшить ставку">
+                  <svg><use href="#i-minus" /></svg>
+                </button>
+                <label class="step-value">
+                  <input
+                    id="bet-input"
+                    class="num"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    value="10"
+                    aria-label="Сумма ставки"
+                  />
+                  <svg class="star"><use href="#i-star" /></svg>
+                </label>
+                <button class="step" id="bet-plus" aria-label="Увеличить ставку">
+                  <svg><use href="#i-plus" /></svg>
+                </button>
+              </div>
+              <button class="btn primary" id="bet-btn">Сделать ставку</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-games" data-view="games">
+          <h1 class="title">Игры</h1>
+          <p class="lead">Соревнуйтесь с другими игроками</p>
+          <div class="games-list">
+            <button class="game-card" data-game="crash" aria-label="Открыть Racket Crash">
+              <img src="/games/racket-crash.webp" alt="Racket Crash" width="1100" height="615" decoding="async" />
+              <span class="gc-badge live" id="gc-crash-badge" hidden></span>
+            </button>
+            <button class="game-card" data-game="basket" aria-label="Открыть Basketball Rush">
+              <img src="/games/basketball-rush.webp" alt="Basketball Rush" width="1100" height="602" decoding="async" />
+              <span class="gc-badge" id="gc-badge" hidden></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="view" id="view-crash" data-view="crash">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Racket Crash</h1>
+            <button class="fair-btn" id="cr-fair-btn">
+              <svg><use href="#i-shield" /></svg>Честно
+            </button>
+          </div>
+          <div class="cr-history" id="cr-history"></div>
+          <div class="cr-stage">
+            <canvas id="cr-canvas"></canvas>
+            <div class="cr-center" id="cr-center"></div>
+          </div>
+          <div class="cr-panel card" id="cr-panel">
+            <div class="cr-row">
+              <span class="cr-label">Ставка</span>
+              <div class="cr-amount">
+                <button class="step" id="cr-minus" aria-label="Меньше">
+                  <svg><use href="#i-minus" /></svg>
+                </button>
+                <label
+                  ><input id="cr-amount" class="num" inputmode="numeric" value="10" /><svg class="star">
+                    <use href="#i-star" /></svg
+                ></label>
+                <button class="step" id="cr-plus" aria-label="Больше">
+                  <svg><use href="#i-plus" /></svg>
+                </button>
+              </div>
+            </div>
+            <div class="cr-chips" id="cr-chips"></div>
+            <div class="cr-row">
+              <button class="cr-switch" id="cr-auto-toggle" aria-label="Автовывод"><i></i>Автовывод</button>
+              <label class="cr-auto"
+                ><span>×</span><input id="cr-auto" class="num" inputmode="decimal" value="2.00"
+              /></label>
+            </div>
+            <div class="cr-chips" id="cr-auto-chips"></div>
+          </div>
+          <div class="cr-bets-head"><span>Ставки раунда</span><span id="cr-count"></span></div>
+          <div class="cr-bets" id="cr-bets"></div>
+          <p class="hint cr-limits" id="cr-limits"></p>
+          <div class="dock dock-crash">
+            <button class="btn primary block cr-main" id="cr-main"><span>Поставить</span></button>
+            <div class="cr-main-sub" id="cr-main-sub"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-basket" data-view="basket">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Basketball Rush</h1>
+          </div>
+          <div class="game-card static">
+            <img src="/games/basketball-rush.webp" alt="" width="1100" height="602" decoding="async" />
+          </div>
+          <div class="gc-info">
+            <div class="gc-chips">
+              <span class="gc-chip"
+                ><svg class="star"><use href="#i-star" /></svg>5 за попытку</span
+              >
+              <span class="gc-chip"
+                ><svg><use href="#i-clock" /></svg>30 сек</span
+              >
+              <span class="gc-chip"
+                ><svg><use href="#i-trophy" /></svg>Топ-1 дня — 50 ⭐</span
+              >
+            </div>
+          </div>
+
+          <div class="bt-card">
+            <div class="bt-head">
+              <div>
+                <div class="bt-label">Приз дня</div>
+                <div class="bt-prize">
+                  <svg class="star"><use href="#i-star" /></svg><b class="num" id="bt-prize">50</b>
+                </div>
+              </div>
+              <div class="bt-timer">
+                <div class="bt-label">До итогов</div>
+                <b class="num" id="bt-left">--:--:--</b>
+              </div>
+            </div>
+            <div class="bt-me" id="bt-me"></div>
+            <div class="bt-sub">
+              <span id="bt-players"></span><button class="link-btn" id="bb-howto">Как играть?</button>
+            </div>
+          </div>
+          <div class="section-title">Таблица дня</div>
+          <div class="lb" id="bt-top"></div>
+          <div class="bt-last" id="bt-last" hidden></div>
+
+          <div class="gc-stats">
+            <div><b class="num" id="gs-games">0</b><span>Попыток</span></div>
+            <div><b class="num" id="gs-best">0</b><span>Рекорд</span></div>
+            <div><b class="num" id="gs-wins">0</b><span>Побед дня</span></div>
+            <div><b class="num" id="gs-won">0</b><span>Выиграно ⭐</span></div>
+          </div>
+          <p class="gc-rules">
+            Каждая попытка стоит 5 ⭐. Играйте сколько угодно — в таблицу идёт лучший результат. В 00:00 по Москве игрок
+            на первом месте получает 50 ⭐. При равных очках выше тот, кто сделал меньше бросков.
+          </p>
+          <div class="dock">
+            <div class="dock-row">
+              <button class="btn secondary" id="bb-history-btn">Мои игры</button>
+              <button class="btn primary btn-play" id="gc-play" style="flex: 1">
+                <svg><use href="#i-ball" /></svg>Играть за 5 ⭐
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-basket-history" data-view="basket-history">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Мои игры</h1>
+          </div>
+          <div class="atts" id="hist-past"></div>
+        </section>
+
+        <section class="view" id="view-tasks" data-view="tasks">
+          <h1 class="title">Задания</h1>
+          <p class="lead">Выполняйте задания и получайте звёзды</p>
+          <div class="tasks" id="tasks"></div>
+        </section>
+
+        <section class="view form-view" id="view-deposit" data-view="deposit">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Пополнение</h1>
+          </div>
+          <p class="lead">Оплата звёздами с баланса Telegram</p>
+          <label class="field">
+            <input
+              id="dep-input"
+              class="num"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="0"
+              aria-label="Количество звёзд"
+            />
+            <svg class="star"><use href="#i-star" /></svg>
+          </label>
+          <p class="hint" id="dep-hint">Минимум 1</p>
+          <div class="dock">
+            <button class="btn primary block" id="dep-btn" disabled>Продолжить</button>
+          </div>
+        </section>
+
+        <section class="view form-view" id="view-withdraw" data-view="withdraw">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Вывод</h1>
+          </div>
+          <p class="lead">Минимальная сумма — <span id="wd-min" class="num">50</span></p>
+          <div class="wager card" id="wd-wager" hidden>
+            <div class="wg-top"><span>Оборот для вывода</span><b class="num" id="wg-val">0 / 0</b></div>
+            <div class="wg-bar"><i id="wg-bar"></i></div>
+            <div class="wg-text" id="wg-text"></div>
+          </div>
+          <label class="field">
+            <input
+              id="wd-input"
+              class="num"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="0"
+              aria-label="Сумма вывода"
+            />
+            <svg class="star"><use href="#i-star" /></svg>
+          </label>
+          <div class="summary card">
+            <div class="row"><span>Сумма вывода</span><b class="num" id="wd-amount">0</b></div>
+            <div class="row">
+              <span>Комиссия <span id="wd-fee-pct">10</span>%</span><b class="num" id="wd-fee">0</b>
+            </div>
+            <div class="row total"><span>К списанию</span><b class="num" id="wd-total">0</b></div>
+          </div>
+          <p class="hint" id="wd-hint"></p>
+          <div class="sub-notice card" id="wd-sub" hidden>
+            <div class="sn-icon">
+              <svg><use href="#i-telegram" /></svg>
+            </div>
+            <div class="sn-main">
+              <div class="sn-title">Нужна подписка на канал</div>
+              <div class="sn-text">Вывод доступен подписчикам <b id="wd-sub-ch">@safroulette</b></div>
+            </div>
+            <button class="t-btn" id="wd-sub-btn">Подписаться</button>
+          </div>
+          <div class="history" id="wd-history"></div>
+          <div class="dock">
+            <button class="btn primary block" id="wd-btn" disabled>Вывести</button>
+          </div>
+        </section>
+
+        <section class="view" id="view-friends" data-view="friends">
+          <h1 class="title">Друзья</h1>
+          <p class="lead">Приглашайте друзей и получайте звёзды</p>
+          <div class="invite card">
+            <div class="inv-head">
+              <div class="inv-icon">
+                <svg><use href="#i-users" /></svg>
+              </div>
+              <div>
+                <div class="inv-title"><span id="ref-percent-title">15%</span> с пополнений друзей</div>
+                <div class="inv-sub">
+                  Друг переходит по вашей ссылке — и вы получаете звёзды с каждого его пополнения
+                </div>
+              </div>
+            </div>
+            <button class="inv-link" id="ref-link" aria-label="Скопировать ссылку">
+              <span class="inv-text num"
+                ><span class="il-head" id="ref-link-head">…</span><span class="il-tail" id="ref-link-tail"></span></span
+              ><svg><use href="#i-copy" /></svg>
+            </button>
+            <button class="btn primary block" id="ref-share">Пригласить друга</button>
+          </div>
+          <div class="ref-stats">
+            <div class="stat card"><b class="num" id="ref-count">0</b><span>Друзей</span></div>
+            <div class="stat card"><b class="num" id="ref-earned">0</b><span>Заработано ⭐</span></div>
+          </div>
+          <div class="section-title" id="friends-title" hidden>Ваши друзья</div>
+          <div class="friends" id="friends"></div>
+        </section>
+
+        <section class="view" id="view-profile" data-view="profile">
+          <div class="profile-head">
+            <div class="avatar xl" id="pf-avatar"></div>
+            <div class="pf-name" id="pf-name"></div>
+            <div class="pf-nick" id="pf-nick"></div>
+            <div class="pf-id num" id="pf-id"></div>
+          </div>
+          <div class="stats">
+            <div class="stat card"><b class="num" id="st-games">0</b><span>Игры</span></div>
+            <div class="stat card"><b class="num" id="st-wins">0</b><span>Победы</span></div>
+            <div class="stat card"><b class="num" id="st-losses">0</b><span>Поражения</span></div>
+          </div>
+          <div class="wallet">
+            <button class="wallet-btn card gold" data-go="deposit">
+              <span class="wb-icon"
+                ><svg><use href="#i-deposit" /></svg
+              ></span>
+              <span class="wb-title">Пополнить</span>
+              <span class="wb-sub">Звёздами Telegram</span>
+            </button>
+            <button class="wallet-btn card violet" data-go="withdraw">
+              <span class="wb-icon"
+                ><svg><use href="#i-withdraw" /></svg
+              ></span>
+              <span class="wb-title">Вывести</span>
+              <span class="wb-sub" id="wb-withdraw-sub">От 50 ⭐</span>
+            </button>
+          </div>
+          <button class="row-btn card" id="support-btn">
+            <span class="rb-icon"
+              ><svg><use href="#i-telegram" /></svg
+            ></span>
+            <span class="rb-text">Поддержка</span>
+            <svg class="rb-chevron"><use href="#i-chevron" /></svg>
+          </button>
+          <button class="row-btn card" id="pf-admin" hidden>
+            <span class="rb-icon"
+              ><svg><use href="#i-shield" /></svg
+            ></span>
+            <span class="rb-text">Админ-панель</span>
+            <svg class="rb-chevron"><use href="#i-chevron" /></svg>
+          </button>
+        </section>
+
+        <section class="view" id="view-admin" data-view="admin">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Админ-панель</h1>
+          </div>
+          <div class="adm-tabs" id="adm-tabs">
+            <button data-tab="users" class="on">Игроки</button>
+            <button data-tab="withdrawals">Выводы <span class="adm-n" id="adm-wd-n" hidden></span></button>
+            <button data-tab="broadcast">Рассылка</button>
+            <button data-tab="tasks">Задания</button>
+            <button data-tab="stats">Сводка</button>
+          </div>
+
+          <div class="adm-pane" data-pane="users">
+            <label class="adm-input"
+              ><input id="adm-search" type="search" placeholder="Ник, имя или ID" autocomplete="off"
+            /></label>
+            <div class="adm-meta"><span>По балансу, от большего</span><span id="adm-count"></span></div>
+            <div class="adm-list" id="adm-users"></div>
+            <button class="btn secondary block" id="adm-more" hidden>Показать ещё</button>
+          </div>
+
+          <div class="adm-pane" data-pane="withdrawals" hidden>
+            <div class="section-title">Ждут обработки</div>
+            <div class="adm-list" id="adm-wd-pending"></div>
+            <div class="section-title">Обработанные</div>
+            <div class="adm-list" id="adm-wd-recent"></div>
+          </div>
+
+          <div class="adm-pane" data-pane="broadcast" hidden>
+            <div class="adm-meta"><span id="adm-audience"></span><span id="adm-bc-left">0 / 4 000</span></div>
+            <textarea
+              class="adm-area"
+              id="adm-bc-text"
+              rows="6"
+              maxlength="4000"
+              placeholder="Текст рассылки"
+            ></textarea>
+            <div class="adm-preview" id="adm-bc-preview" hidden></div>
+            <div class="dock-row adm-actions">
+              <label class="btn secondary adm-file"
+                >Фото<input type="file" id="adm-bc-file" accept="image/jpeg,image/png,image/webp" hidden
+              /></label>
+              <button class="btn primary" id="adm-bc-send" style="flex: 1">Отправить всем</button>
+            </div>
+            <p class="adm-note">Под сообщением будет кнопка «Играть». С фото текст — до 1 024 символов.</p>
+            <div class="adm-card" id="adm-bc-status" hidden></div>
+          </div>
+
+          <div class="adm-pane" data-pane="tasks" hidden>
+            <div class="adm-form">
+              <label class="adm-input"
+                ><input id="adm-t-url" placeholder="Ссылка: https://t.me/channel или @channel" autocomplete="off"
+              /></label>
+              <label class="adm-input"
+                ><input id="adm-t-title" maxlength="80" placeholder="Название (необязательно)" autocomplete="off"
+              /></label>
+              <div class="dock-row">
+                <label class="adm-input" style="flex: 1"
+                  ><input id="adm-t-reward" inputmode="numeric" placeholder="Награда, ⭐" autocomplete="off"
+                /></label>
+                <button class="btn primary" id="adm-t-add">Добавить</button>
+              </div>
+              <p class="adm-note">
+                Для канала бот проверяет подписку, если он администратор канала. Иначе задание засчитывается за переход.
+              </p>
+            </div>
+            <div class="section-title">Активные задания</div>
+            <div class="adm-list" id="adm-tasks"></div>
+          </div>
+
+          <div class="adm-pane" data-pane="stats" hidden>
+            <div id="adm-stats"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-admin-user" data-view="admin-user">
+          <div class="page-head">
+            <button class="back" data-back aria-label="Назад">
+              <svg><use href="#i-back" /></svg>
+            </button>
+            <h1 class="title">Игрок</h1>
+          </div>
+          <div class="au-head" id="au-head"></div>
+          <div class="au-actions">
+            <button class="btn secondary" id="au-balance">Баланс</button>
+            <button class="btn secondary" id="au-message">Написать</button>
+            <button class="btn secondary" id="au-block">Заблокировать</button>
+          </div>
+          <div class="adm-inline" id="au-balance-form" hidden>
+            <input id="au-delta" inputmode="text" placeholder="100 — начислить, -50 — списать" autocomplete="off" />
+            <button class="btn primary" id="au-delta-go">Применить</button>
+          </div>
+          <div class="adm-inline col" id="au-msg-form" hidden>
+            <textarea
+              class="adm-area"
+              id="au-msg"
+              rows="4"
+              maxlength="4000"
+              placeholder="Сообщение придёт от бота"
+            ></textarea>
+            <button class="btn primary block" id="au-msg-go">Отправить</button>
+          </div>
+          <div class="section-title">Деньги</div>
+          <div class="adm-card" id="au-money"></div>
+          <div class="section-title">Игры</div>
+          <div class="adm-card" id="au-games"></div>
+          <div class="section-title">Рефералы</div>
+          <div class="adm-card" id="au-refs"></div>
+          <div class="section-title">Заявки на вывод</div>
+          <div class="adm-card" id="au-wd"></div>
+          <div class="section-title">Все действия</div>
+          <div class="adm-card" id="au-ledger"></div>
+          <button class="btn secondary block" id="au-ledger-more" hidden>Показать ещё</button>
+        </section>
+      </main>
+
+      <nav class="nav" id="nav">
+        <span class="nav-ind" id="nav-ind" aria-hidden="true"></span>
+        <button data-go="roulette" class="active">
+          <span class="ni"
+            ><svg><use href="#i-roulette" /></svg></span
+          >Рулетка
+        </button>
+        <button data-go="games">
+          <span class="ni"
+            ><svg><use href="#i-games" /></svg></span
+          >Игры
+        </button>
+        <button data-go="tasks">
+          <span class="ni"
+            ><svg><use href="#i-tasks" /></svg><i class="badge" id="tasks-badge" hidden></i></span
+          >Задания
+        </button>
+        <button data-go="friends">
+          <span class="ni"
+            ><svg><use href="#i-users" /></svg></span
+          >Друзья
+        </button>
+        <button data-go="profile">
+          <span class="ni"
+            ><svg><use href="#i-user" /></svg></span
+          >Профиль
+        </button>
+      </nav>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+      <div class="bb-game" id="bb-game" hidden>
+        <div class="bb-hud">
+          <div class="bb-pill"><span class="bb-label">Счёт</span><b class="num" id="bb-score">0</b></div>
+          <div class="bb-pill bb-stake">
+            <svg class="star"><use href="#i-star" /></svg><b class="num" id="bb-stake">5</b>
+          </div>
+          <button class="bb-icon-btn" id="bb-sound" aria-label="Звук">
+            <svg><use href="#i-sound" /></svg>
+          </button>
+        </div>
+        <div class="bb-stage">
+          <canvas id="bb-canvas"></canvas>
+          <div class="bb-hint" id="bb-hint">Потяните назад и отпустите</div>
+          <div class="bb-overlay" id="bb-overlay" hidden></div>
+        </div>
+        <div class="bb-sheet" id="bb-result" hidden></div>
+      </div>
+
+      <div class="sheet-wrap" id="cr-fair" hidden>
+        <div class="sheet-backdrop" data-close></div>
+        <div class="sheet">
+          <div class="sheet-grip"></div>
+          <div class="sheet-title">Честная игра</div>
+          <div class="fair-body" id="cr-fair-body"></div>
+          <button class="btn secondary block" data-close>Понятно</button>
+        </div>
+      </div>
+
+      <div class="sheet-wrap tutor" id="bb-tutor" hidden>
+        <div class="sheet-backdrop" data-close></div>
+        <div class="sheet">
+          <div class="sheet-grip"></div>
+          <div class="tutor-slides">
+            <div class="tutor-slide">
+              <div class="tutor-pic t-drag">
+                <span class="t-ball"></span><span class="t-line"></span><span class="t-hand"></span>
+              </div>
+              <div class="sheet-title">Потяните и отпустите</div>
+              <div class="sheet-sub">
+                Коснитесь экрана, потяните палец <b>назад и вниз</b> — как рогатку — и отпустите. Чем длиннее линия, тем
+                сильнее бросок.
+              </div>
+            </div>
+            <div class="tutor-slide">
+              <div class="tutor-pic t-arc">
+                <span class="t-hoop"></span><span class="t-dot d1"></span><span class="t-dot d2"></span
+                ><span class="t-dot d3"></span><span class="t-dot d4"></span><span class="t-dot d5"></span
+                ><span class="t-ball fly"></span>
+              </div>
+              <div class="sheet-title">Цельтесь по пунктиру</div>
+              <div class="sheet-sub">
+                Пунктир показывает начало полёта. После каждого попадания кольцо перемещается, и с каждым очком попасть
+                сложнее.
+              </div>
+            </div>
+            <div class="tutor-slide">
+              <div class="tutor-pic t-score">
+                <div><b>+1</b><span>очко</span></div>
+                <div><b>+3 с</b><span>попадание</span></div>
+                <div class="gold"><b>+5 с</b><span>чистое</span></div>
+              </div>
+              <div class="sheet-title">Набирайте очки на время</div>
+              <div class="sheet-sub">
+                На старте 30 секунд. Попадание даёт +3 секунды, чистое (без касания кольца) — +5. Лучший результат дня
+                получает <b>50 ⭐</b>.
+              </div>
+            </div>
+          </div>
+          <div class="tutor-dots"><i></i><i></i><i></i></div>
+          <div class="dock-row">
+            <button class="btn secondary" id="tutor-skip">Пропустить</button>
+            <button class="btn primary" id="tutor-next" style="flex: 1">Далее</button>
           </div>
         </div>
-        <div class="tutor-dots"><i></i><i></i><i></i></div>
-        <div class="dock-row">
-          <button class="btn secondary" id="tutor-skip">Пропустить</button>
-          <button class="btn primary" id="tutor-next" style="flex:1">Далее</button>
-        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Открыто не из Telegram -->
-  <div class="gate" id="gate" hidden>
-    <div class="ph-icon"><svg><use href="#i-roulette"/></svg></div>
-    <div class="ph-title" id="gate-title">Roulette Arena</div>
-    <p class="lead" id="gate-text">Откройте приложение через Telegram-бота</p>
-    <a class="btn primary" id="gate-link" hidden>Открыть в Telegram</a>
-  </div>
-
-</body>
+    <div class="gate" id="gate" hidden>
+      <div class="ph-icon">
+        <svg><use href="#i-roulette" /></svg>
+      </div>
+      <div class="ph-title" id="gate-title">Roulette Arena</div>
+      <p class="lead" id="gate-text">Откройте приложение через Telegram-бота</p>
+      <a class="btn primary" id="gate-link" hidden>Открыть в Telegram</a>
+    </div>
+  </body>
 </html>

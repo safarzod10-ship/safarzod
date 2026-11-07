@@ -1,6 +1,3 @@
-// Racket Crash — клиент. Сервер ведёт раунды и считает выплаты; клиент рисует полёт
-// по тем же формулам (множитель = e^(growth·t)) и отправляет ставки/выводы.
-
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
 const mul = (m100) => (m100 / 100).toFixed(2);
@@ -8,7 +5,6 @@ const STAR = '<svg class="star"><use href="#i-star"/></svg>';
 const BET_CHIPS = [5, 10, 25, 50, 100];
 const AUTO_CHIPS = [1.5, 2, 3, 5, 10];
 
-/** Цвет множителя: до ×2 — нейтральный, до ×10 — фиолетовый, выше — золото. */
 const tone = (m100) => (m100 < 200 ? 'low' : m100 < 1000 ? 'mid' : 'high');
 
 export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile, go }) {
@@ -41,8 +37,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     } catch {}
   };
 
-  // ====================== Состояние ======================
-
   function onState(st) {
     s.offset = st.serverNow - Date.now();
     const prev = s.st;
@@ -54,7 +48,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
       if (prevMine && prevMine.cashout === null && mine?.cashout === null) haptic.err();
     }
     if (st.status === 'betting' && prev?.status !== 'betting') s.boom = null;
-    // мой вывод (в том числе автовывод сервером)
     const pm = prev && prev.id === st.id ? myBet(prev) : null;
     if (mine?.cashout && !pm?.cashout) {
       haptic.ok();
@@ -73,18 +66,14 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     return Math.max(100, Math.floor(100 * Math.exp((st.growth * (serverNow() - st.startAt)) / 1000)));
   }
 
-  // ====================== Разметка ======================
-
   function render() {
     const st = s.st;
     if (!st) return;
-    // история
     const hist = st.history.map((h) => `<span class="ch-pill ${tone(h.crash)}">×${mul(h.crash)}</span>`).join('');
     if ($('cr-history').dataset.v !== hist) {
       $('cr-history').dataset.v = hist;
       $('cr-history').innerHTML = hist;
     }
-    // ставки раунда
     const total = st.bets.reduce((a, b) => a + b.amount, 0);
     $('cr-count').textContent = st.bets.length ? `${st.bets.length} · ${fmt(total)} ⭐` : 'Ставок пока нет';
     const myId = me()?.id;
@@ -93,13 +82,17 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
         let res = '<span class="cb-wait">в игре</span>';
         if (b.cashout) res = `<span class="cb-win">×${mul(b.cashout)} · +${fmt(b.payout)}</span>`;
         else if (st.status === 'crashed') res = '<span class="cb-lose">сгорела</span>';
-        else if (st.status === 'betting') res = b.auto ? `<span class="cb-wait">авто ×${mul(b.auto)}</span>` : '<span class="cb-wait">ждёт старт</span>';
+        else if (st.status === 'betting')
+          res = b.auto
+            ? `<span class="cb-wait">авто ×${mul(b.auto)}</span>`
+            : '<span class="cb-wait">ждёт старт</span>';
         return `<div class="cb${b.id === myId ? ' me' : ''}">${avatarHtml(b, 'xs')}
           <span class="cb-name">${b.id === myId ? 'Вы' : esc(b.name)}</span>
           <span class="cb-amt num">${fmt(b.amount)}${STAR}</span>${res}</div>`;
       })
       .join('');
-    $('cr-limits').textContent = `Ставка ${st.limits.minBet}–${st.limits.maxBet} ⭐ · выигрыш до ${fmt(st.limits.maxWin)} ⭐`;
+    $('cr-limits').textContent =
+      `Ставка ${st.limits.minBet}–${st.limits.maxBet} ⭐ · выигрыш до ${fmt(st.limits.maxWin)} ⭐`;
     renderPanel();
   }
 
@@ -113,8 +106,12 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     $('cr-auto-toggle').classList.toggle('on', s.autoOn);
     $('cr-auto').disabled = !s.autoOn;
     $('cr-auto').value = s.auto.toFixed(2);
-    document.querySelectorAll('#cr-chips button').forEach((b) => b.classList.toggle('on', Number(b.dataset.v) === s.amount));
-    document.querySelectorAll('#cr-auto-chips button').forEach((b) => b.classList.toggle('on', s.autoOn && Number(b.dataset.v) === s.auto));
+    document
+      .querySelectorAll('#cr-chips button')
+      .forEach((b) => b.classList.toggle('on', Number(b.dataset.v) === s.amount));
+    document
+      .querySelectorAll('#cr-auto-chips button')
+      .forEach((b) => b.classList.toggle('on', s.autoOn && Number(b.dataset.v) === s.auto));
     const lockSettings = !!mine && st.status !== 'crashed';
     $('cr-panel').classList.toggle('locked', lockSettings);
     btn.className = 'btn block cr-main';
@@ -130,7 +127,11 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
         btn.classList.add('primary');
         const poor = (me()?.balance ?? 0) < s.amount;
         text = poor ? 'Пополнить баланс' : `Поставить ${fmt(s.amount)} ⭐`;
-        note = poor ? 'Не хватает звёзд на ставку' : s.autoOn ? `Автовывод ×${s.auto.toFixed(2)}` : 'Заберите выигрыш до взрыва ракеты';
+        note = poor
+          ? 'Не хватает звёзд на ставку'
+          : s.autoOn
+            ? `Автовывод ×${s.auto.toFixed(2)}`
+            : 'Заберите выигрыш до взрыва ракеты';
       }
     } else if (st.status === 'flying' && mine && !mine.cashout) {
       btn.classList.add('cashout');
@@ -153,8 +154,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     }
     sub.textContent = note;
   }
-
-  // ====================== Действия ======================
 
   async function onMain() {
     const st = s.st;
@@ -203,8 +202,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     renderPanel();
   }
 
-  // ====================== Сцена ======================
-
   function resize() {
     const c = $('cr-canvas');
     const r = c.getBoundingClientRect();
@@ -228,7 +225,14 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     s.particles = Array.from({ length: 46 }, () => {
       const a = Math.random() * Math.PI * 2;
       const v = 60 + Math.random() * 220;
-      return { x: pos.x, y: pos.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + Math.random() * 0.6, c: Math.random() < 0.5 ? '#ffb347' : '#ff5d6c' };
+      return {
+        x: pos.x,
+        y: pos.y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        life: 0.6 + Math.random() * 0.6,
+        c: Math.random() < 0.5 ? '#ffb347' : '#ff5d6c',
+      };
     });
   }
 
@@ -245,9 +249,12 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     const m = multiplierNow();
     const flying = st.status === 'flying';
     const crashed = st.status === 'crashed';
-    const elapsed = flying ? (serverNow() - st.startAt) / 1000 : crashed && st.startAt ? Math.log(st.crash / 100) / st.growth : 0;
+    const elapsed = flying
+      ? (serverNow() - st.startAt) / 1000
+      : crashed && st.startAt
+        ? Math.log(st.crash / 100) / st.growth
+        : 0;
 
-    // фон: космос, сетка, звёзды с параллаксом (летят быстрее с ростом множителя)
     const bg = ctx.createLinearGradient(0, 0, 0, v.h);
     bg.addColorStop(0, '#13111d');
     bg.addColorStop(1, '#171427');
@@ -265,7 +272,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     }
     ctx.globalAlpha = 1;
 
-    // оси: время и множитель масштабируются по мере полёта
     const padL = 14;
     const padB = 26;
     const padT = 18;
@@ -290,7 +296,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
       ctx.fillText(`×${g.toFixed(stepM < 1 ? 1 : 0)}`, padL + 4, y - 4);
     }
 
-    // кривая полёта и заливка под ней
     let rocket = { x: X(0), y: Y(1), a: -0.35 };
     if (flying || crashed) {
       const n = 60;
@@ -337,7 +342,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     ctx.translate(r.x, r.y);
     ctx.rotate(flying ? r.a : -0.6);
     const sz = Math.max(20, Math.min(32, s.view.w / 12));
-    // пламя
     const fl = (flying ? 1 : 0.45) * (0.85 + 0.15 * Math.sin(t / 35));
     const flame = ctx.createLinearGradient(-sz * 2.6 * fl, 0, -sz * 0.6, 0);
     flame.addColorStop(0, 'rgba(255,80,40,0)');
@@ -349,7 +353,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     ctx.quadraticCurveTo(-sz * 2.6 * fl, 0, -sz * 0.6, sz * 0.28);
     ctx.closePath();
     ctx.fill();
-    // корпус
     const body = ctx.createLinearGradient(0, -sz * 0.4, 0, sz * 0.4);
     body.addColorStop(0, '#ffffff');
     body.addColorStop(1, '#bba6ff');
@@ -360,7 +363,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     ctx.lineTo(-sz * 0.6, sz * 0.34);
     ctx.quadraticCurveTo(sz * 0.55, sz * 0.42, sz, 0);
     ctx.fill();
-    // нос и стабилизаторы — золото
     ctx.fillStyle = '#f5bf4f';
     ctx.beginPath();
     ctx.moveTo(sz, 0);
@@ -377,7 +379,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
       ctx.closePath();
       ctx.fill();
     }
-    // иллюминатор
     ctx.fillStyle = '#2a1856';
     ctx.beginPath();
     ctx.arc(sz * 0.15, 0, sz * 0.15, 0, Math.PI * 2);
@@ -449,8 +450,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     $('cr-main-sub').textContent = `×${mul(m)} от ставки ${fmt(mine.amount)} ⭐`;
   }
 
-  // ====================== Честная игра ======================
-
   async function openFair() {
     haptic.tap();
     try {
@@ -461,8 +460,10 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
         <p class="mono">взрыв = max(1, ⌊100·(1−${edge}) / (1−r)⌋ / 100),<br>r = первые 52 бита HMAC-SHA256(ключ, «crash:номер»)</p>
         <p>Возврат игрокам — <b>${Math.round((1 - edge) * 100)}%</b> на дистанции при любой стратегии.</p>
         <div class="fair-list">${rounds
-          .map((r) => `<div class="fair-row"><b>#${r.id}</b><span class="ch-pill ${tone(r.crash)}">×${mul(r.crash)}</span>
-            <code title="ключ">${esc(r.seed.slice(0, 16))}…</code></div>`)
+          .map(
+            (r) => `<div class="fair-row"><b>#${r.id}</b><span class="ch-pill ${tone(r.crash)}">×${mul(r.crash)}</span>
+            <code title="ключ">${esc(r.seed.slice(0, 16))}…</code></div>`,
+          )
           .join('')}</div>`;
       const w = $('cr-fair');
       w.classList.remove('closing');
@@ -472,14 +473,12 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
     }
   }
 
-  // ====================== Привязка ======================
-
   function bind() {
     $('cr-chips').innerHTML = BET_CHIPS.map((v) => `<button data-v="${v}" class="num">${v}</button>`).join('');
     $('cr-auto-chips').innerHTML = AUTO_CHIPS.map((v) => `<button data-v="${v}" class="num">×${v}</button>`).join('');
     $('cr-chips').addEventListener('click', (e) => {
       const v = e.target.dataset.v;
-      if (v) setAmount(Number(v)), haptic.tap();
+      if (v) (setAmount(Number(v)), haptic.tap());
     });
     $('cr-auto-chips').addEventListener('click', (e) => {
       const v = e.target.dataset.v;
@@ -531,7 +530,6 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
       s.active = false;
       cancelAnimationFrame(s.raf);
     },
-    /** Для бейджа на карточке: сколько ставок в текущем раунде. */
     players: () => s.st?.bets.length ?? 0,
   };
 }

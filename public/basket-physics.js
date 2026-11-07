@@ -1,50 +1,35 @@
-// Basketball Rush — физика броска. Один и тот же код работает в браузере (анимация, предпросмотр)
-// и на сервере (проверка каждого броска). Симуляция детерминирована: фиксированный шаг и только
-// операции + − × ÷ и √ (они дают одинаковый результат на любом устройстве), без sin/cos/pow.
-//
-// Мир — вид сбоку, единицы ≈ метры, ось Y вверх, пол на y = 0.
-
 export const WORLD = Object.freeze({
-  W: 10, // ширина поля
-  MIN_H: 10.5, // минимальная видимая высота
-  G: 15, // гравитация
-  DT: 1 / 120, // шаг симуляции
-  MAX_T: 4, // предел полёта
+  W: 10,
+  MIN_H: 10.5,
+  G: 15,
+  DT: 1 / 120,
+  MAX_T: 4,
   BALL_R: 0.24,
-  RIM_HALF: 0.5, // половина ширины кольца (от центра до дужки)
-  RIM_R: 0.05, // толщина дужки
-  // Щит — только картинка за кольцом (вид спереди, как в аркадных баскетболах):
-  // мяч ему не мешает, отскакивает только от дужек кольца.
-  BOARD_HALF: 0.8, // полуширина щита (по центру над кольцом)
-  BOARD_TOP: 1.3, // верх щита над кольцом
-  START: Object.freeze({ x: 1.55, y: 2.6 }), // мяч в руках игрока
-  VMIN: 5, // скорость броска
+  RIM_HALF: 0.5,
+  RIM_R: 0.05,
+  BOARD_HALF: 0.8,
+  BOARD_TOP: 1.3,
+  START: Object.freeze({ x: 1.55, y: 2.6 }),
+  VMIN: 5,
   VMAX: 15.5,
-  E_RIM: 0.55, // упругость дужки
+  E_RIM: 0.55,
   E_FLOOR: 0.55,
 });
 
-/** Вся допустимая область центра кольца — всегда в кадре (со щитом) и всегда достижима. */
 export const HOOP_BOUNDS = Object.freeze({ xMin: 4.5, xMax: 8.6, yMin: 3.4, yMax: 7.2 });
 
-/**
- * Сложность растёт с каждым попаданием (level = текущий счёт): кольцо уходит дальше
- * и разброс по высоте становится шире. С 12-го попадания — максимальная сложность.
- */
 export function hoopRange(level) {
   const k = Math.min(1, Math.max(0, level) / 12);
   return {
-    xMin: 4.5 + k * 2.6, // 4.5 → 7.1: на высоких очках кольцо больше не подходит близко
-    xMax: 5.9 + k * 2.7, // 5.9 → 8.6
-    yMin: 3.8 - k * 0.4, // 3.8 → 3.4
-    yMax: 5.2 + k * 2.0, // 5.2 → 7.2
+    xMin: 4.5 + k * 2.6,
+    xMax: 5.9 + k * 2.7,
+    yMin: 3.8 - k * 0.4,
+    yMax: 5.2 + k * 2.0,
   };
 }
 
-/** Скорость броска приходит целыми тысячными — одинаковые числа на клиенте и сервере. */
 export const QUANT = 1000;
 
-/** Допустим ли бросок: скорость в пределах, направление вправо-вверх (≈ 8°…84°). */
 export function validLaunch(vx, vy) {
   if (!Number.isFinite(vx) || !Number.isFinite(vy) || vx <= 0 || vy <= 0) return false;
   const speed = Math.sqrt(vx * vx + vy * vy);
@@ -60,23 +45,18 @@ function collidePoint(b, px, py, minDist, e) {
   const d = Math.sqrt(d2);
   const nx = dx / d;
   const ny = dy / d;
-  b.x = px + nx * minDist; // выталкиваем из препятствия
+  b.x = px + nx * minDist;
   b.y = py + ny * minDist;
   const vn = b.vx * nx + b.vy * ny;
   if (vn < 0) {
     b.vx -= (1 + e) * vn * nx;
     b.vy -= (1 + e) * vn * ny;
-    b.vx *= 0.94; // небольшое трение при касании
+    b.vx *= 0.94;
     b.vy *= 0.94;
   }
   return true;
 }
 
-/**
- * Полёт мяча. hoop — центр кольца {x, y}; vx, vy — скорость броска.
- * Возвращает: made (попал ли), madeT (когда), settleT (когда мяч «отыграл» — можно брать новый),
- * quality (0…1, насколько близко к центру кольца — для правила ничьих), contacts, frames (по запросу).
- */
 export function simulateShot(hoop, vx, vy, { frames = false } = {}) {
   const W = WORLD;
   const b = { x: W.START.x, y: W.START.y, vx, vy };
@@ -101,7 +81,6 @@ export function simulateShot(hoop, vx, vy, { frames = false } = {}) {
     if (collidePoint(b, front, hoop.y, hitDist, W.E_RIM)) contacts.push(['rim', t]);
     if (collidePoint(b, back, hoop.y, hitDist, W.E_RIM)) contacts.push(['rim', t]);
 
-    // Попадание: центр мяча сверху вниз пересёк линию кольца между дужками
     if (!made && prevY > hoop.y && b.y <= hoop.y && b.vy < 0) {
       const off = b.x - hoop.x;
       const abs = off < 0 ? -off : off;
@@ -109,7 +88,7 @@ export function simulateShot(hoop, vx, vy, { frames = false } = {}) {
         made = true;
         madeT = t;
         quality = 1 - abs / (W.RIM_HALF - W.RIM_R);
-        b.vx *= 0.35; // сетка гасит скорость
+        b.vx *= 0.35;
         b.vy *= 0.6;
         settleT = Math.min(W.MAX_T, t + 0.55);
       }
@@ -118,7 +97,7 @@ export function simulateShot(hoop, vx, vy, { frames = false } = {}) {
     let floor = false;
     if (b.y - W.BALL_R < 0) {
       b.y = W.BALL_R;
-      if (b.vy < -0.8) contacts.push(['floor', t]); // для звука отскока; на результат не влияет
+      if (b.vy < -0.8) contacts.push(['floor', t]);
       if (b.vy < 0) b.vy = -b.vy * W.E_FLOOR;
       b.vx *= 0.8;
       floor = true;
@@ -130,7 +109,6 @@ export function simulateShot(hoop, vx, vy, { frames = false } = {}) {
   return { made, madeT, settleT, quality, contacts, frames: out };
 }
 
-/** Точки пунктира: полёт без столкновений (только гравитация), на время previewT. */
 export function previewPath(vx, vy, previewT = 0.75, step = 0.05) {
   const pts = [];
   for (let t = step; t <= previewT + 1e-9; t += step) {
@@ -142,11 +120,9 @@ export function previewPath(vx, vy, previewT = 0.75, step = 0.05) {
   return pts;
 }
 
-/** Есть ли хоть один допустимый бросок, который попадает в кольцо. */
 export function isReachable(hoop) {
   for (let speed = WORLD.VMIN; speed <= WORLD.VMAX; speed += 0.25) {
     for (let k = 0; k <= 30; k++) {
-      // направление без тригонометрии: вектор (1, s), нормированный корнем
       const s = 0.2 + k * 0.17;
       const n = Math.sqrt(1 + s * s);
       const vx = speed / n;
@@ -157,11 +133,6 @@ export function isReachable(hoop) {
   return false;
 }
 
-/**
- * Положение кольца: первое — в центре экрана; дальше — случайно (ближе/дальше/выше/ниже)
- * в пределах сложности уровня, достижимо и заметно отличается от предыдущего.
- * rnd — генератор [0, 1) (на сервере — криптографический); level — текущий счёт игрока.
- */
 export function nextHoop(prev, rnd, level = 0) {
   const R = prev ? hoopRange(level) : { xMin: 4.6, xMax: 5.4, yMin: 4.2, yMax: 4.9 };
   for (let tries = 0; tries < 60; tries++) {

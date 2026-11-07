@@ -1,6 +1,3 @@
-# Roulette Arena: приложение + веб-сервер с HTTPS.
-# restart: unless-stopped — всё поднимается само после сбоя и после перезагрузки сервера (24/7).
-
 name: roulette-arena
 
 services:
@@ -15,14 +12,13 @@ services:
       CHANNEL_URL: ${CHANNEL_URL:-https://t.me/safroulette}
       CHAT_URL: ${CHAT_URL:-https://t.me/safroulette_chat}
       PUBLIC_URL: https://${DOMAIN:?запустите ./setup.sh}/
-      # Необязательные настройки (меняются в .env, затем ./update.sh)
       REF_PERCENT: ${REF_PERCENT:-15}
       WAGER_DEPOSIT: ${WAGER_DEPOSIT:-3}
       WAGER_BONUS: ${WAGER_BONUS:-3}
       BASKET_PRICE: ${BASKET_PRICE:-5}
       BASKET_DAILY_PRIZE: ${BASKET_DAILY_PRIZE:-50}
     volumes:
-      - app_data:/data            # база игроков, балансов и заявок
+      - app_data:/data
     logging: &logging
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
@@ -38,7 +34,7 @@ services:
       - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data          # HTTPS-сертификаты
+      - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - app

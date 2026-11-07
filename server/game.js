@@ -1,12 +1,3 @@
-// Игровой движок рулетки. Сервер — единственный источник правды: он принимает ставки,
-// считает доли, выбирает победителя и сообщает всем клиентам одно и то же состояние.
-//
-// Жизненный цикл раунда:
-//   waiting   — 0–1 участник, ждём второго (ставки принимаются)
-//   countdown — есть 2+ участника, 15 секунд на присоединение (ставки принимаются)
-//   spinning  — победитель выбран, клиенты крутят колесо до одной и той же точки
-//   finished  — показ победителя, затем новый раунд
-
 import { EventEmitter } from 'node:events';
 import { randomInt } from 'node:crypto';
 import { AppError } from './db.js';
@@ -23,7 +14,6 @@ export class Game extends EventEmitter {
     this.topToday = null;
   }
 
-  /** «Последняя игра» и «Топ игра дня» для карточек над колесом. */
   #loadHistory() {
     const card = (r) =>
       r && {
@@ -54,13 +44,13 @@ export class Game extends EventEmitter {
     this.round = {
       id: this.store.createRound(),
       status: 'waiting',
-      players: new Map(), // userId → { user, amount, seat }
+      players: new Map(),
       countdownEndsAt: null,
       spinStartedAt: null,
       spinEndsAt: null,
       resultEndsAt: null,
       winnerId: null,
-      landing: null, // точка на колесе (0..1 от начала круга), куда указывает стрелка
+      landing: null,
       bank: 0,
     };
     this.#emit();
@@ -95,7 +85,6 @@ export class Game extends EventEmitter {
     const players = [...r.players.values()];
     const total = players.reduce((sum, p) => sum + p.amount, 0);
 
-    // Победитель: случайный «билет» из всех поставленных очков — шанс равен доле.
     const ticket = this.random(total);
     let cursor = 0;
     let winner = players[0];
@@ -108,7 +97,6 @@ export class Game extends EventEmitter {
       }
       cursor += p.amount;
     }
-    // Точка остановки — случайное место внутри сектора победителя, не у самой границы.
     const inside = 0.12 + (this.random(10_000) / 10_000) * 0.76;
     r.landing = (winnerStart + winner.amount * inside) / total;
 
@@ -141,7 +129,6 @@ export class Game extends EventEmitter {
     this.emit('update', this.publicState());
   }
 
-  /** Состояние раунда для клиентов. Комиссия не раскрывается — только банк к выплате. */
   publicState() {
     const r = this.round;
     const players = [...r.players.values()];
@@ -156,7 +143,10 @@ export class Game extends EventEmitter {
       spinStartedAt: r.spinStartedAt,
       spinEndsAt: r.spinEndsAt,
       resultEndsAt: r.resultEndsAt,
-      bank: r.status === 'spinning' || r.status === 'finished' ? r.bank : bankOf(total, this.s.houseCut, this.s.houseFreeUpTo),
+      bank:
+        r.status === 'spinning' || r.status === 'finished'
+          ? r.bank
+          : bankOf(total, this.s.houseCut, this.s.houseFreeUpTo),
       landing: r.landing,
       winnerId: r.winnerId,
       lastGame: this.lastGame,
@@ -173,14 +163,9 @@ export class Game extends EventEmitter {
   }
 }
 
-/**
- * Сколько получает победитель. Общие ставки до 9 включительно — целиком, без комиссии.
- * От 10 — минус комиссия 10% (дробная часть округляется вниз, в пользу игрока):
- * 8 → 8, 9 → 9, 10 → 9, 15 → 14, 20 → 18, 500 → 450.
- */
 export function bankOf(total, houseCut, freeUpTo = 9) {
   if (total <= freeUpTo) return total;
-  const feePercent = Math.round(houseCut * 100); // целые проценты — без ошибок округления дробей
+  const feePercent = Math.round(houseCut * 100);
   return total - Math.floor((total * feePercent) / 100);
 }
 

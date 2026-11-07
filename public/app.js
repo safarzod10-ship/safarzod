@@ -1,16 +1,26 @@
-// Roulette Arena — клиент мини-аппа.
-// Всё состояние раунда приходит с сервера (SSE). Клиент только рисует и анимирует.
-
 import { createBasket } from './basket.js';
 import { createCrash } from './crash.js';
+import { createAdmin } from './admin.js';
 
 const tg = window.Telegram?.WebApp;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
 const STAR = '<svg class="star"><use href="#i-star"/></svg>';
-// Спокойная палитра секторов: различимые, но не «конфетные» цвета
-const PALETTE = ['#7c5cff', '#e2a73d', '#2ba98f', '#d9625b', '#4a86e8', '#b65fc2', '#7fae45', '#d98a3d', '#4fb3c8', '#9a8cf0'];
-const BET_STEPS = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+const PALETTE = [
+  '#7c5cff',
+  '#e2a73d',
+  '#2ba98f',
+  '#d9625b',
+  '#4a86e8',
+  '#b65fc2',
+  '#7fae45',
+  '#d98a3d',
+  '#4fb3c8',
+  '#9a8cf0',
+];
+const BET_STEPS = [
+  1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000,
+];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const state = {
@@ -22,11 +32,10 @@ const state = {
   round: null,
   clockOffset: 0,
   view: 'roulette',
-  stack: [], // откуда пришли на подстраницу (для «назад»)
+  stack: [],
   shownBalance: 0,
 };
 
-// ---------- Telegram ----------
 function setupTelegram() {
   if (!tg) return;
   tg.ready();
@@ -47,8 +56,6 @@ function setupTelegram() {
   applyInsets();
   tg.onEvent('safeAreaChanged', applyInsets);
   tg.onEvent('contentSafeAreaChanged', applyInsets);
-  // Полноэкранный режим (как у топовых мини-аппов): Telegram рисует компактные кнопки «Закрыть» и ⌄ ⋯ поверх,
-  // контент начинается ниже них — отступ берётся из safeAreaInset + contentSafeAreaInset.
   tg.onEvent('fullscreenChanged', () => {
     applyInsets();
     document.body.classList.toggle('tg-fullscreen', !!tg.isFullscreen);
@@ -67,20 +74,27 @@ const haptic = {
   err: () => hf()?.notificationOccurred('error'),
 };
 
-// ---------- API ----------
 async function api(path, body) {
   const headers = { 'content-type': 'application/json' };
   if (state.initData) headers.authorization = `tma ${state.initData}`;
   else if (state.devUser) headers['x-dev-user'] = encodeURIComponent(JSON.stringify(state.devUser));
-  const res = await fetch(path, { method: body === undefined ? 'GET' : 'POST', headers, body: body && JSON.stringify(body) });
+  const res = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers,
+    body: body && JSON.stringify(body),
+  });
   const data = await res.json().catch(() => ({}));
   if (data.error === 'BLOCKED') showBlocked();
   if (!res.ok) throw Object.assign(new Error(data.message || 'Ошибка сети'), { code: data.error });
   return data;
 }
 
-function applyProfile({ user, withdrawals, wager }) {
+function applyProfile({ user, withdrawals, wager, admin: isAdmin }) {
   if (wager) state.wager = wager;
+  if (isAdmin !== undefined && state.isAdmin !== isAdmin) {
+    state.isAdmin = isAdmin;
+    admin.enable(isAdmin);
+  }
   state.me = user;
   state.withdrawals = withdrawals ?? state.withdrawals;
   renderMe();
@@ -89,19 +103,28 @@ function applyProfile({ user, withdrawals, wager }) {
   updateWithdrawForm();
 }
 
-const refreshMe = () => api('/api/me', {}).then(applyProfile).catch(() => {});
+const refreshMe = () =>
+  api('/api/me', {})
+    .then(applyProfile)
+    .catch(() => {});
 
-// ---------- Общие элементы ----------
 function avatarHtml(user, cls = '') {
   const name = user.name || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || '?';
-  const initials = name.replace(/^@/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = name
+    .replace(/^@/, '')
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
   const photo = user.photo;
   return `<div class="avatar ${cls}">${
-    photo ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initials)}'))">` : esc(initials)
+    photo
+      ? `<img src="${esc(photo)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initials)}'))">`
+      : esc(initials)
   }</div>`;
 }
 
-/** Заменяет аватар с данным id новым (фото или инициалы), сохраняя id. */
 function setAvatar(id, user, cls) {
   const tmp = document.createElement('div');
   tmp.innerHTML = avatarHtml(user, cls);
@@ -138,15 +161,15 @@ function busy(btn, on) {
 }
 
 const digits = (input) => {
-  const v = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 7);
+  const v = input.value
+    .replace(/\D/g, '')
+    .replace(/^0+(?=\d)/, '')
+    .slice(0, 7);
   if (v !== input.value) input.value = v;
   return v ? Math.min(Number(v), state.config.maxAmount) : 0;
 };
 
-// ---------- Навигация ----------
-// Вкладки меню: рулетка, игры, задания, друзья, профиль. Остальное — подстраницы со стеком «назад»:
-// «+» у баланса → пополнение; профиль → пополнение/вывод; игры → страница игры → история.
-const SUBPAGES = new Set(['deposit', 'withdraw', 'basket', 'basket-history', 'crash']);
+const SUBPAGES = new Set(['deposit', 'withdraw', 'basket', 'basket-history', 'crash', 'admin', 'admin-user']);
 const GAME_VIEWS = new Set(['games', 'basket', 'basket-history']);
 
 function go(view, { back = false } = {}) {
@@ -157,8 +180,7 @@ function go(view, { back = false } = {}) {
   }
   state.view = view;
   document.body.dataset.view = view;
-  // подсвечиваем вкладку, из которой открыта подстраница
-  const tab = SUBPAGES.has(view) ? state.stack.find((v) => !SUBPAGES.has(v)) ?? 'roulette' : view;
+  const tab = SUBPAGES.has(view) ? (state.stack.find((v) => !SUBPAGES.has(v)) ?? 'roulette') : view;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === view));
   document.querySelectorAll('.nav button').forEach((b) => b.classList.toggle('active', b.dataset.go === tab));
   window.scrollTo({ top: 0 });
@@ -169,6 +191,8 @@ function go(view, { back = false } = {}) {
   else basket.hide();
   if (view === 'crash') crash.show();
   else crash.hide();
+  if (view === 'admin') admin.show();
+  else admin.hide();
   moveNavIndicator();
   if (view === 'friends') loadFriends();
   haptic.tap();
@@ -178,7 +202,6 @@ function goBack() {
   go(state.stack.pop() ?? 'roulette', { back: true });
 }
 
-// ---------- Шапка и профиль ----------
 function renderMe() {
   const u = state.me;
   if (!u) return;
@@ -208,17 +231,16 @@ function renderMe() {
   $('st-losses').textContent = fmt(u.losses);
 }
 
-// ---------- Рулетка: геометрия ----------
 const R = 80;
 const C = 2 * Math.PI * R;
 const wheel = {
-  rot: 0, // текущий поворот колеса, градусы
-  shown: new Map(), // seat → отображаемая доля (для плавного перераспределения секторов)
+  rot: 0,
+  shown: new Map(),
   tween: null,
-  spin: null, // { roundId, from, to, start, duration }
+  spin: null,
   roundId: null,
-  flash: new Map(), // seat → время вспышки сектора (новая ставка)
-  fade: 1, // прозрачность аватарок (размытие на скорости)
+  flash: new Map(),
+  fade: 1,
   pointerSector: null,
   lastHaptic: 0,
   wonAt: null,
@@ -226,17 +248,23 @@ const wheel = {
 
 function sharesOf(round) {
   const total = round.players.reduce((s, p) => s + p.amount, 0);
-  return round.players.map((p) => ({ ...p, frac: total ? p.amount / total : 0, color: PALETTE[p.seat % PALETTE.length] }));
+  return round.players.map((p) => ({
+    ...p,
+    frac: total ? p.amount / total : 0,
+    color: PALETTE[p.seat % PALETTE.length],
+  }));
 }
 
-/** Проценты, которые в сумме дают ровно 100 (метод наибольшего остатка). */
 function percents(fracs) {
   const raw = fracs.map((f) => f * 100);
   const floor = raw.map(Math.floor);
   let left = 100 - floor.reduce((a, b) => a + b, 0);
-  raw.map((v, i) => [v - floor[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => {
-    if (left-- > 0) floor[i]++;
-  });
+  raw
+    .map((v, i) => [v - floor[i], i])
+    .sort((a, b) => b[0] - a[0])
+    .forEach(([, i]) => {
+      if (left-- > 0) floor[i]++;
+    });
   return floor;
 }
 
@@ -246,15 +274,20 @@ function inkFor(hex) {
 }
 
 const SVGNS = 'http://www.w3.org/2000/svg';
-const AV_R = 8.5; // радиус аватарки на секторе (единицы viewBox; толщина кольца — 22)
-const avatarNodes = new Map(); // id игрока → <g> с аватаркой и процентом
+const AV_R = 8.5;
+const avatarNodes = new Map();
 
 function initialsOf(u) {
   const name = u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || '?';
-  return name.replace(/^@/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .replace(/^@/, '')
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-/** Аватарка игрока для сектора: создаётся один раз, дальше только двигается. */
 function avatarNode(p) {
   let g = avatarNodes.get(p.id);
   if (g) return g;
@@ -272,9 +305,8 @@ function avatarNode(p) {
   return g;
 }
 
-/** Номер сектора под стрелкой (для «щелчков» стрелки на границах). */
 function sectorUnderPointer(segs, shownTotal) {
-  const pos = ((((-wheel.rot) % 360) + 360) % 360) / 360;
+  const pos = (((-wheel.rot % 360) + 360) % 360) / 360;
   let acc = 0;
   for (let i = 0; i < segs.length; i++) {
     acc += (wheel.shown.get(segs[i].seat) ?? 0) / shownTotal;
@@ -292,7 +324,6 @@ function drawWheel() {
   const pcts = percents(segs.map((s) => s.frac));
   const shownTotal = segs.reduce((a, s) => a + (wheel.shown.get(s.seat) ?? 0), 0) || 1;
   const now = performance.now();
-  // Сектор победителя «выдвигается» наружу после остановки
   const pop = finished && wheel.wonAt ? Math.min(1, (now - wheel.wonAt) / 450) : 0;
   const popE = 1 - (1 - pop) ** 3;
 
@@ -312,13 +343,11 @@ function drawWheel() {
     const rot = -90 + start * 360 + (gap / circ) * 180;
     const cls = finished ? (isWin ? ` class="win" style="--c:${s.color}"` : ' class="dim"') : '';
     svg += `<circle r="${r}" stroke-width="${width}" stroke="${s.color}" stroke-dasharray="${len} ${circ}" transform="rotate(${rot})"${cls}/>`;
-    // Вспышка сектора при новой ставке
     const flashT = wheel.flash.get(s.seat);
     if (flashT && now - flashT < 900) {
       const k = 1 - (now - flashT) / 900;
       flashes += `<circle r="${R}" stroke-width="22" stroke="#fff" opacity="${(0.55 * k * k).toFixed(3)}" stroke-dasharray="${len} ${C}" transform="rotate(${rot})"/>`;
     }
-    // Аватарка игрока в середине сектора (подписи не вращаются — всегда ровно)
     if (f >= 0.07) {
       const a = ((start + f / 2) * 360 - 90 + wheel.rot) * (Math.PI / 180);
       const g = avatarNode(s);
@@ -345,7 +374,6 @@ function drawWheel() {
   labels.style.opacity = wheel.fade;
   $('wheel-rot').setAttribute('transform', `rotate(${wheel.rot})`);
 
-  // Стрелка «цепляет» границы секторов во время вращения
   if (wheel.spin?.from !== undefined && n > 1) {
     const idx = sectorUnderPointer(segs, shownTotal);
     if (wheel.pointerSector !== null && idx !== wheel.pointerSector) {
@@ -363,7 +391,6 @@ function drawWheel() {
   if (pop > 0 && pop < 1) requestAnimationFrame(drawWheel);
 }
 
-/** Плавное перераспределение секторов при новых ставках. */
 function tweenShares() {
   const round = state.round;
   const target = new Map(sharesOf(round).map((s) => [s.seat, s.frac]));
@@ -375,14 +402,15 @@ function tweenShares() {
   const step = (t) => {
     const p = ms ? Math.min(1, (t - t0) / ms) : 1;
     const e = 1 - (1 - p) ** 3;
-    wheel.shown = new Map([...target].map(([seat, f]) => [seat, (from.get(seat) ?? 0) + (f - (from.get(seat) ?? 0)) * e]));
+    wheel.shown = new Map(
+      [...target].map(([seat, f]) => [seat, (from.get(seat) ?? 0) + (f - (from.get(seat) ?? 0)) * e]),
+    );
     drawWheel();
     if (p < 1 || [...wheel.flash.values()].some((t2) => t - t2 < 900)) wheel.tween = requestAnimationFrame(step);
   };
   wheel.tween = requestAnimationFrame(step);
 }
 
-// ---------- Всплывающие ставки ----------
 function betBubble(p, amount, delay) {
   setTimeout(() => {
     const el = document.createElement('div');
@@ -396,13 +424,9 @@ function betBubble(p, amount, delay) {
 
 const serverNow = () => Date.now() + state.clockOffset;
 
-/**
- * Траектория вращения: замах назад → разгон → долгое торможение с небольшим перелётом →
- * мягкое возвращение точно в точку, выбранную сервером (у всех игроков одинаково).
- */
-const WIND = 0.06; // доля времени на замах
-const SETTLE = 0.13; // доля времени на возврат после перелёта
-const OVER = 3.2; // градусы перелёта
+const WIND = 0.06;
+const SETTLE = 0.13;
+const OVER = 3.2;
 function spinAngle(s, p) {
   if (p < WIND) return s.from - 14 * Math.sin((Math.PI * p) / WIND);
   const q = (p - WIND) / (1 - WIND);
@@ -415,7 +439,6 @@ function spinAngle(s, p) {
 function runSpin() {
   const r = state.round;
   if (wheel.spin?.roundId === r.id) return;
-  // Точка landing (доля круга от верха по часовой) должна оказаться под стрелкой.
   const base = wheel.rot;
   const targetMod = (((-r.landing * 360) % 360) + 360) % 360;
   const baseMod = ((base % 360) + 360) % 360;
@@ -429,7 +452,6 @@ function runSpin() {
     if (!s || s.roundId !== state.round?.id) return;
     const p = Math.min(1, Math.max(0, (serverNow() - s.start) / s.duration));
     wheel.rot = spinAngle(s, p);
-    // На большой скорости аватарки «смазываются» — прозрачнеют
     const speed = Math.abs(wheel.rot - prev);
     prev = wheel.rot;
     const targetFade = speed > 9 ? 0.12 : speed > 5 ? 0.45 : 1;
@@ -445,14 +467,12 @@ function runSpin() {
   requestAnimationFrame(frame);
 }
 
-// ---------- Рулетка: состояние ----------
 function onRound(round) {
   const prev = state.round;
   state.clockOffset = round.serverNow - Date.now();
   state.round = round;
 
   if (prev?.id !== round.id) {
-    // Новый раунд: колесо возвращается в исходное положение, секторы собираются заново.
     wheel.rot = 0;
     wheel.shown = new Map();
     wheel.spin = null;
@@ -460,7 +480,6 @@ function onRound(round) {
     wheel.flash.clear();
     $('wheel').classList.remove('spinning');
   }
-  // Новые ставки: вспышка сектора и всплывающее «+сумма»
   if (prev?.id === round.id) {
     const before = new Map(prev.players.map((p) => [p.id, p.amount]));
     let k = 0;
@@ -475,7 +494,6 @@ function onRound(round) {
   if (round.status === 'finished' && !wheel.wonAt) wheel.wonAt = performance.now();
   if (round.status === 'spinning' || round.status === 'finished') {
     if (round.status === 'finished' && !wheel.spin) {
-      // Подключились после окончания вращения — сразу ставим колесо в итоговую позицию.
       wheel.rot = (((-round.landing * 360) % 360) + 360) % 360;
       wheel.spin = { roundId: round.id };
     } else runSpin();
@@ -502,7 +520,6 @@ function onRound(round) {
   }
 }
 
-/** Карточки «Последняя игра» и «Топ игра дня». */
 let featsKey = '';
 function renderFeats() {
   const { lastGame, topToday } = state.round;
@@ -519,11 +536,10 @@ function renderFeats() {
       : '<div class="f-empty">Пока нет игр</div>';
     return `<div class="feat ${cls}${fresh ? ' fresh' : ''}"><div class="f-label"><svg><use href="#${icon}"/></svg>${label}</div>${who}</div>`;
   };
-  $('feats').innerHTML = card(lastGame, 'f-last', 'i-clock', 'Последняя игра') + card(topToday, 'f-top', 'i-trophy', 'Топ игра дня');
+  $('feats').innerHTML =
+    card(lastGame, 'f-last', 'i-clock', 'Последняя игра') + card(topToday, 'f-top', 'i-trophy', 'Топ игра дня');
 }
 
-
-/** Банк над колесом и содержимое центра колеса для каждого этапа раунда. */
 let centerKey = '';
 function renderCenter() {
   const r = state.round;
@@ -565,14 +581,12 @@ function plural(n, one, few, many) {
   return many;
 }
 
-/** Доля текущего игрока в раунде, % (или null, если он не участвует). */
 function myChance(r) {
   const segs = sharesOf(r);
   const i = segs.findIndex((p) => p.id === state.me?.id);
   return i < 0 ? null : percents(segs.map((x) => x.frac))[i];
 }
 
-/** Строка под колесом: подсказка или ваш шанс. */
 function renderStatus() {
   const r = state.round;
   const chance = myChance(r);
@@ -580,20 +594,23 @@ function renderStatus() {
   const n = r.players.length;
   let html = '';
   if (r.status === 'waiting') html = pct ? 'Вы в игре · ждём второго игрока' : 'Раунд начнётся после второй ставки';
-  else if (r.status === 'countdown') html = pct || `${n} ${plural(n, 'игрок', 'игрока', 'игроков')} · успейте сделать ставку`;
+  else if (r.status === 'countdown')
+    html = pct || `${n} ${plural(n, 'игрок', 'игрока', 'игроков')} · успейте сделать ставку`;
   else if (r.status === 'spinning') html = 'Определяем победителя…';
   else {
     const w = r.players.find((p) => p.id === r.winnerId);
-    html = w?.id === state.me?.id ? '<b>Банк ваш!</b> Новый раунд скоро' : `<b>${esc(w?.name ?? '')}</b> забирает банк · новый раунд скоро`;
+    html =
+      w?.id === state.me?.id
+        ? '<b>Банк ваш!</b> Новый раунд скоро'
+        : `<b>${esc(w?.name ?? '')}</b> забирает банк · новый раунд скоро`;
   }
   $('caption').innerHTML = html;
   if (r.status !== 'countdown') $('cd-ring').style.strokeDashoffset = CD_LEN;
 }
 
-const CD_LEN = 2 * Math.PI * 61; // длина кольца отсчёта вокруг центра
+const CD_LEN = 2 * Math.PI * 61;
 let countdownLoop = false;
 let lastSecond = null;
-/** Отсчёт в центре колеса; последние 5 секунд — красные цифры с «сердцебиением». */
 function tickCountdown() {
   if (countdownLoop) return;
   countdownLoop = true;
@@ -616,7 +633,7 @@ function tickCountdown() {
       if (hot) {
         for (const el of [t, $('wheel')]) {
           el.classList.remove('beat');
-          void el.offsetWidth; // перезапуск анимации ровно на смене секунды
+          void el.offsetWidth;
           el.classList.add('beat');
         }
         haptic.impact(sec <= 2 ? 'medium' : 'light');
@@ -646,7 +663,6 @@ function renderPlayers() {
         <div class="p-amount num">${fmt(p.amount)}${STAR}</div></div>
         <div class="p-pct num">${p.pct < 1 ? '<1' : p.pct}%</div></div>`;
     });
-  // Обновляем строки, не пересоздавая уже показанные (без мерцания аватаров)
   const box = $('players');
   const existing = new Map([...box.children].map((el) => [el.dataset.id, el]));
   const html = rows.join('');
@@ -666,7 +682,6 @@ function renderPlayers() {
   );
 }
 
-// ---------- Ставка ----------
 function betAmount() {
   return digits($('bet-input'));
 }
@@ -690,7 +705,6 @@ function updateBetButton() {
   syncChips();
 }
 
-/** Подсветка быстрой суммы, совпадающей с введённой. */
 function syncChips() {
   const v = betAmount();
   const max = state.me?.balance ?? 0;
@@ -701,7 +715,7 @@ function syncChips() {
 }
 
 function chooseChip(chip) {
-  const value = chip === 'max' ? state.me?.balance ?? 0 : Number(chip);
+  const value = chip === 'max' ? (state.me?.balance ?? 0) : Number(chip);
   if (chip === 'max' && !value) return toast('Баланс пуст — пополните его', 'err');
   $('bet-input').value = Math.min(value, state.config.maxAmount);
   haptic.tap();
@@ -710,7 +724,10 @@ function chooseChip(chip) {
 
 function stepBet(dir) {
   const v = betAmount() || 0;
-  const next = dir > 0 ? BET_STEPS.find((s) => s > v) ?? v : [...BET_STEPS].reverse().find((s) => s < v) ?? state.config.minBet;
+  const next =
+    dir > 0
+      ? (BET_STEPS.find((s) => s > v) ?? v)
+      : ([...BET_STEPS].reverse().find((s) => s < v) ?? state.config.minBet);
   $('bet-input').value = next;
   haptic.tap();
   updateBetButton();
@@ -733,7 +750,6 @@ async function placeBet() {
   }
 }
 
-// ---------- Пополнение (Telegram Stars) ----------
 function updateDepositForm() {
   const n = digits($('dep-input'));
   $('dep-btn').disabled = n < state.config.minDeposit;
@@ -759,7 +775,6 @@ async function deposit() {
         toast(`Баланс пополнен на ${fmt(amount)} ⭐`);
         $('dep-input').value = '';
         updateDepositForm();
-        // Зачисление приходит от Telegram отдельным событием — проверяем несколько раз
         [600, 2000, 5000].forEach((ms) => setTimeout(refreshMe, ms));
       } else if (status === 'failed') {
         haptic.err();
@@ -775,7 +790,6 @@ async function deposit() {
   }
 }
 
-// ---------- Вывод ----------
 function withdrawCalc() {
   const amount = digits($('wd-input'));
   const fee = Math.ceil(amount * state.config.withdrawFee);
@@ -797,7 +811,6 @@ function updateWithdrawForm() {
   renderWager();
 }
 
-/** Оборот перед выводом: пополнения нужно поставить в играх, прежде чем выводить. */
 const wagerLeft = () => state.wager?.left ?? 0;
 function renderWager() {
   const w = state.wager;
@@ -848,7 +861,6 @@ function openChannel() {
   const url = state.config.channelUrl || `https://t.me/${(state.config.withdrawChannel || '').replace(/^@/, '')}`;
   haptic.tap();
   supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
-  // После возвращения игрок просто нажимает «Вывести» ещё раз
   setTimeout(() => ($('wd-sub').hidden = true), 1500);
 }
 
@@ -872,8 +884,7 @@ function renderWithdrawals() {
       .join('');
 }
 
-// ---------- Задания ----------
-const opened = new Set(); // задания, ссылку которых игрок уже открыл в этой сессии
+const opened = new Set();
 
 async function loadTasks() {
   try {
@@ -921,7 +932,7 @@ async function onTaskAction(btn) {
     else window.open(task.url, '_blank');
     opened.add(id);
     haptic.tap();
-    return setTimeout(renderTasks, 400); // кнопка меняется на «Проверить», когда игрок вернётся
+    return setTimeout(renderTasks, 400);
   }
   btn.classList.add('loading');
   try {
@@ -938,7 +949,6 @@ async function onTaskAction(btn) {
   renderTasks();
 }
 
-// ---------- Друзья ----------
 async function loadFriends() {
   try {
     const res = await api('/api/friends', {});
@@ -954,7 +964,11 @@ function renderFriends() {
   $('ref-percent-title').textContent = `${fmt(f.percent)}%`;
   const short = f.link.replace(/^https:\/\//, '');
   const cut = short.indexOf('ref_');
-  $('ref-link-head').textContent = short ? (cut > 0 ? short.slice(0, cut) : short) : 'Ссылка появится после запуска бота';
+  $('ref-link-head').textContent = short
+    ? cut > 0
+      ? short.slice(0, cut)
+      : short
+    : 'Ссылка появится после запуска бота';
   $('ref-link-tail').textContent = cut > 0 ? short.slice(cut) : '';
   $('ref-count').textContent = fmt(f.count);
   $('ref-earned').textContent = fmt(f.earned);
@@ -997,9 +1011,13 @@ function shareRefLink() {
   supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
 }
 
-// ---------- Racket Crash ----------
 const crash = createCrash({
-  api, haptic, toast, avatarHtml, esc, go,
+  api,
+  haptic,
+  toast,
+  avatarHtml,
+  esc,
+  go,
   me: () => state.me,
   onProfile: (res) => res.user && applyProfile(res),
 });
@@ -1010,14 +1028,21 @@ function updateCrashBadge() {
   b.textContent = n ? `● ${n} в раунде` : '● LIVE';
 }
 
-// ---------- Basketball Rush ----------
+const admin = createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports, tg });
+
 const basket = createBasket({
-  api, haptic, toast, avatarHtml, esc, supports, tg, go,
+  api,
+  haptic,
+  toast,
+  avatarHtml,
+  esc,
+  supports,
+  tg,
+  go,
   me: () => state.me,
   onProfile: (res) => res.user && applyProfile(res),
 });
 
-/** Подложка активной вкладки плавно переезжает под нужную иконку. */
 function moveNavIndicator() {
   const nav = $('nav');
   const ind = $('nav-ind');
@@ -1027,15 +1052,12 @@ function moveNavIndicator() {
   const nr = nav.getBoundingClientRect();
   const ar = active.getBoundingClientRect();
   ind.style.opacity = '1';
-  // подложка охватывает и иконку, и подпись активной вкладки
   const w = Math.min(ar.width - 6, 76);
   ind.style.width = `${w}px`;
   ind.style.transform = `translateX(${ar.left - nr.left + ar.width / 2 - w / 2}px)`;
 }
 window.addEventListener('resize', moveNavIndicator);
 
-// ---------- Запуск ----------
-/** Сколько людей сейчас в приложении: пинг раз в 30 с + рассылка сервера через поток. */
 function setOnline(n) {
   if (!Number.isFinite(n)) return;
   $('online-n').textContent = fmt(Math.max(1, n));
@@ -1074,6 +1096,7 @@ function bindUi() {
   $('bet-input').addEventListener('input', updateBetButton);
   $('bet-chips').addEventListener('click', (e) => e.target.dataset.chip && chooseChip(e.target.dataset.chip));
   basket.bind();
+  admin.bind();
   crash.bind();
   document.querySelector('[data-game="crash"]').addEventListener('click', () => go('crash'));
   $('ref-link').addEventListener('click', copyRefLink);
@@ -1092,9 +1115,7 @@ function bindUi() {
     const url = `https://t.me/${state.config.supportUsername}`;
     supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');
   });
-  // Клавиатура открыта — прячем меню, чтобы кнопка действия была рядом с полем
   document.addEventListener('focusin', (e) => e.target.matches('input') && document.body.classList.add('kb'));
-  // Убираем с задержкой: иначе при нажатии кнопки поле теряет фокус, панель сдвигается и нажатие «промахивается».
   document.addEventListener('focusout', () =>
     setTimeout(() => !document.activeElement?.matches('input') && document.body.classList.remove('kb'), 250),
   );
@@ -1143,7 +1164,6 @@ async function main() {
     if (e.code === 'BLOCKED') return showBlocked();
     toast(e.message, 'err');
   }
-  // Предзагрузка: картинки игр, звуки, данные всех разделов — чтобы дальше ничего не подвисало
   bootStep(0.35, 'Загружаем игры…');
   const preload = [
     ...['/games/racket-crash.webp', '/games/basketball-rush.webp'].map(loadImage),
@@ -1154,7 +1174,11 @@ async function main() {
   ];
   let done = 0;
   preload.forEach((p) => p.finally(() => bootStep(0.35 + (0.6 * ++done) / preload.length)));
-  const [resumed] = await Promise.all([preload.at(-1), Promise.allSettled(preload), new Promise((r) => setTimeout(r, 900))]);
+  const [resumed] = await Promise.all([
+    preload.at(-1),
+    Promise.allSettled(preload),
+    new Promise((r) => setTimeout(r, 900)),
+  ]);
   bootStep(1, 'Готово');
 
   $('app').hidden = false;
@@ -1165,10 +1189,12 @@ async function main() {
   setInterval(ping, 30_000);
   document.addEventListener('visibilitychange', ping);
   requestAnimationFrame(moveNavIndicator);
-  // Незавершённая игра (обрыв связи, перезапуск Telegram) — сразу возвращаем в неё
   if (resumed) {
     go('games');
     go('basket');
+  } else if (location.hash === '#admin' && state.isAdmin) {
+    go('profile');
+    go('admin');
   }
   updateWithdrawForm();
   updateDepositForm();

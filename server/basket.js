@@ -1,19 +1,3 @@
-// Basketball Rush — ежедневный турнир.
-//
-// Каждая попытка стоит фиксированные 5 ⭐. В зачёт дня идёт лучший результат игрока.
-// В конце дня (00:00 по часовому поясу турнира) первое место получает приз — 50 ⭐.
-// Попыток сколько угодно, но одновременно — одна.
-//
-// Сервер — единственный источник правды:
-//  • клиент присылает только скорость броска; попал ли мяч и было ли касание кольца, сервер считает
-//    сам той же детерминированной физикой (public/basket-physics.js);
-//  • время и бонусные секунды — только серверные; броски до старта и после конца не принимаются;
-//  • новый мяч — не раньше окончания полёта предыдущего (ускорение игры не работает);
-//  • номер броска: повтор того же запроса возвращает тот же ответ, пропуск номера отклоняется;
-//  • положения кольца генерирует сервер (криптографически) и показывает только текущее;
-//  • броски без прицеливания отклоняются; нечеловечески ровная серия попаданий помечается.
-//  Всё хранится в базе — попытка переживает перезапуск сервера и обрыв связи у игрока.
-
 import { EventEmitter } from 'node:events';
 import { randomInt } from 'node:crypto';
 import { QUANT, validLaunch, simulateShot, nextHoop } from '../public/basket-physics.js';
@@ -21,13 +5,13 @@ import { AppError } from './db.js';
 import { displayName } from './game.js';
 
 export const BASKET_DEFAULTS = Object.freeze({
-  price: 5, // стоимость попытки
-  dailyPrize: 50, // приз за 1-е место дня
-  tzOffsetMin: 180, // день турнира — по Москве (UTC+3)
+  price: 5,
+  dailyPrize: 50,
+  tzOffsetMin: 180,
   countdownMs: 3000,
   baseMs: 30_000,
-  bonusMs: 3_000, // обычное попадание
-  swishBonusMs: 5_000, // чистое попадание — мяч не коснулся дужки кольца
+  bonusMs: 3_000,
+  swishBonusMs: 5_000,
   graceMs: 300,
   shotGapMs: 200,
   shotTolMs: 150,
@@ -40,9 +24,9 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS basket_attempts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id      INTEGER NOT NULL REFERENCES users(id),
-  day          TEXT NOT NULL,                   -- день турнира YYYY-MM-DD
-  status       TEXT NOT NULL DEFAULT 'playing', -- playing | done
-  hoops        TEXT NOT NULL,                   -- JSON: положения кольца этой попытки
+  day          TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'playing',
+  hoops        TEXT NOT NULL,
   start_at     INTEGER NOT NULL,
   deadline     INTEGER NOT NULL,
   score        INTEGER NOT NULL DEFAULT 0,
@@ -91,7 +75,6 @@ export class BasketService extends EventEmitter {
                    WHERE id = :id`),
       expired: q("SELECT * FROM basket_attempts WHERE status = 'playing' AND deadline < ?"),
       finish: q("UPDATE basket_attempts SET status = 'done', finished_at = ? WHERE id = ? AND status = 'playing'"),
-      // результаты дня: лучшая попытка каждого игрока определяется в JS по порядку сортировки
       dayResults: q(`SELECT id, user_id, score, shots, finished_at FROM basket_attempts
                      WHERE day = ? AND status = 'done' ORDER BY score DESC, shots ASC, finished_at ASC, id ASC`),
       playingOnDay: q("SELECT COUNT(*) AS n FROM basket_attempts WHERE day = ? AND status = 'playing'"),
@@ -104,41 +87,35 @@ export class BasketService extends EventEmitter {
       stats: q(`SELECT COUNT(*) AS games, COALESCE(MAX(score), 0) AS best FROM basket_attempts
                 WHERE user_id = ? AND status = 'done'`),
       wins: q('SELECT COUNT(*) AS wins, COALESCE(SUM(prize), 0) AS won FROM basket_days WHERE winner_id = ?'),
-      playersToday: q("SELECT COUNT(DISTINCT user_id) AS n FROM basket_attempts WHERE day = ?"),
+      playersToday: q('SELECT COUNT(DISTINCT user_id) AS n FROM basket_attempts WHERE day = ?'),
     };
     this.#refundLegacyMatches();
   }
-
-  // ====================== День турнира ======================
 
   dayOf(ts) {
     return new Date(ts + this.o.tzOffsetMin * 60_000).toISOString().slice(0, 10);
   }
 
-  /** Когда закончится текущий день турнира (мс). */
   dayEndsAt(ts = this.now()) {
     const shifted = ts + this.o.tzOffsetMin * 60_000;
     const next = Math.floor(shifted / 86_400_000 + 1) * 86_400_000;
     return next - this.o.tzOffsetMin * 60_000;
   }
 
-  /** Таблица дня: лучший результат каждого игрока (от 1 очка). */
   leaderboard(day) {
     const seen = new Set();
     const rows = [];
     for (const r of this.q.dayResults.all(day)) {
-      if (seen.has(r.user_id) || r.score <= 0) continue; // в таблицу попадают только с очками
+      if (seen.has(r.user_id) || r.score <= 0) continue;
       seen.add(r.user_id);
       rows.push({ ...r, place: rows.length + 1 });
     }
     return rows;
   }
 
-  // ====================== Попытка ======================
-
   play(user) {
     this.tick();
-    if (this.q.active.get(user.id)) return this.state(user.id); // уже играет — вернуть в игру
+    if (this.q.active.get(user.id)) return this.state(user.id);
     const t = this.now();
     this.store.tx(() => {
       const startAt = t + this.o.countdownMs;
@@ -146,7 +123,7 @@ export class BasketService extends EventEmitter {
       const id = Number(
         this.q.insert.run(user.id, this.dayOf(t), hoops, startAt, startAt + this.o.baseMs, startAt, t).lastInsertRowid,
       );
-      this.store.ledgerDebit(user.id, this.o.price, 'basket_entry', id); // мало звёзд — откат
+      this.store.ledgerDebit(user.id, this.o.price, 'basket_entry', id);
     });
     this.emit('balance', user.id);
     return this.state(user.id);
@@ -224,7 +201,6 @@ export class BasketService extends EventEmitter {
     return sd < 60;
   }
 
-  /** Кольцо для счёта index: чем больше очков, тем дальше и разнообразнее. */
   #hoopAt(e, index) {
     const hoops = JSON.parse(e.hoops);
     if (hoops.length > index) return hoops[index];
@@ -234,8 +210,6 @@ export class BasketService extends EventEmitter {
     return hoops[index];
   }
 
-  // ====================== Завершение попыток и итоги дня ======================
-
   tick() {
     const t = this.now();
     for (const e of this.q.expired.all(t - this.o.graceMs)) {
@@ -243,23 +217,23 @@ export class BasketService extends EventEmitter {
       this.reactions.delete(e.id);
       this.emit('finished', e.id);
     }
-    // Закрываем прошедшие дни: приз — первому месту (если кто-то набрал хотя бы 1 очко)
     const today = this.dayOf(t);
     for (const { day } of this.q.openDays.all(today)) {
-      if (this.q.playingOnDay.get(day).n > 0) continue; // кто-то доигрывает попытку, начатую до полуночи
+      if (this.q.playingOnDay.get(day).n > 0) continue;
       let closed = null;
       this.store.tx(() => {
         const top = this.leaderboard(day)[0];
         const win = top && top.score > 0 ? top : null;
-        if (this.q.closeDay.run(day, win?.user_id ?? null, win?.score ?? 0, win ? this.o.dailyPrize : 0, t).changes !== 1) return;
+        if (
+          this.q.closeDay.run(day, win?.user_id ?? null, win?.score ?? 0, win ? this.o.dailyPrize : 0, t).changes !== 1
+        )
+          return;
         if (win) this.store.ledgerCredit(win.user_id, this.o.dailyPrize, 'basket_prize', null);
         closed = { day, winner: win, prize: win ? this.o.dailyPrize : 0 };
       });
       if (closed) this.emit('dayClosed', closed);
     }
   }
-
-  // ====================== Состояние для клиента ======================
 
   state(userId) {
     this.tick();
@@ -295,18 +269,19 @@ export class BasketService extends EventEmitter {
         endsAt: this.dayEndsAt(t),
         prize: this.o.dailyPrize,
         players: this.q.playersToday.get(today).n,
-        top: board.slice(0, this.o.topSize).map((r) => ({ ...user(r.user_id), place: r.place, score: r.score, shots: r.shots })),
+        top: board
+          .slice(0, this.o.topSize)
+          .map((r) => ({ ...user(r.user_id), place: r.place, score: r.score, shots: r.shots })),
         me: mine ? { place: mine.place, score: mine.score, shots: mine.shots } : null,
       },
-      lastWinner: last?.winner_id ? { day: last.day, score: last.score, prize: last.prize, ...user(last.winner_id) } : null,
+      lastWinner: last?.winner_id
+        ? { day: last.day, score: last.score, prize: last.prize, ...user(last.winner_id) }
+        : null,
       attempts: this.q.myAttempts.all(userId, 20),
       stats: { ...this.q.stats.get(userId), ...this.q.wins.get(userId) },
     };
   }
 
-  // ====================== Переход со старой версии (матчи на троих со ставками) ======================
-
-  /** Незакрытые матчи прежней версии закрываются, ставки возвращаются игрокам (один раз). */
   #refundLegacyMatches() {
     const db = this.store.db;
     const has = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'basket_games'").get();
@@ -315,7 +290,12 @@ export class BasketService extends EventEmitter {
     for (const g of open) {
       const refunded = [];
       this.store.tx(() => {
-        if (db.prepare("UPDATE basket_games SET status = 'refunded', closed_at = ? WHERE id = ? AND status = 'open'").run(this.now(), g.id).changes !== 1) return;
+        if (
+          db
+            .prepare("UPDATE basket_games SET status = 'refunded', closed_at = ? WHERE id = ? AND status = 'open'")
+            .run(this.now(), g.id).changes !== 1
+        )
+          return;
         for (const e of db.prepare('SELECT user_id FROM basket_entries WHERE game_id = ?').all(g.id)) {
           this.store.ledgerCredit(e.user_id, g.stake, 'basket_refund', g.id);
           refunded.push(e.user_id);

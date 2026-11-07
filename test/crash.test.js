@@ -4,7 +4,6 @@ import { createHash, randomBytes } from 'node:crypto';
 import { openDb } from '../server/db.js';
 import { CrashService, crashPoint, multiplierAt, msFor } from '../server/crash.js';
 
-// Управляемые время и таймеры: тест сам «перематывает» раунд
 function setup(opts = {}, { balance = 1000, seeds } = {}) {
   const store = openDb(':memory:');
   for (const id of [1, 2, 3]) {
@@ -14,14 +13,20 @@ function setup(opts = {}, { balance = 1000, seeds } = {}) {
   const clock = { t: 1_000_000 };
   const queue = [];
   const timers = {
-    timeout: (fn, ms) => { const h = { at: clock.t + ms, fn }; queue.push(h); return h; },
+    timeout: (fn, ms) => {
+      const h = { at: clock.t + ms, fn };
+      queue.push(h);
+      return h;
+    },
     interval: () => ({ interval: true }),
-    clear: (h) => { const i = queue.indexOf(h); if (i >= 0) queue.splice(i, 1); },
+    clear: (h) => {
+      const i = queue.indexOf(h);
+      if (i >= 0) queue.splice(i, 1);
+    },
   };
   let n = 0;
   const seed = seeds ? () => seeds[n++ % seeds.length] : undefined;
   const svc = new CrashService(store, opts, { now: () => clock.t, timers, ...(seed ? { seed } : {}) });
-  /** выполнить следующий запланированный шаг (запуск раунда / взрыв / новый раунд) */
   const step = () => {
     queue.sort((a, b) => a.at - b.at);
     const h = queue.shift();
@@ -31,7 +36,6 @@ function setup(opts = {}, { balance = 1000, seeds } = {}) {
   return { store, clock, svc, step };
 }
 
-/** Подбирает seed, при котором взрыв первого раунда (id 1) — в нужном диапазоне. */
 function seedFor(edge, min, max) {
   for (;;) {
     const s = randomBytes(32).toString('hex');
@@ -59,8 +63,8 @@ test('доказуемая честность: хэш публикуется з�
   assert.equal(before.seed, null);
   assert.equal(before.crash, null);
   assert.equal(before.hash, createHash('sha256').update(s).digest('hex'));
-  ctx.step(); // старт
-  ctx.step(); // взрыв
+  ctx.step();
+  ctx.step();
   const after = ctx.svc.publicState();
   assert.equal(after.status, 'crashed');
   assert.equal(after.seed, s);
@@ -87,7 +91,7 @@ test('ставки: лимиты мин/макс, баланс, одна ста�
   ctx.svc.cancelBet(1);
   assert.equal(ctx.store.getUser(1).balance, 1000);
   ctx.svc.placeBet(u, 20);
-  ctx.step(); // старт
+  ctx.step();
   assert.throws(() => ctx.svc.placeBet(ctx.store.getUser(2), 10), /закрыты/);
   assert.throws(() => ctx.svc.cancelBet(1), /уже начался/);
   const poor = setup({}, { balance: 7 });
@@ -95,14 +99,14 @@ test('ставки: лимиты мин/макс, баланс, одна ста�
 });
 
 test('вывод: вручную по текущему множителю, автовывод ровно на цели, не успел — ставка сгорает', () => {
-  const s = seedFor(0.05, 400, 600); // взрыв между ×4 и ×6
+  const s = seedFor(0.05, 400, 600);
   const ctx = setup({}, { seeds: [s] });
-  ctx.svc.placeBet(ctx.store.getUser(1), 100); // вручную
-  ctx.svc.placeBet(ctx.store.getUser(2), 50, 3); // автовывод ×3
-  ctx.svc.placeBet(ctx.store.getUser(3), 10, 50); // цель ×50 — не дождётся
-  ctx.step(); // старт
+  ctx.svc.placeBet(ctx.store.getUser(1), 100);
+  ctx.svc.placeBet(ctx.store.getUser(2), 50, 3);
+  ctx.svc.placeBet(ctx.store.getUser(3), 10, 50);
+  ctx.step();
   const r = ctx.svc.publicState();
-  ctx.clock.t = r.startAt + msFor(200, 0.085) + 1; // ×2.00
+  ctx.clock.t = r.startAt + msFor(200, 0.085) + 1;
   const out = ctx.svc.cashout(1);
   assert.deepEqual([out.cashout, out.payout], [200, 200]);
   assert.equal(ctx.store.getUser(1).balance, 1000 - 100 + 200);
@@ -111,7 +115,7 @@ test('вывод: вручную по текущему множителю, ав�
   ctx.svc.tick();
   const b2 = ctx.svc.publicState().bets.find((b) => b.id === 2);
   assert.deepEqual([b2.cashout, b2.payout], [300, 150], 'автовывод ровно на ×3.00');
-  ctx.step(); // взрыв
+  ctx.step();
   const b3 = ctx.svc.publicState().bets.find((b) => b.id === 3);
   assert.equal(b3.cashout, null);
   assert.equal(ctx.store.getUser(3).balance, 990, 'ставка сгорела');
@@ -124,15 +128,15 @@ test('после взрыва вывести нельзя, даже если з�
   ctx.svc.placeBet(ctx.store.getUser(1), 100);
   ctx.step();
   const r = ctx.svc.round;
-  ctx.clock.t = r.startAt + msFor(r.crash, 0.085) + 50; // таймер взрыва ещё не сработал
+  ctx.clock.t = r.startAt + msFor(r.crash, 0.085) + 50;
   assert.throws(() => ctx.svc.cashout(1), /не успели|не летит/i);
   assert.equal(ctx.store.getUser(1).balance, 900);
 });
 
 test('лимит выигрыша с одной ставки: автоматический вывод на 1500 ⭐', () => {
-  const s = seedFor(0.05, 2000, 100_000); // взрыв выше ×20
+  const s = seedFor(0.05, 2000, 100_000);
   const ctx = setup({}, { seeds: [s] });
-  ctx.svc.placeBet(ctx.store.getUser(1), 100); // 100 × 15 = 1500 — предел
+  ctx.svc.placeBet(ctx.store.getUser(1), 100);
   ctx.step();
   const r = ctx.svc.round;
   ctx.clock.t = r.startAt + msFor(1501, 0.085);
@@ -148,7 +152,7 @@ test('лимит выплат за раунд: при достижении вс�
   for (const id of [1, 2, 3]) ctx.svc.placeBet(ctx.store.getUser(id), 100);
   ctx.step();
   const r = ctx.svc.round;
-  ctx.clock.t = r.startAt + msFor(201, 0.085) + 1; // 3 × 100 × 2.01 = 603 ≥ 600
+  ctx.clock.t = r.startAt + msFor(201, 0.085) + 1;
   ctx.svc.tick();
   const bets = ctx.svc.publicState().bets;
   assert.ok(bets.every((b) => b.cashout === 201 && b.payout === 201));
@@ -157,9 +161,13 @@ test('лимит выплат за раунд: при достижении вс�
 test('перезапуск сервера посреди раунда: раунд отменяется, ставки возвращаются', () => {
   const ctx = setup();
   ctx.svc.placeBet(ctx.store.getUser(1), 40);
-  ctx.step(); // летит
+  ctx.step();
   ctx.svc.stop();
-  const svc2 = new CrashService(ctx.store, {}, { now: () => ctx.clock.t, timers: { timeout: () => ({}), interval: () => ({}), clear() {} } });
+  const svc2 = new CrashService(
+    ctx.store,
+    {},
+    { now: () => ctx.clock.t, timers: { timeout: () => ({}), interval: () => ({}), clear() {} } },
+  );
   assert.equal(ctx.store.getUser(1).balance, 1000);
   assert.equal(svc2.publicState().status, 'betting');
 });
@@ -175,8 +183,7 @@ test('доход казино на модели: оборот × ~5% (и бол�
       ctx.svc.placeBet(ctx.store.getUser(id), 20, targets[id - 1]);
       staked += 20;
     }
-    ctx.step(); // старт
-    // симулируем автовыводы точно: тик в моменты целей
+    ctx.step();
     for (const m of [150, 200, 300]) {
       if (ctx.svc.round.status !== 'flying') break;
       ctx.clock.t = Math.max(ctx.clock.t, ctx.svc.round.startAt + msFor(m, 0.085) + 1);

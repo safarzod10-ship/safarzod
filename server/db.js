@@ -1,13 +1,10 @@
-// Хранилище: SQLite (встроен в Node.js). Все изменения баланса идут через транзакции
-// и записываются в журнал ledger — по нему всегда можно восстановить историю.
-
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
-  id          INTEGER PRIMARY KEY,            -- Telegram ID
+  id          INTEGER PRIMARY KEY,
   first_name  TEXT NOT NULL DEFAULT '',
   last_name   TEXT NOT NULL DEFAULT '',
   username    TEXT NOT NULL DEFAULT '',
@@ -21,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE TABLE IF NOT EXISTS rounds (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  status      TEXT NOT NULL,                  -- open | finished | refunded
+  status      TEXT NOT NULL,
   total       INTEGER NOT NULL DEFAULT 0,
   bank        INTEGER NOT NULL DEFAULT 0,
   winner_id   INTEGER,
@@ -42,7 +39,7 @@ CREATE TABLE IF NOT EXISTS withdrawals (
   amount      INTEGER NOT NULL,
   fee         INTEGER NOT NULL,
   total       INTEGER NOT NULL,
-  status      TEXT NOT NULL DEFAULT 'pending', -- pending | sent | cancelled
+  status      TEXT NOT NULL DEFAULT 'pending',
   reason      TEXT NOT NULL DEFAULT '',
   admin_chat_id    INTEGER,
   admin_message_id INTEGER,
@@ -51,17 +48,17 @@ CREATE TABLE IF NOT EXISTS withdrawals (
 );
 CREATE INDEX IF NOT EXISTS withdrawals_user ON withdrawals(user_id, id);
 CREATE TABLE IF NOT EXISTS payments (
-  charge_id   TEXT PRIMARY KEY,               -- telegram_payment_charge_id (защита от двойного зачисления)
+  charge_id   TEXT PRIMARY KEY,
   user_id     INTEGER NOT NULL REFERENCES users(id),
-  amount      INTEGER NOT NULL,               -- звёзды (XTR)
+  amount      INTEGER NOT NULL,
   payload     TEXT NOT NULL,
   created_at  INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ledger (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL REFERENCES users(id),
-  kind        TEXT NOT NULL,                  -- deposit | bet | win | refund | withdraw
-  amount      INTEGER NOT NULL,               -- со знаком: + зачисление, − списание
+  kind        TEXT NOT NULL,
+  amount      INTEGER NOT NULL,
   ref         INTEGER,
   created_at  INTEGER NOT NULL
 );
@@ -88,14 +85,20 @@ export function openDb(dataDir) {
   return new Store(db);
 }
 
-/** Обновление базы, созданной прошлыми версиями: только добавляет, ничего не удаляет. */
 function migrate(db) {
-  const columns = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
+  const columns = new Set(
+    db
+      .prepare('PRAGMA table_info(users)')
+      .all()
+      .map((c) => c.name),
+  );
   if (!columns.has('blocked')) db.exec('ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0');
-  // Рефералы: кто пригласил и выдана ли уже награда за этого друга
   if (!columns.has('referrer_id')) db.exec('ALTER TABLE users ADD COLUMN referrer_id INTEGER');
   if (!columns.has('ref_rewarded')) db.exec('ALTER TABLE users ADD COLUMN ref_rewarded INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE INDEX IF NOT EXISTS users_referrer ON users(referrer_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS ledger_user ON ledger(user_id, id)');
+  db.exec('CREATE INDEX IF NOT EXISTS users_balance ON users(balance DESC, id)');
+  db.exec('CREATE INDEX IF NOT EXISTS withdrawals_status ON withdrawals(status, id)');
   db.exec(`
     CREATE INDEX IF NOT EXISTS users_username ON users(lower(username));
     CREATE INDEX IF NOT EXISTS users_created ON users(created_at);
@@ -103,17 +106,17 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS rounds_finished ON rounds(status, finished_at);
     CREATE TABLE IF NOT EXISTS tasks (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      kind        TEXT NOT NULL,                -- subscribe (бот проверяет подписку) | link (переход по ссылке)
+      kind        TEXT NOT NULL,
       title       TEXT NOT NULL,
       url         TEXT NOT NULL,
-      chat_ref    TEXT NOT NULL DEFAULT '',     -- @username канала/чата для проверки подписки
+      chat_ref    TEXT NOT NULL DEFAULT '',
       reward      INTEGER NOT NULL CHECK (reward > 0),
       active      INTEGER NOT NULL DEFAULT 1,
       created_at  INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS basket_matches (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      category    INTEGER NOT NULL,             -- уровень матча: 5 | 10 | 20 | 50 | 100 (без денежной стоимости)
+      category    INTEGER NOT NULL,
       started_at  INTEGER NOT NULL,
       finished_at INTEGER NOT NULL
     );
@@ -124,7 +127,7 @@ function migrate(db) {
       score       INTEGER NOT NULL,
       shots       INTEGER NOT NULL,
       quality     REAL NOT NULL,
-      flagged     INTEGER NOT NULL DEFAULT 0,   -- подозрение на автоматизацию — для проверки админом
+      flagged     INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (match_id, user_id)
     );
     CREATE TABLE IF NOT EXISTS task_completions (
@@ -169,19 +172,40 @@ class Store {
       closeWithdrawal: q(`UPDATE withdrawals SET status = :status, reason = :reason, processed_at = :now
                           WHERE id = :id AND status = 'pending'`),
       setAdminMessage: q('UPDATE withdrawals SET admin_chat_id = ?, admin_message_id = ? WHERE id = ?'),
-      // --- админ-панель ---
       findByUsername: q("SELECT * FROM users WHERE lower(username) = lower(?) AND username <> '' LIMIT 1"),
       setBlocked: q('UPDATE users SET blocked = ? WHERE id = ?'),
       countUsers: q('SELECT COUNT(*) AS n FROM users'),
       newUsers: q('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?'),
-      deposits: q("SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE created_at >= ?"),
+      deposits: q('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE created_at >= ?'),
       games: q(`SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS turnover, COALESCE(SUM(total - bank), 0) AS income
                 FROM rounds WHERE status = 'finished' AND finished_at >= ?`),
-      pendingWithdrawals: q("SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE status = 'pending'"),
+      pendingWithdrawals: q(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE status = 'pending'",
+      ),
       userDeposits: q('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
       userWithdrawn: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM withdrawals WHERE user_id = ? AND status = 'sent'"),
+      adminUsers:
+        q(`SELECT u.id, u.first_name, u.last_name, u.username, u.photo_url, u.balance, u.blocked, u.created_at,
+                       (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.user_id = u.id) AS deposited
+                     FROM users u
+                     WHERE :q = '' OR u.id = :id OR lower(u.username) LIKE :like OR lower(u.first_name || ' ' || u.last_name) LIKE :like
+                     ORDER BY u.balance DESC, u.id LIMIT :limit OFFSET :offset`),
+      adminUsersCount: q(`SELECT COUNT(*) AS n FROM users u
+                          WHERE :q = '' OR u.id = :id OR lower(u.username) LIKE :like OR lower(u.first_name || ' ' || u.last_name) LIKE :like`),
+      kindTotals: q(
+        'SELECT kind, COUNT(*) AS n, COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? GROUP BY kind',
+      ),
+      ledgerPage: q(
+        'SELECT id, kind, amount, ref, created_at FROM ledger WHERE user_id = ? AND id < ? ORDER BY id DESC LIMIT ?',
+      ),
+      ledgerSum: q('SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ?'),
+      depositRange: q('SELECT MIN(created_at) AS first, MAX(created_at) AS last FROM payments WHERE user_id = ?'),
+      withdrawalsByStatus: q(`SELECT w.*, u.first_name, u.last_name, u.username, u.photo_url, u.balance
+                              FROM withdrawals w JOIN users u ON u.id = w.user_id
+                              WHERE w.status = ? ORDER BY w.id DESC LIMIT ?`),
+      userPending: q("SELECT COUNT(*) AS n FROM withdrawals WHERE user_id = ? AND status = 'pending'"),
+      userWithdrawalsToday: q('SELECT COUNT(*) AS n FROM withdrawals WHERE user_id = ? AND created_at >= ?'),
       broadcastIds: q('SELECT id FROM users WHERE blocked = 0 ORDER BY id'),
-      // --- задания ---
       addTask: q('INSERT INTO tasks (kind, title, url, chat_ref, reward, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       getTask: q('SELECT * FROM tasks WHERE id = ?'),
       activeTasks: q(`SELECT t.*, (SELECT COUNT(*) FROM task_completions c WHERE c.task_id = t.id) AS done_count
@@ -190,8 +214,11 @@ class Store {
                     FROM tasks t LEFT JOIN task_completions c ON c.task_id = t.id AND c.user_id = ?
                     WHERE t.active = 1 ORDER BY done, t.id DESC`),
       disableTask: q('UPDATE tasks SET active = 0 WHERE id = ?'),
-      completeTask: q('INSERT INTO task_completions (task_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'),
-      topWinSince: q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
+      completeTask: q(
+        'INSERT INTO task_completions (task_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING',
+      ),
+      topWinSince:
+        q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
                           (SELECT SUM(amount) FROM bets b WHERE b.round_id = r.id AND b.user_id = r.winner_id) AS stake
                         FROM rounds r JOIN users u ON u.id = r.winner_id
                         WHERE r.status = 'finished' AND r.finished_at >= ? ORDER BY r.bank DESC, r.id DESC LIMIT 1`),
@@ -203,10 +230,15 @@ class Store {
       friendsCount: q('SELECT COUNT(*) AS n FROM users WHERE referrer_id = ?'),
       wagerRows: q(`SELECT kind, amount, ref FROM ledger WHERE user_id = ? AND kind IN
         ('deposit', 'referral', 'ref_deposit', 'task', 'bet', 'crash_bet', 'basket_entry', 'refund', 'crash_refund') ORDER BY id`),
-      refEarned: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND kind IN ('referral', 'ref_deposit')"),
+      refEarned: q(
+        "SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND kind IN ('referral', 'ref_deposit')",
+      ),
       userPaid: q('SELECT COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
-      refPaidFor: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND ref = ? AND kind = 'ref_deposit'"),
-      recentWinners: q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
+      refPaidFor: q(
+        "SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND ref = ? AND kind = 'ref_deposit'",
+      ),
+      recentWinners:
+        q(`SELECT r.id, r.bank, r.total, r.finished_at, u.id AS user_id, u.first_name, u.last_name, u.username, u.photo_url,
                           (SELECT SUM(amount) FROM bets b WHERE b.round_id = r.id AND b.user_id = r.winner_id) AS stake
                         FROM rounds r JOIN users u ON u.id = r.winner_id
                         WHERE r.status = 'finished' ORDER BY r.id DESC LIMIT ?`),
@@ -241,12 +273,12 @@ class Store {
     return this.q.getUser.get(id) ?? null;
   }
 
-  // ---------- Админ-панель ----------
-
-  /** Поиск по нику (с @ или без) или по Telegram ID. */
   findUser(query) {
-    const q = String(query ?? '').trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
-    if (/^\d{1,15}$/.test(q)) return this.getUser(Number(q)); // ник в Telegram не может быть из одних цифр
+    const q = String(query ?? '')
+      .trim()
+      .replace(/^@/, '')
+      .replace(/^https?:\/\/t\.me\//, '');
+    if (/^\d{1,15}$/.test(q)) return this.getUser(Number(q));
     return q ? (this.q.findByUsername.get(q) ?? null) : null;
   }
 
@@ -255,10 +287,6 @@ class Store {
     return this.getUser(id);
   }
 
-  /**
-   * Ручное изменение баланса. delta > 0 — начислить, delta < 0 — списать,
-   * но не больше, чем есть (с нулевого баланса ничего не списывается).
-   */
   adjustBalance(id, delta) {
     return this.tx(() => {
       const user = this.getUser(id);
@@ -274,6 +302,35 @@ class Store {
       }
       return { user: this.getUser(id), applied };
     });
+  }
+
+  adminUsers({ query = '', limit = 50, offset = 0 } = {}) {
+    const q = String(query).trim().toLowerCase().replace(/^@/, '');
+    const params = { q, id: /^\d{1,15}$/.test(q) ? Number(q) : -1, like: `%${q.replace(/[%_]/g, '')}%` };
+    return {
+      total: this.q.adminUsersCount.get(params).n,
+      users: this.q.adminUsers.all({ ...params, limit, offset }),
+    };
+  }
+
+  kindTotals(userId) {
+    return Object.fromEntries(this.q.kindTotals.all(userId).map((r) => [r.kind, { n: r.n, sum: r.sum }]));
+  }
+
+  ledgerPage(userId, before = Number.MAX_SAFE_INTEGER, limit = 50) {
+    return this.q.ledgerPage.all(userId, before, limit);
+  }
+
+  ledgerSum(userId) {
+    return this.q.ledgerSum.get(userId).sum;
+  }
+
+  depositRange(userId) {
+    return { ...this.q.depositRange.get(userId) };
+  }
+
+  withdrawalsByStatus(status, limit = 50) {
+    return this.q.withdrawalsByStatus.all(status, limit);
   }
 
   stats(now = Date.now()) {
@@ -294,8 +351,6 @@ class Store {
       withdrawn: this.q.userWithdrawn.get(id).sum,
     };
   }
-
-  // ---------- Задания ----------
 
   addTask({ kind, title, url, chatRef = '', reward }) {
     const id = Number(this.q.addTask.run(kind, title, url, chatRef, reward, Date.now()).lastInsertRowid);
@@ -318,7 +373,6 @@ class Store {
     return this.q.disableTask.run(id).changes === 1;
   }
 
-  /** Награда за задание — один раз на пользователя. Возвращает null, если уже получена. */
   completeTask(taskId, userId) {
     return this.tx(() => {
       const task = this.getTask(taskId);
@@ -333,9 +387,6 @@ class Store {
     return this.q.topWinSince.get(since) ?? null;
   }
 
-  // ---------- Рефералы ----------
-
-  /** Привязка к пригласившему — только один раз и не к самому себе. */
   setReferrer(userId, referrerId) {
     if (!this.getUser(referrerId)) return false;
     return this.q.setReferrer.run(referrerId, userId, referrerId).changes === 1;
@@ -349,11 +400,6 @@ class Store {
     };
   }
 
-  /**
-   * Доля пригласившего с пополнений друга (внутри транзакции оплаты).
-   * Считается от суммы ВСЕХ пополнений друга, поэтому дробные части не теряются:
-   * 3 ⭐ + 4 ⭐ → 15% от 7 = 1 ⭐. Возвращает { inviterId, amount } или null.
-   */
   #payReferralShare(friendId, percent) {
     const friend = this.getUser(friendId);
     if (!friend?.referrer_id || !(percent > 0)) return null;
@@ -369,14 +415,10 @@ class Store {
     return this.q.recentWinners.all(limit);
   }
 
-  // ---------- Операции для игровых модулей (только внутри store.tx) ----------
-
-  /** Списание с записью в журнал. Бросает INSUFFICIENT_FUNDS, если звёзд мало. */
   ledgerDebit(userId, amount, kind, ref) {
     this.#debit(userId, amount, kind, ref);
   }
 
-  /** Начисление с записью в журнал. */
   ledgerCredit(userId, amount, kind, ref) {
     this.#credit(userId, amount, kind, ref);
   }
@@ -385,7 +427,6 @@ class Store {
     return this.q.broadcastIds.all().map((r) => r.id);
   }
 
-  /** Списание внутри уже открытой транзакции. */
   #debit(userId, amount, kind, ref) {
     const { changes } = this.q.debit.run({ id: userId, amount });
     if (changes !== 1) throw new AppError('INSUFFICIENT_FUNDS', 'Недостаточно звёзд на балансе');
@@ -397,11 +438,6 @@ class Store {
     this.q.ledger.run(userId, kind, amount, ref, Date.now());
   }
 
-  /**
-   * Зачисление оплаченных звёзд (повторное уведомление о том же платеже игнорируется)
-   * и, если игрока пригласили, — доля refPercent % пригласившему.
-   * Возвращает игрока с полем referral: { inviterId, amount } | null.
-   */
   creditPayment({ chargeId, userId, amount, payload, refPercent = 0 }) {
     return this.tx(() => {
       const { changes } = this.q.addPayment.run(chargeId, userId, amount, payload, Date.now());
@@ -412,31 +448,32 @@ class Store {
     });
   }
 
-  /** Заявка на вывод: сумма + комиссия списываются сразу и замораживаются до решения админа. */
-  withdraw(userId, amount, fee) {
+  withdraw(userId, amount, fee, { maxPerDay = 3 } = {}) {
     const total = amount + fee;
     return this.tx(() => {
+      if (this.q.userPending.get(userId).n > 0) {
+        throw new AppError('PENDING', 'У вас уже есть заявка в обработке. Дождитесь её выполнения', 409);
+      }
+      if (this.q.userWithdrawalsToday.get(userId, Date.now() - 86_400_000).n >= maxPerDay) {
+        throw new AppError('LIMIT', 'Слишком много заявок за сутки. Попробуйте завтра', 429);
+      }
       const id = Number(this.q.addWithdrawal.run(userId, amount, fee, total, Date.now()).lastInsertRowid);
       this.#debit(userId, total, 'withdraw', id);
       return { user: this.getUser(userId), withdrawal: this.getWithdrawal(id) };
     });
   }
 
-  /**
-   * Оборот перед выводом (вейджер), как в казино: после пополнения на N нужно сделать ставок на N × deposit
-   * (бонусы — рефералы, задания — × bonus). Идём по журналу по порядку: пополнение добавляет к «осталось»,
-   * ставка уменьшает его; ставки, сделанные до пополнения, не засчитываются. Отменённая (возвращённая) ставка
-   * возвращает в «осталось» то, что успела засчитать. required/done — по текущему циклу отыгрыша.
-   */
   wager(userId, { deposit = 3, bonus = 3 } = {}) {
     const MULT = { deposit, referral: bonus, ref_deposit: bonus, task: bonus };
     const BET = { bet: 'r', crash_bet: 'c', basket_entry: 'b' };
     const REFUND = { refund: 'r', crash_refund: 'c' };
     const used = new Map();
-    let left = 0, required = 0, done = 0;
+    let left = 0,
+      required = 0,
+      done = 0;
     for (const { kind, amount, ref } of this.q.wagerRows.all(userId)) {
       if (MULT[kind]) {
-        if (left === 0) (required = 0), (done = 0); // новый цикл отыгрыша
+        if (left === 0) ((required = 0), (done = 0));
         const add = Math.ceil(amount * MULT[kind]);
         left += add;
         required += add;
@@ -469,13 +506,11 @@ class Store {
     this.q.setAdminMessage.run(chatId, messageId, id);
   }
 
-  /** Админ отправил выплату. Возвращает null, если заявка уже обработана. */
   markWithdrawalSent(id) {
     const { changes } = this.q.closeWithdrawal.run({ id, status: 'sent', reason: '', now: Date.now() });
     return changes === 1 ? this.getWithdrawal(id) : null;
   }
 
-  /** Отмена с причиной: замороженная сумма (вместе с комиссией) возвращается игроку. */
   cancelWithdrawal(id, reason) {
     return this.tx(() => {
       const { changes } = this.q.closeWithdrawal.run({ id, status: 'cancelled', reason, now: Date.now() });
@@ -509,7 +544,6 @@ class Store {
     });
   }
 
-  /** После перезапуска сервера: незавершённые раунды отменяются, ставки возвращаются. */
   refundOpenRounds() {
     let refunded = 0;
     for (const { id } of this.q.openRounds.all()) {

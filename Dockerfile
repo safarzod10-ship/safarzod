@@ -1,4 +1,3 @@
-# Roulette Arena: сервер (API + мини-апп + бот). Внешних npm-зависимостей нет.
 FROM node:24-alpine
 
 ENV NODE_ENV=production DATA_DIR=/data PORT=3000

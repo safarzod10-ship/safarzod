@@ -1,6 +1,4 @@
-# HTTPS-сертификат Caddy получает и продлевает сам — Telegram открывает мини-аппы только по HTTPS.
 {$DOMAIN} {
-	# Живой поток раунда (SSE) не сжимаем, иначе обновления будут приходить пачками.
 	@compressible not path /api/stream
 	encode @compressible zstd gzip
 
