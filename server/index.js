@@ -139,6 +139,7 @@ function profile(user) {
       reason: w.reason,
       createdAt: w.created_at,
     })),
+    wager: store.wager(user.id, config.wager),
   };
 }
 
@@ -154,6 +155,7 @@ const routes = {
     minWithdraw: config.limits.minWithdraw,
     withdrawFee: config.limits.withdrawFee,
     maxAmount: config.limits.maxAmount,
+    wager: config.wager,
   }),
 
   'GET /api/round': () => game.publicState(),
@@ -273,6 +275,8 @@ const routes = {
     const user = authenticate(req);
     const amount = amountOf(await readJson(req), config.limits.minWithdraw);
     throttle(user.id, 1500);
+    const { left } = store.wager(user.id, config.wager);
+    if (left > 0) throw new AppError('WAGER', `Для вывода нужно сделать ставок ещё на ${left} ⭐`);
     await bot?.assertSubscribed(config.withdrawChannel, user.id); // вывод — только подписчикам канала
     const fee = Math.ceil(amount * config.limits.withdrawFee);
     const { withdrawal } = store.withdraw(user.id, amount, fee);

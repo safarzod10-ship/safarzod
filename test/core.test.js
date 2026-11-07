@@ -409,3 +409,19 @@ test('startapp: параметр из подписанного initData дост
   assert.equal(validateInitData(data.replace('ref_1', 'ref_2'), TOKEN), null);
   assert.equal(validateInitData(signInitData({ ...fields, start_param: undefined }, TOKEN).replace('start_param=undefined&', ''), TOKEN), null);
 });
+
+test('оборот перед выводом: пополнение ×3, бонусы ×10, возвраты ставок не засчитываются', () => {
+  const store = storeWith(1000);
+  const opts = { deposit: 3, bonus: 10 };
+  assert.deepEqual(store.wager(1, opts), { required: 3000, done: 0, left: 3000 });
+  store.tx(() => {
+    store.ledgerDebit(1, 500, 'crash_bet', 1);
+    store.ledgerCredit(1, 100, 'crash_refund', 1);
+    store.ledgerDebit(1, 5, 'basket_entry', 1);
+    store.ledgerCredit(1, 20, 'task', 1);
+  });
+  assert.deepEqual(store.wager(1, opts), { required: 3200, done: 405, left: 2795 });
+  store.tx(() => store.ledgerCredit(1, 5000, 'admin', 0)); // ручное начисление админа не добавляет оборот
+  store.tx(() => store.ledgerDebit(1, 2795, 'crash_bet', 2));
+  assert.deepEqual(store.wager(1, opts), { required: 3200, done: 3200, left: 0 });
+});

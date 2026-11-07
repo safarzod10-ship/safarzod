@@ -79,7 +79,8 @@ async function api(path, body) {
   return data;
 }
 
-function applyProfile({ user, withdrawals }) {
+function applyProfile({ user, withdrawals, wager }) {
+  if (wager) state.wager = wager;
   state.me = user;
   state.withdrawals = withdrawals ?? state.withdrawals;
   renderMe();
@@ -792,7 +793,24 @@ function updateWithdrawForm() {
   else if (state.me && total > state.me.balance) error = 'Недостаточно звёзд на балансе';
   hint.textContent = error;
   hint.classList.toggle('error', !!error);
-  $('wd-btn').disabled = !amount || !!error;
+  $('wd-btn').disabled = !amount || !!error || wagerLeft() > 0;
+  renderWager();
+}
+
+/** Оборот перед выводом: пополнения нужно поставить в играх, прежде чем выводить. */
+const wagerLeft = () => state.wager?.left ?? 0;
+function renderWager() {
+  const w = state.wager;
+  const box = $('wd-wager');
+  if (!w || !w.required) return (box.hidden = true);
+  box.hidden = false;
+  box.classList.toggle('done', !w.left);
+  $('wg-val').textContent = `${fmt(w.done)} / ${fmt(w.required)}`;
+  $('wg-bar').style.transform = `scaleX(${Math.min(1, w.done / w.required)})`;
+  const m = state.config.wager ?? { deposit: 3 };
+  $('wg-text').textContent = w.left
+    ? `Осталось поставить ${fmt(w.left)} ⭐ в любых играх. Пополнения отыгрываются ×${m.deposit}, бонусы ×${m.bonus}.`
+    : 'Оборот выполнен — вывод доступен';
 }
 
 function confirmAsync(text) {

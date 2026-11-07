@@ -48,6 +48,12 @@ export const config = Object.freeze({
     bettingMs: Number(env('CRASH_BETTING_MS', '8000')),
   }),
 
+  // Оборот перед выводом: пополнение × WAGER_DEPOSIT, бонусы (рефералы, задания) × WAGER_BONUS
+  wager: Object.freeze({
+    deposit: Number(env('WAGER_DEPOSIT', '3')),
+    bonus: Number(env('WAGER_BONUS', '10')),
+  }),
+
   limits: Object.freeze({
     maxAmount: 1_000_000,
     minDeposit: 1,

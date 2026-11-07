@@ -290,6 +290,11 @@
       <section class="view form-view" id="view-withdraw" data-view="withdraw">
         <div class="page-head"><button class="back" data-back aria-label="Назад"><svg><use href="#i-back"/></svg></button><h1 class="title">Вывод</h1></div>
         <p class="lead">Минимальная сумма — <span id="wd-min" class="num">50</span></p>
+        <div class="wager card" id="wd-wager" hidden>
+          <div class="wg-top"><span>Оборот для вывода</span><b class="num" id="wg-val">0 / 0</b></div>
+          <div class="wg-bar"><i id="wg-bar"></i></div>
+          <div class="wg-text" id="wg-text"></div>
+        </div>
         <label class="field">
           <input id="wd-input" class="num" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Сумма вывода">
           <svg class="star"><use href="#i-star"/></svg>

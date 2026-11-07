@@ -201,6 +201,7 @@ class Store {
                       WHERE l.user_id = :inviter AND l.ref = u.id AND l.kind IN ('referral', 'ref_deposit')) AS earned
                   FROM users u WHERE u.referrer_id = :inviter ORDER BY earned DESC, u.id DESC LIMIT 200`),
       friendsCount: q('SELECT COUNT(*) AS n FROM users WHERE referrer_id = ?'),
+      ledgerByKind: q('SELECT kind, SUM(amount) AS sum FROM ledger WHERE user_id = ? GROUP BY kind'),
       refEarned: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND kind IN ('referral', 'ref_deposit')"),
       userPaid: q('SELECT COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
       refPaidFor: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND ref = ? AND kind = 'ref_deposit'"),
@@ -420,6 +421,19 @@ class Store {
     });
   }
 
+  /**
+   * Оборот перед выводом (вейджер), как в казино: каждое пополнение нужно поставить × deposit раз,
+   * бонусы (рефералы, задания) — × bonus раз. Считается по журналу нарастающим итогом.
+   * В оборот идут ставки во всех играх за вычетом возвращённых ставок.
+   */
+  wager(userId, { deposit = 3, bonus = 10 } = {}) {
+    const k = Object.fromEntries(this.q.ledgerByKind.all(userId).map((r) => [r.kind, Number(r.sum)]));
+    const v = (name) => k[name] ?? 0;
+    const required = Math.ceil(v('deposit') * deposit + (v('referral') + v('ref_deposit') + v('task')) * bonus);
+    const done = Math.max(0, -(v('bet') + v('crash_bet') + v('basket_entry')) - v('crash_refund') - v('basket_refund'));
+    return { required, done: Math.min(done, required), left: Math.max(0, required - done) };
+  }
+
   getWithdrawal(id) {
     return this.q.getWithdrawal.get(id) ?? null;
   }
@@ -444,7 +458,7 @@ class Store {
       const { changes } = this.q.closeWithdrawal.run({ id, status: 'cancelled', reason, now: Date.now() });
       if (changes !== 1) return null;
       const w = this.getWithdrawal(id);
-      this.#credit(w.user_id, w.total, 'refund', id);
+      this.#credit(w.user_id, w.total, 'withdraw_refund', id);
       return w;
     });
   }
