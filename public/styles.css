@@ -1,27 +1,29 @@
 /* Roulette Arena — визуальная система.
-   Тёмная графитовая база, один фирменный акцент (фиолетовый) и золото только для валюты и главной кнопки. */
+   Сдержанная тёмная база, плоские поверхности, один акцент (фиолетовый) только на главных действиях.
+   Золото — исключительно значок звезды (валюта). Без свечений, бликов и декоративных градиентов. */
 
 :root {
-  --bg: #0b0b10;
-  --surface: #15151d;
-  --surface-2: #1d1d27;
-  --surface-3: #262632;
+  --bg: #0e1015;
+  --surface: #161920;
+  --surface-2: #1c2028;
+  --surface-3: #252a34;
   --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.1);
-  --text: #f4f3f8;
-  --text-2: #a09eb0;
-  --text-3: #6b697b;
-  --accent: #8b6cff;
-  --accent-soft: rgba(139, 108, 255, 0.14);
-  --gold: #f5bf4f;
-  --gold-2: #e9a83a;
+  --line-strong: rgba(255, 255, 255, 0.09);
+  --text: #eef0f4;
+  --text-2: #959cab;
+  --text-3: #646b78;
+  --accent: #7c5cff;
+  --accent-2: #6a49f2;
+  --accent-soft: rgba(124, 92, 255, 0.12);
+  --gold: #f2b84b;
+  --gold-2: #dba23a;
   --gold-ink: #1f1606;
-  --green: #3dd68c;
-  --red: #ff6b6b;
-  --amber: #f5bf4f;
+  --green: #22c27a;
+  --red: #ef5a5f;
+  --amber: #e2a73d;
 
-  --radius: 20px;
-  --radius-sm: 14px;
+  --radius: 14px;
+  --radius-sm: 12px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --safe-top: max(env(safe-area-inset-top), var(--tg-safe-top, 0px));
@@ -38,7 +40,8 @@
 html, body { margin: 0; height: 100%; background: var(--bg); }
 body {
   color: var(--text);
-  font: 400 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font: 400 15px/1.4 "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+  font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
   user-select: none;
@@ -64,9 +67,10 @@ svg { display: block; }
 }
 .view { display: none; }
 .view.active { display: block; animation: view-in 0.32s var(--ease); }
+/* Только прозрачность: transform на разделе сдвигал бы закреплённые панели (position: fixed) */
 @keyframes view-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ---------- Шапка ---------- */
@@ -872,3 +876,119 @@ body[data-view="crash"] { --dock-extra: 40px; }
 .fair-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
 .fair-row code { margin-left: auto; color: var(--text-3); font-size: 11.5px; }
 .gc-badge.live { background: var(--green); color: #052014; }
+
+/* =====================================================================
+   Дизайн v2 — профессиональный минимализм (поверх правил выше)
+   ===================================================================== */
+
+/* Типографика */
+.title { font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
+.lead { font-size: 14px; color: var(--text-2); margin-bottom: 16px; }
+.section-title, .history h2 { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-3); }
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
+
+/* Поверхности: плоские, тонкая граница, без теней */
+.card, .player, .task, .friend, .mg, .cb, .feat, .stat, .h-card, .wd { border-radius: var(--radius); box-shadow: none; }
+.card { background: var(--surface); border-color: var(--line); }
+
+/* Кнопки: акцент только у главного действия */
+.btn { height: 52px; border-radius: 12px; font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:active:not(:disabled) { background: var(--accent-2); }
+.btn.primary:disabled:not(.loading) { background: var(--surface-2); color: var(--text-3); }
+.btn.secondary { background: var(--surface-2); color: var(--text); }
+.btn.loading::after { border-color: #fff; border-right-color: transparent; }
+.btn-play svg { width: 20px; height: 20px; }
+
+/* Шапка */
+.top { background: var(--bg); padding-bottom: 10px; border-bottom: 1px solid transparent; }
+.me-name { font-weight: 600; font-size: 15px; }
+.balance { height: 40px; padding: 0 4px 0 12px; border-radius: 12px; background: var(--surface); border-color: var(--line); font-weight: 600; }
+.balance-add { width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: #fff; }
+.avatar { background: var(--surface-3); font-weight: 600; }
+
+/* Нижнее меню: ровная плашка, активный раздел — мягкая подложка под иконкой и подписью */
+.nav { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; border-top: 1px solid var(--line); }
+.nav::before { display: none; }
+.nav button { color: var(--text-3); font-weight: 500; font-size: 10.5px; }
+.nav button.active { color: var(--text); }
+.nav button.active .ni { color: var(--text); transform: none; }
+.nav-ind { background: var(--surface-2); box-shadow: none; border-radius: 14px; }
+.badge { background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+
+/* Поля, чипы, переключатели */
+.field, .stepper, .cr-amount, .cr-auto { background: var(--surface); border-color: var(--line); border-radius: 12px; }
+.step { background: var(--surface-2); border-radius: 9px; color: var(--text-2); }
+.chips button, .cr-chips button, .bb-cat, .stake { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: var(--text-2); }
+.chips button.on, .cr-chips button.on, .bb-cat.on, .stake.on { color: var(--text); background: var(--accent-soft); border-color: rgba(124, 92, 255, 0.55); box-shadow: none; }
+.stake.on span { color: var(--text-2); }
+.cr-switch.on i { background: var(--accent); }
+
+/* ---------- Рулетка ---------- */
+.wheel-glow, .bulbs, .confetti { display: none !important; }
+.wheel { margin: 18px auto 10px; }
+.wheel-track { stroke: var(--surface-2); stroke-width: 22; }
+.wheel-rim { display: none; }
+#sectors circle.win { filter: none; }
+#sectors circle.dim { opacity: 0.25; }
+.pointer { top: -3.5%; width: 7%; filter: none; }
+.pointer path { fill: var(--text); }
+.pointer circle { display: none; }
+.wheel-center { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.cd-track { stroke: transparent; }
+.cd-ring { stroke: var(--accent); stroke-width: 2; }
+.wheel.hot .cd-ring { stroke: var(--red); }
+.wc-title { font-weight: 600; font-size: clamp(15px, 4.6vw, 17px); color: var(--text-2); }
+.wc-timer { font-weight: 700; font-size: clamp(44px, 14vw, 58px); letter-spacing: -0.04em; }
+.wc-timer.hot { color: var(--red); text-shadow: none; }
+.wc .avatar { box-shadow: none; }
+.wc-prize { color: var(--text); font-weight: 700; }
+.sav-ring { stroke: var(--bg); stroke-width: 2.4; }
+.sav-pct rect { fill: rgba(14, 16, 21, 0.92); stroke: none; }
+.bank-pill { background: none; border: 0; padding: 0; margin-top: 18px; }
+.bp-label { color: var(--text-3); font-weight: 600; letter-spacing: 0.08em; }
+.bp-value { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.feats { gap: 8px; }
+.feat { background: var(--surface); border: 1px solid var(--line); padding: 10px 12px; }
+.feat.f-top .f-label, .f-label { color: var(--text-3); font-weight: 600; }
+.f-bank { color: var(--green); font-weight: 650; }
+.caption { color: var(--text-2); font-size: 13px; }
+.player { background: var(--surface); border-color: var(--line); padding: 10px 12px; }
+.player .avatar { box-shadow: none; }
+.player::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
+.player::after { height: 2px; opacity: 0.5; }
+.player.winner { border-color: rgba(34, 194, 122, 0.45); }
+.p-pct { min-width: 50px; padding: 4px 8px; border-radius: 8px; font-weight: 650; font-size: 13.5px; color: var(--text); background: var(--surface-2); }
+.bubble { background: var(--surface-2); border: 1px solid var(--line-strong); box-shadow: none; }
+.bubble b { color: var(--text); }
+.toast { background: var(--surface-2); border-color: var(--line-strong); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); border-radius: 12px; }
+.toast.win svg { color: var(--gold); }
+
+/* Профиль, кошелёк, задания, друзья — те же плоские поверхности */
+.wallet-btn { background: var(--surface); }
+.wb-icon, .t-icon, .inv-icon, .rb-icon, .sn-icon { background: var(--surface-2); color: var(--text); }
+.wallet-btn.gold .wb-icon { color: var(--gold); }
+.wallet-btn.violet .wb-icon { color: var(--accent); }
+.invite { background: var(--surface); }
+.inv-link { border-style: solid; border-color: var(--line); }
+.t-btn { background: var(--accent); border-radius: 10px; }
+.t-btn.check { background: var(--surface-3); color: var(--text); }
+.chip { border-radius: 7px; }
+.profile-head .avatar.xl { box-shadow: none; }
+
+/* Игры */
+.game-card { filter: none; }
+.gc-badge { background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); box-shadow: none; font-weight: 600; }
+.gc-badge.live { background: rgba(14, 16, 21, 0.85); color: var(--green); border-color: rgba(34, 194, 122, 0.35); }
+.gc-chip svg { color: var(--text-2); }
+.cr-stage { border-color: var(--line); box-shadow: none; border-radius: 16px; }
+.cr-main.cashout { background: var(--green); color: #04150c; animation: none; box-shadow: none; }
+.cr-main.won { background: rgba(34, 194, 122, 0.12); color: var(--green); }
+.ch-pill { border-radius: 7px; font-weight: 600; }
+.ch-pill.mid { color: #b9a6ff; background: rgba(124, 92, 255, 0.12); }
+.ch-pill.high { color: var(--gold); background: rgba(242, 184, 75, 0.12); }
+.fair-btn { background: var(--surface); color: var(--text-2); border: 1px solid var(--line); }
+.bb-pill, .bb-icon-btn { background: rgba(14, 16, 21, 0.72); border-color: var(--line-strong); }
+.bb-pill b { color: var(--text); }
+.btn-play.waiting { background: var(--surface-2); color: var(--text-2); }
+.sheet { background: var(--surface); border-radius: 18px 18px 0 0; }

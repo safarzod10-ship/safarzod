@@ -249,8 +249,8 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
 
     // фон: космос, сетка, звёзды с параллаксом (летят быстрее с ростом множителя)
     const bg = ctx.createLinearGradient(0, 0, 0, v.h);
-    bg.addColorStop(0, '#120a26');
-    bg.addColorStop(1, '#1d0f3a');
+    bg.addColorStop(0, '#13111d');
+    bg.addColorStop(1, '#171427');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, v.w, v.h);
     const speed = flying ? 20 + Math.min(180, (m / 100) * 25) : 6;
@@ -300,8 +300,8 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
         pts.push([X(sec), Y(Math.exp(st.growth * sec))]);
       }
       const area = ctx.createLinearGradient(0, padT, 0, padT + H);
-      area.addColorStop(0, crashed ? 'rgba(255,93,108,0.28)' : 'rgba(168,120,255,0.35)');
-      area.addColorStop(1, 'rgba(168,120,255,0)');
+      area.addColorStop(0, crashed ? 'rgba(239,90,95,0.16)' : 'rgba(124,92,255,0.2)');
+      area.addColorStop(1, 'rgba(124,92,255,0)');
       ctx.fillStyle = area;
       ctx.beginPath();
       ctx.moveTo(pts[0][0], padT + H);
@@ -310,13 +310,13 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
       ctx.closePath();
       ctx.fill();
       const line = ctx.createLinearGradient(X(0), 0, X(elapsed), 0);
-      line.addColorStop(0, crashed ? '#ff8a8a' : '#b48cff');
-      line.addColorStop(1, crashed ? '#ff5d6c' : '#ffcf6a');
+      line.addColorStop(0, crashed ? '#ef5a5f' : '#7c5cff');
+      line.addColorStop(1, crashed ? '#ef5a5f' : '#a993ff');
       ctx.strokeStyle = line;
       ctx.lineWidth = 3.5;
       ctx.lineCap = 'round';
-      ctx.shadowColor = crashed ? 'rgba(255,93,108,0.7)' : 'rgba(190,140,255,0.8)';
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
       ctx.beginPath();
       pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.stroke();

@@ -8,7 +8,8 @@ const tg = window.Telegram?.WebApp;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
 const STAR = '<svg class="star"><use href="#i-star"/></svg>';
-const PALETTE = ['#8b6cff', '#f5bf4f', '#3ccfb4', '#ff7b6e', '#5aa9ff', '#e879c8', '#a5d85c', '#ffa45b', '#7fe0f0', '#c4b3ff'];
+// Спокойная палитра секторов: различимые, но не «конфетные» цвета
+const PALETTE = ['#7c5cff', '#e2a73d', '#2ba98f', '#d9625b', '#4a86e8', '#b65fc2', '#7fae45', '#d98a3d', '#4fb3c8', '#9a8cf0'];
 const BET_STEPS = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -220,7 +221,6 @@ const wheel = {
   pointerSector: null,
   lastHaptic: 0,
   wonAt: null,
-  bulbs: [],
 };
 
 function sharesOf(round) {
@@ -245,7 +245,7 @@ function inkFor(hex) {
 }
 
 const SVGNS = 'http://www.w3.org/2000/svg';
-const AV_R = 10.5; // радиус аватарки на секторе (единицы viewBox; толщина кольца — 28)
+const AV_R = 8.5; // радиус аватарки на секторе (единицы viewBox; толщина кольца — 22)
 const avatarNodes = new Map(); // id игрока → <g> с аватаркой и процентом
 
 function initialsOf(u) {
@@ -305,7 +305,7 @@ function drawWheel() {
     if (f <= 0) return;
     const isWin = finished && s.id === round.winnerId;
     const r = isWin ? R + 2.5 * popE : R;
-    const width = isWin ? 28 + 5 * popE : 28;
+    const width = isWin ? 22 + 4 * popE : 22;
     const circ = 2 * Math.PI * r;
     const len = Math.max(0, f * circ - gap);
     const rot = -90 + start * 360 + (gap / circ) * 180;
@@ -315,7 +315,7 @@ function drawWheel() {
     const flashT = wheel.flash.get(s.seat);
     if (flashT && now - flashT < 900) {
       const k = 1 - (now - flashT) / 900;
-      flashes += `<circle r="${R}" stroke-width="28" stroke="#fff" opacity="${(0.55 * k * k).toFixed(3)}" stroke-dasharray="${len} ${C}" transform="rotate(${rot})"/>`;
+      flashes += `<circle r="${R}" stroke-width="22" stroke="#fff" opacity="${(0.55 * k * k).toFixed(3)}" stroke-dasharray="${len} ${C}" transform="rotate(${rot})"/>`;
     }
     // Аватарка игрока в середине сектора (подписи не вращаются — всегда ровно)
     if (f >= 0.07) {
@@ -379,54 +379,6 @@ function tweenShares() {
     if (p < 1 || [...wheel.flash.values()].some((t2) => t - t2 < 900)) wheel.tween = requestAnimationFrame(step);
   };
   wheel.tween = requestAnimationFrame(step);
-}
-
-// ---------- Обод с огоньками ----------
-const BULBS = 40;
-function drawBulbs() {
-  let html = '';
-  for (let i = 0; i < BULBS; i++) {
-    const a = ((i * 360) / BULBS - 90) * (Math.PI / 180);
-    html += `<circle r="1.7" cx="${(98.6 * Math.cos(a)).toFixed(2)}" cy="${(98.6 * Math.sin(a)).toFixed(2)}"/>`;
-  }
-  $('bulbs').innerHTML = html;
-  wheel.bulbs = [...$('bulbs').children];
-  setInterval(bulbsTick, 60);
-}
-
-/** Узор огоньков зависит от этапа: перелив → бегущие огни → пульс → мерцание → победа. */
-function bulbsTick() {
-  const r = state.round;
-  if (!r || document.hidden || state.view !== 'roulette') return;
-  const t = performance.now();
-  let on;
-  if (r.status === 'waiting') {
-    const step = Math.floor(t / 380);
-    on = (i) => (i + step) % 5 === 0; // медленный перелив
-  } else if (r.status === 'countdown') {
-    const left = r.countdownEndsAt - serverNow();
-    if (left <= 5000) {
-      const beat = left % 1000; // как сердцебиение: два коротких удара в начале каждой секунды
-      const lit = beat > 860 || (beat > 640 && beat < 760);
-      on = () => lit;
-    } else {
-      const step = Math.floor(t / 90);
-      on = (i) => (i + step) % 8 < 2;
-    }
-  } else if (r.status === 'spinning') {
-    const step = Math.floor(t / 70);
-    on = (i) => (i + step) % 2 === 0;
-  } else {
-    const since = t - (wheel.wonAt ?? t);
-    on = () => since > 1300 || Math.floor(since / 160) % 2 === 0; // мигают и загораются цветом победителя
-  }
-  wheel.bulbs.forEach((b, i) => {
-    const v = on(i);
-    if (b._on !== v) {
-      b._on = v;
-      b.classList.toggle('on', v);
-    }
-  });
 }
 
 // ---------- Всплывающие ставки ----------
@@ -538,7 +490,6 @@ function onRound(round) {
   const winner = round.status === 'finished' ? sharesOf(round).find((p) => p.id === round.winnerId) : null;
   wheelEl.classList.toggle('won', !!winner);
   wheelEl.style.setProperty('--glow', winner?.color ?? 'var(--accent)');
-  wheelEl.style.setProperty('--bulb', winner?.color ?? 'var(--gold)');
 
   const me = state.me?.id;
   if (prev?.status === 'spinning' && round.status === 'finished' && round.players.some((p) => p.id === me)) {
@@ -546,7 +497,6 @@ function onRound(round) {
     if (round.winnerId === me) {
       haptic.ok();
       toast(`Вы выиграли ${fmt(round.bank)}`, 'win');
-      confetti();
     }
   }
 }
@@ -571,62 +521,6 @@ function renderFeats() {
   $('feats').innerHTML = card(lastGame, 'f-last', 'i-clock', 'Последняя игра') + card(topToday, 'f-top', 'i-trophy', 'Топ игра дня');
 }
 
-/** Праздничный дождь из звёзд при победе. Лёгкий: один canvas, ~1.8 секунды. */
-function confetti() {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const cv = $('confetti');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  cv.width = innerWidth * dpr;
-  cv.height = innerHeight * dpr;
-  const ctx = cv.getContext('2d');
-  ctx.scale(dpr, dpr);
-  const box = $('wheel').getBoundingClientRect();
-  const cx = box.left + box.width / 2;
-  const cy = box.top + box.height / 2;
-  const colors = ['#f5bf4f', '#ffd77a', '#8b6cff', '#c4b3ff', '#ffffff'];
-  const parts = Array.from({ length: 90 }, () => {
-    const a = Math.random() * Math.PI * 2;
-    const v = 3 + Math.random() * 6;
-    return {
-      x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3,
-      r: 3 + Math.random() * 4, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3,
-      c: colors[(Math.random() * colors.length) | 0], star: Math.random() < 0.55,
-    };
-  });
-  const star = (r) => {
-    ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const rr = i % 2 ? r * 0.45 : r;
-      const a = (i * Math.PI) / 5 - Math.PI / 2;
-      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-    }
-    ctx.closePath();
-    ctx.fill();
-  };
-  const t0 = performance.now();
-  const frame = (t) => {
-    const k = (t - t0) / 1800;
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    for (const p of parts) {
-      p.vy += 0.18;
-      p.vx *= 0.985;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.vr;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, 1 - k);
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      ctx.fillStyle = p.c;
-      if (p.star) star(p.r * 1.4);
-      else ctx.fillRect(-p.r / 2, -p.r, p.r, p.r * 2);
-      ctx.restore();
-    }
-    if (k < 1) requestAnimationFrame(frame);
-    else ctx.clearRect(0, 0, innerWidth, innerHeight);
-  };
-  requestAnimationFrame(frame);
-}
 
 /** Банк над колесом и содержимое центра колеса для каждого этапа раунда. */
 let centerKey = '';
@@ -1230,7 +1124,6 @@ async function main() {
   $('app').hidden = false;
   document.body.dataset.view = 'roulette';
   document.querySelector('#view-roulette').classList.add('active');
-  drawBulbs();
   connectStream();
   requestAnimationFrame(moveNavIndicator);
   // Незавершённая игра (обрыв связи, перезапуск Telegram) — сразу возвращаем в неё
