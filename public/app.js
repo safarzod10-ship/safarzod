@@ -1011,9 +1011,22 @@ function moveNavIndicator() {
 window.addEventListener('resize', moveNavIndicator);
 
 // ---------- Запуск ----------
+/** Сколько людей сейчас в приложении: пинг раз в 30 с + рассылка сервера через поток. */
+function setOnline(n) {
+  if (!Number.isFinite(n)) return;
+  $('online-n').textContent = fmt(Math.max(1, n));
+}
+async function ping() {
+  if (document.visibilityState !== 'visible') return;
+  try {
+    setOnline((await api('/api/ping', {})).online);
+  } catch {}
+}
+
 function connectStream() {
   const es = new EventSource('/api/stream');
   es.addEventListener('round', (e) => onRound(JSON.parse(e.data)));
+  es.addEventListener('online', (e) => setOnline(JSON.parse(e.data).online));
   es.addEventListener('crash', (e) => {
     crash.onState(JSON.parse(e.data));
     updateCrashBadge();
@@ -1125,6 +1138,9 @@ async function main() {
   document.body.dataset.view = 'roulette';
   document.querySelector('#view-roulette').classList.add('active');
   connectStream();
+  ping();
+  setInterval(ping, 30_000);
+  document.addEventListener('visibilitychange', ping);
   requestAnimationFrame(moveNavIndicator);
   // Незавершённая игра (обрыв связи, перезапуск Telegram) — сразу возвращаем в неё
   if (resumed) {

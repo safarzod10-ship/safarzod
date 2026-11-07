@@ -33,7 +33,9 @@ export const config = Object.freeze({
     bonusMs: Number(env('BASKET_BONUS_MS', '3000')),
     swishBonusMs: Number(env('BASKET_SWISH_BONUS_MS', '5000')),
     countdownMs: Number(env('BASKET_COUNTDOWN_MS', '3000')),
-    expireMs: Number(env('BASKET_EXPIRE_MS', String(60 * 60 * 1000))), // час на сбор троих
+    price: Number(env('BASKET_PRICE', '5')), // стоимость попытки
+    dailyPrize: Number(env('BASKET_DAILY_PRIZE', '50')), // приз 1-му месту дня
+    tzOffsetMin: Number(env('BASKET_TZ_OFFSET_MIN', '180')), // день турнира по Москве (UTC+3)
   }),
 
   // Racket Crash: лимиты и перевес (значения по умолчанию — из моделирования, см. README)

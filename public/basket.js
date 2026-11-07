@@ -19,7 +19,7 @@ const plural = (n, one, few, many) => {
   return many;
 };
 const shotsText = (n) => `${fmt(n)} ${plural(n, 'бросок', 'броска', 'бросков')}`;
-const prizeOf = (stake) => stake * 2;
+const TUTOR_KEY = 'bb-tutorial-v1';
 
 // ====================== Звук (Web Audio, реальные записи из /sounds) ======================
 // Три звука: удар мяча об пол, бросок, толпа.
@@ -67,7 +67,6 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
   const s = {
     st: null,
     offset: 0,
-    stake: 10,
     poll: null,
     pollMs: 0,
     active: false,
@@ -129,123 +128,132 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     s.poll = ms ? setInterval(refresh, ms) : null;
   }
 
-  // ====================== Вкладка «Игры» ======================
+  // ====================== Страница игры: турнир дня ======================
 
-  /** Страница игры, бейдж на карточке и «История». */
+  const placeMark = (p) => (p <= 3 ? MEDALS[p - 1] : `<span class="lb-n">${p}</span>`);
+
+  function lbRow(r, myId) {
+    const isMe = r.id === myId;
+    return `<div class="lb-row${isMe ? ' me' : ''}${r.place === 1 ? ' first' : ''}">
+      <div class="lb-place">${placeMark(r.place)}</div>${avatarHtml(r, 'xs')}
+      <div class="lb-who"><span>${isMe ? 'Вы' : esc(r.name)}</span><small>${shotsText(r.shots)}</small></div>
+      <b class="lb-score num">${fmt(r.score)}</b></div>`;
+  }
+
   function renderGamesTab() {
     const st = s.st;
-    if (!st) return;
+    if (!st?.today) return;
+    const t = st.today;
+    const myId = me()?.id;
     const stats = st.stats ?? {};
     $('gs-games').textContent = fmt(stats.games ?? 0);
-    $('gs-wins').textContent = fmt(stats.wins ?? 0);
     $('gs-best').textContent = fmt(stats.best ?? 0);
+    $('gs-wins').textContent = fmt(stats.wins ?? 0);
     $('gs-won').textContent = fmt(stats.won ?? 0);
-    const games = st.games ?? [];
-    const active = games.find((g) => g.id === st.activeGameId && g.me?.status !== 'playing');
-    const playing = !!st.session;
 
     // бейдж на карточке в списке игр
     const badge = $('gc-badge');
-    badge.hidden = !(playing || active);
-    badge.textContent = playing ? 'Идёт игра' : 'Ждём итогов';
+    badge.hidden = !(st.session || t.me);
+    badge.textContent = st.session ? 'Идёт игра' : t.me ? `Вы #${t.me.place} сегодня` : '';
 
-    // кнопка «Играть» и активная игра на странице игры
+    // приз дня и моё место
+    $('bt-prize').textContent = fmt(t.prize);
+    $('bt-players').textContent = `${fmt(t.players)} ${plural(t.players, 'игрок', 'игрока', 'игроков')} сегодня`;
+    $('bt-me').innerHTML = t.me
+      ? `Ваше место <b>#${t.me.place}</b> · лучший результат <b>${fmt(t.me.score)}</b>`
+      : 'Наберите хотя бы 1 очко, чтобы попасть в таблицу';
+    tickDay();
+
+    // таблица дня
+    const rows = t.top.map((r) => lbRow(r, myId));
+    if (t.me && !t.top.some((r) => r.id === myId)) {
+      rows.push('<div class="lb-gap">···</div>' + lbRow({ id: myId, name: 'Вы', photo: me()?.photo, place: t.me.place, score: t.me.score, shots: t.me.shots }, myId));
+    }
+    $('bt-top').innerHTML = rows.length ? rows.join('') : '<div class="hist-empty">Сегодня ещё никто не играл — станьте первым</div>';
+    const lw = st.lastWinner;
+    $('bt-last').hidden = !lw;
+    if (lw) $('bt-last').innerHTML = `🏆 Победитель ${lw.day.slice(8, 10)}.${lw.day.slice(5, 7)}: <b>${lw.id === myId ? 'вы' : esc(lw.name)}</b> — ${fmt(lw.score)} очков, +${fmt(lw.prize)} ⭐`;
+
     const play = $('gc-play');
-    if (playing) play.innerHTML = '<svg><use href="#i-ball"/></svg>Продолжить игру';
-    else if (active) play.innerHTML = 'Ждём итогов';
-    else play.innerHTML = '<svg><use href="#i-ball"/></svg>Играть';
-    play.classList.toggle('waiting', !!active && !playing);
-    $('bb-active').hidden = !active;
-    $('bb-active').innerHTML = active ? gameCard(active) : '';
+    play.innerHTML = st.session
+      ? '<svg><use href="#i-ball"/></svg>Продолжить игру'
+      : `<svg><use href="#i-ball"/></svg>Играть за ${fmt(st.price)} ⭐`;
 
-    // история
-    $('hist-active').innerHTML = active
-      ? gameCard(active)
-      : `<div class="hist-empty">${playing ? 'Игра идёт прямо сейчас' : 'Нет активной игры'}</div>`;
-    const past = games.filter((g) => g.status !== 'open');
-    $('hist-past-title').hidden = false;
-    $('hist-past').innerHTML = past.length ? past.map(gameCard).join('') : '<div class="hist-empty">Пока нет сыгранных игр</div>';
+    // история попыток
+    const date = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const list = (st.attempts ?? []).filter((a) => a.status === 'done');
+    $('hist-past').innerHTML = list.length
+      ? list
+          .map((a) => `<div class="att"><div><b class="num">${fmt(a.score)}</b><span>${plural(a.score, 'очко', 'очка', 'очков')}</span></div>
+            <small>${shotsText(a.shots)}${a.swishes ? ` · ${a.swishes} чист.` : ''}</small><time>${date.format(a.created_at)}</time></div>`)
+          .join('')
+      : '<div class="hist-empty">Пока нет сыгранных попыток</div>';
   }
 
-  function gameCard(g) {
-    const myId = me()?.id;
-    let status;
-    if (g.status === 'open') {
-      const left = g.expiresAt - serverNow();
-      const h = Math.max(0, Math.floor(left / 3_600_000));
-      const m = Math.max(0, Math.floor((left % 3_600_000) / 60_000));
-      const need = 3 - g.players.length;
-      status = `<span class="mg-status open">${need > 0 ? `Ждём ${need} · ${h ? `${h} ч ` : ''}${m} мин` : 'Доигрывают'}</span>`;
-    } else if (g.status === 'refunded') status = '<span class="mg-status refunded">Ставка возвращена</span>';
-    else if (g.me?.prize > 0) status = `<span class="mg-status win">${g.me.place}-е место · +${fmt(g.me.prize)} ⭐</span>`;
-    else status = `<span class="mg-status lose">${g.me?.place ?? '—'}-е место</span>`;
-
-    const slots = [0, 1, 2].map((i) => {
-      const p = g.players[i];
-      if (!p) return '<div class="mg-p empty">свободно</div>';
-      const score = p.score === null ? '…' : fmt(p.score);
-      return `<div class="mg-p${p.id === myId ? ' me' : ''}${p.place === 1 ? ' first' : ''}">${avatarHtml(p, 'xs')}
-        <div><span>${p.id === myId ? 'Вы' : esc(p.name)}</span><b class="num">${score}</b></div></div>`;
-    });
-    return `<div class="mg"><div class="mg-top"><span class="mg-stake num">${STAR}${fmt(g.stake)}</span>
-      <span class="mg-bank">приз ${fmt(g.prize)} ⭐</span>${status}</div>
-      <div class="mg-players">${slots.join('')}</div></div>`;
+  /** Обратный отсчёт до итогов дня. */
+  function tickDay() {
+    const t = s.st?.today;
+    if (!t) return;
+    const left = Math.max(0, t.endsAt - serverNow());
+    const h = Math.floor(left / 3_600_000);
+    const m = Math.floor((left % 3_600_000) / 60_000);
+    const sec = Math.floor((left % 60_000) / 1000);
+    $('bt-left').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   }
+  setInterval(() => s.active && tickDay(), 1000);
 
-  // ====================== Выбор ставки ======================
+  // ====================== Обучение для новичков ======================
 
-  function openStakes() {
-    haptic.tap();
-    audio.unlock();
-    const stakes = s.st?.stakes ?? [5, 10, 20, 50, 100];
-    const balance = me()?.balance ?? 0;
-    if (!stakes.includes(s.stake)) s.stake = stakes[1];
-    $('stakes').innerHTML = stakes
-      .map(
-        (v) => `<button class="stake${v === s.stake ? ' on' : ''}${v > balance ? ' poor' : ''}" data-stake="${v}">
-          <b class="num">${fmt(v)}${STAR}</b><span>приз ${fmt(prizeOf(v))}</span></button>`,
-      )
-      .join('');
-    renderStakeNote();
-    const w = $('stake-sheet');
+  const tutorSeen = () => {
+    try {
+      return localStorage.getItem(TUTOR_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  function openTutorial(thenPlay) {
+    s.tutorStep = 0;
+    s.tutorPlay = thenPlay;
+    renderTutor();
+    const w = $('bb-tutor');
     w.classList.remove('closing');
     w.hidden = false;
   }
 
-  function renderStakeNote() {
-    const balance = me()?.balance ?? 0;
-    const note = $('stake-note');
-    const btn = $('stake-go');
-    document.querySelectorAll('#stakes .stake').forEach((b) => b.classList.toggle('on', Number(b.dataset.stake) === s.stake));
-    if (s.stake > balance) {
-      note.innerHTML = `Не хватает ${fmt(s.stake - balance)} ⭐ — пополните баланс`;
-      note.classList.add('error');
-      btn.textContent = 'Пополнить баланс';
-    } else {
-      note.innerHTML = `Победитель получает ×2 — <b>${fmt(prizeOf(s.stake))} ⭐</b>`;
-      note.classList.remove('error');
-      btn.textContent = `Играть за ${fmt(s.stake)} ⭐`;
-    }
+  function renderTutor() {
+    const i = s.tutorStep;
+    document.querySelectorAll('#bb-tutor .tutor-slide').forEach((el, k) => el.classList.toggle('on', k === i));
+    document.querySelectorAll('#bb-tutor .tutor-dots i').forEach((el, k) => el.classList.toggle('on', k === i));
+    const last = i === 2;
+    $('tutor-next').textContent = last ? (s.tutorPlay ? `Играть за ${fmt(s.st?.price ?? 5)} ⭐` : 'Понятно') : 'Далее';
+    $('tutor-skip').hidden = last;
   }
 
-  function closeStakes() {
-    const w = $('stake-sheet');
-    if (w.hidden) return;
+  function closeTutor(play) {
+    try {
+      localStorage.setItem(TUTOR_KEY, '1');
+    } catch {}
+    const w = $('bb-tutor');
     w.classList.add('closing');
     setTimeout(() => (w.hidden = true), 240);
+    if (play) startGame();
   }
 
+  // ====================== Начать попытку ======================
+
   async function startGame() {
-    if (s.stake > (me()?.balance ?? 0)) {
-      closeStakes();
+    const price = s.st?.price ?? 5;
+    if (price > (me()?.balance ?? 0)) {
+      toast(`Нужно ${fmt(price)} ⭐ — пополните баланс`, 'err');
       return go('deposit');
     }
-    const btn = $('stake-go');
+    const btn = $('gc-play');
     btn.classList.add('loading');
+    audio.unlock();
     try {
-      const res = await api('/api/basket/play', { stake: s.stake });
+      const res = await api('/api/basket/play', {});
       onProfile(res);
-      closeStakes();
       haptic.impact('medium');
       apply(res);
     } catch (e) {
@@ -273,7 +281,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       $('bb-hint').classList.remove('hide');
     }
     s.startAt = sess.startAt;
-    $('bb-stake').textContent = fmt(sess.stake);
+    $('bb-stake').textContent = fmt(s.st?.price ?? 5);
     if (!s.pendingShot) {
       s.score = sess.score;
       s.deadline = sess.deadline;
@@ -448,43 +456,24 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   // ====================== Итог моей игры ======================
 
+  /** Итог попытки: счёт, лучший результат дня, место и топ-3. */
   function renderResultSheet() {
-    const g = s.st?.games?.find((x) => x.id === s.gameId);
-    if (!g || g.me?.status === 'playing') return;
+    const st = s.st;
+    const att = st?.attempts?.find((a) => a.id === s.gameId);
+    if (!att || att.status !== 'done' || !st.today) return;
     const el = $('bb-result');
+    const t = st.today;
     const myId = me()?.id;
-    const done = g.players.filter((p) => p.status !== 'playing');
-    const need = 3 - g.players.length;
-    let title;
-    let sub;
-    if (g.status === 'finished') {
-      title = g.me.prize > 0 ? `Победа! +${fmt(g.me.prize)} ⭐` : `${g.me.place}-е место`;
-      sub = `Итоги матча · ставка ${fmt(g.stake)} ⭐ · приз ${fmt(g.prize)} ⭐`;
-    } else if (g.status === 'refunded') {
-      title = 'Ставка возвращена';
-      sub = 'Матч не собрал троих за час';
-    } else {
-      title = `Ваш результат: ${fmt(g.me.score)}`;
-      sub = `Ставка ${fmt(g.stake)} ⭐ · победитель получает ${fmt(g.prize)} ⭐`;
-    }
-    const ranked = [...g.players].sort((a, b) => (a.place ?? 9) - (b.place ?? 9) || (b.score ?? -1) - (a.score ?? -1));
-    const rows = ranked.map((p) => {
-      const isMe = p.id === myId;
-      const place = p.place ? MEDALS[p.place - 1] ?? p.place : '';
-      const meta = p.status === 'playing' ? 'играет…' : `${shotsText(p.shots ?? 0)}${p.prize ? ` · <span class="res-prize">+${fmt(p.prize)} ⭐</span>` : ''}`;
-      return `<div class="res-row${isMe ? ' me' : ''}"><div class="res-place">${place}</div>${avatarHtml(p, 'sm')}
-        <div class="res-who"><div class="res-name">${isMe ? 'Вы' : esc(p.name)}</div><div class="res-meta">${meta}</div></div>
-        <div class="res-score num">${p.score === null ? '…' : fmt(p.score)}</div></div>`;
-    });
-    for (let i = 0; i < need; i++) rows.push('<div class="res-row empty">Свободное место</div>');
-    const waiting =
-      g.status === 'open'
-        ? `<div class="res-wait"><i></i>${need > 0 ? `Ожидание ${need === 1 ? '3-го участника' : 'ещё 2 участников'} для подведения итогов` : 'Соперники доигрывают…'}</div>`
-        : '';
-    const html = `<div class="res-title">${title}</div><div class="res-sub">${sub}</div>
-      <div class="res-list">${rows.join('')}</div>${waiting}
-      <div class="dock-row"><button class="btn secondary" data-res="history">История</button>
-      <button class="btn primary" data-res="close" style="flex:1">Готово</button></div>`;
+    const best = t.me && att.score >= t.me.score && att.score > 0;
+    const sub = t.me
+      ? `Ваше место сегодня — <b>#${t.me.place}</b> из ${fmt(t.players)} · лучший результат ${fmt(t.me.score)}`
+      : 'Наберите хотя бы 1 очко, чтобы попасть в таблицу дня';
+    const html = `<div class="res-title">${fmt(att.score)} ${plural(att.score, 'очко', 'очка', 'очков')}</div>
+      <div class="res-sub">${best ? '🔥 Ваш лучший результат дня! ' : ''}${sub}</div>
+      <div class="res-list">${t.top.slice(0, 3).map((r) => lbRow(r, myId)).join('') || ''}</div>
+      <div class="res-wait">🏆 Первое место в 00:00 МСК получает <b>${fmt(t.prize)} ⭐</b></div>
+      <div class="dock-row"><button class="btn secondary" data-res="close">Готово</button>
+      <button class="btn primary" data-res="again" style="flex:1">Ещё раз · ${fmt(st.price)} ⭐</button></div>`;
     if (el.dataset.html !== html) {
       el.dataset.html = html;
       el.innerHTML = html;
@@ -492,7 +481,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     if (el.hidden) {
       el.hidden = false;
       $('bb-overlay').hidden = true;
-      if (g.status === 'finished' && g.me.prize > 0) haptic.ok();
+      if (best) haptic.ok();
     }
   }
 
@@ -1112,30 +1101,27 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       go('basket');
     });
     $('bb-history-btn').addEventListener('click', () => go('basket-history'));
+    $('bb-howto').addEventListener('click', () => openTutorial(false));
     $('gc-play').addEventListener('click', () => {
       if (s.st?.session) return apply(s.st); // вернуться в идущую игру
-      if (s.st?.activeGameId) {
-        haptic.err();
-        toast('Дождитесь итогов текущей игры', 'err');
-        return go('basket-history');
-      }
-      openStakes();
+      if (!tutorSeen()) return openTutorial(true); // новичку — сначала как играть
+      startGame();
     });
-    $('stakes').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-stake]');
-      if (!b) return;
-      s.stake = Number(b.dataset.stake);
+    $('tutor-next').addEventListener('click', () => {
       haptic.tap();
-      renderStakeNote();
+      if (s.tutorStep < 2) {
+        s.tutorStep++;
+        renderTutor();
+      } else closeTutor(s.tutorPlay);
     });
-    $('stake-go').addEventListener('click', startGame);
-    $('stake-sheet').addEventListener('click', (e) => e.target.matches('[data-close]') && closeStakes());
+    $('tutor-skip').addEventListener('click', () => closeTutor(s.tutorPlay));
+    $('bb-tutor').addEventListener('click', (e) => e.target.matches('[data-close]') && closeTutor(false));
     $('bb-result').addEventListener('click', (e) => {
       const act = e.target.closest('[data-res]')?.dataset.res;
       if (act === 'close') closeGame();
-      if (act === 'history') {
+      if (act === 'again') {
         closeGame();
-        go('basket-history');
+        setTimeout(startGame, 250);
       }
     });
     $('bb-sound').addEventListener('click', () => {

@@ -673,33 +673,89 @@ body.kb .nav { display: none; }
 .gc-badge { position: absolute; right: 7%; top: 9%; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
   color: #1f1606; background: var(--gold); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
 .gc-rules { margin: 2px 4px 0; font-size: 13px; line-height: 1.45; color: var(--text-3); text-align: center; }
-.active-game { margin-top: 14px; }
 .hist-empty { padding: 18px 12px; text-align: center; color: var(--text-3); font-size: 14px; border-radius: 16px; border: 1px dashed var(--line-strong); }
 #view-basket .dock-row .btn.secondary { padding: 0 20px; }
 .btn-play { gap: 8px; font-size: 17px; }
 .btn-play svg { width: 22px; height: 22px; }
 
-.my-games { display: grid; gap: 8px; }
-.mg { padding: 12px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 10px; animation: row-in 0.35s var(--ease); }
-.mg-top { display: flex; align-items: center; gap: 8px; }
-.mg-stake { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
-.mg-stake .star { width: 14px; height: 14px; }
-.mg-status { margin-left: auto; font-size: 12.5px; font-weight: 600; padding: 4px 9px; border-radius: 9px; }
-.mg-status.open { color: var(--amber); background: rgba(245, 191, 79, 0.12); }
-.mg-status.win { color: var(--green); background: rgba(61, 214, 140, 0.12); }
-.mg-status.lose { color: var(--text-2); background: var(--surface-2); }
-.mg-status.refunded { color: var(--text-2); background: var(--surface-2); }
-.mg-players { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.mg-p { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 6px 8px 6px 6px; border-radius: 12px; background: var(--surface-2); }
-.mg-p.me { box-shadow: inset 0 0 0 1px rgba(139, 108, 255, 0.45); }
-.mg-p .avatar { --size: 24px; font-size: 10px; flex: none; }
-.mg-p div { min-width: 0; }
-.mg-p span { display: block; font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mg-p b { font-size: 14px; font-weight: 750; }
-.mg-p.empty { justify-content: center; color: var(--text-3); font-size: 12px; border: 1px dashed var(--line-strong); background: none; }
-.mg-p.first b { color: var(--gold); }
+/* Турнир дня */
+.bt-card { margin-top: 14px; padding: 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 12px; }
+.bt-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.bt-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+.bt-prize { display: flex; align-items: center; gap: 6px; }
+.bt-prize b { font-size: 30px; font-weight: 750; line-height: 1; }
+.bt-prize .star { width: 22px; height: 22px; color: var(--gold); }
+.bt-timer { text-align: right; }
+.bt-timer b { font-size: 20px; font-weight: 650; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.bt-me { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13.5px; color: var(--text-2); }
+.bt-me b { color: var(--text); }
+.bt-sub { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--text-3); }
+.link-btn { padding: 4px 0; font-size: 13px; font-weight: 600; color: var(--accent); background: none; border: 0; }
+#view-basket .section-title { margin: 20px 4px 10px; }
+.lb { display: grid; gap: 6px; }
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); animation: row-in .35s var(--ease) backwards; }
+.lb-row.me { border-color: rgba(124, 92, 255, 0.5); background: rgba(124, 92, 255, 0.08); }
+.lb-row.first .lb-score { color: var(--gold); }
+.lb-row .avatar { --size: 30px; font-size: 12px; flex: none; }
+.lb-place { width: 26px; text-align: center; font-size: 18px; flex: none; }
+.lb-n { font-size: 13px; font-weight: 600; color: var(--text-3); }
+.lb-who { flex: 1; min-width: 0; }
+.lb-who span { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-who small { font-size: 11.5px; color: var(--text-3); }
+.lb-score { font-size: 18px; font-weight: 700; }
+.lb-gap { text-align: center; color: var(--text-3); line-height: 1; }
+.bt-last { margin: 10px 4px 0; font-size: 12.5px; color: var(--text-3); text-align: center; }
+.bt-last b { color: var(--text-2); }
+#view-basket .gc-stats { margin-top: 18px; }
+#view-basket .gc-rules { margin-top: 12px; }
+.atts { display: grid; gap: 6px; }
+.att { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.att div { display: flex; align-items: baseline; gap: 5px; min-width: 76px; }
+.att div b { font-size: 20px; font-weight: 700; }
+.att div span, .att small { font-size: 12px; color: var(--text-3); }
+.att small { flex: 1; }
+.att time { font-size: 12px; color: var(--text-3); }
 
-/* Нижнее окно выбора ставки */
+/* Онлайн в шапке */
+.online { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 8px; padding: 0 10px; height: 30px; border-radius: 999px;
+  font-size: 12.5px; color: var(--text-2); background: var(--surface); border: 1px solid var(--line); white-space: nowrap; }
+.online i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(61, 214, 140, .5); animation: online-ping 2s infinite; }
+.online span { color: var(--text); font-weight: 600; }
+@keyframes online-ping { 70% { box-shadow: 0 0 0 6px rgba(61, 214, 140, 0); } 100% { box-shadow: 0 0 0 0 rgba(61, 214, 140, 0); } }
+@media (max-width: 360px) { .online { font-size: 0; gap: 0; padding: 0 9px; } .online i { margin-right: 5px; } .online span { font-size: 12.5px; } }
+
+/* Обучение */
+.tutor .sheet { padding-bottom: calc(16px + var(--safe-bottom)); }
+.tutor-slide { display: none; animation: fade-in .3s var(--ease); }
+.tutor-slide.on { display: block; }
+.tutor-slide .sheet-sub { margin: 6px 8px 0; font-size: 14px; line-height: 1.45; }
+.tutor-slide .sheet-sub b { color: var(--text); }
+.tutor-pic { position: relative; height: 150px; margin-bottom: 16px; border-radius: 18px; background: var(--surface-2); overflow: hidden; }
+.t-ball { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffb46b, #e8701e 60%, #b4500f); box-shadow: 0 4px 10px rgba(0,0,0,.4); }
+.t-drag .t-ball { left: 34%; top: 38%; }
+.t-drag .t-line { position: absolute; left: calc(34% + 15px); top: calc(38% + 15px); height: 2px; width: 0; transform-origin: left; transform: rotate(32deg);
+  background: repeating-linear-gradient(90deg, #eef0f4 0 6px, transparent 6px 11px); animation: t-line 2.4s ease-in-out infinite; }
+.t-drag .t-hand { position: absolute; left: calc(34% + 4px); top: calc(38% + 4px); width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.85);
+  box-shadow: 0 0 0 6px rgba(255,255,255,.18); animation: t-hand 2.4s ease-in-out infinite; }
+@keyframes t-hand { 0%, 10% { transform: translate(0, 0); opacity: 0; } 18% { opacity: 1; } 60%, 72% { transform: translate(84px, 52px); opacity: 1; } 80%, 100% { transform: translate(84px, 52px); opacity: 0; } }
+@keyframes t-line { 0%, 18% { width: 0; } 60%, 72% { width: 98px; } 76%, 100% { width: 0; } }
+.t-arc .t-hoop { position: absolute; right: 16%; top: 30%; width: 46px; height: 8px; border-radius: 4px; border: 3px solid #ff6a3d; border-top-color: #ff8a5d; }
+.t-arc .t-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: rgba(238,240,244,.7); }
+.t-dot.d1 { left: 22%; top: 62%; } .t-dot.d2 { left: 32%; top: 40%; } .t-dot.d3 { left: 44%; top: 26%; } .t-dot.d4 { left: 56%; top: 20%; } .t-dot.d5 { left: 68%; top: 22%; }
+.t-arc .t-ball.fly { left: 12%; top: 72%; animation: t-fly 2.2s ease-in-out infinite; offset-path: path('M0 0 C 60 -110, 170 -110, 222 -64'); offset-rotate: 0deg; }
+@keyframes t-fly { 0%, 12% { offset-distance: 0%; opacity: 1; } 70% { offset-distance: 100%; opacity: 1; } 85%, 100% { offset-distance: 100%; opacity: 0; } }
+.t-score { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 26px 14px; }
+.t-score div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); animation: t-pop 2.4s var(--ease) infinite; }
+.t-score div:nth-child(2) { animation-delay: .2s; } .t-score div:nth-child(3) { animation-delay: .4s; }
+.t-score b { font-size: 22px; font-weight: 750; }
+.t-score span { font-size: 11.5px; color: var(--text-3); }
+.t-score .gold b { color: var(--gold); }
+@keyframes t-pop { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.06); } 24% { transform: scale(1); } }
+.tutor-dots { display: flex; justify-content: center; gap: 6px; margin: 16px 0; }
+.tutor-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transition: width .25s var(--ease), background .25s; }
+.tutor-dots i.on { width: 18px; background: var(--accent); }
+
+/* Нижние окна */
 .sheet-wrap { position: fixed; inset: 0; z-index: 50; }
 .sheet-backdrop { position: absolute; inset: 0; background: rgba(5, 5, 9, 0.6); animation: fade-in 0.25s var(--ease); }
 .sheet {
@@ -716,21 +772,6 @@ body.kb .nav { display: none; }
 .sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 14px; }
 .sheet-title { font-size: 20px; font-weight: 750; text-align: center; }
 .sheet-sub { font-size: 13px; color: var(--text-2); text-align: center; margin-top: 2px; }
-.stakes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 18px 0 10px; }
-.stake {
-  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 0 10px; border-radius: 16px;
-  background: var(--surface-2); border: 1px solid var(--line); transition: transform 0.15s var(--ease), border-color 0.2s, background 0.2s;
-}
-.stake b { display: flex; align-items: center; gap: 3px; font-size: 18px; font-weight: 800; }
-.stake b .star { width: 13px; height: 13px; }
-.stake span { font-size: 10.5px; color: var(--text-3); }
-.stake.on { border-color: color-mix(in srgb, var(--gold) 65%, transparent); background: rgba(245, 191, 79, 0.1); }
-.stake.on span { color: var(--gold); }
-.stake:active { transform: scale(0.95); }
-.stake.poor { opacity: 0.45; }
-.stake-note { min-height: 20px; margin-bottom: 12px; text-align: center; font-size: 13px; color: var(--text-2); }
-.stake-note b { color: var(--text); }
-.stake-note.error { color: var(--red); }
 
 /* ===================== Экран игры ===================== */
 .bb-game {
@@ -888,7 +929,7 @@ body[data-view="crash"] { --dock-extra: 40px; }
 .num { font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
 
 /* Поверхности: плоские, тонкая граница, без теней */
-.card, .player, .task, .friend, .mg, .cb, .feat, .stat, .h-card, .wd { border-radius: var(--radius); box-shadow: none; }
+.card, .player, .task, .friend, .cb, .feat, .stat, .h-card, .wd { border-radius: var(--radius); box-shadow: none; }
 .card { background: var(--surface); border-color: var(--line); }
 
 /* Кнопки: акцент только у главного действия */
@@ -919,9 +960,8 @@ body[data-view="crash"] { --dock-extra: 40px; }
 /* Поля, чипы, переключатели */
 .field, .stepper, .cr-amount, .cr-auto { background: var(--surface); border-color: var(--line); border-radius: 12px; }
 .step { background: var(--surface-2); border-radius: 9px; color: var(--text-2); }
-.chips button, .cr-chips button, .bb-cat, .stake { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: var(--text-2); }
-.chips button.on, .cr-chips button.on, .bb-cat.on, .stake.on { color: var(--text); background: var(--accent-soft); border-color: rgba(124, 92, 255, 0.55); box-shadow: none; }
-.stake.on span { color: var(--text-2); }
+.chips button, .cr-chips button, .bb-cat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: var(--text-2); }
+.chips button.on, .cr-chips button.on, .bb-cat.on { color: var(--text); background: var(--accent-soft); border-color: rgba(124, 92, 255, 0.55); box-shadow: none; }
 .cr-switch.on i { background: var(--accent); }
 
 /* ---------- Рулетка ---------- */

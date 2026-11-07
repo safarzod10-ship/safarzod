@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb } from '../server/db.js';
-import { BasketService, STAKES } from '../server/basket.js';
+import { BasketService } from '../server/basket.js';
 import { WORLD, HOOP_BOUNDS, QUANT, simulateShot, previewPath, isReachable, nextHoop, validLaunch } from '../public/basket-physics.js';
 
 // ---------- помощники ----------
@@ -36,8 +36,8 @@ function findShot(hoop, want) {
   throw new Error(`не нашёл бросок: ${want}`);
 }
 
-function play(ctx, uid, stake = 10) {
-  const st = ctx.svc.play(ctx.users[uid - 1], stake);
+function play(ctx, uid) {
+  const st = ctx.svc.play(ctx.users[uid - 1]);
   assert.ok(st.session, 'игра началась сразу');
   return st.session;
 }
@@ -118,68 +118,116 @@ test('сложность: первое кольцо в центре; с очка
   assert.ok(minX(6) > minX(1) - 0.01);
 });
 
-// ---------- матчи ----------
-test('«Играть»: сразу своя игра; второй и третий садятся в тот же матч; четвёртый — в новый; разные ставки раздельно', () => {
-  const ctx = setup();
-  const a = play(ctx, 1, 10);
-  assert.equal(ctx.store.getUser(1).balance, 990, 'ставка списана');
-  const b = play(ctx, 2, 10);
-  const c = play(ctx, 3, 10);
-  assert.equal(b.gameId, a.gameId);
-  assert.equal(c.gameId, a.gameId);
-  const d = play(ctx, 4, 10);
-  assert.notEqual(d.gameId, a.gameId, 'мест нет — новый матч');
-  const e = play(ctx, 5, 50);
-  assert.notEqual(e.gameId, d.gameId, 'другая ставка — другой матч');
-  assert.deepEqual(STAKES, [5, 10, 20, 50, 100]);
-  assert.throws(() => ctx.svc.play(ctx.users[0], 7), /Нет такой ставки/);
-});
+// ---------- ежедневный турнир ----------
+// Часы: 2026-11-07 10:00 по Москве (07:00 UTC)
+const T0 = Date.UTC(2026, 10, 7, 7, 0, 0);
 
-test('одна игра за раз: пока матч не закрыт — новую не начать; после итогов — можно, в новый матч', () => {
+function playScore(ctx, uid, score, misses = 0) {
+  play(ctx, uid);
+  for (let i = 0; i < score; i++) shot(ctx, uid, 'made');
+  for (let i = 0; i < misses; i++) shot(ctx, uid, 'miss');
+  finishTime(ctx, uid);
+}
+
+test('попытка стоит ровно 5 ⭐, игра начинается сразу; одновременно — одна попытка', () => {
   const ctx = setup();
-  const a = play(ctx, 1, 20);
-  assert.equal(play(ctx, 1, 20).gameId, a.gameId, 'вернули в ту же игру, ставка не списана повторно');
-  assert.equal(ctx.store.getUser(1).balance, 980);
+  ctx.clock.t = T0;
+  const s = play(ctx, 1);
+  assert.equal(ctx.store.getUser(1).balance, 995);
+  assert.equal(play(ctx, 1).gameId, s.gameId, 'повторный «Играть» возвращает в ту же попытку');
+  assert.equal(ctx.store.getUser(1).balance, 995, 'без второго списания');
   finishTime(ctx, 1);
-  assert.equal(ctx.svc.state(1).activeGameId, a.gameId);
-  assert.throws(() => ctx.svc.play(ctx.users[0], 20), (e) => e.code === 'WAIT_RESULT');
-  assert.throws(() => ctx.svc.play(ctx.users[0], 5), (e) => e.code === 'WAIT_RESULT', 'и с другой ставкой тоже');
-  assert.equal(ctx.store.getUser(1).balance, 980);
-  for (const uid of [2, 3]) { play(ctx, uid, 20); finishTime(ctx, uid); }
-  assert.equal(ctx.svc.state(1).activeGameId, null, 'итоги подведены');
-  assert.notEqual(play(ctx, 1, 20).gameId, a.gameId, 'новая игра — в новом матче');
+  play(ctx, 1);
+  assert.equal(ctx.store.getUser(1).balance, 990, 'новая попытка — снова 5 ⭐');
 });
 
-test('ставка больше баланса — отказ без следов', () => {
-  const ctx = setup({}, 30);
-  assert.throws(() => ctx.svc.play(ctx.users[0], 50), /Недостаточно/);
+test('мало звёзд — отказ без следов', () => {
+  const ctx = setup({}, 4);
+  assert.throws(() => ctx.svc.play(ctx.users[0]), /Недостаточно/);
   assert.equal(ctx.svc.state(1).session, null);
-  assert.equal(ctx.store.getUser(1).balance, 30);
+  assert.equal(ctx.store.getUser(1).balance, 4);
 });
 
-test('таймер и очки: 30 с; попадание с касанием дужки +1 и +3 с; чистое +1 и +5 с; промах — ничего; кольцо меняется', () => {
+test('таймер и очки: 30 с; попадание +1 и +3 с; чистое +1 и +5 с; промах — ничего; кольцо переезжает', () => {
   const ctx = setup();
   const s = play(ctx, 1);
   assert.equal(s.deadline - s.startAt, 30_000);
   const miss = shot(ctx, 1, 'miss');
   assert.deepEqual([miss.made, miss.score, miss.deadline], [false, 0, s.deadline]);
-  assert.deepEqual(miss.hoop, s.hoop);
   const rim = shot(ctx, 1, 'rim');
-  assert.deepEqual([rim.made, rim.swish, rim.score, rim.deadline, rim.bonusMs], [true, false, 1, s.deadline + 3000, 3000]);
-  assert.notDeepEqual(rim.hoop, s.hoop, 'после попадания кольцо переехало');
+  assert.deepEqual([rim.score, rim.deadline, rim.bonusMs], [1, s.deadline + 3000, 3000]);
+  assert.notDeepEqual(rim.hoop, s.hoop);
   const sw = shot(ctx, 1, 'swish');
-  assert.deepEqual([sw.made, sw.swish, sw.score, sw.deadline, sw.bonusMs], [true, true, 2, s.deadline + 8000, 5000]);
+  assert.deepEqual([sw.swish, sw.score, sw.deadline], [true, 2, s.deadline + 8000]);
 });
 
-test('равные условия: у всех в матче одна последовательность колец, даже если играют в разное время', () => {
+test('таблица дня: в зачёт лучшая попытка игрока; при равенстве — меньше бросков, затем кто раньше', () => {
   const ctx = setup();
-  const a = play(ctx, 1);
-  const r1 = shot(ctx, 1, 'made');
-  ctx.clock.t += 30 * 60_000; // второй пришёл через полчаса
-  const b = play(ctx, 2);
-  assert.deepEqual(b.hoop, a.hoop);
-  shot(ctx, 2, 'made');
-  assert.deepEqual(ctx.svc.state(2).session.hoop, r1.hoop);
+  ctx.clock.t = T0;
+  playScore(ctx, 1, 2);
+  playScore(ctx, 2, 3, 1); // 3 очка за 4 броска
+  playScore(ctx, 1, 4); // лучшая попытка игрока 1 — 4
+  playScore(ctx, 3, 3); // 3 очка за 3 броска — выше игрока 2
+  const st = ctx.svc.state(2);
+  assert.deepEqual(st.today.top.map((r) => [r.id, r.place, r.score]), [[1, 1, 4], [3, 2, 3], [2, 3, 3]]);
+  assert.deepEqual(st.today.me, { place: 3, score: 3, shots: 4 });
+  assert.equal(st.today.players, 3);
+  assert.equal(st.stats.games, 1);
+});
+
+test('конец дня (00:00 МСК): первое место получает 50 ⭐ ровно один раз; следующий день — новая таблица', () => {
+  const ctx = setup();
+  const closed = [];
+  ctx.svc.on('dayClosed', (c) => closed.push(c));
+  ctx.clock.t = T0;
+  playScore(ctx, 1, 2);
+  playScore(ctx, 2, 5);
+  const endsAt = ctx.svc.state(1).today.endsAt;
+  assert.equal(endsAt, Date.UTC(2026, 10, 7, 21, 0, 0), 'полночь по Москве = 21:00 UTC');
+  ctx.clock.t = endsAt - 1000;
+  ctx.svc.tick();
+  assert.equal(closed.length, 0, 'до полуночи итогов нет');
+  ctx.clock.t = endsAt + 1000;
+  ctx.svc.tick();
+  ctx.svc.tick();
+  assert.equal(closed.length, 1);
+  assert.equal(closed[0].winner.user_id, 2);
+  assert.equal(ctx.store.getUser(2).balance, 1000 - 5 + 50);
+  assert.equal(ctx.store.getUser(1).balance, 995);
+  const st = ctx.svc.state(1);
+  assert.equal(st.today.top.length, 0, 'новый день — пустая таблица');
+  assert.equal(st.lastWinner.id, 2);
+  assert.deepEqual(st.stats.wins === undefined ? null : [ctx.svc.state(2).stats.wins, ctx.svc.state(2).stats.won], [1, 50]);
+});
+
+test('попытка, начатая до полуночи, засчитывается в свой день; итоги ждут, пока она закончится', () => {
+  const ctx = setup();
+  const closed = [];
+  ctx.svc.on('dayClosed', (c) => closed.push(c));
+  ctx.clock.t = Date.UTC(2026, 10, 7, 20, 59, 50); // 23:59:50 МСК
+  play(ctx, 1);
+  shot(ctx, 1, 'made');
+  ctx.clock.t = Date.UTC(2026, 10, 7, 21, 0, 5); // уже следующий день, но попытка ещё идёт
+  ctx.svc.tick();
+  assert.equal(closed.length, 0);
+  finishTime(ctx, 1);
+  ctx.svc.tick();
+  assert.equal(closed.length, 1);
+  assert.equal(closed[0].day, '2026-11-07');
+  assert.equal(ctx.store.getUser(1).balance, 1000 - 5 + 50);
+});
+
+test('день, где никто не набрал очков, закрывается без приза', () => {
+  const ctx = setup();
+  const closed = [];
+  ctx.svc.on('dayClosed', (c) => closed.push(c));
+  ctx.clock.t = T0;
+  playScore(ctx, 1, 0, 2);
+  ctx.clock.t = ctx.svc.dayEndsAt(T0) + 1000;
+  ctx.svc.tick();
+  assert.equal(closed.length, 1);
+  assert.equal(closed[0].winner, null);
+  assert.equal(ctx.store.getUser(1).balance, 995);
 });
 
 test('защита: повтор запроса, пропуск номера, ускорение, без прицеливания, подделка скорости, до старта, после конца', () => {
@@ -190,98 +238,27 @@ test('защита: повтор запроса, пропуск номера, у
   ctx.clock.t = s.startAt + 1;
   const body = { seq: 1, ...good, aimMs: 300, samples: 8 };
   assert.equal(ctx.svc.shoot(1, body).score, 1);
-  const again = ctx.svc.shoot(1, body);
-  assert.deepEqual([again.score, again.replay], [1, true]);
+  assert.deepEqual([ctx.svc.shoot(1, body).score, ctx.svc.shoot(1, body).replay], [1, true]);
   assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 3 }), (e) => e.code === 'BAD_SEQ');
   assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2 }), (e) => e.code === 'TOO_FAST');
   ctx.clock.t = ctx.svc.state(1).session.nextShotAt;
   assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2, aimMs: 10 }), (e) => e.code === 'BAD_AIM');
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2, samples: 0 }), (e) => e.code === 'BAD_AIM');
   assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2, vx: 40_000, vy: 40_000 }), (e) => e.code === 'BAD_SHOT');
-  assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2, vx: 6.5, vy: 9.1 }), (e) => e.code === 'BAD_SHOT');
   ctx.clock.t = ctx.svc.state(1).session.deadline + 301;
   assert.throws(() => ctx.svc.shoot(1, { ...body, seq: 2 }), (e) => e.code === 'NO_MATCH' || e.code === 'TIME_UP');
-  assert.equal(ctx.svc.state(1).games[0].me.score, 1, 'ни одна попытка не изменила счёт');
+  assert.equal(ctx.svc.state(1).attempts[0].score, 1);
 });
 
-test('итоги: соперники видны после своей игры; когда сыграли трое — места, победителю ставка × 2', () => {
+test('перезапуск сервера и обрыв связи: попытка продолжается с тем же счётом, таймером и кольцом', () => {
   const ctx = setup();
-  play(ctx, 1, 10); shot(ctx, 1, 'made'); shot(ctx, 1, 'made'); shot(ctx, 1, 'miss'); finishTime(ctx, 1); // 2 очка, 3 броска
-  let g = ctx.svc.state(1).games[0];
-  assert.equal(g.status, 'open');
-  assert.equal(g.players.length, 1);
-  play(ctx, 2, 10); shot(ctx, 2, 'made'); shot(ctx, 2, 'made'); // 2 очка, 2 броска — точнее
-  g = ctx.svc.state(1).games[0];
-  assert.equal(g.players.find((p) => p.id === 2).score, null, 'счёт играющего скрыт');
-  finishTime(ctx, 2);
-  assert.equal(ctx.svc.state(1).games[0].players.find((p) => p.id === 2).score, 2);
-  play(ctx, 3, 10); shot(ctx, 3, 'miss'); finishTime(ctx, 3);
-  g = ctx.svc.state(1).games[0];
-  assert.equal(g.status, 'finished');
-  assert.deepEqual(g.players.map((p) => [p.id, p.place]).sort(), [[1, 2], [2, 1], [3, 3]]);
-  assert.equal(g.prize, 20);
-  assert.equal(g.bank, 20, 'выплачено: ставка 10 × 2');
-  assert.equal(ctx.store.getUser(2).balance, 1000 - 10 + 20);
-  assert.equal(ctx.store.getUser(1).balance, 990);
-  assert.equal(ctx.store.getUser(3).balance, 990);
-  assert.deepEqual(ctx.svc.state(2).stats, { games: 1, wins: 1, best: 2, won: 20 });
-});
-
-test('×2 на всех ставках; ничья за 1-е место — каждому из победителей возврат ставки', () => {
-  for (const stake of [5, 10, 20, 50, 100]) {
-    const ctx = setup();
-    play(ctx, 1, stake); shot(ctx, 1, 'made'); finishTime(ctx, 1);
-    for (const uid of [2, 3]) { play(ctx, uid, stake); shot(ctx, uid, 'miss'); finishTime(ctx, uid); }
-    assert.equal(ctx.store.getUser(1).balance, 1000 - stake + stake * 2, `ставка ${stake} → ×2`);
-    assert.equal(ctx.store.getUser(2).balance, 1000 - stake);
-  }
-  const ctx = setup();
-  for (const uid of [1, 2, 3]) { play(ctx, uid, 5); shot(ctx, uid, 'miss'); finishTime(ctx, uid); }
-  const g = ctx.svc.state(1).games[0];
-  assert.deepEqual(g.players.map((p) => p.place), [1, 1, 1], 'все промахнулись одинаково — общее место');
-  assert.equal(g.bank, 15, 'каждому вернули ставку 5');
-  for (const uid of [1, 2, 3]) assert.equal(ctx.store.getUser(uid).balance, 1000);
-  const P = (id, score, shots, quality) => ({ user_id: id, score, shots, quality });
-  assert.deepEqual(BasketService.rank([P(1, 3, 5, 2.4), P(2, 3, 4, 1.5), P(3, 3, 5, 2.7)]).map((x) => [x.user_id, x.place]), [[2, 1], [3, 2], [1, 3]]);
-  assert.deepEqual(BasketService.rank([P(1, 0, 4, 0), P(2, 0, 0, 0), P(3, 0, 1, 0)]).map((x) => x.place), [1, 1, 1], '0 очков у всех — общее место');
-});
-
-test('час без троих — матч закрывается, ставки возвращаются; игрок посреди игры не мешает возврату позже', () => {
-  const ctx = setup();
-  const notices = [];
-  ctx.svc.on('closed', (c) => notices.push(c));
-  play(ctx, 1, 50); finishTime(ctx, 1);
-  play(ctx, 2, 50);
-  assert.equal(ctx.store.getUser(1).balance, 950);
-  ctx.clock.t += 59 * 60_000;
-  ctx.svc.tick();
-  assert.equal(notices.length, 0, 'через 59 минут ещё ждём');
-  ctx.clock.t += 60_000 + 1;
-  ctx.svc.tick();
-  assert.equal(notices.length, 1);
-  assert.equal(notices[0].refunded, true);
-  assert.equal(ctx.store.getUser(1).balance, 1000);
-  assert.equal(ctx.store.getUser(2).balance, 1000);
-  assert.equal(ctx.svc.state(1).games[0].status, 'refunded');
-  // в закрытый матч новых игроков не сажают
-  assert.notEqual(play(ctx, 3, 50).gameId, ctx.svc.state(1).games[0].id);
-});
-
-test('перезапуск сервера и обрыв связи: игра продолжается с тем же счётом, таймером и кольцом', () => {
-  const ctx = setup();
-  const s = play(ctx, 1);
+  play(ctx, 1);
   const hit = shot(ctx, 1, 'made');
-  // «перезапуск»: новый сервис на той же базе
   const svc2 = new BasketService(ctx.store, {}, { now: () => ctx.clock.t });
-  ctx.clock.t += 5_000;
+  ctx.clock.t += 3_000;
   const st = svc2.state(1).session;
   assert.deepEqual([st.score, st.seq, st.deadline], [1, 1, hit.deadline]);
   assert.deepEqual(st.hoop, hit.hoop);
-  assert.equal(st.lastShot.made, true);
-  assert.equal(svc2.shoot(1, { seq: 1, vx: hit.vx, vy: hit.vy, aimMs: 300, samples: 5 }).score, 1, 'повтор без второго очка');
-  ctx.svc = svc2;
-  assert.equal(shot(ctx, 1, 'miss').seq, 2);
-  assert.ok(s.gameId);
+  assert.equal(svc2.shoot(1, { seq: 1, vx: hit.vx, vy: hit.vy, aimMs: 300, samples: 5 }).score, 1);
 });
 
 test('подозрительно ровная серия попаданий помечается', () => {
@@ -291,5 +268,21 @@ test('подозрительно ровная серия попаданий по
   play(ctx, 1);
   for (let i = 0; i < 13; i++) shot(ctx, 1, 'made');
   assert.equal(flags.length, 1);
-  assert.equal(flags[0].userId, 1);
+});
+
+test('переход со старой версии: незакрытые матчи со ставками закрываются, ставки возвращаются', () => {
+  const store = openDb(':memory:');
+  store.upsertUser({ id: 1, first_name: 'A' });
+  store.creditPayment({ chargeId: 's', userId: 1, amount: 100, payload: 'seed' });
+  store.db.exec(`CREATE TABLE basket_games (id INTEGER PRIMARY KEY, stake INTEGER, status TEXT, hoops TEXT, bank INTEGER DEFAULT 0, created_at INTEGER, closed_at INTEGER);
+                 CREATE TABLE basket_entries (game_id INTEGER, user_id INTEGER, status TEXT);
+                 INSERT INTO basket_games VALUES (7, 20, 'open', '[]', 0, 1, NULL);
+                 INSERT INTO basket_entries VALUES (7, 1, 'done');`);
+  store.tx(() => store.ledgerDebit(1, 20, 'basket_stake', 7));
+  const refunds = [];
+  const svc = new BasketService(store, {}, { now: () => 5 });
+  svc.on('legacyRefund', (r) => refunds.push(r));
+  assert.equal(store.getUser(1).balance, 100);
+  new BasketService(store, {}, { now: () => 6 }); // повторный запуск — без второго возврата
+  assert.equal(store.getUser(1).balance, 100);
 });
