@@ -802,15 +802,21 @@ const wagerLeft = () => state.wager?.left ?? 0;
 function renderWager() {
   const w = state.wager;
   const box = $('wd-wager');
-  if (!w || !w.required) return (box.hidden = true);
+  const sub = $('wb-withdraw-sub');
+  if (!w || !w.required) {
+    box.hidden = true;
+    sub.textContent = `От ${fmt(state.config.minWithdraw)} ⭐`;
+    return;
+  }
   box.hidden = false;
   box.classList.toggle('done', !w.left);
-  $('wg-val').textContent = `${fmt(w.done)} / ${fmt(w.required)}`;
+  $('wg-val').textContent = `${fmt(w.done)} / ${fmt(w.required)} ⭐`;
   $('wg-bar').style.transform = `scaleX(${Math.min(1, w.done / w.required)})`;
-  const m = state.config.wager ?? { deposit: 3 };
+  const m = state.config.wager?.deposit ?? 3;
   $('wg-text').textContent = w.left
-    ? `Осталось поставить ${fmt(w.left)} ⭐ в любых играх. Пополнения отыгрываются ×${m.deposit}, бонусы ×${m.bonus}.`
-    : 'Оборот выполнен — вывод доступен';
+    ? `Сделайте ставок ещё на ${fmt(w.left)} ⭐ — после пополнения сумму нужно прокрутить ×${m}`
+    : 'Оборот выполнен, вывод доступен';
+  sub.textContent = w.left ? `Оборот ${fmt(w.done)} / ${fmt(w.required)}` : `От ${fmt(state.config.minWithdraw)} ⭐`;
 }
 
 function confirmAsync(text) {
@@ -1116,7 +1122,6 @@ async function main() {
   } catch {}
   $('wd-min').textContent = fmt(state.config.minWithdraw);
   if (state.config.withdrawChannel) $('wd-sub-ch').textContent = state.config.withdrawChannel;
-  $('wb-withdraw-sub').textContent = `От ${fmt(state.config.minWithdraw)} ⭐`;
   $('wd-fee-pct').textContent = Math.round(state.config.withdrawFee * 100);
   $('dep-hint').textContent = `Минимум ${fmt(state.config.minDeposit)} · 1 звезда = 1 на балансе`;
   $('support-btn').hidden = !state.config.supportUsername;

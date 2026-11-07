@@ -18,7 +18,7 @@ services:
       # Необязательные настройки (меняются в .env, затем ./update.sh)
       REF_PERCENT: ${REF_PERCENT:-15}
       WAGER_DEPOSIT: ${WAGER_DEPOSIT:-3}
-      WAGER_BONUS: ${WAGER_BONUS:-10}
+      WAGER_BONUS: ${WAGER_BONUS:-3}
       BASKET_PRICE: ${BASKET_PRICE:-5}
       BASKET_DAILY_PRIZE: ${BASKET_DAILY_PRIZE:-50}
     volumes:

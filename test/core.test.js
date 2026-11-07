@@ -410,18 +410,21 @@ test('startapp: параметр из подписанного initData дост
   assert.equal(validateInitData(signInitData({ ...fields, start_param: undefined }, TOKEN).replace('start_param=undefined&', ''), TOKEN), null);
 });
 
-test('оборот перед выводом: пополнение ×3, бонусы ×10, возвраты ставок не засчитываются', () => {
-  const store = storeWith(1000);
-  const opts = { deposit: 3, bonus: 10 };
-  assert.deepEqual(store.wager(1, opts), { required: 3000, done: 0, left: 3000 });
-  store.tx(() => {
-    store.ledgerDebit(1, 500, 'crash_bet', 1);
-    store.ledgerCredit(1, 100, 'crash_refund', 1);
-    store.ledgerDebit(1, 5, 'basket_entry', 1);
-    store.ledgerCredit(1, 20, 'task', 1);
-  });
-  assert.deepEqual(store.wager(1, opts), { required: 3200, done: 405, left: 2795 });
-  store.tx(() => store.ledgerCredit(1, 5000, 'admin', 0)); // ручное начисление админа не добавляет оборот
-  store.tx(() => store.ledgerDebit(1, 2795, 'crash_bet', 2));
-  assert.deepEqual(store.wager(1, opts), { required: 3200, done: 3200, left: 0 });
+test('оборот перед выводом: после пополнения на 100 нужно поставить 300, отмена ставки не засчитывается', () => {
+  const store = storeWith(0);
+  const opts = { deposit: 3, bonus: 3 };
+  store.tx(() => store.ledgerCredit(1, 1000, 'admin', null)); // начисление админа — без оборота
+  store.tx(() => store.ledgerDebit(1, 500, 'crash_bet', 1)); // ставки ДО пополнения не идут в оборот
+  assert.deepEqual(store.wager(1, opts), { required: 0, done: 0, left: 0 });
+  store.creditPayment({ chargeId: 'p1', userId: 1, amount: 100, payload: 'x' });
+  assert.deepEqual(store.wager(1, opts), { required: 300, done: 0, left: 300 });
+  store.tx(() => store.ledgerDebit(1, 50, 'crash_bet', 2));
+  store.tx(() => store.ledgerCredit(1, 50, 'crash_refund', 2)); // отменил ставку — не считается
+  store.tx(() => store.ledgerDebit(1, 5, 'basket_entry', 7));
+  store.tx(() => store.ledgerDebit(1, 100, 'bet', 3));
+  assert.deepEqual(store.wager(1, opts), { required: 300, done: 105, left: 195 });
+  store.tx(() => store.ledgerDebit(1, 400, 'bet', 4)); // перебор не копится впрок
+  assert.deepEqual(store.wager(1, opts), { required: 300, done: 300, left: 0 });
+  store.creditPayment({ chargeId: 'p2', userId: 1, amount: 10, payload: 'x' });
+  assert.deepEqual(store.wager(1, opts), { required: 30, done: 0, left: 30 });
 });

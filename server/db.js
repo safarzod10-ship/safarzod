@@ -201,7 +201,8 @@ class Store {
                       WHERE l.user_id = :inviter AND l.ref = u.id AND l.kind IN ('referral', 'ref_deposit')) AS earned
                   FROM users u WHERE u.referrer_id = :inviter ORDER BY earned DESC, u.id DESC LIMIT 200`),
       friendsCount: q('SELECT COUNT(*) AS n FROM users WHERE referrer_id = ?'),
-      ledgerByKind: q('SELECT kind, SUM(amount) AS sum FROM ledger WHERE user_id = ? GROUP BY kind'),
+      wagerRows: q(`SELECT kind, amount, ref FROM ledger WHERE user_id = ? AND kind IN
+        ('deposit', 'referral', 'ref_deposit', 'task', 'bet', 'crash_bet', 'basket_entry', 'refund', 'crash_refund') ORDER BY id`),
       refEarned: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND kind IN ('referral', 'ref_deposit')"),
       userPaid: q('SELECT COALESCE(SUM(amount), 0) AS sum FROM payments WHERE user_id = ?'),
       refPaidFor: q("SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND ref = ? AND kind = 'ref_deposit'"),
@@ -422,16 +423,38 @@ class Store {
   }
 
   /**
-   * Оборот перед выводом (вейджер), как в казино: каждое пополнение нужно поставить × deposit раз,
-   * бонусы (рефералы, задания) — × bonus раз. Считается по журналу нарастающим итогом.
-   * В оборот идут ставки во всех играх за вычетом возвращённых ставок.
+   * Оборот перед выводом (вейджер), как в казино: после пополнения на N нужно сделать ставок на N × deposit
+   * (бонусы — рефералы, задания — × bonus). Идём по журналу по порядку: пополнение добавляет к «осталось»,
+   * ставка уменьшает его; ставки, сделанные до пополнения, не засчитываются. Отменённая (возвращённая) ставка
+   * возвращает в «осталось» то, что успела засчитать. required/done — по текущему циклу отыгрыша.
    */
-  wager(userId, { deposit = 3, bonus = 10 } = {}) {
-    const k = Object.fromEntries(this.q.ledgerByKind.all(userId).map((r) => [r.kind, Number(r.sum)]));
-    const v = (name) => k[name] ?? 0;
-    const required = Math.ceil(v('deposit') * deposit + (v('referral') + v('ref_deposit') + v('task')) * bonus);
-    const done = Math.max(0, -(v('bet') + v('crash_bet') + v('basket_entry')) - v('crash_refund') - v('basket_refund'));
-    return { required, done: Math.min(done, required), left: Math.max(0, required - done) };
+  wager(userId, { deposit = 3, bonus = 3 } = {}) {
+    const MULT = { deposit, referral: bonus, ref_deposit: bonus, task: bonus };
+    const BET = { bet: 'r', crash_bet: 'c', basket_entry: 'b' };
+    const REFUND = { refund: 'r', crash_refund: 'c' };
+    const used = new Map();
+    let left = 0, required = 0, done = 0;
+    for (const { kind, amount, ref } of this.q.wagerRows.all(userId)) {
+      if (MULT[kind]) {
+        if (left === 0) (required = 0), (done = 0); // новый цикл отыгрыша
+        const add = Math.ceil(amount * MULT[kind]);
+        left += add;
+        required += add;
+      } else if (BET[kind]) {
+        const use = Math.min(left, -amount);
+        left -= use;
+        done += use;
+        const key = BET[kind] + ref;
+        used.set(key, (used.get(key) ?? 0) + use);
+      } else if (REFUND[kind]) {
+        const key = REFUND[kind] + ref;
+        const back = Math.min(used.get(key) ?? 0, amount);
+        used.set(key, (used.get(key) ?? 0) - back);
+        left += back;
+        done -= back;
+      }
+    }
+    return { required, done, left };
   }
 
   getWithdrawal(id) {
