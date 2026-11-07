@@ -1,4 +1,5 @@
-import { WORLD, QUANT, validLaunch, simulateShot, previewPath } from './basket-physics.js';
+import { WORLD, QUANT, validLaunch, simulateShot, previewPath, nextHoop } from './basket-physics.js';
+import { GRAM, gramInput, currency } from './money.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
@@ -14,7 +15,7 @@ const plural = (n, one, few, many) => {
   return many;
 };
 const shotsText = (n) => `${fmt(n)} ${plural(n, 'бросок', 'броска', 'бросков')}`;
-const TUTOR_KEY = 'bb-tutorial-v1';
+const TUTOR_KEY = 'bb-practice-v1';
 
 const SOUNDS = ['bounce', 'throw', 'crowd'];
 function createAudio() {
@@ -173,7 +174,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     const play = $('gc-play');
     play.innerHTML = st.session
       ? '<svg><use href="#i-ball"/></svg>Продолжить игру'
-      : `<svg><use href="#i-ball"/></svg>Играть за ${fmt(st.price)} ⭐`;
+      : `<svg><use href="#i-ball"/></svg>Играть за ${priceLabel()}`;
 
     const date = new Intl.DateTimeFormat('ru-RU', {
       day: 'numeric',
@@ -214,45 +215,130 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     }
   };
 
-  function openTutorial(thenPlay) {
-    s.tutorStep = 0;
-    s.tutorPlay = thenPlay;
-    renderTutor();
-    const w = $('bb-tutor');
-    w.classList.remove('closing');
-    w.hidden = false;
+  const priceLabel = () => {
+    const st = s.st;
+    if (currency() === GRAM) return `${gramInput(st?.priceGram ?? 0)} Gram`;
+    return `${fmt(st?.price ?? 5)} ⭐`;
+  };
+  const canAfford = () =>
+    currency() === GRAM ? (me()?.gram ?? 0) >= (s.st?.priceGram ?? 0) : (me()?.balance ?? 0) >= (s.st?.price ?? 5);
+
+  function coach(text, { hand = false, skip = true } = {}) {
+    const el = $('bb-coach');
+    el.hidden = false;
+    $('bb-coach-text').innerHTML = text;
+    $('bb-coach-skip').hidden = !skip;
+    $('bb-hand').hidden = !hand;
+    if (hand) placeHand();
   }
 
-  function renderTutor() {
-    const i = s.tutorStep;
-    document.querySelectorAll('#bb-tutor .tutor-slide').forEach((el, k) => el.classList.toggle('on', k === i));
-    document.querySelectorAll('#bb-tutor .tutor-dots i').forEach((el, k) => el.classList.toggle('on', k === i));
-    const last = i === 2;
-    $('tutor-next').textContent = last ? (s.tutorPlay ? `Играть за ${fmt(s.st?.price ?? 5)} ⭐` : 'Понятно') : 'Далее';
-    $('tutor-skip').hidden = last;
+  function placeHand() {
+    const c = $('bb-canvas').getBoundingClientRect();
+    const hand = $('bb-hand');
+    hand.style.left = `${c.left + c.width * 0.62}px`;
+    hand.style.top = `${c.top + c.height * 0.36}px`;
   }
 
-  function closeTutor(play) {
+  function startPractice(thenPlay) {
+    if (thenPlay && !canAfford()) {
+      toast(`Нужно ${priceLabel()} — пополните баланс`, 'err');
+      return go('deposit');
+    }
+    audio.unlock();
+    s.practice = { thenPlay, misses: 0 };
+    s.gameId = null;
+    s.ended = false;
+    s.flight = null;
+    s.pendingShot = null;
+    s.popups = [];
+    s.score = 0;
+    s.seq = 0;
+    s.startAt = 0;
+    s.deadline = Infinity;
+    s.nextShotAt = 0;
+    s.hoop = null;
+    $('bb-result').hidden = true;
+    $('bb-hint').classList.add('hide');
+    $('bb-score').textContent = '0';
+    $('bb-stake').textContent = 'Тренировка';
+    openGame();
+    setHoop(nextHoop(null, Math.random, 0), false);
+    requestAnimationFrame(() =>
+      coach(
+        '<b>Тренер:</b> зажмите палец в любом месте экрана и потяните <b>влево-вниз</b>, как рогатку. Отпустите — мяч полетит в кольцо.',
+        {
+          hand: true,
+        },
+      ),
+    );
+  }
+
+  function practiceResult(made) {
+    const p = s.practice;
+    if (!p) return;
+    if (!made) {
+      p.misses++;
+      coach(
+        p.misses > 2
+          ? '<b>Тренер:</b> чем длиннее тянете, тем сильнее бросок. Смотрите на пунктир — он показывает, куда полетит мяч.'
+          : '<b>Тренер:</b> почти! Попробуйте ещё раз — чуть сильнее или слабее.',
+        { hand: p.misses > 2 },
+      );
+      return;
+    }
     try {
       localStorage.setItem(TUTOR_KEY, '1');
     } catch {}
-    const w = $('bb-tutor');
-    w.classList.add('closing');
-    setTimeout(() => (w.hidden = true), 240);
-    if (play) startGame();
+    haptic.ok();
+    s.practice = null;
+    if (!p.thenPlay) {
+      coach('<b>Тренер:</b> отлично, вы готовы! За игру — 30 секунд, каждое попадание даёт +3 секунды, чистое — +5.', {
+        skip: false,
+      });
+      setTimeout(() => {
+        $('bb-coach').hidden = true;
+        closeGame();
+      }, 2600);
+      return;
+    }
+    coach(
+      `<b>Тренер:</b> есть! Теперь по-настоящему: 30 секунд, каждое попадание +3 секунды. Ставка ${priceLabel()}.`,
+      {
+        skip: false,
+      },
+    );
+    setTimeout(() => {
+      $('bb-coach').hidden = true;
+      s.hoop = null;
+      startGame();
+    }, 2200);
+  }
+
+  function skipPractice() {
+    const p = s.practice;
+    s.practice = null;
+    $('bb-coach').hidden = true;
+    try {
+      localStorage.setItem(TUTOR_KEY, '1');
+    } catch {}
+    if (p?.thenPlay) {
+      s.hoop = null;
+      s.flight = null;
+      startGame();
+    } else closeGame();
   }
 
   async function startGame() {
-    const price = s.st?.price ?? 5;
-    if (price > (me()?.balance ?? 0)) {
-      toast(`Нужно ${fmt(price)} ⭐ — пополните баланс`, 'err');
+    if (!canAfford()) {
+      if (!$('bb-game').hidden) closeGame();
+      toast(`Нужно ${priceLabel()} — пополните баланс`, 'err');
       return go('deposit');
     }
     const btn = $('gc-play');
     btn.classList.add('loading');
     audio.unlock();
     try {
-      const res = await api('/api/basket/play', {});
+      const res = await api('/api/basket/play', { currency: currency() });
       onProfile(res);
       haptic.impact('medium');
       apply(res);
@@ -279,7 +365,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       $('bb-hint').classList.remove('hide');
     }
     s.startAt = sess.startAt;
-    $('bb-stake').textContent = fmt(s.st?.price ?? 5);
+    $('bb-stake').textContent = 'В игре';
     if (!s.pendingShot) {
       s.score = sess.score;
       s.deadline = sess.deadline;
@@ -304,6 +390,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
   }
 
   function closeGame() {
+    s.practice = null;
+    $('bb-coach').hidden = true;
     $('bb-game').hidden = true;
     $('bb-result').hidden = true;
     document.body.classList.remove('bb-playing');
@@ -320,6 +408,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
   function resize() {
     const c = $('bb-canvas');
     const r = c.getBoundingClientRect();
+    if (!r.width || !r.height) return requestAnimationFrame(resize);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     c.width = Math.round(r.width * dpr);
     c.height = Math.round(r.height * dpr);
@@ -415,9 +504,13 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       contacts: sim.contacts.slice(),
     };
     s.throwAt = performance.now();
-    s.pendingShot = { seq, vx: ivx, vy: ivy, aimMs, samples };
     audio.play('throw', 0.5 + 0.5 * (s.lastPower ?? 0.5));
     haptic.impact('light');
+    if (s.practice) {
+      $('bb-coach').hidden = true;
+      return;
+    }
+    s.pendingShot = { seq, vx: ivx, vy: ivy, aimMs, samples };
     sendShot(s.pendingShot, 0);
   }
 
@@ -485,7 +578,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       }</div>
       <div class="res-wait">🏆 Первое место в 00:00 МСК получает <b>${fmt(t.prize)} ⭐</b></div>
       <div class="dock-row"><button class="btn secondary" data-res="close">Готово</button>
-      <button class="btn primary" data-res="again" style="flex:1">Ещё раз · ${fmt(st.price)} ⭐</button></div>`;
+      <button class="btn primary" data-res="again" style="flex:1">Ещё раз · ${priceLabel()}</button></div>`;
     if (el.dataset.html !== html) {
       el.dataset.html = html;
       el.innerHTML = html;
@@ -524,6 +617,17 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
         const [kind] = f.contacts.shift();
         if (kind === 'floor') audio.play('bounce', 0.55);
         else haptic.impact('soft');
+      }
+      if (s.practice && !f.popped && ((f.made && el >= f.madeT) || el >= f.settleT)) {
+        f.popped = true;
+        if (f.made) {
+          s.net = 1;
+          s.flash = 1;
+          s.popups.push({ t: performance.now(), x: s.hoop.x, y: s.hoop.y, swish: f.swish, bonus: 0 });
+          audio.play('crowd', 0.7);
+          $('bb-score').textContent = '1';
+        }
+        practiceResult(f.made);
       }
       if (!f.popped && f.made && el >= f.madeT && s.serverShot?.seq === f.seq) {
         f.popped = true;
@@ -689,7 +793,8 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
   let lastSec = null;
   function drawScoreboard(ctx, t) {
     const v = s.view;
-    const left = s.ended ? 0 : started() ? timeLeft() : s.deadline - s.startAt;
+    const left =
+      s.practice || s.deadline === Infinity ? 30_000 : s.ended ? 0 : started() ? timeLeft() : s.deadline - s.startAt;
     const sec = Math.ceil(left / 1000);
     const hot = started() && sec <= 5 && !s.ended;
     const w = Math.min(118, v.cw * 0.3);
@@ -832,12 +937,27 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   function drawPlayer(ctx, t, holdsBall) {
     const sc = s.view.scale;
+    const C = {
+      skin: '#c88b5d',
+      skinDark: '#9c6340',
+      jersey: '#f4f6fb',
+      jerseyDark: '#cdd5e6',
+      navy: '#1c2650',
+      navyDark: '#111834',
+      gold: '#f4b93a',
+      hair: '#201712',
+      shoe: '#f6f7fb',
+      shoeDark: '#c9d0df',
+    };
     const baseX = 0.95;
     const aiming = !!s.aim;
     const sinceThrow = (t - s.throwAt) / 1000;
     const throwing = sinceThrow < 0.45;
     const idle = holdsBall && !aiming && !throwing;
-    const P = (x, y) => [X(x), Y(y)];
+    const P = (p) => [X(p[0]), Y(p[1])];
+    const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const smooth = (v) => v * v * (3 - 2 * v);
 
     const period = 0.56;
     const ph = ((t / 1000) % period) / period;
@@ -848,98 +968,286 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       if (hit && ballReady()) audio.play('bounce', 0.28);
       s.lastPh = ph;
     }
-    const bob = idle ? Math.sin(ph * Math.PI * 2) * 0.03 : aiming ? -0.04 : 0;
-    const crouch = aiming ? 0.08 + (s.aim?.power ?? 0) * 0.08 : 0;
+    const power = aiming ? (s.aim?.power ?? 0) : 0;
+    const crouch = aiming ? 0.08 + power * 0.08 : 0;
+    const tk = clamp01(sinceThrow / 0.45);
+    const lift = throwing ? Math.sin(Math.PI * tk) * 0.09 : 0;
+    const bob = idle ? Math.cos(ph * Math.PI * 2) * 0.02 : 0;
+    const breathe = !idle && !aiming && !throwing ? Math.sin(t / 650) * 0.008 : 0;
+    const armsUp = aiming ? 1 : !holdsBall || throwing ? 1 - smooth(clamp01((sinceThrow - 0.3) / 0.5)) : 0;
 
-    const hip = 1.0 - crouch + bob;
-    const shoulder = 1.72 - crouch + bob;
-    const headY = 2.05 - crouch + bob;
+    const hipY = (idle ? 1.02 : 1.08) - crouch * 0.8 + bob + lift + breathe;
+    const lean = idle ? 0.2 : aiming ? -0.06 + crouch * 0.3 : 0.1 - armsUp * 0.08;
+    const hipC = [baseX - 0.03 - crouch * 0.25, hipY];
+    const torsoLen = 0.78;
+    const u = [Math.sin(lean), Math.cos(lean)];
+    const n = [u[1], -u[0]];
+    const T = (a, b) => [hipC[0] + u[0] * torsoLen * a + n[0] * b, hipC[1] + u[1] * torsoLen * a + n[1] * b];
+    const rise = armsUp * 0.07;
+    const shN = T(0.88 + rise, 0.02);
+    const shF = T(0.88 + rise, -0.07);
+    const headC = T(1.32 + rise * 0.3, 0.04 - armsUp * 0.04);
+    const headR = 0.16;
+
+    const ankleN = [baseX + 0.15, 0.1 + lift];
+    const ankleF = [baseX - 0.17, 0.1 + lift];
+    const hipN = T(0.02, 0.05);
+    const hipF = T(0.02, -0.06);
+    const [kneeN] = playerIk(hipN, ankleN, 0.53, 0.5, 1);
+    const [kneeF] = playerIk(hipF, ankleF, 0.53, 0.5, 1);
+
+    let ballPos = null;
+    let nearT;
+    let farT;
+    let nearDir = null;
+    if (aiming) {
+      ballPos = { x: WORLD.START.x, y: WORLD.START.y };
+      nearT = [WORLD.START.x - 0.2, WORLD.START.y - 0.17];
+      farT = [WORLD.START.x - 0.24, WORLD.START.y - 0.04];
+      nearDir = Math.atan2(0.17, 0.2);
+    } else if (throwing || !holdsBall) {
+      const a = smooth(clamp01(Math.max(0, sinceThrow) / 0.16));
+      const back = 1 - armsUp;
+      const rel = [WORLD.START.x - 0.2, WORLD.START.y - 0.17];
+      const fol = [shN[0] + 0.5, shN[1] + 0.52];
+      nearT = mix(mix(rel, fol, a), [baseX + 0.1, hipY - 0.04], back);
+      farT = mix(
+        mix([WORLD.START.x - 0.24, WORLD.START.y - 0.04], [shF[0] + 0.42, shF[1] + 0.38], a),
+        [baseX - 0.02, hipY - 0.02],
+        back,
+      );
+      nearDir = back > 0.5 ? null : 0.75 - a * 1.9;
+    } else {
+      ballPos = { x: baseX + 0.48, y: dribY };
+      nearT = [baseX + 0.43, Math.max(hand + 0.1, dribY + WORLD.BALL_R + 0.09)];
+      farT = [baseX + 0.24, hipY + 0.2 + bob];
+      nearDir = -1.35;
+    }
+    const [elbowN, wristN] = playerIk(shN, nearT, 0.4, 0.37, -1);
+    const [elbowF, wristF] = playerIk(shF, farT, 0.4, 0.37, -1);
+    const handDir = (elbow, wrist, d) => d ?? Math.atan2(wrist[1] - elbow[1], wrist[0] - elbow[0]);
+    const handTip = (wrist, ang) => [wrist[0] + Math.cos(ang) * 0.1, wrist[1] + Math.sin(ang) * 0.1];
+    const R = (v) => v * sc;
 
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(X(baseX), Y(0) + 2, sc * 0.42, sc * 0.08, 0, 0, Math.PI * 2);
+    ctx.ellipse(X(baseX), Y(0) + 2, sc * (0.44 - lift), sc * 0.08, 0, 0, Math.PI * 2);
     ctx.fill();
-    const knee = 0.5 - crouch * 0.4;
-    for (const [fx, kx, c] of [
-      [-0.14, -0.06, '#d9a77e'],
-      [0.16, 0.1, '#e6b58a'],
-    ]) {
-      ctx.strokeStyle = c;
-      ctx.lineWidth = sc * 0.15;
+
+    const farHandAng = handDir(elbowF, wristF, aiming ? nearDir + 0.3 : null);
+    playerChain(
+      ctx,
+      [P(shF), P(elbowF), P(wristF), P(handTip(wristF, farHandAng))],
+      [R(0.07), R(0.055), R(0.042), R(0.038)],
+      null,
+      C.skinDark,
+    );
+
+    playerChain(ctx, [P(hipF), P(kneeF), P(ankleF)], [R(0.1), R(0.075), R(0.048)], null, C.skinDark);
+    playerShoe(ctx, sc, P, ankleF, C.shoeDark, C);
+    playerChain(ctx, [P(hipF), P(mix(hipF, kneeF, 0.55))], [R(0.15), R(0.135)], null, C.navyDark);
+
+    playerChain(ctx, [P(hipN), P(kneeN), P(ankleN)], [R(0.105), R(0.078), R(0.05)], C.skin, C.skinDark);
+    ctx.fillStyle = C.shoe;
+    playerCapsule(ctx, P(ankleN), P(mix(ankleN, kneeN, 0.12)), R(0.055), R(0.055));
+    playerShoe(ctx, sc, P, ankleN, C.shoe, C);
+
+    playerChain(ctx, [P(T(0.86, 0.02)), P(mix(T(0.9, 0.03), headC, 0.7))], [R(0.07), R(0.062)], C.skin, C.skinDark);
+
+    const J = (a, b) => P(T(a, b));
+    const jersey = () => {
       ctx.beginPath();
-      ctx.moveTo(...P(baseX + fx * 0.6, hip));
-      ctx.lineTo(...P(baseX + kx + crouch * 0.4, knee));
-      ctx.lineTo(...P(baseX + fx, 0.12));
-      ctx.stroke();
-      ctx.fillStyle = '#f2f2f7';
-      ctx.beginPath();
-      ctx.ellipse(X(baseX + fx + 0.06), Y(0.06), sc * 0.15, sc * 0.075, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#8b6cff';
-      ctx.fillRect(X(baseX + fx - 0.06), Y(0.14), sc * 0.14, sc * 0.03);
-    }
-    ctx.fillStyle = '#3b2a78';
-    roundRect(ctx, X(baseX - 0.27), Y(hip + 0.16), sc * 0.56, sc * 0.42, sc * 0.08);
+      ctx.moveTo(...J(-0.05, -0.19));
+      ctx.lineTo(...J(-0.05, 0.2));
+      ctx.quadraticCurveTo(...J(0.32, 0.25), ...J(0.62, 0.24));
+      ctx.lineTo(...J(0.7, 0.18));
+      ctx.quadraticCurveTo(...J(0.86, 0.12), ...J(0.98, 0.11));
+      ctx.quadraticCurveTo(...J(0.86, 0.02), ...J(0.98, -0.08));
+      ctx.lineTo(...J(0.98, -0.17));
+      ctx.quadraticCurveTo(...J(0.82, -0.17), ...J(0.68, -0.24));
+      ctx.quadraticCurveTo(...J(0.35, -0.25), ...J(-0.05, -0.19));
+      ctx.closePath();
+    };
+    jersey();
+    ctx.fillStyle = C.jersey;
     ctx.fill();
-    const jersey = ctx.createLinearGradient(X(baseX - 0.3), 0, X(baseX + 0.3), 0);
-    jersey.addColorStop(0, '#7a5cf0');
-    jersey.addColorStop(1, '#9d84ff');
-    ctx.fillStyle = jersey;
-    roundRect(ctx, X(baseX - 0.28), Y(shoulder + 0.05), sc * 0.56, sc * (shoulder - hip + 0.05), sc * 0.16);
+    ctx.save();
+    jersey();
+    ctx.clip();
+    ctx.fillStyle = C.jerseyDark;
+    ctx.beginPath();
+    ctx.moveTo(...J(-0.2, -0.3));
+    ctx.lineTo(...J(1.1, -0.3));
+    ctx.lineTo(...J(1.1, -0.1));
+    ctx.lineTo(...J(-0.2, -0.07));
     ctx.fill();
-    ctx.strokeStyle = '#f5bf4f';
-    ctx.lineWidth = Math.max(1.5, sc * 0.03);
+    ctx.fillStyle = C.gold;
+    ctx.beginPath();
+    ctx.moveTo(...J(-0.2, 0.15));
+    ctx.lineTo(...J(1.1, 0.15));
+    ctx.lineTo(...J(1.1, 0.12));
+    ctx.lineTo(...J(-0.2, 0.12));
+    ctx.fill();
+    ctx.restore();
+    jersey();
+    ctx.strokeStyle = C.navy;
+    ctx.lineWidth = Math.max(1, sc * 0.03);
     ctx.stroke();
-    ctx.fillStyle = '#fff';
-    ctx.font = `800 ${Math.round(sc * 0.26)}px -apple-system, Roboto, sans-serif`;
+    const num = P(T(0.52, 0.04));
+    ctx.save();
+    ctx.translate(num[0], num[1]);
+    ctx.rotate(lean);
+    ctx.font = `900 ${Math.round(sc * 0.27)}px -apple-system, Roboto, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('7', X(baseX), Y((shoulder + hip) / 2 + 0.06));
-    ctx.fillStyle = '#e6b58a';
-    ctx.beginPath();
-    ctx.arc(X(baseX + 0.02), Y(headY), sc * 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#231a2e';
-    ctx.beginPath();
-    ctx.arc(X(baseX + 0.0), Y(headY + 0.06), sc * 0.205, Math.PI * 0.95, Math.PI * 2.05);
-    ctx.fill();
-    ctx.fillStyle = '#f5bf4f';
-    ctx.fillRect(X(baseX - 0.19), Y(headY + 0.09), sc * 0.42, sc * 0.06);
+    ctx.lineWidth = Math.max(1, sc * 0.035);
+    ctx.strokeStyle = C.gold;
+    ctx.strokeText('7', 0, 0);
+    ctx.fillStyle = C.navy;
+    ctx.fillText('7', 0, 0);
+    ctx.restore();
 
-    const sh = P(baseX + 0.08, shoulder - 0.05);
-    let ballPos = null;
-    let handPos;
-    if (aiming) {
-      ballPos = { x: WORLD.START.x, y: WORLD.START.y };
-      handPos = P(WORLD.START.x - 0.1, WORLD.START.y - 0.1);
-    } else if (throwing) {
-      const a = Math.min(1, sinceThrow / 0.15);
-      handPos = P(baseX + 0.45 + 0.35 * a, shoulder + 0.55 + 0.4 * a);
-    } else if (holdsBall) {
-      ballPos = { x: baseX + 0.48, y: dribY };
-      handPos = P(baseX + 0.46, hand + 0.12 + (idle ? 0.05 * Math.sin(ph * Math.PI * 2) : 0));
-    } else {
-      handPos = P(baseX + 0.3, hip + 0.25);
-    }
-    ctx.strokeStyle = '#d9a77e';
-    ctx.lineWidth = sc * 0.12;
+    playerChain(ctx, [P(T(0.06, -0.02)), P(T(0.06, 0.06))], [R(0.195), R(0.195)], C.navy, C.navyDark);
+    playerChain(ctx, [P(hipN), P(mix(hipN, kneeN, 0.54))], [R(0.15), R(0.135)], C.navy, C.navyDark);
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = Math.max(1, sc * 0.035);
     ctx.beginPath();
-    ctx.moveTo(sh[0] - sc * 0.12, sh[1]);
-    ctx.lineTo((sh[0] + handPos[0]) / 2 - sc * 0.05, (sh[1] + handPos[1]) / 2 + sc * 0.05);
-    ctx.lineTo(handPos[0] - sc * 0.12, handPos[1] + sc * 0.02);
+    ctx.moveTo(...P(mix(T(0.16, 0.0), hipN, 0.2)));
+    ctx.lineTo(...P(mix(hipN, kneeN, 0.5)));
     ctx.stroke();
+    ctx.fillStyle = C.navyDark;
+    ctx.beginPath();
+    ctx.moveTo(...J(0.17, -0.2));
+    ctx.lineTo(...J(0.17, 0.21));
+    ctx.lineTo(...J(0.11, 0.21));
+    ctx.lineTo(...J(0.11, -0.2));
+    ctx.fill();
+
+    playerHead(ctx, P(headC), R(headR), lean * 0.5 - (aiming ? 0.25 : 0), C);
+
     if (ballPos && holdsBall) drawBall(ctx, ballPos.x, ballPos.y, t / 260, ballReady() ? spawn(t) : 1);
-    ctx.strokeStyle = '#e6b58a';
-    ctx.beginPath();
-    ctx.moveTo(...sh);
-    ctx.lineTo((sh[0] + handPos[0]) / 2 + sc * 0.04, (sh[1] + handPos[1]) / 2 + sc * 0.08);
-    ctx.lineTo(...handPos);
-    ctx.stroke();
+
+    const nearHandAng = handDir(elbowN, wristN, nearDir);
+    playerChain(ctx, [P(shN), P(elbowN), P(wristN)], [R(0.078), R(0.06), R(0.045)], C.skin, C.skinDark);
+    ctx.fillStyle = C.gold;
+    playerCapsule(ctx, P(mix(elbowN, wristN, 0.78)), P(mix(elbowN, wristN, 0.92)), R(0.05), R(0.048));
+    playerChain(ctx, [P(wristN), P(handTip(wristN, nearHandAng))], [R(0.046), R(0.042)], C.skin, C.skinDark);
     ctx.restore();
     if (!holdsBall) s.readySince = 0;
+  }
+
+  function playerIk(a, b, l1, l2, dir) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const d = Math.max(1e-4, Math.min(Math.hypot(dx, dy), (l1 + l2) * 0.999));
+    const c = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+    const ang = Math.atan2(dy, dx) + dir * Math.acos(c);
+    const j = [a[0] + Math.cos(ang) * l1, a[1] + Math.sin(ang) * l1];
+    const e = Math.atan2(b[1] - j[1], b[0] - j[0]);
+    return [j, [j[0] + Math.cos(e) * l2, j[1] + Math.sin(e) * l2]];
+  }
+
+  function playerCapsule(ctx, a, b, ra, rb) {
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    ctx.beginPath();
+    ctx.arc(a[0], a[1], ra, ang + Math.PI / 2, ang + Math.PI * 1.5);
+    ctx.arc(b[0], b[1], rb, ang - Math.PI / 2, ang + Math.PI / 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function playerChain(ctx, pts, radii, light, dark) {
+    ctx.fillStyle = dark;
+    for (let i = 0; i < pts.length - 1; i++) playerCapsule(ctx, pts[i], pts[i + 1], radii[i], radii[i + 1]);
+    if (!light) return;
+    ctx.fillStyle = light;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const o = Math.min(radii[i], radii[i + 1]) * 0.24;
+      playerCapsule(
+        ctx,
+        [pts[i][0] - o * 0.5, pts[i][1] - o],
+        [pts[i + 1][0] - o * 0.5, pts[i + 1][1] - o],
+        radii[i] * 0.74,
+        radii[i + 1] * 0.74,
+      );
+    }
+  }
+
+  function playerShoe(ctx, sc, P, ankle, fill, C) {
+    const [hx, top] = P([ankle[0] - 0.09, ankle[1] + 0.05]);
+    const [tx, bottom] = P([ankle[0] + 0.25, ankle[1] - 0.1]);
+    const [cx] = P([ankle[0] + 0.06, 0]);
+    const toeTop = bottom - sc * 0.1;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(hx + sc * 0.03, bottom);
+    ctx.lineTo(tx - sc * 0.04, bottom);
+    ctx.quadraticCurveTo(tx + sc * 0.01, bottom, tx, toeTop + sc * 0.04);
+    ctx.quadraticCurveTo(tx - sc * 0.03, toeTop, cx + sc * 0.02, top + sc * 0.03);
+    ctx.lineTo(hx + sc * 0.02, top);
+    ctx.quadraticCurveTo(hx - sc * 0.01, top + sc * 0.04, hx, bottom - sc * 0.03);
+    ctx.quadraticCurveTo(hx, bottom, hx + sc * 0.03, bottom);
+    ctx.fill();
+    ctx.fillStyle = C.navy;
+    roundRect(ctx, hx - sc * 0.005, bottom - sc * 0.035, tx - hx + sc * 0.01, sc * 0.04, sc * 0.02);
+    ctx.fill();
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = Math.max(1, sc * 0.025);
+    ctx.beginPath();
+    ctx.moveTo(hx + sc * 0.05, bottom - sc * 0.07);
+    ctx.quadraticCurveTo(cx + sc * 0.04, bottom - sc * 0.06, cx + sc * 0.08, top + sc * 0.06);
+    ctx.stroke();
+  }
+
+  function playerHead(ctx, c, r, tilt, C) {
+    ctx.save();
+    ctx.translate(c[0], c[1]);
+    ctx.rotate(tilt);
+    ctx.fillStyle = C.skin;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.95, r * 1.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.42, r * 0.55, r * 0.5, r * 0.42, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.88, -r * 0.05);
+    ctx.lineTo(r * 1.08, r * 0.25);
+    ctx.lineTo(r * 0.85, r * 0.3);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.95, r * 1.05, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = C.hair;
+    ctx.beginPath();
+    ctx.moveTo(-r * 1.2, r * 0.45);
+    ctx.lineTo(-r * 0.45, r * 0.3);
+    ctx.lineTo(-r * 0.25, -r * 0.3);
+    ctx.lineTo(r * 1.2, -r * 0.42);
+    ctx.lineTo(r * 1.2, -r * 1.2);
+    ctx.lineTo(-r * 1.2, -r * 1.2);
+    ctx.fill();
+    ctx.fillStyle = C.gold;
+    ctx.beginPath();
+    ctx.moveTo(-r * 1.2, -r * 0.22);
+    ctx.lineTo(r * 1.2, -r * 0.48);
+    ctx.lineTo(r * 1.2, -r * 0.2);
+    ctx.lineTo(-r * 1.2, r * 0.06);
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = C.skinDark;
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.2, r * 0.12, r * 0.16, r * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.hair;
+    ctx.beginPath();
+    ctx.arc(r * 0.55, r * 0.08, Math.max(0.8, r * 0.1), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function spawn(t) {
@@ -1044,6 +1352,11 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   function tickClock() {
     const ov = $('bb-overlay');
+    if (s.practice || (!s.gameId && !$('bb-coach').hidden)) {
+      ov.hidden = true;
+      ov.dataset.k = 'none';
+      return;
+    }
     if (!started()) {
       const n = Math.max(1, Math.ceil((s.startAt - serverNow()) / 1000));
       if (ov.dataset.k !== `c${n}`) {
@@ -1083,21 +1396,13 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       go('basket');
     });
     $('bb-history-btn').addEventListener('click', () => go('basket-history'));
-    $('bb-howto').addEventListener('click', () => openTutorial(false));
+    $('bb-howto').addEventListener('click', () => startPractice(false));
     $('gc-play').addEventListener('click', () => {
       if (s.st?.session) return apply(s.st);
-      if (!tutorSeen()) return openTutorial(true);
+      if (!tutorSeen()) return startPractice(true);
       startGame();
     });
-    $('tutor-next').addEventListener('click', () => {
-      haptic.tap();
-      if (s.tutorStep < 2) {
-        s.tutorStep++;
-        renderTutor();
-      } else closeTutor(s.tutorPlay);
-    });
-    $('tutor-skip').addEventListener('click', () => closeTutor(s.tutorPlay));
-    $('bb-tutor').addEventListener('click', (e) => e.target.matches('[data-close]') && closeTutor(false));
+    $('bb-coach-skip').addEventListener('click', skipPractice);
     $('bb-result').addEventListener('click', (e) => {
       const act = e.target.closest('[data-res]')?.dataset.res;
       if (act === 'close') closeGame();
@@ -1126,6 +1431,9 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
 
   return {
     bind,
+    setCurrency() {
+      if (s.st) renderGamesTab();
+    },
     show() {
       s.active = true;
       refresh();

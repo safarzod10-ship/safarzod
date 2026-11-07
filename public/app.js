@@ -1,13 +1,31 @@
 import { createBasket } from './basket.js';
 import { createCrash } from './crash.js';
 import { createAdmin } from './admin.js';
+import { createTour } from './tour.js';
+import {
+  XTR,
+  GRAM,
+  NANO,
+  money,
+  pot,
+  icon,
+  fmtGram,
+  gramInput,
+  cleanGramInput,
+  currency,
+  setCurrency,
+  onCurrency,
+  switchHtml,
+  syncSwitches,
+  commentBoc,
+} from './money.js';
 
 const tg = window.Telegram?.WebApp;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
 const STAR = '<svg class="star"><use href="#i-star"/></svg>';
 const PALETTE = [
-  '#7c5cff',
+  '#19c37d',
   '#e2a73d',
   '#2ba98f',
   '#d9625b',
@@ -16,11 +34,15 @@ const PALETTE = [
   '#7fae45',
   '#d98a3d',
   '#4fb3c8',
-  '#9a8cf0',
+  '#6ec1ff',
 ];
 const BET_STEPS = [
   1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000,
 ];
+const GRAM_STEPS = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000].map((g) =>
+  Math.round(g * NANO),
+);
+const CHIPS = { XTR: [10, 50, 100, 500], GRAM: [0.1, 0.5, 1, 5].map((g) => Math.round(g * NANO)) };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const state = {
@@ -43,10 +65,10 @@ function setupTelegram() {
   const at = (v) => tg.isVersionAtLeast?.(v);
   if (at('7.7')) tg.disableVerticalSwipes();
   if (at('6.1')) {
-    tg.setHeaderColor('#0b0b10');
-    tg.setBackgroundColor('#0b0b10');
+    tg.setHeaderColor('#0b0e13');
+    tg.setBackgroundColor('#0b0e13');
   }
-  if (at('7.10')) tg.setBottomBarColor('#0f0f15');
+  if (at('7.10')) tg.setBottomBarColor('#0b0e13');
   const applyInsets = () => {
     const s = tg.safeAreaInset ?? {};
     const c = tg.contentSafeAreaInset ?? {};
@@ -210,12 +232,14 @@ function renderMe() {
   $('me-nick').textContent = u.username ? `@${u.username}` : `ID ${u.id}`;
   setAvatar('me-avatar', u);
 
+  $('balance-gram').textContent = fmtGram(u.gram ?? 0);
   const bal = $('balance');
   if (state.shownBalance !== u.balance) {
     if (u.balance > state.shownBalance && state.shownBalance) {
-      $('balance-btn').classList.remove('bump');
-      void $('balance-btn').offsetWidth;
-      $('balance-btn').classList.add('bump');
+      const pill = document.querySelector('.bal-xtr');
+      pill.classList.remove('bump');
+      void pill.offsetWidth;
+      pill.classList.add('bump');
     }
     animateNumber(bal, state.shownBalance, u.balance);
     state.shownBalance = u.balance;
@@ -247,10 +271,10 @@ const wheel = {
 };
 
 function sharesOf(round) {
-  const total = round.players.reduce((s, p) => s + p.amount, 0);
+  const total = round.players.reduce((s, p) => s + p.value, 0);
   return round.players.map((p) => ({
     ...p,
-    frac: total ? p.amount / total : 0,
+    frac: total ? p.value / total : 0,
     color: PALETTE[p.seat % PALETTE.length],
   }));
 }
@@ -411,12 +435,12 @@ function tweenShares() {
   wheel.tween = requestAnimationFrame(step);
 }
 
-function betBubble(p, amount, delay) {
+function betBubble(p, amount, cur, delay) {
   setTimeout(() => {
     const el = document.createElement('div');
     el.className = 'bubble';
     el.style.setProperty('--c', PALETTE[p.seat % PALETTE.length]);
-    el.innerHTML = `${avatarHtml(p, 'xs')}<b class="num">+${fmt(amount)}</b>${STAR}<span>${p.id === state.me?.id ? 'вы' : esc(p.name)}</span>`;
+    el.innerHTML = `${avatarHtml(p, 'xs')}<b>+${money(amount, cur)}</b><span>${p.id === state.me?.id ? 'вы' : esc(p.name)}</span>`;
     $('bubbles').append(el);
     el.addEventListener('animationend', () => el.remove());
   }, delay);
@@ -481,14 +505,15 @@ function onRound(round) {
     $('wheel').classList.remove('spinning');
   }
   if (prev?.id === round.id) {
-    const before = new Map(prev.players.map((p) => [p.id, p.amount]));
+    const before = new Map(prev.players.map((p) => [p.id, p]));
     let k = 0;
     for (const p of round.players) {
-      const delta = p.amount - (before.get(p.id) ?? 0);
-      if (delta > 0) {
-        wheel.flash.set(p.seat, performance.now());
-        betBubble(p, delta, k++ * 280);
-      }
+      const old = before.get(p.id);
+      const dx = p.xtr - (old?.xtr ?? 0);
+      const dg = p.gram - (old?.gram ?? 0);
+      if (dx > 0 || dg > 0) wheel.flash.set(p.seat, performance.now());
+      if (dx > 0) betBubble(p, dx, XTR, k++ * 280);
+      if (dg > 0) betBubble(p, dg, GRAM, k++ * 280);
     }
   }
   if (round.status === 'finished' && !wheel.wonAt) wheel.wonAt = performance.now();
@@ -515,7 +540,11 @@ function onRound(round) {
     refreshMe();
     if (round.winnerId === me) {
       haptic.ok();
-      toast(`Вы выиграли ${fmt(round.bank)}`, 'win');
+      const won = [
+        round.bank.xtr ? `${fmt(round.bank.xtr)} ⭐` : '',
+        round.bank.gram ? `${fmtGram(round.bank.gram)} Gram` : '',
+      ];
+      toast(`Вы выиграли ${won.filter(Boolean).join(' + ')}`, 'win');
     }
   }
 }
@@ -532,7 +561,7 @@ function renderFeats() {
       ? `<div class="f-row">${avatarHtml(g, 'sm')}<div class="f-who">
           <div class="f-name">${g.id === state.me?.id ? 'Вы' : esc(g.username ? `@${g.username}` : g.name)}</div>
           <div class="f-chance num">${g.chance}%</div></div>
-          <div class="f-bank num">+${fmt(g.bank)}${STAR}</div></div>`
+          <div class="f-bank">+${pot(g.bankXtr, g.bankGram)}</div></div>`
       : '<div class="f-empty">Пока нет игр</div>';
     return `<div class="feat ${cls}${fresh ? ' fresh' : ''}"><div class="f-label"><svg><use href="#${icon}"/></svg>${label}</div>${who}</div>`;
   };
@@ -543,10 +572,11 @@ function renderFeats() {
 let centerKey = '';
 function renderCenter() {
   const r = state.round;
-  const bankEl = $('bank');
-  const prevBank = Number(bankEl.dataset.v || 0);
-  if (prevBank !== r.bank) animateNumber(bankEl, prevBank, r.bank, 500);
-  bankEl.dataset.v = r.bank;
+  const bankHtml = pot(r.bank.xtr, r.bank.gram);
+  if ($('bank').dataset.html !== bankHtml) {
+    $('bank').dataset.html = bankHtml;
+    $('bank').innerHTML = bankHtml;
+  }
 
   const n = r.players.length;
   const inRound = r.players.some((p) => p.id === state.me?.id);
@@ -569,7 +599,7 @@ function renderCenter() {
   } else {
     const w = r.players.find((p) => p.id === r.winnerId) ?? {};
     wc.innerHTML = `${avatarHtml(w)}<div class="wc-name">${w.id === state.me?.id ? 'Вы победили!' : esc(w.name)}</div>
-      <div class="wc-prize num">+${fmt(r.bank)}${STAR}</div>`;
+      <div class="wc-prize">+${pot(r.bank.xtr, r.bank.gram)}</div>`;
   }
 }
 
@@ -653,14 +683,14 @@ function renderPlayers() {
   const finished = r.status === 'finished';
   const rows = segs
     .map((s, i) => ({ ...s, pct: pcts[i] }))
-    .sort((a, b) => b.amount - a.amount)
+    .sort((a, b) => b.value - a.value)
     .map((p) => {
       const cls = finished ? (p.id === r.winnerId ? ' winner' : ' dim') : '';
       const you = p.id === state.me?.id ? '<small>вы</small>' : '';
       return `<div class="player${cls}" style="--c:${p.color};--w:${(p.frac * 100).toFixed(2)}%" data-id="${p.id}">
         ${avatarHtml(p, 'sm')}
         <div class="p-main"><div class="p-name">${esc(p.name)}${you}</div>
-        <div class="p-amount num">${fmt(p.amount)}${STAR}</div></div>
+        <div class="p-amount">${pot(p.xtr, p.gram)}${p.gram ? `<span class="p-eq num">≈ ${fmt(Math.round(p.value))} ⭐</span>` : ''}</div></div>
         <div class="p-pct num">${p.pct < 1 ? '<1' : p.pct}%</div></div>`;
     });
   const box = $('players');
@@ -682,64 +712,91 @@ function renderPlayers() {
   );
 }
 
+const balanceOf = (cur) => (cur === GRAM ? (state.me?.gram ?? 0) : (state.me?.balance ?? 0));
+const rate = () => state.config.gram?.rate ?? 140;
+const starsOf = (nano) => Math.round((nano / NANO) * rate());
+
 function betAmount() {
-  return digits($('bet-input'));
+  return currency() === GRAM ? cleanGramInput($('bet-input')) : digits($('bet-input'));
+}
+
+function minBetOf(cur) {
+  return cur === GRAM ? Math.ceil((state.config.minBet / rate()) * 100) * 10_000_000 : state.config.minBet;
+}
+
+function renderBetCurrency() {
+  const cur = currency();
+  $('bet-cur').innerHTML = icon(cur);
+  $('bet-input').inputMode = cur === GRAM ? 'decimal' : 'numeric';
+  $('bet-chips').innerHTML =
+    CHIPS[cur].map((v) => `<button data-chip="${v}">${cur === GRAM ? gramInput(v) : fmt(v)}</button>`).join('') +
+    '<button data-chip="max">Макс</button>';
+  setBetInput(cur === GRAM ? 500_000_000 : 10);
+  updateBetButton();
 }
 
 function updateBetButton() {
   const btn = $('bet-btn');
   if (btn.classList.contains('loading')) return;
   const r = state.round;
+  const cur = currency();
   const amount = betAmount();
   const open = r && (r.status === 'waiting' || r.status === 'countdown');
+  $('bet-hint').textContent =
+    cur === GRAM ? `1 Gram = ${fmt(rate())} ⭐${amount ? ` · ставка ≈ ${fmt(starsOf(amount))} ⭐` : ''}` : '';
   if (!open) {
     btn.textContent = 'Идёт розыгрыш';
     btn.disabled = true;
-  } else if (state.me && amount > state.me.balance) {
+  } else if (state.me && amount > balanceOf(cur)) {
     btn.textContent = 'Пополнить';
     btn.disabled = false;
   } else {
     btn.textContent = 'Сделать ставку';
-    btn.disabled = amount < state.config.minBet;
+    btn.disabled = amount < minBetOf(cur);
   }
   syncChips();
 }
 
 function syncChips() {
   const v = betAmount();
-  const max = state.me?.balance ?? 0;
+  const max = balanceOf(currency());
   document.querySelectorAll('#bet-chips button').forEach((b) => {
     const val = b.dataset.chip === 'max' ? max : Number(b.dataset.chip);
     b.classList.toggle('on', v > 0 && v === val);
   });
 }
 
+function setBetInput(units) {
+  $('bet-input').value = currency() === GRAM ? gramInput(units) : String(units);
+}
+
 function chooseChip(chip) {
-  const value = chip === 'max' ? (state.me?.balance ?? 0) : Number(chip);
+  const cur = currency();
+  const value = chip === 'max' ? balanceOf(cur) : Number(chip);
   if (chip === 'max' && !value) return toast('Баланс пуст — пополните его', 'err');
-  $('bet-input').value = Math.min(value, state.config.maxAmount);
+  setBetInput(cur === GRAM ? Math.floor(value / 10_000_000) * 10_000_000 : Math.min(value, state.config.maxAmount));
   haptic.tap();
   updateBetButton();
 }
 
 function stepBet(dir) {
+  const cur = currency();
+  const steps = cur === GRAM ? GRAM_STEPS : BET_STEPS;
   const v = betAmount() || 0;
-  const next =
-    dir > 0
-      ? (BET_STEPS.find((s) => s > v) ?? v)
-      : ([...BET_STEPS].reverse().find((s) => s < v) ?? state.config.minBet);
-  $('bet-input').value = next;
+  const next = dir > 0 ? (steps.find((x) => x > v) ?? v) : ([...steps].reverse().find((x) => x < v) ?? minBetOf(cur));
+  setBetInput(next);
   haptic.tap();
   updateBetButton();
 }
 
 async function placeBet() {
+  const cur = currency();
   const amount = betAmount();
-  if (state.me && amount > state.me.balance) return go('deposit');
+  if (state.me && amount > balanceOf(cur)) return go('deposit');
   const btn = $('bet-btn');
   busy(btn, true);
   try {
-    applyProfile(await api('/api/bet', { amount }));
+    applyProfile(await api('/api/bet', { amount: cur === GRAM ? gramInput(amount) : amount, currency: cur }));
     haptic.impact('medium');
   } catch (e) {
     haptic.err();
@@ -750,12 +807,37 @@ async function placeBet() {
   }
 }
 
+function renderMoneyForms() {
+  const cur = currency();
+  $('dep-xtr').hidden = cur !== XTR;
+  $('dep-gram').hidden = cur !== GRAM;
+  $('wd-cur').innerHTML = icon(cur);
+  $('wd-address-field').hidden = cur !== GRAM;
+  $('wd-min').textContent =
+    cur === GRAM ? `${state.config.gram?.minWithdraw ?? 1} Gram` : `${fmt(state.config.minWithdraw)} ⭐`;
+  $('wd-input').value = '';
+  updateDepositForm();
+  updateWithdrawForm();
+}
+
 function updateDepositForm() {
-  const n = digits($('dep-input'));
-  $('dep-btn').disabled = n < state.config.minDeposit;
+  const btn = $('dep-btn');
+  if (currency() === GRAM) {
+    const n = cleanGramInput($('dep-gram-input'));
+    const min = Math.round((state.config.gram?.minDeposit ?? 0.1) * NANO);
+    $('dep-gram-hint').textContent = n
+      ? `≈ ${fmt(starsOf(n))} ⭐ по курсу 1 Gram = ${fmt(rate())} ⭐`
+      : `Минимум ${gramInput(min)} Gram`;
+    btn.textContent = 'Оплатить через кошелёк';
+    btn.disabled = n < min;
+  } else {
+    btn.textContent = 'Продолжить';
+    btn.disabled = digits($('dep-input')) < state.config.minDeposit;
+  }
 }
 
 async function deposit() {
+  if (currency() === GRAM) return depositGram();
   const amount = digits($('dep-input'));
   const btn = $('dep-btn');
   if (!supports('6.1') && !state.devUser) return toast('Оплата доступна только в Telegram', 'err');
@@ -768,8 +850,7 @@ async function deposit() {
       $('dep-input').value = '';
       return;
     }
-    const { link } = res;
-    tg.openInvoice(link, (status) => {
+    tg.openInvoice(res.link, (status) => {
       if (status === 'paid') {
         haptic.ok();
         toast(`Баланс пополнен на ${fmt(amount)} ⭐`);
@@ -790,24 +871,109 @@ async function deposit() {
   }
 }
 
+let tonUi = null;
+function loadTonConnect() {
+  if (tonUi) return Promise.resolve(tonUi);
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = 'https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js';
+    el.onload = () => {
+      try {
+        tonUi = new window.TON_CONNECT_UI.TonConnectUI({
+          manifestUrl: `${location.origin}/tonconnect-manifest.json`,
+          language: 'ru',
+        });
+        resolve(tonUi);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    el.onerror = () => reject(new Error('Кошелёк недоступен — переведите вручную по реквизитам ниже'));
+    document.head.append(el);
+  });
+}
+
+function waitWallet(ui) {
+  if (ui.connected) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const off = ui.onStatusChange((w) => {
+      if (w) {
+        off();
+        resolve();
+      }
+    });
+    ui.openModal().catch(reject);
+  });
+}
+
+async function depositGram() {
+  const nano = cleanGramInput($('dep-gram-input'));
+  const btn = $('dep-btn');
+  busy(btn, true);
+  try {
+    const res = await api('/api/deposit/gram', { amount: gramInput(nano) });
+    if (res.dev) {
+      applyProfile(res);
+      toast(`Баланс пополнен на ${fmtGram(nano)} Gram`);
+      $('dep-gram-input').value = '';
+      return;
+    }
+    $('dep-addr').textContent = res.address;
+    $('dep-memo').textContent = res.memo;
+    $('dep-manual').hidden = false;
+    state.gramDeposit = res;
+    const ui = await loadTonConnect();
+    await waitWallet(ui);
+    await ui.sendTransaction({
+      validUntil: Math.floor(Date.now() / 1000) + 600,
+      messages: [{ address: res.address, amount: res.amount, payload: commentBoc(res.memo) }],
+    });
+    haptic.ok();
+    toast('Перевод отправлен. Gram появятся на балансе в течение минуты');
+    $('dep-gram-input').value = '';
+    [10_000, 25_000, 45_000, 70_000].forEach((ms) => setTimeout(refreshMe, ms));
+  } catch (e) {
+    if (!/reject|cancel|closed|declined/i.test(e?.message ?? '')) toast(e?.message || 'Перевод не отправлен', 'err');
+  } finally {
+    busy(btn, false);
+    updateDepositForm();
+  }
+}
+
+function copyText(text) {
+  navigator.clipboard?.writeText(text).then(
+    () => toast('Скопировано'),
+    () => toast(text),
+  );
+  haptic.tap();
+}
+
 function withdrawCalc() {
-  const amount = digits($('wd-input'));
-  const fee = Math.ceil(amount * state.config.withdrawFee);
-  return { amount, fee, total: amount + fee };
+  const cur = currency();
+  const amount = cur === GRAM ? cleanGramInput($('wd-input')) : digits($('wd-input'));
+  const fee =
+    cur === GRAM
+      ? Math.ceil((amount * state.config.withdrawFee) / 10_000_000) * 10_000_000
+      : Math.ceil(amount * state.config.withdrawFee);
+  return { cur, amount, fee, total: amount + fee };
 }
 
 function updateWithdrawForm() {
-  const { amount, fee, total } = withdrawCalc();
-  $('wd-amount').innerHTML = `${fmt(amount)}${STAR}`;
-  $('wd-fee').innerHTML = `${fmt(fee)}${STAR}`;
-  $('wd-total').innerHTML = `${fmt(total)}${STAR}`;
+  const { cur, amount, fee, total } = withdrawCalc();
+  $('wd-amount').innerHTML = money(amount, cur);
+  $('wd-fee').innerHTML = money(fee, cur);
+  $('wd-total').innerHTML = money(total, cur);
   const hint = $('wd-hint');
+  const min = cur === GRAM ? Math.round((state.config.gram?.minWithdraw ?? 1) * NANO) : state.config.minWithdraw;
   let error = '';
-  if (amount && amount < state.config.minWithdraw) error = `Минимальная сумма — ${fmt(state.config.minWithdraw)}`;
-  else if (state.me && total > state.me.balance) error = 'Недостаточно звёзд на балансе';
+  if (amount && amount < min) error = `Минимальная сумма — ${cur === GRAM ? `${gramInput(min)} Gram` : fmt(min)}`;
+  else if (state.me && total > balanceOf(cur)) {
+    error = cur === GRAM ? 'Недостаточно Gram на балансе' : 'Недостаточно звёзд на балансе';
+  }
   hint.textContent = error;
   hint.classList.toggle('error', !!error);
-  $('wd-btn').disabled = !amount || !!error || wagerLeft() > 0;
+  const needAddress = cur === GRAM && $('wd-address').value.trim().length < 48;
+  $('wd-btn').disabled = !amount || !!error || wagerLeft() > 0 || needAddress;
   renderWager();
 }
 
@@ -837,13 +1003,18 @@ function confirmAsync(text) {
 }
 
 async function withdraw() {
-  const { amount, total } = withdrawCalc();
-  const ok = await confirmAsync(`Вывести ${fmt(amount)} ⭐?\nС баланса будет списано ${fmt(total)} ⭐.`);
+  const { cur, amount, total } = withdrawCalc();
+  const label = (n) => (cur === GRAM ? `${fmtGram(n)} Gram` : `${fmt(n)} ⭐`);
+  const address = $('wd-address').value.trim();
+  const to = cur === GRAM ? `\nНа адрес ${address.slice(0, 6)}…${address.slice(-6)}` : '';
+  const ok = await confirmAsync(`Вывести ${label(amount)}?\nС баланса будет списано ${label(total)}.${to}`);
   if (!ok) return;
   const btn = $('wd-btn');
   busy(btn, true);
   try {
-    applyProfile(await api('/api/withdraw', { amount }));
+    applyProfile(
+      await api('/api/withdraw', cur === GRAM ? { amount: gramInput(amount), currency: GRAM, address } : { amount }),
+    );
     haptic.ok();
     toast('Заявка отправлена');
     $('wd-input').value = '';
@@ -875,9 +1046,9 @@ function renderWithdrawals() {
     list
       .map(
         (w) => `<div class="wd card">
-          <div class="wd-top"><div class="wd-amount num">${fmt(w.amount)}${STAR}</div>
+          <div class="wd-top"><div class="wd-amount">${money(w.amount, w.currency)}</div>
           <span class="chip ${w.status}">${STATUS[w.status]}</span></div>
-          <div class="wd-meta">#${w.id} · ${date.format(w.createdAt)} · списано ${fmt(w.total)}</div>
+          <div class="wd-meta">#${w.id} · ${date.format(w.createdAt)} · списано ${w.currency === GRAM ? `${fmtGram(w.total)} Gram` : `${fmt(w.total)} ⭐`}</div>
           ${w.status === 'cancelled' && w.reason ? `<div class="wd-reason">Причина: ${esc(w.reason)}</div>` : ''}
         </div>`,
       )
@@ -1028,6 +1199,7 @@ function updateCrashBadge() {
   b.textContent = n ? `● ${n} в раунде` : '● LIVE';
 }
 
+const tour = createTour({ go, haptic });
 const admin = createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports, tg });
 
 const basket = createBasket({
@@ -1082,6 +1254,17 @@ function connectStream() {
   });
 }
 
+function applyCurrency() {
+  const cur = currency();
+  document.body.dataset.cur = cur;
+  syncSwitches();
+  document.querySelectorAll('.wallet-bar [data-cur]').forEach((b) => b.classList.toggle('on', b.dataset.cur === cur));
+  renderBetCurrency();
+  renderMoneyForms();
+  crash.setCurrency?.(cur);
+  basket.setCurrency?.(cur);
+}
+
 function bindUi() {
   document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', goBack));
@@ -1091,12 +1274,45 @@ function bindUi() {
     tg.openTelegramLink(e.currentTarget.href);
   });
   $('balance-btn').addEventListener('click', () => go('deposit'));
+  document.querySelectorAll('.cur-slot').forEach((el) => (el.innerHTML = switchHtml()));
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.cur-switch [data-cur], .wallet-bar [data-cur]');
+    if (!b) return;
+    if (b.dataset.cur === GRAM && !state.config.gram?.enabled) return toast('Gram скоро будет доступен', 'err');
+    haptic.tap();
+    setCurrency(b.dataset.cur);
+  });
+  onCurrency(applyCurrency);
+  $('dep-chips').addEventListener('click', (e) => {
+    if (!e.target.dataset.dep) return;
+    $('dep-input').value = e.target.dataset.dep;
+    haptic.tap();
+    updateDepositForm();
+  });
+  $('dep-gram-chips').addEventListener('click', (e) => {
+    if (!e.target.dataset.gdep) return;
+    $('dep-gram-input').value = e.target.dataset.gdep;
+    haptic.tap();
+    updateDepositForm();
+  });
+  $('dep-gram-input').addEventListener('input', updateDepositForm);
+  $('dep-manual').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-copy]');
+    if (b && state.gramDeposit)
+      copyText(b.dataset.copy === 'memo' ? state.gramDeposit.memo : state.gramDeposit.address);
+  });
+  $('wd-address').addEventListener('input', updateWithdrawForm);
   $('bet-minus').addEventListener('click', () => stepBet(-1));
   $('bet-plus').addEventListener('click', () => stepBet(1));
   $('bet-input').addEventListener('input', updateBetButton);
   $('bet-chips').addEventListener('click', (e) => e.target.dataset.chip && chooseChip(e.target.dataset.chip));
   basket.bind();
   admin.bind();
+  tour.bind();
+  $('pf-tour').addEventListener('click', () => {
+    go('roulette');
+    setTimeout(() => tour.start({ gram: !!state.config.gram?.enabled }), 350);
+  });
   crash.bind();
   document.querySelector('[data-game="crash"]').addEventListener('click', () => go('crash'));
   $('ref-link').addEventListener('click', copyRefLink);
@@ -1146,6 +1362,8 @@ async function main() {
   $('wd-fee-pct').textContent = Math.round(state.config.withdrawFee * 100);
   $('dep-hint').textContent = `Минимум ${fmt(state.config.minDeposit)} · 1 звезда = 1 на балансе`;
   $('support-btn').hidden = !state.config.supportUsername;
+  document.body.classList.toggle('no-gram', !state.config.gram?.enabled);
+  if (!state.config.gram?.enabled) setCurrency(XTR);
 
   if (!state.initData && !state.devUser) {
     $('gate').hidden = false;
@@ -1158,6 +1376,7 @@ async function main() {
   }
 
   bindUi();
+  applyCurrency();
   try {
     applyProfile(await api('/api/me', {}));
   } catch (e) {
@@ -1195,6 +1414,8 @@ async function main() {
   } else if (location.hash === '#admin' && state.isAdmin) {
     go('profile');
     go('admin');
+  } else if (!tour.seen()) {
+    setTimeout(() => tour.start({ gram: !!state.config.gram?.enabled }), 900);
   }
   updateWithdrawForm();
   updateDepositForm();

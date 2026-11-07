@@ -1,4 +1,4 @@
-import { AppError } from './db.js';
+import { AppError, GRAM, NANO, XTR } from './db.js';
 
 const DAY = 86_400_000;
 const GAME_KINDS = {
@@ -26,9 +26,11 @@ const userView = (u) => ({
   username: u.username,
   photo: u.photo_url,
   balance: u.balance,
+  gram: u.gram ?? 0,
   blocked: !!u.blocked,
   createdAt: u.created_at,
   deposited: u.deposited,
+  depositedGram: u.deposited_gram ?? 0,
 });
 
 const withdrawalView = (w) => ({
@@ -36,6 +38,8 @@ const withdrawalView = (w) => ({
   amount: w.amount,
   fee: w.fee,
   total: w.total,
+  currency: w.currency,
+  address: w.address,
   status: w.status,
   reason: w.reason,
   createdAt: w.created_at,
@@ -43,7 +47,17 @@ const withdrawalView = (w) => ({
   user: w.first_name !== undefined ? userView({ ...w, id: w.user_id }) : undefined,
 });
 
-export function createAdminRoutes({ store, bot, config, crash, readJson, requireAdmin, notifyBalance }) {
+export function createAdminRoutes({
+  store,
+  bot,
+  config,
+  crash,
+  readJson,
+  requireAdmin,
+  notifyBalance,
+  isOnline = () => false,
+  onlineIds = () => [],
+}) {
   const cache = new Map();
   const q = {
     flagged: 'SELECT COUNT(*) AS n FROM basket_attempts WHERE user_id = ? AND flagged = 1',
@@ -52,8 +66,10 @@ export function createAdminRoutes({ store, bot, config, crash, readJson, require
     crashBets: `SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN cashout IS NOT NULL THEN 1 ELSE 0 END), 0) AS won
                            FROM crash_bets WHERE user_id = ?`,
     basketStats: `SELECT COUNT(*) AS n,
-                               COALESCE(SUM(-amount), 0) AS sum FROM ledger WHERE kind = 'basket_entry' AND created_at >= ?`,
-    basketPrizes: "SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE kind = 'basket_prize' AND created_at >= ?",
+                               COALESCE(SUM(CASE WHEN currency = 'GRAM' THEN -amount * :rate / 1e9 ELSE -amount END), 0) AS sum
+                  FROM ledger WHERE kind = 'basket_entry' AND created_at >= :since`,
+    basketPrizes:
+      "SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE kind = 'basket_prize' AND currency = 'XTR' AND created_at >= ?",
   };
 
   const safe = (sql, ...args) => {
@@ -66,14 +82,29 @@ export function createAdminRoutes({ store, bot, config, crash, readJson, require
   };
 
   function gameSummary(totals) {
-    const pick = (k) => totals[k] ?? { n: 0, sum: 0 };
+    const rate = store.rate();
+    const side = (k, suffix) => {
+      const pick = (kind) => totals[kind + suffix] ?? { n: 0, sum: 0 };
+      const bet = pick(k.bet);
+      const win = pick(k.win);
+      const refund = pick(k.refund);
+      const staked = -bet.sum - refund.sum;
+      return { bets: bet.n, staked, wins: win.n, won: win.sum, net: win.sum - staked };
+    };
     return Object.fromEntries(
       Object.entries(GAME_KINDS).map(([game, k]) => {
-        const bet = pick(k.bet);
-        const win = pick(k.win);
-        const refund = pick(k.refund);
-        const staked = -bet.sum - refund.sum;
-        return [game, { bets: bet.n, staked, wins: win.n, won: win.sum, net: win.sum - staked }];
+        const xtr = side(k, '');
+        const gram = side(k, ':GRAM');
+        return [
+          game,
+          {
+            bets: xtr.bets + gram.bets,
+            wins: xtr.wins + gram.wins,
+            xtr,
+            gram,
+            net: xtr.net + (gram.net * rate) / NANO,
+          },
+        ];
       }),
     );
   }
@@ -83,36 +114,52 @@ export function createAdminRoutes({ store, bot, config, crash, readJson, require
     if (!u) throw new AppError('NOT_FOUND', 'Пользователь не найден', 404);
     const totals = store.kindTotals(id);
     const pick = (k) => totals[k] ?? { n: 0, sum: 0 };
-    const deposits = store.userSummary(id).deposits;
+    const summary = store.userSummary(id);
+    const deposits = summary.deposits;
+    const gramDeposits = summary.gramDeposits;
     const range = store.depositRange(id);
     const withdrawals = store.userWithdrawals(id, 50);
     const by = (status) => withdrawals.filter((w) => w.status === status);
-    const sum = (list) => list.reduce((a, w) => a + w.amount, 0);
-    const ledgerBalance = store.ledgerSum(id);
+    const sum = (list) => ({
+      xtr: list.filter((w) => w.currency !== GRAM).reduce((a, w) => a + w.amount, 0),
+      gram: list.filter((w) => w.currency === GRAM).reduce((a, w) => a + w.amount, 0),
+    });
+    const ledgerXtr = store.ledgerSum(id, XTR);
+    const ledgerGram = store.ledgerSum(id, GRAM);
+    const both = (kind) => ({ xtr: pick(kind).sum, gram: pick(`${kind}:GRAM`).sum });
     const referrer = u.referrer_id ? store.getUser(u.referrer_id) : null;
     const crashRow = safe(q.crashBets, id);
     const basketRow = safe(q.basketBest, id);
     return {
-      user: { ...userView({ ...u, deposited: deposits.sum }), referrerId: u.referrer_id, updatedAt: u.updated_at },
+      user: {
+        ...userView({ ...u, deposited: deposits.sum, deposited_gram: gramDeposits.sum }),
+        referrerId: u.referrer_id,
+        updatedAt: u.updated_at,
+        online: isOnline(id),
+      },
+      rate: store.rate(),
       roulette: { games: u.games, wins: u.wins, losses: u.losses },
       games: gameSummary(totals),
       crash: { rounds: crashRow?.n ?? 0, cashouts: crashRow?.won ?? 0 },
       basket: { attempts: basketRow?.n ?? 0, best: basketRow?.best ?? 0, flagged: safe(q.flagged, id)?.n ?? 0 },
       money: {
         deposits: { n: deposits.n, sum: deposits.sum, first: range.first, last: range.last },
-        withdrawn: { n: by('sent').length, sum: sum(by('sent')) },
-        pending: { n: by('pending').length, sum: sum(by('pending')) },
-        cancelled: { n: by('cancelled').length, sum: sum(by('cancelled')) },
-        fees: by('sent').reduce((a, w) => a + w.fee, 0),
-        referral: pick('referral').sum + pick('ref_deposit').sum,
+        gramDeposits: { n: gramDeposits.n, sum: gramDeposits.sum },
+        withdrawn: { n: by('sent').length, ...sum(by('sent')) },
+        pending: { n: by('pending').length, ...sum(by('pending')) },
+        cancelled: { n: by('cancelled').length, ...sum(by('cancelled')) },
+        referral: {
+          xtr: both('referral').xtr + both('ref_deposit').xtr,
+          gram: both('referral').gram + both('ref_deposit').gram,
+        },
         tasks: { n: pick('task').n, sum: pick('task').sum },
-        admin: pick('admin').sum,
+        admin: both('admin'),
       },
       wager: store.wager(id, config.wager),
       friends: store.friends(id).n,
       referrer: referrer ? userView(referrer) : null,
       withdrawals: withdrawals.map(withdrawalView),
-      integrity: { ok: ledgerBalance === u.balance, ledger: ledgerBalance },
+      integrity: { ok: ledgerXtr === u.balance && ledgerGram === u.gram, xtr: ledgerXtr, gram: ledgerGram },
       ledger: store.ledgerPage(id),
     };
   }
@@ -124,9 +171,10 @@ export function createAdminRoutes({ store, bot, config, crash, readJson, require
     const per = (fn) => Object.fromEntries(Object.entries(periods).map(([k, since]) => [k, fn(since)]));
     return {
       ...s,
+      rate: store.rate(),
       crash: per((since) => crash.stats(since)),
       basket: per((since) => {
-        const e = safe(q.basketStats, since) ?? { n: 0, sum: 0 };
+        const e = safe(q.basketStats, { since, rate: store.rate() }) ?? { n: 0, sum: 0 };
         const prize = safe(q.basketPrizes, since)?.sum ?? 0;
         return { attempts: e.n, staked: e.sum, prizes: prize, profit: e.sum - prize };
       }),
@@ -143,16 +191,43 @@ export function createAdminRoutes({ store, bot, config, crash, readJson, require
       return overview();
     },
 
+    'POST /api/admin/rate': async (req) => {
+      requireAdmin(req);
+      const rate = int((await body(req)).rate, { min: 1, max: 1_000_000, name: 'курс' });
+      return { rate: store.setRate(rate) };
+    },
+
     'POST /api/admin/users': async (req) => {
       requireAdmin(req);
       const b = await body(req);
       const offset = int(b.offset ?? 0, { min: 0, max: 1e7, name: 'offset' });
+      const online = onlineIds();
+      if (b.online) {
+        const rate = store.rate();
+        const list = online
+          .map((id) => store.getUser(id))
+          .filter(Boolean)
+          .sort((x, y) => y.balance + (y.gram * rate) / NANO - (x.balance + (x.gram * rate) / NANO));
+        return {
+          total: list.length,
+          offset: 0,
+          rate,
+          onlineCount: online.length,
+          users: list.map((u) => ({ ...userView(u), online: true })),
+        };
+      }
       const { total, users } = store.adminUsers({
         query: text(b.query, { max: 64, name: 'поиск', required: false }),
         limit: 50,
         offset,
       });
-      return { total, offset, users: users.map(userView) };
+      return {
+        total,
+        offset,
+        rate: store.rate(),
+        onlineCount: online.length,
+        users: users.map((u) => ({ ...userView(u), online: isOnline(u.id) })),
+      };
     },
 
     'POST /api/admin/user': async (req) => {
@@ -182,9 +257,19 @@ export function createAdminRoutes({ store, bot, config, crash, readJson, require
       requireAdmin(req);
       const b = await body(req);
       const id = int(b.id, { min: 1, name: 'id' });
-      const delta = int(b.delta, { min: -config.limits.maxAmount, max: config.limits.maxAmount, name: 'сумма' });
+      const currency = b.currency === GRAM ? GRAM : XTR;
+      let delta;
+      if (currency === GRAM) {
+        const raw = String(b.delta ?? '')
+          .trim()
+          .replace(',', '.');
+        if (!/^[+-]?\d{1,7}(\.\d{1,4})?$/.test(raw)) throw new AppError('BAD_INPUT', 'Некорректное значение: сумма');
+        delta = Math.round(Number(raw) * 10_000) * 100_000;
+      } else {
+        delta = int(b.delta, { min: -config.limits.maxAmount, max: config.limits.maxAmount, name: 'сумма' });
+      }
       if (!delta) throw new AppError('BAD_INPUT', 'Сумма не может быть нулевой');
-      const { applied } = store.adjustBalance(id, delta);
+      const { applied } = store.adjustBalance(id, delta, currency);
       notifyBalance(id);
       return { applied, ...detail(id) };
     },

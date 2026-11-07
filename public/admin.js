@@ -1,5 +1,8 @@
 const $ = (id) => document.getElementById(id);
-const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n ?? 0);
+const fmt = (n) => new Intl.NumberFormat('ru-RU').format(Math.round(n ?? 0));
+const gram = (nano) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 4 }).format((nano ?? 0) / 1e9);
+const both = (xtr, g) => [`${fmt(xtr)} ⭐`, g ? `${gram(g)} Gram` : ''].filter(Boolean).join(' + ');
+const sgnGram = (nano) => (nano > 0 ? `+${gram(nano)}` : nano < 0 ? `−${gram(-nano)}` : '0');
 const signed = (n) => (n > 0 ? `+${fmt(n)}` : n < 0 ? `−${fmt(-n)}` : '0');
 const dateTime = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
@@ -42,6 +45,7 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     photo: null,
     poll: null,
     searchTimer: 0,
+    onlineOnly: false,
   };
 
   const run = async (btn, fn) => {
@@ -76,25 +80,28 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       s.users = [];
       s.total = 0;
     }
-    const data = await api('/api/admin/users', { query: s.query, offset: s.users.length }).catch((e) =>
-      toast(e.message, 'err'),
-    );
+    const data = await api('/api/admin/users', {
+      query: s.query,
+      offset: reset ? 0 : s.users.length,
+      online: s.onlineOnly,
+    }).catch((e) => toast(e.message, 'err'));
     if (!data) return;
     s.users = reset ? data.users : s.users.concat(data.users);
     s.total = data.total;
+    $('adm-online-n').textContent = fmt(data.onlineCount ?? 0);
     renderUsers();
   }
 
   function renderUsers() {
-    $('adm-count').textContent = `${fmt(s.total)} ${s.query ? 'найдено' : 'всего'}`;
+    $('adm-count').textContent = `${fmt(s.total)} ${s.onlineOnly ? 'онлайн' : s.query ? 'найдено' : 'всего'}`;
     $('adm-users').innerHTML = s.users.length
       ? s.users
           .map(
             (u, i) => `<button class="adm-row" data-user="${u.id}">
-              <span class="adm-rank num">${i + 1}</span>${avatarHtml(u, 'xs')}
+              <span class="adm-rank num">${i + 1}</span><span class="adm-av${u.online ? ' online' : ''}">${avatarHtml(u, 'xs')}</span>
               <span class="adm-who"><b>${esc(u.name)}</b><small>${u.username ? '@' + esc(u.username) + ' · ' : ''}ID ${u.id}</small></span>
               ${u.blocked ? '<span class="adm-tag red">Блок</span>' : ''}
-              <span class="adm-bal num">${fmt(u.balance)} ⭐</span></button>`,
+              <span class="adm-bal num">${fmt(u.balance)} ⭐${u.gram ? `<small>${gram(u.gram)} Gram</small>` : ''}</span></button>`,
           )
           .join('')
       : '<div class="adm-empty">Никого не найдено</div>';
@@ -117,11 +124,11 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     const d = s.user;
     const u = d.user;
     const m = d.money;
-    $('au-head').innerHTML = `${avatarHtml(u, 'lg')}
+    $('au-head').innerHTML = `<span class="adm-av big${u.online ? ' online' : ''}">${avatarHtml(u, 'lg')}</span>
       <div class="au-name">${esc(u.name)}${u.blocked ? ' <span class="adm-tag red">Заблокирован</span>' : ''}</div>
       <div class="au-sub">${u.username ? `<a href="https://t.me/${esc(u.username)}" target="_blank" rel="noopener">@${esc(u.username)}</a> · ` : ''}ID ${u.id}</div>
-      <div class="au-bal num">${fmt(u.balance)} ⭐</div>
-      <div class="au-sub">С нами с ${dateOnly.format(u.createdAt)} · был ${when(u.updatedAt)}</div>`;
+      <div class="au-bal num">${fmt(u.balance)} ⭐${u.gram ? `<span class="au-gram">${gram(u.gram)} Gram</span>` : ''}</div>
+      <div class="au-sub">${u.online ? '<span class="green">● сейчас в приложении</span>' : `был ${when(u.updatedAt)}`} · с нами с ${dateOnly.format(u.createdAt)}</div>`;
     $('au-block').textContent = u.blocked ? 'Разблокировать' : 'Заблокировать';
     $('au-block').classList.toggle('danger', !u.blocked);
 
@@ -129,20 +136,20 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       `${fmt(n)} ${n % 10 === 1 && n % 100 !== 11 ? 'раз' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'раза' : 'раз'}`;
     const money = (x) => `${fmt(x.sum)} ⭐ · ${times(x.n)}`;
     $('au-money').innerHTML =
-      row('Пополнено', money(m.deposits)) +
+      row('Пополнено звёздами', money(m.deposits)) +
+      row('Пополнено Gram', `${gram(m.gramDeposits.sum)} Gram · ${times(m.gramDeposits.n)}`) +
       row('Первое пополнение', when(m.deposits.first)) +
       row('Последнее пополнение', when(m.deposits.last)) +
-      row('Выведено', money(m.withdrawn)) +
-      row('Вывод в обработке', money(m.pending)) +
-      row('Отменённые выводы', money(m.cancelled)) +
-      row('Комиссия с выводов', `${fmt(m.fees)} ⭐`) +
-      row('Доход с рефералов', `${fmt(m.referral)} ⭐`) +
+      row('Выведено', `${both(m.withdrawn.xtr, m.withdrawn.gram)} · ${times(m.withdrawn.n)}`) +
+      row('Вывод в обработке', `${both(m.pending.xtr, m.pending.gram)} · ${times(m.pending.n)}`) +
+      row('Отменённые выводы', `${both(m.cancelled.xtr, m.cancelled.gram)} · ${times(m.cancelled.n)}`) +
+      row('Доход с рефералов', both(m.referral.xtr, m.referral.gram)) +
       row('Задания', money(m.tasks)) +
-      row('Изменения админом', `${signed(m.admin)} ⭐`) +
+      row('Изменения админом', `${signed(m.admin.xtr)} ⭐${m.admin.gram ? ` · ${sgnGram(m.admin.gram)} Gram` : ''}`) +
       row('Оборот для вывода', d.wager.required ? `${fmt(d.wager.done)} / ${fmt(d.wager.required)} ⭐` : 'нет') +
       row(
         'Сверка с журналом',
-        d.integrity.ok ? 'совпадает' : `журнал ${fmt(d.integrity.ledger)} ⭐`,
+        d.integrity.ok ? 'совпадает' : `журнал ${both(d.integrity.xtr, d.integrity.gram)}`,
         d.integrity.ok ? 'ok' : 'bad',
       );
 
@@ -155,7 +162,8 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
               ? `${fmt(d.crash.rounds)} раундов · ${fmt(d.crash.cashouts)} забрал`
               : `${fmt(d.basket.attempts)} попыток · рекорд ${fmt(d.basket.best)}${d.basket.flagged ? ` · <span class="red">подозрительных ${d.basket.flagged}</span>` : ''}`;
         return `<div class="au-game"><div class="au-game-top"><b>${GAMES[k]}</b><span class="num ${g.net > 0 ? 'green' : g.net < 0 ? 'red' : ''}">${signed(g.net)} ⭐</span></div>
-          <div class="au-game-sub">Ставок ${fmt(g.bets)} на ${fmt(g.staked)} ⭐ · выигрышей ${fmt(g.wins)} на ${fmt(g.won)} ⭐</div>
+          <div class="au-game-sub">Ставок ${fmt(g.bets)} на ${both(g.xtr.staked, g.gram.staked)}</div>
+          <div class="au-game-sub">Выигрышей ${fmt(g.wins)} на ${both(g.xtr.won, g.gram.won)}</div>
           <div class="au-game-sub">${extra}</div></div>`;
       })
       .join('');
@@ -171,7 +179,7 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       ? d.withdrawals
           .map(
             (w) =>
-              `<div class="adm-kv"><span>#${w.id} · ${when(w.createdAt)}${w.reason ? ` · ${esc(w.reason)}` : ''}</span><b class="num st-${w.status}">${fmt(w.amount)} ⭐ · ${STATUS[w.status]}</b></div>`,
+              `<div class="adm-kv"><span>#${w.id} · ${when(w.createdAt)}${w.reason ? ` · ${esc(w.reason)}` : ''}</span><b class="num st-${w.status}">${w.currency === 'GRAM' ? `${gram(w.amount)} Gram` : `${fmt(w.amount)} ⭐`} · ${STATUS[w.status]}</b></div>`,
           )
           .join('')
       : '<div class="adm-empty">Заявок не было</div>';
@@ -222,14 +230,17 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
   }
 
   async function changeBalance(btn) {
-    const raw = $('au-delta').value.replace(/\s/g, '');
-    if (!/^[+-]?\d{1,7}$/.test(raw) || Number(raw) === 0) return toast('Введите число, например 100 или -50', 'err');
-    const delta = Number(raw);
-    const data = await run(btn, () => api('/api/admin/balance', { id: s.user.user.id, delta }));
+    const raw = $('au-delta').value.replace(/\s/g, '').replace(',', '.');
+    const cur = $('au-delta-cur').value;
+    const ok = cur === 'GRAM' ? /^[+-]?\d{1,7}(\.\d{1,4})?$/.test(raw) : /^[+-]?\d{1,7}$/.test(raw);
+    if (!ok || Number(raw) === 0) return toast('Введите число, например 100 или -50', 'err');
+    const delta = cur === 'GRAM' ? raw : Number(raw);
+    const data = await run(btn, () => api('/api/admin/balance', { id: s.user.user.id, delta, currency: cur }));
     if (!data) return;
     s.user = data;
     haptic.ok();
-    toast(data.applied >= 0 ? `Начислено ${fmt(data.applied)} ⭐` : `Списано ${fmt(-data.applied)} ⭐`);
+    const label = (n) => (cur === 'GRAM' ? `${gram(n)} Gram` : `${fmt(n)} ⭐`);
+    toast(data.applied >= 0 ? `Начислено ${label(data.applied)}` : `Списано ${label(-data.applied)}`);
     $('au-delta').value = '';
     renderUser();
   }
@@ -251,8 +262,9 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     const card = (w, actions) => `<div class="adm-wd" data-wd="${w.id}">
       <button class="adm-row plain" data-user="${w.user.id}">${avatarHtml(w.user, 'xs')}
         <span class="adm-who"><b>${esc(w.user.name)}</b><small>${w.user.username ? '@' + esc(w.user.username) + ' · ' : ''}ID ${w.user.id}</small></span>
-        <span class="adm-bal num">${fmt(w.amount)} ⭐</span></button>
-      <div class="adm-wd-sub">#${w.id} · ${when(w.createdAt)} · комиссия ${fmt(w.fee)} ⭐${w.status !== 'pending' ? ` · <span class="st-${w.status}">${STATUS[w.status]}</span>` : ''}${w.reason ? ` · ${esc(w.reason)}` : ''}</div>
+        <span class="adm-bal num">${w.currency === 'GRAM' ? `${gram(w.amount)} Gram` : `${fmt(w.amount)} ⭐`}</span></button>
+      ${w.currency === 'GRAM' ? `<button class="copy-row small" data-copy-addr="${esc(w.address)}"><span>Адрес</span><b class="num">${esc(w.address)}</b><svg><use href="#i-copy"/></svg></button>` : ''}
+      <div class="adm-wd-sub">#${w.id} · ${when(w.createdAt)} · комиссия ${w.currency === 'GRAM' ? `${gram(w.fee)} Gram` : `${fmt(w.fee)} ⭐`}${w.status !== 'pending' ? ` · <span class="st-${w.status}">${STATUS[w.status]}</span>` : ''}${w.reason ? ` · ${esc(w.reason)}` : ''}</div>
       ${
         actions
           ? `<div class="adm-wd-actions"><button class="btn secondary" data-wd-cancel="${w.id}">Отменить</button><button class="btn primary" data-wd-sent="${w.id}">Отправлено</button></div>
@@ -406,12 +418,15 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       ${rows.map(([label, fn]) => `<tr><td>${label}</td>${['day', 'week', 'month'].map((p) => `<td class="num">${fn(p)}</td>`).join('')}</tr>`).join('')}
     </table></div>`;
     $('adm-stats').innerHTML =
-      `<div class="adm-big"><div><b class="num">${fmt(d.users)}</b><span>Пользователей</span></div>
+      `<div class="adm-rate"><div><b>Курс Gram</b><span>1 Gram = ${fmt(d.rate)} ⭐ — по нему считаются шансы в рулетке и лимиты</span></div>
+        <div class="adm-inline"><input id="adm-rate" inputmode="numeric" value="${d.rate}"><button class="btn primary" id="adm-rate-go">Сохранить</button></div></div>
+      <div class="adm-big"><div><b class="num">${fmt(d.users)}</b><span>Пользователей</span></div>
         <div><b class="num">${fmt(d.pending.n)}</b><span>Выводов ждут · ${fmt(d.pending.sum)} ⭐</span></div></div>` +
       table('Пользователи и деньги', [
         ['Новые', (p) => fmt(d.newUsers[p])],
         ['Пополнения', (p) => `${fmt(d.deposits[p].sum)} ⭐`],
         ['Платежей', (p) => fmt(d.deposits[p].n)],
+        ['Пополнения Gram', (p) => gram(d.gramDeposits[p].sum)],
       ]) +
       table('Рулетка', [
         ['Раундов', (p) => fmt(d.games[p].n)],
@@ -447,6 +462,26 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       }, 300);
     });
     $('adm-more').addEventListener('click', () => loadUsers(false));
+    $('adm-online-btn').addEventListener('click', () => {
+      s.onlineOnly = !s.onlineOnly;
+      $('adm-online-btn').classList.toggle('on', s.onlineOnly);
+      haptic.tap();
+      loadUsers(true);
+    });
+    $('adm-stats').addEventListener('click', async (e) => {
+      if (e.target.id !== 'adm-rate-go') return;
+      const rate = Number($('adm-rate').value);
+      const res = await run(e.target, () => api('/api/admin/rate', { rate }));
+      if (res) {
+        haptic.ok();
+        toast(`Курс сохранён: 1 Gram = ${fmt(res.rate)} ⭐`);
+      }
+    });
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-copy-addr]');
+      if (!b) return;
+      navigator.clipboard?.writeText(b.dataset.copyAddr).then(() => toast('Адрес скопирован'));
+    });
     document.addEventListener('click', (e) => {
       const u = e.target.closest('[data-user]');
       if (u && (u.closest('#view-admin') || u.closest('#view-admin-user'))) return openUser(Number(u.dataset.user));

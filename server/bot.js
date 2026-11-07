@@ -12,6 +12,8 @@ const WELCOME =
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
+const money = (n, currency) =>
+  currency === 'GRAM' ? `${(n / 1e9).toLocaleString('ru-RU', { maximumFractionDigits: 4 })} Gram` : `${fmt(n)} ⭐`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fullName = (u) => [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Игрок';
 const btn = (text, data) => ({ text, callback_data: data });
@@ -90,16 +92,9 @@ export class Bot {
     this.username = me.username;
     this.botId = me.id;
     await this.api('deleteWebhook', { drop_pending_updates: false });
-    const commands = [
-      { command: 'start', description: 'Открыть Roulette Arena' },
-      { command: 'paysupport', description: 'Помощь с оплатой' },
-    ];
-    await this.api('setMyCommands', { commands });
+    await this.api('setMyCommands', { commands: [{ command: 'start', description: 'Открыть Roulette Arena' }] });
     if (this.adminId) {
-      await this.api('setMyCommands', {
-        commands: [{ command: 'admin', description: 'Админ-панель' }, ...commands],
-        scope: { type: 'chat', chat_id: Number(this.adminId) },
-      }).catch((e) => console.warn('Меню админа:', e.message));
+      await this.api('deleteMyCommands', { scope: { type: 'chat', chat_id: Number(this.adminId) } }).catch(() => {});
     }
     await this.api('setChatMenuButton', { menu_button: { type: 'default' } });
     await this.api('setMyShortDescription', {
@@ -193,19 +188,6 @@ export class Bot {
     if (user.blocked && !admin) {
       const contact = this.supportUsername ? ` Если это ошибка — напишите @${esc(this.supportUsername)}.` : '';
       return this.#send(msg.chat.id, `🚫 Ваш аккаунт заблокирован.${contact}`);
-    }
-    if (admin && /^\/admin\b/.test(text)) {
-      return this.#send(msg.chat.id, 'Админ-панель открывается в приложении.', {
-        inline_keyboard: [
-          [
-            {
-              text: 'Открыть админ-панель',
-              web_app: { url: `${this.webAppUrl.replace(/\/$/, '')}/#admin` },
-              style: 'primary',
-            },
-          ],
-        ],
-      });
     }
     if (/^\/paysupport\b/.test(text)) {
       const contact = this.supportUsername ? `@${esc(this.supportUsername)}` : 'администратору бота';
@@ -471,8 +453,9 @@ export class Bot {
       `💸 <b>Заявка на вывод #${w.id}</b>\n\n` +
       `Игрок: <a href="tg://user?id=${user.id}">${esc(fullName(user))}</a> · ${nick}\n` +
       `ID: <code>${user.id}</code>\n\n` +
-      `К отправке: <b>${fmt(w.amount)} ⭐</b>\n` +
-      `Комиссия: ${fmt(w.fee)} ⭐ · Списано с баланса: ${fmt(w.total)} ⭐` +
+      `К отправке: <b>${money(w.amount, w.currency)}</b>\n` +
+      (w.currency === 'GRAM' ? `Адрес: <code>${esc(w.address)}</code>\n` : '') +
+      `Комиссия: ${money(w.fee, w.currency)} · Списано с баланса: ${money(w.total, w.currency)}` +
       (footer ? `\n\n${footer}` : '')
     );
   }
@@ -510,7 +493,10 @@ export class Bot {
     const done = this.store.markWithdrawalSent(id);
     if (!done) return null;
     await this.#closeAdminMessage(done, '✅ <b>Отправлено</b>');
-    await this.#notifyUser(done.user_id, `✅ Вывод <b>${fmt(done.amount)} ⭐</b> выполнен. Заявка #${done.id}.`);
+    await this.#notifyUser(
+      done.user_id,
+      `✅ Вывод <b>${money(done.amount, done.currency)}</b> выполнен. Заявка #${done.id}.`,
+    );
     return done;
   }
 
@@ -521,7 +507,7 @@ export class Bot {
     await this.#closeAdminMessage(w, `✖️ <b>Отменено</b>\nПричина: ${esc(reason)}`);
     await this.#notifyUser(
       w.user_id,
-      `✖️ Заявка на вывод #${w.id} отменена.\nПричина: ${esc(reason)}\n\n${fmt(w.total)} ⭐ возвращено на баланс.`,
+      `✖️ Заявка на вывод #${w.id} отменена.\nПричина: ${esc(reason)}\n\n${money(w.total, w.currency)} возвращено на баланс.`,
     );
     return w;
   }
@@ -539,9 +525,14 @@ export class Bot {
     const w = await this.cancelWithdrawal(withdrawalId, reason);
     if (!w) return this.#send(msg.chat.id, `Заявка #${withdrawalId} уже обработана.`);
     await this.api('deleteMessage', { chat_id: msg.chat.id, message_id: promptId }).catch(() => {});
-    await this.#send(msg.chat.id, `Заявка #${w.id} отменена, ${fmt(w.total)} ⭐ возвращено игроку.`, undefined, {
-      reply_parameters: { message_id: msg.message_id },
-    });
+    await this.#send(
+      msg.chat.id,
+      `Заявка #${w.id} отменена, ${money(w.total, w.currency)} возвращено игроку.`,
+      undefined,
+      {
+        reply_parameters: { message_id: msg.message_id },
+      },
+    );
   }
 
   async #closeAdminMessage(w, footer) {
@@ -551,6 +542,20 @@ export class Bot {
       { chat: { id: w.admin_chat_id }, message_id: w.admin_message_id },
       this.#withdrawalText(w, user, footer),
     ).catch((e) => console.error('editMessageText:', e.message));
+  }
+
+  notifyGramDeposit(user, amount) {
+    this.onBalance(user);
+    this.#notifyUser(user.id, `Баланс пополнен на <b>${money(amount, 'GRAM')}</b>`);
+    if (user.referral) {
+      const inviter = this.store.getUser(user.referral.inviterId);
+      if (inviter) {
+        this.#notifyUser(
+          inviter.id,
+          `💸 Друг <b>${esc(fullName(user))}</b> пополнил баланс — вам <b>+${money(user.referral.amount, 'GRAM')}</b> (${fmt(this.refPercent)}%)`,
+        );
+      }
+    }
   }
 
   notifyAdmin(html) {

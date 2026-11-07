@@ -12,12 +12,12 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="/styles.css" />
     <style>
       html,
       body {
-        background: #0e1015;
+        background: #0b0e13;
         margin: 0;
       }
       .boot {
@@ -28,7 +28,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        background: radial-gradient(circle at 50% 46%, rgba(124, 92, 255, 0.09), rgba(124, 92, 255, 0) 55vmin), #0e1015;
+        background: radial-gradient(circle at 50% 46%, rgba(25, 195, 125, 0.09), rgba(25, 195, 125, 0) 55vmin), #0b0e13;
         transition: opacity 0.45s ease;
       }
       .boot.hide {
@@ -38,7 +38,7 @@
       .boot-mark {
         width: min(42vw, 168px);
         height: auto;
-        filter: drop-shadow(0 0 28px rgba(124, 92, 255, 0.28));
+        filter: drop-shadow(0 0 28px rgba(25, 195, 125, 0.28));
         animation: boot-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
       }
       .boot-mark .arc {
@@ -52,7 +52,7 @@
       .boot-name {
         margin-top: 30px;
         font:
-          600 15px/1 Inter,
+          600 15px/1 Onest,
           system-ui,
           sans-serif;
         letter-spacing: 0.42em;
@@ -74,8 +74,8 @@
         display: block;
         height: 100%;
         width: 100%;
-        background: linear-gradient(90deg, #7c5cff, #b9a8ff);
-        box-shadow: 0 0 10px rgba(124, 92, 255, 0.8);
+        background: linear-gradient(90deg, #19c37d, #6be3ad);
+        box-shadow: 0 0 10px rgba(25, 195, 125, 0.8);
         transform: scaleX(0.04);
         transform-origin: left;
         transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -107,11 +107,11 @@
           t.ready();
           t.expand();
           if (t.isVersionAtLeast('6.1')) {
-            t.setHeaderColor('#0b0b10');
-            t.setBackgroundColor('#0b0b10');
+            t.setHeaderColor('#0b0e13');
+            t.setBackgroundColor('#0b0e13');
           }
           if (t.isVersionAtLeast('7.7')) t.disableVerticalSwipes();
-          if (t.isVersionAtLeast('7.10')) t.setBottomBarColor('#0f0f15');
+          if (t.isVersionAtLeast('7.10')) t.setBottomBarColor('#0b0e13');
           if (t.isVersionAtLeast('8.0') && /^(android|ios)$/.test(t.platform)) {
             if (!t.isFullscreen) t.requestFullscreen();
             t.lockOrientation();
@@ -131,12 +131,19 @@
           cy="60"
           r="52"
           fill="none"
-          stroke="#7c5cff"
+          stroke="#19c37d"
           stroke-width="4"
           stroke-linecap="round"
           stroke-dasharray="70 257"
         />
-        <circle cx="60" cy="60" r="38" fill="rgba(124,92,255,.08)" stroke="rgba(255,255,255,.08)" stroke-width="1.5" />
+        <circle
+          cx="60"
+          cy="60"
+          r="38"
+          fill="rgba(25, 195, 125, .08)"
+          stroke="rgba(255,255,255,.08)"
+          stroke-width="1.5"
+        />
         <path
           class="glyph"
           d="M60 39l6.4 13 14.3 2.1-10.35 10.1 2.45 14.25L60 71.7l-12.8 6.75 2.45-14.25L39.3 54.1 53.6 52z"
@@ -147,6 +154,42 @@
       <div class="boot-bar"><i id="boot-bar"></i></div>
     </div>
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-coach" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="31" fill="#1f6feb" />
+        <path d="M14 58c3-9 10-14 18-14s15 5 18 14a31 31 0 0 1-36 0z" fill="#0f2a4d" />
+        <path d="M26 44h12l-6 7z" fill="#fff" />
+        <ellipse cx="32" cy="31" rx="12.5" ry="14" fill="#f2c39b" />
+        <path d="M19.5 27c0-9 5.5-14 12.5-14s12.5 5 12.5 14c-3-3-7-4.5-12.5-4.5S22.5 24 19.5 27z" fill="#2b1d16" />
+        <path d="M18 24.5c2-8 7.5-12 14-12s12 4 14 12l-3 1.5c-2-5-6-8-11-8s-9 3-11 8z" fill="#ffc533" />
+        <rect x="17" y="24" width="30" height="4" rx="2" fill="#ffc533" />
+        <circle cx="27" cy="32" r="1.8" fill="#2b1d16" />
+        <circle cx="37" cy="32" r="1.8" fill="#2b1d16" />
+        <path
+          d="M27.5 38.5c2.6 2.4 6.4 2.4 9 0"
+          stroke="#8a4b2e"
+          stroke-width="1.8"
+          fill="none"
+          stroke-linecap="round"
+        />
+        <circle cx="45" cy="47" r="3" fill="#c9ced6" />
+        <path d="M45 44v-3" stroke="#c9ced6" stroke-width="1.6" />
+      </symbol>
+      <symbol id="i-hand" viewBox="0 0 48 48">
+        <path
+          d="M18 6c2 0 3.5 1.5 3.5 3.5v13.2l1.4-.6c1.6-.7 3.4 0 4.1 1.5l.3.6 1.4-.5c1.6-.6 3.4.1 4.1 1.7l.2.5 1.1-.3c1.8-.4 3.6.7 4 2.5.7 3.3.6 6.7-.3 10l-.6 2.2C36 43.7 32.6 46 28.8 46h-5.3c-3 0-5.7-1.4-7.4-3.8l-7.4-10.3c-1-1.4-.7-3.4.7-4.4 1.3-.9 3-.8 4.1.3l1.1 1.1V9.5C14.5 7.5 16 6 18 6z"
+          fill="#fff"
+          stroke="#0b0f14"
+          stroke-width="2"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-gram" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="11" fill="#2d9cff" />
+        <path
+          d="M7.4 7.6h9.2c.8 0 1.3.9.9 1.6l-4.6 8a1 1 0 0 1-1.8 0l-4.6-8c-.4-.7.1-1.6.9-1.6zm3.9 1.5H8.6l2.7 4.8V9.1zm1.4 0v4.8l2.7-4.8h-2.7z"
+          fill="#fff"
+        />
+      </symbol>
       <symbol id="i-star" viewBox="0 0 24 24">
         <path
           d="M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9L12 2.8z"
@@ -332,13 +375,17 @@
         <div class="online" id="online" title="Сейчас в приложении">
           <i></i><span class="num" id="online-n">1</span> онлайн
         </div>
-        <button class="balance" id="balance-btn" aria-label="Баланс. Пополнить">
-          <svg class="star"><use href="#i-star" /></svg>
-          <span id="balance" class="num">0</span>
-          <span class="balance-add" aria-hidden="true"
-            ><svg><use href="#i-plus" /></svg
-          ></span>
-        </button>
+        <div class="wallet-bar" id="wallet-bar">
+          <button class="bal bal-xtr" data-cur="XTR" aria-label="Играть на звёзды">
+            <svg class="cur cur-xtr"><use href="#i-star" /></svg><span id="balance" class="num">0</span>
+          </button>
+          <button class="bal bal-gram" data-cur="GRAM" id="bal-gram" aria-label="Играть на Gram">
+            <svg class="cur cur-gram"><use href="#i-gram" /></svg><span id="balance-gram" class="num">0</span>
+          </button>
+          <button class="bal-add" id="balance-btn" aria-label="Пополнить">
+            <svg><use href="#i-plus" /></svg>
+          </button>
+        </div>
       </header>
 
       <main class="views">
@@ -347,9 +394,7 @@
 
           <div class="bank-pill">
             <span class="bp-label">Всего в банке</span>
-            <span class="bp-value"
-              ><svg class="star"><use href="#i-star" /></svg><span id="bank" class="num">0</span></span
-            >
+            <span class="bp-value" id="bank"></span>
           </div>
 
           <div class="wheel" id="wheel">
@@ -379,10 +424,11 @@
           <div class="players" id="players"></div>
 
           <div class="dock dock-bet">
-            <div class="chips" id="bet-chips">
-              <button data-chip="10">10</button><button data-chip="50">50</button><button data-chip="100">100</button>
-              <button data-chip="500">500</button><button data-chip="max">Макс</button>
+            <div class="bet-top">
+              <div class="cur-slot"></div>
+              <span class="bet-hint num" id="bet-hint"></span>
             </div>
+            <div class="chips" id="bet-chips"></div>
             <div class="dock-row">
               <div class="stepper">
                 <button class="step" id="bet-minus" aria-label="Уменьшить ставку">
@@ -392,12 +438,12 @@
                   <input
                     id="bet-input"
                     class="num"
-                    inputmode="numeric"
+                    inputmode="decimal"
                     autocomplete="off"
                     value="10"
                     aria-label="Сумма ставки"
                   />
-                  <svg class="star"><use href="#i-star" /></svg>
+                  <span class="cur-icon" id="bet-cur"></span>
                 </label>
                 <button class="step" id="bet-plus" aria-label="Увеличить ставку">
                   <svg><use href="#i-plus" /></svg>
@@ -439,6 +485,7 @@
             <div class="cr-center" id="cr-center"></div>
           </div>
           <div class="cr-panel card" id="cr-panel">
+            <div class="cur-slot"></div>
             <div class="cr-row">
               <span class="cr-label">Ставка</span>
               <div class="cr-amount">
@@ -446,8 +493,10 @@
                   <svg><use href="#i-minus" /></svg>
                 </button>
                 <label
-                  ><input id="cr-amount" class="num" inputmode="numeric" value="10" /><svg class="star">
-                    <use href="#i-star" /></svg
+                  ><input id="cr-amount" class="num" inputmode="decimal" value="10" /><span
+                    class="cur-icon"
+                    id="cr-cur"
+                  ></span
                 ></label>
                 <button class="step" id="cr-plus" aria-label="Больше">
                   <svg><use href="#i-plus" /></svg>
@@ -561,19 +610,57 @@
             </button>
             <h1 class="title">Пополнение</h1>
           </div>
-          <p class="lead">Оплата звёздами с баланса Telegram</p>
-          <label class="field">
-            <input
-              id="dep-input"
-              class="num"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="0"
-              aria-label="Количество звёзд"
-            />
-            <svg class="star"><use href="#i-star" /></svg>
-          </label>
-          <p class="hint" id="dep-hint">Минимум 1</p>
+          <div class="cur-slot"></div>
+          <div id="dep-xtr">
+            <p class="form-note">Оплата звёздами Telegram. Зачисление сразу после оплаты.</p>
+            <label class="field">
+              <input
+                id="dep-input"
+                class="num"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="0"
+                aria-label="Количество звёзд"
+              />
+              <svg class="cur cur-xtr"><use href="#i-star" /></svg>
+            </label>
+            <div class="chips small" id="dep-chips">
+              <button data-dep="50">50</button><button data-dep="100">100</button><button data-dep="250">250</button>
+              <button data-dep="500">500</button><button data-dep="1000">1000</button>
+            </div>
+          </div>
+          <div id="dep-gram" hidden>
+            <p class="form-note">
+              Перевод Gram из Telegram Wallet, Tonkeeper или любого TON-кошелька. Зачисление через 10–30 секунд.
+            </p>
+            <label class="field">
+              <input
+                id="dep-gram-input"
+                class="num"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="0"
+                aria-label="Сумма в Gram"
+              />
+              <svg class="cur cur-gram"><use href="#i-gram" /></svg>
+            </label>
+            <div class="chips small" id="dep-gram-chips">
+              <button data-gdep="1">1</button><button data-gdep="5">5</button><button data-gdep="10">10</button>
+              <button data-gdep="25">25</button><button data-gdep="50">50</button>
+            </div>
+            <p class="hint" id="dep-gram-hint"></p>
+            <div class="manual card" id="dep-manual" hidden>
+              <div class="manual-title">Или переведите вручную</div>
+              <button class="copy-row" data-copy="address">
+                <span>Адрес</span><b class="num" id="dep-addr"></b><svg><use href="#i-copy" /></svg>
+              </button>
+              <button class="copy-row" data-copy="memo">
+                <span>Комментарий</span><b class="num" id="dep-memo"></b><svg><use href="#i-copy" /></svg>
+              </button>
+              <p class="manual-warn">Обязательно укажите комментарий — по нему мы узнаём, что перевод ваш.</p>
+            </div>
+          </div>
+          <p class="hint" id="dep-hint"></p>
           <div class="dock">
             <button class="btn primary block" id="dep-btn" disabled>Продолжить</button>
           </div>
@@ -586,7 +673,8 @@
             </button>
             <h1 class="title">Вывод</h1>
           </div>
-          <p class="lead">Минимальная сумма — <span id="wd-min" class="num">50</span></p>
+          <div class="cur-slot"></div>
+          <p class="form-note">Минимальная сумма — <span id="wd-min" class="num">50</span></p>
           <div class="wager card" id="wd-wager" hidden>
             <div class="wg-top"><span>Оборот для вывода</span><b class="num" id="wg-val">0 / 0</b></div>
             <div class="wg-bar"><i id="wg-bar"></i></div>
@@ -596,12 +684,21 @@
             <input
               id="wd-input"
               class="num"
-              inputmode="numeric"
+              inputmode="decimal"
               autocomplete="off"
               placeholder="0"
               aria-label="Сумма вывода"
             />
-            <svg class="star"><use href="#i-star" /></svg>
+            <span class="cur-icon" id="wd-cur"></span>
+          </label>
+          <label class="field address" id="wd-address-field" hidden>
+            <input
+              id="wd-address"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Адрес кошелька UQ… или EQ…"
+              aria-label="Адрес кошелька"
+            />
           </label>
           <div class="summary card">
             <div class="row"><span>Сумма вывода</span><b class="num" id="wd-amount">0</b></div>
@@ -692,6 +789,13 @@
             <span class="rb-text">Поддержка</span>
             <svg class="rb-chevron"><use href="#i-chevron" /></svg>
           </button>
+          <button class="row-btn card" id="pf-tour">
+            <span class="rb-icon"
+              ><svg><use href="#i-coach" /></svg
+            ></span>
+            <span class="rb-text">Как пользоваться приложением</span>
+            <svg class="rb-chevron"><use href="#i-chevron" /></svg>
+          </button>
           <button class="row-btn card" id="pf-admin" hidden>
             <span class="rb-icon"
               ><svg><use href="#i-shield" /></svg
@@ -720,7 +824,10 @@
             <label class="adm-input"
               ><input id="adm-search" type="search" placeholder="Ник, имя или ID" autocomplete="off"
             /></label>
-            <div class="adm-meta"><span>По балансу, от большего</span><span id="adm-count"></span></div>
+            <div class="adm-meta">
+              <button class="adm-online" id="adm-online-btn"><i></i>Онлайн <b id="adm-online-n">0</b></button>
+              <span id="adm-count"></span>
+            </div>
             <div class="adm-list" id="adm-users"></div>
             <button class="btn secondary block" id="adm-more" hidden>Показать ещё</button>
           </div>
@@ -793,7 +900,11 @@
             <button class="btn secondary" id="au-block">Заблокировать</button>
           </div>
           <div class="adm-inline" id="au-balance-form" hidden>
-            <input id="au-delta" inputmode="text" placeholder="100 — начислить, -50 — списать" autocomplete="off" />
+            <select id="au-delta-cur" aria-label="Валюта">
+              <option value="XTR">Звёзды</option>
+              <option value="GRAM">Gram</option>
+            </select>
+            <input id="au-delta" inputmode="text" placeholder="100 или -50" autocomplete="off" />
             <button class="btn primary" id="au-delta-go">Применить</button>
           </div>
           <div class="adm-inline col" id="au-msg-form" hidden>
@@ -867,6 +978,18 @@
           <div class="bb-overlay" id="bb-overlay" hidden></div>
         </div>
         <div class="bb-sheet" id="bb-result" hidden></div>
+        <div class="bb-coach" id="bb-coach" hidden>
+          <div class="coach-face" aria-hidden="true">
+            <svg><use href="#i-coach" /></svg>
+          </div>
+          <div class="coach-bubble">
+            <p id="bb-coach-text"></p>
+            <button class="link-btn" id="bb-coach-skip">Пропустить обучение</button>
+          </div>
+        </div>
+        <div class="bb-hand" id="bb-hand" hidden aria-hidden="true">
+          <svg><use href="#i-hand" /></svg>
+        </div>
       </div>
 
       <div class="sheet-wrap" id="cr-fair" hidden>
@@ -878,51 +1001,20 @@
           <button class="btn secondary block" data-close>Понятно</button>
         </div>
       </div>
+    </div>
 
-      <div class="sheet-wrap tutor" id="bb-tutor" hidden>
-        <div class="sheet-backdrop" data-close></div>
-        <div class="sheet">
-          <div class="sheet-grip"></div>
-          <div class="tutor-slides">
-            <div class="tutor-slide">
-              <div class="tutor-pic t-drag">
-                <span class="t-ball"></span><span class="t-line"></span><span class="t-hand"></span>
-              </div>
-              <div class="sheet-title">Потяните и отпустите</div>
-              <div class="sheet-sub">
-                Коснитесь экрана, потяните палец <b>назад и вниз</b> — как рогатку — и отпустите. Чем длиннее линия, тем
-                сильнее бросок.
-              </div>
-            </div>
-            <div class="tutor-slide">
-              <div class="tutor-pic t-arc">
-                <span class="t-hoop"></span><span class="t-dot d1"></span><span class="t-dot d2"></span
-                ><span class="t-dot d3"></span><span class="t-dot d4"></span><span class="t-dot d5"></span
-                ><span class="t-ball fly"></span>
-              </div>
-              <div class="sheet-title">Цельтесь по пунктиру</div>
-              <div class="sheet-sub">
-                Пунктир показывает начало полёта. После каждого попадания кольцо перемещается, и с каждым очком попасть
-                сложнее.
-              </div>
-            </div>
-            <div class="tutor-slide">
-              <div class="tutor-pic t-score">
-                <div><b>+1</b><span>очко</span></div>
-                <div><b>+3 с</b><span>попадание</span></div>
-                <div class="gold"><b>+5 с</b><span>чистое</span></div>
-              </div>
-              <div class="sheet-title">Набирайте очки на время</div>
-              <div class="sheet-sub">
-                На старте 30 секунд. Попадание даёт +3 секунды, чистое (без касания кольца) — +5. Лучший результат дня
-                получает <b>50 ⭐</b>.
-              </div>
-            </div>
-          </div>
-          <div class="tutor-dots"><i></i><i></i><i></i></div>
-          <div class="dock-row">
-            <button class="btn secondary" id="tutor-skip">Пропустить</button>
-            <button class="btn primary" id="tutor-next" style="flex: 1">Далее</button>
+    <div class="tour" id="tour" hidden>
+      <div class="tour-hole"></div>
+      <div class="tour-card">
+        <div class="tour-face">
+          <svg><use href="#i-coach" /></svg>
+        </div>
+        <div class="tour-body">
+          <div class="tour-name">Макс <span class="tour-count"></span></div>
+          <p class="tour-text"></p>
+          <div class="tour-actions">
+            <button class="link-btn muted" data-tour="skip">Пропустить</button>
+            <button class="btn primary" data-tour="next">Далее</button>
           </div>
         </div>
       </div>

@@ -17,6 +17,11 @@ services:
       WAGER_BONUS: ${WAGER_BONUS:-3}
       BASKET_PRICE: ${BASKET_PRICE:-5}
       BASKET_DAILY_PRIZE: ${BASKET_DAILY_PRIZE:-50}
+      GRAM_WALLET: ${GRAM_WALLET:-}
+      TONCENTER_API_KEY: ${TONCENTER_API_KEY:-}
+      GRAM_RATE: ${GRAM_RATE:-140}
+      GRAM_MIN_DEPOSIT: ${GRAM_MIN_DEPOSIT:-0.1}
+      GRAM_MIN_WITHDRAW: ${GRAM_MIN_WITHDRAW:-1}
     volumes:
       - app_data:/data
     logging: &logging

@@ -54,7 +54,7 @@ test('раунд: ожидание → отсчёт → вращение → б�
   game.placeBet(store.getUser(2), 700);
   const s = game.publicState();
   assert.equal(s.status, 'countdown');
-  assert.equal(s.bank, 900);
+  assert.deepEqual(s.bank, { xtr: 900, gram: 0, value: 900 });
   await until(() => game.publicState().status === 'spinning');
   assert.throws(() => game.placeBet(store.getUser(2), 1), /розыгрыш/);
   const landing = game.publicState().landing;
@@ -231,16 +231,12 @@ function adminApi(store, bot) {
   return (path, body, userId = 999) => routes[`POST /api/admin/${path}`]({ body, userId });
 }
 
-test('/admin в боте открывает админ-панель мини-аппа только администратору', async () => {
+test('в боте только /start: /admin и прочие команды показывают обычное приветствие', async () => {
   const store = storeWith(100);
   const bot = fakeBot(store);
-  await bot.handleUpdate({
-    message: { message_id: 1, chat: { id: 1, type: 'private' }, from: { id: 1, first_name: 'U1' }, text: '/admin' },
-  });
-  assert.doesNotMatch(lastText(bot), /Админ-панель/);
   await bot.handleUpdate(adminMsg('/admin'));
-  const call = bot.calls.at(-1);
-  assert.equal(call.payload.reply_markup.inline_keyboard[0][0].web_app.url, 'https://x.test/#admin');
+  assert.match(lastText(bot), /ROULETTE ARENA/);
+  assert.doesNotMatch(JSON.stringify(bot.calls.at(-1).payload), /#admin/);
 });
 
 test('админ API: чужой пользователь получает отказ', async () => {
@@ -280,10 +276,11 @@ test('админ API: карточка игрока — пополнения, и
   const d = await adminApi(store, fakeBot(store))('user', { id: 1 });
   assert.deepEqual(d.money.deposits.n, 2);
   assert.equal(d.money.deposits.sum, 150);
-  assert.deepEqual(d.games.crash, { bets: 1, staked: 30, wins: 1, won: 60, net: 30 });
+  assert.deepEqual(d.games.crash.xtr, { bets: 1, staked: 30, wins: 1, won: 60, net: 30 });
+  assert.equal(d.games.crash.net, 30);
   assert.equal(d.games.basket.net, -5);
   assert.equal(d.user.balance, 175);
-  assert.deepEqual(d.integrity, { ok: true, ledger: 175 });
+  assert.deepEqual(d.integrity, { ok: true, xtr: 175, gram: 0 });
   assert.deepEqual(
     d.ledger.map((l) => l.kind),
     ['basket_entry', 'crash_win', 'crash_bet', 'deposit', 'deposit'],
@@ -587,4 +584,75 @@ test('initData с чужой подписью и пустые данные не 
   assert.equal(validateInitData(good.replace('id%22%3A5', 'id%22%3A6'), TOKEN), null);
   assert.equal(validateInitData('', TOKEN), null);
   assert.equal(validateInitData('x'.repeat(5000), TOKEN), null);
+});
+
+test('рулетка в двух валютах: шанс по курсу, банк победителю в тех же валютах минус 10%', async () => {
+  const store = storeWith(1000, 0);
+  store.setRate(100);
+  store.tx(() => store.ledgerCredit(2, 5_000_000_000, 'admin', null, 'GRAM'));
+  const game = new Game(store, settings, { random: (n) => (n === 10_000 ? 5000 : n - 1) });
+  game.start();
+  game.placeBet(store.getUser(1), 100);
+  game.placeBet(store.getUser(2), 3_000_000_000, 'GRAM');
+  const s = game.publicState();
+  assert.equal(s.total, 400);
+  assert.deepEqual(
+    s.players.map((p) => [p.id, p.xtr, p.gram, p.value]),
+    [
+      [1, 100, 0, 100],
+      [2, 0, 3_000_000_000, 300],
+    ],
+  );
+  assert.deepEqual(s.bank, { xtr: 90, gram: 2_700_000_000, value: 360 });
+  await until(() => game.publicState().status === 'finished');
+  assert.equal(game.publicState().winnerId, 2);
+  assert.equal(store.getUser(2).gram, 2_000_000_000 + 2_700_000_000);
+  assert.equal(store.getUser(2).balance, 90);
+  assert.equal(store.getUser(1).balance, 900);
+  game.stop();
+});
+
+test('Gram: пополнение один раз на транзакцию, реферал получает 15% в Gram, недостаточно Gram — понятная ошибка', () => {
+  const store = storeWith(0, 0);
+  store.setReferrer(2, 1);
+  const u = store.creditGramDeposit({ hash: 'h1', userId: 2, amount: 2_000_000_000, refPercent: 15 });
+  assert.equal(u.gram, 2_000_000_000);
+  assert.equal(store.creditGramDeposit({ hash: 'h1', userId: 2, amount: 2_000_000_000 }), null);
+  assert.equal(store.getUser(1).gram, 300_000_000);
+  assert.throws(() => store.tx(() => store.ledgerDebit(2, 3_000_000_000, 'bet', 1, 'GRAM')), /Недостаточно Gram/);
+});
+
+test('Gram: сервер видит перевод на кошелёк с комментарием-ID и зачисляет его один раз', async () => {
+  const { GramWatcher, parseMemo } = await import('../server/gram.js');
+  assert.equal(parseMemo(' 12345 '), 12345);
+  assert.equal(parseMemo('RA-7'), 7);
+  assert.equal(parseMemo('привет'), null);
+  const store = storeWith(0, 0);
+  const tx = (lt, memo, value, source = 'EQsender') => ({
+    transaction_id: { lt: String(lt), hash: `h${lt}` },
+    in_msg: { source, value: String(value), message: memo },
+  });
+  let batch = [tx(5, '1', 9_000_000_000)];
+  const w = new GramWatcher({
+    store,
+    wallet: 'EQwallet',
+    fetchImpl: async () => ({ json: async () => ({ ok: true, result: batch }) }),
+  });
+  assert.equal(await w.poll(), 0);
+  assert.equal(store.getUser(1).gram, 0);
+  const seen = [];
+  w.on('unmatched', (x) => seen.push(x.memo));
+  batch = [
+    tx(5, '1', 9_000_000_000),
+    tx(6, '2', 1_500_000_000),
+    tx(7, 'кто я', 2_000_000_000),
+    tx(8, '1', 10),
+    tx(9, '1', 3_000_000_000, ''),
+  ];
+  assert.equal(await w.poll(), 1);
+  assert.equal(store.getUser(2).gram, 1_500_000_000);
+  assert.equal(store.getUser(1).gram, 0);
+  assert.deepEqual(seen, ['кто я']);
+  assert.equal(await w.poll(), 0);
+  assert.equal(store.getUser(2).gram, 1_500_000_000);
 });

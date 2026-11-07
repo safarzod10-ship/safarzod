@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
-import { AppError } from './db.js';
+import { AppError, GRAM, NANO, XTR } from './db.js';
 import { displayName } from './game.js';
 
 export const CRASH_DEFAULTS = Object.freeze({
@@ -79,6 +79,13 @@ export class CrashService extends EventEmitter {
     this.t = timers;
     this.timers = [];
     store.db.exec(SCHEMA);
+    const cols = new Set(
+      store.db
+        .prepare('PRAGMA table_info(crash_bets)')
+        .all()
+        .map((c) => c.name),
+    );
+    if (!cols.has('currency')) store.db.exec("ALTER TABLE crash_bets ADD COLUMN currency TEXT NOT NULL DEFAULT 'XTR'");
     const q = (sql) => store.db.prepare(sql);
     this.q = {
       newRound: q("INSERT INTO crash_rounds (status, seed, hash, crash, created_at) VALUES ('betting', ?, ?, 0, ?)"),
@@ -88,18 +95,22 @@ export class CrashService extends EventEmitter {
         'UPDATE crash_rounds SET status = ?, started_at = COALESCE(?, started_at), ended_at = ? WHERE id = ?',
       ),
       unfinished: q("SELECT id FROM crash_rounds WHERE status IN ('betting', 'flying')"),
-      addBet: q('INSERT INTO crash_bets (round_id, user_id, amount, auto, created_at) VALUES (?, ?, ?, ?, ?)'),
+      addBet: q(
+        'INSERT INTO crash_bets (round_id, user_id, amount, auto, created_at, currency) VALUES (?, ?, ?, ?, ?, ?)',
+      ),
       delBet: q('DELETE FROM crash_bets WHERE round_id = ? AND user_id = ? AND cashout IS NULL'),
       bet: q('SELECT * FROM crash_bets WHERE round_id = ? AND user_id = ?'),
-      bets: q('SELECT * FROM crash_bets WHERE round_id = ? ORDER BY amount DESC, created_at'),
+      bets: q('SELECT * FROM crash_bets WHERE round_id = ? ORDER BY created_at'),
       cashout: q(
         'UPDATE crash_bets SET cashout = ?, payout = ? WHERE round_id = ? AND user_id = ? AND cashout IS NULL',
       ),
       history: q("SELECT id, crash, hash, seed FROM crash_rounds WHERE status = 'crashed' ORDER BY id DESC LIMIT ?"),
-      myBets: q(`SELECT b.round_id, b.amount, b.cashout, b.payout, r.crash, r.status FROM crash_bets b
+      myBets: q(`SELECT b.round_id, b.amount, b.currency, b.cashout, b.payout, r.crash, r.status FROM crash_bets b
                  JOIN crash_rounds r ON r.id = b.round_id WHERE b.user_id = ? ORDER BY b.round_id DESC LIMIT ?`),
-      stats: q(`SELECT COUNT(*) AS rounds, COALESCE(SUM(amount), 0) AS staked, COALESCE(SUM(payout), 0) AS paid
-                FROM crash_bets b JOIN crash_rounds r ON r.id = b.round_id WHERE r.status = 'crashed' AND r.ended_at >= ?`),
+      stats: q(`SELECT COUNT(*) AS rounds,
+                  COALESCE(SUM(CASE WHEN currency = 'GRAM' THEN amount * :rate / 1e9 ELSE amount END), 0) AS staked,
+                  COALESCE(SUM(CASE WHEN currency = 'GRAM' THEN payout * :rate / 1e9 ELSE payout END), 0) AS paid
+                FROM crash_bets b JOIN crash_rounds r ON r.id = b.round_id WHERE r.status = 'crashed' AND r.ended_at >= :since`),
     };
     this.round = null;
     if (autoStart) this.start();
@@ -122,7 +133,7 @@ export class CrashService extends EventEmitter {
   #void(roundId) {
     this.store.tx(() => {
       for (const b of this.q.bets.all(roundId)) {
-        if (b.cashout === null) this.store.ledgerCredit(b.user_id, b.amount, 'crash_refund', roundId);
+        if (b.cashout === null) this.store.ledgerCredit(b.user_id, b.amount, 'crash_refund', roundId, b.currency);
       }
       this.q.setStatus.run('void', null, this.now(), roundId);
     });
@@ -177,7 +188,7 @@ export class CrashService extends EventEmitter {
       }
     }
     const live = this.q.bets.all(r.id).filter((b) => b.cashout === null);
-    const exposure = live.reduce((sum, b) => sum + Math.floor((b.amount * m) / 100), 0);
+    const exposure = live.reduce((sum, b) => sum + (this.#value(b) * m) / 100, 0);
     if (live.length && r.paidOut + exposure >= this.o.maxRoundPayout) {
       for (const b of live) this.#payout(b, m);
       changed = true;
@@ -185,18 +196,23 @@ export class CrashService extends EventEmitter {
     if (changed) this.#emit();
   }
 
+  #value(b, amount = b.amount) {
+    return this.store.toStars(amount, b.currency);
+  }
+
   #target(b) {
-    const capByWin = Math.floor((this.o.maxWin * 100) / b.amount);
+    const capByWin = Math.max(101, Math.floor((this.o.maxWin * 100) / this.#value(b)));
     return b.auto ? Math.min(b.auto, capByWin) : capByWin;
   }
 
   #payout(b, m100) {
     const r = this.round;
-    const payout = Math.min(this.o.maxWin, Math.floor((b.amount * m100) / 100));
+    const cap = b.currency === GRAM ? Math.floor((this.o.maxWin * NANO) / this.store.rate()) : this.o.maxWin;
+    const payout = Math.min(cap, Math.floor((b.amount * m100) / 100));
     this.store.tx(() => {
       if (this.q.cashout.run(m100, payout, r.id, b.user_id).changes !== 1) return;
-      this.store.ledgerCredit(b.user_id, payout, 'crash_win', r.id);
-      r.paidOut += payout;
+      this.store.ledgerCredit(b.user_id, payout, 'crash_win', r.id, b.currency);
+      r.paidOut += this.#value(b, payout);
     });
     this.emit('balance', b.user_id);
   }
@@ -211,12 +227,13 @@ export class CrashService extends EventEmitter {
     this.#later(() => this.#newRound(), this.o.crashedMs);
   }
 
-  placeBet(user, rawAmount, rawAuto) {
+  placeBet(user, rawAmount, rawAuto, currency = XTR) {
     const r = this.round;
     if (!r || r.status !== 'betting') throw new AppError('BETS_CLOSED', 'Ставки на этот раунд закрыты', 409);
     const amount = Number(rawAmount);
-    if (!Number.isSafeInteger(amount) || amount < this.o.minBet || amount > this.o.maxBet) {
-      throw new AppError('BAD_AMOUNT', `Ставка от ${this.o.minBet} до ${this.o.maxBet} ⭐`);
+    const value = this.store.toStars(amount, currency);
+    if (!Number.isSafeInteger(amount) || amount <= 0 || value < this.o.minBet - 1e-9 || value > this.o.maxBet + 1e-9) {
+      throw new AppError('BAD_AMOUNT', `Ставка от ${this.o.minBet} до ${this.o.maxBet} ⭐ или столько же в Gram`);
     }
     let auto = null;
     if (rawAuto !== null && rawAuto !== undefined && rawAuto !== '') {
@@ -226,8 +243,8 @@ export class CrashService extends EventEmitter {
     }
     if (this.q.bet.get(r.id, user.id)) throw new AppError('ALREADY', 'Вы уже сделали ставку в этом раунде', 409);
     this.store.tx(() => {
-      this.store.ledgerDebit(user.id, amount, 'crash_bet', r.id);
-      this.q.addBet.run(r.id, user.id, amount, auto, this.now());
+      this.store.ledgerDebit(user.id, amount, 'crash_bet', r.id, currency);
+      this.q.addBet.run(r.id, user.id, amount, auto, this.now(), currency);
     });
     this.emit('balance', user.id);
     this.#emit();
@@ -241,7 +258,7 @@ export class CrashService extends EventEmitter {
     if (!b) throw new AppError('NO_BET', 'Ставки нет', 404);
     this.store.tx(() => {
       this.q.delBet.run(r.id, userId);
-      this.store.ledgerCredit(userId, b.amount, 'crash_refund', r.id);
+      this.store.ledgerCredit(userId, b.amount, 'crash_refund', r.id, b.currency);
     });
     this.emit('balance', userId);
     this.#emit();
@@ -282,6 +299,7 @@ export class CrashService extends EventEmitter {
       bettingEndsAt: r.bettingEndsAt,
       startAt: r.startAt,
       growth: this.o.growth,
+      rate: this.store.rate(),
       limits: { minBet: this.o.minBet, maxBet: this.o.maxBet, maxWin: this.o.maxWin, houseEdge: this.o.houseEdge },
       bets: this.q.bets.all(r.id).map((b) => {
         const u = this.store.getUser(b.user_id) ?? { id: b.user_id };
@@ -290,6 +308,8 @@ export class CrashService extends EventEmitter {
           name: displayName(u),
           photo: u.photo_url || '',
           amount: b.amount,
+          currency: b.currency,
+          value: this.#value(b),
           auto: b.auto,
           cashout: b.cashout,
           payout: b.payout,
@@ -308,7 +328,7 @@ export class CrashService extends EventEmitter {
   }
 
   stats(since) {
-    const s = this.q.stats.get(since);
+    const s = this.q.stats.get({ since, rate: this.store.rate() });
     return { ...s, profit: s.staked - s.paid };
   }
 }

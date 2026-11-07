@@ -3,7 +3,8 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, assertProductionConfig } from './config.js';
-import { openDb, AppError } from './db.js';
+import { openDb, AppError, GRAM, NANO, XTR } from './db.js';
+import { GramWatcher } from './gram.js';
 import { validateInitData } from './auth.js';
 import { Game } from './game.js';
 import { Bot } from './bot.js';
@@ -36,12 +37,12 @@ const SECURITY_HEADERS = {
   'strict-transport-security': 'max-age=31536000',
   'content-security-policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://telegram.org",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "script-src 'self' 'unsafe-inline' https://telegram.org https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://t.me https://*.telegram.org https://*.telesco.pe",
+    "img-src 'self' data: blob: https:",
     "media-src 'self'",
-    "connect-src 'self'",
+    "connect-src 'self' https: wss:",
     'frame-ancestors https://web.telegram.org https://*.telegram.org https://t.me',
     "base-uri 'none'",
     "form-action 'none'",
@@ -175,6 +176,41 @@ function requireAdmin(req) {
   return user;
 }
 
+function currencyOf(body) {
+  if (body.currency === GRAM) {
+    if (!config.gram.wallet && !DEV_AUTH) throw new AppError('NO_GRAM', 'Gram пока недоступен', 400);
+    return GRAM;
+  }
+  return XTR;
+}
+
+function gramOf(raw) {
+  const s = String(raw ?? '')
+    .trim()
+    .replace(',', '.');
+  if (!/^\d{1,9}(\.\d{1,2})?$/.test(s))
+    throw new AppError('BAD_AMOUNT', 'Сумма в Gram — число, до двух знаков после точки');
+  const [i, f = ''] = s.split('.');
+  return Number(i) * NANO + Number(f.padEnd(2, '0')) * 10_000_000;
+}
+
+function stakeOf(body, minStars) {
+  const currency = currencyOf(body);
+  if (currency === XTR) return { currency, amount: amountOf(body, minStars) };
+  const amount = gramOf(body.amount);
+  const value = store.toStars(amount, GRAM);
+  if (value < minStars - 1e-9) {
+    throw new AppError(
+      'BAD_AMOUNT',
+      `Минимум — ${fmtGram(Math.ceil((minStars / store.rate()) * 100) * 10_000_000)} Gram`,
+    );
+  }
+  if (value > config.limits.maxAmount) throw new AppError('BAD_AMOUNT', 'Слишком большая сумма');
+  return { currency, amount };
+}
+
+const fmtGram = (nano) => (nano / NANO).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+
 function amountOf(body, min) {
   const n = Number(body.amount);
   if (!Number.isSafeInteger(n) || n < min) throw new AppError('BAD_AMOUNT', `Минимальная сумма — ${min}`);
@@ -200,6 +236,7 @@ function profile(user) {
       username: user.username,
       photo: user.photo_url,
       balance: user.balance,
+      gram: user.gram,
       games: user.games,
       wins: user.wins,
       losses: user.losses,
@@ -211,6 +248,8 @@ function profile(user) {
       total: w.total,
       status: w.status,
       reason: w.reason,
+      currency: w.currency,
+      address: w.address,
       createdAt: w.created_at,
     })),
     wager: store.wager(user.id, config.wager),
@@ -230,7 +269,40 @@ const routes = {
     withdrawFee: config.limits.withdrawFee,
     maxAmount: config.limits.maxAmount,
     wager: config.wager,
+    gram: {
+      enabled: !!config.gram.wallet || DEV_AUTH,
+      rate: store.rate(),
+      minDeposit: config.gram.minDeposit,
+      minWithdraw: config.gram.minWithdraw,
+    },
   }),
+
+  'GET /tonconnect-manifest.json': () => ({
+    url: config.publicUrl.replace(/\/$/, '') || 'http://localhost:3000',
+    name: 'Roulette Arena',
+    iconUrl: `${config.publicUrl.replace(/\/$/, '')}/brand/loading-icon.png`,
+  }),
+
+  'POST /api/deposit/gram': async (req) => {
+    const user = authenticate(req);
+    const body = await readJson(req);
+    const amount = gramOf(body.amount);
+    if (amount < config.gram.minDeposit * NANO) {
+      throw new AppError('BAD_AMOUNT', `Минимальное пополнение — ${config.gram.minDeposit} Gram`);
+    }
+    if (!config.gram.wallet) {
+      if (!DEV_AUTH) throw new AppError('NO_GRAM', 'Пополнение Gram пока недоступно', 503);
+      const u = store.creditGramDeposit({
+        hash: `dev-${Date.now()}-${Math.random()}`,
+        userId: user.id,
+        amount,
+        refPercent: config.refPercent,
+      });
+      broadcast('balance', { id: user.id });
+      return { dev: true, ...profile(u) };
+    }
+    return { address: config.gram.wallet, memo: String(user.id), amount: String(amount) };
+  },
 
   'GET /api/round': () => game.publicState(),
 
@@ -261,9 +333,9 @@ const routes = {
 
   'POST /api/bet': async (req) => {
     const user = authenticate(req);
-    const amount = amountOf(await readJson(req), config.game.minBet);
+    const { amount, currency } = stakeOf(await readJson(req), config.game.minBet);
     throttle(user.id);
-    game.placeBet(user, amount);
+    game.placeBet(user, amount, currency);
     return profile(store.getUser(user.id));
   },
 
@@ -327,9 +399,11 @@ const routes = {
   'GET /api/crash/fair': () => ({ edge: config.crash.houseEdge, rounds: crash.fairness(30) }),
   'POST /api/crash/bet': async (req) => {
     const user = authenticate(req);
-    const { amount, auto } = await readJson(req);
+    const body = await readJson(req);
+    const currency = currencyOf(body);
+    const amount = currency === GRAM ? gramOf(body.amount) : Number(body.amount);
     throttle(user.id, 300);
-    return { ...crash.placeBet(user, amount, auto), ...profile(store.getUser(user.id)) };
+    return { ...crash.placeBet(user, amount, body.auto, currency), ...profile(store.getUser(user.id)) };
   },
   'POST /api/crash/cancel': (req) => {
     const user = authenticate(req);
@@ -343,10 +417,11 @@ const routes = {
   'POST /api/crash/my': (req) => ({ bets: crash.myBets(authenticate(req).id) }),
 
   'POST /api/basket/state': (req) => basket.state(authenticate(req).id),
-  'POST /api/basket/play': (req) => {
+  'POST /api/basket/play': async (req) => {
     const user = authenticate(req);
+    const currency = currencyOf(await readJson(req));
     throttle(user.id, 800);
-    return { ...basket.play(user), ...profile(store.getUser(user.id)) };
+    return { ...basket.play(user, currency), ...profile(store.getUser(user.id)) };
   },
 
   'POST /api/ping': (req) => {
@@ -363,14 +438,32 @@ const routes = {
 
   'POST /api/withdraw': async (req) => {
     const user = authenticate(req);
-    const amount = amountOf(await readJson(req), config.limits.minWithdraw);
+    const body = await readJson(req);
+    const currency = currencyOf(body);
+    let amount;
+    let address = '';
+    if (currency === GRAM) {
+      amount = gramOf(body.amount);
+      if (amount < config.gram.minWithdraw * NANO) {
+        throw new AppError('BAD_AMOUNT', `Минимальный вывод — ${config.gram.minWithdraw} Gram`);
+      }
+      address = String(body.address ?? '').trim();
+      if (!/^[A-Za-z0-9_-]{48}$/.test(address) && !/^-?\d:[a-fA-F0-9]{64}$/.test(address)) {
+        throw new AppError(
+          'BAD_ADDRESS',
+          'Проверьте адрес кошелька: он должен начинаться с UQ или EQ и содержать 48 символов',
+        );
+      }
+    } else {
+      amount = amountOf(body, config.limits.minWithdraw);
+    }
     throttle(user.id, 1500);
     rateLimit(`wd:${user.id}`, 3);
     const { left } = store.wager(user.id, config.wager);
     if (left > 0) throw new AppError('WAGER', `Для вывода нужно сделать ставок ещё на ${left} ⭐`);
     await bot?.assertSubscribed(config.withdrawChannel, user.id);
     const fee = Math.ceil(amount * config.limits.withdrawFee);
-    const { withdrawal } = store.withdraw(user.id, amount, fee);
+    const { withdrawal } = store.withdraw(user.id, amount, fee, { currency, address });
     broadcast('balance', { id: user.id });
     bot?.notifyWithdrawal(withdrawal, store.getUser(user.id)).catch((e) => console.error('Заявка админу:', e.message));
     return profile(store.getUser(user.id));
@@ -383,6 +476,11 @@ const routes = {
     readJson,
     requireAdmin,
     notifyBalance: (id) => broadcast('balance', { id }),
+    isOnline: (id) => (seenAt.get(id) ?? 0) >= Date.now() - 70_000,
+    onlineIds: () => {
+      const since = Date.now() - 70_000;
+      return [...seenAt].filter(([, t]) => t >= since).map(([id]) => id);
+    },
   }),
 };
 
@@ -460,6 +558,26 @@ const server = createServer(async (req, res) => {
     send(res, 500, { error: 'INTERNAL', message: 'Что-то пошло не так. Попробуйте ещё раз' });
   }
 });
+
+store.defaultRate = config.gram.rate;
+const gram = new GramWatcher({
+  store,
+  wallet: config.gram.wallet,
+  apiKey: config.gram.apiKey,
+  minDeposit: Math.round(config.gram.minDeposit * NANO),
+  refPercent: config.refPercent,
+});
+gram.on('deposit', ({ user, amount }) => {
+  broadcast('balance', { id: user.id });
+  bot?.notifyGramDeposit(user, amount);
+  if (user.referral) broadcast('balance', { id: user.referral.inviterId });
+});
+gram.on('unmatched', ({ amount, sender, memo }) => {
+  bot?.notifyAdmin(
+    `Перевод ${fmtGram(amount)} Gram без ID игрока в комментарии.\nОтправитель: <code>${sender}</code>\nКомментарий: ${memo ? memo.replace(/[<>&]/g, '') : '—'}`,
+  );
+});
+gram.start();
 
 game.start();
 setInterval(() => basket.tick(), 1000).unref();

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { randomInt } from 'node:crypto';
 import { QUANT, validLaunch, simulateShot, nextHoop } from '../public/basket-physics.js';
-import { AppError } from './db.js';
+import { AppError, GRAM, XTR } from './db.js';
 import { displayName } from './game.js';
 
 export const BASKET_DEFAULTS = Object.freeze({
@@ -113,17 +113,22 @@ export class BasketService extends EventEmitter {
     return rows;
   }
 
-  play(user) {
+  priceGram() {
+    return Math.ceil((this.o.price / this.store.rate()) * 100) * 10_000_000;
+  }
+
+  play(user, currency = XTR) {
     this.tick();
     if (this.q.active.get(user.id)) return this.state(user.id);
     const t = this.now();
+    const cost = currency === GRAM ? this.priceGram() : this.o.price;
     this.store.tx(() => {
       const startAt = t + this.o.countdownMs;
       const hoops = JSON.stringify([nextHoop(null, this.rnd, 0)]);
       const id = Number(
         this.q.insert.run(user.id, this.dayOf(t), hoops, startAt, startAt + this.o.baseMs, startAt, t).lastInsertRowid,
       );
-      this.store.ledgerDebit(user.id, this.o.price, 'basket_entry', id);
+      this.store.ledgerDebit(user.id, cost, 'basket_entry', id, currency);
     });
     this.emit('balance', user.id);
     return this.state(user.id);
@@ -250,6 +255,7 @@ export class BasketService extends EventEmitter {
     return {
       serverNow: t,
       price: this.o.price,
+      priceGram: this.priceGram(),
       rules: { baseMs: this.o.baseMs, bonusMs: this.o.bonusMs, swishBonusMs: this.o.swishBonusMs },
       session: e
         ? {

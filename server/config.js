@@ -46,6 +46,14 @@ export const config = Object.freeze({
     bonus: Number(env('WAGER_BONUS', '3')),
   }),
 
+  gram: Object.freeze({
+    wallet: env('GRAM_WALLET'),
+    apiKey: env('TONCENTER_API_KEY'),
+    rate: Number(env('GRAM_RATE', '140')),
+    minDeposit: Number(env('GRAM_MIN_DEPOSIT', '0.1')),
+    minWithdraw: Number(env('GRAM_MIN_WITHDRAW', '1')),
+  }),
+
   limits: Object.freeze({
     maxAmount: 1_000_000,
     minDeposit: 1,
