@@ -15,6 +15,12 @@ services:
       CHANNEL_URL: ${CHANNEL_URL:-https://t.me/safroulette}
       CHAT_URL: ${CHAT_URL:-https://t.me/safroulette_chat}
       PUBLIC_URL: https://${DOMAIN:?запустите ./setup.sh}/
+      # Необязательные настройки (меняются в .env, затем ./update.sh)
+      REF_PERCENT: ${REF_PERCENT:-15}
+      WAGER_DEPOSIT: ${WAGER_DEPOSIT:-3}
+      WAGER_BONUS: ${WAGER_BONUS:-10}
+      BASKET_PRICE: ${BASKET_PRICE:-5}
+      BASKET_DAILY_PRIZE: ${BASKET_DAILY_PRIZE:-50}
     volumes:
       - app_data:/data            # база игроков, балансов и заявок
     logging: &logging
