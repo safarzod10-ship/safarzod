@@ -1565,6 +1565,7 @@ async function main() {
   } else if (!tour.seen()) {
     setTimeout(() => tour.start({ gram: !!state.config.gram?.enabled }), 900);
   }
+  setTimeout(() => gifts.preloadAnimations(), 2500);
   updateWithdrawForm();
   updateDepositForm();
   setTimeout(() => $('boot').classList.add('hide'), 250);

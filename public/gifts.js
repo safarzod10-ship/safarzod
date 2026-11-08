@@ -3,15 +3,29 @@ const W = 132;
 const STRIP = 44;
 const TARGET = 38;
 
-import { play, playVisible } from './lottie.js';
+import { play, playAll, preloadAll } from './lottie.js';
+
+const ANIMS = [
+  'snakebox',
+  'candycane',
+  'lunarsnake',
+  'vicecream',
+  'chillflame',
+  'lolpop',
+  'xmasstocking',
+  'poolfloat',
+  'whipcupcake',
+  'instantramen',
+  'star',
+  'star-effect',
+];
 
 const STACK = { 1: 1, 5: 2, 10: 3, 15: 4 };
 
 const starTile = (amount) => {
   const n = STACK[amount] ?? 1;
   const stars = Array.from({ length: n }, (_, i) => `<svg class="tgs s${i}"><use href="#i-tgstar"/></svg>`).join('');
-  return `<div class="gw-star n${n}"><i class="spark k1"></i><i class="spark k2"></i><i class="spark k3"></i><i class="spark k4"></i>
-    <div class="gw-stack">${stars}</div><b class="num">${amount}</b></div>`;
+  return `<div class="gw-star n${n}"><div class="gw-stack">${stars}</div><b class="num">${amount}</b></div>`;
 };
 
 const nftArt = (p, anim) =>
@@ -91,7 +105,28 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
         )
         .join('');
     }
-    if (!s.io && !$('gw').hidden) s.io = playVisible($('gw-prizes'));
+    if (!$('gw').hidden) startAnimations();
+  }
+
+  let preload = null;
+  function preloadAnimations(progress) {
+    if (!preload) preload = preloadAll(ANIMS, progress);
+    else if (progress) preload.then(() => progress(ANIMS.length, ANIMS.length));
+    return preload;
+  }
+
+  async function startAnimations() {
+    const box = $('gw-loading');
+    if (s.animsReady) return playAll($('gw-prizes'));
+    box.hidden = false;
+    const ok = await preloadAnimations((done, total) => {
+      $('gw-loading-text').textContent = `Загружаем анимации ${done} из ${total}`;
+      $('gw-loading-bar').style.transform = `scaleX(${total ? done / total : 0})`;
+    });
+    box.hidden = true;
+    if (!ok) preload = null;
+    s.animsReady = ok;
+    playAll($('gw-prizes'));
   }
 
   async function load() {
@@ -142,7 +177,8 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
 
   function showResult(p) {
     const box = $('gw-result');
-    box.innerHTML = `<div class="gw-result-art ${p.kind}">${art(p, true)}</div>
+    const starArt = `<div class="gw-big-star"><div class="gw-fx" data-fx></div><div class="gw-star-anim" data-lottie="star"><svg><use href="#i-tgstar"/></svg></div></div>`;
+    box.innerHTML = `<div class="gw-result-art ${p.kind}">${p.kind === 'nft' ? art(p, true) : starArt}</div>
       <div class="gw-result-title">${p.kind === 'nft' ? p.name : `+${p.amount} ⭐`}</div>
       <div class="gw-result-sub">${
         p.kind === 'nft' ? 'NFT-подарок ваш! Отправим его вам в Telegram в течение суток.' : 'Звёзды уже на балансе.'
@@ -151,6 +187,8 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
     box.hidden = false;
     const a = box.querySelector('[data-lottie]');
     if (a) play(a, a.dataset.lottie);
+    const fx = box.querySelector('[data-fx]');
+    if (fx) play(fx, 'star-effect', { loop: false });
   }
 
   async function spin() {
@@ -223,5 +261,5 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
     $('gw-code').addEventListener('keydown', (e) => e.key === 'Enter' && activate());
   }
 
-  return { bind, load, isOpen: () => !$('gw').hidden, close };
+  return { bind, load, preloadAnimations, isOpen: () => !$('gw').hidden, close };
 }

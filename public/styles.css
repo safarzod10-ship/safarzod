@@ -5571,3 +5571,129 @@ body {
 .gw-star .cur {
   display: none;
 }
+
+.gw-star {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 190, 40, 0.3), transparent 60%),
+    radial-gradient(circle at 50% 45%, #2b3576 0%, #1b2156 55%, #11143a 100%);
+}
+.gw-star::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+}
+.tgs {
+  width: 64%;
+  height: 64%;
+  margin: -32% 0 0 -32%;
+  filter: drop-shadow(0 6px 10px rgba(5, 6, 30, 0.6));
+}
+.gw-big-star {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 45%, #2b3576 0%, #1b2156 55%, #11143a 100%);
+}
+.gw-star-anim,
+.gw-fx {
+  position: absolute;
+  inset: 0;
+}
+.gw-star-anim > svg:first-child:not([preserveAspectRatio]) {
+  position: absolute;
+  inset: 22%;
+  width: 56%;
+  height: 56%;
+}
+.gw-star-anim.playing > svg:first-child:not([preserveAspectRatio]) {
+  display: none;
+}
+.gw-fx {
+  z-index: 2;
+  inset: -30%;
+  pointer-events: none;
+}
+.gw-result-art {
+  overflow: visible;
+}
+.gw-result-art .gw-big-star {
+  border-radius: 32px;
+}
+.gw-loading {
+  display: grid;
+  gap: 8px;
+  margin: 0 2px 14px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.cur-xtr {
+  color: inherit;
+}
+
+.gw-stack {
+  inset: 10% 6% 30%;
+}
+.tgs,
+.gw-star.n1 .s0,
+.gw-star.n2 .tgs,
+.gw-star.n3 .tgs,
+.gw-star.n4 .tgs {
+  top: 50%;
+  left: 50%;
+  width: 46%;
+  height: 46%;
+  margin: -23% 0 0 -23%;
+  transform: none;
+  filter: drop-shadow(0 0 0 #161a46) drop-shadow(1.5px 0 0 #161a46) drop-shadow(-1.5px 0 0 #161a46)
+    drop-shadow(0 4px 6px rgba(5, 6, 30, 0.55));
+}
+.gw-star.n1 .s0 {
+  width: 66%;
+  height: 66%;
+  margin: -33% 0 0 -33%;
+}
+.gw-star.n2 .s0 {
+  transform: translateX(-24%);
+}
+.gw-star.n2 .s1 {
+  transform: translateX(24%);
+}
+.gw-star.n3 .s0 {
+  transform: translateX(-46%) scale(0.86);
+}
+.gw-star.n3 .s1 {
+  transform: translateX(0);
+  z-index: 1;
+}
+.gw-star.n3 .s2 {
+  transform: translateX(46%) scale(0.86);
+}
+.gw-star.n4 .s0 {
+  transform: translateX(-60%) scale(0.8);
+}
+.gw-star.n4 .s1 {
+  transform: translateX(-20%) scale(0.92);
+  z-index: 1;
+}
+.gw-star.n4 .s2 {
+  transform: translateX(20%) scale(0.92);
+  z-index: 1;
+}
+.gw-star.n4 .s3 {
+  transform: translateX(60%) scale(0.8);
+}
+.gw-star.n3 .s1,
+.gw-star.n4 .s1,
+.gw-star.n4 .s2 {
+  z-index: 2;
+}
+.gw-star.n2 .tgs,
+.gw-star.n3 .tgs,
+.gw-star.n4 .tgs {
+  width: 52%;
+  height: 52%;
+  margin: -26% 0 0 -26%;
+}
+.gw-star.n1 .s0 {
+  width: 72%;
+  height: 72%;
+  margin: -36% 0 0 -36%;
+}

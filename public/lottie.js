@@ -1,6 +1,8 @@
-let player = null;
-const cache = new Map();
+const CACHE = 'anim-v1';
+const memory = new Map();
+const pending = new Map();
 const live = new WeakMap();
+let player = null;
 
 function loadPlayer() {
   if (window.lottie) return Promise.resolve(window.lottie);
@@ -9,64 +11,91 @@ function loadPlayer() {
       const el = document.createElement('script');
       el.src = '/vendor/lottie_light.min.js';
       el.onload = () => resolve(window.lottie);
-      el.onerror = reject;
+      el.onerror = () => {
+        player = null;
+        reject(new Error('player'));
+      };
       document.head.append(el);
     });
   }
   return player;
 }
 
-function data(slug) {
-  if (!cache.has(slug))
-    cache.set(
-      slug,
-      fetch(`/gifts/${slug}.json`).then((r) => r.json()),
-    );
-  return cache.get(slug);
+async function fetchStored(url) {
+  let cache = null;
+  try {
+    cache = await caches.open(CACHE);
+    const hit = await cache.match(url);
+    if (hit) return hit.json();
+  } catch {}
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(url);
+  if (cache) {
+    try {
+      await cache.put(url, res.clone());
+    } catch {}
+  }
+  return res.json();
 }
 
-export async function play(container, slug) {
-  if (!container || live.has(container)) return;
+export function load(slug) {
+  if (memory.has(slug)) return Promise.resolve(memory.get(slug));
+  if (!pending.has(slug)) {
+    pending.set(
+      slug,
+      fetchStored(`/gifts/${slug}.json`)
+        .then((d) => {
+          memory.set(slug, d);
+          pending.delete(slug);
+          return d;
+        })
+        .catch((e) => {
+          pending.delete(slug);
+          throw e;
+        }),
+    );
+  }
+  return pending.get(slug);
+}
+
+export const ready = (slug) => memory.has(slug);
+
+export async function preloadAll(slugs, onProgress = () => {}) {
+  let done = 0;
+  onProgress(0, slugs.length);
+  await Promise.all([
+    loadPlayer().catch(() => {}),
+    ...slugs.map((slug) =>
+      load(slug)
+        .catch(() => {})
+        .finally(() => onProgress(++done, slugs.length)),
+    ),
+  ]);
+  return slugs.every(ready);
+}
+
+export async function play(container, slug, { loop = true } = {}) {
+  if (!container || live.has(container)) return live.get(container);
   live.set(container, null);
   try {
-    const [lottie, animationData] = await Promise.all([loadPlayer(), data(slug)]);
+    const [lottie, animationData] = await Promise.all([loadPlayer(), load(slug)]);
     if (!container.isConnected) return live.delete(container);
     const anim = lottie.loadAnimation({
       container,
       renderer: 'svg',
-      loop: true,
+      loop,
       autoplay: true,
       animationData,
-      rendererSettings: { preserveAspectRatio: 'xMidYMid slice', progressiveLoad: true },
+      rendererSettings: { preserveAspectRatio: 'xMidYMid slice' },
     });
     anim.addEventListener('DOMLoaded', () => container.classList.add('playing'));
     live.set(container, anim);
+    return anim;
   } catch {
     live.delete(container);
   }
 }
 
-export function stop(container) {
-  const anim = live.get(container);
-  anim?.destroy();
-  live.delete(container);
-  container?.classList.remove('playing');
-}
-
-export function playVisible(root, selector = '[data-lottie]') {
-  const nodes = [...root.querySelectorAll(selector)];
-  if (!('IntersectionObserver' in window)) return nodes.forEach((n) => play(n, n.dataset.lottie));
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      const n = e.target;
-      if (e.isIntersecting) play(n, n.dataset.lottie);
-      else {
-        const anim = live.get(n);
-        anim?.pause();
-      }
-      if (e.isIntersecting) live.get(n)?.play();
-    }
-  });
-  nodes.forEach((n) => io.observe(n));
-  return io;
+export function playAll(root, selector = '[data-lottie]') {
+  root.querySelectorAll(selector).forEach((n) => play(n, n.dataset.lottie));
 }

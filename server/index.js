@@ -581,7 +581,9 @@ async function serveStatic(req, res, pathname) {
     res.writeHead(200, {
       ...SECURITY_HEADERS,
       'content-type': MIME[extname(file)] ?? 'application/octet-stream',
-      'cache-control': 'no-cache',
+      'cache-control': /^(gifts|vendor|games|sounds)[/\\]/.test(rel)
+        ? 'public, max-age=2592000, immutable'
+        : 'no-cache',
     });
     res.end(req.method === 'HEAD' ? undefined : body);
   } catch {
