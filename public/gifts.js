@@ -3,10 +3,21 @@ const W = 132;
 const STRIP = 44;
 const TARGET = 38;
 
-const starTile = (amount) =>
-  `<div class="gw-star"><svg class="cur cur-xtr"><use href="#i-star"/></svg><b class="num">${amount}</b></div>`;
+import { play, playVisible } from './lottie.js';
 
-const art = (p) => (p.kind === 'nft' ? `<img src="${p.image}" alt="" decoding="async">` : starTile(p.amount));
+const STACK = { 1: 1, 5: 2, 10: 3, 15: 4 };
+
+const starTile = (amount) => {
+  const n = STACK[amount] ?? 1;
+  const stars = Array.from({ length: n }, (_, i) => `<svg class="tgs s${i}"><use href="#i-tgstar"/></svg>`).join('');
+  return `<div class="gw-star n${n}"><i class="spark k1"></i><i class="spark k2"></i><i class="spark k3"></i><i class="spark k4"></i>
+    <div class="gw-stack">${stars}</div><b class="num">${amount}</b></div>`;
+};
+
+const nftArt = (p, anim) =>
+  `<div class="gw-nft"${anim ? ` data-lottie="${p.id}"` : ''}><img src="${p.image}" alt="" decoding="async"></div>`;
+
+const art = (p, anim = false) => (p.kind === 'nft' ? nftArt(p, anim) : starTile(p.amount));
 
 const plural = (n, one, few, many) => {
   const m10 = n % 10;
@@ -74,9 +85,13 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
     if (!$('gw-prizes').dataset.ready) {
       $('gw-prizes').dataset.ready = '1';
       $('gw-prizes').innerHTML = st.prizes
-        .map((p) => `<div class="gw-prize ${p.kind}"><div class="gw-art">${art(p)}</div><span>${p.name}</span></div>`)
+        .map(
+          (p) =>
+            `<div class="gw-prize ${p.kind}"><div class="gw-art">${art(p, true)}</div><span>${p.name}</span></div>`,
+        )
         .join('');
     }
+    if (!s.io && !$('gw').hidden) s.io = playVisible($('gw-prizes'));
   }
 
   async function load() {
@@ -127,13 +142,15 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
 
   function showResult(p) {
     const box = $('gw-result');
-    box.innerHTML = `<div class="gw-result-art ${p.kind}">${art(p)}</div>
+    box.innerHTML = `<div class="gw-result-art ${p.kind}">${art(p, true)}</div>
       <div class="gw-result-title">${p.kind === 'nft' ? p.name : `+${p.amount} ⭐`}</div>
       <div class="gw-result-sub">${
         p.kind === 'nft' ? 'NFT-подарок ваш! Отправим его вам в Telegram в течение суток.' : 'Звёзды уже на балансе.'
       }</div>
       <button class="btn primary block" data-gw-ok>Отлично</button>`;
     box.hidden = false;
+    const a = box.querySelector('[data-lottie]');
+    if (a) play(a, a.dataset.lottie);
   }
 
   async function spin() {
@@ -153,7 +170,13 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
       setTimeout(() => {
         setOffset(centerOffset(TARGET), true);
         $('gw-strip').style.transition = 'transform 0.35s ease';
-        $('gw-strip').children[TARGET].classList.add('win');
+        const won = $('gw-strip').children[TARGET];
+        won.classList.add('win');
+        const nft = won.querySelector('.gw-nft');
+        if (nft) {
+          nft.dataset.lottie = res.prize;
+          play(nft, res.prize);
+        }
         s.spinning = false;
         s.st = res;
         onProfile(res);

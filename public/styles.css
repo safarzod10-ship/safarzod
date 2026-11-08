@@ -5387,3 +5387,187 @@ body {
   padding: 0 16px;
   font-size: 15px;
 }
+
+.gw-nft {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.gw-nft img,
+.gw-nft svg {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+.gw-nft.playing img {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.gw-star {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 196, 60, 0.28), transparent 62%),
+    radial-gradient(circle at 50% 45%, #3c4a9a 0%, #252d68 55%, #161a42 100%);
+}
+.gw-star::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image: radial-gradient(circle, #fff 1px, transparent 1.5px);
+  background-size: 14px 14px;
+}
+.gw-stack {
+  position: absolute;
+  inset: 8% 10% 26%;
+}
+.tgs {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62%;
+  height: 62%;
+  margin: -31% 0 0 -31%;
+  filter: drop-shadow(0 4px 6px rgba(10, 8, 40, 0.55));
+  animation: tgs-float 3s ease-in-out infinite;
+}
+.gw-star.n1 .s0 {
+  width: 70%;
+  height: 70%;
+  margin: -35% 0 0 -35%;
+}
+.gw-star.n2 .s0 {
+  transform: translate(-22%, 6%) rotate(-12deg);
+}
+.gw-star.n2 .s1 {
+  transform: translate(22%, -4%) rotate(10deg);
+  animation-delay: -1.2s;
+}
+.gw-star.n3 .s0 {
+  transform: translate(-34%, 12%) rotate(-16deg) scale(0.82);
+}
+.gw-star.n3 .s1 {
+  transform: translate(34%, 12%) rotate(14deg) scale(0.82);
+  animation-delay: -0.8s;
+}
+.gw-star.n3 .s2 {
+  transform: translate(0, -8%);
+  animation-delay: -1.6s;
+}
+.gw-star.n4 .s0 {
+  transform: translate(-38%, 18%) rotate(-18deg) scale(0.74);
+}
+.gw-star.n4 .s1 {
+  transform: translate(38%, 18%) rotate(16deg) scale(0.74);
+  animation-delay: -0.7s;
+}
+.gw-star.n4 .s2 {
+  transform: translate(-16%, -14%) rotate(-6deg) scale(0.86);
+  animation-delay: -1.4s;
+}
+.gw-star.n4 .s3 {
+  transform: translate(20%, -10%) rotate(8deg) scale(0.92);
+  animation-delay: -2.1s;
+}
+@keyframes tgs-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5%;
+  }
+}
+.gw-star::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 40%;
+  transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: tgs-shine 3.6s ease-in-out infinite;
+}
+@keyframes tgs-shine {
+  0%,
+  55% {
+    left: -60%;
+  }
+  85%,
+  100% {
+    left: 130%;
+  }
+}
+.spark {
+  position: absolute;
+  z-index: 1;
+  width: 10%;
+  aspect-ratio: 1;
+  background: #fff6c8;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  animation: tgs-spark 2.4s ease-in-out infinite;
+}
+.spark.k1 {
+  left: 14%;
+  top: 14%;
+}
+.spark.k2 {
+  right: 12%;
+  top: 22%;
+  width: 7%;
+  animation-delay: -0.6s;
+}
+.spark.k3 {
+  left: 20%;
+  bottom: 30%;
+  width: 6%;
+  animation-delay: -1.3s;
+}
+.spark.k4 {
+  right: 18%;
+  bottom: 34%;
+  width: 8%;
+  animation-delay: -1.9s;
+}
+@keyframes tgs-spark {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+.gw-star b {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7%;
+  z-index: 2;
+  text-align: center;
+  font-size: clamp(14px, 15%, 34px);
+  font-weight: 800;
+  color: #ffd75e;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.gw-prize .gw-star b {
+  font-size: 22px;
+}
+.gw-item .gw-star b {
+  font-size: 18px;
+}
+.gw-result-art .gw-star b {
+  font-size: 36px;
+}
+.gw-star .cur {
+  display: none;
+}
