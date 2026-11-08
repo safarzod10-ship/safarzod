@@ -683,3 +683,41 @@ test('вывод Gram: админ получает в бот сумму в Gram 
   await bot.completeWithdrawal(withdrawal.id);
   assert.match(lastText(bot), /Вывод <b>1 Gram<\/b> выполнен/);
 });
+
+test('обменник: курс от цены Gram с выгодой 15% в обе стороны, обмен туда-обратно всегда в минус игроку', async () => {
+  const { exchangeRates } = await import('../server/price.js');
+  const r = exchangeRates(1.064, { starBuyUsd: 0.015, starSellUsd: 0.013, spread: 0.15 });
+  assert.deepEqual(r, { game: 76, gramToStars: 60, starsToGram: 97 });
+  const store = storeWith(1000);
+  const a = store.exchange(1, 'XTR', 970, r);
+  assert.deepEqual([a.received, a.currency], [10_000_000_000, 'GRAM']);
+  assert.equal(store.getUser(1).balance, 30);
+  const b = store.exchange(1, 'GRAM', 10_000_000_000, r);
+  assert.deepEqual([b.received, b.currency], [600, 'XTR']);
+  assert.equal(store.getUser(1).balance, 630);
+  assert.equal(store.getUser(1).gram, 0);
+  assert.throws(() => store.exchange(1, 'GRAM', 1, r), /маленькая/);
+  assert.throws(() => store.exchange(1, 'XTR', 5000, r), /Недостаточно звёзд/);
+  assert.equal(store.ledgerSum(1, 'XTR'), 630);
+});
+
+test('цена Gram: берётся из первого рабочего источника, при сбое остаётся прежней', async () => {
+  const { PriceFeed } = await import('../server/price.js');
+  const store = storeWith(0);
+  let fail = false;
+  const feed = new PriceFeed({
+    store,
+    fallbackUsd: 1,
+    star: { starBuyUsd: 0.015, starSellUsd: 0.013, spread: 0.15 },
+    fetchImpl: async (url) => {
+      if (fail) throw new Error('down');
+      return { json: async () => (url.includes('tonapi') ? { rates: { TON: { prices: { USD: 2.1 } } } } : {}) };
+    },
+  });
+  assert.equal(store.rate(), 71);
+  assert.equal(await feed.refresh(), 2.1);
+  assert.equal(store.rate(), 150);
+  fail = true;
+  assert.equal(await feed.refresh(), null);
+  assert.equal(feed.usd(), 2.1);
+});

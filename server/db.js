@@ -535,6 +535,23 @@ class Store {
     });
   }
 
+  exchange(userId, from, amount, rates) {
+    const toGram = from === XTR;
+    let out;
+    if (toGram) {
+      out = Math.floor((amount * NANO) / rates.starsToGram / 10_000_000) * 10_000_000;
+    } else {
+      out = Math.floor((amount / NANO) * rates.gramToStars);
+    }
+    if (out <= 0) throw new AppError('BAD_AMOUNT', 'Слишком маленькая сумма для обмена');
+    return this.tx(() => {
+      const ref = Date.now();
+      this.#debit(userId, amount, 'exchange', ref, from);
+      this.#credit(userId, out, 'exchange', ref, toGram ? GRAM : XTR);
+      return { user: this.getUser(userId), received: out, currency: toGram ? GRAM : XTR };
+    });
+  }
+
   getSetting(key) {
     return this.q.getSetting.get(key)?.value ?? null;
   }

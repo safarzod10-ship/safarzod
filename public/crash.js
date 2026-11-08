@@ -121,7 +121,9 @@ export function createCrash({ api, haptic, toast, avatarHtml, esc, me, onProfile
       .join('');
     const rg = range(GRAM);
     $('cr-limits').textContent =
-      `Ставка ${st.limits.minBet}–${st.limits.maxBet} ⭐ или ${gramInput(rg.min)}–${gramInput(rg.max)} Gram · выигрыш до ${fmt(st.limits.maxWin)} ⭐ · 1 Gram = ${fmt(rate())} ⭐`;
+      currency() === GRAM
+        ? `Ставка от ${gramInput(rg.min)} до ${gramInput(rg.max)} Gram`
+        : `Ставка от ${st.limits.minBet} до ${st.limits.maxBet} ⭐ · выигрыш до ${fmt(st.limits.maxWin)} ⭐`;
     renderPanel();
   }
 

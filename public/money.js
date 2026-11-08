@@ -54,14 +54,27 @@ try {
 } catch {}
 
 export const currency = () => current;
-export function setCurrency(cur) {
+export function setCurrency(cur, { remember = true } = {}) {
   if (cur !== XTR && cur !== GRAM) return;
+  if (remember) {
+    try {
+      localStorage.setItem('cur', cur);
+    } catch {}
+  }
   if (cur === current) return;
   current = cur;
-  try {
-    localStorage.setItem('cur', cur);
-  } catch {}
   listeners.forEach((fn) => fn(cur));
+}
+
+export function autoCurrency(stars, gram) {
+  let chosen = null;
+  try {
+    chosen = localStorage.getItem('cur');
+  } catch {}
+  const has = { XTR: stars > 0, GRAM: gram > 0 };
+  if (!chosen) return setCurrency(gram > 0 ? GRAM : XTR, { remember: false });
+  if (!has[current] && has[current === GRAM ? XTR : GRAM])
+    setCurrency(current === GRAM ? XTR : GRAM, { remember: false });
 }
 export const onCurrency = (fn) => listeners.add(fn);
 

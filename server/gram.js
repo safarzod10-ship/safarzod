@@ -103,3 +103,23 @@ export class GramWatcher extends EventEmitter {
     return credited;
   }
 }
+
+function crc16(bytes) {
+  let crc = 0;
+  for (const b of bytes) {
+    crc ^= b << 8;
+    for (let i = 0; i < 8; i++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+  }
+  return crc;
+}
+
+export function friendlyAddress(address) {
+  const m = /^(-?\d+):([a-fA-F0-9]{64})$/.exec(String(address).trim());
+  if (!m) return String(address).trim();
+  const body = Buffer.alloc(34);
+  body[0] = 0x51;
+  body.writeInt8(Number(m[1]), 1);
+  Buffer.from(m[2], 'hex').copy(body, 2);
+  const crc = crc16(body);
+  return Buffer.concat([body, Buffer.from([crc >> 8, crc & 0xff])]).toString('base64url');
+}

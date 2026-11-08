@@ -3,7 +3,6 @@ import { GRAM, gramInput, currency } from './money.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(n);
-const MEDALS = ['🥇', '🥈', '🥉'];
 const STAR = '<svg class="star"><use href="#i-star"/></svg>';
 const TOP = 10;
 
@@ -120,7 +119,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     s.poll = ms ? setInterval(refresh, ms) : null;
   }
 
-  const placeMark = (p) => (p <= 3 ? MEDALS[p - 1] : `<span class="lb-n">${p}</span>`);
+  const placeMark = (p) => `<span class="lb-n${p <= 3 ? ` top${p}` : ''}">${p}</span>`;
 
   function lbRow(r, myId) {
     const isMe = r.id === myId;
@@ -169,7 +168,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     $('bt-last').hidden = !lw;
     if (lw)
       $('bt-last').innerHTML =
-        `🏆 Победитель ${lw.day.slice(8, 10)}.${lw.day.slice(5, 7)}: <b>${lw.id === myId ? 'вы' : esc(lw.name)}</b> — ${fmt(lw.score)} очков, +${fmt(lw.prize)} ⭐`;
+        `Победитель ${lw.day.slice(8, 10)}.${lw.day.slice(5, 7)}: <b>${lw.id === myId ? 'вы' : esc(lw.name)}</b> — ${fmt(lw.score)} очков, +${fmt(lw.prize)} ⭐`;
 
     const play = $('gc-play');
     play.innerHTML = st.session
@@ -569,14 +568,14 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
       ? `Ваше место сегодня — <b>#${t.me.place}</b> из ${fmt(t.players)} · лучший результат ${fmt(t.me.score)}`
       : 'Наберите хотя бы 1 очко, чтобы попасть в таблицу дня';
     const html = `<div class="res-title">${fmt(att.score)} ${plural(att.score, 'очко', 'очка', 'очков')}</div>
-      <div class="res-sub">${best ? '🔥 Ваш лучший результат дня! ' : ''}${sub}</div>
+      <div class="res-sub">${best ? 'Ваш лучший результат за день. ' : ''}${sub}</div>
       <div class="res-list">${
         t.top
           .slice(0, 3)
           .map((r) => lbRow(r, myId))
           .join('') || ''
       }</div>
-      <div class="res-wait">🏆 Первое место в 00:00 МСК получает <b>${fmt(t.prize)} ⭐</b></div>
+      <div class="res-wait">Первое место в 00:00 МСК получает <b>${fmt(t.prize)} ⭐</b></div>
       <div class="dock-row"><button class="btn secondary" data-res="close">Готово</button>
       <button class="btn primary" data-res="again" style="flex:1">Ещё раз · ${priceLabel()}</button></div>`;
     if (el.dataset.html !== html) {

@@ -1,5 +1,5 @@
 :root {
-  --bg: #0b0e13;
+  --bg: #0f0f10;
   --surface: #161920;
   --surface-2: #1c2028;
   --surface-3: #252a34;
@@ -45,7 +45,11 @@ body {
 body {
   color: var(--text);
   font:
-    400 15px/1.4 'Onest',
+    400 15px/1.4 -apple-system,
+    'SF Pro Text',
+    system-ui,
+    Roboto,
+    'Segoe UI',
     -apple-system,
     BlinkMacSystemFont,
     'SF Pro Text',
@@ -4063,7 +4067,7 @@ body[data-view='admin-user'] .nav {
 }
 
 :root {
-  --bg: #0b0e13;
+  --bg: #0f0f10;
   --surface: #131920;
   --surface-2: #1a212b;
   --surface-3: #232c38;
@@ -4084,7 +4088,11 @@ body[data-view='admin-user'] .nav {
 
 body {
   font-family:
-    'Onest',
+    -apple-system,
+    'SF Pro Text',
+    system-ui,
+    Roboto,
+    'Segoe UI',
     system-ui,
     -apple-system,
     sans-serif;
@@ -4628,4 +4636,323 @@ body[data-view='roulette'] {
 }
 body[data-cur='GRAM'] #dep-hint {
   display: none;
+}
+
+:root {
+  --bg: #0f0f10;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --surface-3: #3a3a3c;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.11);
+  --text: #ffffff;
+  --text-2: #a1a1a6;
+  --text-3: #6e6e73;
+  --accent: var(--tg-button, #3e88f7);
+  --accent-2: var(--tg-button, #3e88f7);
+  --accent-soft: rgba(62, 136, 247, 0.14);
+  --on-accent: var(--tg-button-text, #ffffff);
+  --gold: #ffb800;
+  --gram: #0098ea;
+  --gram-soft: rgba(0, 152, 234, 0.16);
+  --star-soft: rgba(255, 184, 0, 0.14);
+  --green: #30d158;
+  --red: #ff453a;
+  --radius: 12px;
+}
+body {
+  font-family: -apple-system, 'SF Pro Text', system-ui, Roboto, 'Segoe UI', sans-serif;
+  letter-spacing: 0;
+}
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.section-title,
+.history h2,
+#view-admin .section-title,
+#view-admin-user .section-title {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.btn {
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+.btn.primary,
+.btn.primary:active:not(:disabled) {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btn.primary:active:not(:disabled) {
+  opacity: 0.85;
+}
+.btn.secondary {
+  background: var(--surface-2);
+}
+.bal-add {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.bal {
+  background: var(--surface);
+  box-shadow: none;
+}
+.bal-xtr.on {
+  background: var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.bal-gram.on {
+  background: var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--gram);
+}
+.nav {
+  background: rgba(22, 22, 24, 0.94);
+  border-top: 0.5px solid var(--line-strong);
+}
+.nav-ind {
+  display: none;
+}
+.nav button {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.nav button.active,
+.nav button.active .ni {
+  color: var(--accent);
+}
+.chips button,
+.cr-chips button,
+.chips.small button {
+  border: 0;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-weight: 500;
+}
+.chips button.on,
+.cr-chips button.on {
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: none;
+}
+.card,
+.feat,
+.stat,
+.player,
+.task,
+.friend,
+.lb-row,
+.att,
+.bt-card,
+.adm-card {
+  border-radius: var(--radius);
+}
+.player::before {
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+}
+.lb-n {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.lb-n.top1 {
+  color: var(--gold);
+}
+.lb-n.top2 {
+  color: #c7c7cc;
+}
+.lb-n.top3 {
+  color: #c98a52;
+}
+.cur-switch {
+  background: var(--surface);
+  border-radius: 10px;
+}
+.cur-switch button {
+  border-radius: 8px;
+}
+.cur-switch button[data-cur='XTR'].on,
+.cur-switch button[data-cur='GRAM'].on {
+  background: var(--surface-3);
+}
+.wallet {
+  gap: 0;
+}
+.wallet-btn.ex-row .wb-icon {
+  color: var(--accent) !important;
+}
+.coach-bubble,
+.tour-body {
+  border-radius: 14px;
+}
+
+.ex-box {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+.ex-side {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.ex-label {
+  font-size: 13px;
+  color: var(--text-3);
+}
+.ex-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+.ex-line input,
+.ex-out {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 30px;
+  font-weight: 600;
+}
+.ex-cur {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--surface-2);
+}
+.ex-cur .cur {
+  width: 18px;
+  height: 18px;
+}
+.ex-max {
+  justify-self: start;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.ex-max b {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.ex-swap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 4px var(--bg);
+}
+.ex-swap svg {
+  width: 18px;
+  height: 18px;
+}
+.wd-wallet {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.wallet-connect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+  background: var(--gram);
+}
+.wallet-connect.on {
+  color: var(--text);
+  background: var(--surface);
+}
+.wallet-connect .cur {
+  width: 20px;
+  height: 20px;
+}
+.wd-wallet .link-btn {
+  justify-self: center;
+}
+.ex-box,
+.ex-side {
+  min-width: 0;
+  width: 100%;
+}
+.ex-line input {
+  width: 100%;
+}
+.wallet-btn,
+.wallet-btn.gold,
+.wallet-btn.violet {
+  background: none !important;
+}
+.wallet .wb-icon,
+.wallet-btn .wb-icon {
+  display: grid;
+  place-items: center;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  color: var(--accent) !important;
+}
+.wallet .wb-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.wallet .wallet-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  min-height: 54px;
+  padding: 0 16px;
+}
+.wallet .wb-icon {
+  margin: 0 !important;
+}
+.wallet .wb-title {
+  flex: 1;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 500;
+}
+.wallet .wallet-btn + .wallet-btn {
+  border-top: 0.5px solid var(--line-strong) !important;
+}
+.wallet .wb-icon {
+  flex: none !important;
+}
+.row-btn .rb-icon {
+  background: none !important;
+  color: var(--accent) !important;
 }

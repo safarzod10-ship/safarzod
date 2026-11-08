@@ -57,6 +57,7 @@ export function createAdminRoutes({
   notifyBalance,
   isOnline = () => false,
   onlineIds = () => [],
+  priceInfo = () => null,
 }) {
   const cache = new Map();
   const q = {
@@ -172,6 +173,7 @@ export function createAdminRoutes({
     return {
       ...s,
       rate: store.rate(),
+      price: priceInfo(),
       crash: per((since) => crash.stats(since)),
       basket: per((since) => {
         const e = safe(q.basketStats, { since, rate: store.rate() }) ?? { n: 0, sum: 0 };

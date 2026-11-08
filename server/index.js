@@ -4,7 +4,8 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, assertProductionConfig } from './config.js';
 import { openDb, AppError, GRAM, NANO, XTR } from './db.js';
-import { GramWatcher } from './gram.js';
+import { GramWatcher, friendlyAddress } from './gram.js';
+import { PriceFeed } from './price.js';
 import { validateInitData } from './auth.js';
 import { Game } from './game.js';
 import { Bot } from './bot.js';
@@ -52,6 +53,13 @@ const SECURITY_HEADERS = {
 const DEV_AUTH = config.devMode && !config.botToken;
 
 const store = openDb(config.dataDir);
+store.defaultRate = config.gram.rate;
+const price = new PriceFeed({
+  store,
+  fallbackUsd: config.gram.usd,
+  star: { starBuyUsd: config.gram.starBuyUsd, starSellUsd: config.gram.starSellUsd, spread: config.gram.spread },
+});
+if (!DEV_AUTH || config.gram.wallet) price.start();
 const game = new Game(store, config.game);
 const basket = new BasketService(store, config.basket);
 const crash = new CrashService(store, config.crash);
@@ -274,8 +282,28 @@ const routes = {
       rate: store.rate(),
       minDeposit: config.gram.minDeposit,
       minWithdraw: config.gram.minWithdraw,
+      exchange: price.rates(),
     },
   }),
+
+  'POST /api/exchange': async (req) => {
+    const user = authenticate(req);
+    const body = await readJson(req);
+    if (!config.gram.wallet && !DEV_AUTH) throw new AppError('NO_GRAM', 'Обмен пока недоступен', 400);
+    const from = body.from === GRAM ? GRAM : XTR;
+    let amount;
+    if (from === GRAM) {
+      amount = gramOf(body.amount);
+      if (amount < 100_000_000) throw new AppError('BAD_AMOUNT', 'Минимум для обмена — 0,1 Gram');
+    } else {
+      amount = amountOf(body, 10);
+    }
+    throttle(user.id, 1000);
+    rateLimit(`ex:${user.id}`, 20);
+    const res = store.exchange(user.id, from, amount, price.rates());
+    broadcast('balance', { id: user.id });
+    return { received: res.received, currency: res.currency, exchange: price.rates(), ...profile(res.user) };
+  },
 
   'GET /tonconnect-manifest.json': () => ({
     url: config.publicUrl.replace(/\/$/, '') || 'http://localhost:3000',
@@ -447,7 +475,7 @@ const routes = {
       if (amount < config.gram.minWithdraw * NANO) {
         throw new AppError('BAD_AMOUNT', `Минимальный вывод — ${config.gram.minWithdraw} Gram`);
       }
-      address = String(body.address ?? '').trim();
+      address = friendlyAddress(body.address ?? '');
       if (!/^[A-Za-z0-9_-]{48}$/.test(address) && !/^-?\d:[a-fA-F0-9]{64}$/.test(address)) {
         throw new AppError(
           'BAD_ADDRESS',
@@ -480,6 +508,7 @@ const routes = {
     readJson,
     requireAdmin,
     notifyBalance: (id) => broadcast('balance', { id }),
+    priceInfo: () => ({ usd: price.usd(), ...price.rates() }),
     isOnline: (id) => (seenAt.get(id) ?? 0) >= Date.now() - 70_000,
     onlineIds: () => {
       const since = Date.now() - 70_000;

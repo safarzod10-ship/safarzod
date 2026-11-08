@@ -14,6 +14,7 @@ import {
   cleanGramInput,
   currency,
   setCurrency,
+  autoCurrency,
   onCurrency,
   switchHtml,
   syncSwitches,
@@ -65,10 +66,13 @@ function setupTelegram() {
   const at = (v) => tg.isVersionAtLeast?.(v);
   if (at('7.7')) tg.disableVerticalSwipes();
   if (at('6.1')) {
-    tg.setHeaderColor('#0b0e13');
-    tg.setBackgroundColor('#0b0e13');
+    const tp = tg.themeParams ?? {};
+    if (tp.button_color) document.documentElement.style.setProperty('--tg-button', tp.button_color);
+    if (tp.button_text_color) document.documentElement.style.setProperty('--tg-button-text', tp.button_text_color);
+    tg.setHeaderColor('#0f0f10');
+    tg.setBackgroundColor('#0f0f10');
   }
-  if (at('7.10')) tg.setBottomBarColor('#0b0e13');
+  if (at('7.10')) tg.setBottomBarColor('#0f0f10');
   const applyInsets = () => {
     const s = tg.safeAreaInset ?? {};
     const c = tg.contentSafeAreaInset ?? {};
@@ -118,6 +122,7 @@ function applyProfile({ user, withdrawals, wager, admin: isAdmin }) {
     admin.enable(isAdmin);
   }
   state.me = user;
+  if (state.config.gram?.enabled) autoCurrency(user.balance, user.gram ?? 0);
   state.withdrawals = withdrawals ?? state.withdrawals;
   renderMe();
   renderWithdrawals();
@@ -191,7 +196,16 @@ const digits = (input) => {
   return v ? Math.min(Number(v), state.config.maxAmount) : 0;
 };
 
-const SUBPAGES = new Set(['deposit', 'withdraw', 'basket', 'basket-history', 'crash', 'admin', 'admin-user']);
+const SUBPAGES = new Set([
+  'deposit',
+  'withdraw',
+  'exchange',
+  'basket',
+  'basket-history',
+  'crash',
+  'admin',
+  'admin-user',
+]);
 const GAME_VIEWS = new Set(['games', 'basket', 'basket-history']);
 
 function go(view, { back = false } = {}) {
@@ -208,6 +222,15 @@ function go(view, { back = false } = {}) {
   window.scrollTo({ top: 0 });
   if (supports('6.1')) view === 'roulette' ? tg.BackButton.hide() : tg.BackButton.show();
   if (view === 'withdraw' || view === 'profile') refreshMe();
+  if (view === 'deposit' || view === 'withdraw') {
+    state.payCur = currency();
+    renderMoneyForms();
+  }
+  if (view === 'exchange') {
+    state.exFrom = currency() === GRAM ? GRAM : XTR;
+    $('ex-input').value = '';
+    renderExchange();
+  }
   if (view === 'tasks') loadTasks();
   if (GAME_VIEWS.has(view)) basket.show();
   else basket.hide();
@@ -690,7 +713,7 @@ function renderPlayers() {
       return `<div class="player${cls}" style="--c:${p.color};--w:${(p.frac * 100).toFixed(2)}%" data-id="${p.id}">
         ${avatarHtml(p, 'sm')}
         <div class="p-main"><div class="p-name">${esc(p.name)}${you}</div>
-        <div class="p-amount">${pot(p.xtr, p.gram)}${p.gram ? `<span class="p-eq num">≈ ${fmt(Math.round(p.value))} ⭐</span>` : ''}</div></div>
+        <div class="p-amount">${pot(p.xtr, p.gram)}</div></div>
         <div class="p-pct num">${p.pct < 1 ? '<1' : p.pct}%</div></div>`;
     });
   const box = $('players');
@@ -742,8 +765,6 @@ function updateBetButton() {
   const cur = currency();
   const amount = betAmount();
   const open = r && (r.status === 'waiting' || r.status === 'countdown');
-  $('bet-hint').textContent =
-    cur === GRAM ? `1 Gram = ${fmt(rate())} ⭐${amount ? ` · ставка ≈ ${fmt(starsOf(amount))} ⭐` : ''}` : '';
   if (!open) {
     btn.textContent = 'Идёт розыгрыш';
     btn.disabled = true;
@@ -807,8 +828,13 @@ async function placeBet() {
   }
 }
 
+const payCur = () => (state.config.gram?.enabled ? state.payCur || currency() : XTR);
+
 function renderMoneyForms() {
-  const cur = currency();
+  document
+    .querySelectorAll('.cur-slot.pay button')
+    .forEach((b) => b.classList.toggle('on', b.dataset.cur === payCur()));
+  const cur = payCur();
   $('dep-xtr').hidden = cur !== XTR;
   $('dep-gram').hidden = cur !== GRAM;
   $('wd-cur').innerHTML = icon(cur);
@@ -822,12 +848,9 @@ function renderMoneyForms() {
 
 function updateDepositForm() {
   const btn = $('dep-btn');
-  if (currency() === GRAM) {
+  if (payCur() === GRAM) {
     const n = cleanGramInput($('dep-gram-input'));
     const min = Math.round((state.config.gram?.minDeposit ?? 0.1) * NANO);
-    $('dep-gram-hint').textContent = n
-      ? `≈ ${fmt(starsOf(n))} ⭐ по курсу 1 Gram = ${fmt(rate())} ⭐`
-      : `Минимум ${gramInput(min)} Gram`;
     btn.textContent = 'Оплатить через кошелёк';
     btn.disabled = n < min;
   } else {
@@ -837,7 +860,7 @@ function updateDepositForm() {
 }
 
 async function deposit() {
-  if (currency() === GRAM) return depositGram();
+  if (payCur() === GRAM) return depositGram();
   const amount = digits($('dep-input'));
   const btn = $('dep-btn');
   if (!supports('6.1') && !state.devUser) return toast('Оплата доступна только в Telegram', 'err');
@@ -940,6 +963,94 @@ async function depositGram() {
   }
 }
 
+function exRates() {
+  return state.config.gram?.exchange ?? { gramToStars: 60, starsToGram: 97 };
+}
+
+function exFrom() {
+  return state.exFrom ?? (currency() === GRAM ? GRAM : XTR);
+}
+
+function exAmount() {
+  return exFrom() === GRAM ? cleanGramInput($('ex-input')) : digits($('ex-input'));
+}
+
+function exReceive(amount) {
+  const r = exRates();
+  if (exFrom() === GRAM) return Math.floor((amount / NANO) * r.gramToStars);
+  return Math.floor((amount * NANO) / r.starsToGram / 10_000_000) * 10_000_000;
+}
+
+function renderExchange() {
+  const from = exFrom();
+  const to = from === GRAM ? XTR : GRAM;
+  $('ex-from').innerHTML = `${icon(from)}${from === GRAM ? 'Gram' : 'Звёзды'}`;
+  $('ex-to').innerHTML = `${icon(to)}${to === GRAM ? 'Gram' : 'Звёзды'}`;
+  $('ex-input').inputMode = from === GRAM ? 'decimal' : 'numeric';
+  $('ex-bal').innerHTML = money(balanceOf(from), from);
+  const amount = exAmount();
+  const out = amount ? exReceive(amount) : 0;
+  $('ex-out').textContent = to === GRAM ? fmtGram(out) : fmt(out);
+  const min = from === GRAM ? 100_000_000 : 10;
+  let error = '';
+  if (amount && amount < min) error = from === GRAM ? 'Минимум 0,1 Gram' : 'Минимум 10 ⭐';
+  else if (amount > balanceOf(from)) error = from === GRAM ? 'Недостаточно Gram' : 'Недостаточно звёзд';
+  else if (amount && !out) error = 'Слишком маленькая сумма';
+  $('ex-hint').textContent = error;
+  $('ex-hint').classList.toggle('error', !!error);
+  $('ex-btn').disabled = !amount || !!error;
+}
+
+async function doExchange() {
+  const from = exFrom();
+  const amount = exAmount();
+  const btn = $('ex-btn');
+  busy(btn, true);
+  try {
+    const res = await api('/api/exchange', { from, amount: from === GRAM ? gramInput(amount) : amount });
+    state.config.gram.exchange = res.exchange;
+    applyProfile(res);
+    haptic.ok();
+    toast(`Получено ${res.currency === GRAM ? `${fmtGram(res.received)} Gram` : `${fmt(res.received)} ⭐`}`);
+    $('ex-input').value = '';
+  } catch (e) {
+    haptic.err();
+    toast(e.message, 'err');
+  } finally {
+    busy(btn, false);
+    renderExchange();
+  }
+}
+
+async function connectWithdrawWallet() {
+  const btn = $('wd-connect');
+  busy(btn, true);
+  try {
+    const ui = await loadTonConnect();
+    await waitWallet(ui);
+    state.wdAddress = ui.account?.address ?? '';
+    renderWithdrawWallet();
+    updateWithdrawForm();
+  } catch (e) {
+    if (!/reject|cancel|closed|declined/i.test(e?.message ?? '')) toast(e?.message || 'Кошелёк не подключён', 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+const shortAddress = (a) => (a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-6)}` : a);
+
+function withdrawAddress() {
+  return state.wdAddress || $('wd-address').value.trim();
+}
+
+function renderWithdrawWallet() {
+  const a = state.wdAddress;
+  $('wd-connect').classList.toggle('on', !!a);
+  $('wd-connect-text').textContent = a ? `Кошелёк ${shortAddress(a.replace(/^0:/, ''))}` : 'Подключить кошелёк';
+  $('wd-manual-btn').hidden = !!a;
+}
+
 function copyText(text) {
   navigator.clipboard?.writeText(text).then(
     () => toast('Скопировано'),
@@ -949,7 +1060,7 @@ function copyText(text) {
 }
 
 function withdrawCalc() {
-  const cur = currency();
+  const cur = payCur();
   const amount = cur === GRAM ? cleanGramInput($('wd-input')) : digits($('wd-input'));
   const fee =
     cur === GRAM
@@ -972,7 +1083,7 @@ function updateWithdrawForm() {
   }
   hint.textContent = error;
   hint.classList.toggle('error', !!error);
-  const needAddress = cur === GRAM && $('wd-address').value.trim().length < 48;
+  const needAddress = cur === GRAM && withdrawAddress().length < 48;
   $('wd-btn').disabled = !amount || !!error || wagerLeft() > 0 || needAddress;
   renderWager();
 }
@@ -1005,7 +1116,7 @@ function confirmAsync(text) {
 async function withdraw() {
   const { cur, amount, total } = withdrawCalc();
   const label = (n) => (cur === GRAM ? `${fmtGram(n)} Gram` : `${fmt(n)} ⭐`);
-  const address = $('wd-address').value.trim();
+  const address = withdrawAddress();
   const to = cur === GRAM ? `\nНа адрес ${address.slice(0, 6)}…${address.slice(-6)}` : '';
   const ok = await confirmAsync(`Вывести ${label(amount)}?\nС баланса будет списано ${label(total)}.${to}`);
   if (!ok) return;
@@ -1276,7 +1387,13 @@ function bindUi() {
   $('balance-btn').addEventListener('click', () => go('deposit'));
   document.querySelectorAll('.cur-slot').forEach((el) => (el.innerHTML = switchHtml()));
   document.addEventListener('click', (e) => {
-    const b = e.target.closest('.cur-switch [data-cur], .wallet-bar [data-cur]');
+    const p = e.target.closest('.cur-slot.pay [data-cur]');
+    if (p) {
+      haptic.tap();
+      state.payCur = p.dataset.cur;
+      return renderMoneyForms();
+    }
+    const b = e.target.closest('.wallet-bar [data-cur]');
     if (!b) return;
     if (b.dataset.cur === GRAM && !state.config.gram?.enabled) return toast('Gram скоро будет доступен', 'err');
     haptic.tap();
@@ -1302,6 +1419,25 @@ function bindUi() {
       copyText(b.dataset.copy === 'memo' ? state.gramDeposit.memo : state.gramDeposit.address);
   });
   $('wd-address').addEventListener('input', updateWithdrawForm);
+  $('wd-connect').addEventListener('click', connectWithdrawWallet);
+  $('wd-manual-btn').addEventListener('click', () => {
+    $('wd-manual').hidden = false;
+    $('wd-manual-btn').hidden = true;
+    $('wd-address').focus();
+  });
+  $('ex-input').addEventListener('input', renderExchange);
+  $('ex-btn').addEventListener('click', doExchange);
+  $('ex-swap').addEventListener('click', () => {
+    state.exFrom = exFrom() === GRAM ? XTR : GRAM;
+    $('ex-input').value = '';
+    haptic.tap();
+    renderExchange();
+  });
+  $('ex-max').addEventListener('click', () => {
+    const b = balanceOf(exFrom());
+    $('ex-input').value = exFrom() === GRAM ? gramInput(Math.floor(b / 10_000_000) * 10_000_000) : String(b);
+    renderExchange();
+  });
   $('bet-minus').addEventListener('click', () => stepBet(-1));
   $('bet-plus').addEventListener('click', () => stepBet(1));
   $('bet-input').addEventListener('input', updateBetButton);
@@ -1309,10 +1445,6 @@ function bindUi() {
   basket.bind();
   admin.bind();
   tour.bind();
-  $('pf-tour').addEventListener('click', () => {
-    go('roulette');
-    setTimeout(() => tour.start({ gram: !!state.config.gram?.enabled }), 350);
-  });
   crash.bind();
   document.querySelector('[data-game="crash"]').addEventListener('click', () => go('crash'));
   $('ref-link').addEventListener('click', copyRefLink);

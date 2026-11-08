@@ -418,8 +418,11 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       ${rows.map(([label, fn]) => `<tr><td>${label}</td>${['day', 'week', 'month'].map((p) => `<td class="num">${fn(p)}</td>`).join('')}</tr>`).join('')}
     </table></div>`;
     $('adm-stats').innerHTML =
-      `<div class="adm-rate"><div><b>Курс Gram</b><span>1 Gram = ${fmt(d.rate)} ⭐ — по нему считаются шансы в рулетке и лимиты</span></div>
-        <div class="adm-inline"><input id="adm-rate" inputmode="numeric" value="${d.rate}"><button class="btn primary" id="adm-rate-go">Сохранить</button></div></div>
+      `${
+        d.price
+          ? `<div class="adm-rate"><div><b>Gram — $${d.price.usd.toFixed(3)}</b><span>Цена обновляется сама каждые 10 минут. Обмен: 1 Gram → ${fmt(d.price.gramToStars)} ⭐, ${fmt(d.price.starsToGram)} ⭐ → 1 Gram. В играх 1 Gram = ${fmt(d.price.game)} ⭐.</span></div></div>`
+          : ''
+      }
       <div class="adm-big"><div><b class="num">${fmt(d.users)}</b><span>Пользователей</span></div>
         <div><b class="num">${fmt(d.pending.n)}</b><span>Выводов ждут · ${fmt(d.pending.sum)} ⭐</span></div></div>` +
       table('Пользователи и деньги', [
@@ -467,15 +470,6 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       $('adm-online-btn').classList.toggle('on', s.onlineOnly);
       haptic.tap();
       loadUsers(true);
-    });
-    $('adm-stats').addEventListener('click', async (e) => {
-      if (e.target.id !== 'adm-rate-go') return;
-      const rate = Number($('adm-rate').value);
-      const res = await run(e.target, () => api('/api/admin/rate', { rate }));
-      if (res) {
-        haptic.ok();
-        toast(`Курс сохранён: 1 Gram = ${fmt(res.rate)} ⭐`);
-      }
     });
     document.addEventListener('click', (e) => {
       const b = e.target.closest('[data-copy-addr]');

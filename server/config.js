@@ -49,7 +49,11 @@ export const config = Object.freeze({
   gram: Object.freeze({
     wallet: env('GRAM_WALLET'),
     apiKey: env('TONCENTER_API_KEY'),
-    rate: Number(env('GRAM_RATE', '140')),
+    rate: Number(env('GRAM_RATE', '76')),
+    usd: Number(env('GRAM_USD', '1.06')),
+    starBuyUsd: Number(env('STAR_BUY_USD', '0.015')),
+    starSellUsd: Number(env('STAR_SELL_USD', '0.013')),
+    spread: Number(env('EXCHANGE_SPREAD', '0.15')),
     minDeposit: Number(env('GRAM_MIN_DEPOSIT', '0.1')),
     minWithdraw: Number(env('GRAM_MIN_WITHDRAW', '1')),
   }),
