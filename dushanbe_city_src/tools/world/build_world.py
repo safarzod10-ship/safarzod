@@ -108,6 +108,22 @@ def main():
             if on.any():
                 pin = np.where(on, D[ii, 2], np.nan)
                 hp = pinned_profile(hp, pin, c["g"])
+        # roads starting at the seam: exactly on the peninsula's ground there, and the ribbon reaches
+        # 6 m over it (the old terrain's edge at z = -800 is under the road, never a step)
+        if P[0][1] > -830.0:
+            import build_coast as bc
+            h_old = float(bc.fields(np.array([P[0][0]]), np.array([P[0][1]]))["h"][0])
+            ext = P[0] + (P[0] - P[1]) / max(np.linalg.norm(P[0] - P[1]), 1e-6) * 6.0
+            h_ext = float(bc.fields(np.array([ext[0]]), np.array([ext[1]]))["h"][0])
+            P = np.concatenate([[ext], P])
+            r["P"] = P
+            hp = np.concatenate([[h_ext], hp])
+            corr = h_old - hp[1]
+            w = np.exp(-np.arange(len(hp)) * 4.0 / 60.0)          # fade the correction over ~60 m
+            hp = hp + corr * w
+            hp[0] = h_ext
+            hp[1] = h_old
+            h_orig = np.concatenate([[h_ext], h_orig])
         wd = T_sample(water_d, P)
         r["H"] = hp
         r["water"] = wd < 18.0
@@ -135,6 +151,8 @@ def main():
     # remove carving artefacts (switchbacks stacked above each other: the nearest-road fill / cut
     # can flip between levels from one cell to the next) - never under a road surface
     H = despike(H, rm0 > 0.3)
+    H = enforce_roads(H, roads)
+    H = shoulders(H, roads)
     H = enforce_roads(H, roads)
     H = enforce_tunnels(H, roads)
 
@@ -229,6 +247,33 @@ def enforce_roads(H, roads, clearance=0.22, it=4):
     return H
 
 
+def shoulders(H, roads):
+    """after the enforcement the ground beside a road can be far below it (a high, edge-less
+    embankment): raise every cell around the carriageway (+3 m) up to 0.3 m under the road, never
+    above 0.22 m under any road sample nearby (bridges excluded)"""
+    target = np.full(H.shape, -1e9)
+    allowed = np.full(H.shape, 1e9)
+    for r in roads:
+        c = NW.CLASSES[r["cls"]]
+        P = r["P"]; hp = r["H"]
+        skip = np.zeros(len(P), bool)
+        for a, b in r["bridges"] + r["tunnels"]:
+            skip[a:b + 1] = True
+        d = np.gradient(P, axis=0); d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
+        nrm = np.stack([-d[:, 1], d[:, 0]], 1)
+        for off in np.arange(-(c["w"] / 2 + 3.0), c["w"] / 2 + 3.01, 1.5):
+            Q = P + nrm * off
+            fx = (Q[:, 0] - T.X0) / T.STEP; fz = (Q[:, 1] - T.Z0) / T.STEP
+            i = np.clip(np.floor(fx).astype(int), 0, T.N - 2); j = np.clip(np.floor(fz).astype(int), 0, T.N - 2)
+            for (jj, ii) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+                J = j + jj; I = i + ii
+                np.minimum.at(allowed, (J, I), hp - 0.22)
+                np.maximum.at(target, (J[~skip], I[~skip]), (hp - 0.3)[~skip])
+    near = target > -1e8
+    H = np.where(near, np.minimum(np.maximum(H, target), allowed), H)
+    return H
+
+
 def enforce_tunnels(H, roads, cover=9.0):
     """inside tunnels (away from the portals) the mountain is above the vault everywhere across the
     tube: no slope may cut through it; the game removes the terrain triangles at the portals"""
@@ -295,41 +340,57 @@ def split_structures_at_junctions(roads):
 
 def connect_ends(roads, reach=150.0):
     """a road that starts / ends at a waypoint in the middle of another road must physically join
-    it: smoothing moves interior waypoints by up to tens of metres. The end is extended with a
-    smooth connector onto the nearest point of the other road (no dead ends, no gaps)."""
+    it. First the stretch that runs ON / along the other road is trimmed (no doubled, diverging
+    surfaces), then a smooth connector (quadratic curve) joins the remaining end to the nearest point
+    of the other road (no dead ends, no gaps)."""
     for r in roads:
         for end in (0, -1):
-            p = r["P"][end]
+            P = r["P"]
+            p = P[end]
             if p[1] > -830.0:
                 continue                     # ends at the seam: joins the peninsula's road there
-            best = (1e9, None)
+            best = (1e9, None, None)
             for o in roads:
                 if o is r:
                     continue
                 d = np.hypot(o["P"][:, 0] - p[0], o["P"][:, 1] - p[1])
                 k = int(np.argmin(d))
                 if d[k] < best[0]:
-                    best = (float(d[k]), o["P"][k])
-            if best[1] is None or best[0] < 1.0 or best[0] > reach:
+                    best = (float(d[k]), o, k)
+            if best[1] is None or best[0] > reach or best[0] < 1.0:
+                continue                     # far away, or already exactly on the other road
+            o = best[1]
+            clear = NW.CLASSES[o["cls"]]["w"] / 2 + NW.CLASSES[r["cls"]]["w"] / 2 + 3.0
+            tree = cKDTree(o["P"])
+            dd, _ = tree.query(P)
+            seq = range(len(P)) if end == 0 else range(len(P) - 1, -1, -1)
+            first = None
+            for k in seq:
+                if dd[k] > clear:
+                    first = k
+                    break
+            if first is None:
                 continue
-            q = best[1]
-            P = r["P"]
-            # blend: replace the first / last stretch by a curve that ends exactly on the other road
-            n = min(len(P) - 2, int(best[0] / 4.0) + 8)
+            keep = P[first:] if end == 0 else P[:first + 1]
+            q_end = keep[0] if end == 0 else keep[-1]
+            _, kk = tree.query(q_end)
+            q = o["P"][kk]
+            if np.hypot(*(q - q_end)) < 1.0:
+                continue
+            # quadratic connector: from the other road's point, leaving it perpendicular-ish, to the kept end
+            tdir = (keep[min(3, len(keep) - 1)] - keep[0]) if end == 0 else (keep[-1] - keep[max(-4, -len(keep))])
+            tdir = tdir / max(np.linalg.norm(tdir), 1e-6)
+            L = np.hypot(*(q_end - q))
+            ctrl = q_end - tdir * L * 0.5 if end == 0 else q_end + tdir * L * 0.5
+            t = np.linspace(0, 1, max(3, int(L / 4.0) + 2))[:, None]
+            curve = (1 - t) ** 2 * q + 2 * (1 - t) * t * ctrl + t ** 2 * q_end
             if end == 0:
-                seg = P[:n + 1].copy()
-                w = np.linspace(1.0, 0.0, n + 1)[:, None] ** 1.5
-                seg = seg + (q - P[0]) * w
-                r["P"] = np.concatenate([seg, P[n + 1:]])
+                r["P"] = T.resample(np.concatenate([curve[:-1], keep]), 4.0)
                 r["P"][0] = q
             else:
-                seg = P[-(n + 1):].copy()
-                w = np.linspace(0.0, 1.0, n + 1)[:, None] ** 1.5
-                seg = seg + (q - P[-1]) * w
-                r["P"] = np.concatenate([P[:-(n + 1)], seg])
+                r["P"] = T.resample(np.concatenate([keep, curve[::-1][1:]]), 4.0)
                 r["P"][-1] = q
-            r["P"] = T.resample(r["P"], 4.0)
-            print("  connector: %s %s -> %.0f m" % (r["id"], "start" if end == 0 else "end", best[0]))
+            print("  connector: %s %s -> %s, trimmed %d pts, %.0f m" % (r["id"], "start" if end == 0 else "end", o["id"], first if end == 0 else len(P) - 1 - first, L))
 
 
 def T_sample(A, P):

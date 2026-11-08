@@ -70,7 +70,7 @@ class Router:
                 if Rv[nj, ni]:
                     c += 60.0
                 if TK[nj, ni]:
-                    c *= 0.7
+                    c *= 1.0                         # (no attraction to existing roads: no doubled corridors)
                 ng = g0 + c
                 k = (nj, ni, nh)
                 if ng < gs.get(k, 1e18):

@@ -320,11 +320,26 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 					if not _on_other_road(bs, ri, 3.0):
 						_prop(props, "bus_stop_shelter", bs, atan2(ra.x, ra.z) + PI)
 						pboxes.append([bs + Vector3(0, 1.3, 0), Vector3(4.9, 2.6, 1.7), atan2(ra.x, ra.z)])
-			if not walks or bridge or tunnel:
-				# skirts down from the edges (hide terrain seams)
-				var d := Vector3(0, -0.7 if not bridge else -1.2, 0)
-				(conc if bridge else m).quad_flat(ar, ar + d + ra * 0.6, br + d + rb * 0.6, br)
-				(conc if bridge else m).quad_flat(bl, bl + d - rb * 0.6, al + d - ra * 0.6, al)
+			if bridge:
+				var d := Vector3(0, -1.2, 0)
+				conc.quad_flat(ar, ar + d + ra * 0.6, br + d + rb * 0.6, br)
+				conc.quad_flat(bl, bl + d - rb * 0.6, al + d - ra * 0.6, al)
+			elif not walks and not tunnel:
+				# gravel shoulders (1.5 m, sloping 0.35 m down) - part of the drivable surface - then a
+				# skirt down into the ground (the 8 m terrain may lie lower on steep stretches)
+				var sw := 1.5
+				var sd := Vector3(0, -0.35, 0)
+				var arO := ar + ra * sw + sd
+				var brO := br + rb * sw + sd
+				var alO := al - ra * sw + sd
+				var blO := bl - rb * sw + sd
+				var u2 := Vector2(hw + sw, 0.0)
+				dirt.quad(ar, arO, brO, br, Vector2(hw, S[k]), Vector2(hw + sw, S[k]), Vector2(hw + sw, S[k + 1]), Vector2(hw, S[k + 1]), u2)
+				dirt.quad(alO, al, bl, blO, Vector2(-hw - sw, S[k]), Vector2(-hw, S[k]), Vector2(-hw, S[k + 1]), Vector2(-hw - sw, S[k + 1]), u2)
+				col.append_array([ar, arO, brO, ar, brO, br, alO, al, bl, alO, bl, blO])
+				var d2 := Vector3(0, -1.2, 0)
+				dirt.quad_flat(arO, arO + d2 + ra * 0.8, brO + d2 + rb * 0.8, brO)
+				dirt.quad_flat(blO, blO + d2 - rb * 0.8, alO + d2 - ra * 0.8, alO)
 			if bridge:
 				_bridge_segment(conc, col, a, b, ra, rb, hw, k, S, ri)
 			if tunnel and mask[k] == 2 and mask[k + 1] == 2:

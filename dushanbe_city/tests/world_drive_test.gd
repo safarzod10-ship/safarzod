@@ -94,6 +94,22 @@ func _add(name: String, pts: Array, half: float) -> void:
 	legs.append([name, a, route.size() - 1])
 
 
+## index on road A where road B comes closest, among A's points within 400 m of the hint
+func _junction(A: Array, B: Array, hint: Vector2) -> int:
+	var best := 0
+	var bd := INF
+	for i in A.size():
+		var pa := Vector2(A[i][0], A[i][2])
+		if pa.distance_to(hint) > 900.0:
+			continue
+		for j in range(0, B.size(), 2):
+			var d := pa.distance_to(Vector2(B[j][0], B[j][2]))
+			if d < bd:
+				bd = d
+				best = i
+	return best
+
+
 func _slice(id: String, from: Vector2, to: Vector2) -> Array:
 	var r := _road(id)
 	var pts: Array = r["pts"]
@@ -131,15 +147,37 @@ func _build_route() -> void:
 		var t := k / 6.0
 		join.append([lerpf(j0[0], j1[0], t), lerpf(j0[1], j1[1], t), lerpf(j0[2], j1[2], t)])
 	_add("Загородная дорога к материку", join + ext, 13.5)
-	_add("Проспект Рудаки на север (материк)", _slice("rudaki", Vector2(-70, -800), Vector2(-40, -4700)), 13.5)
-	_add("М34 по ущелью Варзоба", _slice("m34", Vector2(-40, -4700), Vector2(480, -7000)), 7.0)
-	_add("Перевальная дорога (серпантин, тоннель)", _slice("pass", Vector2(480, -7000), Vector2(-3300, -7880)), 3.75)
-	_add("Озёрная дорога (западный берег)", _slice("lake_s", Vector2(-3300, -7880), Vector2(-3850, -8150)), 3.75)
-	_add("Спуск в Гиссар (серпантин)", _slice("lake_down", Vector2(-3850, -8150), Vector2(-4150, -5500)), 3.75)
-	_add("Гиссар — с гор в город (сельская местность)", _slice("gissar_n", Vector2(-4150, -5500), Vector2(-4200, -2450)), 4.0)
-	_add("Гиссарская трасса на восток", _slice("gissar", Vector2(-4200, -2450), Vector2(-1950, -2400)), 7.0)
-	_add("Проспект Дусти", _slice("ew2400", Vector2(-1950, -2400), Vector2(-40, -2400)), 7.0)
-	_add("Проспект Рудаки на юг (другим путём)", _slice("rudaki", Vector2(-40, -2400), Vector2(-70, -800)), 13.5)
+	# mainland legs: each leg runs along its road from where the previous one ended to the point
+	# where it really meets the next road (junction found on the geometry, near a hint)
+	var plan := [
+		["Проспект Рудаки на север (материк)", "rudaki", 13.5, Vector2(-40, -4700)],
+		["М34 по ущелью Варзоба", "m34", 7.0, Vector2(480, -7000)],
+		["Перевальная дорога (серпантин, тоннель)", "pass", 3.75, Vector2(-3300, -7880)],
+		["Озёрная дорога (западный берег)", "lake_s", 3.75, Vector2(-3850, -8150)],
+		["Спуск в Гиссар (серпантин)", "lake_down", 3.75, Vector2(-4150, -5500)],
+		["Гиссар — с гор в город (сельская местность)", "gissar_n", 4.0, Vector2(-4200, -2450)],
+		["Гиссарская трасса на восток", "gissar", 7.0, Vector2(-1950, -2400)],
+		["Проспект Дусти", "ew2400", 7.0, Vector2(-40, -2400)],
+		["Проспект Рудаки на юг (другим путём)", "rudaki", 13.5, Vector2(-74, -794)],
+	]
+	for li in plan.size():
+		var leg: Array = plan[li]
+		var pts: Array = _road(leg[1])["pts"]
+		var cur := route[route.size() - 1]
+		var a := _nearest(pts, Vector2(cur.x, cur.z))
+		var b := 0
+		if li + 1 < plan.size():
+			var nxt: Array = _road(plan[li + 1][1])["pts"]
+			b = _junction(pts, nxt, leg[3])
+		else:
+			b = _nearest(pts, leg[3])
+		var sl: Array
+		if a <= b:
+			sl = pts.slice(a, b + 1)
+		else:
+			sl = pts.slice(b, a + 1)
+			sl.reverse()
+		_add(leg[0], sl, leg[2])
 	var back := ext.duplicate()
 	back.reverse()
 	for k in range(1, 6):
