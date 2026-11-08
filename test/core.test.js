@@ -721,3 +721,40 @@ test('цена Gram: берётся из первого рабочего ист�
   assert.equal(await feed.refresh(), null);
   assert.equal(feed.usd(), 2.1);
 });
+
+test('рулетка подарков: 1 прокрутка за 5 друзей, звёзды на баланс с оборотом, NFT ~1 на 7700', async () => {
+  const { WheelService, PRIZES, SCALE } = await import('../server/wheel.js');
+  const nft = PRIZES.filter((p) => p.kind === 'nft');
+  assert.equal(nft.length, 10);
+  assert.equal(
+    PRIZES.reduce((a, p) => a + p.weight, 0),
+    SCALE,
+  );
+  const nftChance = nft.reduce((a, p) => a + p.weight, 0) / SCALE;
+  assert.ok(1 / nftChance > 5000 && 1 / nftChance < 10000, `NFT 1 на ${Math.round(1 / nftChance)}`);
+
+  const store = storeWith(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  let r = 999_999;
+  const wheel = new WheelService(store, { random: () => r });
+  assert.equal(wheel.state(1).spins, 0);
+  for (let i = 2; i <= 6; i++) store.setReferrer(i, 1);
+  assert.deepEqual([wheel.state(1).spins, wheel.state(1).nextIn], [1, 5]);
+  const res = wheel.spin(1);
+  assert.equal(res.prize, 'stars1');
+  assert.equal(store.getUser(1).balance, 1);
+  assert.equal(res.spins, 0);
+  assert.throws(() => wheel.spin(1), /Пригласите 5 друзей/);
+  assert.equal(store.wager(1, { deposit: 3, bonus: 3 }).left, 3);
+
+  for (let i = 7; i <= 11; i++) store.setReferrer(i, 1);
+  r = 0;
+  const won = [];
+  wheel.on('nft', (x) => won.push(x.prize.id));
+  assert.equal(wheel.spin(1).prize, 'snakebox');
+  assert.deepEqual(won, ['snakebox']);
+  assert.equal(store.getUser(1).balance, 1);
+  const [g] = wheel.adminList();
+  assert.equal(g.status, 'pending');
+  assert.ok(wheel.markSent(g.id));
+  assert.equal(wheel.markSent(g.id), null);
+});

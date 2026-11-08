@@ -6,6 +6,7 @@ import { config, assertProductionConfig } from './config.js';
 import { openDb, AppError, GRAM, NANO, XTR } from './db.js';
 import { GramWatcher, friendlyAddress } from './gram.js';
 import { PriceFeed } from './price.js';
+import { WheelService } from './wheel.js';
 import { validateInitData } from './auth.js';
 import { Game } from './game.js';
 import { Bot } from './bot.js';
@@ -63,6 +64,7 @@ if (!DEV_AUTH || config.gram.wallet) price.start();
 const game = new Game(store, config.game);
 const basket = new BasketService(store, config.basket);
 const crash = new CrashService(store, config.crash);
+const wheel = new WheelService(store);
 const bot = config.botToken
   ? new Bot({
       token: config.botToken,
@@ -286,6 +288,13 @@ const routes = {
     },
   }),
 
+  'POST /api/wheel': (req) => wheel.state(authenticate(req).id),
+  'POST /api/wheel/spin': (req) => {
+    const user = authenticate(req);
+    throttle(user.id, 1500);
+    return { ...wheel.spin(user.id), ...profile(store.getUser(user.id)) };
+  },
+
   'POST /api/exchange': async (req) => {
     const user = authenticate(req);
     const body = await readJson(req);
@@ -473,7 +482,10 @@ const routes = {
     if (currency === GRAM) {
       amount = gramOf(body.amount);
       if (amount < config.gram.minWithdraw * NANO) {
-        throw new AppError('BAD_AMOUNT', `Минимальный вывод — ${String(config.gram.minWithdraw).replace('.', ',')} Gram`);
+        throw new AppError(
+          'BAD_AMOUNT',
+          `Минимальный вывод — ${String(config.gram.minWithdraw).replace('.', ',')} Gram`,
+        );
       }
       address = friendlyAddress(body.address ?? '');
       if (!/^[A-Za-z0-9_-]{48}$/.test(address) && !/^-?\d:[a-fA-F0-9]{64}$/.test(address)) {
@@ -508,6 +520,7 @@ const routes = {
     readJson,
     requireAdmin,
     notifyBalance: (id) => broadcast('balance', { id }),
+    wheel,
     priceInfo: () => ({ usd: price.usd(), ...price.rates() }),
     isOnline: (id) => (seenAt.get(id) ?? 0) >= Date.now() - 70_000,
     onlineIds: () => {
@@ -611,6 +624,18 @@ gram.on('unmatched', ({ amount, sender, memo }) => {
   );
 });
 gram.start();
+
+wheel.on('balance', (id) => broadcast('balance', { id }));
+wheel.on('nft', ({ userId, prize }) => {
+  const u = store.getUser(userId);
+  bot?.notifyAdmin(
+    `🎁 <b>Выигран NFT-подарок: ${prize.name}</b>\nИгрок: ${u?.username ? '@' + u.username + ' · ' : ''}ID <code>${userId}</code>\nОтправьте подарок и отметьте в админке → «Выводы».`,
+  );
+  bot?.notifyUser(
+    userId,
+    `🎁 Вы выиграли NFT-подарок <b>${prize.name}</b>! Мы отправим его вам в Telegram в ближайшее время.`,
+  );
+});
 
 game.start();
 setInterval(() => basket.tick(), 1000).unref();

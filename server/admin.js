@@ -58,6 +58,7 @@ export function createAdminRoutes({
   isOnline = () => false,
   onlineIds = () => [],
   priceInfo = () => null,
+  wheel = null,
 }) {
   const cache = new Map();
   const q = {
@@ -334,6 +335,20 @@ export function createAdminRoutes({
           .slice(0, 30)
           .map(withdrawalView),
       };
+    },
+
+    'POST /api/admin/gifts': (req) => {
+      requireAdmin(req);
+      return { gifts: wheel?.adminList() ?? [] };
+    },
+
+    'POST /api/admin/gifts/sent': async (req) => {
+      requireAdmin(req);
+      const id = int((await body(req)).id, { min: 1, name: 'id' });
+      const w = wheel?.markSent(id);
+      if (!w) throw new AppError('ALREADY', 'Уже отмечено', 409);
+      bot?.notifyUser(w.user_id, '🎁 Ваш NFT-подарок отправлен — проверьте подарки в профиле Telegram.');
+      return { gifts: wheel.adminList() };
     },
 
     'POST /api/admin/withdrawals/sent': async (req) => {

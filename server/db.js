@@ -283,7 +283,7 @@ class Store {
                   FROM users u WHERE u.referrer_id = :inviter ORDER BY earned DESC, u.id DESC LIMIT 200`),
       friendsCount: q('SELECT COUNT(*) AS n FROM users WHERE referrer_id = ?'),
       wagerRows: q(`SELECT kind, amount, ref, currency FROM ledger WHERE user_id = ? AND kind IN
-        ('deposit', 'referral', 'ref_deposit', 'task', 'bet', 'crash_bet', 'basket_entry', 'refund', 'crash_refund') ORDER BY id`),
+        ('deposit', 'referral', 'ref_deposit', 'task', 'wheel', 'bet', 'crash_bet', 'basket_entry', 'refund', 'crash_refund') ORDER BY id`),
       refEarned: q(
         "SELECT COALESCE(SUM(amount), 0) AS sum FROM ledger WHERE user_id = ? AND kind IN ('referral', 'ref_deposit') AND currency = 'XTR'",
       ),
@@ -588,7 +588,7 @@ class Store {
   }
 
   wager(userId, { deposit = 3, bonus = 3 } = {}) {
-    const MULT = { deposit, referral: bonus, ref_deposit: bonus, task: bonus };
+    const MULT = { deposit, referral: bonus, ref_deposit: bonus, task: bonus, wheel: bonus };
     const BET = { bet: 'r', crash_bet: 'c', basket_entry: 'b' };
     const REFUND = { refund: 'r', crash_refund: 'c' };
     const used = new Map();

@@ -4956,3 +4956,328 @@ body {
   background: none !important;
   color: var(--accent) !important;
 }
+
+.wheel {
+  width: min(70vw, 330px, calc(100dvh - 500px));
+}
+.gift-fab {
+  position: absolute;
+  top: 50%;
+  left: calc((100% - 100vw) / 2 + 10px);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-top: -23px;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--surface-2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s;
+}
+.gift-fab svg {
+  width: 24px;
+  height: 24px;
+}
+.gift-fab:active {
+  transform: scale(0.94);
+}
+.gift-fab.ready {
+  background: linear-gradient(160deg, #ff8a3d, #e5484d);
+  animation: fab-wiggle 3.2s ease-in-out infinite;
+}
+@keyframes fab-wiggle {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0);
+  }
+  89% {
+    transform: rotate(-10deg);
+  }
+  93% {
+    transform: rotate(9deg);
+  }
+  97% {
+    transform: rotate(-4deg);
+  }
+}
+.gift-fab-n {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  color: #fff;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.gw {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow-y: auto;
+  background: var(--bg);
+  animation: fade-in 0.2s ease;
+}
+.gw.closing {
+  animation: fade-out 0.2s ease forwards;
+}
+.gw-panel {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: calc(var(--safe-top) + 16px) var(--gutter) calc(var(--safe-bottom) + 28px);
+}
+.gw-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.gw-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.gw-lead {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.gw-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--text-2);
+  background: var(--surface);
+}
+.gw-close svg {
+  width: 18px;
+  height: 18px;
+}
+.gw-reel {
+  position: relative;
+  height: 288px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface);
+  -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+}
+.gw-strip {
+  will-change: transform;
+}
+.gw-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 96px;
+  padding: 0 22px;
+  transition: opacity 0.3s;
+}
+.gw-item .gw-art {
+  width: 72px;
+  height: 72px;
+}
+.gw-art {
+  flex: none;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.gw-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gw-star {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 35%, #ffd76a, #f0a020 70%, #c97a10);
+}
+.gw-star .cur {
+  width: 42%;
+  height: 42%;
+  color: #fff;
+  filter: drop-shadow(0 2px 3px rgba(120, 60, 0, 0.35));
+}
+.gw-star b {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(120, 60, 0, 0.45);
+}
+.gw-name {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.gw-name b {
+  font-size: 18px;
+  font-weight: 650;
+}
+.gw-name span {
+  font-size: 13px;
+  color: var(--text-3);
+}
+.gw-item.nft .gw-name span {
+  color: var(--gram);
+}
+.gw-item.win {
+  background: rgba(255, 255, 255, 0.05);
+}
+.gw-pointer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 96px;
+  margin-top: -48px;
+  pointer-events: none;
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  border-left: 0;
+  border-right: 0;
+}
+.gw-pointer i {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -9px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+}
+.gw-pointer i:first-child {
+  left: 0;
+  border-left: 12px solid var(--accent);
+}
+.gw-pointer i:last-child {
+  right: 0;
+  border-right: 12px solid var(--accent);
+}
+.gw-progress {
+  display: grid;
+  gap: 8px;
+  margin: 22px 2px 16px;
+}
+.gw-progress-text {
+  font-size: 16px;
+  font-weight: 600;
+}
+.gw-progress-sub {
+  font-size: 13px;
+  color: var(--text-3);
+}
+.gw-progress .wg-bar i {
+  background: var(--accent);
+}
+.gw-spin {
+  height: 54px;
+  font-size: 17px;
+}
+.gw-section {
+  margin: 30px 4px 12px !important;
+}
+.gw-prizes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.gw-prize {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 10px 8px 12px;
+  border-radius: 16px;
+  text-align: center;
+  background: var(--surface);
+}
+.gw-prize .gw-art {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+.gw-prize span {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.gw-prize.stars .gw-star b {
+  font-size: 22px;
+}
+.gw-result {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(8, 8, 9, 0.92);
+  animation: fade-in 0.25s ease;
+}
+.gw-result-art {
+  width: 180px;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: gw-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.gw-result-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gw-result-art .gw-star b {
+  font-size: 34px;
+}
+.gw-result-title {
+  margin-top: 14px;
+  font-size: 28px;
+  font-weight: 750;
+}
+.gw-result-sub {
+  max-width: 300px;
+  margin-bottom: 18px;
+  font-size: 15px;
+  color: var(--text-2);
+}
+.gw-result .btn {
+  max-width: 320px;
+}
+@keyframes gw-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+.adm-gift {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+.adm-del.ok {
+  color: var(--green);
+}

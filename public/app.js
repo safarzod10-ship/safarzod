@@ -2,6 +2,7 @@ import { createBasket } from './basket.js';
 import { createCrash } from './crash.js';
 import { createAdmin } from './admin.js';
 import { createTour } from './tour.js';
+import { createGifts } from './gifts.js';
 import {
   XTR,
   GRAM,
@@ -244,6 +245,7 @@ function go(view, { back = false } = {}) {
 }
 
 function goBack() {
+  if (gifts.isOpen()) return gifts.close();
   go(state.stack.pop() ?? 'roulette', { back: true });
 }
 
@@ -1308,6 +1310,21 @@ function updateCrashBadge() {
 }
 
 const tour = createTour({ go, haptic });
+const gifts = createGifts({
+  api,
+  haptic,
+  toast,
+  onProfile: applyProfile,
+  invite: async () => {
+    if (!state.friends?.link) await loadFriends();
+    shareRefLink();
+  },
+  onToggle: (open) => {
+    if (!supports('6.1')) return;
+    if (open) tg.BackButton.show();
+    else if (state.view === 'roulette') tg.BackButton.hide();
+  },
+});
 const admin = createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports, tg });
 
 const basket = createBasket({
@@ -1442,6 +1459,7 @@ function bindUi() {
   basket.bind();
   admin.bind();
   tour.bind();
+  gifts.bind();
   crash.bind();
   document.querySelector('[data-game="crash"]').addEventListener('click', () => go('crash'));
   $('ref-link').addEventListener('click', copyRefLink);
@@ -1517,6 +1535,7 @@ async function main() {
     ...['/games/racket-crash.webp', '/games/basketball-rush.webp'].map(loadImage),
     ...['bounce', 'throw', 'crowd'].map((n) => fetch(`/sounds/${n}.mp3`).catch(() => {})),
     crash.load().then(updateCrashBadge),
+    gifts.load(),
     loadTasks(),
     basket.resume(),
   ];

@@ -256,7 +256,26 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     $('au-msg-form').hidden = true;
   }
 
+  async function loadGifts() {
+    const data = await api('/api/admin/gifts', {}).catch(() => null);
+    if (data) renderGifts(data.gifts);
+  }
+
+  function renderGifts(list) {
+    $('adm-gifts').innerHTML = list.length
+      ? list
+          .map(
+            (g) => `<div class="adm-task"><img class="adm-gift" src="${g.image}" alt="">
+              <div class="adm-who"><b>${esc(g.prize)}</b>
+              <small>${esc(g.user.name)}${g.user.username ? ' · @' + esc(g.user.username) : ''} · ID ${g.user.id} · ${when(g.createdAt)}</small></div>
+              ${g.status === 'pending' ? `<button class="adm-del ok" data-gift-sent="${g.id}">Отправлено</button>` : '<span class="adm-tag">Отправлен</span>'}</div>`,
+          )
+          .join('')
+      : '<div class="adm-empty">Пока никто не выиграл</div>';
+  }
+
   async function loadWithdrawals() {
+    loadGifts();
     const data = await api('/api/admin/withdrawals', {}).catch((e) => toast(e.message, 'err'));
     if (!data) return;
     const card = (w, actions) => `<div class="adm-wd" data-wd="${w.id}">
@@ -490,6 +509,15 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       }
       const confirm = e.target.closest('[data-wd-confirm]');
       if (confirm) return wdCancel(Number(confirm.dataset.wdConfirm), confirm);
+      const gs = e.target.closest('[data-gift-sent]');
+      if (gs) {
+        confirmAsync('Подарок отправлен игроку?').then(async (ok) => {
+          if (!ok) return;
+          const data = await run(gs, () => api('/api/admin/gifts/sent', { id: Number(gs.dataset.giftSent) }));
+          if (data) renderGifts(data.gifts);
+        });
+        return;
+      }
       const del = e.target.closest('[data-task-del]');
       if (del) return deleteTask(Number(del.dataset.taskDel), del);
     });
