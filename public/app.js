@@ -1092,10 +1092,8 @@ const wagerLeft = () => state.wager?.left ?? 0;
 function renderWager() {
   const w = state.wager;
   const box = $('wd-wager');
-  const sub = $('wb-withdraw-sub');
   if (!w || !w.required) {
     box.hidden = true;
-    sub.textContent = `От ${fmt(state.config.minWithdraw)} ⭐`;
     return;
   }
   box.hidden = false;
@@ -1106,7 +1104,6 @@ function renderWager() {
   $('wg-text').textContent = w.left
     ? `Сделайте ставок ещё на ${fmt(w.left)} ⭐ — после пополнения сумму нужно прокрутить ×${m}`
     : 'Оборот выполнен, вывод доступен';
-  sub.textContent = w.left ? `Оборот ${fmt(w.done)} / ${fmt(w.required)}` : `От ${fmt(state.config.minWithdraw)} ⭐`;
 }
 
 function confirmAsync(text) {

@@ -55,7 +55,7 @@ export const config = Object.freeze({
     starSellUsd: Number(env('STAR_SELL_USD', '0.013')),
     spread: Number(env('EXCHANGE_SPREAD', '0.15')),
     minDeposit: Number(env('GRAM_MIN_DEPOSIT', '0.1')),
-    minWithdraw: Number(env('GRAM_MIN_WITHDRAW', '1')),
+    minWithdraw: Number(env('GRAM_MIN_WITHDRAW', '0.5')),
   }),
 
   limits: Object.freeze({

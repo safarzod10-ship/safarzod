@@ -473,7 +473,7 @@ const routes = {
     if (currency === GRAM) {
       amount = gramOf(body.amount);
       if (amount < config.gram.minWithdraw * NANO) {
-        throw new AppError('BAD_AMOUNT', `Минимальный вывод — ${config.gram.minWithdraw} Gram`);
+        throw new AppError('BAD_AMOUNT', `Минимальный вывод — ${String(config.gram.minWithdraw).replace('.', ',')} Gram`);
       }
       address = friendlyAddress(body.address ?? '');
       if (!/^[A-Za-z0-9_-]{48}$/.test(address) && !/^-?\d:[a-fA-F0-9]{64}$/.test(address)) {
