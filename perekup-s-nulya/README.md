@@ -17,6 +17,15 @@ node render.js episode1.html --shots 5,40,100   # отдельные кадры 
 ```
 Нужны Node, Playwright (Chromium) и ffmpeg.
 
+## Видео с готовой озвучкой
+Записи голоса кладутся в `out/voice/ep1/` (в git не попадают), привязка фраз к субтитрам —
+в `voice/ep1_map.json`. Анимация подстраивается под темп голоса, рот персонажей двигается
+по громкости записи, реплики «Голоса в трубке» проходят через телефонный фильтр.
+```bash
+python3 build_voice.py episode1.html voice/ep1_map.json out/ep1_voice   # голосовая дорожка + тайминг
+node render.js episode1.html --voice out/ep1_voice                       # MP4 со звуком (-14 LUFS)
+```
+
 ## Как озвучить
 1. Открой `out/episode1.mp4` в CapCut.
 2. Читай текст ниже по таймкодам (субтитры уже в видео, по ним удобно попадать).
