@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Перекуп с нуля — Серия 1</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="180" step="0.01" value="0">
+    <span id="time">0:00 / 3:00</span>
+  </div>
+</div>
+<script>
+'use strict';
+const W = 1080, H = 1920, DUR = 180;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const F = 'Rubik, Arial, sans-serif';
+const OL = '#161a24';
+
+/* ---------- math helpers ---------- */
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const P = (t, a, b) => clamp((t - a) / (b - a));
+const eio = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+const eout = k => 1 - Math.pow(1 - k, 3);
+const back = k => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+const pop = (t, a, d = .35) => t < a ? 0 : back(P(t, a, a + d));
+const fade = (t, a, b, d = .25) => Math.min(P(t, a, a + d), 1 - P(t, b - d, b));
+const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const fmt = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const within = (t, a, b) => t >= a && t < b;
+
+/* ---------- subtitles / voice script ---------- */
+// [start, end, speaker, text]  — *слова* выделяются жёлтым
+const SUBS = [
+  [0.3, 3.3, 'T', 'У меня *30 000 рублей*.'],
+  [3.3, 6.3, 'T', 'Цель — своя *сеть магазинов* телефонов.'],
+  [6.3, 8.6, 'T', 'Это серия номер один.'],
+  [8.6, 11.8, 'T', 'И спойлер: в первой же сделке я *облажался*.'],
+
+  [12.3, 14.8, 'T', 'Меня зовут Тимур, мне 19.'],
+  [14.8, 18.5, 'T', 'Эти деньги я копил *8 месяцев*:'],
+  [18.5, 21.0, 'T', 'курьером и на складе.'],
+  [21.0, 24.5, 'T', 'Идея простая: покупаю б/у телефоны *дешевле рынка*,'],
+  [24.5, 27.0, 'T', 'привожу в порядок и продаю *дороже*.'],
+  [27.0, 29.8, 'T', 'Звучит легко. Посмотрим.'],
+
+  [30.3, 33.0, 'T', 'Сижу ночами на сайте объявлений.'],
+  [33.0, 37.0, 'T', 'iPhone 12 в нормальном состоянии — около *27 000*.'],
+  [37.0, 40.0, 'T', 'И вдруг вижу: *19 000*!'],
+  [40.0, 43.0, 'T', 'Да, трещина на экране. Продавец пишет: «срочно».'],
+  [43.0, 47.5, 'T', 'Новый экран — тысяч пять. 19 плюс 5 — *24 000*.'],
+  [47.5, 51.0, 'T', 'Продам за 27 — и *3 000 сверху*!'],
+  [51.0, 54.8, 'T', 'Пишу продавцу. Встречаемся через час.'],
+
+  [55.3, 58.0, 'T', 'Вечер. Станция метро.'],
+  [58.0, 61.0, 'S', 'Брат, давай быстрее, у меня электричка!'],
+  [61.0, 64.5, 'T', 'Проверяю: включается, звонит, камера работает.'],
+  [64.5, 67.5, 'T', 'Батарея — *85%*. Норм.'],
+  [67.5, 70.0, 'S', 'Ну что, берёшь? Я опаздываю!'],
+  [70.0, 73.5, 'T', 'Он торопил. Я нервничал.'],
+  [73.5, 77.0, 'T', 'И не проверил *одну очень важную вещь*.'],
+  [77.0, 80.5, 'T', 'Отдаю *19 000*.'],
+  [80.5, 84.8, 'T', 'А продавец исчезает быстрее, чем я говорю «спасибо».'],
+
+  [85.3, 88.5, 'T', 'На следующий день несу телефон мастеру.'],
+  [88.5, 91.0, 'M', 'Экран поменяю. *5 000*.'],
+  [91.0, 93.0, 'T', 'Минус пять тысяч.'],
+  [93.0, 96.0, 'T', 'Через час мастер меня зовёт.'],
+  [96.0, 100.0, 'M', 'Слушай… а ты знал, что у тебя *Face ID не работает*?'],
+  [100.0, 102.0, 'T', 'Что?!'],
+  [102.0, 106.0, 'T', 'Нет. Не знал. Телефон роняли — и *датчик умер*.'],
+  [106.0, 110.5, 'M', 'Чинить — дорого, и гарантии никакой.'],
+  [110.5, 114.8, 'T', 'А без Face ID айфон стоит *намного дешевле*.'],
+
+  [115.3, 119.0, 'T', 'Честно пишу в объявлении: Face ID не работает.'],
+  [119.0, 123.0, 'T', 'И начинается…'],
+  [123.0, 128.0, 'T', '*3 дня* переписок и торга.'],
+  [128.0, 131.0, 'T', 'В итоге продаю за *23 000*.'],
+  [131.0, 134.0, 'T', 'Садимся считать.'],
+  [134.0, 138.0, 'T', 'Купил — 19, экран — 5, дорога — 500.'],
+  [138.0, 141.0, 'T', 'Продал — 23.'],
+  [141.0, 144.8, 'T', 'Итог: *минус 1 500*.'],
+
+  [145.3, 148.5, 'T', 'Первая сделка — в минус. Обидно.'],
+  [148.5, 151.5, 'T', 'Но я сделал себе *чек-лист*. Теперь проверяю:'],
+  [151.5, 154.0, 'T', 'Face ID или отпечаток.'],
+  [154.0, 156.5, 'T', 'Отвязан ли iCloud.'],
+  [156.5, 159.0, 'T', 'Совпадает ли IMEI с коробкой.'],
+  [159.0, 164.8, 'T', 'И главное: если продавец *торопит* — значит, что-то *скрывает*.'],
+
+  [165.3, 168.0, 'T', 'На счету — *28 500*.'],
+  [168.0, 170.0, 'T', 'И тут звонок.'],
+  [170.0, 174.5, 'C', 'Привет. У меня *5 телефонов*. Отдам все за *25 000*.'],
+  [174.5, 176.5, 'C', 'Но только *сегодня*.'],
+  [176.5, 179.8, 'T', 'Это шанс… или *ловушка*?'],
+];
+const SPK = {
+  T: { name: 'Тимур', col: '#22b07d' },
+  S: { name: 'Продавец', col: '#6b7280' },
+  M: { name: 'Мастер', col: '#b7793f' },
+  C: { name: 'Голос в трубке', col: '#e5484d' },
+};
+function talkAmt(who, t) {
+  for (const s of SUBS) {
+    if (s[2] === who && t >= s[0] + .05 && t < s[1] - .15) {
+      return clamp(.25 + .75 * Math.abs(Math.sin(t * 12.5)) * (.55 + .45 * Math.sin(t * 3.3 + 1)));
+    }
+  }
+  return 0;
+}
+
+/* ---------- money ---------- */
+const MONEY = [
+  { t: 79.0, d: -19000 },
+  { t: 91.6, d: -5000 },
+  { t: 129.2, d: 23000 },
+  { t: 136.5, d: -500 },
+];
+const money = t => 30000 + MONEY.reduce((s, e) => s + e.d * eout(P(t, e.t, e.t + .8)), 0);
+
+/* ---------- drawing primitives ---------- */
+function rr(x, y, w, h, r, fill, stroke, lw = 6) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function circ(x, y, r, fill, stroke, lw = 6) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function line(pts, col, lw) {
+  ctx.beginPath(); ctx.moveTo(pts[0], pts[1]);
+  for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+}
+function txt(s, x, y, size, col = '#fff', o = {}) {
+  ctx.save();
+  ctx.font = `${o.w || 800} ${size}px ${F}`;
+  ctx.textAlign = o.al || 'center'; ctx.textBaseline = 'middle';
+  if (o.a != null) ctx.globalAlpha *= o.a;
+  if (o.st) { ctx.lineWidth = o.st; ctx.strokeStyle = o.sc || OL; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); }
+  ctx.fillStyle = col; ctx.fillText(s, x, y);
+  ctx.restore();
+}
+function tw(s, size, w = 800) { ctx.font = `${w} ${size}px ${F}`; return ctx.measureText(s).width; }
+function at(x, y, s, rot, fn, a = 1) {
+  if (s <= 0.001 || a <= 0.001) return;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0); ctx.scale(s, s); ctx.globalAlpha *= a; fn(); ctx.restore();
+}
+function shk(t, a, dur, amp) {
+  if (t < a || t > a + dur) return [0, 0];
+  const k = 1 - (t - a) / dur, f = Math.floor(t * 60);
+  return [(hash(f) - .5) * 2 * amp * k, (hash(f + 99) - .5) * 2 * amp * k];
+}
+function cam(z, cx, cy, dx, dy, fn) {
+  ctx.save(); ctx.translate(cx + dx, cy + dy); ctx.scale(z, z); ctx.translate(-cx, -cy); fn(); ctx.restore();
+}
+function check(x, y, s, k = 1, col = '#22c55e') {
+  // animated checkmark, k = draw progress
+  const p = [[-20, 0], [-6, 16], [24, -18]];
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]);
+  const k1 = clamp(k * 2), k2 = clamp(k * 2 - 1);
+  ctx.lineTo(lerp(p[0][0], p[1][0], k1), lerp(p[0][1], p[1][1], k1));
+  if (k2 > 0) ctx.lineTo(lerp(p[1][0], p[2][0], k2), lerp(p[1][1], p[2][1], k2));
+  ctx.strokeStyle = col; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.restore();
+}
+function cross(x, y, r, col = '#ef4444', lw = 18) {
+  line([x - r, y - r, x + r, y + r], col, lw); line([x + r, y - r, x - r, y + r], col, lw);
+}
+function phone(x, y, w, h, o = {}) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0);
+  rr(-w / 2, -h / 2, w, h, w * .18, o.body || '#1c2130', OL, o.lw || 5);
+  const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  g.addColorStop(0, o.s1 || '#5b8cff'); g.addColorStop(1, o.s2 || '#8f5bff');
+  rr(-w / 2 + w * .09, -h / 2 + w * .09, w * .82, h - w * .18, w * .11, g);
+  rr(-w * .14, -h / 2 + w * .12, w * .28, w * .07, w * .04, '#0b0d12');
+  if (o.crack) {
+    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = Math.max(2, w * .025);
+    const cx = w * .12, cy = h * .12;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy); ctx.lineTo(cx - w * .3, cy - h * .18); ctx.lineTo(cx - w * .36, cy - h * .3);
+    ctx.moveTo(cx, cy); ctx.lineTo(cx + w * .26, cy - h * .05);
+    ctx.moveTo(cx, cy); ctx.lineTo(cx - w * .12, cy + h * .22); ctx.lineTo(cx - w * .26, cy + h * .34);
+    ctx.moveTo(cx, cy); ctx.lineTo(cx + w * .2, cy + h * .2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function note(x, y, rot, s = 1) {
+  at(x, y, s, rot, () => {
+    rr(-62, -32, 124, 64, 8, '#4caf6e', OL, 5);
+    rr(-50, -21, 100, 42, 6, null, '#2e7d4a', 4);
+    txt('₽', 0, 2, 34, '#1d5e36', { w: 900 });
+  });
+}
+function coin(x, y, r) {
+  circ(x, y, r, '#ffc93c', OL, r * .12);
+  circ(x, y, r * .72, null, '#e0a400', r * .08);
+  txt('₽', x, y + r * .04, r * 1.05, '#9a6a00', { w: 900 });
+}
+function cloud(x, y, w, h) {
+  const pts = [];
+  const n = 9;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2;
+    pts.push([x + Math.cos(a) * w * .42, y + Math.sin(a) * h * .36, Math.min(w, h) * (.26 + hash(i) * .06)]);
+  }
+  pts.push([x, y, Math.min(w, h) * .42]);
+  for (const p of pts) circ(p[0], p[1], p[2] + 6, OL);
+  for (const p of pts) circ(p[0], p[1], p[2], '#fff');
+}
+function bubble(x, y, w, h, fill, tailX, tailDir = 1) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 28);
+  ctx.moveTo(tailX - 18, y + h); ctx.lineTo(tailX + 14 * tailDir, y + h + 34); ctx.lineTo(tailX + 18, y + h);
+  ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+  ctx.fillStyle = fill; ctx.fillRect(tailX - 15, y + h - 8, 30, 10);
+}
+function faceId(x, y, s) {
+  at(x, y, s, 0, () => {
+    rr(-150, -150, 300, 300, 60, '#ffffff', OL, 10);
+    const c = '#1f2937';
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      line([sx * 105, sy * 50, sx * 105, sy * 105, sx * 50, sy * 105], c, 16);
+    }
+    line([-38, -40, -38, -12], c, 16); line([38, -40, 38, -12], c, 16);
+    line([4, -40, 4, 18, -10, 18], c, 12);
+    ctx.beginPath(); ctx.moveTo(-42, 46); ctx.quadraticCurveTo(0, 76, 42, 46);
+    ctx.strokeStyle = c; ctx.lineWidth = 14; ctx.stroke();
+  });
+}
+function wrench(x, y, s, rot) {
+  at(x, y, s, rot, () => {
+    line([0, 20, 0, 120], OL, 40); line([0, 20, 0, 120], '#9aa4b2', 26);
+    ctx.beginPath(); ctx.arc(0, 0, 34, -Math.PI * .3, Math.PI * 1.3);
+    ctx.strokeStyle = OL; ctx.lineWidth = 34; ctx.stroke();
+    ctx.strokeStyle = '#9aa4b2'; ctx.lineWidth = 22; ctx.stroke();
+  });
+}
+function clock(x, y, r, t) {
+  circ(x, y, r, '#fff', OL, 8);
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * Math.PI * 2;
+    line([x + Math.cos(a) * r * .78, y + Math.sin(a) * r * .78, x + Math.cos(a) * r * .88, y + Math.sin(a) * r * .88], OL, 5);
+  }
+  const a1 = t * 6, a2 = t * .5;
+  line([x, y, x + Math.sin(a1) * r * .7, y - Math.cos(a1) * r * .7], OL, 7);
+  line([x, y, x + Math.sin(a2) * r * .45, y - Math.cos(a2) * r * .45], '#e5484d', 9);
+  circ(x, y, 8, OL);
+}
+function shopFront(x, y, s, n) {
+  at(x, y, s, 0, () => {
+    rr(-90, -40, 180, 150, 10, '#fef3c7', OL, 6);
+    rr(-60, 20, 50, 90, 6, '#93c5fd', OL, 5);
+    rr(5, 20, 55, 50, 6, '#93c5fd', OL, 5);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = i % 2 ? '#fff' : '#e5484d';
+      ctx.fillRect(-90 + i * 30, -40, 30, 34);
+    }
+    ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.strokeRect(-90, -40, 180, 34);
+    rr(-80, -92, 160, 46, 10, '#1f2937', OL, 5);
+    txt('ТЕЛЕФОНЫ', 0, -68, 24, '#ffd23f', { w: 900 });
+    circ(78, -96, 22, '#22b07d', OL, 5);
+    txt(String(n), 78, -95, 26, '#fff', { w: 900 });
+  });
+}
+function vignette(col, a) {
+  const g = ctx.createRadialGradient(W / 2, H * .45, H * .2, W / 2, H * .45, H * .75);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, col);
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+}
+function stamp(s, x, y, size, col, k, rot = -.12) {
+  if (k <= 0) return;
+  const sc = lerp(2.2, 1, eout(clamp(k))), a = clamp(k * 3);
+  at(x, y, sc, rot, () => {
+    const w = tw(s, size, 900) + size * .9;
+    rr(-w / 2, -size * .8, w, size * 1.6, 18, 'rgba(255,255,255,.92)', col, 12);
+    txt(s, 0, size * .04, size, col, { w: 900 });
+  }, a);
+}
+
+/* ---------- characters ---------- */
+const TIMUR = { skin: '#f3c49c', shirt: '#22b07d', pants: '#2c3e66', hair: 'cap', capCol: '#e5484d', hairCol: '#3a2a1e', strings: true };
+const SELLER = { skin: '#d9a77f', shirt: '#4b5563', pants: '#1f2937', hair: 'hood', hood: '#3d4451', glasses: 'sun', stubble: true };
+const MASTER = { skin: '#e8b88e', shirt: '#eef2f7', pants: '#374151', hair: 'bald', apron: '#8b5e3c', glasses: 'round', mustache: '#6b625b', pocket: false };
+const BUYER = { skin: '#f0c7a6', shirt: '#8b5cf6', pants: '#1e293b', hair: 'long', hairCol: '#4a2c1a' };
+
+function arm(x, y, ab, sd, col) {
+  const L = 60, a = ab[0], a2 = ab[0] + ab[1];
+  const ex = x + sd * Math.sin(a) * L, ey = y + Math.cos(a) * L;
+  const hx = ex + sd * Math.sin(a2) * L, hy = ey + Math.cos(a2) * L;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = OL; ctx.lineWidth = 36; ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineWidth = 24; ctx.stroke();
+  return [hx, hy];
+}
+function person(o, t) {
+  const s = o.s || 1, ph = o.ph || 0, ex = o.expr || 'n';
+  ctx.save(); ctx.translate(o.x, o.y); ctx.scale(s, s);
+  if (o.rot) ctx.rotate(o.rot);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const walk = o.walk || 0, wp = t * (o.wspd || 10);
+  const bob = (o.bob != null ? o.bob : Math.sin(t * 2.4 + ph) * 2.5) - Math.abs(Math.sin(wp)) * 12 * walk;
+  // legs
+  for (const sd of [-1, 1]) {
+    const phs = wp + (sd > 0 ? 0 : Math.PI);
+    const sw = Math.sin(phs) * 32 * walk;
+    const fx = sd * 26 + sw, fy = -Math.max(0, Math.cos(phs)) * 16 * walk;
+    line([sd * 24, -85, fx, fy - 10], OL, 38);
+    line([sd * 24, -85, fx, fy - 10], o.pants, 26);
+    ctx.beginPath(); ctx.ellipse(fx + sd * 8, fy - 6, 28, 14, 0, 0, Math.PI * 2);
+    ctx.fillStyle = o.shoe || '#232838'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+  }
+  ctx.translate(0, bob);
+  // back layers
+  if (o.hair === 'long') {
+    ctx.beginPath(); ctx.ellipse(0, -282, 96, 122, 0, 0, Math.PI * 2);
+    ctx.fillStyle = o.hairCol; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+  }
+  if (o.hair === 'hood') circ(0, -310, 96, o.hood, OL, 6);
+  if (o.hair === 'cap') {
+    ctx.beginPath(); ctx.ellipse(-82, -362, 40, 13, -.5, 0, Math.PI * 2);
+    ctx.fillStyle = o.capCol; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+  }
+  // body
+  rr(-64, -250, 128, 180, [44, 44, 24, 24], o.shirt, OL, 6);
+  if (o.apron) {
+    rr(-46, -205, 92, 135, [12, 12, 18, 18], o.apron, OL, 5);
+    rr(-24, -160, 48, 30, 8, null, 'rgba(0,0,0,.3)', 4);
+  } else if (o.pocket !== false) {
+    rr(-40, -150, 80, 48, 16, null, 'rgba(0,0,0,.22)', 5);
+  }
+  if (o.strings) { line([-14, -236, -17, -196], '#f5f5f5', 5); line([14, -236, 17, -196], '#f5f5f5', 5); }
+  // arms
+  const sleeve = o.shirt;
+  const hL = arm(-56, -222, o.aL || [.14, .06], -1, sleeve);
+  const hR = arm(56, -222, o.aR || [.14, .06], 1, sleeve);
+  // ears + head
+  circ(-73, -306, 15, o.skin, OL, 5); circ(73, -306, 15, o.skin, OL, 5);
+  circ(0, -312, 76, o.skin, OL, 6);
+  // hair front
+  if (o.hair === 'cap') {
+    ctx.beginPath(); ctx.arc(0, -320, 79, Math.PI * 1.04, Math.PI * 1.96); ctx.closePath();
+    ctx.fillStyle = o.capCol; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+    line([-74, -338, 74, -338], '#b8323a', 6);
+    ctx.beginPath(); ctx.moveTo(-62, -334); ctx.quadraticCurveTo(-58, -300, -70, -290); ctx.lineTo(-74, -334);
+    ctx.fillStyle = o.hairCol; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(62, -334); ctx.quadraticCurveTo(58, -300, 70, -290); ctx.lineTo(74, -334);
+    ctx.fill();
+  } else if (o.hair === 'hood') {
+    ctx.beginPath(); ctx.arc(0, -312, 82, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.strokeStyle = o.hood; ctx.lineWidth = 26; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -312, 70, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 8; ctx.stroke();
+  } else if (o.hair === 'long') {
+    ctx.beginPath(); ctx.arc(0, -318, 80, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.quadraticCurveTo(20, -360, -30, -340); ctx.quadraticCurveTo(-60, -320, -80, -312);
+    ctx.fillStyle = o.hairCol; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+  } else if (o.hair === 'bald') {
+    for (const sd of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(sd * 66, -306, 18, 0, Math.PI * 2); ctx.fillStyle = '#9a948e'; ctx.fill();
+    }
+    ctx.beginPath(); ctx.ellipse(-22, -366, 18, 8, -.3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fill();
+  }
+  // face
+  const lx = (o.lx || 0) * 7, ly = (o.ly || 0) * 6;
+  const blink = ((t + ph * 1.7) % 3.9) < .13 && ex !== 's';
+  for (const sd of [-1, 1]) {
+    const cx = sd * 27, cy = -318;
+    if (o.glasses === 'sun') continue;
+    if (blink) { line([cx - 13, cy, cx + 13, cy], OL, 6); continue; }
+    ctx.beginPath(); ctx.ellipse(cx, cy, 15, ex === 's' ? 21 : 18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+    circ(cx + lx, cy + ly + 2, ex === 's' ? 6 : 8.5, OL);
+    circ(cx + lx + 3, cy + ly - 2, 2.6, '#fff');
+  }
+  if (o.glasses === 'sun') {
+    rr(-52, -334, 46, 30, 10, '#0f1117', OL, 4); rr(6, -334, 46, 30, 10, '#0f1117', OL, 4);
+    line([-6, -322, 6, -322], OL, 5);
+    line([-44, -326, -32, -326], 'rgba(255,255,255,.5)', 4); line([14, -326, 26, -326], 'rgba(255,255,255,.5)', 4);
+  }
+  if (o.glasses === 'round') {
+    circ(-27, -318, 24, null, '#2b2f3a', 5); circ(27, -318, 24, null, '#2b2f3a', 5);
+    line([-4, -320, 4, -320], '#2b2f3a', 5);
+  }
+  // brows
+  const by = -347, bw = 15;
+  for (const sd of [-1, 1]) {
+    const cx = sd * 27;
+    let p;
+    switch (ex) {
+      case 's': p = [cx - bw, by - 8, cx, by - 16, cx + bw, by - 8]; break;
+      case 'h': p = [cx - bw, by + 2, cx, by - 6, cx + bw, by + 2]; break;
+      case 'sad': case 'worry': p = [cx + sd * bw, by + 4, cx, by - 2, cx - sd * bw, by - 8]; break;
+      case 'angry': p = [cx + sd * bw, by - 8, cx, by - 2, cx - sd * bw, by + 6]; break;
+      case 'smirk': p = sd > 0 ? [cx - bw, by - 6, cx, by - 13, cx + bw, by - 8] : [cx - bw, by + 2, cx, by, cx + bw, by + 2]; break;
+      default: p = [cx - bw, by, cx, by - 2, cx + bw, by];
+    }
+    if (o.glasses === 'sun') p = p.map((v, i) => i % 2 ? v - 6 : v);
+    ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.quadraticCurveTo(p[2], p[3], p[4], p[5]);
+    ctx.strokeStyle = o.hair === 'bald' ? '#6b625b' : OL; ctx.lineWidth = 7; ctx.stroke();
+  }
+  // nose
+  ctx.beginPath(); ctx.arc(0, -290, 8, Math.PI * .1, Math.PI * .9);
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 4; ctx.stroke();
+  if (o.stubble) for (let i = 0; i < 14; i++) circ(-34 + hash(i) * 68, -262 + hash(i + 7) * 30, 2, 'rgba(0,0,0,.25)');
+  // mouth
+  const tk = o.talk || 0;
+  if (tk > .04) {
+    ctx.beginPath(); ctx.ellipse(0, -258, 22, 6 + 20 * tk, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#6b1f2a'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+    if (tk > .3) { ctx.beginPath(); ctx.ellipse(0, -258 + 12 * tk, 11, 5 * tk, 0, 0, Math.PI * 2); ctx.fillStyle = '#e57373'; ctx.fill(); }
+  } else {
+    ctx.beginPath();
+    switch (ex) {
+      case 'h':
+        ctx.moveTo(-24, -268); ctx.quadraticCurveTo(0, -238, 24, -268); ctx.closePath();
+        ctx.fillStyle = '#6b1f2a'; ctx.fill(); break;
+      case 'smirk': ctx.moveTo(-20, -262); ctx.quadraticCurveTo(6, -252, 26, -274); break;
+      case 's': ctx.ellipse(0, -256, 11, 16, 0, 0, Math.PI * 2); ctx.fillStyle = '#6b1f2a'; ctx.fill(); break;
+      case 'sad': case 'worry': ctx.moveTo(-18, -250); ctx.quadraticCurveTo(0, -266, 18, -250); break;
+      case 'angry': ctx.moveTo(-18, -256); ctx.lineTo(18, -261); break;
+      default: ctx.moveTo(-14, -262); ctx.quadraticCurveTo(0, -256, 14, -262);
+    }
+    ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+  }
+  if (o.mustache) {
+    ctx.beginPath(); ctx.moveTo(0, -276);
+    ctx.quadraticCurveTo(-30, -286, -40, -262); ctx.quadraticCurveTo(-20, -270, 0, -268);
+    ctx.quadraticCurveTo(20, -270, 40, -262); ctx.quadraticCurveTo(30, -286, 0, -276);
+    ctx.fillStyle = o.mustache; ctx.fill();
+  }
+  if (o.sweat) {
+    const sy = -360 + ((t * 40) % 30);
+    ctx.beginPath(); ctx.moveTo(86, sy - 22); ctx.quadraticCurveTo(100, sy, 86, sy + 6); ctx.quadraticCurveTo(72, sy, 86, sy - 22);
+    ctx.fillStyle = '#7cc8ff'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 4; ctx.stroke();
+  }
+  // props + hands
+  if (o.propL) o.propL(hL[0], hL[1]);
+  if (o.propR) o.propR(hR[0], hR[1]);
+  circ(hL[0], hL[1], 16, o.skin, OL, 5);
+  circ(hR[0], hR[1], 16, o.skin, OL, 5);
+  ctx.restore();
+}
+// common arm poses
+const POSE = {
+  idle: [.14, .06],
+  hold: [.35, -1.95],          // phone at chest (right arm)
+  ear: [1.25, 2.3],            // phone to ear (right arm)
+  point: [1.45, .12],
+  up: [2.6, .35],
+  shrug: [.95, 1.75],
+  finger: [.45, 2.75],
+  watch: [.4, -2.0],
+  give: [1.1, .2],
+};
+const holdPhone = (opt = {}) => (x, y) => phone(x, y - 28, 46, 82, Object.assign({ lw: 4 }, opt));
+
+/* ---------- backgrounds ---------- */
+function bgDark(t) {
+  const g = ctx.createRadialGradient(W / 2, H * .42, 50, W / 2, H * .42, H * .8);
+  g.addColorStop(0, '#26305c'); g.addColorStop(1, '#07080f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 12; i++) {
+    const x = hash(i) * W + Math.sin(t * .3 + i) * 40;
+    const y = ((hash(i + 20) * H - t * (30 + hash(i + 5) * 40)) % H + H) % H;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(hash(i + 9) * 6 + t * .2 * (hash(i + 3) - .5));
+    ctx.globalAlpha = .08; rr(-40, -70, 80, 140, 16, null, '#fff', 5); ctx.restore();
+  }
+}
+function bgRoom(night, t) {
+  ctx.fillStyle = night ? '#252a47' : '#f2d6ac'; ctx.fillRect(0, 0, W, H);
+  // wallpaper stripes
+  ctx.fillStyle = night ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.18)';
+  for (let x = 0; x < W; x += 90) ctx.fillRect(x, 0, 40, 1300);
+  // window
+  rr(600, 420, 360, 420, 14, '#fff', OL, 8);
+  const sky = ctx.createLinearGradient(0, 430, 0, 830);
+  if (night) { sky.addColorStop(0, '#0d1433'); sky.addColorStop(1, '#2b3a7a'); }
+  else { sky.addColorStop(0, '#7cc4ff'); sky.addColorStop(1, '#cdeaff'); }
+  rr(618, 438, 324, 384, 8, sky);
+  if (night) {
+    circ(870, 520, 34, '#fff7cc'); circ(884, 510, 30, '#0d1433');
+    for (let i = 0; i < 9; i++) circ(640 + hash(i) * 280, 460 + hash(i + 4) * 300, 2.5 + (Math.sin(t * 3 + i) + 1), '#fff');
+  } else {
+    const cx = 700 + (t * 8) % 300;
+    ctx.save(); ctx.beginPath(); ctx.rect(618, 438, 324, 384); ctx.clip();
+    circ(cx, 560, 30, '#fff'); circ(cx + 34, 548, 36, '#fff'); circ(cx + 70, 562, 28, '#fff');
+    ctx.restore();
+  }
+  line([780, 430, 780, 830], '#fff', 12); line([610, 630, 950, 630], '#fff', 12);
+  // poster
+  rr(110, 420, 220, 300, 10, night ? '#3b4470' : '#ffffff', OL, 6);
+  phone(220, 560, 90, 160, { s1: '#ff7a59', s2: '#ffd23f' });
+  txt('GOAL', 220, 680, 34, night ? '#ffd23f' : '#e5484d', { w: 900 });
+  // floor
+  ctx.fillStyle = night ? '#2d2438' : '#b98552'; ctx.fillRect(0, 1300, W, H - 1300);
+  ctx.fillStyle = night ? '#3a2f47' : '#a5743f';
+  for (let y = 1340; y < H; y += 80) ctx.fillRect(0, y, W, 6);
+  ctx.fillStyle = night ? '#1b1f35' : '#e6c08c'; ctx.fillRect(0, 1286, W, 18);
+  // desk
+  rr(560, 1110, 440, 34, 8, night ? '#5a4636' : '#8a5a34', OL, 6);
+  rr(590, 1144, 26, 160, 4, night ? '#4a3a2c' : '#734a2a', OL, 5);
+  rr(944, 1144, 26, 160, 4, night ? '#4a3a2c' : '#734a2a', OL, 5);
+  // laptop
+  ctx.save(); ctx.translate(820, 1110);
+  rr(-110, -150, 220, 150, 10, '#cbd5e1', OL, 6);
+  rr(-96, -136, 192, 122, 6, night ? '#3b82f6' : '#1e293b');
+  rr(-140, -12, 280, 16, 6, '#94a3b8', OL, 5);
+  ctx.restore();
+  if (night) { ctx.fillStyle = 'rgba(5,8,25,.35)'; ctx.fillRect(0, 0, W, H); }
+}
+function bgStreet(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, 1260);
+  g.addColorStop(0, '#2b2a6b'); g.addColorStop(.55, '#a24f8c'); g.addColorStop(1, '#ff9a62');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 1260);
+  // far buildings
+  for (let i = 0; i < 9; i++) {
+    const bx = i * 130 - 20, bh = 300 + hash(i) * 380, bw = 120;
+    ctx.fillStyle = '#3a2d63'; ctx.fillRect(bx, 1260 - bh, bw, bh);
+    for (let r = 0; r < bh / 60 - 1; r++) for (let c = 0; c < 3; c++) {
+      if (hash(i * 31 + r * 7 + c) > .45) {
+        ctx.fillStyle = hash(i + r + c * 3) > .5 ? '#ffd27a' : '#ffb85c';
+        ctx.fillRect(bx + 16 + c * 34, 1260 - bh + 30 + r * 60, 20, 28);
+      }
+    }
+  }
+  // sidewalk
+  ctx.fillStyle = '#7b8194'; ctx.fillRect(0, 1250, W, H - 1250);
+  ctx.fillStyle = '#6a7084'; for (let x = 0; x < W; x += 140) ctx.fillRect(x, 1250, 6, H - 1250);
+  ctx.fillStyle = '#9aa0b3'; ctx.fillRect(0, 1240, W, 16);
+  // metro sign
+  rr(905, 760, 22, 490, 6, '#4b5563', OL, 6);
+  circ(916, 720, 70, '#e5484d', OL, 8);
+  txt('М', 916, 724, 86, '#fff', { w: 900 });
+  // lamp
+  rr(95, 640, 18, 610, 6, '#374151', OL, 5);
+  ctx.beginPath(); ctx.moveTo(60, 640); ctx.lineTo(148, 640); ctx.lineTo(128, 600); ctx.lineTo(80, 600); ctx.closePath();
+  ctx.fillStyle = '#374151'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+  const lg = ctx.createRadialGradient(104, 660, 10, 104, 660, 260);
+  lg.addColorStop(0, 'rgba(255,220,140,.55)'); lg.addColorStop(1, 'rgba(255,220,140,0)');
+  ctx.fillStyle = lg; ctx.fillRect(0, 420, 400, 500);
+}
+function bgShop() {
+  ctx.fillStyle = '#e9e3d5'; ctx.fillRect(0, 0, W, H);
+  rr(90, 380, 900, 560, 14, '#c9a46f', OL, 8);
+  ctx.fillStyle = 'rgba(0,0,0,.2)';
+  for (let x = 130; x < 970; x += 44) for (let y = 410; y < 920; y += 44) { ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); }
+  wrench(220, 520, 1, -.4); wrench(840, 500, .8, .5);
+  // screwdrivers
+  for (const [x, c] of [[380, '#e5484d'], [430, '#3b82f6'], [480, '#ffd23f']]) {
+    rr(x - 12, 470, 24, 90, 8, c, OL, 5); line([x, 560, x, 680], '#9aa4b2', 9);
+  }
+  // phones on shelf
+  rr(560, 700, 360, 20, 4, '#7a5a3a', OL, 5);
+  phone(610, 645, 48, 88, {}); phone(690, 645, 48, 88, { s1: '#22c55e', s2: '#0ea5e9' }); phone(770, 645, 48, 88, { s1: '#f97316', s2: '#ef4444' }); phone(850, 645, 48, 88, { crack: true });
+  line([130, 300, 130, 330], OL, 5); line([290, 300, 290, 330], OL, 5);
+  rr(70, 326, 280, 80, 12, '#1f2937', OL, 6);
+  txt('РЕМОНТ', 210, 368, 44, '#ffd23f', { w: 900 });
+  ctx.fillStyle = '#b8ab95'; ctx.fillRect(0, 1360, W, H - 1360);
+}
+function counter() {
+  rr(470, 1150, 640, 40, 6, '#a07a55', OL, 7);
+  rr(490, 1190, 600, 400, 0, '#6b4f3a', OL, 7);
+  line([490, 1290, 1090, 1290], 'rgba(0,0,0,.2)', 6);
+}
+function bgBoard() {
+  ctx.fillStyle = '#dfe7ef'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#c3cfdc'; ctx.fillRect(0, 1340, W, H - 1340);
+  rr(330, 360, 690, 860, 18, '#fbfdff', '#64748b', 16);
+  rr(420, 1218, 510, 24, 6, '#94a3b8', OL, 4);
+  rr(470, 1206, 70, 16, 6, '#e5484d'); rr(560, 1206, 70, 16, 6, '#3b82f6');
+}
+
+/* ---------- HUD ---------- */
+function hud(t) {
+  if (t < 12) return;
+  const a = P(t, 12, 12.4);
+  const v = money(t);
+  let glow = null, pulse = 0;
+  for (const e of MONEY) if (within(t, e.t, e.t + 1.4)) { glow = e.d < 0 ? '#ef4444' : '#22c55e'; pulse = 1 - P(t, e.t, e.t + 1.4); }
+  if (within(t, 165.3, 167.5)) { glow = '#ffd23f'; pulse = .5 + .5 * Math.sin(t * 10); }
+  const sc = 1 + pulse * .08;
+  at(540, 262, sc, 0, () => {
+    if (glow) { ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 40; rr(-230, -50, 460, 100, 50, 'rgba(14,17,28,.92)', glow, 6); ctx.restore(); }
+    else rr(-230, -50, 460, 100, 50, 'rgba(14,17,28,.88)', 'rgba(255,255,255,.18)', 4);
+    coin(-170, 0, 34);
+    txt('БАЛАНС', 30, -24, 22, 'rgba(255,255,255,.6)', { w: 600 });
+    txt(fmt(v) + ' ₽', 30, 14, 50, v < 30000 ? '#ffffff' : '#ffffff', { w: 900 });
+  }, a);
+  for (const e of MONEY) {
+    const k = P(t, e.t, e.t + 1.8);
+    if (k > 0 && k < 1) {
+      const s = (e.d > 0 ? '+' : '−') + fmt(Math.abs(e.d)) + ' ₽';
+      txt(s, 540, 370 + k * 50, 64, e.d > 0 ? '#4ade80' : '#ff5a5f', { w: 900, st: 12, a: 1 - k * k });
+    }
+  }
+}
+
+/* ---------- subtitles ---------- */
+function subs(t) {
+  const s = SUBS.find(x => t >= x[0] && t < x[1]);
+  if (!s) return;
+  const [a, b, who, text] = s;
+  const k = eout(P(t, a, a + .2)) * (1 - P(t, b - .12, b));
+  const size = 64, lh = 80, maxW = 900;
+  // tokenize with emphasis
+  const words = []; let em = false;
+  for (const raw of text.split(' ')) {
+    let w = raw, e0 = em;
+    if (w.startsWith('*')) { w = w.slice(1); e0 = true; em = true; }
+    if (w.includes('*')) { w = w.replace('*', ''); em = false; }
+    words.push({ w, e: e0 });
+  }
+  ctx.font = `800 ${size}px ${F}`;
+  const sp = ctx.measureText(' ').width;
+  const lines = [[]]; let lw = 0;
+  for (const wd of words) {
+    wd.wd = ctx.measureText(wd.w).width;
+    if (lw + wd.wd > maxW && lines[lines.length - 1].length) { lines.push([]); lw = 0; }
+    lines[lines.length - 1].push(wd); lw += wd.wd + sp;
+  }
+  const cy = 1450, top = cy - (lines.length - 1) * lh / 2;
+  ctx.save(); ctx.globalAlpha = k;
+  ctx.translate(540, cy); const sc = lerp(.86, 1, k); ctx.scale(sc, sc); ctx.translate(-540, -cy);
+  if (who !== 'T') {
+    const sp2 = SPK[who], nw = tw(sp2.name, 40, 800) + 48, ly = top - 84;
+    rr(540 - nw / 2, ly - 30, nw, 60, 30, sp2.col, OL, 5);
+    txt(sp2.name, 540, ly + 1, 40, '#fff', { w: 800 });
+  }
+  lines.forEach((ln, i) => {
+    const total = ln.reduce((s2, w) => s2 + w.wd, 0) + sp * (ln.length - 1);
+    let x = 540 - total / 2; const y = top + i * lh;
+    for (const wd of ln) {
+      ctx.font = `800 ${size}px ${F}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round'; ctx.lineWidth = 15; ctx.strokeStyle = '#0b0d12'; ctx.strokeText(wd.w, x, y);
+      ctx.fillStyle = wd.e ? '#ffd23f' : (who === 'T' ? '#ffffff' : '#e8ecf5'); ctx.fillText(wd.w, x, y);
+      x += wd.wd + sp;
+    }
+  });
+  ctx.restore();
+}
+
+/* ---------- transitions ---------- */
+const CUTS = [12, 30, 55, 85, 115, 145, 165];
+function wipe(t) {
+  for (const b of CUTS) {
+    const k = P(t, b - .3, b + .3);
+    if (k <= 0 || k >= 1) continue;
+    const x0 = lerp(-W * 1.1, W * 2.1, eio(k));
+    ctx.save(); ctx.translate(x0, 0);
+    ctx.beginPath(); ctx.moveTo(-W * .95, 0); ctx.lineTo(W * .75, 0); ctx.lineTo(W * .45, H); ctx.lineTo(-W * 1.25, H); ctx.closePath();
+    ctx.fillStyle = '#ffd23f'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-W * .8, 0); ctx.lineTo(W * .6, 0); ctx.lineTo(W * .3, H); ctx.lineTo(-W * 1.1, H); ctx.closePath();
+    ctx.fillStyle = '#10131c'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+/* ================= SCENES ================= */
+
+// 1. Hook 0–12
+function s1(t) {
+  bgDark(t);
+  // counter
+  const ca = P(t, 0, .45) * (1 - P(t, 6.2, 6.6));
+  if (ca > 0) {
+    const mv = eio(P(t, 3.3, 3.8));
+    const y = lerp(600, 330, mv), sc0 = lerp(2.6, 1, eout(P(t, 0, .5))) * lerp(1, .62, mv);
+    const [dx, dy] = shk(t, .45, .4, 22);
+    at(540 + dx, y + dy, sc0, 0, () => {
+      txt('СТАРТОВЫЙ БЮДЖЕТ', 0, -120, 44, '#9fb3ff', { w: 700 });
+      ctx.save(); ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 50;
+      txt('30 000 ₽', 0, 0, 170, '#ffffff', { w: 900, st: 16 }); ctx.restore();
+    }, ca);
+  }
+  // thought bubble with shops
+  const bk = pop(t, 3.6, .4) * (1 - P(t, 6.1, 6.4));
+  if (bk > 0) {
+    at(540, 640, bk, 0, () => {
+      cloud(0, 0, 820, 380);
+      shopFront(-230, 30, .95 * pop(t, 3.9), 1);
+      shopFront(0, 30, .95 * pop(t, 4.3), 2);
+      shopFront(230, 30, .95 * pop(t, 4.7), 3);
+    });
+    circ(540, 880, 24 * bk, '#fff', OL, 5); circ(556, 922, 14 * bk, '#fff', OL, 4);
+  }
+  // title
+  const tk = pop(t, 6.3, .45);
+  if (tk > 0) {
+    const mv = eio(P(t, 8.6, 9.1));
+    const y = lerp(560, 440, mv), sc = tk * lerp(1, .8, mv);
+    const [dx, dy] = shk(t, 6.55, .35, 18);
+    at(540 + dx, y + dy, sc, -.04, () => {
+      txt('ПЕРЕКУП', 0, -90, 150, '#ffffff', { w: 900, st: 22 });
+      txt('С НУЛЯ', 0, 50, 170, '#ffd23f', { w: 900, st: 22 });
+      rr(-170, 150, 340, 90, 45, '#e5484d', OL, 8);
+      txt('СЕРИЯ 1', 0, 196, 58, '#fff', { w: 900 });
+    });
+  }
+  // Timur
+  const ty = lerp(1760, 1395, back(P(t, 1, 1.5)));
+  let expr = 'smirk', aR = POSE.idle, aL = POSE.idle, sweat = false;
+  if (within(t, 3.3, 6.3)) { aR = POSE.up; expr = 'h'; }
+  if (within(t, 6.3, 8.6)) { aL = [.9, .4]; aR = [.9, .4]; expr = 'h'; }
+  if (t >= 8.6) { expr = 'worry'; sweat = true; aL = POSE.shrug; aR = POSE.shrug; }
+  person(Object.assign({}, TIMUR, { x: 540, y: ty, s: 1.38, expr, aL, aR, sweat, talk: talkAmt('T', t), ly: t < 6.3 && t > 3.3 ? -.8 : 0 }), t);
+  // stamp
+  const [dx, dy] = shk(t, 10.0, .35, 20);
+  stamp('СДЕЛКА В МИНУС', 540 + dx, 780 + dy, 64, '#e5484d', P(t, 9.7, 10.0));
+}
+
+// 2. Who am I 12–30
+function s2(t) {
+  bgRoom(false, t);
+  // calendar
+  const ck = pop(t, 14.9) * (1 - P(t, 20.8, 21.1));
+  if (ck > 0) {
+    at(770, 560, ck, .05, () => {
+      rr(-150, -170, 300, 330, 22, '#fff', OL, 8);
+      rr(-150, -170, 300, 90, [22, 22, 0, 0], '#e5484d', OL, 8);
+      circ(-80, -170, 14, '#cbd5e1', OL, 5); circ(80, -170, 14, '#cbd5e1', OL, 5);
+      const n = Math.max(1, Math.min(8, Math.floor(lerp(1, 8.99, P(t, 15.0, 17.8)))));
+      txt(String(n), 0, 30, 170, OL, { w: 900 });
+      txt(n === 1 ? 'МЕСЯЦ' : n < 5 ? 'МЕСЯЦА' : 'МЕСЯЦЕВ', 0, -125, 40, '#fff', { w: 900 });
+    });
+    // jobs
+    const j1 = pop(t, 18.6), j2 = pop(t, 19.4);
+    at(640, 900, j1, -.06, () => {
+      rr(-80, -70, 160, 140, 18, '#ffd23f', OL, 7); line([-40, -70, -40, -100, 40, -100, 40, -70], OL, 8);
+      rr(-100, 80, 200, 56, 28, '#fff', OL, 5); txt('КУРЬЕР', 0, 108, 34, OL, { w: 900 });
+    }, ck);
+    at(890, 900, j2, .06, () => {
+      rr(-90, -10, 90, 80, 6, '#c08a52', OL, 6); rr(0, -10, 90, 80, 6, '#c08a52', OL, 6); rr(-45, -90, 90, 80, 6, '#d39b62', OL, 6);
+      rr(-100, 80, 200, 56, 28, '#fff', OL, 5); txt('СКЛАД', 0, 108, 34, OL, { w: 900 });
+    }, ck);
+  }
+  // flow diagram
+  const dk = P(t, 21, 21.3);
+  if (dk > 0) {
+    ctx.save(); ctx.globalAlpha = dk;
+    rr(40, 360, 1000, 420, 30, 'rgba(255,255,255,.9)', OL, 7);
+    ctx.restore();
+    const nodes = [
+      { x: 200, a: 21.3, lbl: 'КУПИЛ', sub: 'дешевле', col: '#3b82f6' },
+      { x: 540, a: 23.0, lbl: 'ПОЧИНИЛ', sub: 'в порядок', col: '#f59e0b' },
+      { x: 880, a: 24.8, lbl: 'ПРОДАЛ', sub: 'дороже', col: '#22b07d' },
+    ];
+    nodes.forEach((n, i) => {
+      const k = pop(t, n.a);
+      if (i > 0) {
+        const ak = P(t, n.a - .5, n.a);
+        if (ak > 0) {
+          const x0 = nodes[i - 1].x + 105, x1 = lerp(x0, n.x - 115, ak);
+          line([x0, 520, x1, 520], OL, 10);
+          if (ak > .95) { line([x1 - 22, 500, x1, 520, x1 - 22, 540], OL, 10); }
+        }
+      }
+      at(n.x, 520, k, 0, () => {
+        circ(0, 0, 95, n.col, OL, 8);
+        if (i === 0) phone(0, 0, 60, 108, { s1: '#e0f2fe', s2: '#93c5fd' });
+        if (i === 1) wrench(0, -16, .85, .7);
+        if (i === 2) { coin(-24, 14, 36); coin(22, -14, 36); }
+        txt(n.lbl, 0, 140, 42, OL, { w: 900 });
+        txt(n.sub, 0, 186, 32, '#475569', { w: 600 });
+      });
+    });
+    const pk = pop(t, 27.3);
+    at(870, 400, pk, .15, () => {
+      rr(-110, -40, 220, 80, 40, '#22c55e', OL, 7); txt('+ ₽', 0, 2, 50, '#fff', { w: 900 });
+    });
+  }
+  const expr = t > 27 ? 'smirk' : 'h';
+  const aR = within(t, 21, 27) ? POSE.up : POSE.idle;
+  person(Object.assign({}, TIMUR, { x: 300, y: 1340, s: 1.55, expr, aR, talk: talkAmt('T', t), lx: .6, ly: t > 21 ? -.7 : 0 }), t);
+}
+
+// 3. Search 30–55
+const LISTINGS = [
+  ['iPhone 12, 64 ГБ', '28 500 ₽'], ['iPhone 12 Pro', '39 000 ₽'], ['iPhone 12, 128 ГБ', '29 900 ₽'],
+  ['iPhone 12 mini', '22 000 ₽'], ['iPhone 12, 64 ГБ', '27 000 ₽'], ['iPhone 12, 256 ГБ', '33 500 ₽'],
+  ['iPhone 12, 64 ГБ', '26 500 ₽'], ['iPhone 12 Pro Max', '45 000 ₽'], ['iPhone 12, 128 ГБ', '28 000 ₽'],
+  ['iPhone 12, 128 ГБ', '19 000 ₽', true], ['iPhone 12, 64 ГБ', '27 500 ₽'], ['iPhone 12 mini', '21 000 ₽'],
+];
+function s3(t) {
+  bgRoom(true, t);
+  ctx.fillStyle = 'rgba(0,0,10,.45)'; ctx.fillRect(0, 0, W, H);
+  // glow
+  const gl = ctx.createRadialGradient(200, 1150, 20, 200, 1150, 520);
+  gl.addColorStop(0, 'rgba(120,160,255,.45)'); gl.addColorStop(1, 'rgba(120,160,255,0)');
+  ctx.fillStyle = gl; ctx.fillRect(0, 600, 800, 1100);
+  // big phone
+  const PX = 290, PY = 370, PW = 520, PH = 880;
+  const pk = eout(P(t, 30, 30.5));
+  ctx.save(); ctx.translate(PX + PW / 2, PY + PH / 2); ctx.scale(lerp(.85, 1, pk), lerp(.85, 1, pk)); ctx.globalAlpha = pk; ctx.translate(-(PX + PW / 2), -(PY + PH / 2));
+  rr(PX - 18, PY - 18, PW + 36, PH + 36, 70, '#111827', OL, 8);
+  rr(PX, PY, PW, PH, 54, '#f1f5f9');
+  ctx.save(); ctx.beginPath(); ctx.roundRect(PX, PY, PW, PH, 54); ctx.clip();
+  const chat = t >= 51;
+  // header
+  rr(PX, PY, PW, 150, 0, chat ? '#1f2937' : '#22b07d');
+  txt('21:47', PX + 70, PY + 40, 26, '#fff', { w: 700 });
+  if (!chat) {
+    txt('Объявления', PX + PW / 2, PY + 82, 36, '#fff', { w: 900 });
+    rr(PX + 30, PY + 106, PW - 60, 34, 17, 'rgba(255,255,255,.9)');
+    txt('iphone 12', PX + 60, PY + 124, 24, '#64748b', { w: 600, al: 'left' });
+    const CH = 160, top = PY + 166;
+    const target = 9 * CH - (PH - 150) / 2 + CH / 2 + 20;
+    const scroll = target * eout(P(t, 30.4, 37));
+    for (let i = 0; i < LISTINGS.length; i++) {
+      const y = top + i * CH - scroll;
+      if (y < PY + 60 || y > PY + PH) continue;
+      const L = LISTINGS[i], hot = !!L[2];
+      const hp = hot ? (t > 37 ? .5 + .5 * Math.sin(t * 8) : 0) : 0;
+      rr(PX + 20, y, PW - 40, CH - 16, 18, '#fff', hot && t > 37 ? `rgba(255,190,0,${.6 + .4 * hp})` : '#e2e8f0', hot && t > 37 ? 9 : 3);
+      rr(PX + 36, y + 16, 100, CH - 48, 12, '#dbe4f0');
+      phone(PX + 86, y + CH / 2 - 8, 46, 84, { lw: 3, crack: hot });
+      txt(L[0], PX + 156, y + 44, 28, '#0f172a', { w: 700, al: 'left' });
+      txt(L[1], PX + 156, y + 90, 38, hot ? '#e5484d' : '#0f172a', { w: 900, al: 'left' });
+      if (hot) { rr(PX + 360, y + 72, 110, 38, 10, '#e5484d'); txt('СРОЧНО', PX + 415, y + 92, 22, '#fff', { w: 900 }); }
+    }
+  } else {
+    circ(PX + 70, PY + 92, 32, '#6b7280', '#fff', 3);
+    txt('Продавец', PX + 120, PY + 80, 32, '#fff', { w: 800, al: 'left' });
+    txt('был(а) недавно', PX + 120, PY + 114, 22, '#9ca3af', { w: 500, al: 'left' });
+    rr(PX, PY + 150, PW, PH - 150, 0, '#e5ddd5');
+    const msgs = [
+      [51.3, true, ['Здравствуйте!', 'Ещё актуально?']],
+      [52.6, false, ['Да. Через час', 'у метро.']],
+      [53.6, false, ['Только быстро.']],
+    ];
+    let y = PY + 200;
+    for (const [mt, me, ls] of msgs) {
+      const k = pop(t, mt, .3); const h = 30 + ls.length * 44;
+      if (k > 0) at(me ? PX + PW - 40 : PX + 40, y, k, 0, () => {
+        const w = Math.max(...ls.map(s => tw(s, 32, 600))) + 44;
+        const x0 = me ? -w : 0;
+        rr(x0, 0, w, h, 22, me ? '#dcf8c6' : '#fff');
+        ls.forEach((s, i) => txt(s, x0 + 22, 36 + i * 44, 32, '#111', { w: 600, al: 'left' }));
+      });
+      y += h + 24;
+    }
+  }
+  ctx.restore(); ctx.restore();
+  // arrow to target
+  const ak = P(t, 37, 37.3) * (1 - P(t, 42.8, 43.1));
+  if (ak > 0) {
+    const bx = 860 + Math.sin(t * 9) * 12;
+    at(bx, 815, ak, 0, () => {
+      ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(10, -40); ctx.lineTo(10, -16); ctx.lineTo(70, -16); ctx.lineTo(70, 16); ctx.lineTo(10, 16); ctx.lineTo(10, 40); ctx.closePath();
+      ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.stroke();
+    });
+  }
+  // calc card
+  const ck = pop(t, 43, .35) * (1 - P(t, 50.8, 51.1));
+  if (ck > 0) at(540, 800, ck, -.02, () => {
+    rr(-330, -230, 660, 470, 30, '#fffdf5', OL, 8);
+    const rows = [
+      [43.2, 'Покупка', '19 000', OL],
+      [44.6, 'Экран', '+ 5 000', OL],
+      [46.0, 'Вложу', '24 000', OL],
+      [47.6, 'Продам', '27 000', '#2563eb'],
+    ];
+    rows.forEach(([rt, a, b, c], i) => {
+      const k = P(t, rt, rt + .25); if (k <= 0) return;
+      const y = -170 + i * 80 + (i >= 2 ? 16 : 0);
+      txt(a, -280, y, 42, '#475569', { w: 600, al: 'left', a: k });
+      txt(b, 280, y, 46, c, { w: 900, al: 'right', a: k });
+      if (i === 1 && t > 45.8) line([-280, y + 46, 280, y + 46], OL, 5);
+    });
+    const pk = pop(t, 49, .4);
+    at(0, 160, pk, -.05, () => {
+      ctx.save(); ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 30;
+      rr(-220, -50, 440, 100, 50, '#22c55e', OL, 7); ctx.restore();
+      txt('+3 000 ₽', 0, 3, 62, '#fff', { w: 900 });
+    });
+  });
+  // Timur
+  let expr = 'n';
+  if (t > 37) expr = 's'; if (t > 43) expr = 'h'; if (t > 51) expr = 'smirk';
+  person(Object.assign({}, TIMUR, { x: 160, y: 1380, s: .95, expr, aR: POSE.hold, propR: holdPhone({ s1: '#9ec5ff', s2: '#c4b5fd' }), talk: talkAmt('T', t), lx: .7, ly: -.6 }), t);
+}
+
+// 4. Metro 55–85
+function s4(t) {
+  const z = lerp(1.12, 1, eio(P(t, 55, 58))) * lerp(1, 1.22, eio(P(t, 73.5, 75))) / lerp(1, 1.22, eio(P(t, 76.8, 77.4)));
+  const [sx, sy] = shk(t, 77.2, .3, 10);
+  cam(z, 380, 1050, sx, sy, () => {
+    bgStreet(t);
+    // seller
+    const run = P(t, 81, 82.6);
+    let sxp = lerp(780, 720, eio(P(t, 67.5, 68.2)));
+    sxp += run * run * 760;
+    const sTalk = talkAmt('S', t);
+    let saL = POSE.watch, saR = POSE.idle, sex = 'angry', sScale = 1.5;
+    if (within(t, 61, 67.5)) { saL = POSE.watch; sex = 'n'; }
+    if (within(t, 67.5, 70)) { saL = POSE.shrug; saR = POSE.shrug; sex = 'angry'; }
+    if (within(t, 70, 73.5)) { sScale = lerp(1.5, 1.62, eout(P(t, 70, 70.6))); saL = POSE.watch; }
+    if (within(t, 77, 81)) { saL = POSE.idle; saR = POSE.give; sex = 'smirk'; }
+    if (t >= 81) { sex = 'smirk'; saL = [.8, -.5]; saR = [.8, -.5]; }
+    if (run > 0 && run < 1) {
+      for (let i = 0; i < 5; i++) line([sxp - 160 - i * 30, 900 + i * 70, sxp - 320 - i * 30, 900 + i * 70], 'rgba(255,255,255,.6)', 8);
+    }
+    const dk = P(t, 81, 82.4);
+    if (dk > 0 && dk < 1) for (let i = 0; i < 5; i++) circ(720 + i * 40 * dk, 1320 - i * 6, (40 - i * 5) * (1 - dk) + 10, `rgba(220,220,230,${.8 * (1 - dk)})`);
+    person(Object.assign({}, SELLER, { x: sxp, y: 1330, s: sScale, expr: sex, aL: saL, aR: saR, talk: sTalk, lx: -.7, walk: run > 0 ? 1 : 0, wspd: 22, bob: within(t, 58, 73.5) ? Math.abs(Math.sin(t * 9)) * -6 : null, ph: 2 }), t);
+    // Timur
+    let tex = 'n', taR = POSE.idle, sweat = false;
+    if (within(t, 61, 67.5)) { tex = 'n'; taR = POSE.hold; }
+    if (within(t, 67.5, 77)) { tex = 'worry'; taR = POSE.hold; sweat = t > 70; }
+    if (within(t, 77, 80.5)) { tex = 'worry'; taR = POSE.give; }
+    if (t >= 80.5) { tex = 's'; }
+    person(Object.assign({}, TIMUR, { x: 320, y: 1330, s: 1.5, expr: tex, aR: taR, sweat, propR: taR === POSE.hold ? holdPhone({ crack: true }) : null, talk: talkAmt('T', t), lx: .7 }), t);
+    // money flight
+    for (let i = 0; i < 4; i++) {
+      const k = P(t, 77.6 + i * .18, 78.4 + i * .18);
+      if (k > 0 && k < 1) note(lerp(470, 640, k), lerp(1000, 1000, k) - Math.sin(k * Math.PI) * 200, k * 6, 1);
+    }
+    // "..." bubble
+    const bk = pop(t, 82.6);
+    if (bk > 0) at(360, 650, bk, 0, () => { bubble(-90, -60, 180, 100, '#fff', -20, -1); txt('…', 0, -16, 70, OL, { w: 900 }); });
+  });
+  // checklist panel
+  const ck = pop(t, 61, .3) * (1 - P(t, 69.8, 70.1));
+  if (ck > 0) at(560, 560, ck, 0, () => {
+    rr(-420, -170, 840, 330, 28, 'rgba(255,255,255,.95)', OL, 7);
+    const items = [[61.2, 'Включается'], [62.3, 'Звонит'], [63.4, 'Камера'], [64.8, 'Батарея 85%']];
+    items.forEach(([it, s], i) => {
+      const k = P(t, it, it + .3); if (k <= 0) return;
+      const x = i % 2 ? 40 : -380, y = i < 2 ? -80 : 60;
+      rr(x, y - 30, 60, 60, 12, '#dcfce7', OL, 5);
+      check(x + 30, y + 2, 1, P(t, it + .1, it + .5));
+      txt(s, x + 82, y, 40, OL, { w: 700, al: 'left', a: k });
+    });
+  });
+  // dramatic moment
+  const dm = P(t, 73.5, 74) * (1 - P(t, 76.8, 77.2));
+  if (dm > 0) {
+    vignette('rgba(120,0,0,1)', dm * .85);
+    ctx.save(); ctx.globalAlpha = dm * .35; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    const qs = 1 + .08 * Math.sin(t * 10);
+    at(720, 700, qs * pop(t, 73.7), .1, () => txt('?', 0, 0, 300, '#ff3b3b', { w: 900, st: 20 }));
+    txt('ОДНА ВАЖНАЯ ВЕЩЬ…', 540, 420, 60, '#fff', { w: 900, st: 14, a: dm });
+  }
+}
+
+// 5. Workshop 85–115
+function s5(t) {
+  const [sx, sy] = shk(t, 100, .5, 26);
+  cam(1, 540, 960, sx, sy, () => {
+    bgShop();
+    // master behind counter
+    const mt = talkAmt('M', t);
+    let mex = 'n', maR = POSE.idle, maL = POSE.idle;
+    if (within(t, 88.5, 91)) { mex = 'h'; maR = [1.0, -.4]; }
+    if (within(t, 96, 100)) { mex = 'worry'; maR = POSE.finger; }
+    if (within(t, 100, 106)) { mex = 'worry'; }
+    if (within(t, 106, 110.5)) { mex = 'worry'; maL = POSE.shrug; maR = POSE.shrug; }
+    person(Object.assign({}, MASTER, { x: 790, y: 1400, s: 1.45, expr: mex, aL: maL, aR: maR, talk: mt, lx: -.7, ly: within(t, 88, 96) ? .6 : 0, ph: 1 }), t);
+    counter();
+    // phone on counter
+    if (t > 86.6) {
+      const open = within(t, 89, 96);
+      phone(640, 1132, 60, 26, { rot: 0, crack: false, s1: open ? '#94a3b8' : '#5b8cff', s2: open ? '#64748b' : '#8f5bff', lw: 4 });
+    }
+    // Timur walks in
+    const wk = P(t, 85, 86.6);
+    const tx = lerp(-160, 300, eout(wk));
+    let tex = 'n', taR = wk < 1 ? POSE.hold : POSE.idle, taL = POSE.idle, sweat = false;
+    if (within(t, 100, 102)) { tex = 's'; taL = POSE.up; taR = POSE.up; }
+    if (within(t, 102, 115)) { tex = 'sad'; sweat = t > 110.5; }
+    if (within(t, 91, 93)) tex = 'worry';
+    person(Object.assign({}, TIMUR, { x: tx, y: 1380, s: 1.5, expr: tex, aL: taL, aR: taR, walk: wk < 1 ? 1 : 0, sweat, propR: wk < 1 ? holdPhone({ crack: true }) : null, talk: talkAmt('T', t), lx: .7 }), t);
+  });
+  // price tag
+  const pk = pop(t, 88.7) * (1 - P(t, 92.8, 93.1));
+  if (pk > 0) at(560, 480, pk, -.05, () => {
+    rr(-260, -70, 520, 140, 24, '#ffd23f', OL, 8);
+    circ(-215, 0, 14, '#fff', OL, 5);
+    txt('Замена экрана', 20, -26, 38, OL, { w: 700 });
+    txt('5 000 ₽', 20, 26, 54, '#b91c1c', { w: 900 });
+  });
+  // one hour later
+  const hk = P(t, 93, 93.3) * (1 - P(t, 95.7, 96));
+  if (hk > 0) {
+    ctx.save(); ctx.globalAlpha = hk * .65; ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    at(540, 620, pop(t, 93.1), 0, () => {
+      clock(0, -60, 120, t * 3);
+      txt('ЧЕРЕЗ 1 ЧАС', 0, 130, 70, '#fff', { w: 900, st: 14 });
+    }, hk);
+  }
+  // Face ID slam
+  const fk = pop(t, 100, .3) * (1 - P(t, 101.8, 102.1));
+  if (fk > 0) {
+    ctx.save(); ctx.globalAlpha = (1 - P(t, 100, 100.4)) * .55; ctx.fillStyle = '#ff2d2d'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    at(540, 640, fk, -.06, () => { faceId(0, 0, 1); cross(0, 0, 130, '#ef4444', 34); });
+  }
+  // RIP tombstone
+  const rk = pop(t, 102.2) * (1 - P(t, 105.8, 106.1));
+  if (rk > 0) at(540, 640, rk, 0, () => {
+    ctx.beginPath(); ctx.moveTo(-150, 170); ctx.lineTo(-150, -60); ctx.arc(0, -60, 150, Math.PI, 0); ctx.lineTo(150, 170); ctx.closePath();
+    ctx.fillStyle = '#9ca3af'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 9; ctx.stroke();
+    txt('R.I.P.', 0, -70, 70, '#374151', { w: 900 });
+    txt('FACE ID', 0, 30, 54, '#1f2937', { w: 900 });
+    rr(-200, 160, 400, 40, 14, '#4ade80', OL, 6);
+  });
+  // repair tag
+  const ek = pop(t, 106.2) * (1 - P(t, 110.3, 110.6));
+  if (ek > 0) at(540, 560, ek, .04, () => {
+    rr(-330, -100, 660, 200, 26, '#fff', '#e5484d', 10);
+    txt('Ремонт датчика:', 0, -44, 44, OL, { w: 700 });
+    txt('ДОРОГО', -120, 30, 58, '#e5484d', { w: 900 });
+    txt('БЕЗ ГАРАНТИИ', 150, 30, 40, '#e5484d', { w: 900 });
+  });
+  // price drop
+  const dk = P(t, 110.6, 110.9);
+  if (dk > 0) at(540, 600, dk, 0, () => {
+    rr(-360, -190, 720, 380, 30, 'rgba(255,255,255,.96)', OL, 8);
+    txt('27 000 ₽', -170, -90, 64, '#64748b', { w: 900 });
+    const lk = P(t, 111.2, 111.6); if (lk > 0) line([-310, -90, lerp(-310, -30, lk), -90], '#e5484d', 10);
+    const ak = P(t, 111.7, 112.3);
+    if (ak > 0) {
+      line([40, -120, lerp(40, 150, ak), lerp(-120, 20, ak)], '#e5484d', 16);
+      if (ak > .95) line([110, 20, 150, 20, 150, -20], '#e5484d', 16);
+    }
+    const nk = pop(t, 112.4);
+    at(0, 100, nk, 0, () => txt('≈ 23 000 ₽', 0, 0, 84, '#e5484d', { w: 900 }));
+  });
+}
+
+// 6. Selling 115–145
+function s6(t) {
+  bgRoom(false, t);
+  // buyer
+  const bk = P(t, 128, 129.2);
+  if (t > 128) {
+    const bx = lerp(1300, 790, eout(bk));
+    person(Object.assign({}, BUYER, { x: bx, y: 1340, s: 1.5, expr: 'h', aR: within(t, 128.8, 131) ? POSE.give : POSE.idle, walk: bk < 1 ? 1 : 0, lx: -.7, ph: 3 }), t);
+  }
+  let tex = 'n', taR = POSE.hold, sweat = false;
+  if (within(t, 119, 128)) { tex = t > 123 ? 'angry' : 'worry'; }
+  if (within(t, 128, 131)) { tex = 'h'; taR = POSE.give; }
+  if (t >= 131) { tex = t > 141 ? 'sad' : 'n'; taR = POSE.idle; sweat = t > 141; }
+  person(Object.assign({}, TIMUR, { x: 290, y: 1340, s: 1.5, expr: tex, aR: taR, sweat, propR: taR === POSE.hold ? holdPhone({}) : null, talk: talkAmt('T', t), lx: .6, ly: t < 128 ? -.5 : 0 }), t);
+  // money from buyer
+  for (let i = 0; i < 4; i++) {
+    const k = P(t, 129.0 + i * .16, 129.7 + i * .16);
+    if (k > 0 && k < 1) note(lerp(700, 400, k), 1000 - Math.sin(k * Math.PI) * 200, -k * 6, 1);
+  }
+  // camera flashes
+  for (const ft of [116.0, 116.9]) {
+    const fk = 1 - P(t, ft, ft + .35);
+    if (fk > 0 && fk < 1) { ctx.save(); ctx.globalAlpha = fk * .8; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  }
+  // listing card
+  const lk = pop(t, 116.6) * (1 - P(t, 118.8, 119.1));
+  if (lk > 0) at(560, 640, lk, -.03, () => {
+    rr(-360, -240, 720, 480, 30, '#fff', OL, 8);
+    rr(-320, -200, 220, 400, 20, '#e2e8f0');
+    phone(-210, 0, 120, 220, {});
+    txt('iPhone 12, 128 ГБ', -70, -150, 40, '#0f172a', { w: 800, al: 'left' });
+    txt('Батарея 85%', -70, -80, 32, '#475569', { w: 600, al: 'left' });
+    txt('Новый экран', -70, -30, 32, '#475569', { w: 600, al: 'left' });
+    txt('Face ID не работает', -70, 20, 32, '#e5484d', { w: 800, al: 'left' });
+    txt('24 000 ₽', -70, 120, 64, '#0f172a', { w: 900, al: 'left' });
+  });
+  // chat spam
+  if (within(t, 119, 128.3)) {
+    const msgs = [
+      [119.4, 'почему так дёшево?'], [120.5, 'отдашь за 18?'], [121.6, 'а с Face ID что??'],
+      [122.7, 'ещё актуально?'], [123.8, 'торг будет?'], [124.9, 'ау'], [126.0, 'отдай за 20, заберу сейчас'],
+      [127.0, 'актуально???'],
+    ];
+    const shown = msgs.filter(m => t >= m[0]);
+    const fa = 1 - P(t, 128, 128.3);
+    const start = Math.max(0, shown.length - 6);
+    shown.slice(start).forEach((m, i) => {
+      const k = pop(t, m[0], .3);
+      const y = 420 + i * 120;
+      const w = tw(m[1], 40, 700) + 60;
+      at(1000 - w / 2, y, k, 0, () => {
+        rr(-w / 2, -44, w, 88, 26, '#fff', OL, 6);
+        txt(m[1], 0, 2, 40, '#111', { w: 700 });
+      }, fa);
+      circ(1000 - w - 30, y, 26 * k, ['#f97316', '#3b82f6', '#a855f7', '#10b981'][(start + i) % 4], OL, 5);
+    });
+    // day counter
+    const day = t < 123 ? 1 : t < 125.5 ? 2 : 3;
+    at(200, 420, pop(t, 119.2), -.05, () => {
+      rr(-140, -50, 280, 100, 20, '#1f2937', OL, 6);
+      txt('ДЕНЬ ' + day, 0, 3, 52, '#ffd23f', { w: 900 });
+    }, fa);
+  }
+  // SOLD stamp
+  const [dx, dy] = shk(t, 129.4, .3, 14);
+  if (within(t, 129.1, 131.2)) stamp('ПРОДАНО', 540 + dx, 520 + dy, 80, '#16a34a', P(t, 129.1, 129.4), -.1);
+  // table
+  const tk = P(t, 131, 131.5);
+  if (tk > 0) {
+    ctx.save(); ctx.globalAlpha = tk * .6; ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    at(540, 780, lerp(.9, 1, eout(tk)), 0, () => {
+      rr(-420, -400, 840, 780, 34, '#fffdf5', OL, 9);
+      txt('СЧИТАЕМ', 0, -320, 64, OL, { w: 900 });
+      line([-360, -260, 360, -260], '#e2e8f0', 6);
+      const rows = [
+        [133.0, 'Купил телефон', '−19 000', '#e5484d'],
+        [134.8, 'Новый экран', '−5 000', '#e5484d'],
+        [136.4, 'Дорога', '−500', '#e5484d'],
+        [138.2, 'Продал', '+23 000', '#16a34a'],
+      ];
+      rows.forEach(([rt, a, b, c], i) => {
+        const k = P(t, rt, rt + .3); if (k <= 0) return;
+        const y = -190 + i * 100;
+        txt(a, -360, y, 46, '#334155', { w: 600, al: 'left', a: k });
+        txt(b, 360, y, 52, c, { w: 900, al: 'right', a: k });
+      });
+      if (t > 140.6) line([-360, 210, 360, 210], OL, 7);
+      const fk = P(t, 141, 141.3);
+      if (fk > 0) {
+        txt('ИТОГ', -360, 290, 56, OL, { w: 900, al: 'left', a: fk });
+        const [ex2, ey2] = shk(t, 141.3, .3, 12);
+        at(190 + ex2, 290 + ey2, lerp(2, 1, eout(fk)), -.04, () => txt('−1 500 ₽', 0, 0, 84, '#e5484d', { w: 900 }), fk);
+      }
+    });
+  }
+}
+
+// 7. Lesson 145–165
+function s7(t) {
+  bgBoard();
+  // early loss on board
+  const lk = P(t, 145.4, 145.8) * (1 - P(t, 148.3, 148.6));
+  if (lk > 0) {
+    txt('−1 500 ₽', 675, 700, 120, '#e5484d', { w: 900, a: lk });
+    txt('обидно…', 675, 840, 56, '#64748b', { w: 600, a: lk });
+  }
+  // title with reveal
+  const reveal = (s, x, y, size, col, a, b, al = 'left', w = 800) => {
+    const k = P(t, a, b); if (k <= 0) return;
+    const wd = tw(s, size, w);
+    ctx.save(); ctx.beginPath();
+    const x0 = al === 'center' ? x - wd / 2 : x;
+    ctx.rect(x0 - 10, y - size, (wd + 20) * k, size * 2); ctx.clip();
+    txt(s, x, y, size, col, { w, al }); ctx.restore();
+  };
+  reveal('ЧЕК-ЛИСТ ПЕРЕКУПА', 675, 450, 50, '#1e3a8a', 148.6, 149.6, 'center', 900);
+  if (t > 149.6) line([420, 492, lerp(420, 930, P(t, 149.6, 150)), 492], '#3b82f6', 7);
+  const items = [
+    [151.5, 'Face ID / отпечаток', '#0f172a'],
+    [154.0, 'iCloud отвязан', '#0f172a'],
+    [156.5, 'IMEI = коробка', '#0f172a'],
+    [159.0, 'Торопят = скрывают!', '#dc2626'],
+  ];
+  items.forEach(([it, s, c], i) => {
+    if (t < it) return;
+    const y = 610 + i * 140;
+    const bk = pop(t, it, .3);
+    at(415, y, bk, 0, () => rr(-30, -30, 60, 60, 10, '#fff', OL, 6));
+    if (i < 3) check(415, y, 1, P(t, it + .6, it + 1.0));
+    else { const k = P(t, it + .6, it + 1); if (k > 0) txt('!', 415, y + 2, 54, '#dc2626', { w: 900, a: k }); }
+    reveal(s, 470, y, i === 3 ? 44 : 44, c, it + .1, it + 1.1, 'left', i === 3 ? 900 : 700);
+  });
+  // circle scribble around last item
+  const sk = P(t, 161, 162.2);
+  if (sk > 0) {
+    ctx.beginPath(); ctx.ellipse(700, 1030, 330, 70, -.03, -Math.PI * .9, -Math.PI * .9 + Math.PI * 2.1 * sk);
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  let ex = t < 148.5 ? 'sad' : 'n', aR = t < 148.5 ? POSE.idle : POSE.point;
+  if (t > 159) ex = 'angry';
+  if (t > 162) ex = 'smirk';
+  person(Object.assign({}, TIMUR, { x: 175, y: 1400, s: 1.2, expr: ex, aR, talk: talkAmt('T', t), lx: .8, ly: -.3 }), t);
+}
+
+// 8. Cliffhanger 165–180
+function s8(t) {
+  const z = lerp(1, 1.55, eio(P(t, 176.5, 177.6)));
+  const ring = within(t, 168, 170);
+  const [sx, sy] = ring ? [Math.sin(t * 70) * 6, 0] : shk(t, 172.5, .4, 16);
+  cam(z, 540, 860, sx, sy, () => {
+    bgRoom(true, t);
+    ctx.fillStyle = 'rgba(0,0,10,.25)'; ctx.fillRect(0, 0, W, H);
+    let ex = 'n', aR = POSE.idle;
+    if (ring) { aR = POSE.hold; ex = 's'; }
+    if (t >= 170) { aR = POSE.ear; ex = 'n'; }
+    if (t >= 172.5) ex = 's';
+    if (t >= 176.5) ex = 'smirk';
+    const propR = aR === POSE.hold ? (x, y) => {
+      phone(x, y - 28, 46, 82, { s1: '#22c55e', s2: '#16a34a', lw: 4 });
+      for (let i = 0; i < 2; i++) { const r = 50 + ((t * 80 + i * 30) % 60); ctx.beginPath(); ctx.arc(x, y - 28, r, -.6, .6); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 5; ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - 28, r, Math.PI - .6, Math.PI + .6); ctx.stroke(); }
+    } : aR === POSE.ear ? (x, y) => phone(x - 4, y - 40, 40, 74, { rot: -.25, lw: 4 }) : null;
+    person(Object.assign({}, TIMUR, { x: 540, y: 1380, s: 1.6, expr: ex, aR, propR, talk: talkAmt('T', t), lx: t > 176.5 ? 0 : -.3, ly: t > 176.5 ? 0 : -.2 }), t);
+  });
+  // incoming call card
+  const ck = pop(t, 168, .3) * (1 - P(t, 169.9, 170.2));
+  if (ck > 0) at(540, 560, ck, 0, () => {
+    rr(-300, -140, 600, 280, 40, 'rgba(20,24,38,.95)', '#fff', 5);
+    txt('Входящий звонок', 0, -86, 30, '#9ca3af', { w: 600 });
+    txt('Неизвестный номер', 0, -30, 46, '#fff', { w: 800 });
+    circ(-120, 70, 42, '#e5484d', OL, 5); circ(120, 70, 42, '#22c55e', OL, 5);
+    line([-140, 70, -100, 70], '#fff', 10);
+    phone(120, 70, 22, 38, { s1: '#fff', s2: '#fff', lw: 3, body: '#fff' });
+  });
+  // offer
+  const ok = P(t, 170.2, 170.5) * (1 - P(t, 176.3, 176.6));
+  if (ok > 0) {
+    ctx.save(); ctx.globalAlpha = ok;
+    rr(60, 380, 960, 520, 34, 'rgba(14,17,28,.92)', '#ffd23f', 7);
+    ctx.restore();
+    for (let i = 0; i < 5; i++) {
+      const k = pop(t, 171.0 + i * .35);
+      at(180 + i * 180, 520, k, (i - 2) * .06, () => phone(0, 0, 90, 160, { s1: ['#5b8cff', '#22c55e', '#f97316', '#a855f7', '#ef4444'][i], s2: '#1e293b', crack: i === 3 }), ok);
+    }
+    const pk = pop(t, 172.6, .35);
+    at(540, 700, pk, 0, () => txt('= 25 000 ₽', 0, 0, 100, '#ffd23f', { w: 900, st: 14 }), ok);
+    if (t > 174.5) {
+      const bl = Math.sin(t * 12) > -.3 ? 1 : .35;
+      stamp('ТОЛЬКО СЕГОДНЯ', 540, 830, 54, '#e5484d', P(t, 174.5, 174.8) * bl, -.06);
+    }
+  }
+  // final text
+  const f1 = pop(t, 176.7), f2 = pop(t, 177.4);
+  at(300, 440, f1, -.1, () => txt('ШАНС', 0, 0, 120, '#4ade80', { w: 900, st: 18 }));
+  at(540, 560, f1, 0, () => txt('или', 0, 0, 64, '#fff', { w: 800, st: 12 }));
+  at(660, 680, f2, .08, () => txt('ЛОВУШКА?', 0, 0, 104, '#ff4d4f', { w: 900, st: 18 }));
+  const ek = P(t, 178.2, 178.6);
+  if (ek > 0) {
+    at(540, 1210, lerp(.8, 1, eout(ek)), 0, () => {
+      rr(-420, -60, 840, 120, 30, '#ffd23f', OL, 8);
+      txt('ПРОДОЛЖЕНИЕ СЛЕДУЕТ…', 0, 3, 54, OL, { w: 900 });
+    }, ek);
+  }
+}
+
+const SCENES = [[0, 12, s1], [12, 30, s2], [30, 55, s3], [55, 85, s4], [85, 115, s5], [115, 145, s6], [145, 165, s7], [165, 180.1, s8]];
+
+function frame(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, W, H);
+  const sc = SCENES.find(s => t >= s[0] && t < s[1]) || SCENES[SCENES.length - 1];
+  ctx.save(); sc[2](t); ctx.restore();
+  hud(t);
+  subs(t);
+  wipe(t);
+}
+
+/* ---------- player ---------- */
+const params = new URLSearchParams(location.search);
+const RENDER = params.has('render');
+if (RENDER) document.body.classList.add('render');
+window.renderAt = t => frame(t);
+window.DURATION = DUR;
+window.SUBS = SUBS;
+
+let cur = parseFloat(params.get('t') || '0') || 0, playing = false, last = 0;
+const btn = document.getElementById('play'), seek = document.getElementById('seek'), tm = document.getElementById('time');
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function show() { frame(cur); seek.value = cur; tm.textContent = `${mmss(cur)} / ${mmss(DUR)}`; }
+function loop(ts) {
+  if (!playing) return;
+  if (last) cur += (ts - last) / 1000;
+  last = ts;
+  if (cur >= DUR) { cur = DUR - .01; playing = false; btn.textContent = '▶ Play'; }
+  show();
+  if (playing) requestAnimationFrame(loop);
+}
+function toggle() {
+  playing = !playing; btn.textContent = playing ? '❚❚ Pause' : '▶ Play';
+  if (playing) { if (cur >= DUR - .05) cur = 0; last = 0; requestAnimationFrame(loop); }
+}
+btn.onclick = toggle; cv.onclick = toggle;
+seek.oninput = () => { cur = +seek.value; show(); };
+document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); toggle(); } });
+document.fonts.load(`800 40px Rubik`).finally(() => { window.READY = true; if (!RENDER) show(); });
+</script>
+</body>
+</html>
