@@ -6,6 +6,7 @@ const TOUCH_SCENE := "res://scenes/ui/touch_controls.tscn"
 
 var env_rig: EnvironmentRig
 var world: CityWorld
+var open_world: OpenWorld
 var player: Node3D
 
 
@@ -40,6 +41,9 @@ func _build() -> void:
 	world = CityWorld.new()
 	world.name = "City"
 	add_child(world)
+	open_world = OpenWorld.new()
+	open_world.name = "OpenWorld"
+	add_child(open_world)
 	var grass := GrassField.new()
 	grass.name = "Grass"
 	grass.city = world.city

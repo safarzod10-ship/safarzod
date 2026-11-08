@@ -4,9 +4,9 @@
   python3 -I tools/world/build_world.py            (from dushanbe_city_src, ~2 min)
 
 Outputs (dushanbe_city/data/world/):
-  height.bin     uint16, 1281 x 1281 (8 m grid), h = v * 0.05 - 100  (roads carved in)
-  splat.png      RGBA weights for the terrain shader: R rock, G snow, B earth/dirt, A sand (grass = rest)
-  biome.png      R forest density, G orchard/field, B settlement, A river/lake proximity
+  height.bin     float32, 1281 x 1281 (8 m grid), roads and plots carved in
+  splat.bin      raw RGBA8 weights for the terrain shader: R rock, G snow, B earth/dirt, A sand (grass = rest)
+  biome.bin      raw RGBA8: R forest density, G orchard/field, B settlement, A river/lake proximity
   surface.bin    uint8 tyre surface class per cell (CityWorld.Surface + SNOW 6)
   world.json     roads (4 m polylines with heights, widths, bridges, tunnels), rivers, lakes,
                  places, landmarks, buildings, signs, km posts, fuel stations
@@ -76,6 +76,8 @@ def main():
     roads.sort(key=lambda r: PRIO[r["cls"]])
     water_d = np.minimum(np.minimum(F["d_var"], F["d_gis"]), np.minimum(F["d_east"], F["d_trib"]))
     H = H0.copy()
+    global LOCK
+    LOCK = np.zeros(H.shape, bool)          # cells under finished roads: later roads never move them
     done_pts = []          # (x, z, h, half width) of finished roads (junction pinning)
     for r in roads:
         c = NW.CLASSES[r["cls"]]
@@ -102,7 +104,7 @@ def main():
             pass
         for k in range(len(P)):
             done_pts.append((P[k, 0], P[k, 1], hp[k], c["w"] / 2))
-        H = carve(H, H0, X, Z, P, hp, c["w"] / 2, r["bridges"], r["tunnels"], dirt=c["surf"] == "dirt")
+        H = carve(H, H0, X, Z, P, hp, c["w"] / 2, r["bridges"], r["tunnels"], dirt=c["surf"] == "dirt", lock=LOCK)
     log("profiles + carving done")
     for r in roads:
         log("  %-10s %-9s %6.0f m  h %4.0f..%4.0f  bridges %d tunnels %d" % (
@@ -111,8 +113,15 @@ def main():
     # ------------------------------------------------------------------ places, buildings, signs
     world = PL.build(roads, H, H_at, F)
     log("places: %d buildings, %d landmarks, %d signs" % (len(world["buildings"]), len(world["landmarks"]), len(world["signs"])))
-    # flatten building plots
+    # flatten building plots (never the cells under / next to a road)
+    rm0, _ = rasterize_roads(roads, X, Z)
+    H_before = H.copy()
     H = PL.flatten_plots(H, X, Z, world)
+    H = np.where(rm0 > 0.05, H_before, H)
+    # remove carving artefacts (switchbacks stacked above each other: the nearest-road fill / cut
+    # can flip between levels from one cell to the next) - never under a road surface
+    H = despike(H, rm0 > 0.3)
+    H = enforce_roads(H, roads)
 
     # ------------------------------------------------------------------ surfaces, splat, biome
     gx = np.gradient(H, T.STEP, axis=1); gz = np.gradient(H, T.STEP, axis=0)
@@ -128,7 +137,7 @@ def main():
     earth = np.maximum(earth, (road_cls == 4) * road_mask)
     rock = np.clip(rock, 0, 1); snow = np.clip(snow, 0, 1); earth = np.clip(earth, 0, 1) * (1 - snow)
     splat = np.stack([rock, snow, earth, sand], -1)
-    Image.fromarray((splat * 255).astype(np.uint8), "RGBA").save(os.path.join(OUT, "splat.png"))
+    (splat * 255).astype(np.uint8).tofile(os.path.join(OUT, "splat.bin"))       # raw RGBA8, rows = z
     # biome: forest density (mid altitudes, moderate slope, valleys), fields / orchards, settlements
     fn = T.fbm(X, Z, 1 / 380, 47, 4)
     forest = T.ss(0.48, 0.62, fn) * T.ss(120, 260, H) * T.ss(900, 650, H) * T.ss(0.9, 0.5, slope)
@@ -139,7 +148,7 @@ def main():
     forest = forest * (1 - settle) * (1 - road_mask)
     waterp = T.ss(60, 10, water_d)
     biome = np.stack([forest, fields * (1 - settle), settle, waterp], -1)
-    Image.fromarray((np.clip(biome, 0, 1) * 255).astype(np.uint8), "RGBA").save(os.path.join(OUT, "biome.png"))
+    (np.clip(biome, 0, 1) * 255).astype(np.uint8).tofile(os.path.join(OUT, "biome.bin"))
     surf = np.full(H.shape, SURF["grass"], np.uint8)
     surf[earth > 0.5] = SURF["earth"]
     surf[sand > 0.5] = SURF["sand"]
@@ -151,8 +160,7 @@ def main():
     log("splat / biome / surface written")
 
     # ------------------------------------------------------------------ heights
-    q = np.clip(np.round((H + 100.0) / 0.05), 0, 65535).astype("<u2")
-    q.tofile(os.path.join(OUT, "height.bin"))
+    H.astype("<f4").tofile(os.path.join(OUT, "height.bin"))      # float32, rows = z (loads with one call)
 
     # ------------------------------------------------------------------ world.json
     W = {"version": 1, "origin": [T.X0, T.Z0], "step": T.STEP, "size": T.N, "height_scale": 0.05, "height_offset": -100.0,
@@ -172,6 +180,48 @@ def main():
     log("world.json %.1f MB" % (os.path.getsize(os.path.join(OUT, "world.json")) / 1e6))
     PL.write_map(W, H, splat, biome, road_mask, os.path.join(GAME, "assets", "ui", "world_map.png"))
     log("map written. done")
+
+
+def enforce_roads(H, roads, clearance=0.22, it=4):
+    """guarantee: the bilinear terrain is below every road surface (across its full width + 2 m),
+    except inside tunnels; lowers the 4 grid cells around any sample that pokes through"""
+    for _ in range(it):
+        moved = 0
+        for r in roads:
+            c = NW.CLASSES[r["cls"]]
+            P = r["P"]; hp = r["H"]
+            tun = np.zeros(len(P), bool)
+            for a, b in r["tunnels"]:
+                tun[a:b + 1] = True
+            d = np.gradient(P, axis=0); d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
+            nrm = np.stack([-d[:, 1], d[:, 0]], 1)
+            for off in np.arange(-(c["w"] / 2 + 2.0), c["w"] / 2 + 2.01, 2.0):
+                Q = P + nrm * off
+                fx = (Q[:, 0] - T.X0) / T.STEP; fz = (Q[:, 1] - T.Z0) / T.STEP
+                i = np.clip(np.floor(fx).astype(int), 0, T.N - 2); j = np.clip(np.floor(fz).astype(int), 0, T.N - 2)
+                u = fx - i; v = fz - j
+                h = H[j, i] * (1 - u) * (1 - v) + H[j, i + 1] * u * (1 - v) + H[j + 1, i] * (1 - u) * v + H[j + 1, i + 1] * u * v
+                ex = h - (hp - clearance)
+                bad = (ex > 0) & ~tun
+                if not bad.any():
+                    continue
+                moved += int(bad.sum())
+                for (jj, ii) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+                    J = j[bad] + jj; I = i[bad] + ii
+                    np.minimum.at(H, (J, I), H[J, I] - ex[bad] - 0.02)
+        if moved == 0:
+            break
+    return H
+
+
+def despike(H, protect, it=4, tol=4.0):
+    from scipy.ndimage import median_filter
+    for _ in range(it):
+        M = median_filter(H, 3)
+        bad = (np.abs(H - M) > tol) & ~protect
+        H = np.where(bad, M, H)
+    # gentle cap of the steepness next to roads: no vertical walls between switchbacks
+    return H
 
 
 def T_sample(A, P):
@@ -204,7 +254,10 @@ def pinned_profile(hp, pin, g, step=4.0):
     return out
 
 
-def carve(H, H0, X, Z, P, hp, hw, bridges, tunnels, dirt=False):
+LOCK = None
+
+
+def carve(H, H0, X, Z, P, hp, hw, bridges, tunnels, dirt=False, lock=None):
     """cut / fill the terrain along a road: flat under the carriageway (+ 1.5 m shoulders) 0.25 m
     below the road surface, 1:1.5 slopes beyond; nothing under bridges, nothing over tunnels
     (except the portal cuts)."""
@@ -234,12 +287,16 @@ def carve(H, H0, X, Z, P, hp, hw, bridges, tunnels, dirt=False):
     wa = np.where(np.isfinite(d0), d1 / np.maximum(np.nan_to_num(d0, posinf=1e6) + d1, 1e-6), 1.0)
     hr = hk[i_0c] * wa + hk[i_1c] * (1 - wa)
     sub = H[j0:j1, i0:i1].ravel().copy()
-    w0 = hw + 1.5 + (0.0 if dirt else 0.5)
+    w0 = hw + 1.5 + 4.0                     # + half a grid cell: the 8 m terrain never rises over the road edge
     under = hr - (0.05 if dirt else 0.25)
     cut = np.minimum(sub, under + np.maximum(d0 - w0, 0) / 1.5)
-    fill = np.maximum(sub, under - np.maximum(d0 - w0, 0) / 1.5)
+    fill = np.maximum(sub, np.minimum(under - np.maximum(d0 - w0, 0) / 1.5, sub + 30.0))
     new = np.where(d0 <= w0, under, np.where(sub > hr, cut, fill))
     new = np.where(ok, new, sub)
+    if lock is not None:
+        lk = lock[j0:j1, i0:i1].ravel()
+        new = np.where(lk, sub, new)
+        lock[j0:j1, i0:i1] = (lk | (ok & (d0 <= w0))).reshape(sx.shape)
     H[j0:j1, i0:i1] = new.reshape(sx.shape)
     return H
 

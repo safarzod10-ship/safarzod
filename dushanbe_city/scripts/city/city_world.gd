@@ -28,7 +28,7 @@ var terrain_heights := PackedFloat32Array()
 var sea: Sea
 var terrain_surface := PackedByteArray()
 static var instance: CityWorld           ## the loaded city (surface / height queries)
-enum Surface { GRASS, SAND, ROCK, EARTH, ASPHALT, PAVED }
+enum Surface { GRASS, SAND, ROCK, EARTH, ASPHALT, PAVED, SNOW }
 var _extra_from := {}
 
 
@@ -43,10 +43,13 @@ func _ready() -> void:
 	var ground := _make_outer_ground()
 	add_child(ground)
 	for path in DirAccess.get_files_at("res://data/city/"):
-		if path.begins_with("chunk_") and path.ends_with(".json"):
+		if path.begins_with("chunk_") and path.ends_with(".json") and not _replaced_by_open_world(path):
 			_load_chunk("res://data/city/" + path)
 	_make_bounds()
-	_load_backdrop()
+	# the decorative mountain ring / far city of the old backdrop is replaced by the real open world
+	# north of the peninsula (OpenWorld); without world data the old backdrop is kept
+	if not WorldData.get_instance().ok:
+		_load_backdrop()
 	sea = Sea.new()
 	sea.name = "Sea"
 	add_child(sea)
@@ -57,6 +60,21 @@ func _ready() -> void:
 	apply_quality()
 	if not _missing.is_empty():
 		print("CityWorld: categories without assets: ", _missing.keys())
+
+
+## coast tiles / vegetation entirely north of the seam (z < -800) belong to the open world now
+static func _replaced_by_open_world(file: String) -> bool:
+	if not WorldData.get_instance().ok:
+		return false
+	var b := file.get_basename()
+	if b.begins_with("chunk_coast_v_"):
+		return b.ends_with("_-3")
+	if b.begins_with("chunk_coast_") and b.count("_") == 4:
+		var parts := b.split("_")
+		var z := float(parts[3])
+		var sz := float(parts[4])
+		return z + sz <= -800.0
+	return false
 
 
 static func _load_json(p: String) -> Dictionary:
@@ -383,17 +401,23 @@ func _make_outer_ground() -> Node3D:
 		var n: int = meta["size"]
 		var step: float = meta["step"]
 		var data := FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
-		for i in data.size():
-			data[i] /= step                    # uniform scale by `step` below (non-uniform shape scale is unsupported)
+		var o: Array = meta["origin"]
+		# rows north of the open-world seam (z < -800) are not part of the peninsula collision any more
+		var skip := 0
+		if WorldData.get_instance().ok:
+			skip = clampi(int(round((WorldData.get_instance().seam_z - float(o[1])) / step)), 0, n - 2)
+		var rows := n - skip
+		var cut := data.slice(skip * n)
+		for i in cut.size():
+			cut[i] /= step                     # uniform scale by `step` below (non-uniform shape scale is unsupported)
 		var hs := HeightMapShape3D.new()
 		hs.map_width = n
-		hs.map_depth = n
-		hs.map_data = data
+		hs.map_depth = rows
+		hs.map_data = cut
 		var cs := CollisionShape3D.new()
 		cs.shape = hs
 		cs.scale = Vector3.ONE * step
-		var o: Array = meta["origin"]
-		cs.position = Vector3(o[0] + (n - 1) * step * 0.5, 0.0, o[1] + (n - 1) * step * 0.5)
+		cs.position = Vector3(o[0] + (n - 1) * step * 0.5, 0.0, o[1] + skip * step + (rows - 1) * step * 0.5)
 		body.add_child(cs)
 		terrain_info = meta
 		terrain_heights = FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
@@ -420,6 +444,9 @@ static func city_relief(x: float, z: float) -> float:
 ## Surface class of the baked terrain at (x, z) (data/terrain/surface.bin, 4 m grid, same window as
 ## the heightmap): grass / sand / rock / earth / asphalt (country roads, and the city's roads).
 func surface_at(x: float, z: float) -> int:
+	var w := WorldData.get_instance()
+	if w.contains(x, z):
+		return w.surface_at(x, z)
 	if terrain_surface.is_empty() or terrain_info.is_empty():
 		return Surface.ASPHALT
 	var n: int = terrain_info["size"]
@@ -432,6 +459,9 @@ func surface_at(x: float, z: float) -> int:
 
 ## Terrain height at a world point (bilinear, same data as the collision); 0 outside the baked area.
 func terrain_height(x: float, z: float) -> float:
+	var w := WorldData.get_instance()
+	if w.contains(x, z):
+		return w.height_at(x, z)
 	if terrain_info.is_empty():
 		return 0.0
 	var n: int = terrain_info["size"]
@@ -502,9 +532,12 @@ func _make_bounds() -> void:
 	var pts: Array = B.get("polyline", [])
 	if pts.is_empty():
 		pts = [[-301, -301], [301, -301], [301, 301], [-301, 301]]
+	var open_north := WorldData.get_instance().ok
 	for i in pts.size():
 		var a := Vector2(pts[i][0], pts[i][1])
 		var b := Vector2(pts[(i + 1) % pts.size()][0], pts[(i + 1) % pts.size()][1])
+		if open_north and a.y < -600.0 and b.y < -600.0:
+			continue                           # the mainland is open: the open world continues north
 		var mid := (a + b) * 0.5
 		var cs := CollisionShape3D.new()
 		var bs := BoxShape3D.new()

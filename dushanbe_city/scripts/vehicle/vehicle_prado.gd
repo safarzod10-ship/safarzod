@@ -365,14 +365,20 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		# surface under the tyre: baked terrain classes for the heightmap (country asphalt road, grass,
 		# sand, earth, rock); everything else (raised city blocks, kerbs, test pads) is paved
 		var surf := CityWorld.Surface.PAVED
-		if hit.collider is StaticBody3D and String((hit.collider as Node).name) == "TerrainBody" and CityWorld.instance:
+		var cn := String((hit.collider as Node).name) if hit.collider is Node else ""
+		if hit.collider is StaticBody3D and cn == "TerrainBody" and CityWorld.instance:
 			surf = CityWorld.instance.surface_at(contact.x, contact.z)
+		elif cn == "WorldTerrain" or cn == "WorldRoad":
+			# open world: baked surface map (asphalt roads, dirt tracks, grass, rock, sand, snow)
+			surf = WorldData.get_instance().surface_at(contact.x, contact.z)
+			if cn == "WorldRoad" and surf != CityWorld.Surface.EARTH:
+				surf = CityWorld.Surface.ASPHALT
 		if surface_override >= 0:
 			surf = surface_override
 		w["surface"] = surf
 		# grip by surface (dry asphalt 1.0); wet: asphalt / paving ~0.72, rock 0.7, earth turns to mud
-		var wet_k: float = [0.9, 1.0, 0.82, 0.75, 0.72, 0.72][surf]
-		w["surface_mu"] = [0.74, 0.62, 0.85, 0.72, 1.0, 1.0][surf] * lerpf(1.0, wet_k, wetness)
+		var wet_k: float = [0.9, 1.0, 0.82, 0.75, 0.72, 0.72, 1.0][surf]
+		w["surface_mu"] = [0.74, 0.62, 0.85, 0.72, 1.0, 1.0, 0.42][surf] * lerpf(1.0, wet_k, wetness)
 	wheels_on_ground = on
 	# anti-roll bars: left/right offset difference per axle
 	var arb := {true: 0.0, false: 0.0}
@@ -660,7 +666,7 @@ static func impact_material(o: Object) -> String:
 	if o == null or not (o is Node):
 		return "concrete"
 	var n := String((o as Node).name).to_lower()
-	if n == "terrainbody" or n == "groundcollision":
+	if n == "terrainbody" or n == "groundcollision" or n == "worldterrain" or n == "worldroad":
 		return "ground"
 	if n.begins_with("tree_") or n.contains("wood") or n.contains("tapchan"):
 		return "wood"

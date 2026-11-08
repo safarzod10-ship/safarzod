@@ -54,6 +54,12 @@ func surface_at(pos: Vector3, collider: Object) -> String:
 	if collider == null:
 		return "asphalt"
 	var n := String((collider as Node).name) if collider is Node else ""
+	if (n == "WorldTerrain" or n == "WorldRoad") and WorldData.get_instance().ok:
+		var c2: int = WorldData.get_instance().surface_at(pos.x, pos.z)
+		if n == "WorldRoad" and c2 != CityWorld.Surface.EARTH:
+			return "asphalt"
+		return {CityWorld.Surface.GRASS: "grass", CityWorld.Surface.SAND: "sand", CityWorld.Surface.ROCK: "hard",
+			CityWorld.Surface.EARTH: "earth", CityWorld.Surface.ASPHALT: "asphalt", CityWorld.Surface.SNOW: "sand"}.get(c2, "grass")
 	if n == "TerrainBody" and CityWorld.instance:
 		var c: int = CityWorld.instance.surface_at(pos.x, pos.z)
 		return {CityWorld.Surface.GRASS: "grass", CityWorld.Surface.SAND: "sand", CityWorld.Surface.ROCK: "hard",
