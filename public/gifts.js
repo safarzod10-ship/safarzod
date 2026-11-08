@@ -22,7 +22,7 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
   const byId = (id) => s.st?.prizes.find((p) => p.id === id);
 
   function item(p, i) {
-    return `<div class="gw-item ${p.kind}" data-id="${p.id}" style="left:${-i * W}px">
+    return `<div class="gw-item ${p.kind}" data-id="${p.id}" style="left:${i * W}px">
       <div class="gw-art">${art(p)}</div>
       <div class="gw-name"><b>${p.name}</b><span>${p.kind === 'nft' ? 'NFT-подарок' : 'на баланс'}</span></div>
     </div>`;
@@ -43,7 +43,7 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
   }
 
   const base = () => $('gw-reel').clientWidth / 2 - W / 2;
-  const centerOffset = (index) => base() + index * W;
+  const centerOffset = (index) => base() - index * W;
 
   function setOffset(y, animate) {
     const strip = $('gw-strip');
@@ -111,11 +111,11 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
   }
 
   function ticks(until) {
-    let last = Math.round((s.offset - base()) / W);
+    let last = Math.round((base() - s.offset) / W);
     const strip = $('gw-strip');
     const step = () => {
       const m = new DOMMatrixReadOnly(getComputedStyle(strip).transform);
-      const idx = Math.round((m.m41 - base()) / W);
+      const idx = Math.round((base() - m.m41) / W);
       if (idx !== last) {
         last = idx;
         haptic.tap();
