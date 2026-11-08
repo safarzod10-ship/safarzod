@@ -59,7 +59,7 @@ const srtTime = s => {
   fs.writeFileSync(path.join(outDir, `${name}.srt`), srt);
 
   // cover
-  fs.writeFileSync(path.join(outDir, `${name}_cover.png`), await grab(7.6));
+  fs.writeFileSync(path.join(outDir, `${name}_cover.png`), await grab(await page.evaluate(() => window.COVER_T)));
 
   const dur = voice ? voice.duration : await page.evaluate(() => window.DURATION);
   const total = Math.round(dur * FPS);

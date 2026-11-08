@@ -92,7 +92,7 @@ for a, b, who in subs:
         L = 0.7 * slot
     knots.append((a, start)); knots.append((b, start + L))
     cur, prev_b = start + L, b
-end_anim = 180.0
+end_anim = float(re.search(r'const DUR = ([\d.]+)', html).group(1))
 knots.append((end_anim, cur + 2.0))
 duration = cur + 2.0
 
