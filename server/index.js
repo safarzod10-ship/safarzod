@@ -460,7 +460,11 @@ const routes = {
     throttle(user.id, 1500);
     rateLimit(`wd:${user.id}`, 3);
     const { left } = store.wager(user.id, config.wager);
-    if (left > 0) throw new AppError('WAGER', `Для вывода нужно сделать ставок ещё на ${left} ⭐`);
+    if (left > 0) {
+      const inGram =
+        currency === GRAM ? ` (≈ ${fmtGram(Math.ceil((left / store.rate()) * 100) * 10_000_000)} Gram)` : '';
+      throw new AppError('WAGER', `Для вывода нужно сделать ставок ещё на ${left} ⭐${inGram}`);
+    }
     await bot?.assertSubscribed(config.withdrawChannel, user.id);
     const fee = Math.ceil(amount * config.limits.withdrawFee);
     const { withdrawal } = store.withdraw(user.id, amount, fee, { currency, address });

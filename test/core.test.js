@@ -656,3 +656,30 @@ test('Gram: сервер видит перевод на кошелёк с ком
   assert.equal(await w.poll(), 0);
   assert.equal(store.getUser(2).gram, 1_500_000_000);
 });
+
+test('вывод Gram: заявка списывает Gram с комиссией, отмена возвращает Gram, адрес сохраняется', () => {
+  const store = storeWith(0);
+  store.creditGramDeposit({ hash: 'w1', userId: 1, amount: 5_000_000_000 });
+  const address = 'UQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqEBI';
+  const { withdrawal } = store.withdraw(1, 1_000_000_000, 100_000_000, { currency: 'GRAM', address });
+  assert.equal(store.getUser(1).gram, 3_900_000_000);
+  assert.equal(store.getUser(1).balance, 0);
+  assert.deepEqual([withdrawal.currency, withdrawal.address, withdrawal.total], ['GRAM', address, 1_100_000_000]);
+  store.cancelWithdrawal(withdrawal.id, 'тест');
+  assert.equal(store.getUser(1).gram, 5_000_000_000);
+  assert.throws(() => store.withdraw(1, 6_000_000_000, 0, { currency: 'GRAM', address }), /Недостаточно Gram/);
+});
+
+test('вывод Gram: админ получает в бот сумму в Gram и адрес кошелька', async () => {
+  const store = storeWith(0);
+  store.creditGramDeposit({ hash: 'w2', userId: 1, amount: 2_000_000_000 });
+  const bot = fakeBot(store);
+  const address = 'UQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqEBI';
+  const { withdrawal } = store.withdraw(1, 1_000_000_000, 100_000_000, { currency: 'GRAM', address });
+  await bot.notifyWithdrawal(withdrawal, store.getUser(1));
+  const text = bot.calls.find((c) => c.method === 'sendMessage').payload.text;
+  assert.match(text, /1 Gram/);
+  assert.match(text, new RegExp(address));
+  await bot.completeWithdrawal(withdrawal.id);
+  assert.match(lastText(bot), /Вывод <b>1 Gram<\/b> выполнен/);
+});
