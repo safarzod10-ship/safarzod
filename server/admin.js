@@ -337,6 +337,23 @@ export function createAdminRoutes({
       };
     },
 
+    'POST /api/admin/promos': (req) => {
+      requireAdmin(req);
+      return { promos: wheel?.promos() ?? [] };
+    },
+
+    'POST /api/admin/promos/add': async (req) => {
+      requireAdmin(req);
+      const b = await body(req);
+      const uses = int(b.uses, { min: 1, max: 1_000_000, name: 'количество активаций' });
+      return { promos: wheel.addPromo(b.code, uses) };
+    },
+
+    'POST /api/admin/promos/delete': async (req) => {
+      requireAdmin(req);
+      return { promos: wheel.removePromo((await body(req)).code) };
+    },
+
     'POST /api/admin/gifts': (req) => {
       requireAdmin(req);
       return { gifts: wheel?.adminList() ?? [] };

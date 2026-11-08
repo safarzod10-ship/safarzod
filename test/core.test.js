@@ -758,3 +758,22 @@ test('рулетка подарков: 1 прокрутка за 5 друзей,
   assert.ok(wheel.markSent(g.id));
   assert.equal(wheel.markSent(g.id), null);
 });
+
+test('промокоды: бесплатная прокрутка, один раз на игрока, лимит активаций, без учёта регистра', async () => {
+  const { WheelService } = await import('../server/wheel.js');
+  const store = storeWith(0, 0, 0);
+  const wheel = new WheelService(store, { random: () => 999_999 });
+  assert.deepEqual(wheel.addPromo('gift2026', 2), [{ code: 'GIFT2026', uses: 0, usesMax: 2, spins: 1 }]);
+  assert.throws(() => wheel.addPromo('GIFT2026', 5), /уже есть/);
+  assert.throws(() => wheel.addPromo('a b', 5), /от 3 до 32/);
+  assert.throws(() => wheel.activate(1, 'nope'), /нет/);
+  assert.equal(wheel.activate(1, ' gift2026 ').spins, 1);
+  assert.throws(() => wheel.activate(1, 'GIFT2026'), /уже активировали/);
+  assert.equal(wheel.spin(1).prize, 'stars1');
+  assert.equal(wheel.state(1).spins, 0);
+  wheel.activate(2, 'Gift2026');
+  assert.throws(() => wheel.activate(3, 'GIFT2026'), /закончился/);
+  assert.deepEqual(wheel.promos(), [{ code: 'GIFT2026', uses: 2, usesMax: 2, spins: 1 }]);
+  wheel.removePromo('gift2026');
+  assert.deepEqual(wheel.promos(), []);
+});

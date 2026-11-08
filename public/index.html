@@ -865,6 +865,7 @@
             <button data-tab="withdrawals">Выводы <span class="adm-n" id="adm-wd-n" hidden></span></button>
             <button data-tab="broadcast">Рассылка</button>
             <button data-tab="tasks">Задания</button>
+            <button data-tab="promos">Промокоды</button>
             <button data-tab="stats">Сводка</button>
           </div>
 
@@ -929,6 +930,30 @@
             </div>
             <div class="section-title">Активные задания</div>
             <div class="adm-list" id="adm-tasks"></div>
+          </div>
+
+          <div class="adm-pane" data-pane="promos" hidden>
+            <div class="adm-form">
+              <label class="adm-input"
+                ><input
+                  id="adm-p-code"
+                  maxlength="32"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  placeholder="Промокод, например GIFT2026"
+              /></label>
+              <div class="dock-row">
+                <label class="adm-input" style="flex: 1"
+                  ><input id="adm-p-uses" inputmode="numeric" autocomplete="off" placeholder="Количество активаций"
+                /></label>
+                <button class="btn primary" id="adm-p-add">Создать</button>
+              </div>
+              <p class="adm-note">
+                Каждая активация даёт игроку одну бесплатную прокрутку в «Подарках за друзей». Один игрок — один раз.
+              </p>
+            </div>
+            <div class="section-title">Активные промокоды</div>
+            <div class="adm-list" id="adm-promos"></div>
           </div>
 
           <div class="adm-pane" data-pane="stats" hidden>
@@ -1074,6 +1099,18 @@
           <div class="gw-progress-sub" id="gw-progress-sub"></div>
         </div>
         <button class="btn primary block gw-spin" id="gw-spin">Крутить</button>
+        <div class="gw-promo">
+          <input
+            id="gw-code"
+            maxlength="32"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="Промокод"
+            aria-label="Промокод"
+          />
+          <button class="btn secondary" id="gw-code-go">Активировать</button>
+        </div>
         <div class="section-title gw-section">Можно выиграть</div>
         <div class="gw-prizes" id="gw-prizes"></div>
         <div class="gw-result" id="gw-result" hidden></div>

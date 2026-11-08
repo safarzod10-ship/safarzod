@@ -72,6 +72,7 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     if (tab === 'withdrawals') loadWithdrawals();
     if (tab === 'broadcast') loadBroadcast();
     if (tab === 'tasks') loadTasks();
+    if (tab === 'promos') loadPromos();
     if (tab === 'stats') loadStats();
   }
 
@@ -254,6 +255,36 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     toast('Сообщение доставлено');
     $('au-msg').value = '';
     $('au-msg-form').hidden = true;
+  }
+
+  async function loadPromos() {
+    const data = await api('/api/admin/promos', {}).catch((e) => toast(e.message, 'err'));
+    if (data) renderPromos(data.promos);
+  }
+
+  function renderPromos(list) {
+    $('adm-promos').innerHTML = list.length
+      ? list
+          .map(
+            (p) => `<div class="adm-task"><div class="adm-who"><b class="num">${esc(p.code)}</b>
+              <small>Активировано ${fmt(p.uses)} из ${fmt(p.usesMax)}${p.uses >= p.usesMax ? ' · закончился' : ''}</small></div>
+              <button class="adm-del" data-promo-del="${esc(p.code)}">Удалить</button></div>`,
+          )
+          .join('')
+      : '<div class="adm-empty">Промокодов нет</div>';
+  }
+
+  async function addPromo(btn) {
+    const code = $('adm-p-code').value.trim();
+    const uses = Number($('adm-p-uses').value);
+    if (!code) return toast('Введите промокод', 'err');
+    if (!Number.isSafeInteger(uses) || uses < 1) return toast('Укажите количество активаций', 'err');
+    const data = await run(btn, () => api('/api/admin/promos/add', { code, uses }));
+    if (!data) return;
+    haptic.ok();
+    toast('Промокод создан');
+    $('adm-p-code').value = $('adm-p-uses').value = '';
+    renderPromos(data.promos);
   }
 
   async function loadGifts() {
@@ -509,6 +540,15 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
       }
       const confirm = e.target.closest('[data-wd-confirm]');
       if (confirm) return wdCancel(Number(confirm.dataset.wdConfirm), confirm);
+      const pd = e.target.closest('[data-promo-del]');
+      if (pd) {
+        confirmAsync(`Удалить промокод ${pd.dataset.promoDel}?`).then(async (ok) => {
+          if (!ok) return;
+          const data = await run(pd, () => api('/api/admin/promos/delete', { code: pd.dataset.promoDel }));
+          if (data) renderPromos(data.promos);
+        });
+        return;
+      }
       const gs = e.target.closest('[data-gift-sent]');
       if (gs) {
         confirmAsync('Подарок отправлен игроку?').then(async (ok) => {
@@ -539,6 +579,7 @@ export function createAdmin({ api, haptic, toast, avatarHtml, esc, go, supports,
     $('adm-bc-text').addEventListener('input', updateCounter);
     $('adm-bc-send').addEventListener('click', (e) => sendBroadcast(e.currentTarget));
     $('adm-t-add').addEventListener('click', (e) => addTask(e.currentTarget));
+    $('adm-p-add').addEventListener('click', (e) => addPromo(e.currentTarget));
   }
 
   return {

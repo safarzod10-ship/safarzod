@@ -44,6 +44,21 @@ CREATE TABLE IF NOT EXISTS wheel_spins (
 );
 CREATE INDEX IF NOT EXISTS wheel_spins_user ON wheel_spins(user_id, id);
 CREATE INDEX IF NOT EXISTS wheel_spins_status ON wheel_spins(status, id);
+CREATE TABLE IF NOT EXISTS promo_codes (
+  code        TEXT PRIMARY KEY,
+  spins       INTEGER NOT NULL DEFAULT 1,
+  uses_max    INTEGER NOT NULL,
+  uses        INTEGER NOT NULL DEFAULT 0,
+  active      INTEGER NOT NULL DEFAULT 1,
+  created_at  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS promo_uses (
+  code        TEXT NOT NULL REFERENCES promo_codes(code),
+  user_id     INTEGER NOT NULL REFERENCES users(id),
+  spins       INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (code, user_id)
+);
 `;
 
 export class WheelService extends EventEmitter {
@@ -65,13 +80,22 @@ export class WheelService extends EventEmitter {
                   JOIN users u ON u.id = w.user_id WHERE w.kind = 'nft' ORDER BY w.status = 'pending' DESC, w.id DESC LIMIT 50`),
       markSent: q("UPDATE wheel_spins SET status = 'sent', sent_at = ? WHERE id = ? AND status = 'pending'"),
       get: q('SELECT * FROM wheel_spins WHERE id = ?'),
+      bonus: q('SELECT COALESCE(SUM(spins), 0) AS n FROM promo_uses WHERE user_id = ?'),
+      promo: q('SELECT * FROM promo_codes WHERE code = ?'),
+      promoUse: q(
+        'INSERT INTO promo_uses (code, user_id, spins, created_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING',
+      ),
+      promoInc: q('UPDATE promo_codes SET uses = uses + 1 WHERE code = ? AND active = 1 AND uses < uses_max'),
+      promoAdd: q('INSERT INTO promo_codes (code, spins, uses_max, created_at) VALUES (?, ?, ?, ?)'),
+      promoList: q('SELECT * FROM promo_codes WHERE active = 1 ORDER BY created_at DESC'),
+      promoOff: q('UPDATE promo_codes SET active = 0 WHERE code = ?'),
     };
   }
 
   #counts(userId) {
     const invites = this.q.invites.get(userId).n;
     const used = this.q.used.get(userId).n;
-    const earned = Math.floor(invites / this.per);
+    const earned = Math.floor(invites / this.per) + this.q.bonus.get(userId).n;
     return { invites, used, spins: Math.max(0, earned - used), nextIn: this.per - (invites % this.per) };
   }
 
@@ -115,6 +139,41 @@ export class WheelService extends EventEmitter {
     return { prize: result.prize.id, ...this.state(userId) };
   }
 
+  activate(userId, raw) {
+    const code = normalizeCode(raw);
+    if (!code) throw new AppError('BAD_CODE', 'Введите промокод');
+    this.store.tx(() => {
+      const p = this.q.promo.get(code);
+      if (!p || !p.active) throw new AppError('BAD_CODE', 'Такого промокода нет');
+      if (p.uses >= p.uses_max) throw new AppError('CODE_USED_UP', 'Промокод закончился');
+      if (this.q.promoUse.run(code, userId, p.spins, Date.now()).changes !== 1) {
+        throw new AppError('CODE_ALREADY', 'Вы уже активировали этот промокод', 409);
+      }
+      if (this.q.promoInc.run(code).changes !== 1) throw new AppError('CODE_USED_UP', 'Промокод закончился');
+    });
+    return this.state(userId);
+  }
+
+  addPromo(raw, usesMax, spins = 1) {
+    const code = normalizeCode(raw);
+    if (!code || code.length < 3) throw new AppError('BAD_INPUT', 'Промокод — от 3 до 32 букв или цифр');
+    if (!Number.isSafeInteger(usesMax) || usesMax < 1 || usesMax > 1_000_000) {
+      throw new AppError('BAD_INPUT', 'Количество активаций — от 1 до 1 000 000');
+    }
+    if (this.q.promo.get(code)) throw new AppError('BAD_INPUT', 'Такой промокод уже есть');
+    this.q.promoAdd.run(code, spins, usesMax, Date.now());
+    return this.promos();
+  }
+
+  promos() {
+    return this.q.promoList.all().map((p) => ({ code: p.code, uses: p.uses, usesMax: p.uses_max, spins: p.spins }));
+  }
+
+  removePromo(raw) {
+    this.q.promoOff.run(normalizeCode(raw));
+    return this.promos();
+  }
+
   adminList() {
     return this.q.pending.all().map((w) => ({
       id: w.id,
@@ -135,4 +194,11 @@ export class WheelService extends EventEmitter {
     if (this.q.markSent.run(Date.now(), id).changes !== 1) return null;
     return this.q.get.get(id);
   }
+}
+
+export function normalizeCode(raw) {
+  const s = String(raw ?? '')
+    .trim()
+    .toUpperCase();
+  return /^[A-ZА-ЯЁ0-9_-]{1,32}$/.test(s) ? s : '';
 }

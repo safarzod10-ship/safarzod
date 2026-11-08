@@ -178,6 +178,26 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
       if (e.target.closest('[data-gw-ok]')) $('gw-result').hidden = true;
     });
     $('gw-spin').addEventListener('click', spin);
+    const activate = async () => {
+      const code = $('gw-code').value.trim();
+      if (!code) return $('gw-code').focus();
+      const btn = $('gw-code-go');
+      btn.classList.add('loading');
+      try {
+        s.st = await api('/api/wheel/promo', { code });
+        render();
+        haptic.ok();
+        toast('Промокод активирован — бесплатная прокрутка ваша');
+        $('gw-code').value = '';
+      } catch (e) {
+        haptic.err();
+        toast(e.message, 'err');
+      } finally {
+        btn.classList.remove('loading');
+      }
+    };
+    $('gw-code-go').addEventListener('click', activate);
+    $('gw-code').addEventListener('keydown', (e) => e.key === 'Enter' && activate());
   }
 
   return { bind, load, isOpen: () => !$('gw').hidden, close };

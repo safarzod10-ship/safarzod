@@ -289,9 +289,15 @@ const routes = {
   }),
 
   'POST /api/wheel': (req) => wheel.state(authenticate(req).id),
+  'POST /api/wheel/promo': async (req) => {
+    const user = authenticate(req);
+    const { code } = await readJson(req);
+    rateLimit(`promo:${user.id}`, 8);
+    return wheel.activate(user.id, code);
+  },
   'POST /api/wheel/spin': (req) => {
     const user = authenticate(req);
-    throttle(user.id, 1500);
+    rateLimit(`spin:${user.id}`, 20);
     return { ...wheel.spin(user.id), ...profile(store.getUser(user.id)) };
   },
 
