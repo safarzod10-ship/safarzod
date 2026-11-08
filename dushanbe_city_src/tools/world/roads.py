@@ -31,55 +31,107 @@ class Router:
         return (int(round((z - T.Z0) / G)), int(round((x - T.X0) / G)))
 
     def route(self, a, b, gmax, margin=900.0, curv=0.6):
-        """A* from point a to b (x, z): returns a list of (x, z)"""
+        """A* from point a to b (x, z) with the heading in the state: every step may turn by at most
+        45 deg, so switchbacks become loops of >= ~16-20 m radius (drivable, no self-overlapping road
+        ribbons). Returns a list of (x, z)."""
         ja, ia = self.cell(*a); jb, ib = self.cell(*b)
         m = int(margin / G)
         j0, j1 = max(0, min(ja, jb) - m), min(self.nx - 1, max(ja, jb) + m)
         i0, i1 = max(0, min(ia, ib) - m), min(self.nx - 1, max(ia, ib) + m)
-        H = self.H; R = self.river; Lk = self.lake
-        moves = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1),
-                 (2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
-        mv = [(dj, di, G * math.hypot(dj, di)) for dj, di in moves]
-        start = (ja, ia); goal = (jb, ib)
-        gs = {start: 0.0}; came = {}
-        hq = [(0.0, start)]
+        H = self.H; Rv = self.river; Lk = self.lake; TK = self.taken
+        D8 = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]     # (dj, di)
+        gs = {}; came = {}; hq = []
+        for h in range(8):
+            gs[(ja, ia, h)] = 0.0
+            heapq.heappush(hq, (0.0, (ja, ia, h)))
+        goal = None
         while hq:
             f, cur = heapq.heappop(hq)
-            if cur == goal:
+            cj, ci, ch = cur
+            if cj == jb and ci == ib:
+                goal = cur
                 break
             g0 = gs[cur]
-            cj, ci = cur
+            if f - math.hypot(cj - jb, ci - ib) * G > g0 + 1e-6:
+                continue
             h0 = H[cj, ci]
-            for dj, di, L in mv:
+            for dh in (-1, 0, 1):
+                nh = (ch + dh) % 8
+                dj, di = D8[nh]
                 nj, ni = cj + dj, ci + di
-                if nj < j0 or nj > j1 or ni < i0 or ni > i1:
+                if nj < j0 or nj > j1 or ni < i0 or ni > i1 or Lk[nj, ni]:
                     continue
-                if Lk[nj, ni]:
-                    continue
+                L = G * (1.4142 if dj and di else 1.0)
                 gr = abs(H[nj, ni] - h0) / L
                 c = L
                 if gr > gmax:
-                    c += L * 400.0 * (gr - gmax)            # steeper than the class allows: very expensive
-                c += L * 2.5 * gr                            # prefer flatter lines anyway
-                if R[nj, ni]:
-                    c += 60.0                                # a bridge: short crossings only
-                if self.taken[nj, ni]:
-                    c *= 0.7                                 # join existing roads rather than run parallel
+                    c += L * 400.0 * (gr - gmax)
+                c += L * 2.5 * gr + (L * 0.25 if dh else 0.0)
+                if Rv[nj, ni]:
+                    c += 60.0
+                if TK[nj, ni]:
+                    c *= 0.7
                 ng = g0 + c
-                k = (nj, ni)
+                k = (nj, ni, nh)
                 if ng < gs.get(k, 1e18):
                     gs[k] = ng; came[k] = cur
-                    hh = math.hypot(nj - jb, ni - ib) * G
-                    heapq.heappush(hq, (ng + hh, k))
-        if goal not in came and goal != start:
+                    heapq.heappush(hq, (ng + math.hypot(nj - jb, ni - ib) * G, k))
+        if goal is None:
             raise RuntimeError("no route %s -> %s" % (a, b))
         path = [goal]
-        while path[-1] != start:
+        while path[-1] in came:
             path.append(came[path[-1]])
         path.reverse()
-        for (j, i) in path:
+        cells = []
+        for (j, i, h) in path:
+            if not cells or cells[-1] != (j, i):
+                cells.append((j, i))
+        for (j, i) in cells:
             self.taken[j, i] = True
-        return [(T.X0 + i * G, T.Z0 + j * G) for (j, i) in path]
+        return [(T.X0 + i * G, T.Z0 + j * G) for (j, i) in cells]
+
+
+def min_radius(P, rmin, step=4.0, it=400):
+    """relax the polyline until no turn is tighter than rmin (Laplacian moves of the offending points
+    only, ends fixed); then resample"""
+    P = np.asarray(P, np.float64).copy()
+    amax = step / rmin
+    for _ in range(it):
+        d1 = P[1:-1] - P[:-2]; d2 = P[2:] - P[1:-1]
+        a1 = np.arctan2(d1[:, 1], d1[:, 0]); a2 = np.arctan2(d2[:, 1], d2[:, 0])
+        da = np.abs((a2 - a1 + np.pi) % (2 * np.pi) - np.pi)
+        bad = np.nonzero(da > amax)[0] + 1
+        if len(bad) == 0:
+            break
+        mid = (P[bad - 1] + P[bad + 1]) * 0.5
+        P[bad] = P[bad] * 0.5 + mid * 0.5
+        if _ % 20 == 19:
+            P = T.resample(P, step)
+    return T.resample(P, step)
+
+
+def remove_loops(P, w, H_at, dh=5.0):
+    """cut out-and-back spurs / loops: when the path comes back within w of an earlier point at a
+    similar height, everything in between is dropped"""
+    P = np.asarray(P, np.float64)
+    for _ in range(50):
+        from scipy.spatial import cKDTree
+        h = H_at(P[:, 0], P[:, 1])
+        t = cKDTree(P)
+        pairs = [(i, j) for i, j in t.query_pairs(w) if abs(i - j) > 12 and abs(h[i] - h[j]) < dh]
+        if not pairs:
+            break
+        i, j = max(pairs, key=lambda q: abs(q[0] - q[1]))
+        i, j = min(i, j), max(i, j)
+        P = np.concatenate([P[:i + 1], P[j:]])
+    return P
+
+
+def self_overlaps(P, w):
+    """pairs of points of the same road closer than its width but far apart along it"""
+    from scipy.spatial import cKDTree
+    t = cKDTree(P)
+    return [(i, j) for i, j in t.query_pairs(w) if abs(i - j) > 12]
 
 
 def smooth_route(pts, step=4.0):

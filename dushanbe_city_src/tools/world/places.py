@@ -16,8 +16,8 @@ RNG = np.random.default_rng(2026)
 
 # landmarks: id, name, x, z, yaw, footprint (L, D) -> plot is flattened and kept free of buildings
 LANDMARKS = [
-    ("somoni", "Памятник Исмоили Сомони и площадь Дусти", -40.0, -2440.0, 0.0, (150.0, 120.0)),
-    ("rudaki_park", "Парк Рудаки", 140.0, -2700.0, 0.0, (220.0, 340.0)),
+    ("somoni", "Памятник Исмоили Сомони и площадь Дусти", -175.0, -2475.0, 0.0, (150.0, 120.0)),
+    ("rudaki_park", "Парк Рудаки", 150.0, -2655.0, 0.0, (220.0, 230.0)),
     ("museum", "Национальный музей", 230.0, -3380.0, 0.0, (160.0, 90.0)),
     ("library", "Национальная библиотека", -250.0, -3380.0, 0.0, (150.0, 90.0)),
     ("flag", "Парк Национального флага", 120.0, -3780.0, 0.0, (240.0, 300.0)),
@@ -102,6 +102,14 @@ def build(roads, H, H_at, F):
     # ---------------------------------------------------------------- landmarks, fuel, signs, km posts
     landmarks = []
     for (lid, nm, x, z, yaw, (L, D)) in LANDMARKS:
+        # a landmark's plaza must never cover a road
+        cs, sn = math.cos(yaw), math.sin(yaw)
+        for u in np.linspace(-L / 2, L / 2, 9):
+            for v in np.linspace(-D / 2, D / 2, 9):
+                px = x + u * cs + v * sn; pz = z - u * sn + v * cs
+                d, i = rtree.query((px, pz))
+                if d < road_hw[i] + 1.0:
+                    raise SystemExit("landmark %s overlaps a road at (%.0f, %.0f)" % (lid, px, pz))
         landmarks.append({"id": lid, "name": nm, "x": x, "z": z, "yaw": yaw, "L": L, "D": D, "y": round(float(H_at([x], [z])[0]), 2)})
     fuel = []
     by_id = {r["id"]: r for r in roads}
@@ -237,14 +245,14 @@ def village(add, free, roads, px, pz, rad, town=False):
                 if town and RNG.random() < 0.25:
                     kind, L, D, floors = "shop" if RNG.random() < 0.5 else "brick5", float(RNG.uniform(18, 30)), 12.0, int(RNG.choice([2, 3]))
                 facing = yaw + (math.pi / 2 if side > 0 else -math.pi / 2)
-                if free(x, z, L, D, facing, 3.0):
+                if free(x, z, L + (8 if kind == "house" else 0), D + (30 if kind == "house" else 0), facing, 3.0):
                     add(kind, x, z, facing + math.pi, L, D, floors)
                     n0 += 1
                 # second row
                 if RNG.random() < 0.55:
                     off2 = off + 30.0
                     x2 = p[0] + nx * off2 * side; z2 = p[1] + nz * off2 * side
-                    if free(x2, z2, L, D, facing, 3.0):
+                    if free(x2, z2, L + 8, D + 30, facing, 3.0):
                         add("house", x2, z2, facing + math.pi, float(RNG.uniform(10, 15)), float(RNG.uniform(8, 10)), int(RNG.choice([1, 1, 2])))
 
 
@@ -275,7 +283,7 @@ def roadside(add, free, r, every):
         yaw = math.atan2(dx, dz) + (math.pi / 2 if side > 0 else -math.pi / 2)
         kind = RNG.choice(["house", "house", "shop", "cottage"])
         L, D = (20.0, 12.0) if kind == "shop" else (float(RNG.uniform(10, 15)), 9.0)
-        if free(x, z, L, D, yaw, 3.0):
+        if free(x, z, L + 8, D + 30, yaw, 3.0):
             add(kind, x, z, yaw + math.pi, L, D, 1 if kind != "house" else int(RNG.choice([1, 2])))
 
 
@@ -395,7 +403,7 @@ def rivers(H_at, H):
 
 
 # -------------------------------------------------------------------- world map
-def write_map(W, H, splat, biome, road_mask, path, px=2048):
+def write_map(W, H, splat, biome, road_mask, path, px=4096):
     s = H.shape[0]
     rock, snow, earth, sand = [splat[..., i] for i in range(4)]
     gx = np.gradient(H, T.STEP, axis=1); gz = np.gradient(H, T.STEP, axis=0)

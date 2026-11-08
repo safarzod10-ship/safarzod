@@ -20,6 +20,12 @@ func _ready() -> void:
 	_mat = ShaderMaterial.new()
 	_mat.shader = load("res://assets/shaders/minimap.gdshader")
 	_mat.set_shader_parameter("map_tex", load("res://assets/ui/minimap.png"))
+	if ResourceLoader.exists("res://assets/ui/world_map.png") and WorldData.get_instance().ok:
+		var wd := WorldData.get_instance()
+		_mat.set_shader_parameter("world_tex", load("res://assets/ui/world_map.png"))
+		_mat.set_shader_parameter("world_rect", Vector4(wd.origin.x, wd.origin.y, wd.size, wd.size))
+		_mat.set_shader_parameter("seam_z", wd.seam_z)
+		_mat.set_shader_parameter("has_world", true)
 	_map = ColorRect.new()
 	_map.material = _mat
 	_map.mouse_filter = Control.MOUSE_FILTER_IGNORE

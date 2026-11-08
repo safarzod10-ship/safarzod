@@ -67,6 +67,10 @@ func _build() -> void:
 		add_child(cam)
 	var menu: CanvasLayer = preload("res://scripts/ui/game_menu.gd").new()
 	add_child(menu)
+	if WorldData.get_instance().ok:
+		var wm := WorldMapScreen.new()
+		wm.name = "WorldMap"
+		add_child(wm)
 	var map_layer := CanvasLayer.new()
 	map_layer.name = "MinimapLayer"
 	map_layer.layer = 15

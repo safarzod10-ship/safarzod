@@ -31,6 +31,8 @@ var _sign_font: Font
 var ready_count := 0
 var _landmarks: Dictionary = {}   ## id -> PackedScene path
 var enabled := true
+var _props := {}                  ## prop id -> {"lod0": Mesh, "lod1": Mesh, "end": float}
+var lights: LightPool             ## night lamps of the loaded sectors
 
 
 func _ready() -> void:
@@ -42,6 +44,10 @@ func _ready() -> void:
 	builder = WorldSectorBuilder.new(wd)
 	_make_materials()
 	_load_veg()
+	_load_props()
+	lights = LightPool.new()
+	lights.name = "WorldLights"
+	add_child(lights)
 	_sign_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
 	_build_far()
 	_build_lakes()
@@ -113,6 +119,54 @@ func _load_veg() -> void:
 			if p != "" and ResourceLoader.exists(p):
 				d[k] = load(p)
 		_veg[e["id"]] = d
+
+
+func _load_props() -> void:
+	var cat: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/props_catalog.json"))
+	for e in (cat as Dictionary).get("props", []):
+		var m0 := str(e.get("mesh", ""))
+		if m0 == "" or not ResourceLoader.exists(m0):
+			continue
+		var d := {"lod0": load(m0), "end": float(e.get("visibility_end", 120.0))}
+		var m1 := str(e.get("mesh_lod1", ""))
+		if m1 != "" and ResourceLoader.exists(m1):
+			d["lod1"] = load(m1)
+		_props[e["id"]] = d
+
+
+func _place_props(node: Node3D, props: Dictionary) -> void:
+	for id in props:
+		var meta: Dictionary = _props.get(id, {})
+		if meta.is_empty():
+			continue
+		var xs: Array = props[id]
+		var chain := [["lod0", 0.0, float(meta["end"]) * (0.4 if meta.has("lod1") else 1.0)]]
+		if meta.has("lod1"):
+			chain.append(["lod1", float(meta["end"]) * 0.4, float(meta["end"]) * 1.6])
+		for c in chain:
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = meta[c[0]]
+			mm.instance_count = xs.size()
+			for i in xs.size():
+				mm.set_instance_transform(i, xs[i])
+			var mmi := MultiMeshInstance3D.new()
+			mmi.multimesh = mm
+			mmi.visibility_range_begin = c[1]
+			mmi.visibility_range_end = c[2]
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			node.add_child(mmi)
+
+
+func _refresh_lights() -> void:
+	var pts := PackedVector3Array()
+	var kinds := PackedByteArray()
+	for s in sectors:
+		for q in sectors[s].get("lamps", []):
+			pts.append(q)
+			kinds.append(0)
+	lights.points = pts
+	lights.kinds = kinds
 
 
 # ------------------------------------------------------------------------------------------ far mesh
@@ -335,6 +389,7 @@ func _process(_delta: float) -> void:
 			if not want.has(s):
 				(sectors[s]["node"] as Node).queue_free()
 				sectors.erase(s)
+				_refresh_lights()
 		var x0 := wd.origin.x + (cam_sc.x - NEAR) * SECTOR
 		var z0 := wd.origin.y + (cam_sc.y - NEAR) * SECTOR
 		var x1 := x0 + (2 * NEAR + 1) * SECTOR
@@ -422,11 +477,22 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 		mi.mesh = m
 		mi.material_override = mats["roof"] if k == "roof" else mats["wall"]
 		node.add_child(mi)
+	var ov: PackedVector3Array = bd["occ_v"]
+	if not ov.is_empty():
+		var occ := ArrayOccluder3D.new()
+		occ.set_arrays(ov, bd["occ_i"])
+		var oi := OccluderInstance3D.new()
+		oi.name = "Occluders"
+		oi.occluder = occ
+		node.add_child(oi)
 	_trees(node, res["trees"], lod)
-	_items(node, res["items"], lod, rd["lights"])
+	_items(node, res["items"], lod)
+	_place_props(node, rd["props"])
 	sectors[s] = {"node": node, "lod": lod, "col": false, "res_hm": res.get("hm", PackedFloat32Array()),
-		"road_col": rd["col"], "boxes": bd["boxes"],
+		"faces": res.get("terrain_faces", PackedVector3Array()),
+		"road_col": rd["col"], "boxes": bd["boxes"] + rd["pboxes"], "lamps": rd["lights"],
 		"x0": wd.origin.x + s.x * SECTOR, "z0": wd.origin.y + s.y * SECTOR}
+	_refresh_lights()
 
 
 func _set_collision(d: Dictionary, on: bool) -> void:
@@ -442,7 +508,19 @@ func _set_collision(d: Dictionary, on: bool) -> void:
 	holder.name = "Collision"
 	node.add_child(holder)
 	var hm: PackedFloat32Array = d["res_hm"]
-	if not hm.is_empty():
+	var tf: PackedVector3Array = d.get("faces", PackedVector3Array())
+	if not tf.is_empty():
+		# sector with tunnel portals: terrain collision with holes (same triangles as the mesh)
+		var tb0 := StaticBody3D.new()
+		tb0.name = "WorldTerrain"
+		holder.add_child(tb0)
+		var cps0 := ConcavePolygonShape3D.new()
+		cps0.backface_collision = true
+		cps0.set_faces(tf)
+		var cs0 := CollisionShape3D.new()
+		cs0.shape = cps0
+		tb0.add_child(cs0)
+	elif not hm.is_empty():
 		var tb := StaticBody3D.new()
 		tb.name = "WorldTerrain"
 		holder.add_child(tb)
@@ -542,7 +620,7 @@ func _cells(node: Node3D, mesh: Mesh, xs: Array, r0: float, r1: float) -> void:
 		node.add_child(mmi)
 
 
-func _items(node: Node3D, items: Array, lod: int, lights: Array) -> void:
+func _items(node: Node3D, items: Array, lod: int) -> void:
 	for it in items:
 		var kind: String = it[0]
 		var d: Dictionary = it[1]
@@ -557,9 +635,6 @@ func _items(node: Node3D, items: Array, lod: int, lights: Array) -> void:
 					_fuel(node, p, float(d["yaw"]))
 			"landmark":
 				WorldLandmarks.build(node, d, lod)
-	if lod == 0:
-		for q in lights:
-			_street_lamp(node, q)
 
 
 func _sign(node: Node3D, p: Vector3, yaw: float, text: String, town: bool, end: bool) -> void:

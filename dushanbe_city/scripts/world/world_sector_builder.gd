@@ -18,6 +18,7 @@ var sector_segs := {}                ## Vector2i -> Array of [road index, k0, k1
 var sector_buildings := {}           ## Vector2i -> Array of building indices
 var sector_items := {}               ## Vector2i -> Array of [kind, dict]
 var bridge_mask: Array = []          ## per road: PackedByteArray (1 bridge, 2 tunnel) per point
+var _hash := {}                      ## Vector2i (16 m cell) -> Array of [road index, point index]
 
 
 func _init(data: WorldData) -> void:
@@ -71,6 +72,11 @@ func _prepare_roads() -> void:
 				acc += Vector2(P[k].x - P[k - 1].x, P[k].z - P[k - 1].z).length()
 			S.append(acc)
 		road_frames.append({"p": P, "r": R, "s": S})
+		for k in P.size():
+			var hc := Vector2i(floori(P[k].x / 16.0), floori(P[k].z / 16.0))
+			if not _hash.has(hc):
+				_hash[hc] = []
+			_hash[hc].append([ri, k])
 		var mask := PackedByteArray()
 		mask.resize(P.size())
 		for br in r.get("bridges", []):
@@ -103,6 +109,17 @@ func build(sc: Vector2i, lod: int) -> Dictionary:
 	out["terrain"] = _terrain(x0, z0, 1 if lod == 0 else 2)
 	if lod == 0:
 		out["hm"] = _heightmap(x0, z0)
+		if int(out["terrain"]["holes"]) > 0:
+			# tunnel portals in this sector: trimesh collision of the terrain with the same holes
+			var T: Dictionary = out["terrain"]
+			var faces := PackedVector3Array()
+			var Vt: PackedVector3Array = T["v"]
+			var It: PackedInt32Array = T["i"]
+			var cells := int(SECTOR / wd.step)
+			var main_tris := cells * cells * 2 - int(T["holes"])
+			for q in main_tris * 3:
+				faces.append(Vt[It[q]])
+			out["terrain_faces"] = faces
 	out["roads"] = _roads(sc, lod)
 	out["water"] = _water(x0, z0)
 	out["buildings"] = _buildings(sc, lod)
@@ -132,10 +149,18 @@ func _terrain(x0: float, z0: float, stride: int) -> Dictionary:
 			var hz := wd.h_grid(gi, gj + stride) - wd.h_grid(gi, gj - stride)
 			N[j * nv + i] = Vector3(-hx, 2.0 * st, -hz).normalized()
 	var I := PackedInt32Array()
+	var holes := 0
+	var tun_near := _tunnels_near(x0, z0)
 	for j in cells:
 		for i in cells:
 			var a := j * nv + i
-			I.append_array([a, a + 1, a + nv, a + 1, a + nv + 1, a + nv])
+			for tri in [[a, a + 1, a + nv], [a + 1, a + nv + 1, a + nv]]:
+				if not tun_near.is_empty():
+					var cc: Vector3 = (V[tri[0]] + V[tri[1]] + V[tri[2]]) / 3.0
+					if _cuts_tunnel(cc, V[tri[0]], V[tri[1]], V[tri[2]], tun_near):
+						holes += 1
+						continue
+				I.append_array(tri)
 	# skirts (hide cracks between sectors of different resolution)
 	var edges := [[], [], [], []]
 	for i in nv:
@@ -156,7 +181,34 @@ func _terrain(x0: float, z0: float, stride: int) -> Dictionary:
 			var d := base + q + 1
 			# both windings (skirts seen from either side)
 			I.append_array([a, b, c, b, d, c, a, c, b, b, c, d])
-	return {"v": V, "n": N, "i": I}
+	return {"v": V, "n": N, "i": I, "holes": holes}
+
+
+## tunnel tube samples near a sector: [position (road surface), half width + walkways]
+func _tunnels_near(x0: float, z0: float) -> Array:
+	var out := []
+	var rect := Rect2(x0 - 40, z0 - 40, SECTOR + 80, SECTOR + 80)
+	for ri in wd.roads.size():
+		var mask: PackedByteArray = bridge_mask[ri]
+		var P: PackedVector3Array = road_frames[ri]["p"]
+		for k in P.size():
+			if mask[k] == 2 and rect.has_point(Vector2(P[k].x, P[k].z)):
+				out.append([P[k], float(wd.roads[ri]["w"]) * 0.5 + 2.5])
+	return out
+
+
+## does a terrain triangle cut through a tunnel tube (between the road and the vault)?
+func _cuts_tunnel(cc: Vector3, a: Vector3, b: Vector3, c: Vector3, tun: Array) -> bool:
+	var lo := minf(minf(a.y, b.y), c.y)
+	var hi := maxf(maxf(a.y, b.y), c.y)
+	for t in tun:
+		var p: Vector3 = t[0]
+		var r: float = t[1] + 6.0                    # triangle size margin (8 m grid)
+		if absf(cc.x - p.x) > r or absf(cc.z - p.z) > r:
+			continue
+		if Vector2(cc.x - p.x, cc.z - p.z).length() < r and hi > p.y - 1.0 and lo < p.y + 7.5:
+			return true
+	return false
 
 
 func _heightmap(x0: float, z0: float) -> PackedFloat32Array:
@@ -180,6 +232,8 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 	var lamps := _Mesh.new()         # tunnel light strips (emissive)
 	var col := PackedVector3Array()
 	var lights: Array = []
+	var props := {}                  ## prop id -> Array of Transform3D
+	var pboxes: Array = []           ## collision boxes of the props
 	for seg in sector_segs.get(sc, []):
 		var ri: int = seg[0]
 		var k0: int = seg[1]
@@ -205,14 +259,24 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 			var ar := a + ra * hw
 			var bl := b - rb * hw
 			var br := b + rb * hw
-			# carriageway: UV.x lateral (m), UV.y distance; UV2 = (half width, lanes)
+			# carriageway: UV.x lateral (m), UV.y distance; UV2 = (half width, lanes); not where a more
+			# important road's surface already is (junctions)
+			# junctions: where this surface lies on a more important road it is tucked 4 cm under it
+			# (continuous, no gap, no z-fighting, no step)
+			al = _tuck(al, ri)
+			ar = _tuck(ar, ri)
+			bl = _tuck(bl, ri)
+			br = _tuck(br, ri)
 			m.quad(al, ar, br, bl, Vector2(-hw, S[k]), Vector2(hw, S[k]), Vector2(hw, S[k + 1]), Vector2(-hw, S[k + 1]), Vector2(hw, lanes))
 			col.append_array([al, ar, br, al, br, bl])
 			var bridge: bool = mask[k] == 1 or mask[k + 1] == 1
 			var tunnel: bool = mask[k] == 2 or mask[k + 1] == 2
 			if walks and not bridge and not tunnel:
-				# sidewalks 3.5 m (+0.15 m) with curbs on both sides
+				# sidewalks 3.5 m (+0.15 m) with curbs on both sides (not across other roads)
 				for sgn: float in [-1.0, 1.0]:
+					var mid_w := (a + b) * 0.5 + (ra + rb) * 0.5 * (hw + 1.75) * sgn
+					if _on_other_road(mid_w, ri, 2.5):
+						continue
 					var a0 := a + ra * hw * sgn
 					var b0 := b + rb * hw * sgn
 					var a1 := a + ra * (hw + 3.5) * sgn + Vector3(0, 0.15, 0)
@@ -227,16 +291,42 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 						side.quad_flat(b0, b0u, a0u, a0)
 						side.quad_flat(b0u, b1, a1, a0u)
 						col.append_array([b0u, b1, a1, b0u, a1, a0u])
-				if int(S[k] / 30.0) != int(S[k + 1] / 30.0) and r["cls"] != "street":
-					lights.append(a + ra * (hw + 1.0) + Vector3(0, 0.15, 0))
-					lights.append(a - ra * (hw + 1.0) + Vector3(0, 0.15, 0))
-			else:
+				if int(S[k] / 32.0) != int(S[k + 1] / 32.0):
+					for sgn2: float in [-1.0, 1.0]:
+						if r["cls"] == "street" and sgn2 < 0:
+							continue
+						var lp := a + ra * (hw + 0.8) * sgn2 + Vector3(0, 0.15, 0)
+						if not _on_other_road(lp, ri, 2.0):
+							lights.append(lp + Vector3(0, 8.6, 0) - ra * sgn2 * 2.0)
+							# lamp arm over the carriageway
+							_prop(props, "light_street_single", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI)
+							pboxes.append([lp + Vector3(0, 4.5, 0), Vector3(0.26, 9.0, 0.26), 0.0])
+				# benches / bins on the sidewalks now and then
+				if int(S[k] / 70.0) != int(S[k + 1] / 70.0) and r["cls"] != "highway":
+					var bp := a + ra * (hw + 2.9) + Vector3(0, 0.15, 0)
+					if not _on_other_road(bp, ri, 2.0):
+						_prop(props, "bench_park_soviet" if int(S[k] / 70.0) % 2 == 0 else "container_trash_green", bp, atan2(ra.x, ra.z))
+			elif not tunnel and not bridge and r["cls"] in ["road", "highway", "mountain", "lane"]:
+				# country road: concrete utility poles on one side, bus stops in villages
+				if int(S[k] / 45.0) != int(S[k + 1] / 45.0):
+					var pp := a + ra * (hw + 3.2)
+					pp.y = wd.height_at(pp.x, pp.z)
+					if not _on_other_road(pp, ri, 2.0):
+						_prop(props, "utility_pole_concrete", pp, atan2(ra.x, ra.z))
+						pboxes.append([pp + Vector3(0, 4.8, 0), Vector3(0.26, 9.6, 0.26), 0.0])
+				if int(S[k] / 260.0) != int(S[k + 1] / 260.0) and not wd.place_at(a.x, a.z).is_empty():
+					var bs := a + ra * (hw + 3.0)
+					bs.y = maxf(wd.height_at(bs.x, bs.z), a.y)
+					if not _on_other_road(bs, ri, 3.0):
+						_prop(props, "bus_stop_shelter", bs, atan2(ra.x, ra.z) + PI)
+						pboxes.append([bs + Vector3(0, 1.3, 0), Vector3(4.9, 2.6, 1.7), atan2(ra.x, ra.z)])
+			if not walks or bridge or tunnel:
 				# skirts down from the edges (hide terrain seams)
 				var d := Vector3(0, -0.7 if not bridge else -1.2, 0)
 				(conc if bridge else m).quad_flat(ar, ar + d + ra * 0.6, br + d + rb * 0.6, br)
 				(conc if bridge else m).quad_flat(bl, bl + d - rb * 0.6, al + d - ra * 0.6, al)
 			if bridge:
-				_bridge_segment(conc, col, a, b, ra, rb, hw, k, S)
+				_bridge_segment(conc, col, a, b, ra, rb, hw, k, S, ri)
 			if tunnel and mask[k] == 2 and mask[k + 1] == 2:
 				_tunnel_segment(conc, lamps, col, a, b, ra, rb, hw)
 			# tunnel portals at the tunnel ends
@@ -245,14 +335,82 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 			if mask[k + 1] == 2 and k + 2 < P.size() and mask[k + 2] != 2:
 				_portal(conc, col, b, rb, hw, (a - b).normalized())
 	return {"asphalt": asph.arrays(), "dirt": dirt.arrays(), "side": side.arrays(), "conc": conc.arrays(),
-			"lamps": lamps.arrays(), "col": col, "lights": lights}
+			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes}
+
+
+static func _prop(d: Dictionary, id: String, p: Vector3, yaw: float) -> void:
+	if not d.has(id):
+		d[id] = []
+	d[id].append(Transform3D(Basis(Vector3.UP, yaw), p))
+
+
+const PRIO := {"avenue": 0, "highway": 1, "street": 2, "road": 2, "mountain": 2, "lane": 3, "dirt": 4}
+
+
+## does p lie on the carriageway of a MORE IMPORTANT road at about the same level? Then the minor
+## road's surface stops there (junctions: one surface, no overlapping decks / steps)
+func _on_major_road(p: Vector3, ri: int) -> bool:
+	var my: int = PRIO.get(wd.roads[ri]["cls"], 2)
+	var c := Vector2i(floori(p.x / 16.0), floori(p.z / 16.0))
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			for e in _hash.get(c + Vector2i(di, dj), []):
+				var oi: int = e[0]
+				if oi == ri:
+					continue
+				var op: int = PRIO.get(wd.roads[oi]["cls"], 2)
+				if op > my or (op == my and oi > ri):
+					continue
+				var q: Vector3 = (road_frames[oi]["p"] as PackedVector3Array)[e[1]]
+				var hw := float(wd.roads[oi]["w"]) * 0.5
+				if absf(q.y - p.y) < 2.5 and Vector2(q.x - p.x, q.z - p.z).length() < hw - 0.3:
+					return true
+	return false
+
+
+func _tuck(v: Vector3, ri: int) -> Vector3:
+	var my: int = PRIO.get(wd.roads[ri]["cls"], 2)
+	var c := Vector2i(floori(v.x / 16.0), floori(v.z / 16.0))
+	var best := INF
+	var bh := v.y
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			for e in _hash.get(c + Vector2i(di, dj), []):
+				var oi: int = e[0]
+				if oi == ri:
+					continue
+				var op: int = PRIO.get(wd.roads[oi]["cls"], 2)
+				if op > my or (op == my and oi > ri):
+					continue
+				var q: Vector3 = (road_frames[oi]["p"] as PackedVector3Array)[e[1]]
+				var d := Vector2(q.x - v.x, q.z - v.z).length()
+				if absf(q.y - v.y) < 2.5 and d < float(wd.roads[oi]["w"]) * 0.5 + 0.5 and d < best:
+					best = d
+					bh = q.y - 0.04
+	return Vector3(v.x, bh, v.z) if best < INF else v
+
+
+## is p on the carriageway (+ margin) of ANOTHER road at about the same level? (junction areas:
+## no sidewalks / curbs / parapets / lamps there)
+func _on_other_road(p: Vector3, ri: int, margin: float) -> bool:
+	var c := Vector2i(floori(p.x / 16.0), floori(p.z / 16.0))
+	for dj in range(-2, 3):
+		for di in range(-2, 3):
+			for e in _hash.get(c + Vector2i(di, dj), []):
+				if e[0] == ri:
+					continue
+				var q: Vector3 = (road_frames[e[0]]["p"] as PackedVector3Array)[e[1]]
+				var hw := float(wd.roads[e[0]]["w"]) * 0.5 + margin
+				if absf(q.y - p.y) < 3.0 and Vector2(q.x - p.x, q.z - p.z).length() < hw:
+					return true
+	return false
 
 
 func _in_city(p: Vector3) -> bool:
 	return absf(p.x) < 2000.0 and p.z < -950.0 and p.z > -4800.0
 
 
-func _bridge_segment(c: _Mesh, col: PackedVector3Array, a: Vector3, b: Vector3, ra: Vector3, rb: Vector3, hw: float, k: int, S: PackedFloat32Array) -> void:
+func _bridge_segment(c: _Mesh, col: PackedVector3Array, a: Vector3, b: Vector3, ra: Vector3, rb: Vector3, hw: float, k: int, S: PackedFloat32Array, ri: int) -> void:
 	var w := hw + 0.6
 	var up := Vector3(0, 0.95, 0)
 	var dn := Vector3(0, -1.3, 0)
@@ -260,6 +418,8 @@ func _bridge_segment(c: _Mesh, col: PackedVector3Array, a: Vector3, b: Vector3, 
 	for sgn: float in [-1.0, 1.0]:
 		var ao := a + ra * w * sgn
 		var bo := b + rb * w * sgn
+		if _on_other_road((ao + bo) * 0.5, ri, 3.0):
+			continue                               # junction on the bridge: no parapet across the other road
 		var ai := a + ra * (w - 0.3) * sgn
 		var bi := b + rb * (w - 0.3) * sgn
 		if sgn > 0:
@@ -287,8 +447,8 @@ func _bridge_segment(c: _Mesh, col: PackedVector3Array, a: Vector3, b: Vector3, 
 
 
 func _tunnel_segment(c: _Mesh, lamps: _Mesh, col: PackedVector3Array, a: Vector3, b: Vector3, ra: Vector3, rb: Vector3, hw: float) -> void:
-	# arched shell: walls 1 m outside the carriageway, 5.2 m high, 5-segment vault
-	var w := hw + 1.0
+	# arched shell: walls 2 m outside the carriageway (service walkways), vault 6.4 m high
+	var w := hw + 2.0
 	var prof: Array[Vector2] = [Vector2(-w, -0.3), Vector2(-w, 4.0), Vector2(-w * 0.75, 5.6), Vector2(-w * 0.3, 6.4),
 		Vector2(w * 0.3, 6.4), Vector2(w * 0.75, 5.6), Vector2(w, 4.0), Vector2(w, -0.3)]
 	for q in prof.size() - 1:
@@ -310,7 +470,7 @@ func _tunnel_segment(c: _Mesh, lamps: _Mesh, col: PackedVector3Array, a: Vector3
 
 func _portal(c: _Mesh, col: PackedVector3Array, p: Vector3, r: Vector3, hw: float, inward: Vector3) -> void:
 	# concrete portal frame: two pillars and a lintel, 1.2 m deep
-	var w := hw + 1.0
+	var w := hw + 2.0
 	var d := inward * 1.2
 	for sgn: float in [-1.0, 1.0]:
 		var o := p + r * (w + 0.6) * sgn
@@ -358,6 +518,8 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 	var roof := _Mesh.new()
 	var walls := _Mesh.new()
 	var boxes: Array = []
+	var occ_v := PackedVector3Array()
+	var occ_i := PackedInt32Array()
 	for bi in sector_buildings.get(sc, []):
 		var b: Array = wd.buildings[bi]
 		var kind: String = b[0]
@@ -438,12 +600,21 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 				var w2 := w1 + Zv * yd
 				var w3 := w0 + Zv * yd
 				walls.tint = wc
-				walls.wall(w1, w2, y, 2.2)
-				walls.wall(w2, w3, y, 2.2)
-				walls.wall(w3, w0, y, 2.2)
-				boxes.append([(w1 + w2) * 0.5 + Vector3(0, 1.1, 0), Vector3(0.3, 2.2, yd), yaw])
-				boxes.append([(w3 + w0) * 0.5 + Vector3(0, 1.1, 0), Vector3(0.3, 2.2, yd), yaw])
-				boxes.append([(w2 + w3) * 0.5 + Vector3(0, 1.1, 0), Vector3(L + 6, 2.2, 0.3), yaw])
+				# yard walls never stand on a road (checked along each wall)
+				for seg2 in [[w1, w2, Vector3(0.3, 2.2, yd)], [w3, w0, Vector3(0.3, 2.2, yd)], [w2, w3, Vector3(L + 6, 2.2, 0.3)]]:
+					var pa: Vector3 = seg2[0]
+					var pb: Vector3 = seg2[1]
+					var blocked := false
+					for q in 5:
+						var pq := pa.lerp(pb, q / 4.0)
+						pq.y = y
+						if _on_other_road(pq, -1, 2.0):
+							blocked = true
+							break
+					if blocked:
+						continue
+					walls.wall(pa, pb, y, 2.2)
+					boxes.append([(pa + pb) * 0.5 + Vector3(0, 1.1, 0), seg2[2], yaw])
 		else:
 			roof.tint = Color(0.55, 0.54, 0.52)
 			var up := Vector3(0, top, 0)
@@ -458,7 +629,17 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 				fac.facade(Vector3(pts[q + 1].x, top, pts[q + 1].z) - (pts[q + 1] - c).normalized() * 0.25 * Vector3(1, 0, 1),
 					Vector3(pts[q].x, top, pts[q].z) - (pts[q] - c).normalized() * 0.25 * Vector3(1, 0, 1), 0.6, 0.0, 0.0, 0.0, 0.0, par, cu2)
 		boxes.append([c + Vector3(0, H * 0.5, 0), Vector3(L, H, D), yaw])
-	return {"facade": fac.arrays(true), "roof": roof.arrays(), "walls": walls.arrays(), "boxes": boxes}
+		if H > 10.0 and L > 18.0:
+			# occluder: the building box inset by 0.5 m (occlusion culling of what is behind it)
+			var o0 := occ_v.size()
+			var hx := X * (L * 0.5 - 0.5)
+			var hz := Zv * (D * 0.5 - 0.5)
+			for yy in [y, y + H - 0.5]:
+				for corner in [-hx - hz, hx - hz, hx + hz, -hx + hz]:
+					occ_v.append(Vector3(c.x, yy, c.z) + corner)
+			for f in [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7]]:
+				occ_i.append_array([o0 + f[0], o0 + f[1], o0 + f[2], o0 + f[0], o0 + f[2], o0 + f[3]])
+	return {"facade": fac.arrays(true), "roof": roof.arrays(), "walls": walls.arrays(), "boxes": boxes, "occ_v": occ_v, "occ_i": occ_i}
 
 
 # ------------------------------------------------------------------------------------------ trees
