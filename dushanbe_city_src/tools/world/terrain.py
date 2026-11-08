@@ -198,15 +198,21 @@ def heights(X, Z):
     land = land * (1 - lw) + np.minimum(land, bowl) * lw
 
     # ---- rivers: carve beds
-    def carve(h, pts, bed_fn, width, depth):
+    def carve(h, pts, bed_fn, width, depth, reach=None):
         d, a = dist_poly(X, Z, pts)
         P = np.asarray(pts)
         sl = np.concatenate([[0], np.cumsum(np.hypot(np.diff(P[:, 0]), np.diff(P[:, 1])))])
         bz = np.interp(a, sl, P[:, 1])
         bed = bed_fn(bz, a)
-        prof = bed + np.where(d < width, -depth * (1 - (d / width) ** 2), (d - width) * 0.35)
-        return np.minimum(h, np.where(d < width * 6, prof, 1e9)), d
-    land, d_var = carve(land, VARZOB, lambda bz, a: bed_height(bz), 16.0, 2.6)
+        # V-shaped valley: gentle banks, then the slope steepens to ~45 deg (rock) so the bed meets
+        # any surrounding height without a vertical wall (no reach limit)
+        e = np.maximum(d - width, 0.0)
+        prof = bed + np.where(d < width, -depth * (1 - (d / width) ** 2),
+                              e * 0.35 + np.maximum(e - 30.0, 0.0) * 0.65)
+        if reach is not None:          # the Varzob: its valley walls come from the gorge shape above
+            prof = np.where(d < reach, bed + np.where(d < width, -depth * (1 - (d / width) ** 2), (d - width) * 0.35), 1e9)
+        return np.minimum(h, prof), d
+    land, d_var = carve(land, VARZOB, lambda bz, a: bed_height(bz), 16.0, 2.6, reach=96.0)
 
     def gis_bed(bz, a):
         return np.interp(bz, [-7350, -6600, -5800, -4900, -3000, -1400], [540, 300, 120, 60, 25, 12])

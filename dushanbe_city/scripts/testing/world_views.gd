@@ -45,7 +45,7 @@ func _ready() -> void:
 	var m34 := _road("m34")
 	var br: Array = m34["bridges"][0] if not (m34["bridges"] as Array).is_empty() else [600, 620]
 	var bp := _pt(m34, int((br[0] + br[1]) / 2))
-	await _look("varzob_bridge", bp + Vector3(45, 18, 35), bp)
+	await _look("varzob_bridge", bp + Vector3(80, 40, 70), bp)
 	await _look("varzob_gorge", _pt(m34, 1500) + Vector3(0, 60, 120), _pt(m34, 1900))
 	# ---- switchbacks (lake descent) from above, tunnel portal, pass, lake
 	var ld := _road("lake_down")
@@ -63,7 +63,21 @@ func _ready() -> void:
 	await _look("village", Vector3(4120, 0, -2200), Vector3(4250, 0, -2350), 25.0, 0.0)
 	var wf: Dictionary = wd.waterfalls[0]
 	var wfp := Vector3(wf["x"], float(wf["bottom"]) + 10.0, wf["z"])
-	await _look("waterfall", wfp + Vector3(-55, 6, 35), wfp)
+	# camera in the gorge, downstream of the fall, looking upstream at it
+	var cp := wfp
+	for rv in wd.rivers:
+		if str(rv.get("id", "")) == "trib":
+			var rp: Array = rv["pts"]
+			var k := 0
+			var bd := INF
+			for i in rp.size():
+				var d := Vector2(rp[i][0] - wfp.x, rp[i][2] - wfp.z).length()
+				if d < bd:
+					bd = d
+					k = i
+			var q: Array = rp[mini(k + 12, rp.size() - 1)]
+			cp = Vector3(q[0], q[1] + 14.0, q[2])
+	await _look("waterfall", cp, wfp)
 	# ---- night city, rain in the mountains
 	_hour(21.5)
 	await _look("night_city", Vector3(-28, 0, -2150), Vector3(-40, 0, -2600), 8.0, 8.0)

@@ -264,6 +264,8 @@ func _drive() -> void:
 		var g := wd.height_at(p.x, p.z) if wd.contains(p.x, p.z) else (CityWorld.instance.terrain_height(p.x, p.z) if CityWorld.instance else -100.0)
 		if p.y < g - 2.5 and not _in_tunnel(p):
 			under += 1
+			if under <= 6:
+				lines.append("    below the terrain at (%.0f, %.1f, %.0f): ground %.1f, leg %s" % [p.x, p.y, p.z, g, legs[leg][0]])
 		if wd.contains(p.x, p.z) and not ow.is_ready_at(p):
 			no_col += 1
 		visited[_region(p)] = true
