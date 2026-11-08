@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const H = 96;
+const W = 132;
 const STRIP = 44;
 const TARGET = 38;
 
@@ -21,8 +21,8 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
 
   const byId = (id) => s.st?.prizes.find((p) => p.id === id);
 
-  function item(p) {
-    return `<div class="gw-item ${p.kind}" data-id="${p.id}">
+  function item(p, i) {
+    return `<div class="gw-item ${p.kind}" data-id="${p.id}" style="left:${-i * W}px">
       <div class="gw-art">${art(p)}</div>
       <div class="gw-name"><b>${p.name}</b><span>${p.kind === 'nft' ? 'NFT-подарок' : 'на баланс'}</span></div>
     </div>`;
@@ -39,15 +39,16 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
 
   function buildStrip(targetId) {
     const items = Array.from({ length: STRIP }, (_, i) => (i === TARGET && targetId ? byId(targetId) : filler()));
-    $('gw-strip').innerHTML = items.map(item).join('');
+    $('gw-strip').innerHTML = items.map((p, i) => item(p, i)).join('');
   }
 
-  const centerOffset = (index) => -(index * H) + ($('gw-reel').clientHeight / 2 - H / 2);
+  const base = () => $('gw-reel').clientWidth / 2 - W / 2;
+  const centerOffset = (index) => base() + index * W;
 
   function setOffset(y, animate) {
     const strip = $('gw-strip');
     strip.style.transition = animate ? 'transform 5.4s cubic-bezier(0.1, 0.6, 0.08, 1)' : 'none';
-    strip.style.transform = `translate3d(0, ${y}px, 0)`;
+    strip.style.transform = `translate3d(${y}px, 0, 0)`;
     s.offset = y;
   }
 
@@ -110,11 +111,11 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
   }
 
   function ticks(until) {
-    let last = Math.round(-s.offset / H);
+    let last = Math.round((s.offset - base()) / W);
     const strip = $('gw-strip');
     const step = () => {
       const m = new DOMMatrixReadOnly(getComputedStyle(strip).transform);
-      const idx = Math.round(-m.m42 / H);
+      const idx = Math.round((m.m41 - base()) / W);
       if (idx !== last) {
         last = idx;
         haptic.tap();
@@ -146,7 +147,7 @@ export function createGifts({ api, haptic, toast, onProfile, invite, onToggle = 
       buildStrip(res.prize);
       setOffset(centerOffset(2), false);
       void $('gw-strip').offsetHeight;
-      setOffset(centerOffset(TARGET) + (Math.random() - 0.5) * H * 0.5, true);
+      setOffset(centerOffset(TARGET) + (Math.random() - 0.5) * W * 0.5, true);
       haptic.impact('medium');
       ticks(performance.now() + 5400);
       setTimeout(() => {
