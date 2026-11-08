@@ -65,10 +65,10 @@ class Router:
                 gr = abs(H[nj, ni] - h0) / L
                 c = L
                 if gr > gmax:
-                    c += L * 400.0 * (gr - gmax)
+                    c += L * 3000.0 * (gr - gmax)            # steeper than the class: practically forbidden
                 c += L * 2.5 * gr + (L * 0.25 if dh else 0.0)
-                if Rv[nj, ni]:
-                    c += 60.0
+                if Rv[nj, ni] and not Rv[cj, ci]:
+                    c += 40.0                        # entering the river channel (a bridge / ford)
                 if TK[nj, ni]:
                     c *= 1.0                         # (no attraction to existing roads: no doubled corridors)
                 ng = g0 + c

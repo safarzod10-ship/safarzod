@@ -158,6 +158,14 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 	match str(d["id"]):
 		"somoni":
 			_box(root, body, "plaza", Vector3(0, 0.05, 0), Vector3(L, 0.3, D), true)
+			var mon := Node3D.new()
+			mon.name = "Monument"
+			mon.scale = Vector3.ONE * 1.6          # the real arch is ~40 m high
+			mon.position = Vector3(0, 0, -10)
+			root.add_child(mon)
+			root = mon
+			body = StaticBody3D.new()
+			mon.add_child(body)
 			for k in 3:                                          # stepped platform
 				_box(root, body, "marble", Vector3(0, 0.4 + k * 0.5, 18), Vector3(34 - k * 6, 0.5, 22 - k * 4))
 			_box(root, body, "stone", Vector3(0, 7.5, 18), Vector3(6, 12, 3.5))       # stele

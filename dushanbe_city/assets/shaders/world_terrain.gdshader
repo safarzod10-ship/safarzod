@@ -17,9 +17,9 @@ uniform sampler2D rock_alb : source_color, filter_linear_mipmap_anisotropic, rep
 uniform sampler2D rock_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D earth_alb : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D macro_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
-uniform vec3 grass_tint : source_color = vec3(0.78, 0.96, 0.66);
-uniform vec3 dry_tint : source_color = vec3(0.98, 0.93, 0.70);
-uniform vec3 alpine_tint : source_color = vec3(0.72, 0.80, 0.58);
+uniform vec3 grass_tint : source_color = vec3(0.62, 0.76, 0.50);
+uniform vec3 dry_tint : source_color = vec3(0.80, 0.76, 0.56);
+uniform vec3 alpine_tint : source_color = vec3(0.60, 0.66, 0.48);
 uniform bool is_far = false;
 uniform vec4 near_rect = vec4(0.0);      // x0, z0, x1, z1 of the loaded near square (far mesh only)
 uniform float far_drop = 0.0;
@@ -50,7 +50,7 @@ void fragment() {
 	vec2 p = wp.xz;
 	float dist = length(wp - CAMERA_POSITION_WORLD);
 	// far away: one fetch per layer at a coarse scale (less shimmer, cheaper)
-	float sc = dist > 600.0 ? 6.0 : 1.0;
+	float sc = dist > 600.0 ? 6.0 : (dist > 120.0 ? 2.5 : 1.0);
 	vec2 rock_uv = abs(wn.y) > 0.7 ? p / 7.0 : (abs(wn.x) > abs(wn.z) ? wp.zy : wp.xy) / 7.0;
 	vec3 g = gr > 0.003 ? texture(grass_alb, p / (3.0 * sc)).rgb : vec3(0.0);
 	vec3 r = rk > 0.003 ? texture(rock_alb, rock_uv / sc).rgb : vec3(0.0);
@@ -66,7 +66,10 @@ void fragment() {
 	float strata = 0.5 + 0.5 * sin(wp.y * 0.09 + texture(macro_tex, p * 0.0007).r * 9.0);
 	r *= mix(vec3(0.72, 0.64, 0.56), vec3(1.05, 1.0, 0.94), clamp(m * 0.8 + strata * 0.35, 0.0, 1.0));
 	vec3 alb = g * gr + r * rk + e * ea + s * sa + snow * sn;
-	alb *= 0.82 + 0.36 * m;
+	// patches of greener / drier ground at two scales (no uniform lawn look)
+	float patch = texture(macro_tex, p * 0.0045 + 0.37).r;
+	alb *= 0.74 + 0.5 * m * (0.6 + 0.4 * patch);
+	alb = mix(alb, alb * vec3(0.86, 1.0, 0.82), smoothstep(0.55, 0.8, patch) * gr * 0.6);
 	float rough = 0.93 - 0.35 * sn;
 	float wet = city_wetness * (1.0 - sn) * (0.4 + 0.6 * (rk + ea));
 	alb *= mix(1.0, 0.65, wet);

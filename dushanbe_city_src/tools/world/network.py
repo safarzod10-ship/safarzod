@@ -8,7 +8,7 @@ CLASSES = {
     "highway":  {"w": 14.0, "g": 0.07, "surf": "asphalt", "lanes": 4},
     "street":   {"w": 10.0, "g": 0.08, "surf": "asphalt", "lanes": 2},
     "road":     {"w": 8.0,  "g": 0.08, "surf": "asphalt", "lanes": 2},
-    "mountain": {"w": 7.5,  "g": 0.095, "surf": "asphalt", "lanes": 2},
+    "mountain": {"w": 7.5,  "g": 0.11, "surf": "asphalt", "lanes": 2},
     "lane":     {"w": 6.0,  "g": 0.10, "surf": "asphalt", "lanes": 1},
     "dirt":     {"w": 5.0,  "g": 0.12, "surf": "dirt", "lanes": 1},
 }

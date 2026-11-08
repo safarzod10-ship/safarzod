@@ -180,6 +180,8 @@ def heights(X, Z):
     low = np.maximum.reduce([ss(2900, 1900, np.abs(X) + nb) * ss(-5600, -4700, Z + nb),
                              ss(-1500, -2300, X + nb) * ss(-6400, -5500, Z - nb),
                              ss(1500, 2300, X - nb) * ss(-5900, -5000, Z + nb)])
+    # the mainland city itself (and its ring road) is a plain: no foothills inside x +-2350, z > -5000
+    low = np.maximum(low, ss(2700, 2350, np.abs(X)) * ss(-5350, -5000, Z))
     m_mask = m_mask * (1 - low)
     side = side * (1 - low)
     # Gissar valley stays open to the north-west as a high valley up to the lake

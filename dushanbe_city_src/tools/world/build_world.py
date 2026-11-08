@@ -63,7 +63,7 @@ def main():
         g = NW.CLASSES[cls]["g"]
         pts = []
         for a, b in zip(wps[:-1], wps[1:]):
-            seg = rt.route(a, b, g)
+            seg = rt.route(a, b, g, margin=1500.0 if cls == "mountain" else 900.0)
             pts += seg if not pts else seg[1:]
         # exact waypoints at the ends (junctions with other roads)
         pts[0] = wps[0]; pts[-1] = wps[-1]
@@ -91,7 +91,7 @@ def main():
         c = NW.CLASSES[r["cls"]]
         P = r["P"]
         dirt = c["surf"] == "dirt" or r["cls"] == "lane"
-        win = 120.0 if not r["routed"] else (16.0 if dirt else 60.0)
+        win = 120.0 if not r["routed"] else (16.0 if dirt else (45.0 if r["cls"] == "mountain" else 60.0))
         hp, h = R.profile(P, lambda xs, zs: H_at(xs, zs, H), c["g"] * (1.6 if dirt else 1.0), win=win)
         h_orig = H_at(P[:, 0], P[:, 1])
         # pin points lying on earlier (major) roads to their height
@@ -127,7 +127,7 @@ def main():
         wd = T_sample(water_d, P)
         r["H"] = hp
         r["water"] = wd < 18.0
-        r["bridges"], r["tunnels"] = R.structures(P, hp, h_orig, r["water"], allow_tunnels=not dirt, bridge_h=99.0 if dirt else (12.0 if r["cls"] in ("mountain", "road") else 6.0))
+        r["bridges"], r["tunnels"] = R.structures(P, hp, h_orig, r["water"], allow_tunnels=not dirt, bridge_h=99.0 if dirt else (20.0 if r["cls"] in ("mountain", "road") else 6.0))
         # city grid streets over the river are bridges at the river only (the basin is flat)
         for (a, b) in r["bridges"]:
             pass
@@ -153,8 +153,10 @@ def main():
     H = despike(H, rm0 > 0.3)
     H = enforce_roads(H, roads)
     H = shoulders(H, roads)
-    H = enforce_roads(H, roads)
     H = enforce_tunnels(H, roads)
+    H = enforce_roads(H, roads, it=12)       # last: nothing may end up above a road surface
+    H = enforce_nodes(H, X, Z, roads)
+    log("terrain above any road after enforcement: %d samples" % check_roads(H, roads))
 
     # ------------------------------------------------------------------ surfaces, splat, biome
     gx = np.gradient(H, T.STEP, axis=1); gz = np.gradient(H, T.STEP, axis=0)
@@ -228,7 +230,7 @@ def enforce_roads(H, roads, clearance=0.22, it=4):
                 tun[a:b + 1] = True
             d = np.gradient(P, axis=0); d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
             nrm = np.stack([-d[:, 1], d[:, 0]], 1)
-            for off in np.arange(-(c["w"] / 2 + 2.0), c["w"] / 2 + 2.01, 2.0):
+            for off in np.arange(-(c["w"] / 2 + 4.5), c["w"] / 2 + 4.51, 1.5):
                 Q = P + nrm * off
                 fx = (Q[:, 0] - T.X0) / T.STEP; fz = (Q[:, 1] - T.Z0) / T.STEP
                 i = np.clip(np.floor(fx).astype(int), 0, T.N - 2); j = np.clip(np.floor(fz).astype(int), 0, T.N - 2)
@@ -247,6 +249,66 @@ def enforce_roads(H, roads, clearance=0.22, it=4):
     return H
 
 
+def enforce_nodes(H, X, Z, roads, clearance=0.22):
+    """every terrain grid node inside a road corridor (half width + 4.5 m) is clamped under the road
+    height at that node's projection (roads densified to 1 m) - the terrain triangles can no longer
+    poke through between the 4 m road samples"""
+    pts = []; hs = []; rad = []
+    for r in roads:
+        c = NW.CLASSES[r["cls"]]
+        P = r["P"]; hp = r["H"]
+        tun = np.zeros(len(P), bool)
+        for a, b in r["tunnels"]:
+            tun[a:b + 1] = True
+        for k in range(len(P) - 1):
+            if tun[k] or tun[k + 1]:
+                continue
+            n = 4
+            for t in np.linspace(0, 1, n, endpoint=False):
+                pts.append(P[k] * (1 - t) + P[k + 1] * t)
+                hs.append(hp[k] * (1 - t) + hp[k + 1] * t)
+                rad.append(c["w"] / 2 + 4.5)
+    pts = np.array(pts); hs = np.array(hs); rad = np.array(rad)
+    tree = cKDTree(pts)
+    nodes = np.stack([X.ravel(), Z.ravel()], 1)
+    lim = np.full(nodes.shape[0], np.inf)
+    for i, near in enumerate(tree.query_ball_point(nodes, r=rad.max())):
+        if not near:
+            continue
+        nr = np.array(near)
+        d = np.hypot(pts[nr, 0] - nodes[i, 0], pts[nr, 1] - nodes[i, 1])
+        ok = d <= rad[nr]
+        if ok.any():
+            lim[i] = hs[nr[ok]].min() - clearance
+    flat = H.ravel()
+    flat = np.where(np.isfinite(lim), np.minimum(flat, lim), flat)
+    return flat.reshape(H.shape)
+
+
+def check_roads(H, roads, clearance=0.2):
+    n = 0
+    for r in roads:
+        c = NW.CLASSES[r["cls"]]
+        P = r["P"]; hp = r["H"]
+        tun = np.zeros(len(P), bool)
+        for a, b in r["tunnels"]:
+            tun[a:b + 1] = True
+        d = np.gradient(P, axis=0); d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
+        nrm = np.stack([-d[:, 1], d[:, 0]], 1)
+        for off in np.arange(-(c["w"] / 2 + 4.5), c["w"] / 2 + 4.51, 1.5):
+            Q = P + nrm * off
+            fx = (Q[:, 0] - T.X0) / T.STEP; fz = (Q[:, 1] - T.Z0) / T.STEP
+            i = np.clip(np.floor(fx).astype(int), 0, T.N - 2); j = np.clip(np.floor(fz).astype(int), 0, T.N - 2)
+            u = fx - i; v = fz - j
+            h = H[j, i] * (1 - u) * (1 - v) + H[j, i + 1] * u * (1 - v) + H[j + 1, i] * (1 - u) * v + H[j + 1, i + 1] * u * v
+            bad = (h - (hp - clearance) > 0.01) & ~tun
+            n += int(bad.sum())
+            if bad.any() and r["id"] == "pass":
+                k = int(np.nonzero(bad)[0][0])
+                print("   pass violation k=%d off=%.1f h=%.2f road=%.2f" % (k, off, h[k], hp[k]))
+    return n
+
+
 def shoulders(H, roads):
     """after the enforcement the ground beside a road can be far below it (a high, edge-less
     embankment): raise every cell around the carriageway (+3 m) up to 0.3 m under the road, never
@@ -261,7 +323,7 @@ def shoulders(H, roads):
             skip[a:b + 1] = True
         d = np.gradient(P, axis=0); d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
         nrm = np.stack([-d[:, 1], d[:, 0]], 1)
-        for off in np.arange(-(c["w"] / 2 + 3.0), c["w"] / 2 + 3.01, 1.5):
+        for off in np.arange(-(c["w"] / 2 + 4.5), c["w"] / 2 + 4.51, 1.5):
             Q = P + nrm * off
             fx = (Q[:, 0] - T.X0) / T.STEP; fz = (Q[:, 1] - T.Z0) / T.STEP
             i = np.clip(np.floor(fx).astype(int), 0, T.N - 2); j = np.clip(np.floor(fz).astype(int), 0, T.N - 2)
@@ -459,7 +521,7 @@ def carve(H, H0, X, Z, P, hp, hw, bridges, tunnels, dirt=False, lock=None):
     w0 = hw + 1.5 + 4.0                     # + half a grid cell: the 8 m terrain never rises over the road edge
     under = hr - (0.05 if dirt else 0.25)
     cut = np.minimum(sub, under + np.maximum(d0 - w0, 0) / 1.5)
-    fill = np.maximum(sub, np.minimum(under - np.maximum(d0 - w0, 0) / 1.5, sub + 30.0))
+    fill = np.maximum(sub, np.minimum(under - np.maximum(d0 - w0, 0) / 1.5, sub + 24.0))
     new = np.where(d0 <= w0, under, np.where(sub > hr, cut, fill))
     new = np.where(ok, new, sub)
     if lock is not None:
