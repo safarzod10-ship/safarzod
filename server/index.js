@@ -322,7 +322,7 @@ const routes = {
 
   'GET /tonconnect-manifest.json': () => ({
     url: config.publicUrl.replace(/\/$/, '') || 'http://localhost:3000',
-    name: 'Roulette Arena',
+    name: 'RULIX',
     iconUrl: `${config.publicUrl.replace(/\/$/, '')}/brand/loading-icon.png`,
   }),
 

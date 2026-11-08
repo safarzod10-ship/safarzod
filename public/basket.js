@@ -749,7 +749,7 @@ export function createBasket({ api, haptic, toast, avatarHtml, esc, me, supports
     let tx = 10;
     let k = 0;
     while (tx < v.cw) {
-      const text = k++ % 2 ? '★' : 'ROULETTE ARENA';
+      const text = k++ % 2 ? '★' : 'RULIX';
       g.fillStyle = k % 2 ? 'rgba(220,200,255,0.92)' : 'rgba(245,191,79,0.95)';
       g.fillText(text, tx, by + bandH / 2 + 1);
       tx += g.measureText(text).width + 16;

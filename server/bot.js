@@ -3,7 +3,7 @@ import { AppError } from './db.js';
 import { basename } from 'node:path';
 
 const WELCOME =
-  '🎲 <b>ROULETTE ARENA</b> — рулетка в Telegram!\n\n' +
+  '🎲 <b>RULIX</b> — крути, играй, RULIX выбирай!\n\n' +
   '⭐ Участвуй в раундах, соревнуйся с другими игроками и побеждай!\n\n' +
   '🎯 Чем больше твоя доля, тем выше шанс на победу.\n' +
   '🏆 Испытай удачу и стань победителем!\n\n' +
@@ -92,13 +92,13 @@ export class Bot {
     this.username = me.username;
     this.botId = me.id;
     await this.api('deleteWebhook', { drop_pending_updates: false });
-    await this.api('setMyCommands', { commands: [{ command: 'start', description: 'Открыть Roulette Arena' }] });
+    await this.api('setMyCommands', { commands: [{ command: 'start', description: 'Открыть RULIX' }] });
     if (this.adminId) {
       await this.api('deleteMyCommands', { scope: { type: 'chat', chat_id: Number(this.adminId) } }).catch(() => {});
     }
     await this.api('setChatMenuButton', { menu_button: { type: 'default' } });
     await this.api('setMyShortDescription', {
-      short_description: 'Roulette Arena — рулетка на звёзды: победитель забирает весь банк.',
+      short_description: 'RULIX — крути, играй, RULIX выбирай! Рулетка, Crash и NFT-подарки на звёзды и Gram.',
     }).catch(() => {});
     console.log(`Бот @${me.username} запущен. Мини-апп: ${this.webAppUrl}`);
     if (!this.adminId) console.warn('ADMIN_ID не задан — админ-панель и заявки на вывод недоступны.');
@@ -392,7 +392,7 @@ export class Bot {
   createDepositLink(userId, amount) {
     return this.api('createInvoiceLink', {
       title: 'Пополнение баланса',
-      description: `${fmt(amount)} ⭐ на баланс Roulette Arena`,
+      description: `${fmt(amount)} ⭐ на баланс RULIX`,
       payload: `dep:${userId}:${amount}:${Date.now()}`,
       currency: 'XTR',
       prices: [{ label: 'Пополнение', amount }],

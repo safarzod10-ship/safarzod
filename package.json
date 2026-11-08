@@ -2,7 +2,7 @@
   "name": "roulette-arena",
   "version": "1.0.0",
   "private": true,
-  "description": "Roulette Arena — Telegram Mini App и бот",
+  "description": "RULIX — Telegram Mini App и бот",
   "type": "module",
   "engines": { "node": ">=22.13" },
   "scripts": {

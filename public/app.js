@@ -1286,7 +1286,7 @@ async function copyRefLink() {
 function shareRefLink() {
   const link = state.friends?.link;
   if (!link) return;
-  const text = 'Залетай в Roulette Arena 🎰 Крути рулетку, обгоняй соперников и забирай весь банк!';
+  const text = 'Залетай в RULIX 🎰 Крути, играй — RULIX выбирай!';
   const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
   haptic.tap();
   supports('6.1') ? tg.openTelegramLink(url) : window.open(url, '_blank');

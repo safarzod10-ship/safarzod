@@ -235,7 +235,7 @@ test('в боте только /start: /admin и прочие команды п�
   const store = storeWith(100);
   const bot = fakeBot(store);
   await bot.handleUpdate(adminMsg('/admin'));
-  assert.match(lastText(bot), /ROULETTE ARENA/);
+  assert.match(lastText(bot), /RULIX/);
   assert.doesNotMatch(JSON.stringify(bot.calls.at(-1).payload), /#admin/);
 });
 
@@ -368,7 +368,7 @@ test('/start: баннер с подписью, синяя «Играть», к�
   const [first, second] = sent;
   assert.equal(first.method, 'sendPhoto');
   assert.ok(first.body.photo instanceof Blob && first.body.photo.size > 50_000, 'картинка загружена файлом');
-  assert.match(first.body.caption, /ROULETTE ARENA<\/b> — рулетка в Telegram!/);
+  assert.match(first.body.caption, /RULIX<\/b> — крути, играй, RULIX выбирай!/);
   const kb = JSON.parse(first.body.reply_markup).inline_keyboard;
   assert.deepEqual(kb[0][0], { text: '🎮 Играть', web_app: { url: 'https://x.test/' }, style: 'primary' });
   assert.deepEqual(
