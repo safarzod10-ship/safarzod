@@ -15,6 +15,7 @@ pass() { echo "PASS: $*"; }
 
 cleanup() {
 	stop_feeder
+	[[ -f $WORK/roulette-arena/docker-compose.yml ]] && docker compose --project-directory "$WORK/roulette-arena" down -v >/dev/null 2>&1
 	if [[ -f $WORK/opt/zuba-ruba/zuba-ruba/docker-compose.yml ]]; then
 		docker compose --project-directory "$WORK/opt/zuba-ruba/zuba-ruba" down -v >/dev/null 2>&1 || true
 	fi
@@ -69,11 +70,43 @@ run_installer() {
 }
 
 APP="$WORK/opt/zuba-ruba/zuba-ruba"
+RULIX="$WORK/roulette-arena"
+
+start_foreign_project() {
+	mkdir -p "$RULIX"
+	cat >"$RULIX/docker-compose.yml" <<'EOF2'
+name: roulette-arena
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    command: ["caddy", "respond", "--listen", ":80", "--body", "<title>RULIX</title>"]
+    ports: ["80:80", "443:443"]
+    volumes: ["app_data:/data"]
+volumes:
+  app_data:
+EOF2
+	docker compose --project-directory "$RULIX" up -d >/dev/null 2>&1
+	docker run --rm -v roulette-arena_app_data:/data alpine:3.20 sh -c 'echo players > /data/db.txt'
+}
+
+start_foreign_project
+answers
+if ZR_BOT_TOKEN="$TOKEN" ZR_ADMIN_IDS="1000" ZR_FLYER_API_KEY="FL-abcdefgh-12345" ZR_DOMAIN="$DOMAIN" run_installer >"$WORK/conflict.log" 2>&1; then
+	fail "installer must stop when ports are taken by another project"
+fi
+grep -q "roulette-arena" "$WORK/conflict.log" || { cat "$WORK/conflict.log"; fail "conflict message"; }
+[[ -n $(docker ps -q --filter label=com.docker.compose.project=roulette-arena) ]] || fail "foreign project must stay untouched without ZR_REMOVE_PROJECTS"
+pass "occupied ports detected, foreign project left untouched"
 
 answers
-ZR_BOT_TOKEN="$TOKEN" ZR_ADMIN_IDS="1000" ZR_FLYER_API_KEY="FL-abcdefgh-12345" ZR_DOMAIN="$DOMAIN" run_installer >"$WORK/first.log" 2>&1 || { cat "$WORK/first.log"; fail "first installation"; }
+ZR_REMOVE_PROJECTS=roulette-arena ZR_BOT_TOKEN="$TOKEN" ZR_ADMIN_IDS="1000" ZR_FLYER_API_KEY="FL-abcdefgh-12345" ZR_DOMAIN="$DOMAIN" run_installer >"$WORK/first.log" 2>&1 || { cat "$WORK/first.log"; fail "first installation"; }
 stop_feeder
 pass "first installation (non-interactive, one command)"
+[[ -z $(docker ps -aq --filter label=com.docker.compose.project=roulette-arena) ]] || fail "foreign containers removed"
+[[ -z $(docker volume ls -q --filter label=com.docker.compose.project=roulette-arena) ]] || fail "foreign volumes removed"
+[[ ! -d $RULIX ]] || fail "foreign project directory removed"
+ls /root/removed-projects/roulette-arena-roulette-arena_app_data-*.tgz >/dev/null 2>&1 || fail "foreign data archived"
+pass "foreign project removed completely, its data archived"
 
 [[ $(stat -c %a "$APP/.env") == 600 ]] || fail ".env permissions"
 grep -qx "BOT_USERNAME=zuba_ruba_bot" "$APP/.env" || fail "bot username from getMe"

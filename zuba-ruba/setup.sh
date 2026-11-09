@@ -407,6 +407,72 @@ compose() {
 	docker compose --project-directory "$APP_DIR" -f "$APP_DIR/docker-compose.yml" "$@"
 }
 
+PROJECT_NAME="zuba-ruba"
+
+port_users() {
+	local port="$1"
+	docker ps --filter "publish=$port" --format '{{.Label "com.docker.compose.project"}}|{{.Names}}' 2>/dev/null |
+		awk -F'|' -v own="$PROJECT_NAME" '$1 != own {print ($1 == "" ? "-" : $1) "|" $2}'
+}
+
+remove_project() {
+	local name="$1" dir stamp target volumes images
+	[[ $name =~ ^[a-z0-9][a-z0-9_-]*$ && $name != "$PROJECT_NAME" ]] || die "нельзя удалить проект «$name»"
+	info "Удаление Docker-проекта $name"
+	dir=$(docker ps -a --filter "label=com.docker.compose.project=$name" --format '{{.Label "com.docker.compose.project.working_dir"}}' | head -n1)
+	images=$(docker ps -a --filter "label=com.docker.compose.project=$name" --format '{{.Image}}' | sort -u)
+	volumes=$(docker volume ls -q --filter "label=com.docker.compose.project=$name")
+	stamp=$(date +%Y%m%d-%H%M%S)
+	target="/root/removed-projects"
+	if [[ -n $volumes ]]; then
+		mkdir -p "$target"
+		chmod 700 "$target"
+		for volume in $volumes; do
+			docker run --rm -v "$volume:/source:ro" -v "$target:/backup" alpine:3.20 tar czf "/backup/$name-$volume-$stamp.tgz" -C /source . >/dev/null 2>&1 ||
+				warn "не удалось сохранить архив тома $volume"
+		done
+		info "Архивы данных $name сохранены в $target"
+	fi
+	docker ps -aq --filter "label=com.docker.compose.project=$name" | xargs -r docker rm -f >/dev/null
+	for volume in $volumes; do
+		docker volume rm "$volume" >/dev/null || warn "том $volume не удалён"
+	done
+	docker network ls -q --filter "label=com.docker.compose.project=$name" | xargs -r docker network rm >/dev/null 2>&1 || true
+	for image in $images; do
+		docker image rm "$image" >/dev/null 2>&1 || true
+	done
+	if [[ -n $dir && -d $dir && $dir != / && $dir != "$HOME" && $dir != "$INSTALL_DIR"* ]] &&
+		grep -qE "^name:[[:space:]]*${name}[[:space:]]*\$" "$dir/docker-compose.yml" 2>/dev/null; then
+		rm -rf -- "$dir"
+		info "Удалён каталог $dir"
+	fi
+	ok "Проект $name удалён"
+}
+
+check_ports() {
+	step "Проверка портов 80 и 443"
+	local conflicts entry project names=() requested="${ZR_REMOVE_PROJECTS:-}"
+	local remove=" ${requested//,/ } "
+	conflicts=$( { port_users 80; port_users 443; } | sort -u)
+	for entry in $conflicts; do
+		project=${entry%%|*}
+		if [[ $project != "-" && $remove == *" $project "* ]]; then
+			remove_project "$project"
+		else
+			names+=("${entry#*|} (проект ${project})")
+		fi
+	done
+	if (( ${#names[@]} )); then
+		die "порты 80/443 заняты контейнерами: ${names[*]}. Остановите их или запустите установщик с ZR_REMOVE_PROJECTS=<имя проекта>, чтобы удалить проект целиком."
+	fi
+	local listeners
+	listeners=$(ss -Hltnp '( sport = :80 or sport = :443 )' 2>/dev/null | grep -v docker-proxy | grep -oE 'users:\(\("[^"]+' | cut -d'"' -f2 | sort -u | tr '\n' ' ' || true)
+	if [[ -n $listeners ]]; then
+		die "порты 80/443 заняты программами: $listeners. Отключите их, например: systemctl disable --now nginx"
+	fi
+	ok "Порты 80 и 443 свободны"
+}
+
 open_firewall() {
 	if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
 		ufw allow 80/tcp >/dev/null
@@ -441,19 +507,26 @@ deploy() {
 
 verify() {
 	step "Проверка HTTPS"
-	local code=""
+	local body="" page=""
+	if [[ $(docker inspect -f '{{.State.Running}}' "$(compose ps -q caddy)" 2>/dev/null) != true ]]; then
+		compose logs --tail 30 caddy
+		die "веб-сервер Caddy не запущен"
+	fi
 	for _ in $(seq 1 40); do
-		code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://$DOMAIN/health" || true)
-		[[ $code == 200 ]] && break
+		body=$(curl -s --max-time 10 "https://$DOMAIN/health" || true)
+		[[ $body == *'"status":"ok"'* ]] && break
 		sleep 5
 	done
-	if [[ $code == 200 ]]; then
-		ok "https://$DOMAIN/health отвечает"
+	if [[ $body == *'"status":"ok"'* ]]; then
+		ok "https://$DOMAIN/health — API ZUBA RUBA отвечает"
+	elif [[ -n $body ]]; then
+		die "по адресу https://$DOMAIN отвечает другое приложение. Проверьте, что домен указывает на этот сервер."
 	else
-		warn "HTTPS пока недоступен. Проверьте DNS и открытые порты 80/443: docker compose logs caddy"
+		die "HTTPS недоступен. Проверьте DNS и порты 80/443: cd $APP_DIR && docker compose logs caddy"
 	fi
-	code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://$DOMAIN/" || true)
-	[[ $code == 200 ]] && ok "Mini App отдаётся по https://$DOMAIN/" || warn "Главная страница вернула код $code"
+	page=$(curl -s --max-time 10 "https://$DOMAIN/" || true)
+	[[ $page == *"<title>ZUBA RUBA</title>"* ]] || die "по адресу https://$DOMAIN/ открывается не ZUBA RUBA"
+	ok "Mini App ZUBA RUBA открывается по https://$DOMAIN/"
 }
 
 summary() {
@@ -497,6 +570,7 @@ main() {
 	check_tools
 	fetch_project
 	configure
+	check_ports
 	deploy
 	verify
 	summary
