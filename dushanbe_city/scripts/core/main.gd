@@ -152,8 +152,8 @@ func _spawn_extra_vehicles() -> void:
 	fuel.name = "FuelService"
 	fuel.session = car_session
 	add_child(fuel)
-	# Toyota Camry + Lexus RX parked behind the Prado on the avenue (same physics, own tanks)
-	for spec in [["camry", Vector3(-49.0, 0.0, 2.0)], ["lexus", Vector3(-49.0, 0.0, 16.0)]]:
+	# Toyota Camry + Lexus RX parked on the avenue right by the start point, then the Prado (same physics)
+	for spec in [["camry", Vector3(-45.6, 0.0, -102.0)], ["lexus", Vector3(-45.6, 0.0, -116.0)]]:
 		var c := VehicleCar.new()
 		c.configure(spec[0])
 		c.name = "Camry" if spec[0] == "camry" else "Lexus"
@@ -187,6 +187,7 @@ func _spawn_extra_vehicles() -> void:
 		bus.place(bxf.origin, bxf.basis.get_euler().y)
 		bus_job.bus = bus
 		car_session.add_vehicle(bus)
+	_start_hint()
 	var sp: Array = world.city.get("spawn", [0, 0.15, 0, 0])
 	for spot in boat_spots(Vector3(sp[0], 0, sp[2])):
 		var b := VehicleBoat.new()
@@ -237,3 +238,15 @@ func boat_spots(near: Vector3) -> Array:
 			if not is_nan(VehicleBoat.water_level_at(p2.x, p2.z)):
 				out.append([p2, PI * 0.5])
 	return out
+
+
+
+## where everything is (once at the start): the cars by the road, the jobs on the map
+func _start_hint() -> void:
+	if laklak == null or OS.get_cmdline_user_args().has("nohint"):
+		return
+	var d := 0.0
+	if not laklak.depot.is_empty() and player:
+		d = (player as Node3D).global_position.distance_to(laklak.depot_point(Vector3.ZERO)) / 1000.0
+	laklak.toast("Рядом на дороге: Toyota Camry, Lexus RX, Land Cruiser.\nСклад LakLak — %.1f км на север. КАРТА → НАВИГАТОР" % d)
+	laklak._toast_t = 9.0

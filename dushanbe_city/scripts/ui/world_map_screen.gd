@@ -73,6 +73,7 @@ func toggle() -> void:
 		var p := _player_pos()
 		center = Vector2(p.x, p.z)
 		mpp = 8.0
+		_refresh_nav()
 		_canvas.queue_redraw()
 
 
@@ -174,11 +175,18 @@ func _draw_map() -> void:
 				var m: Array = pts[pts.size() / 2]
 				_label(w2s(m[0], m[2]) + Vector2(0, 14), str(r["name"]), 13, Color(1.0, 0.95, 0.75))
 	_label(w2s(0, -150), "Душанбе (центр, набережная)", 20, Color.WHITE)
+	# always visible: the player's vehicles and the job places (any zoom)
+	for poi in pois():
+		var pp0: Vector3 = poi[1]
+		var ps := w2s(pp0.x, pp0.z)
+		_canvas.draw_circle(ps, 12, Color(0.05, 0.05, 0.05, 0.85))
+		_canvas.draw_circle(ps, 9, poi[2])
+		_label(ps + Vector2(0, -24), String(poi[0]), 17, Color(1, 1, 1))
 	if Minimap.target != Vector3.INF:
 		var tp := w2s(Minimap.target.x, Minimap.target.z)
-		_canvas.draw_circle(tp, 13, Color(0.05, 0.05, 0.05, 0.85))
-		_canvas.draw_circle(tp, 10, Color(1.0, 0.6, 0.1))
-		_label(tp + Vector2(0, -24), "LakLak: доставка", 16, Color(1.0, 0.8, 0.4))
+		_canvas.draw_circle(tp, 15, Color(0.05, 0.05, 0.05, 0.85))
+		_canvas.draw_circle(tp, 11, Color(1.0, 0.6, 0.1))
+		_label(tp + Vector2(0, 26), "ЦЕЛЬ", 16, Color(1.0, 0.8, 0.4))
 	# player / car marker + north arrow
 	var pp := _player_pos()
 	var sp2 := w2s(pp.x, pp.z)
@@ -193,3 +201,101 @@ func _label(p: Vector2, t: String, fs: int, col: Color) -> void:
 	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	_canvas.draw_string_outline(_font, p - Vector2(w.x * 0.5, -fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color(0, 0, 0, 0.75))
 	_canvas.draw_string(_font, p - Vector2(w.x * 0.5, -fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+
+
+## [name, position, colour] of the player's vehicles and the job places
+func pois() -> Array:
+	var out: Array = []
+	var main := get_parent()
+	if main == null:
+		return out
+	for spec in [["car", "Land Cruiser", Color(1.0, 1.0, 1.0)], ["camry", "Toyota Camry", Color(0.9, 0.9, 0.95)],
+			["lexus", "Lexus RX", Color(0.8, 0.85, 0.9)], ["van", "Фургон LakLak", Color(0.2, 0.5, 1.0)], ["bus", "Автобус №1", Color(0.25, 0.55, 1.0)]]:
+		var v: Variant = main.get(spec[0])
+		if v is Node3D and is_instance_valid(v):
+			out.append([spec[1], (v as Node3D).global_position, spec[2]])
+	var job: Variant = main.get("laklak")
+	if job is LakLakJob and not (job as LakLakJob).depot.is_empty():
+		out.append(["Склад LakLak (работа)", (job as LakLakJob).depot_point(Vector3.ZERO), Color(1.0, 0.75, 0.1)])
+	var bj: Variant = main.get("bus_job")
+	if bj is BusJob and not (bj as BusJob).stops.is_empty():
+		out.append(["Конечная автобуса №1 (работа)", (bj as BusJob).office_point(), Color(0.3, 0.9, 0.4)])
+	var boats: Variant = main.get("boats")
+	if boats is Array and not (boats as Array).is_empty():
+		out.append(["Лодка", ((boats as Array)[0] as Node3D).global_position, Color(0.4, 0.9, 1.0)])
+	return out
+
+
+# ------------------------------------------------------------------------------------------ navigator
+var _nav_box: VBoxContainer
+var _nav_target := Vector3.INF
+
+
+func _build_nav() -> void:
+	_nav_box = VBoxContainer.new()
+	_nav_box.position = Vector2(16, 90)
+	_nav_box.add_theme_constant_override("separation", 6)
+	_root.add_child(_nav_box)
+	var t := Label.new()
+	t.text = "НАВИГАТОР — куда ехать:"
+	t.add_theme_font_size_override("font_size", 20)
+	t.add_theme_color_override("font_outline_color", Color.BLACK)
+	t.add_theme_constant_override("outline_size", 6)
+	_nav_box.add_child(t)
+
+
+func _refresh_nav() -> void:
+	if _nav_box == null:
+		_build_nav()
+	for c in _nav_box.get_children().slice(1):
+		c.queue_free()
+	var items := pois()
+	var near := _nearest_fuel()
+	if near != Vector3.INF:
+		items.append(["Ближайшая АЗС", near, Color(0.2, 0.9, 0.35)])
+	for poi in items:
+		var b := Button.new()
+		var p: Vector3 = poi[1]
+		var d := Vector2(p.x - _player_pos().x, p.z - _player_pos().z).length()
+		b.text = "%s · %s" % [poi[0], ("%.1f км" % (d / 1000.0)) if d >= 1000.0 else ("%d м" % int(d))]
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", 19)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.pressed.connect(func() -> void: navigate_to(p))
+		_nav_box.add_child(b)
+
+
+func _nearest_fuel() -> Vector3:
+	var best := Vector3.INF
+	var bd := INF
+	var pp := _player_pos()
+	for f in wd.fuel:
+		var q := Vector3(float(f["x"]), float(f["y"]), float(f["z"]))
+		var d := Vector2(q.x - pp.x, q.z - pp.z).length()
+		if d < bd:
+			bd = d
+			best = q
+	return best
+
+
+## set a waypoint (orange marker / arrow on the minimap) and close the map
+func navigate_to(p: Vector3) -> void:
+	Minimap.target = p
+	Minimap.target_owner = self
+	_nav_target = p
+	if _open:
+		toggle()
+
+
+func _physics_process(_d: float) -> void:
+	# waypoint reached (or a job took over the marker): clear it
+	if _nav_target != Vector3.INF:
+		if Minimap.target_owner != self:
+			_nav_target = Vector3.INF
+		else:
+			var pp := _player_pos()
+			if Vector2(pp.x - _nav_target.x, pp.z - _nav_target.z).length() < 25.0:
+				Minimap.target = Vector3.INF
+				Minimap.target_owner = null
+				_nav_target = Vector3.INF

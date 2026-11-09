@@ -88,12 +88,12 @@ func _process(delta: float) -> void:
 			complete()
 		_beacon.visible = true
 		_beacon.global_position = dest
-		if in_van or Minimap.target_owner == null or Minimap.target_owner == self:
+		if in_van or Minimap.target_owner == self:
 			Minimap.target = dest
 			Minimap.target_owner = self
 	else:
 		_beacon.visible = false
-		if Minimap.target_owner == self or Minimap.target_owner == null:
+		if Minimap.target_owner == self:
 			Minimap.target = Vector3.INF
 			Minimap.target_owner = null
 		if Wallet.laklak_hired:
