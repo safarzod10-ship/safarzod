@@ -948,6 +948,9 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				continue
 			if _near_building(x, z, sc) or _near_board(boards, x, z, 55.0):
 				continue
+			# never on a road / its shoulder: the coarse surface map misses narrow tracks
+			if wd.road_edge_dist(x, z) < 3.5 + sc_ * 1.5:
+				continue
 			if not out.has(id):
 				out[id] = []
 			out[id].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc_), Vector3(x, wd.height_at(x, z) - 0.1, z)))
@@ -964,7 +967,7 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				continue
 			for sgn: float in [-1.0, 1.0]:
 				var q := P[k] + Vector3(R[k].x, 0, R[k].y) * (float(r["w"]) * 0.5 + 5.0) * sgn
-				if wd.surface_at(q.x, q.z) == 4 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 150.0):
+				if wd.surface_at(q.x, q.z) == 4 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 150.0) or wd.road_edge_dist(q.x, q.z) < 3.0:
 					continue
 				if not out.has("poplar_a"):
 					out["poplar_a"] = []

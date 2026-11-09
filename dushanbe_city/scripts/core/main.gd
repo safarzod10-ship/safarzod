@@ -125,6 +125,10 @@ func _spawn_car(touch: CanvasLayer) -> void:
 		var shop := GunShop.new()
 		shop.name = "GunShop"
 		add_child(shop)
+	var svc := AutoService.new()
+	svc.name = "AutoService"
+	svc.session = car_session
+	add_child(svc)
 	var combat := PlayerCombat.new()
 	combat.name = "PlayerCombat"
 	combat.player = player

@@ -85,6 +85,19 @@ func _ready() -> void:
 			PlayerInput.fire_held = false
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("streets"):
+		_hour(11.0)
+		for k in 4:
+			var r: Dictionary = wd.roads[[0, 2, 9, 12][k] % wd.roads.size()]
+			var pts: Array = r["pts"]
+			var a0: Array = pts[pts.size() / 3]
+			var a1: Array = pts[pts.size() / 3 + 6]
+			var pa := Vector3(a0[0], a0[1], a0[2])
+			var pb := Vector3(a1[0], a1[1], a1[2])
+			var dv := (pb - pa).normalized()
+			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("cabin"):
 		_ui(false)
 		var sc: CarSession = main.get("car_session")

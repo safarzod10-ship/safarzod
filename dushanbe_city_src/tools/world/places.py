@@ -171,8 +171,10 @@ def build(roads, H, H_at, F, avoid=()):
 def perimeter_block(add, free, a, b, c, d, tall):
     """city centre (c > d): buildings along all four block edges facing the streets (6-20 storeys,
     shops on the ground floors), a second ring of lower blocks and a school in the courtyard"""
-    for ring, inset in ((0, 24.0), (1, 70.0)):
-        if ring == 1 and RNG.random() < 0.35:
+    # three rings: the street front right behind the sidewalk, then two inner rows (no empty
+    # 400 m courtyards)
+    for ring, inset in ((0, 17.0), (1, 58.0), (2, 102.0)):
+        if ring == 2 and RNG.random() < 0.3:
             continue
         x0, x1, zs_, zn = a + inset, b - inset, d + inset, c - inset
         # edges as (start, end); the building's local +Z points into the block
@@ -191,6 +193,8 @@ def perimeter_block(add, free, a, b, c, d, tall):
             while s < length - 14.0:
                 if ring == 0:
                     kind = str(RNG.choice(["panel9", "panel9", "office", "hotel", "admin", "tower", "sky"] if tall else ["panel9", "panel5", "brick5", "office", "panel9"]))
+                elif ring == 2:
+                    kind = str(RNG.choice(["panel5", "panel9", "brick5", "panel5"]))
                 else:
                     kind = str(RNG.choice(["panel5", "brick5", "panel5", "school"]))
                 L = 30.0 if kind == "tower" else float(RNG.choice([36, 42, 48, 54, 60]))
@@ -208,15 +212,15 @@ def perimeter_block(add, free, a, b, c, d, tall):
                           "admin": int(RNG.integers(4, 7)), "hotel": int(RNG.integers(7, 13)), "tower": int(RNG.integers(14, 23)), "sky": 30}[kind]
                 if free(x, z, L, D, yaw, 3.0):
                     add(kind, x, z, yaw, L, D, floors)
-                s += L + float(RNG.choice([8, 12, 18]))
+                s += L + float(RNG.choice([6, 8, 12]))
 
 
 def micro_block(add, free, a, b, c, d):
     """Soviet micro-district: rows of 5 / 9-storey panel blocks, parallel, with yards"""
-    x0, x1 = a + 26, b - 26
-    zn, zs_ = c - 26, d + 26
+    x0, x1 = a + 17, b - 17
+    zn, zs_ = c - 17, d + 17
     rot = RNG.random() < 0.5
-    rows = np.arange(zs_ + 10, zn - 10, 48.0)
+    rows = np.arange(zs_ + 6, zn - 6, 42.0)
     for k, z in enumerate(rows):
         x = x0
         while x < x1 - 30:
@@ -229,7 +233,7 @@ def micro_block(add, free, a, b, c, d):
             yaw = 0.0 if not rot else 0.0
             if free(cx, z, L, 12.0, yaw, 4.0):
                 add(kind, cx, z, yaw, L, 12.0 if kind != "panel9" else 13.0, {"panel5": 5, "panel9": 9, "brick5": 5}[kind])
-            x += L + float(RNG.choice([16, 22, 30]))
+            x += L + float(RNG.choice([12, 16, 22]))
     if RNG.random() < 0.6:
         cx = (a + b) / 2 + RNG.uniform(-40, 40); cz = (c + d) / 2
         if free(cx, cz, 50, 16, 0.0):
@@ -242,8 +246,8 @@ def micro_block(add, free, a, b, c, d):
 
 def houses_block(add, free, a, b, c, d):
     """private sector (havli): plots ~24 x 30 m, a house at the street side of each plot"""
-    for zrow in np.arange(d + 24, c - 20, 32.0):
-        for x in np.arange(a + 20, b - 18, 25.0 + RNG.uniform(-2, 4)):
+    for zrow in np.arange(d + 17, c - 14, 30.0):
+        for x in np.arange(a + 15, b - 13, 23.0 + RNG.uniform(-2, 3)):
             if RNG.random() < 0.08:
                 continue
             L = float(RNG.uniform(11, 17)); D = float(RNG.uniform(8, 11))
@@ -280,7 +284,7 @@ def village(add, free, roads, px, pz, rad, town=False):
             for side in (-1, 1):
                 if RNG.random() < 0.15:
                     continue
-                off = hw + 12.0 + RNG.uniform(0, 4)
+                off = hw + 8.0 + RNG.uniform(0, 2.5)
                 x = p[0] + nx * off * side; z = p[1] + nz * off * side
                 L = float(RNG.uniform(10, 16)); D = float(RNG.uniform(8, 11))
                 kind = "house"
@@ -293,7 +297,7 @@ def village(add, free, roads, px, pz, rad, town=False):
                     n0 += 1
                 # second row
                 if RNG.random() < 0.55:
-                    off2 = off + 30.0
+                    off2 = off + 24.0
                     x2 = p[0] + nx * off2 * side; z2 = p[1] + nz * off2 * side
                     if free(x2, z2, L + 8, D + 30, facing, 3.0):
                         add("house", x2, z2, facing + math.pi, float(RNG.uniform(10, 15)), float(RNG.uniform(8, 10)), int(RNG.choice([1, 1, 2])))
@@ -326,7 +330,7 @@ def roadside(add, free, r, every):
         p = P[k]; q = P[k + 2]; dx, dz = q - p; L0 = math.hypot(dx, dz)
         nx, nz = dz / L0, -dx / L0
         side = 1 if RNG.random() < 0.5 else -1
-        off = hw + 14.0
+        off = hw + 9.0
         x = p[0] + nx * off * side; z = p[1] + nz * off * side
         yaw = math.atan2(dx, dz) + (math.pi / 2 if side > 0 else -math.pi / 2)
         kind = str(RNG.choice(["house", "house", "shop", "cottage", "villa"]))
@@ -335,7 +339,7 @@ def roadside(add, free, r, every):
             vk = int(RNG.integers(1, 5))
             kind = "villa%d" % vk
             L, D = VILLA[vk]
-            off = hw + 8.0 + D / 2
+            off = hw + 5.0 + D / 2
             x = p[0] + nx * off * side; z = p[1] + nz * off * side
             if free(x, z, L + 4, D + 6, yaw, 3.0):
                 add(kind, x, z, yaw + math.pi, L, D, 2)
@@ -501,6 +505,73 @@ def rivers_under_roads(rivers, roads, clear=1.2, deck=2.6):
         for k in range(1, len(P)):
             P[k][1] = min(P[k][1], P[k - 1][1])
     return lowered
+
+
+def fill_under_roads(H, roads, rivers, under=0.35, slope=0.35):
+    """roads must lie ON the ground: where the terrain is far below a road (dirt / forest tracks over
+    small hollows, the carving left them in the air), raise each grid node near a road to `under` m
+    below the NEAREST road sample (so slopes stay right) and slope it down (1:3) for 6 m beside it.
+    Never raises a node above that; not on bridges / tunnels, not near rivers."""
+    from scipy.spatial import cKDTree
+    pts = []
+    for r in roads:
+        hw = r["w"] * 0.5
+        skip = set()
+        for a, b in r["bridges"] + r["tunnels"]:
+            skip.update(range(a - 3, b + 4))
+        P = r["pts"]
+        for k in range(len(P)):
+            # densify to ~2 m so the nearest sample is close to the node's projection
+            x, y, z = P[k]
+            if k in skip:
+                pts.append((x, z, -1e9, hw))      # a bridge / tunnel sample: blocks filling there
+                continue
+            pts.append((x, z, y, hw))
+            if k + 1 < len(P) and (k + 1) not in skip:
+                x2, y2, z2 = P[k + 1]
+                L = math.hypot(x2 - x, z2 - z)
+                for m in range(1, int(L // 2.0) + 1):
+                    t = m * 2.0 / L
+                    if t < 1.0:
+                        pts.append((x + (x2 - x) * t, z + (z2 - z) * t, y + (y2 - y) * t, hw))
+    A = np.array(pts)
+    tree = cKDTree(A[:, :2])
+    rv = [(p[0], p[2]) for rv in rivers for p in rv["pts"]]
+    rt = cKDTree(np.array(rv)) if rv else None
+    n = H.shape[0]
+    xs = T.X0 + np.arange(n) * T.STEP
+    GX, GZ = np.meshgrid(xs, T.Z0 + np.arange(n) * T.STEP)
+    G = np.stack([GX.ravel(), GZ.ravel()], 1)
+    d, idx = tree.query(G, distance_upper_bound=20.0)
+    ok = np.isfinite(d)
+    hw = np.where(ok, A[np.minimum(idx, len(A) - 1), 3], 0.0)
+    y = np.where(ok, A[np.minimum(idx, len(A) - 1), 2], -1e9)
+    reach = hw + 6.0
+    ok &= (d <= reach) & (y > -1e8)
+    if rt is not None:
+        dr, _ = rt.query(G, distance_upper_bound=40.0)
+        ok &= ~(dr < 30.0)
+    t = y - under - np.maximum(0.0, d - hw - 1.0) * slope
+    Hf = H.ravel()
+    up = ok & (Hf < t)
+    Hf[up] = t[up]
+    # safety: nothing may now poke through a road surface (junctions of roads at different levels)
+    for r in roads:
+        skip = set()
+        for a_, b_ in r["tunnels"]:
+            skip.update(range(a_, b_ + 1))
+        for k, (x, y, z) in enumerate(r["pts"]):
+            if k in skip:
+                continue
+            fx = (x - T.X0) / T.STEP; fz = (z - T.Z0) / T.STEP
+            i = min(max(int(fx), 0), n - 2); j = min(max(int(fz), 0), n - 2)
+            u = fx - i; v = fz - j
+            hh = H[j, i] * (1 - u) * (1 - v) + H[j, i + 1] * u * (1 - v) + H[j + 1, i] * (1 - u) * v + H[j + 1, i + 1] * u * v
+            ex = hh - (y - 0.22)
+            if ex > 0:
+                for jj, ii in ((0, 0), (0, 1), (1, 0), (1, 1)):
+                    H[j + jj, i + ii] -= ex + 0.02
+    return int(up.sum())
 
 
 # -------------------------------------------------------------------- world map

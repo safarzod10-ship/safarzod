@@ -19,7 +19,10 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	for sec in ["shop", "shoot", "explode", "steer"]:
+	var secs: Array = ["shop", "shoot", "explode", "steer"]
+	if not OS.get_cmdline_user_args().is_empty():
+		secs = Array(OS.get_cmdline_user_args())
+	for sec in secs:
 		await call("_t_" + sec)
 	print("STAGE10_TESTS ", "ALL PASS" if ok_all else "SOME FAILED", "  (%d checks)" % n)
 	var f := FileAccess.open("res://docs/reports/stage10_tests.txt", FileAccess.WRITE)
@@ -129,9 +132,11 @@ func _t_steer() -> void:
 	if sw == null:
 		_check("steering wheel node found", false)
 		return
-	while s.cam.mode != 1:                  # the cabin view
+	for k in 3:                             # the cabin view
+		if s.cam.mode == 1:
+			break
 		s.cam.cycle()
-		await get_tree().process_frame
+		await _frames(2)
 	VehicleInput.scripted = {"steer": 0.0, "brake": 1.0}
 	await _sec(1.0)
 	var b0 := car.global_basis.inverse() * sw.global_basis

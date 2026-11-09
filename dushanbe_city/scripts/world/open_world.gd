@@ -679,7 +679,12 @@ func _items(node: Node3D, items: Array, lod: int) -> void:
 			"landmark":
 				WorldLandmarks.build(node, d, lod)
 			"billboard":
-				WorldModels.billboard(node, p, float(d["yaw"]), int(d.get("variant", 0)))
+				# the post stands on the ground (the data height is the road's): lowest ground under
+				# the post footprint, sunk 0.2 m so it never floats on a slope
+				var gp := p
+				gp.y = minf(minf(wd.height_at(p.x - 0.6, p.z - 0.6), wd.height_at(p.x + 0.6, p.z + 0.6)),
+					minf(wd.height_at(p.x + 0.6, p.z - 0.6), wd.height_at(p.x - 0.6, p.z + 0.6))) - 0.2
+				WorldModels.billboard(node, gp, float(d["yaw"]), int(d.get("variant", 0)))
 
 
 func _sign(node: Node3D, p: Vector3, yaw: float, text: String, town: bool, end: bool) -> void:

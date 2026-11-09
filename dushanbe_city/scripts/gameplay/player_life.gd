@@ -13,6 +13,8 @@ var _since_hit := 99.0
 var _ui: CanvasLayer
 var _label: Label
 var _dim: ColorRect
+var _grey: ColorRect            ## death: the screen turns grey (screen-reading shader)
+var _black: ColorRect
 
 
 func _ready() -> void:
@@ -27,6 +29,30 @@ func _ready() -> void:
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_dim)
+	_grey = ColorRect.new()
+	_grey.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_grey.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sh := Shader.new()
+	sh.code = """shader_type canvas_item;
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
+uniform float amount = 0.0;
+void fragment() {
+	vec3 c = texture(screen_tex, SCREEN_UV).rgb;
+	float l = dot(c, vec3(0.299, 0.587, 0.114));
+	vec3 g = vec3(l) * vec3(1.05, 0.98, 0.95);
+	float v = 1.0 - smoothstep(0.35, 0.95, distance(SCREEN_UV, vec2(0.5)));
+	COLOR = vec4(mix(c, g * mix(0.55, 1.0, v), amount), 1.0);
+}"""
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	_grey.material = mat
+	_grey.visible = false
+	_ui.add_child(_grey)
+	_black = ColorRect.new()
+	_black.color = Color(0, 0, 0, 0)
+	_black.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_black.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui.add_child(_black)
 	_label = Label.new()
 	_label.set_anchors_preset(Control.PRESET_CENTER)
 	_label.offset_left = -500
@@ -61,15 +87,33 @@ func _process(delta: float) -> void:
 		_dim.color.a = clampf((40.0 - health) / 40.0, 0.0, 1.0) * 0.35 + clampf(0.6 - _since_hit, 0.0, 0.6) * 0.4
 
 
+## death as in the big open-world games: the world slows down (slow motion), the picture drains
+## to grey, «ВЫ ПОГИБЛИ», fade to black, then the hospital
 func _die() -> void:
 	dead = true
 	if session and session.driving:
 		session.exit()
+	_dim.color.a = 0.0
+	_grey.visible = true
+	(_grey.material as ShaderMaterial).set_shader_parameter("amount", 0.0)
+	var tw := create_tween().set_ignore_time_scale(true)
+	tw.tween_property(Engine, "time_scale", 0.2, 0.6)
+	tw.parallel().tween_method(func(v: float) -> void: (_grey.material as ShaderMaterial).set_shader_parameter("amount", v), 0.0, 1.0, 1.2)
+	await get_tree().create_timer(0.9, true, false, true).timeout
 	_label.text = "ВЫ ПОГИБЛИ"
+	_label.modulate.a = 0.0
 	_label.visible = true
-	_dim.color = Color(0.25, 0.0, 0.0, 0.55)
-	await get_tree().create_timer(4.0, false).timeout
-	_respawn()
+	var tw2 := create_tween().set_ignore_time_scale(true)
+	tw2.tween_property(_label, "modulate:a", 1.0, 0.5)
+	await get_tree().create_timer(2.6, true, false, true).timeout
+	var tw3 := create_tween().set_ignore_time_scale(true)
+	tw3.tween_property(_black, "color:a", 1.0, 0.8)
+	await get_tree().create_timer(0.9, true, false, true).timeout
+	Engine.time_scale = 1.0
+	_grey.visible = false
+	await _respawn()
+	var tw4 := create_tween()
+	tw4.tween_property(_black, "color:a", 0.0, 1.0)
 
 
 func _respawn() -> void:
@@ -99,5 +143,4 @@ func _respawn() -> void:
 	dead = false
 	_label.text = "Больница: лечение −%s" % Wallet.fmt(fee) if fee > 0 else ""
 	_dim.color.a = 0.0
-	await get_tree().create_timer(3.0, false).timeout
-	_label.visible = false
+	get_tree().create_timer(3.0, false).timeout.connect(func() -> void: _label.visible = false)

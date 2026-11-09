@@ -178,6 +178,10 @@ func _draw_map() -> void:
 		if mpp < 12.0:
 			for f in wd.fuel:
 				_badge(w2s(f["x"], f["z"]), "fuel", Color(0.1, 0.55, 0.25), 13.0)
+			for sv in get_tree().get_nodes_in_group(&"auto_service"):
+				for sp in (sv as AutoService).spots:
+					var q: Vector3 = sp["pos"]
+					_badge(w2s(q.x, q.z), "wrench", Color(0.15, 0.35, 0.75), 13.0)
 		if mpp < 7.0:
 			for bd in wd.buildings:
 				if bd[0] == "hospital_m":
@@ -255,7 +259,7 @@ func _overlay() -> void:
 
 
 func _legend(p: Vector2, u: float) -> void:
-	var rows := [["house", "Жилые районы"], ["office", "Бизнес и офисы"], ["cart", "Рынки и магазины"], ["fuel", "АЗС"],
+	var rows := [["house", "Жилые районы"], ["office", "Бизнес и офисы"], ["cart", "Рынки и магазины"], ["fuel", "АЗС"], ["wrench", "Автосервис"],
 		["cross", "Больница"], ["school", "Школа"], ["tree", "Парки и зоны отдыха"], ["monument", "Достопримечательности"],
 		["box", "Работа: LakLak"], ["shop", "Оружейный магазин"], ["bus", "Автобус №1"], ["anchor", "Набережная, лодки"]]
 	var rh := u * 0.42

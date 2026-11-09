@@ -86,11 +86,15 @@ func _process(delta: float) -> void:
 		_job.text = "LakLak · заказ №%d: %s · %.1f км · %s" % [order_no, order["addr"], d / 1000.0, Wallet.fmt(int(order["pay"]))]
 		if in_van and d < DROP_RADIUS and van.speed_kmh < 6.0:
 			complete()
-		_beacon.visible = true
+		# the marker / route only while driving the van: out of it the order waits, no marker
+		_beacon.visible = in_van
 		_beacon.global_position = dest
-		if in_van or Minimap.target_owner == self:
+		if in_van:
 			Minimap.target = dest
 			Minimap.target_owner = self
+		elif Minimap.target_owner == self:
+			Minimap.target = Vector3.INF
+			Minimap.target_owner = null
 	else:
 		_beacon.visible = false
 		if Minimap.target_owner == self:

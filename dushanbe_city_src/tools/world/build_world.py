@@ -237,6 +237,8 @@ def main():
                   {"id": "komsomol", "name": "Комсомольское озеро", "c": [T.KOMSOMOL[0], T.KOMSOMOL[1]], "r": [T.KOMSOMOL[2], T.KOMSOMOL[3]], "level": 0.2}]
     W["waterfalls"] = [{"x": T.WATERFALL[0], "z": T.WATERFALL[1], "top": 262.0, "bottom": 234.0}]
     W.update(world)
+    log("terrain raised under floating roads at %d nodes" % PL.fill_under_roads(H, W["roads"], W["rivers"]))
+    H.astype("<f4").tofile(os.path.join(OUT, "height.bin"))
     json.dump(W, open(os.path.join(OUT, "world.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     log("world.json %.1f MB" % (os.path.getsize(os.path.join(OUT, "world.json")) / 1e6))
     PL.write_map(W, H, splat, biome, road_mask, os.path.join(GAME, "assets", "ui", "world_map.png"))

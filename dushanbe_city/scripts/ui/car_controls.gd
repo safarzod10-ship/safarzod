@@ -5,7 +5,7 @@ extends Control
 ##   bottom-left  : big round steering arrows ◄ ►
 ##   bottom-right : pedals ТОРМОЗ (at standstill = reverse) and ГАЗ (dotted rubber plates)
 ##   right        : round DOOR (leave the vehicle) and (P) handbrake; headlights, hazards
-##   left column  : camera view, pause (the game menu), repair
+##   left column  : camera view, pause (the game menu)  (repairs: only at a garage, AutoService)
 ##   bottom centre: dashboard panel: speed, gear | fuel % + bar (every vehicle: its own tank),
 ##                  ◄ ► indicator buttons beside it, condition above it
 ## Free drags elsewhere orbit the camera.
@@ -53,7 +53,6 @@ func _rects() -> Dictionary:
 		"hazard": _sq(Vector2(w - 2.3 * u, h - 3.85 * u), 0.42 * u),
 		"orbit": _sq(Vector2(0.8 * u, top + 0.6 * u), 0.42 * u),
 		"menu": _sq(Vector2(0.8 * u, top + 1.6 * u), 0.42 * u),
-		"repair": _sq(Vector2(0.8 * u, top + 2.6 * u), 0.42 * u),
 		"tleft": _sq(Vector2(w * 0.5 - 1.5 * u, h - 1.55 * u), 0.32 * u),
 		"tright": _sq(Vector2(w * 0.5 + 1.5 * u, h - 1.55 * u), 0.32 * u),
 	}
@@ -163,7 +162,6 @@ func _draw() -> void:
 	_rb(r, "handbrake", "parking", held.has("handbrake") or (car != null and car.handbrake), Color(0.75, 0.12, 0.1, 0.8) if car != null and car.handbrake else Color(0, 0, 0, 0))
 	_rb(r, "orbit", "camera", false)
 	_rb(r, "menu", "pause", false)
-	_rb(r, "repair", "wrench", false)
 	if car and car.lights:
 		var L := car.lights
 		_rb(r, "lights", "lights", false, Color(0.15, 0.55, 0.25, 0.85) if L.beam == 1 else (Color(0.15, 0.35, 0.85, 0.85) if L.beam == 2 else Color(0, 0, 0, 0)))
