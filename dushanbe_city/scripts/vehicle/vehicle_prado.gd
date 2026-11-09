@@ -673,7 +673,7 @@ func _process(delta: float) -> void:
 		# spin about the axle (pivot X axis); negative angle = top of the tyre moves forward (-Z)
 		mesh.transform = Transform3D(Basis(Vector3.RIGHT, -float(w["spin"])) * mr.basis, mr.origin)
 	if _steering_wheel:
-		_steering_wheel.transform = Transform3D(_steering_rest.basis * Basis(Vector3.BACK, steer * deg_to_rad(240.0)), _steering_rest.origin)
+		_steering_wheel.transform = Transform3D(_steering_rest.basis * Basis(Vector3.FORWARD, steer * deg_to_rad(240.0)), _steering_rest.origin)
 	if _driver and _driver.visible:
 		_driver.pose(steer)
 	_update_doors(delta)

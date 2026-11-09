@@ -22,6 +22,11 @@ func _process(_d: float) -> void:
 	queue_redraw()
 
 
+func weapon_rect() -> Rect2:
+	var u := _u()
+	return Rect2(size.x - 1.3 * u, 0.22 * u, 1.05 * u, 1.05 * u)
+
+
 func _u() -> float:
 	return minf(size.x, size.y) / 10.0
 
@@ -31,20 +36,22 @@ func _draw() -> void:
 		return
 	var u := _u()
 	var w := size.x
-	# weapon slot (fists): white rounded square, dark frame, the fist inside
-	var box := Rect2(w - 1.5 * u, 0.22 * u, 1.25 * u, 1.25 * u)
+	# weapon slot: the current weapon (tap -> the weapon wheel)
+	var box := weapon_rect()
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.93, 0.94, 0.96, 0.95)
-	sb.set_corner_radius_all(int(u * 0.18))
-	sb.border_color = Color(0.08, 0.09, 0.11)
-	sb.set_border_width_all(int(maxf(3.0, u * 0.07)))
+	sb.bg_color = Color(0.02, 0.02, 0.03, 0.45)
+	sb.set_corner_radius_all(int(u * 0.14))
+	sb.border_color = Color(1, 1, 1, 0.55)
+	sb.set_border_width_all(2)
 	draw_style_box(sb, box)
-	var fist := HudStyle.icon("fist")
-	if fist:
-		draw_texture_rect(fist, box.grow(-u * 0.1), false)
+	var wi := HudStyle.icon(Weapons.icon_of(Weapons.current))
+	if wi:
+		draw_texture_rect(wi, box.grow(-u * 0.14), false)
+	if Weapons.uses_ammo(Weapons.current):
+		HudStyle.label(self, "%d" % Weapons.ammo_of(Weapons.current), box.get_center() + Vector2(0, box.size.y * 0.62), int(u * 0.22))
 	# money: green, heavy dark outline (somoni)
 	var mt := HudStyle.money_text(Wallet.money)
-	var fs := int(u * 0.46)
+	var fs := int(u * 0.4)
 	var f := HudStyle.font()
 	var tw := f.get_string_size(mt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var right := box.position.x - 0.2 * u
@@ -62,9 +69,7 @@ func _draw() -> void:
 		fuel = session.car.fuel_l / maxf(session.car.tank_l, 1.0)
 	_bar(Rect2(right - bw, 0.8 * u, bw, 0.2 * u), hp, Color(0.86, 0.1, 0.1))
 	_bar(Rect2(right - bw, 1.1 * u, bw, 0.2 * u), fuel, Color(0.97, 0.97, 0.97))
-	# logo right of the minimap
-	var d := clampf(minf(size.x, size.y) * 0.22, 150.0, 320.0)
-	_logo(Vector2(16.0 + d + 0.3 * u, 0.3 * u), u)
+
 
 
 func _bar(rc: Rect2, v: float, col: Color) -> void:

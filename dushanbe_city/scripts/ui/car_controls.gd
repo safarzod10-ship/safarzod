@@ -43,19 +43,19 @@ func _rects() -> Dictionary:
 	var h := size.y
 	var top := 16.0 + clampf(minf(w, h) * 0.22, 150.0, 320.0)     # under the round minimap
 	return {
-		"left": _sq(Vector2(1.95 * u, h - 1.8 * u), 1.3 * u),
-		"right": _sq(Vector2(4.9 * u, h - 1.8 * u), 1.3 * u),
-		"gas": Rect2(w - 1.95 * u, h - 3.55 * u, 1.6 * u, 3.2 * u),
-		"brake": Rect2(w - 4.2 * u, h - 2.55 * u, 2.05 * u, 2.2 * u),
-		"exit": _sq(Vector2(w - 1.35 * u, h - 6.05 * u), 0.72 * u),
-		"handbrake": _sq(Vector2(w - 1.35 * u, h - 4.45 * u), 0.72 * u),
-		"lights": _sq(Vector2(w - 3.0 * u, h - 6.2 * u), 0.5 * u),
-		"hazard": _sq(Vector2(w - 3.0 * u, h - 4.95 * u), 0.5 * u),
-		"orbit": _sq(Vector2(0.95 * u, top + 0.75 * u), 0.55 * u),
-		"menu": _sq(Vector2(0.95 * u, top + 2.0 * u), 0.55 * u),
-		"repair": _sq(Vector2(0.95 * u, top + 3.25 * u), 0.55 * u),
-		"tleft": _sq(Vector2(w * 0.5 - 1.75 * u, h - 1.85 * u), 0.4 * u),
-		"tright": _sq(Vector2(w * 0.5 + 1.75 * u, h - 1.85 * u), 0.4 * u),
+		"left": _sq(Vector2(1.45 * u, h - 1.35 * u), 0.95 * u),
+		"right": _sq(Vector2(3.7 * u, h - 1.35 * u), 0.95 * u),
+		"gas": Rect2(w - 1.6 * u, h - 2.85 * u, 1.25 * u, 2.55 * u),
+		"brake": Rect2(w - 3.3 * u, h - 2.05 * u, 1.55 * u, 1.75 * u),
+		"exit": _sq(Vector2(w - 1.0 * u, h - 4.95 * u), 0.52 * u),
+		"handbrake": _sq(Vector2(w - 1.0 * u, h - 3.75 * u), 0.52 * u),
+		"lights": _sq(Vector2(w - 2.3 * u, h - 4.95 * u), 0.42 * u),
+		"hazard": _sq(Vector2(w - 2.3 * u, h - 3.85 * u), 0.42 * u),
+		"orbit": _sq(Vector2(0.8 * u, top + 0.6 * u), 0.42 * u),
+		"menu": _sq(Vector2(0.8 * u, top + 1.6 * u), 0.42 * u),
+		"repair": _sq(Vector2(0.8 * u, top + 2.6 * u), 0.42 * u),
+		"tleft": _sq(Vector2(w * 0.5 - 1.5 * u, h - 1.55 * u), 0.32 * u),
+		"tright": _sq(Vector2(w * 0.5 + 1.5 * u, h - 1.55 * u), 0.32 * u),
 	}
 
 
@@ -186,8 +186,8 @@ func _rb(r: Dictionary, key: String, icon_id: String, pressed: bool, accent := C
 ## fuel pump icon + % + bar (red and blinking when low); the camera view name above it
 func _dash_panel() -> void:
 	var u := _u()
-	var pw := 4.6 * u
-	var ph := 1.05 * u
+	var pw := 3.9 * u
+	var ph := 0.85 * u
 	var rc := Rect2(size.x * 0.5 - pw * 0.5, size.y - ph - 0.25 * u, pw, ph)
 	HudStyle.panel(self, rc)
 	var cy := rc.get_center().y

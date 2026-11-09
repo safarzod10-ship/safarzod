@@ -78,24 +78,24 @@ func _bottom() -> float:
 
 
 func _joy_radius() -> float:
-	return 1.15 * _unit()
+	return 0.95 * _unit()
 
 
 func _joy_home() -> Vector2:
 	var u := _unit()
 	var x0 := (_safe.position.x if _safe.size.x > 0 else 0.0) + 0.25 * u
-	return Vector2(x0 + 1.6 * u, _bottom() - 1.55 * u)
+	return Vector2(x0 + 1.35 * u, _bottom() - 1.3 * u)
 
 
 ## right edge, as in the mock-up: FIST above, RUN under it; JUMP (small) left of RUN
 func _jump_rect() -> Array:                # [center, radius]
 	var u := _unit()
-	return [Vector2(_right() - 2.75 * u, _bottom() - 1.0 * u), 0.55 * u]
+	return [Vector2(_right() - 2.3 * u, _bottom() - 0.8 * u), 0.42 * u]
 
 
 func _punch_rect() -> Array:
 	var u := _unit()
-	return [Vector2(_right() - 0.95 * u, _bottom() - 3.05 * u), 0.8 * u]
+	return [Vector2(_right() - 0.85 * u, _bottom() - 2.5 * u), 0.62 * u]
 
 
 func _column_top() -> float:
@@ -104,17 +104,17 @@ func _column_top() -> float:
 
 func _run_rect() -> Array:
 	var u := _unit()
-	return [Vector2(_right() - 0.95 * u, _bottom() - 1.05 * u), 0.8 * u]
+	return [Vector2(_right() - 0.85 * u, _bottom() - 0.9 * u), 0.55 * u]
 
 
 func _menu_rect() -> Array:               # small pause button under the minimap
 	var u := minf(size.x, size.y) / 10.0
-	return [Vector2(0.8 * u, _column_top() + 0.65 * u), 0.45 * u]
+	return [Vector2(0.8 * u, _column_top() + 0.6 * u), 0.42 * u]
 
 
 func _action_rect() -> Array:            # contextual: left of the fist (only when something is usable)
 	var u := _unit()
-	return [Vector2(_right() - 2.85 * u, _bottom() - 3.05 * u), 0.7 * u]
+	return [Vector2(_right() - 2.3 * u, _bottom() - 2.5 * u), 0.52 * u]
 
 
 func _in_circle(p: Vector2, c: Array) -> bool:
@@ -192,16 +192,15 @@ func _draw() -> void:
 	var r := _joy_radius()
 	var o := _joy_origin if _joy_finger >= 0 else _joy_home()
 	var active := _joy_finger >= 0
-	draw_circle(o + Vector2(0, r * 0.04), r * 1.02, Color(0, 0, 0, 0.3))
-	draw_circle(o, r, Color(0.45, 0.46, 0.5, 0.5 if active else 0.4))
-	draw_arc(o, r - 2.0, 0, TAU, 72, HudStyle.RIM, maxf(2.5, r * 0.04), true)
+	draw_circle(o, r, Color(0.02, 0.02, 0.03, 0.4 if active else 0.32))
+	draw_arc(o, r - 1.0, 0, TAU, 72, Color(1, 1, 1, 0.55), maxf(1.5, r * 0.03), true)
 	for k in 4:
 		var d := Vector2.from_angle(k * PI * 0.5)
 		var n := Vector2(-d.y, d.x)
 		var t := o + d * r * 0.8
 		draw_colored_polygon(PackedVector2Array([t + d * r * 0.1, t - d * r * 0.06 + n * r * 0.1, t - d * r * 0.06 - n * r * 0.1]), Color(1, 1, 1, 0.9))
 	var knob := o + _joy_vec * r * 0.62
-	draw_circle(knob, 0.4 * r, Color(0.86, 0.87, 0.89, 0.92 if active else 0.8))
+	draw_circle(knob, 0.38 * r, Color(1, 1, 1, 0.55 if active else 0.4))
 	draw_arc(knob, 0.4 * r, 0, TAU, 48, Color(1, 1, 1, 0.9), 2.0, true)
 	# RUN toggle, PAUSE (left column)
 	var run := _run_rect()

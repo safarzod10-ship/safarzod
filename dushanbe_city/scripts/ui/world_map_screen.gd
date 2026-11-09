@@ -189,8 +189,7 @@ func _draw_map() -> void:
 				elif bd[0] == "school_m":
 					_badge(w2s(bd[1], bd[2]), "school", Color(0.15, 0.4, 0.8), 13.0)
 		# photo cards of the sights (zoomed out)
-		if mpp >= 3.5:
-			_cards()
+		pass
 		# places: icon + name (tourist-map style)
 		for p in wd.places:
 			var sp := w2s(p["x"], p["z"])
@@ -249,14 +248,8 @@ func _draw_map() -> void:
 func _overlay() -> void:
 	var vs := _canvas.size
 	var u := minf(vs.x, vs.y) / 10.0
-	HudStyle.logo(_canvas, Vector2(22, 0.45 * u), u * 0.95)
-	HudStyle.label_left(_canvas, "Открытый мир Таджикистана", Vector2(30, 1.45 * u), int(u * 0.26), Color(1, 1, 1), 6)
-	_flag(Rect2(vs.x - 3.0 * u, 1.0 * u, 2.4 * u, 1.35 * u))
-	HudStyle.label(_canvas, "Душанбе —", Vector2(vs.x - 1.8 * u, 2.75 * u), int(u * 0.28), Color(1, 1, 1))
-	HudStyle.label(_canvas, "город возможностей!", Vector2(vs.x - 1.8 * u, 3.12 * u), int(u * 0.28), Color(1, 0.86, 0.35))
-	_compass(Vector2(vs.x - 1.25 * u, 4.6 * u), 0.85 * u)
 	if not _nav_open:
-		_legend(Vector2(14, 2.6 * u), u)
+		_legend(Vector2(14, 1.2 * u), u)
 	_canvas.draw_rect(Rect2(vs.x * 0.5 - 300, vs.y - 32, 600, 28), Color(0.03, 0.05, 0.09, 0.7))
 	_label(Vector2(vs.x * 0.5, vs.y - 18), "масштаб: %d м / см · нажмите на место — маршрут" % int(mpp * 38), 16, Color(1, 1, 1, 0.9))
 
@@ -407,14 +400,14 @@ func _build_nav() -> void:
 	_nav_btn.text = "НАВИГАТОР ▾"
 	_nav_btn.focus_mode = Control.FOCUS_NONE
 	_nav_btn.add_theme_font_size_override("font_size", 20)
-	_nav_btn.position = Vector2(16, 1.75 * u)
+	_nav_btn.position = Vector2(16, 16)
 	_nav_btn.pressed.connect(func() -> void:
 		_nav_open = not _nav_open
 		_nav_box.visible = _nav_open
 		_nav_btn.text = "НАВИГАТОР ▴" if _nav_open else "НАВИГАТОР ▾")
 	_root.add_child(_nav_btn)
 	_nav_box = VBoxContainer.new()
-	_nav_box.position = Vector2(16, 1.75 * u + 50)
+	_nav_box.position = Vector2(16, 66)
 	_nav_box.visible = false
 	_nav_box.add_theme_constant_override("separation", 6)
 	_root.add_child(_nav_box)
