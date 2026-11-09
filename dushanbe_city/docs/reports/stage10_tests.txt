@@ -1,4 +1,4 @@
-PASS  1. account ID given automatically: 81125857 (8 digits)
+PASS  1. account ID given automatically: 30205748 (8 digits)
 PASS  2. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
 PASS  3. the same code again: refused (Этот код уже использован)
 PASS  4. a code made for another ID: refused (Код не подходит к вашему ID)
@@ -19,3 +19,5 @@ PASS 18. it explodes after burning: wreck true, can't get in true
 PASS 19. the blast killed the player standing 2.5 m away (dead true, health 0)
 PASS 20. respawn: alive at the hospital / start, health 100, fee 90 смн
 PASS 21. wreck restored at its parking place (condition 100 %)
+PASS 22. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 362.4 px)
+PASS 23. steer right -> the steering wheel turns clockwise for the driver (114 deg)

@@ -30,7 +30,10 @@ func _ready() -> void:
 	for w in get_tree().get_nodes_in_group(&"weather"):
 		w.set("auto_cycle", false)
 		w.call("set_state", 0, true)
-	for sec in ["tanks", "consumption", "empty", "station", "cars", "bus_route", "bus_job", "city"]:
+	var secs: Array = ["tanks", "consumption", "empty", "station", "cars", "bus_route", "bus_job", "city"]
+	if not OS.get_cmdline_user_args().is_empty():
+		secs = Array(OS.get_cmdline_user_args())
+	for sec in secs:
 		await call("_t_" + sec)
 	print("STAGE8_TESTS ", "ALL PASS" if ok_all else "SOME FAILED", "  (%d checks)" % n)
 	var f := FileAccess.open("res://docs/reports/stage8_tests.txt", FileAccess.WRITE)
@@ -156,18 +159,37 @@ func _t_station() -> void:
 	_check("nearest station from any road point: at most %.1f km" % (worst / 1000.0), worst < 7000.0)
 	# drive to one: the Prado parked at the pumps
 	var car: VehiclePrado = main.get("car")
-	car.repair()                 # the earlier drives may have damaged it (a burning car explodes)
+	# the earlier crash drives may have set it burning: put out / restore it, wait out a death
+	var vf: VehicleFire = car.get_node_or_null("Fire")
+	if vf:
+		vf.restore()
+	car.repair()
+	for i in 900:
+		if not PlayerLife.dead:
+			break
+		await get_tree().physics_frame
+	if not s.driving or s.car != car:
+		if s.driving:
+			s.exit()
+			await _frames(5)
+		s.player.teleport(car.driver_door_point(0.7), 0.0)
+		await _frames(10)
+		s._select(car)
+		s.enter()
+		await _frames(10)
+	fs._panel.visible = false          # the delivery window from the empty-tank check
 	var f: Dictionary = wd.fuel[0]
 	var pump := fs.nearest_station_pos(Vector3(float(f.get("ox", f["x"])), 0, float(f.get("oz", f["z"]))))
-	car.place(pump + Vector3(0, 40, 0), float(f["yaw"]))       # first above it: the camera follows
-	car.freeze = true
-	s.cam.snap()
+	ow.hold = pump                       # keep the collision there
 	await _wait_sectors(pump)
-	await _sec(1.0)
-	car.freeze = false
 	car.place(pump + Vector3(0, 2, 0), float(f["yaw"]))
+	s.cam.snap()
 	car.linear_velocity = Vector3.ZERO
-	await _sec(1.5)
+	VehicleInput.scripted = {"handbrake": true}
+	for i in 300:
+		await get_tree().physics_frame
+		if i > 60 and car.speed_kmh < 1.0:
+			break
 	car.fuel_l = 20.0
 	Wallet.money = 2000
 	await _frames(10)
@@ -184,6 +206,8 @@ func _t_station() -> void:
 	_check("low fuel: nearest station marked on the minimap (%s)" % str(Minimap.fuel_marker.round()), Minimap.fuel_marker != Vector3.INF)
 	car.fuel_l = car.tank_l * 0.6
 	await _frames(3)
+	VehicleInput.scripted = null
+	ow.hold = Vector3.INF
 	# money too low at the station
 	Wallet.money = 0
 	car.fuel_l = 10.0

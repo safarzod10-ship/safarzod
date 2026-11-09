@@ -1,18 +1,42 @@
 extends Control
-## The start menu: a picture of the city in the background, the game's name, ИГРАТЬ / МАГАЗИН /
-## НАСТРОЙКИ / ВЫХОД, and the player's account (ID given automatically, money).
-## МАГАЗИН: packages of game money for real money (data/shop_packages.json). Payment goes through
-## the administrator for now: the player pays and gives his ID, gets a one-time code
-## (tools/admin/make_code.py) and activates it here (Account.redeem).
+## The start menu, drawn by the owner (assets/ui/menu_main.png, menu_shop.png): the pictures fill the
+## screen without cropping (a blurred copy fills the side bars on wider phones) and every button
+## drawn in them is a real button placed exactly over it (rects in the pictures' 1672 x 941 pixels):
+##   main: Бозӣ кардан (play) · Магазин · Об игре · Баромадан (exit) · settings (gear)
+##   shop: four «Харидорӣ» packages · promo code field + ✓ · Бозгашт (back) · ✕
+## The account ID is given automatically (Account); packages are paid through the administrator
+## (one-time codes, tools/admin/make_code.py); promo code TAJDUSH gives 20 000 смн once.
 
 const GAME_SCENE := "res://scenes/main/main.tscn"
+const IMG := Vector2(1672, 941)
+const MAIN_BTNS := {"play": Rect2(65, 462, 450, 86), "shop": Rect2(55, 563, 440, 82), "about": Rect2(50, 663, 425, 82),
+	"exit": Rect2(50, 763, 420, 82), "settings": Rect2(1563, 28, 87, 62)}
+const SHOP_BTNS := {"close": Rect2(1570, 25, 75, 70), "buy0": Rect2(276, 578, 260, 64), "buy1": Rect2(617, 578, 240, 64),
+	"buy2": Rect2(942, 578, 244, 64), "buy3": Rect2(1275, 578, 257, 64), "promo": Rect2(1178, 724, 317, 62),
+	"ok": Rect2(1512, 722, 85, 66), "back": Rect2(32, 838, 373, 74)}
+const LINKS := {
+	"YouTube": "https://youtube.com/@dushanbe-x?si=6Kg6TmjxlxOiQ-g2",
+	"TikTok": "https://www.tiktok.com/@dushanbe_x?_r=1&_t=ZS-9BGBeNNHSGw",
+	"Telegram": "https://t.me/DushanbeXgame",
+	"Instagram": "https://www.instagram.com/dushanbe.x?dlrf=MXc5b2hkNzJ5OHUydQ%3D%3D&utm_source=qr",
+}
+const SUPPORT := "https://t.me/DushanbeX_Support"
 
 var _font: Font
-var _shop: PanelContainer
-var _settings: PanelContainer
+var _main_tex: Texture2D
+var _shop_tex: Texture2D
+var _blur := {}                  ## blurred copies for the side bars
+var _screen := "main"
+var _bg: Control                 ## draws the current picture (fit + blurred fill)
+var _main_btns := {}
+var _shop_btns := {}
 var _code: LineEdit
-var _shop_msg: Label
-var _money: Label
+var _info: Label                 ## account line (bottom right)
+var _toast: Label
+var _toast_t := 0.0
+var _dialog: PanelContainer
+var _dialog_text: Label
+var _dialog_box: VBoxContainer
 var _loading: Label
 var _pk := {}
 
@@ -22,207 +46,295 @@ func _ready() -> void:
 	Wallet.load_state()
 	_font = HudStyle.font()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg := TextureRect.new()
-	bg.texture = load("res://assets/ui/menu_bg.jpg")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	add_child(bg)
-	var shade := TextureRect.new()                    # dark gradient on the left, under the buttons
-	var g := Gradient.new()
-	g.set_color(0, Color(0, 0, 0, 0.82))
-	g.set_color(1, Color(0, 0, 0, 0.0))
-	var gt := GradientTexture2D.new()
-	gt.gradient = g
-	gt.fill_from = Vector2(0, 0.5)
-	gt.fill_to = Vector2(0.75, 0.5)
-	shade.texture = gt
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.stretch_mode = TextureRect.STRETCH_SCALE
-	add_child(shade)
-	# title
-	var title := _label("DUSHANBE CITY", 76, Color.WHITE, 14)
-	title.position = Vector2(70, 60)
-	add_child(title)
-	var sub := _label("открытый мир Таджикистана", 28, Color(1.0, 0.85, 0.4), 8)
-	sub.position = Vector2(76, 160)
-	add_child(sub)
-	# buttons
-	var v := VBoxContainer.new()
-	v.position = Vector2(70, 250)
-	v.add_theme_constant_override("separation", 16)
-	add_child(v)
-	v.add_child(_button("ИГРАТЬ", Color(0.1, 0.55, 0.25), _play, 420, 92, 40))
-	v.add_child(_button("МАГАЗИН", Color(0.75, 0.45, 0.05), func() -> void: _open(_shop), 420, 76, 32))
-	v.add_child(_button("НАСТРОЙКИ", Color(0.15, 0.3, 0.55), func() -> void: _open(_settings), 420, 76, 32))
-	v.add_child(_button("ВЫХОД", Color(0.35, 0.1, 0.1), func() -> void: get_tree().quit(), 420, 64, 26))
-	# account card (top-right)
-	var card := _panel(Color(0.04, 0.05, 0.07, 0.8))
-	card.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	card.position = Vector2(-470, 30)
-	card.custom_minimum_size = Vector2(440, 0)
-	add_child(card)
-	var cv := VBoxContainer.new()
-	cv.add_theme_constant_override("separation", 8)
-	card.add_child(cv)
-	cv.add_child(_label("АККАУНТ", 22, Color(0.7, 0.8, 1.0), 4))
-	cv.add_child(_label("ID: " + Account.id, 36, Color.WHITE, 6))
-	_money = _label("", 30, HudStyle.MONEY, 6)
-	cv.add_child(_money)
-	cv.add_child(_button("СКОПИРОВАТЬ ID", Color(0.2, 0.25, 0.32), func() -> void: DisplayServer.clipboard_set(Account.id), 400, 52, 20))
-	_build_shop()
-	_build_settings()
-	_loading = _label("Загрузка…", 44, Color.WHITE, 10)
-	_loading.set_anchors_preset(Control.PRESET_CENTER)
-	_loading.position = Vector2(-120, -30)
-	_loading.visible = false
-	add_child(_loading)
-	_refresh()
-
-
-func _refresh() -> void:
-	_money.text = "Деньги: " + Wallet.fmt(Wallet.money)
-
-
-func _play() -> void:
-	_loading.visible = true
-	await get_tree().process_frame
-	await get_tree().process_frame
-	get_tree().change_scene_to_file(GAME_SCENE)
-
-
-func _open(p: Control) -> void:
-	_shop.visible = p == _shop
-	_settings.visible = p == _settings
-	p.reset_size()
-	var vs := get_viewport_rect().size
-	p.position = (vs - p.size) * 0.5
-
-
-# ------------------------------------------------------------------------------------------ shop
-func _build_shop() -> void:
-	_shop = _panel(Color(0.04, 0.05, 0.08, 0.96))
-	add_child(_shop)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
-	_shop.add_child(v)
-	v.add_child(_label("МАГАЗИН · игровые деньги", 34, Color(1.0, 0.8, 0.3), 6))
+	_main_tex = load("res://assets/ui/menu_main.png")
+	_shop_tex = load("res://assets/ui/menu_shop.png")
+	_blur = {"main": load("res://assets/ui/menu_main_blur.jpg"), "shop": load("res://assets/ui/menu_shop_blur.jpg")}
 	var cfg: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/shop_packages.json")) if FileAccess.file_exists("res://data/shop_packages.json") else null
 	_pk = cfg if cfg is Dictionary else {"packages": [], "currency_real": "TJS", "contact": ""}
-	var grid := HBoxContainer.new()
-	grid.add_theme_constant_override("separation", 14)
-	v.add_child(grid)
-	for p in _pk["packages"]:
-		var c := _panel(Color(0.1, 0.12, 0.16, 1.0))
-		c.custom_minimum_size = Vector2(230, 0)
-		grid.add_child(c)
-		var cv := VBoxContainer.new()
-		cv.alignment = BoxContainer.ALIGNMENT_CENTER
-		c.add_child(cv)
-		var a := _label(Wallet.fmt(int(p["game"])), 30, HudStyle.MONEY, 6)
-		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cv.add_child(a)
-		var r := _label("%d %s" % [int(p["real"]), String(_pk["currency_real"])], 26, Color.WHITE, 4)
-		r.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cv.add_child(r)
-		var pg := int(p["game"])
-		var pr := str(int(p["real"]))
-		cv.add_child(_button("КУПИТЬ", Color(0.1, 0.5, 0.25), func() -> void:
-			_shop_msg.text = "Оплата %s %s через администратора.\nСообщите ему ваш ID %s — он пришлёт код на %s, введите его ниже." % [pr, String(_pk["currency_real"]), Account.id, Wallet.fmt(pg)], 200, 56, 22))
-	var how := _label("Как пополнить: оплатите выбранный пакет администратору и укажите свой ID: %s.\nВы получите код пополнения — введите его здесь.\n%s" % [Account.id, String(_pk.get("contact", ""))], 20, Color(0.85, 0.9, 1.0), 3)
-	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	how.custom_minimum_size = Vector2(980, 0)
-	v.add_child(how)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
-	v.add_child(h)
+	_bg = Control.new()
+	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bg.draw.connect(_draw_bg)
+	add_child(_bg)
+	for k in MAIN_BTNS:
+		_main_btns[k] = _hit_button(k, _on_main)
+	for k in SHOP_BTNS:
+		if k == "promo":
+			continue
+		_shop_btns[k] = _hit_button(k, _on_shop)
 	_code = LineEdit.new()
-	_code.placeholder_text = "Код пополнения, например DX-5000-1A2B3C-…"
-	_code.custom_minimum_size = Vector2(640, 64)
-	_code.add_theme_font_size_override("font_size", 24)
-	h.add_child(_code)
-	h.add_child(_button("АКТИВИРОВАТЬ", Color(0.15, 0.35, 0.7), _redeem, 300, 64, 24))
-	_shop_msg = _label("", 22, Color(1.0, 0.85, 0.45), 4)
-	_shop_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_shop_msg.custom_minimum_size = Vector2(980, 0)
-	v.add_child(_shop_msg)
-	v.add_child(_button("ЗАКРЫТЬ", Color(0.35, 0.1, 0.1), func() -> void: _shop.visible = false, 980, 56, 22))
-	_shop.visible = false
+	_code.placeholder_text = "Кодро ворид кунед..."
+	_code.add_theme_font_override("font", _font)
+	_code.add_theme_color_override("font_color", Color.WHITE)
+	_code.add_theme_color_override("font_placeholder_color", Color(0.65, 0.65, 0.68))
+	var lsb := StyleBoxFlat.new()
+	lsb.bg_color = Color(0.07, 0.07, 0.08)
+	lsb.set_corner_radius_all(10)
+	lsb.border_color = Color(0.85, 0.65, 0.2, 0.9)
+	lsb.set_border_width_all(2)
+	lsb.content_margin_left = 14
+	for st in ["normal", "focus", "read_only"]:
+		_code.add_theme_stylebox_override(st, lsb)
+	_code.text_submitted.connect(func(_t: String) -> void: _redeem())
+	add_child(_code)
+	_info = _text_label(20, Color(1, 1, 1, 0.95))
+	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(_info)
+	_build_dialog()
+	_toast = _text_label(30, Color(1.0, 0.86, 0.4))
+	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast.visible = false
+	add_child(_toast)
+	_loading = _text_label(48, Color.WHITE)
+	_loading.text = "Загрузка…"
+	_loading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_loading.visible = false
+	add_child(_loading)
+	get_viewport().size_changed.connect(_layout)
+	show_screen("main")
+
+
+# ------------------------------------------------------------------------------------------ layout
+## the picture fitted in the screen (no crop): its rect on screen
+func _pic_rect() -> Rect2:
+	var vs := get_viewport_rect().size
+	var s := minf(vs.x / IMG.x, vs.y / IMG.y)
+	var sz := IMG * s
+	return Rect2((vs - sz) * 0.5, sz)
+
+
+func _map(r: Rect2) -> Rect2:
+	var pr := _pic_rect()
+	var s := pr.size.x / IMG.x
+	return Rect2(pr.position + r.position * s, r.size * s)
+
+
+func _layout() -> void:
+	var vs := get_viewport_rect().size
+	for k in _main_btns:
+		var b: Button = _main_btns[k]
+		var r := _map(MAIN_BTNS[k])
+		b.position = r.position
+		b.size = r.size
+		b.visible = _screen == "main"
+	for k in _shop_btns:
+		var b: Button = _shop_btns[k]
+		var r := _map(SHOP_BTNS[k])
+		b.position = r.position
+		b.size = r.size
+		b.visible = _screen == "shop"
+	var pr := _map(SHOP_BTNS["promo"])
+	_code.position = pr.position
+	_code.size = pr.size
+	_code.add_theme_font_size_override("font_size", int(pr.size.y * 0.38))
+	_code.visible = _screen == "shop"
+	var pic := _pic_rect()
+	_info.size = Vector2(700, 40)
+	_info.position = Vector2(pic.end.x - 720, pic.end.y - 52)
+	_info.text = "ID: %s   ·   %s" % [Account.id, Wallet.fmt(Wallet.money)]
+	_toast.size = Vector2(vs.x, 60)
+	_toast.position = Vector2(0, pic.position.y + pic.size.y * 0.05)
+	_loading.size = Vector2(vs.x, 80)
+	_loading.position = Vector2(0, vs.y * 0.45)
+	if _dialog.visible:
+		_dialog.reset_size()
+		_dialog.position = (vs - _dialog.size) * 0.5
+	_bg.queue_redraw()
+
+
+func show_screen(s: String) -> void:
+	_screen = s
+	_dialog.visible = false
+	_layout()
+
+
+func _draw_bg() -> void:
+	var tex := _main_tex if _screen != "shop" else _shop_tex
+	if tex == null:
+		return
+	var vs := get_viewport_rect().size
+	# side fill: the same picture covering the screen, darkened (looks like a blur behind the bars)
+	var s := maxf(vs.x / IMG.x, vs.y / IMG.y) * 1.08
+	var cover := IMG * s
+	var bt: Texture2D = _blur["shop" if _screen == "shop" else "main"]
+	_bg.draw_texture_rect(bt if bt else tex, Rect2((vs - cover) * 0.5, cover), false)
+	_bg.draw_texture_rect(tex, _pic_rect(), false)
+
+
+func _process(delta: float) -> void:
+	_toast_t -= delta
+	_toast.visible = _toast_t > 0.0
+
+
+func toast(t: String, secs := 3.0) -> void:
+	_toast.text = t
+	_toast_t = secs
+
+
+# ------------------------------------------------------------------------------------------ actions
+func _on_main(k: String) -> void:
+	match k:
+		"play":
+			_loading.visible = true
+			for b in _main_btns.values():
+				(b as Button).disabled = true
+			await get_tree().process_frame
+			await get_tree().process_frame
+			get_tree().change_scene_to_file(GAME_SCENE)
+		"shop":
+			show_screen("shop")
+		"about":
+			_open_about()
+		"exit":
+			get_tree().quit()
+		"settings":
+			_open_settings()
+
+
+func _on_shop(k: String) -> void:
+	match k:
+		"close", "back":
+			show_screen("main")
+		"ok":
+			_redeem()
+		_:
+			if k.begins_with("buy"):
+				var i := int(k.substr(3))
+				var pks: Array = _pk.get("packages", [])
+				if i < pks.size():
+					_open_buy(pks[i])
 
 
 func _redeem() -> void:
 	var r: Variant = Account.redeem(_code.text)
 	if r is int:
-		_shop_msg.text = "Зачислено: +%s" % Wallet.fmt(int(r))
+		toast("Зачислено: +%s" % Wallet.fmt(int(r)), 4.0)
 		_code.text = ""
 	else:
-		_shop_msg.text = String(r)
-	_refresh()
+		toast(String(r), 3.5)
+	_layout()
 
 
-# ------------------------------------------------------------------------------------------ settings
-func _build_settings() -> void:
-	_settings = _panel(Color(0.04, 0.05, 0.08, 0.96))
-	add_child(_settings)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
-	_settings.add_child(v)
-	v.add_child(_label("НАСТРОЙКИ · графика", 32, Color.WHITE, 6))
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 10)
-	v.add_child(h)
-	var st := _label("", 22, Color(0.8, 0.9, 1.0), 3)
+# ------------------------------------------------------------------------------------------ dialogs
+func _build_dialog() -> void:
+	_dialog = PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.05, 0.07, 0.96)
+	sb.set_corner_radius_all(18)
+	sb.border_color = Color(0.9, 0.7, 0.25)
+	sb.set_border_width_all(3)
+	sb.content_margin_left = 30
+	sb.content_margin_right = 30
+	sb.content_margin_top = 22
+	sb.content_margin_bottom = 22
+	_dialog.add_theme_stylebox_override("panel", sb)
+	_dialog_box = VBoxContainer.new()
+	_dialog_box.add_theme_constant_override("separation", 14)
+	_dialog.add_child(_dialog_box)
+	_dialog_text = _text_label(24, Color.WHITE)
+	_dialog_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dialog_text.custom_minimum_size = Vector2(900, 0)
+	_dialog.visible = false
+	add_child(_dialog)
+
+
+func _open_dialog(text: String, buttons: Array) -> void:
+	for c in _dialog_box.get_children():
+		_dialog_box.remove_child(c)
+		if c != _dialog_text:
+			c.queue_free()
+	_dialog_box.add_child(_dialog_text)
+	_dialog_text.text = text
+	for b in buttons:
+		_dialog_box.add_child(b)
+	_dialog_box.add_child(_button("ЗАКРЫТЬ", Color(0.4, 0.12, 0.1), func() -> void: _dialog.visible = false))
+	_dialog.visible = true
+	_layout()
+
+
+func _open_buy(p: Dictionary) -> void:
+	var cur := String(_pk.get("currency_real", "TJS"))
+	var t := "Пакет: %s за %d %s\n\nОплата пока через администратора:\n1) напишите в поддержку @DushanbeX_Support и укажите ваш ID: %s\n2) оплатите %d %s\n3) получите код пополнения и введите его в поле «Промоко» → ✓" % [
+		Wallet.fmt(int(p["game"])), int(p["real"]), cur, Account.id, int(p["real"]), cur]
+	_open_dialog(t, [
+		_button("НАПИСАТЬ В ПОДДЕРЖКУ", Color(0.15, 0.45, 0.8), func() -> void: OS.shell_open(SUPPORT)),
+		_button("СКОПИРОВАТЬ МОЙ ID", Color(0.25, 0.28, 0.34), func() -> void:
+			DisplayServer.clipboard_set(Account.id)
+			toast("ID скопирован: " + Account.id)),
+	])
+
+
+func _open_about() -> void:
+	var t := "DUSHANBE-X\n\nЭту игру мы делали от души — для Таджикистана и для всех, кто любит Душанбе. Мы хотим, чтобы вы нас поддержали: подписывайтесь, делитесь игрой с друзьями.\n\nКомпаниям по вопросам рекламы в игре (билборды, вывески, машины) пишите: @DushanbeX_Support\n\nОфициальные соцсети:"
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var cols := {"YouTube": Color(0.8, 0.1, 0.1), "TikTok": Color(0.12, 0.12, 0.14), "Telegram": Color(0.15, 0.55, 0.85), "Instagram": Color(0.75, 0.2, 0.55)}
+	for n in LINKS:
+		var url: String = LINKS[n]
+		var b := _button(n, cols[n], func() -> void: OS.shell_open(url))
+		b.custom_minimum_size = Vector2(210, 64)
+		row.add_child(b)
+	_open_dialog(t, [row, _button("ПОДДЕРЖКА / РЕКЛАМА: @DushanbeX_Support", Color(0.15, 0.45, 0.8), func() -> void: OS.shell_open(SUPPORT)),
+		_text_label(20, Color(0.75, 0.8, 0.9))])
+	(_dialog_box.get_child(_dialog_box.get_child_count() - 2) as Label).text = "Ваш ID: " + Account.id
+
+
+func _open_settings() -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var st := _text_label(22, Color(0.8, 0.9, 1.0))
+	st.text = "Сейчас: " + String(Settings.mode)
 	for m in ["auto", "low", "medium", "high", "ultra"]:
 		var nm: String = {"auto": "Авто", "low": "Низкая", "medium": "Средняя", "high": "Высокая", "ultra": "Ультра"}[m]
-		h.add_child(_button(nm, Color(0.2, 0.25, 0.32), func() -> void:
+		var b := _button(nm, Color(0.2, 0.25, 0.32), func() -> void:
 			Settings.set_mode(m)
-			st.text = "Выбрано: " + nm, 170, 60, 22))
-	st.text = "Сейчас: " + String(Settings.mode)
-	v.add_child(st)
-	v.add_child(_button("ЗАКРЫТЬ", Color(0.35, 0.1, 0.1), func() -> void: _settings.visible = false, 890, 56, 22))
-	_settings.visible = false
+			st.text = "Выбрано: " + nm)
+		b.custom_minimum_size = Vector2(170, 60)
+		row.add_child(b)
+	_open_dialog("НАСТРОЙКИ · качество графики", [row, st])
 
 
 # ------------------------------------------------------------------------------------------ helpers
-func _label(t: String, fs: int, col: Color, outline: int) -> Label:
+## an invisible button over a button drawn in the picture: a soft glow when pressed / hovered
+func _hit_button(key: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.flat = true
+	var empty := StyleBoxEmpty.new()
+	var glow := StyleBoxFlat.new()
+	glow.bg_color = Color(1, 1, 1, 0.12)
+	glow.set_corner_radius_all(12)
+	b.add_theme_stylebox_override("normal", empty)
+	b.add_theme_stylebox_override("hover", glow)
+	b.add_theme_stylebox_override("pressed", glow)
+	b.add_theme_stylebox_override("focus", empty)
+	b.pressed.connect(func() -> void: cb.call(key))
+	b.name = "Btn_" + key
+	add_child(b)
+	return b
+
+
+func _text_label(fs: int, col: Color) -> Label:
 	var l := Label.new()
-	l.text = t
 	l.add_theme_font_override("font", _font)
 	l.add_theme_font_size_override("font_size", fs)
 	l.add_theme_color_override("font_color", col)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	l.add_theme_constant_override("outline_size", outline)
+	l.add_theme_constant_override("outline_size", 6)
 	return l
 
 
-func _panel(col: Color) -> PanelContainer:
-	var p := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = col
-	sb.set_corner_radius_all(16)
-	sb.border_color = Color(1, 1, 1, 0.18)
-	sb.set_border_width_all(2)
-	sb.content_margin_left = 22
-	sb.content_margin_right = 22
-	sb.content_margin_top = 18
-	sb.content_margin_bottom = 18
-	p.add_theme_stylebox_override("panel", sb)
-	return p
-
-
-func _button(t: String, col: Color, cb: Callable, w: float, h: float, fs: int) -> Button:
+func _button(t: String, col: Color, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = t
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(w, h)
+	b.custom_minimum_size = Vector2(900, 62)
 	b.add_theme_font_override("font", _font)
-	b.add_theme_font_size_override("font_size", fs)
-	for state in ["normal", "hover", "pressed", "disabled"]:
+	b.add_theme_font_size_override("font_size", 22)
+	for state in ["normal", "hover", "pressed"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = col.lightened(0.15) if state == "pressed" else (col.lightened(0.06) if state == "hover" else col)
-		sb.set_corner_radius_all(14)
-		sb.border_color = Color(1, 1, 1, 0.35)
-		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(12)
 		b.add_theme_stylebox_override(state, sb)
 	b.pressed.connect(cb)
 	return b

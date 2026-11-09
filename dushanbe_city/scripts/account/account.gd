@@ -11,6 +11,8 @@ extends RefCounted
 
 const PATH := "user://account.json"
 const KEY := "dushanbe-city-topup-2026-key-v1-change-me"
+## promo codes typed in the shop: amount, once per account
+const PROMOS := {"TAJDUSH": 20000}
 
 static var id := ""
 static var used := {}
@@ -56,6 +58,17 @@ static func signature(pid: String, amount: int, nonce: String) -> String:
 static func redeem(code: String) -> Variant:
 	ensure()
 	var c := code.strip_edges().to_upper().replace(" ", "")
+	if c == "":
+		return "Введите код"
+	if PROMOS.has(c):
+		if used.has("PROMO:" + c):
+			return "Промокод уже использован"
+		used["PROMO:" + c] = true
+		save()
+		Wallet.load_state()
+		Wallet.money += int(PROMOS[c])
+		Wallet.save_state()
+		return int(PROMOS[c])
 	var p := c.split("-")
 	if p.size() != 4 or p[0] != "DX" or not p[1].is_valid_int():
 		return "Неверный формат кода"
