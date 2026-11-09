@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d32f6fdmwdyit"
-path.s3tc="res://.godot/imported/dushanbecity_3.png-ea9a1d7b224d03778014f8f3a1fb092a.s3tc.ctex"
-path.etc2="res://.godot/imported/dushanbecity_3.png-ea9a1d7b224d03778014f8f3a1fb092a.etc2.ctex"
+uid="uid://b2haghkbw7woj"
+path.s3tc="res://.godot/imported/ad_eskhata.png-e7ca446777d3b639aed5fb957cc12396.s3tc.ctex"
+path.etc2="res://.godot/imported/ad_eskhata.png-e7ca446777d3b639aed5fb957cc12396.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/ads/dushanbecity_3.png"
-dest_files=["res://.godot/imported/dushanbecity_3.png-ea9a1d7b224d03778014f8f3a1fb092a.s3tc.ctex", "res://.godot/imported/dushanbecity_3.png-ea9a1d7b224d03778014f8f3a1fb092a.etc2.ctex"]
+source_file="res://assets/textures/ads/ad_eskhata.png"
+dest_files=["res://.godot/imported/ad_eskhata.png-e7ca446777d3b639aed5fb957cc12396.s3tc.ctex", "res://.godot/imported/ad_eskhata.png-e7ca446777d3b639aed5fb957cc12396.etc2.ctex"]
 
 [params]
 

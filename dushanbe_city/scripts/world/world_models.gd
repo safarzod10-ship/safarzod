@@ -14,6 +14,9 @@ extends RefCounted
 const DIR := "res://assets/models/extra/"
 static var _cache := {}
 static var _mats := {}
+## roadside billboard posters (supplied by the project owner), in turn along the roads
+const ADS := ["res://assets/textures/ads/ad_dcnext.png", "res://assets/textures/ads/ad_orienbank.png",
+	"res://assets/textures/ads/ad_laklak.png", "res://assets/textures/ads/ad_eskhata.png"]
 
 
 ## Array of [Mesh, Transform3D] for a model key (main thread)
@@ -150,14 +153,14 @@ static func multi(parent: Node3D, key: String, xfs: Array, vis_end := 0.0, shado
 
 
 # ------------------------------------------------------------------------------------------ billboard
-## the DushanbeCity bank poster (3 designs), lit at night
+## the advertising poster (4 banners in turn: DCnext, Orienbank, LakLak, Eskhata), lit at night
 static func ad_material(variant: int) -> Material:
 	var key := "ad%d" % variant
 	if _mats.has(key):
 		return _mats[key]
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://assets/shaders/billboard_ad.gdshader")
-	var p := "res://assets/textures/ads/dushanbecity_%d.png" % (variant % 3 + 1)
+	var p: String = ADS[variant % ADS.size()]
 	if ResourceLoader.exists(p):
 		sm.set_shader_parameter("poster", load(p))
 	_mats[key] = sm

@@ -24,13 +24,13 @@ the glTF `asset.extras` of the file. The files are in `assets/models/extra/`.
     (`assets/vehicles/laklak/van_body_blue.png`).
   - The LakLak logo was added on both sides and the rear doors.
   - The wheels were given pivot nodes for the game's vehicle physics.
-- **Billboard:** the poster is a new texture — DushanbeCity bank adverts drawn for the game
-  (`assets/textures/ads/`).
+- **Billboard:** the posters are the 4 advertising banners supplied by the project owner
+  (DCnext / DC City Dushanbe, Orienbank, LakLak, Eskhata), in `assets/textures/ads/ad_*.png`. Each
+  banner is fitted to the board's 2.5:1 format, uncropped, with blurred sides.
 - **Flag:** the cloth waves via a vertex shader, and the model is scaled ×20 (a 150 m flagpole).
 - **Road pack:** the street lamps and the bench are used at ×3.2 scale.
 - **Factory building:** used as the LakLak depot, with a sign drawn for the game.
 
-The LakLak logo, the DushanbeCity adverts and their textures were made for this project. The
-DushanbeCity design is a generic one, not the bank's real logo.
+The LakLak logo on the van and the depot sign were made for this project.
 
 The models' own textures are unchanged apart from the van's colour.

@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bmvxu0l5hs7tj"
-path.s3tc="res://.godot/imported/dushanbecity_2.png-5aaa9d0c926a7afe3d65ad2e4bad90a7.s3tc.ctex"
-path.etc2="res://.godot/imported/dushanbecity_2.png-5aaa9d0c926a7afe3d65ad2e4bad90a7.etc2.ctex"
+uid="uid://8pfuwh0xpy0o"
+path.s3tc="res://.godot/imported/ad_laklak.png-37463ff5ee579c226036ede3cae891a1.s3tc.ctex"
+path.etc2="res://.godot/imported/ad_laklak.png-37463ff5ee579c226036ede3cae891a1.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/ads/dushanbecity_2.png"
-dest_files=["res://.godot/imported/dushanbecity_2.png-5aaa9d0c926a7afe3d65ad2e4bad90a7.s3tc.ctex", "res://.godot/imported/dushanbecity_2.png-5aaa9d0c926a7afe3d65ad2e4bad90a7.etc2.ctex"]
+source_file="res://assets/textures/ads/ad_laklak.png"
+dest_files=["res://.godot/imported/ad_laklak.png-37463ff5ee579c226036ede3cae891a1.s3tc.ctex", "res://.godot/imported/ad_laklak.png-37463ff5ee579c226036ede3cae891a1.etc2.ctex"]
 
 [params]
 

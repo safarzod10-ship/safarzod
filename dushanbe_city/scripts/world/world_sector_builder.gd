@@ -41,7 +41,7 @@ func _init(data: WorldData) -> void:
 		_bucket(sector_items, _sec(float(s["x"]), float(s["z"]))).append(["landmark", s])
 	for i in wd.billboards.size():
 		var bb: Dictionary = (wd.billboards[i] as Dictionary).duplicate()
-		bb["variant"] = i % 3
+		bb["variant"] = i % WorldModels.ADS.size()
 		_bucket(sector_items, _sec(float(bb["x"]), float(bb["z"]))).append(["billboard", bb])
 	for g in wd.guardrails:
 		var pts: Array = g["p"]

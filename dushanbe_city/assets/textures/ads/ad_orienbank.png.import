@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blmruyajkdwb0"
-path.s3tc="res://.godot/imported/dushanbecity_1.png-9539cfb1a72d9b5bc502502746893d9d.s3tc.ctex"
-path.etc2="res://.godot/imported/dushanbecity_1.png-9539cfb1a72d9b5bc502502746893d9d.etc2.ctex"
+uid="uid://do0cdwrripls5"
+path.s3tc="res://.godot/imported/ad_orienbank.png-a83e41fcaf8361d5b85f3927b2ebb28c.s3tc.ctex"
+path.etc2="res://.godot/imported/ad_orienbank.png-a83e41fcaf8361d5b85f3927b2ebb28c.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/ads/dushanbecity_1.png"
-dest_files=["res://.godot/imported/dushanbecity_1.png-9539cfb1a72d9b5bc502502746893d9d.s3tc.ctex", "res://.godot/imported/dushanbecity_1.png-9539cfb1a72d9b5bc502502746893d9d.etc2.ctex"]
+source_file="res://assets/textures/ads/ad_orienbank.png"
+dest_files=["res://.godot/imported/ad_orienbank.png-a83e41fcaf8361d5b85f3927b2ebb28c.s3tc.ctex", "res://.godot/imported/ad_orienbank.png-a83e41fcaf8361d5b85f3927b2ebb28c.etc2.ctex"]
 
 [params]
 

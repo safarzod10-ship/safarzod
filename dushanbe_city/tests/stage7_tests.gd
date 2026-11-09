@@ -98,7 +98,7 @@ func _t_billboards() -> void:
 		var pts: Array = r["pts"]
 		for k in pts.size() - 1:
 			km += Vector2(float(pts[k + 1][0]) - float(pts[k][0]), float(pts[k + 1][2]) - float(pts[k][2])).length() / 1000.0
-	_check("DushanbeCity billboards: %d along %.0f km of roads (one per km: >= 75 %% of the whole kilometres)" % [nb, km], nb >= int(km * 0.75))
+	_check("advertising billboards: %d along %.0f km of roads (one per km: >= 75 %% of the whole kilometres)" % [nb, km], nb >= int(km * 0.75))
 	# spacing along each road
 	var by_road := {}
 	for b in wd.billboards:
@@ -134,7 +134,11 @@ func _t_billboards() -> void:
 	var tex: Texture2D = null
 	if poster:
 		tex = (poster.material_override as ShaderMaterial).get_shader_parameter("poster")
-	_check("billboard in the scene with the DushanbeCity poster (%s)" % (tex.resource_path if tex else "none"), tex != null and tex.resource_path.contains("dushanbecity"))
+	_check("billboard in the scene with an advertising banner (%s)" % (tex.resource_path if tex else "none"), tex != null and tex.resource_path.contains("/ads/ad_"))
+	var used := {}
+	for i in wd.billboards.size():
+		used[WorldModels.ADS[i % WorldModels.ADS.size()]] = true
+	_check("all 4 banners (DCnext, Orienbank, LakLak, Eskhata) are on the roads: %d of %d used" % [used.size(), WorldModels.ADS.size()], used.size() == 4)
 	await _frames(3)
 	var space := (main as Node3D).get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(p + Vector3(-3, 2, 0.1), p + Vector3(3, 2, 0.1)))
