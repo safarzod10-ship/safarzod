@@ -26,7 +26,7 @@ trap cleanup EXIT
 answers() {
 	rm -f "$FIFO"
 	mkfifo "$FIFO"
-	( exec 3>"$FIFO"; printf '%s\n' "$@" >&3; sleep 900 ) &
+	( exec 3>"$FIFO"; sleep 900 ) &
 	FEEDER=$!
 }
 
@@ -128,8 +128,8 @@ curl -sk --resolve "$DOMAIN:443:127.0.0.1" -X POST -H "$AUTH" "https://$DOMAIN/a
 curl -sk --resolve "$DOMAIN:443:127.0.0.1" -X PATCH -H "$AUTH" -H 'Content-Type: application/json' -d '{"values":{"reward_boost":"0.25"}}' "https://$DOMAIN/api/admin/settings" >/dev/null
 pass "admin session and settings change"
 
-answers "y"
-run_installer >"$WORK/second.log" 2>&1 || { cat "$WORK/second.log"; fail "repeated installation"; }
+answers
+ZR_RESET_DB=0 run_installer >"$WORK/second.log" 2>&1 || { cat "$WORK/second.log"; fail "repeated installation"; }
 stop_feeder
 grep -q "Резервная копия базы перед обновлением" "$WORK/second.log" || fail "backup before update"
 [[ $(grep '^POSTGRES_PASSWORD=' "$APP/.env" | cut -d= -f2) == "$PG_PASSWORD" ]] || fail "postgres password changed"
@@ -139,4 +139,16 @@ AUTH="Authorization: tma $(signed_init_data 1000)"
 settings=$(curl -sk --resolve "$DOMAIN:443:127.0.0.1" -H "$AUTH" "https://$DOMAIN/api/admin/settings")
 [[ $settings == *'"key":"reward_boost"'*'"value":"0.25"'* ]] || fail "settings lost after update"
 curl -sk --resolve "$DOMAIN:443:127.0.0.1" -H "$AUTH" "https://$DOMAIN/api/me" | grep -q '"id":1000' || fail "user lost after update"
-pass "repeated installation keeps database, settings and secrets"
+pass "repeated installation without any input keeps database, settings and secrets"
+
+answers
+ZR_RESET_DB=1 run_installer >"$WORK/reset.log" 2>&1 || { cat "$WORK/reset.log"; fail "reset installation"; }
+stop_feeder
+[[ $(grep '^POSTGRES_PASSWORD=' "$APP/.env" | cut -d= -f2) == "$PG_PASSWORD" ]] || fail "postgres password changed on reset"
+ls "$APP"/backups/zuba-*.dump >/dev/null 2>&1 || fail "backup before reset"
+AUTH="Authorization: tma $(signed_init_data 1000)"
+settings=$(curl -sk --resolve "$DOMAIN:443:127.0.0.1" -H "$AUTH" "https://$DOMAIN/api/admin/settings")
+[[ $settings == *'"key":"reward_boost"'*'"value":"0.2"'* ]] || fail "database not reset"
+users=$(curl -sk --resolve "$DOMAIN:443:127.0.0.1" -H "$AUTH" "https://$DOMAIN/api/admin/users")
+[[ $users == *'"id":1000'* && $users != *'"id":2'* ]] || fail "unexpected users after reset: $users"
+pass "ZR_RESET_DB=1 wipes the database, keeps config and makes a backup first"

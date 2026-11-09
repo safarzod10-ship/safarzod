@@ -8,7 +8,8 @@ INSTALL_DIR="${ZR_INSTALL_DIR:-/opt/zuba-ruba}"
 MIN_DISK_GB=5
 MIN_RAM_MB=900
 NONINTERACTIVE=0
-[[ -n ${ZR_BOT_TOKEN:-} ]] && NONINTERACTIVE=1
+[[ -n ${ZR_BOT_TOKEN:-} || -f $INSTALL_DIR/$REPO_SUBDIR/.env ]] && NONINTERACTIVE=1
+RESET_DB="${ZR_RESET_DB:-0}"
 
 if [[ -t 1 ]]; then
 	BOLD=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; RESET=$'\e[0m'
@@ -283,10 +284,11 @@ validate_flyer_key() {
 
 configure_from_env() {
 	local env_file="$1" response
-	BOT_TOKEN="${ZR_BOT_TOKEN// /}"
-	[[ $BOT_TOKEN =~ ^[0-9]{6,12}:[A-Za-z0-9_-]{30,}$ ]] || die "ZR_BOT_TOKEN: неверный формат токена"
+	BOT_TOKEN="${ZR_BOT_TOKEN:-$(env_get "$env_file" BOT_TOKEN)}"
+	BOT_TOKEN="${BOT_TOKEN// /}"
+	[[ $BOT_TOKEN =~ ^[0-9]{6,12}:[A-Za-z0-9_-]{30,}$ ]] || die "токен бота не задан или в неверном формате. Передайте ZR_BOT_TOKEN"
 	response=$(telegram_get_me "$BOT_TOKEN")
-	[[ $response == *'"ok":true'* ]] || die "Telegram не принял токен ZR_BOT_TOKEN (getMe)"
+	[[ $response == *'"ok":true'* ]] || die "Telegram не принял токен бота (getMe). Передайте новый токен в ZR_BOT_TOKEN"
 	BOT_USERNAME=$(printf '%s' "$response" | json_field username)
 	ok "Бот @$BOT_USERNAME"
 	ADMIN_IDS="${ZR_ADMIN_IDS:-$(env_get "$env_file" ADMIN_IDS)}"
@@ -332,29 +334,13 @@ prompt_domain() {
 
 configure() {
 	step "Настройка"
-	local env_file="$APP_DIR/.env" reuse=0
-	if [[ -f $env_file ]] && (( ! NONINTERACTIVE )); then
-		info "Найдена конфигурация $env_file"
-		if confirm "Оставить текущие настройки без изменений?"; then
-			reuse=1
-		fi
-	fi
+	local env_file="$APP_DIR/.env"
 	POSTGRES_PASSWORD=$(env_get "$env_file" POSTGRES_PASSWORD)
 	FLYER_WEBHOOK_SECRET=$(env_get "$env_file" FLYER_WEBHOOK_SECRET)
 	BACKUP_KEEP_DAYS=$(env_get "$env_file" BACKUP_KEEP_DAYS)
 	if (( NONINTERACTIVE )); then
+		[[ -f $env_file ]] && info "Используются сохранённые настройки из $env_file"
 		configure_from_env "$env_file"
-	elif (( reuse )); then
-		BOT_TOKEN=$(env_get "$env_file" BOT_TOKEN)
-		local response
-		response=$(telegram_get_me "$BOT_TOKEN")
-		[[ $response == *'"ok":true'* ]] || die "сохранённый токен бота больше не действителен. Запустите установщик снова и введите новый токен."
-		BOT_USERNAME=$(printf '%s' "$response" | json_field username)
-		ADMIN_IDS=$(env_get "$env_file" ADMIN_IDS)
-		FLYER_API_KEY=$(env_get "$env_file" FLYER_API_KEY)
-		DOMAIN=$(env_get "$env_file" DOMAIN)
-		ACME_EMAIL=$(env_get "$env_file" ACME_EMAIL)
-		ok "Используются сохранённые настройки (бот @$BOT_USERNAME, домен $DOMAIN)"
 	else
 		prompt_bot_token "$(env_get "$env_file" BOT_TOKEN)"
 		prompt_admins "$(env_get "$env_file" ADMIN_IDS)"
@@ -482,6 +468,18 @@ open_firewall() {
 	fi
 }
 
+reset_database() {
+	warn "ZR_RESET_DB=1: база данных и Redis будут удалены, все пользователи и балансы обнулятся"
+	compose down --remove-orphans
+	local volume
+	for volume in pgdata redisdata; do
+		if docker volume inspect "${PROJECT_NAME}_${volume}" >/dev/null 2>&1; then
+			docker volume rm "${PROJECT_NAME}_${volume}" >/dev/null
+		fi
+	done
+	ok "База данных удалена. Резервная копия осталась в $APP_DIR/backups"
+}
+
 deploy() {
 	step "Сборка и запуск"
 	open_firewall
@@ -491,6 +489,9 @@ deploy() {
 	if compose ps --status running --services 2>/dev/null | grep -qx postgres; then
 		info "Резервная копия базы перед обновлением"
 		compose exec -T backup /bin/sh /backup.sh once || warn "не удалось создать резервную копию"
+	fi
+	if [[ $RESET_DB == 1 ]]; then
+		reset_database
 	fi
 	compose build --pull
 	compose up -d --remove-orphans
