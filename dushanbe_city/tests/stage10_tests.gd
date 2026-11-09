@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["shop", "shoot", "explode", "steer"]
+	var secs: Array = ["account", "shop", "shoot", "explode", "steer"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -161,3 +161,21 @@ func _t_steer() -> void:
 	VehicleInput.scripted = null
 	_check("steer right -> the steering wheel turns clockwise for the driver (%.0f deg)" % rad_to_deg(spin), spin > deg_to_rad(30.0))
 	s.exit()
+
+
+func _t_account() -> void:
+	Account.no_save = true
+	Account.ensure()
+	_check("account ID given automatically: %s (8 digits)" % Account.id, Account.id.length() == 8 and Account.id.is_valid_int())
+	# a code as tools/admin/make_code.py makes it (same HMAC)
+	var nonce := "A1B2C3"
+	var code := "DX-5000-%s-%s" % [nonce, Account.signature(Account.id, 5000, nonce)]
+	var m0 := Wallet.money
+	var r: Variant = Account.redeem(code)
+	_check("top-up code for this ID: +5 000 смн (money %s -> %s)" % [Wallet.fmt(m0), Wallet.fmt(Wallet.money)], r is int and int(r) == 5000 and Wallet.money == m0 + 5000)
+	var r2: Variant = Account.redeem(code)
+	_check("the same code again: refused (%s)" % str(r2), r2 is String and Wallet.money == m0 + 5000)
+	var other := "DX-5000-%s-%s" % [nonce, Account.signature("99999999", 5000, nonce)]
+	_check("a code made for another ID: refused (%s)" % str(Account.redeem(other)), Wallet.money == m0 + 5000)
+	_check("a forged amount: refused (%s)" % str(Account.redeem("DX-90000-%s-%s" % [nonce, Account.signature(Account.id, 5000, nonce)])), Wallet.money == m0 + 5000)
+	Wallet.money = m0

@@ -1,0 +1,10 @@
+{
+  "currency_real": "TJS",
+  "contact": "Администратор: укажите контакт (Telegram / телефон) в data/shop_packages.json",
+  "packages": [
+    {"game": 5000, "real": 10},
+    {"game": 15000, "real": 25},
+    {"game": 50000, "real": 70},
+    {"game": 150000, "real": 180}
+  ]
+}
