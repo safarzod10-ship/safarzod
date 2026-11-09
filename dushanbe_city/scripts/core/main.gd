@@ -148,6 +148,9 @@ func _spawn_extra_vehicles() -> void:
 		laklak.van = van
 		car_session.add_vehicle(van)
 	# fuel for every vehicle: filling stations + delivery when the tank runs dry
+	var nav := RoadNav.new()
+	nav.name = "RoadNav"
+	add_child(nav)
 	fuel = FuelService.new()
 	fuel.name = "FuelService"
 	fuel.session = car_session

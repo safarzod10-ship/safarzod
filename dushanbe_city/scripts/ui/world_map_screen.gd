@@ -5,9 +5,10 @@ extends CanvasLayer
 ## real positions, names of regions, villages, landmarks, fuel stations, and the player / car.
 ## Drag (finger or mouse) to pan, pinch / wheel to zoom; the map follows the real coordinates, so the
 ## marker moves along the road the player drives on.
-## Tap a place (a vehicle, a job, a landmark, a station, a village or any spot): a card appears with
-## «ОТПРАВИТЬСЯ» (the player - or the car he drives - is moved there at once, onto the nearest road)
-## and «МАРШРУТ» (waypoint on the minimap).
+## Tap a place (a vehicle, a job, a landmark, a station, a village or any spot): a marker is set
+## there and the navigator (RoadNav) draws the route along the roads - on this map and on the
+## minimap; the card shows the name and the length of the route, «ПОЕХАЛИ» closes the map,
+## «УБРАТЬ МЕТКУ» clears it. No teleport: you drive / walk there.
 
 var _open := false
 var _root: Control
@@ -134,6 +135,8 @@ func _input(event: InputEvent) -> void:
 func _process(_d: float) -> void:
 	if _open:
 		_canvas.queue_redraw()
+		if _card.visible:
+			_update_card()
 
 
 func _player_pos() -> Vector3:
@@ -199,6 +202,14 @@ func _draw_map() -> void:
 		_canvas.draw_circle(tp, 15, Color(0.05, 0.05, 0.05, 0.85))
 		_canvas.draw_circle(tp, 11, Color(1.0, 0.6, 0.1))
 		_label(tp + Vector2(0, 26), "ЦЕЛЬ", 16, Color(1.0, 0.8, 0.4))
+	# the navigator's route along the roads (blue, with a dark outline)
+	var rt := RoadNav.route
+	if rt.size() >= 2:
+		var line := PackedVector2Array()
+		for q in rt:
+			line.append(w2s(q.x, q.z))
+		_canvas.draw_polyline(line, Color(0.02, 0.1, 0.25, 0.9), 11.0, true)
+		_canvas.draw_polyline(line, Color(0.2, 0.6, 1.0), 7.0, true)
 	if not _sel.is_empty() and _card.visible:
 		var sp3 := w2s((_sel["pos"] as Vector3).x, (_sel["pos"] as Vector3).z)
 		_canvas.draw_arc(sp3, 20, 0, TAU, 32, Color(1, 1, 1), 4.0)
@@ -318,14 +329,13 @@ func _physics_process(_d: float) -> void:
 				_nav_target = Vector3.INF
 
 
-# ------------------------------------------------------------------------------------------ teleport
+# ------------------------------------------------------------------------------------------ marker card
 var _tap_start := {}
 var _card: PanelContainer
 var _card_label: Label
 var _btn_go: Button
 var _btn_route: Button
 var _sel := {}                       ## {"name": String, "pos": Vector3}
-var busy := false                    ## a teleport is loading
 
 
 func _build_card() -> void:
@@ -352,11 +362,11 @@ func _build_card() -> void:
 	h.add_theme_constant_override("separation", 14)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(h)
-	_btn_go = _card_button("ОТПРАВИТЬСЯ", Color(0.1, 0.55, 0.25))
-	_btn_go.pressed.connect(func() -> void: if not _sel.is_empty(): teleport_to(_sel["pos"], String(_sel["name"])))
+	_btn_go = _card_button("ПОЕХАЛИ", Color(0.1, 0.55, 0.25))
+	_btn_go.pressed.connect(func() -> void: if _open: toggle())
 	h.add_child(_btn_go)
-	_btn_route = _card_button("МАРШРУТ", Color(0.15, 0.35, 0.7))
-	_btn_route.pressed.connect(func() -> void: if not _sel.is_empty(): navigate_to(_sel["pos"]))
+	_btn_route = _card_button("УБРАТЬ МЕТКУ", Color(0.55, 0.18, 0.12))
+	_btn_route.pressed.connect(clear_target)
 	h.add_child(_btn_route)
 	_card.visible = false
 	_root.add_child(_card)
@@ -420,9 +430,8 @@ func select_at(sp: Vector2) -> void:
 
 func select_place(nm: String, p: Vector3) -> void:
 	_sel = {"name": nm, "pos": p}
-	var pp := _player_pos()
-	var d := Vector2(p.x - pp.x, p.z - pp.z).length()
-	_card_label.text = "%s\n%s от вас" % [nm, ("%.1f км" % (d / 1000.0)) if d >= 1000.0 else ("%d м" % int(d))]
+	set_target(p)
+	_update_card()
 	_card.visible = true
 	_card.reset_size()
 	var vs := _canvas.size
@@ -430,95 +439,30 @@ func select_place(nm: String, p: Vector3) -> void:
 	_canvas.queue_redraw()
 
 
-## where to land for a target p: next to the vehicle when it is one of the player's vehicles,
-## otherwise on the nearest road (never inside a building or in the water); [position, yaw, vehicle]
-func landing_for(p: Vector3, driving: bool) -> Array:
-	var main := get_parent()
-	for key in ["car", "camry", "lexus", "van", "bus"]:
-		var v: Variant = main.get(key) if main else null
-		if v is VehiclePrado and is_instance_valid(v) and (v as Node3D).global_position.distance_to(p) < 1.0:
-			return [(v as VehiclePrado).driver_door_point(1.2), (v as Node3D).global_rotation.y, v]
-	var best := INF
-	var out: Array = [p, 0.0, null]
-	if wd.ok:
-		for r in wd.roads:
-			if r["cls"] == "lane":
-				continue
-			var pts: Array = r["pts"]
-			var hw := float(r["w"]) * 0.5
-			var skip := {}
-			for t in r.get("tunnels", []):
-				for i in range(int(t[0]) - 2, int(t[1]) + 3):
-					skip[i] = true
-			for k in range(0, pts.size() - 1):
-				if skip.has(k):
-					continue
-				var q: Array = pts[k]
-				var d := Vector2(float(q[0]) - p.x, float(q[2]) - p.z).length_squared()
-				if d < best:
-					best = d
-					var a := Vector3(q[0], q[1], q[2])
-					var b2: Array = pts[k + 1]
-					var dir := (Vector3(b2[0], b2[1], b2[2]) - a).normalized()
-					var right := dir.cross(Vector3.UP)
-					# car: right-hand lane; on foot: the roadside
-					var lp := a + right * (minf(hw * 0.5, 3.0) if driving else hw + 1.6)
-					out = [lp, atan2(-dir.x, -dir.z), null]
-	# the old city (peninsula, south of the seam): no world roads there - land on the spot when it
-	# is closer than the nearest world road
-	if (not wd.ok or p.z > wd.seam_z) and sqrt(best) > 60.0:
-		out = [p, 0.0, null]
-	return out
-
-
-## move the player (or the car he drives) to p: load the place, put it on the ground, close the map
-func teleport_to(p: Vector3, nm := "") -> void:
-	if busy:
+## the card text: name + the route length along the roads (straight line while it is being built)
+func _update_card() -> void:
+	if _sel.is_empty():
 		return
-	busy = true
-	var main := get_parent()
-	var s: CarSession = main.get("car_session") if main else null
-	var ow: OpenWorld = main.get("open_world") if main else null
-	_card_label.text = "Загрузка: %s…" % nm
-	_btn_go.disabled = true
-	_btn_route.disabled = true
-	await get_tree().process_frame
-	await get_tree().process_frame
-	var driving := s != null and s.driving and not (s.car is VehicleBoat)
-	var land := landing_for(p, driving)
-	var target: Vector3 = land[0]
-	if land[2] != null and s and s.driving:
-		s.exit()                               # going to another vehicle: on foot next to its door
-		driving = false
-		await get_tree().physics_frame
-	elif s and s.driving and s.car is VehicleBoat:
-		s.exit()
-		await get_tree().physics_frame
-	if ow:
-		ow.hold = target                       # the streamer keeps its collision on meanwhile
-		ow.preload_at(target)
-	for i in 3:
-		await get_tree().physics_frame
-	var space := get_viewport().find_world_3d().direct_space_state
-	# on a world road: from just above the road (bridges, not the mountain over a tunnel); a free spot:
-	# from high above
-	var top := target + Vector3.UP * (4.0 if land[2] == null and target.y != 0.0 else 400.0)
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(top, target + Vector3.DOWN * 600.0, 1))
-	if not hit.is_empty():
-		target.y = (hit.position as Vector3).y
-	if driving and s:
-		s.car.place(target + Vector3.UP * 0.5, float(land[1]))
-		s.cam.snap()
-	elif s and s.player:
-		s.player.teleport(target + Vector3.UP * 1.0, float(land[1]))
+	var p: Vector3 = _sel["pos"]
+	var pp := _player_pos()
+	var d := Vector2(p.x - pp.x, p.z - pp.z).length()
+	var by_road := RoadNav.route.size() >= 2 and Minimap.target == p
+	if by_road:
+		d = RoadNav.length_of(RoadNav.route)
+	_card_label.text = "%s\n%s %s" % [String(_sel["name"]), ("%.1f км" % (d / 1000.0)) if d >= 1000.0 else ("%d м" % int(d)), "по дорогам" if by_road else "(прямо)"]
+
+
+## marker + route (the navigator follows Minimap.target)
+func set_target(p: Vector3) -> void:
+	Minimap.target = p
+	Minimap.target_owner = self
+	_nav_target = p
+
+
+func clear_target() -> void:
 	if Minimap.target_owner == self:
 		Minimap.target = Vector3.INF
 		Minimap.target_owner = null
-		_nav_target = Vector3.INF
-	_btn_go.disabled = false
-	_btn_route.disabled = false
-	busy = false
-	if ow:
-		get_tree().create_timer(3.0).timeout.connect(func() -> void: ow.hold = Vector3.INF)
-	if _open:
-		toggle()
+	_nav_target = Vector3.INF
+	_sel = {}
+	_card.visible = false

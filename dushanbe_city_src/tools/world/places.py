@@ -459,6 +459,50 @@ def rivers(H_at, H):
     return out
 
 
+def rivers_under_roads(rivers, roads, clear=1.2, deck=2.6):
+    """The water surface (bed + 0.9 m) is sampled from the terrain, which the road passes flatten to
+    0.22 m under the road: where a road runs along the river or crosses it, the water came out ABOVE
+    the carriageway / the bridge deck. Lower the surface under and beside every road to `clear` m
+    below it (bridge decks: `deck` m), keep it never rising downstream."""
+    pts = []
+    for r in roads:
+        hw = r["w"] * 0.5
+        br = set()
+        for a, b in r["bridges"]:
+            br.update(range(a - 2, b + 3))
+        tu = set()
+        for a, b in r["tunnels"]:
+            tu.update(range(a, b + 1))
+        for k, p in enumerate(r["pts"]):
+            if k in tu:
+                continue
+            pts.append((p[0], p[2], p[1] - (deck if k in br else clear), hw))
+    R = np.array(pts)
+    cell = 32.0
+    grid = {}
+    for i, (x, z, _, _) in enumerate(R):
+        grid.setdefault((int(np.floor(x / cell)), int(np.floor(z / cell))), []).append(i)
+    lowered = 0
+    for rv in rivers:
+        hw = rv["w"] * 0.5
+        P = rv["pts"]
+        for p in P:
+            cx, cz = int(np.floor(p[0] / cell)), int(np.floor(p[2] / cell))
+            lim = p[1]
+            for dj in (-1, 0, 1):
+                for di in (-1, 0, 1):
+                    for i in grid.get((cx + di, cz + dj), ()):
+                        x, z, ymax, rhw = R[i]
+                        if (x - p[0]) ** 2 + (z - p[2]) ** 2 < (hw + rhw + 8.0) ** 2:
+                            lim = min(lim, ymax)
+            if lim < p[1] - 1e-3:
+                p[1] = round(float(lim), 2)
+                lowered += 1
+        for k in range(1, len(P)):
+            P[k][1] = min(P[k][1], P[k - 1][1])
+    return lowered
+
+
 # -------------------------------------------------------------------- world map
 def write_map(W, H, splat, biome, road_mask, path, px=4096):
     s = H.shape[0]

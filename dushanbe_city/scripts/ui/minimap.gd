@@ -93,6 +93,8 @@ func _draw_overlay() -> void:
 	for q in pts:
 		inner.append(c + (q - c) * 0.78)
 	_overlay.draw_colored_polygon(inner, Color(1.0, 0.82, 0.25))
+	# the navigator's route (blue), clipped to the round map
+	_draw_route(c, R, yaw)
 	# mission target (orange) / nearest filling station (green); radius of the map: 160 m
 	for mk in [[target, Color(1.0, 0.6, 0.1)], [fuel_marker, Color(0.2, 0.9, 0.35)]]:
 		_marker(mk[0], mk[1], c, R, yaw)
@@ -124,3 +126,46 @@ func _marker(target_p: Vector3, col: Color, c: Vector2, R: float, yaw: float) ->
 		var dn := sp.normalized()
 		var sd := Vector2(-dn.y, dn.x)
 		_overlay.draw_colored_polygon(PackedVector2Array([tc + dn * R * 0.14, tc + sd * R * 0.06, tc - sd * R * 0.06]), col)
+
+
+func _draw_route(c: Vector2, R: float, yaw: float) -> void:
+	var rt := RoadNav.route
+	if rt.size() < 2:
+		return
+	var p := focus.global_position if is_instance_valid(focus) else player.global_position
+	var f := Vector2(-sin(yaw), -cos(yaw))
+	var rgt := Vector2(-f.y, f.x)
+	var lim := R * 0.9
+	var prev := Vector2.INF
+	for q in rt:
+		var d := Vector2(q.x - p.x, q.z - p.z)
+		var sp := Vector2(d.dot(rgt), -d.dot(f)) * (R / 160.0)
+		if prev != Vector2.INF:
+			var a := prev
+			var b := sp
+			if a.length() > lim and b.length() > lim:
+				prev = sp
+				if a.length() > lim * 3.0:
+					break
+				continue
+			# clip the segment to the circle
+			if a.length() > lim:
+				a = _clip(b, a, lim)
+			if b.length() > lim:
+				b = _clip(a, b, lim)
+			_overlay.draw_line(c + a, c + b, Color(0.02, 0.1, 0.25, 0.85), R * 0.075, true)
+			_overlay.draw_line(c + a, c + b, Color(0.2, 0.6, 1.0), R * 0.045, true)
+		prev = sp
+
+
+## the point where the segment inside -> outside crosses the circle of radius r
+static func _clip(inside: Vector2, outside: Vector2, r: float) -> Vector2:
+	var lo := 0.0
+	var hi := 1.0
+	for i in 12:
+		var m := (lo + hi) * 0.5
+		if inside.lerp(outside, m).length() < r:
+			lo = m
+		else:
+			hi = m
+	return inside.lerp(outside, lo)

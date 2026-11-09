@@ -108,7 +108,7 @@ func can_enter(v: VehiclePrado = null) -> bool:
 	if v is VehicleBoat:
 		# a boat: from the pier / shore or swimming beside it, anywhere along the hull
 		var dh := Vector2(player.global_position.x - v.global_position.x, player.global_position.z - v.global_position.z).length()
-		return dh < 4.2 and absf(player.global_position.y - v.global_position.y) < 4.0 and v.speed_kmh < 6.0
+		return dh < 4.2 and absf(player.global_position.y - v.global_position.y) < 6.0 and v.speed_kmh < 6.0
 	var d := player.global_position.distance_to(v.driver_door_point(0.6))
 	return d < ENTER_DIST and v.speed_kmh < 5.0 and player.is_on_floor()
 

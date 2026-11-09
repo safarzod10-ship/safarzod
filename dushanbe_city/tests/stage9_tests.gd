@@ -35,7 +35,7 @@ func _ready() -> void:
 	for w in get_tree().get_nodes_in_group(&"weather"):
 		w.set("auto_cycle", false)
 		w.call("set_state", 0, true)
-	var secs: Array = ["touch_fuel", "map", "teleport", "embankment"]
+	var secs: Array = ["touch_fuel", "map", "world", "embankment"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -144,6 +144,11 @@ func _t_touch_fuel() -> void:
 	camry.place(pump + Vector3(0, 1, 0), 0.0)
 	camry.fuel_l = 5.0
 	await _sec(1.5)
+	for i in 240:
+		if fs._btn_fill.visible:
+			break
+		await get_tree().physics_frame
+	print("   pumps: car %s pump %s speed %.1f station %s panel %s filling %s driving %s" % [str(camry.global_position.round()), str(pump.round()), camry.speed_kmh, fs.station_near(camry.global_position), fs._panel.visible, fs._filling, s.car == camry])
 	_check("at the pumps: «ЗАПРАВИТЬ» shown", fs._btn_fill.visible)
 	m0 = Wallet.money
 	await _tap(fs._btn_fill, 1)
@@ -154,8 +159,13 @@ func _t_touch_fuel() -> void:
 	await _frames(10)
 
 
-# ------------------------------------------------------------------------------------------ map card
+# ------------------------------------------------------------------------------------------ map: marker + route
 func _t_map() -> void:
+	var nav: RoadNav = main.get_node("RoadNav")
+	var t0 := Time.get_ticks_msec()
+	while not nav.ready_graph and Time.get_ticks_msec() - t0 < 30000:
+		await get_tree().process_frame
+	_check("navigator road graph built: %d nodes (world roads + city lanes), %.1f s" % [nav.nodes.size(), (Time.get_ticks_msec() - t0) / 1000.0], nav.ready_graph and nav.nodes.size() > 2000)
 	wm.toggle()
 	await _frames(3)
 	_check("map open; the touch controls stay off under it", wm.is_open() and TouchBlock.hit(get_tree(), Vector2(600, 400)))
@@ -164,78 +174,116 @@ func _t_map() -> void:
 	wm.mpp = 4.0
 	await _frames(2)
 	var sp := wm.w2s(f["x"], f["z"])
-	# a real tap on the map (finger 0 down / up at the same spot)
 	await _touch(sp + Vector2(6, 4), 0, true)
 	await _frames(2)
 	await _touch(sp + Vector2(6, 4), 0, false)
-	await _frames(2)
-	_check("tap on a station on the map -> card «%s»" % wm._card_label.text.replace("\n", " · "), wm._card.visible and String(wm._sel.get("name", "")) == "АЗС")
-	_check("card has «ОТПРАВИТЬСЯ» and «МАРШРУТ»", wm._btn_go.is_visible_in_tree() and wm._btn_route.is_visible_in_tree())
-	# a tap on an empty spot
-	wm.select_at(Vector2(40, wm._canvas.size.y - 200))
-	_check("tap on an empty spot -> «%s»" % String(wm._sel["name"]), wm._card.visible and String(wm._sel["name"]) != "")
-	wm.select_place("АЗС", Vector3(f["x"], f["y"], f["z"]))
-	wm._btn_route.pressed.emit()
-	await _frames(2)
-	_check("«МАРШРУТ» sets the waypoint and closes the map", Minimap.target != Vector3.INF and not wm.is_open())
-
-
-# ------------------------------------------------------------------------------------------ teleport
-func _t_teleport() -> void:
-	# on foot to a village far away
-	var vil: Dictionary = {}
-	for pl in wd.places:
-		if pl["kind"] == "village" and Vector2(pl["x"], pl["z"]).length() > 5000.0:
-			vil = pl
-			break
-	var dest := Vector3(vil["x"], 0, vil["z"])
-	wm.toggle()
-	wm.select_place(str(vil["name"]), dest)
-	var t0 := Time.get_ticks_msec()
-	wm._btn_go.pressed.emit()
-	while wm.busy:
-		await get_tree().process_frame
-	var ms := Time.get_ticks_msec() - t0
-	await _sec(2.0)
+	await _frames(20)
+	var fp := Vector3(f["x"], f["y"], f["z"])
+	_check("tap on a station -> marker there (target %s), card «%s»" % [str(Minimap.target.round()), wm._card_label.text.replace("\n", " · ")],
+		wm._card.visible and Minimap.target == fp and String(wm._sel.get("name", "")) == "АЗС")
+	_check("no teleport: the card offers «ПОЕХАЛИ» / «УБРАТЬ МЕТКУ» only", wm._btn_go.text == "ПОЕХАЛИ" and wm._btn_route.text == "УБРАТЬ МЕТКУ" and not wm.has_method("teleport_to"))
+	var rt := RoadNav.route
 	var pp := s.player.global_position
-	var d := Vector2(pp.x - dest.x, pp.z - dest.z).length()
-	var g := wd.height_at(pp.x, pp.z)
-	_check("ОТПРАВИТЬСЯ on foot → %s: %.0f m from the village centre (on its road), %.1f s load, map closed" % [vil["name"], d, ms / 1000.0], d < 400.0 and not wm.is_open())
-	_check("landed on the ground, standing (y %.1f, terrain %.1f, on floor %s)" % [pp.y, g, s.player.is_on_floor()], s.player.is_on_floor() and absf(pp.y - g) < 3.0)
-	# in the Prado to a filling station: the car comes along, upright, on the road
+	var straight := Vector2(fp.x - pp.x, fp.z - pp.z).length()
+	var L := RoadNav.length_of(rt)
+	_check("route along the roads: %d points, %.1f km (straight line %.1f km)" % [rt.size(), L / 1000.0, straight / 1000.0], rt.size() > 10 and L >= straight * 0.98 and L < straight * 2.5)
+	# the route really follows roads: its inner points are on a carriageway / city lane
+	var off := 0
+	for k in range(1, rt.size() - 1):
+		var q := rt[k]
+		if wd.contains(q.x, q.z) and wd.road_edge_dist(q.x, q.z) > 1.0:
+			off += 1
+	_check("route points off the roads: %d of %d" % [off, rt.size() - 2], off <= (rt.size() - 2) / 20)
+	_check("card shows the route length «по дорогам»", wm._card_label.text.contains("по дорогам"))
+	wm._btn_go.pressed.emit()
+	await _frames(2)
+	_check("«ПОЕХАЛИ» closes the map, marker + route stay (minimap draws it)", not wm.is_open() and Minimap.target == fp and RoadNav.route.size() > 10)
+	# leave the route -> rebuilt from the new position
 	var car: VehiclePrado = main.get("car")
 	car.fuel_l = car.tank_l
 	await _board(car)
-	var f: Dictionary = wd.fuel[10]
-	var fp := Vector3(f["x"], f["y"], f["z"])
+	var away := Vector3(-300, 0, -1500)
+	ow.preload_at(away)
+	await _frames(5)
+	car.place(away + Vector3(0, 30, 0), 0.0)
+	await _sec(2.5)
+	var r2 := RoadNav.route
+	_check("driver off the old route -> route rebuilt from the car (start %.0f m from the car)" % (r2[0].distance_to(car.global_position) if r2.size() > 0 else INF),
+		r2.size() > 5 and Vector2(r2[0].x - car.global_position.x, r2[0].z - car.global_position.z).length() < 5.0)
+	# a LakLak / bus job target also gets a route (any Minimap.target)
 	wm.toggle()
-	wm.select_place("АЗС", fp)
-	wm._btn_go.pressed.emit()
-	while wm.busy:
-		await get_tree().process_frame
-	await _sec(3.0)
-	var cp := car.global_position
-	_check("ОТПРАВИТЬСЯ in the Prado → station: car %.0f m from it, still driving %s" % [Vector2(cp.x - fp.x, cp.z - fp.z).length(), s.driving and s.car == car],
-		Vector2(cp.x - fp.x, cp.z - fp.z).length() < 80.0 and s.driving and s.car == car)
-	_check("the car stands on its wheels (up %.2f, speed %.1f km/h, %d/4 wheels on ground)" % [car.global_transform.basis.y.y, car.speed_kmh, _wheels(car)],
-		car.global_transform.basis.y.y > 0.9 and car.speed_kmh < 5.0 and _wheels(car) >= 3)
-	VehicleInput.scripted = {"throttle": 0.7}
-	await _sec(4.0)
-	VehicleInput.scripted = null
-	_check("drives away after the teleport (%.0f km/h)" % car.speed_kmh, car.speed_kmh > 15.0)
-	VehicleInput.scripted = {"brake": 1.0}
-	await _sec(3.0)
-	VehicleInput.scripted = null
-	# to a vehicle: on foot next to its door
-	var lexus: VehiclePrado = main.get("lexus")
-	wm.toggle()
-	wm.select_place("Lexus RX", lexus.global_position)
-	wm._btn_go.pressed.emit()
-	while wm.busy:
-		await get_tree().process_frame
-	await _sec(1.0)
-	var dl := s.player.global_position.distance_to(lexus.global_position)
-	_check("ОТПРАВИТЬСЯ to the Lexus: out of the Prado, %.1f m from the Lexus, can get in %s" % [dl, s.can_enter(lexus)], not s.driving and dl < 4.0 and s.can_enter(lexus))
+	wm._btn_route.pressed.emit()
+	await _frames(3)
+	_check("«УБРАТЬ МЕТКУ» clears the marker and the route", Minimap.target == Vector3.INF and RoadNav.route.is_empty())
+	if wm.is_open():
+		wm.toggle()
+	# peninsula -> world: a route exists from the start area to Varzob
+	var a := Vector3(-58, 2.4, -90)
+	var vz := Vector3(450, 0, -7050)
+	var r3 := nav.find_path(a, vz)
+	_check("route from the city (peninsula) to Varzob: %.1f km" % (RoadNav.length_of(r3) / 1000.0), r3.size() > 50)
+	s.exit()
+	await _frames(5)
+
+
+# ------------------------------------------------------------------------------------------ 0.15 world fixes
+func _t_world() -> void:
+	# fuel gauge: every vehicle has a tank; the HUD gauge is drawn for the vehicle driven
+	var names := []
+	for key in ["car", "camry", "lexus", "van", "bus"]:
+		var v: VehiclePrado = main.get(key)
+		names.append("%s %.0f л" % [key, v.tank_l])
+	var bt: VehiclePrado = (main.get("boats") as Array)[0]
+	names.append("лодка %.0f л" % bt.tank_l)
+	_check("every vehicle has its tank (gauge): " + ", ".join(names), s.controls.has_method("_fuel_gauge"))
+	# billboards: bigger, the photo over the whole 16:9 panel
+	var bb: Dictionary = wd.billboards[2]
+	ow.preload_at(Vector3(bb["x"], bb["y"], bb["z"]))
+	await _frames(5)
+	var found: Node3D = null
+	for b in get_tree().get_nodes_in_group(&"billboard"):
+		if (b as Node3D).global_position.distance_to(Vector3(bb["x"], bb["y"], bb["z"])) < 2.0:
+			found = b
+	var poster: MeshInstance3D = found.get_node("Poster") if found else null
+	var qs: Vector2 = (poster.mesh as QuadMesh).size if poster else Vector2.ZERO
+	var tex: Texture2D = (poster.material_override as ShaderMaterial).get_shader_parameter("poster") if poster else null
+	var ta := float(tex.get_width()) / tex.get_height() if tex else 0.0
+	_check("billboard poster %.1f x %.1f m (was 10.8 x 4.3), aspect %.3f = photo %.3f (no side margins)" % [qs.x, qs.y, qs.x / maxf(qs.y, 0.01), ta],
+		qs.x > 14.0 and absf(qs.x / qs.y - ta) < 0.01)
+	# no trees in front of / around the billboards (the sector builder's tree lists, every board)
+	var near := 0
+	var checked := 0
+	for bi in range(0, wd.billboards.size(), 3):
+		var b2: Dictionary = wd.billboards[bi]
+		var sc := Vector2i(floori((float(b2["x"]) - wd.origin.x) / 512.0), floori((float(b2["z"]) - wd.origin.y) / 512.0))
+		var res: Dictionary = ow.builder.build(sc, 0)
+		checked += 1
+		for id in res["trees"]:
+			for xf: Transform3D in res["trees"][id]:
+				if Vector2(xf.origin.x - float(b2["x"]), xf.origin.z - float(b2["z"])).length() < 45.0:
+					near += 1
+		if checked >= 6:
+			break
+	bb = wd.billboards[0]
+	_check("trees within 45 m of %d billboards: %d" % [checked, near], near == 0 and checked >= 4)
+	# rivers: never above a road / bridge deck
+	var bad := 0
+	for rv in wd.rivers:
+		var hw := float(rv["w"]) * 0.5
+		for q in rv["pts"]:
+			for r in wd.roads:
+				var tun := {}
+				for t in r["tunnels"]:
+					for k in range(int(t[0]), int(t[1]) + 1):
+						tun[k] = true
+				var rp: Array = r["pts"]
+				for k in range(0, rp.size(), 2):
+					if tun.has(k):
+						continue
+					var d := Vector2(float(rp[k][0]) - float(q[0]), float(rp[k][2]) - float(q[2])).length()
+					if d < hw + float(r["w"]) * 0.5 and float(q[1]) > float(rp[k][1]) - 0.8:
+						bad += 1
+	_check("river water above / at a road or bridge: %d points (was 614 overlaps)" % bad, bad == 0)
 
 
 func _wheels(v: VehiclePrado) -> int:

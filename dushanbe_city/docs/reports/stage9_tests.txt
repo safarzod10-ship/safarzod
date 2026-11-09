@@ -10,16 +10,14 @@ PASS  9. getting into a Camry with an empty tank opens the fuel window
 PASS 10. «full tank» from the window: Camry 60 / 60 l
 PASS 11. at the pumps: «ЗАПРАВИТЬ» shown
 PASS 12. tap «ЗАПРАВИТЬ»: Camry filled to 60 l, paid 771 смн
-PASS 13. map open; the touch controls stay off under it
-PASS 14. tap on a station on the map -> card «АЗС · 4.4 км от вас»
-PASS 15. card has «ОТПРАВИТЬСЯ» and «МАРШРУТ»
-PASS 16. tap on an empty spot -> «Точка на карте»
-PASS 17. «МАРШРУТ» sets the waypoint and closes the map
-PASS 18. ОТПРАВИТЬСЯ on foot → Варзоб: 61 m from the village centre (on its road), 0.9 s load, map closed
-PASS 19. landed on the ground, standing (y 204.0, terrain 203.4, on floor true)
-PASS 20. ОТПРАВИТЬСЯ in the Prado → station: car 27 m from it, still driving true
-PASS 21. the car stands on its wheels (up 1.00, speed 4.8 km/h, 4/4 wheels on ground)
-PASS 22. drives away after the teleport (34 km/h)
-PASS 23. ОТПРАВИТЬСЯ to the Lexus: out of the Prado, 2.3 m from the Lexus, can get in true
-PASS 24. found 20 stretches with the road above the ground beside it (country + city)
-PASS 25. Camry drives from the ground beside the road back onto it (square on, slowly): 9 / 9 stretches
+PASS 13. navigator road graph built: 14750 nodes (world roads + city lanes), 0.0 s
+PASS 14. map open; the touch controls stay off under it
+PASS 15. tap on a station -> marker there (target (2094.0, 44.0, -3760.0)), card «АЗС · 5.7 км по дорогам»
+PASS 16. no teleport: the card offers «ПОЕХАЛИ» / «УБРАТЬ МЕТКУ» only
+PASS 17. route along the roads: 476 points, 5.7 km (straight line 4.4 km)
+PASS 18. route points off the roads: 0 of 474
+PASS 19. card shows the route length «по дорогам»
+PASS 20. «ПОЕХАЛИ» closes the map, marker + route stay (minimap draws it)
+PASS 21. driver off the old route -> route rebuilt from the car (start 0 m from the car)
+PASS 22. «УБРАТЬ МЕТКУ» clears the marker and the route
+PASS 23. route from the city (peninsula) to Varzob: 9.1 km

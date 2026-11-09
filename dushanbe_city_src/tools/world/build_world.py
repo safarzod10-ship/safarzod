@@ -232,6 +232,7 @@ def main():
                            "pts": [[round(float(x), 2), round(float(h), 2), round(float(z), 2)] for (x, z), h in zip(r["P"], r["H"])],
                            "bridges": r["bridges"], "tunnels": r["tunnels"]})
     W["rivers"] = PL.rivers(H_at, H)
+    log("river surface lowered under / beside roads at %d points" % PL.rivers_under_roads(W["rivers"], W["roads"]))
     W["lakes"] = [{"id": "lake", "name": "Озеро Искандар", "c": [T.LAKE[0], T.LAKE[1]], "r": [T.LAKE[2], T.LAKE[3]], "level": 520.0},
                   {"id": "komsomol", "name": "Комсомольское озеро", "c": [T.KOMSOMOL[0], T.KOMSOMOL[1]], "r": [T.KOMSOMOL[2], T.KOMSOMOL[3]], "level": 0.2}]
     W["waterfalls"] = [{"x": T.WATERFALL[0], "z": T.WATERFALL[1], "top": 262.0, "bottom": 234.0}]

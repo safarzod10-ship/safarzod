@@ -337,16 +337,21 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 					# behind the sidewalk a gentle slope down to the ground (no ledge to get stuck on)
 					var af := _foot(a1, ra * sgn)
 					var bf := _foot(b1, rb * sgn)
+					var ramp := not _on_other_road((af + bf) * 0.5, ri, 0.5) and not _in_fillet((af + bf) * 0.5)
 					if sgn > 0:
 						side.quad_flat(a0, a0u, b0u, b0)
 						side.quad_flat(a0u, a1, b1, b0u)
-						side.quad_flat(a1, af, bf, b1)
-						col.append_array([a0u, a1, b1, a0u, b1, b0u, a1, af, bf, a1, bf, b1])
+						col.append_array([a0u, a1, b1, a0u, b1, b0u])
+						if ramp:
+							side.quad_flat(a1, af, bf, b1)
+							col.append_array([a1, af, bf, a1, bf, b1])
 					else:
 						side.quad_flat(b0, b0u, a0u, a0)
 						side.quad_flat(b0u, b1, a1, a0u)
-						side.quad_flat(b1, bf, af, a1)
-						col.append_array([b0u, b1, a1, b0u, a1, a0u, b1, bf, af, b1, af, a1])
+						col.append_array([b0u, b1, a1, b0u, a1, a0u])
+						if ramp:
+							side.quad_flat(b1, bf, af, a1)
+							col.append_array([b1, bf, af, b1, af, a1])
 				if int(S[k] / 32.0) != int(S[k + 1] / 32.0):
 					for sgn2: float in [-1.0, 1.0]:
 						if r["cls"] == "street" and sgn2 < 0:
@@ -395,19 +400,29 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				var alO := al - ra * sw + sd
 				var blO := bl - rb * sw + sd
 				var u2 := Vector2(hw + sw, 0.0)
-				dirt.quad(ar, arO, brO, br, Vector2(hw, S[k]), Vector2(hw + sw, S[k]), Vector2(hw + sw, S[k + 1]), Vector2(hw, S[k + 1]), u2)
-				dirt.quad(alO, al, bl, blO, Vector2(-hw - sw, S[k]), Vector2(-hw, S[k]), Vector2(-hw, S[k + 1]), Vector2(-hw - sw, S[k + 1]), u2)
-				col.append_array([ar, arO, brO, ar, brO, br, alO, al, bl, alO, bl, blO])
+				# at junctions the shoulder / embankment of this road would lie over the other road's
+				# carriageway (a gravel band across the asphalt): left out there, per side
+				var okR := not _on_other_road((arO + brO) * 0.5, ri, 1.0) and not _on_other_road((ar + br) * 0.5, ri, 0.3)
+				var okL := not _on_other_road((alO + blO) * 0.5, ri, 1.0) and not _on_other_road((al + bl) * 0.5, ri, 0.3)
 				# embankment: a gentle drivable slope (<= 1:4) from the shoulder edge down to (a bit
 				# under) the terrain - part of the collision, so a car that left the road climbs back
 				# on instead of hitting a step
-				var afR := _foot(arO, ra)
-				var bfR := _foot(brO, rb)
-				var afL := _foot(alO, -ra)
-				var bfL := _foot(blO, -rb)
-				dirt.quad(arO, afR, bfR, brO, Vector2(hw + sw, S[k]), Vector2(hw + sw + 3.0, S[k]), Vector2(hw + sw + 3.0, S[k + 1]), Vector2(hw + sw, S[k + 1]), u2)
-				dirt.quad(afL, alO, blO, bfL, Vector2(-hw - sw - 3.0, S[k]), Vector2(-hw - sw, S[k]), Vector2(-hw - sw, S[k + 1]), Vector2(-hw - sw - 3.0, S[k + 1]), u2)
-				col.append_array([arO, afR, bfR, arO, bfR, brO, afL, alO, blO, afL, blO, bfL])
+				if okR:
+					dirt.quad(ar, arO, brO, br, Vector2(hw, S[k]), Vector2(hw + sw, S[k]), Vector2(hw + sw, S[k + 1]), Vector2(hw, S[k + 1]), u2)
+					col.append_array([ar, arO, brO, ar, brO, br])
+					var afR := _foot(arO, ra)
+					var bfR := _foot(brO, rb)
+					if not _on_other_road((afR + bfR) * 0.5, ri, 0.5):
+						dirt.quad(arO, afR, bfR, brO, Vector2(hw + sw, S[k]), Vector2(hw + sw + 3.0, S[k]), Vector2(hw + sw + 3.0, S[k + 1]), Vector2(hw + sw, S[k + 1]), u2)
+						col.append_array([arO, afR, bfR, arO, bfR, brO])
+				if okL:
+					dirt.quad(alO, al, bl, blO, Vector2(-hw - sw, S[k]), Vector2(-hw, S[k]), Vector2(-hw, S[k + 1]), Vector2(-hw - sw, S[k + 1]), u2)
+					col.append_array([alO, al, bl, alO, bl, blO])
+					var afL := _foot(alO, -ra)
+					var bfL := _foot(blO, -rb)
+					if not _on_other_road((afL + bfL) * 0.5, ri, 0.5):
+						dirt.quad(afL, alO, blO, bfL, Vector2(-hw - sw - 3.0, S[k]), Vector2(-hw - sw, S[k]), Vector2(-hw - sw, S[k + 1]), Vector2(-hw - sw - 3.0, S[k + 1]), u2)
+						col.append_array([afL, alO, blO, afL, blO, bfL])
 			if bridge:
 				_bridge_segment(conc, col, a, b, ra, rb, hw, k, S, ri)
 			if tunnel and mask[k] == 2 and mask[k + 1] == 2:
@@ -880,6 +895,13 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 	var out := {}
 	var spacing := 11.0 if lod == 0 else 16.0
 	var cells := int(SECTOR / spacing)
+	# billboards near this sector: no trees in front of / around them (they must be seen from the road)
+	var boards: Array = []
+	for bb in wd.billboards:
+		var bx := float(bb["x"])
+		var bz := float(bb["z"])
+		if bx > x0 - 160.0 and bx < x0 + SECTOR + 160.0 and bz > z0 - 160.0 and bz < z0 + SECTOR + 160.0:
+			boards.append(Vector2(bx, bz))
 	for j in cells:
 		for i in cells:
 			var x := x0 + (i + rng.randf()) * spacing
@@ -924,7 +946,7 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				sc_ = rng.randf_range(0.7, 1.1)
 			if id == "":
 				continue
-			if _near_building(x, z, sc):
+			if _near_building(x, z, sc) or _near_board(boards, x, z, 55.0):
 				continue
 			if not out.has(id):
 				out[id] = []
@@ -942,12 +964,19 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				continue
 			for sgn: float in [-1.0, 1.0]:
 				var q := P[k] + Vector3(R[k].x, 0, R[k].y) * (float(r["w"]) * 0.5 + 5.0) * sgn
-				if wd.surface_at(q.x, q.z) == 4 or _near_building(q.x, q.z, sc):
+				if wd.surface_at(q.x, q.z) == 4 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 150.0):
 					continue
 				if not out.has("poplar_a"):
 					out["poplar_a"] = []
 				out["poplar_a"].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.85, 1.1)), Vector3(q.x, wd.height_at(q.x, q.z) - 0.1, q.z)))
 	return out
+
+
+static func _near_board(boards: Array, x: float, z: float, r: float) -> bool:
+	for b: Vector2 in boards:
+		if absf(b.x - x) < r and absf(b.y - z) < r and Vector2(b.x - x, b.y - z).length() < r:
+			return true
+	return false
 
 
 func _near_building(x: float, z: float, sc: Vector2i) -> bool:

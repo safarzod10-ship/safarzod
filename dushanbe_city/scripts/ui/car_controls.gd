@@ -203,6 +203,7 @@ func _text(t: String, c: Vector2, fs: int) -> void:
 func _hud(c: Vector2, rad: float) -> void:
 	_speedometer(c, rad)
 	_tachometer(c + Vector2(-rad * 2.25, rad * 0.25), rad * 0.72)
+	_fuel_gauge(c + Vector2(rad * 1.72, rad * 0.32), rad * 0.6)
 	_telltales(c + Vector2(-rad * 1.15, rad * 1.25), rad)
 
 
@@ -268,10 +269,35 @@ func _speedometer(c: Vector2, rad: float) -> void:
 	var hcol := Color(0.3, 0.85, 0.35).lerp(Color(0.95, 0.25, 0.2), 1.0 - car.health / 100.0)
 	draw_rect(Rect2(br.position, Vector2(bw * car.health / 100.0, br.size.y)), hcol)
 	_text("состояние %d%%" % roundi(car.health), c + Vector2(0, rad * 0.38), int(rad * 0.16))
-	# fuel: bar + litres (red under 15 %), under the speedometer
+
+
+
+## fuel gauge of the vehicle being driven (every car, the van, the bus, the boat): E .. F dial with a
+## needle, red zone under 15 %, litres left / tank size; blinks when the tank is (nearly) empty
+func _fuel_gauge(c: Vector2, rad: float) -> void:
 	var fr := clampf(car.fuel_l / maxf(car.tank_l, 1.0), 0.0, 1.0)
-	var fb := Rect2(c.x - bw * 0.5, c.y + rad * 1.12, bw, rad * 0.12)
-	draw_rect(fb.grow(2.0), Color(0, 0, 0, 0.55))
-	var fcol := Color(0.95, 0.2, 0.15) if fr < 0.15 else (Color(1.0, 0.75, 0.15) if fr < 0.3 else Color(0.25, 0.75, 1.0))
-	draw_rect(Rect2(fb.position, Vector2(bw * fr, fb.size.y)), fcol)
-	_text("топливо %.0f / %.0f л" % [car.fuel_l, car.tank_l], c + Vector2(0, rad * 0.97), int(rad * 0.16))
+	draw_circle(c, rad * 1.08, Color(0, 0, 0, 0.5))
+	var a0 := PI * 0.75
+	var a1 := PI * 0.25 + TAU
+	draw_arc(c, rad * 0.9, a0, a1, 32, Color(1, 1, 1, 0.35), 3.0)
+	draw_arc(c, rad * 0.9, a0, lerpf(a0, a1, 0.15), 8, Color(0.95, 0.15, 0.1, 0.95), 6.0)
+	for k in 5:
+		var a := lerpf(a0, a1, k / 4.0)
+		var d := Vector2(cos(a), sin(a))
+		draw_line(c + d * rad * 0.7, c + d * rad * 0.9, Color(1, 1, 1, 0.8), 2.0 if k % 2 == 0 else 1.0)
+	_text("E", c + Vector2(cos(a0), sin(a0)) * rad * 0.5, int(rad * 0.28))
+	_text("F", c + Vector2(cos(a1), sin(a1)) * rad * 0.5, int(rad * 0.28))
+	var low := fr < 0.15
+	var blink := low and int(Time.get_ticks_msec() / 400) % 2 == 0
+	var an := lerpf(a0, a1, fr)
+	draw_line(c, c + Vector2(cos(an), sin(an)) * rad * 0.85, Color(1.0, 0.35, 0.2), 3.0)
+	draw_circle(c, rad * 0.1, Color(0.9, 0.9, 0.9))
+	var col := Color(1.0, 0.25, 0.2) if blink else (Color(1.0, 0.8, 0.2) if low else Color(0.6, 0.85, 1.0))
+	_text_col("БЕНЗИН", c + Vector2(0, rad * 0.42), int(rad * 0.2), col)
+	_text("%.0f / %.0f л" % [car.fuel_l, car.tank_l], c + Vector2(0, rad * 0.78), int(rad * 0.22))
+
+
+func _text_col(t: String, c: Vector2, fs: int, col: Color) -> void:
+	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
+	draw_string_outline(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.8))
+	draw_string(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)

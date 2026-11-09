@@ -173,18 +173,43 @@ static func ad_material(variant: int) -> Material:
 	return sm
 
 
-## a complete billboard (model + poster + lamps + collision) at world position / yaw
+## a complete billboard at world position / yaw: the model scaled up x1.4 (a big roadside board), and
+## in front of its board a 16:9 panel (frame + the poster photo over its whole face; the photos are
+## 16:9, the model's own board is 2.4:1, so the panel is taller than it and covers it), + collision
+const BB_SCALE := 1.4
+const BB_ASPECT := 1455.0 / 823.0
+
 static func billboard(parent: Node3D, pos: Vector3, yaw: float, variant: int) -> Node3D:
 	var root := place(parent, "billboard", Transform3D(Basis(Vector3.UP, yaw), pos), 900.0, true)
 	root.name = "Billboard"
-	# the poster: the board's front face is at x = +1.69, y 7.15 .. 11.74, z -5.54 .. 5.53 (model)
+	var S := BB_SCALE
+	for c in root.get_children():
+		(c as Node3D).transform = Transform3D(Basis.IDENTITY.scaled(Vector3(S, S, S)), Vector3.ZERO) * (c as Node3D).transform
+	# the model's board front face: x = +1.69, centre y 9.445, 11.07 m wide (model units)
+	var W := 11.07 * S
+	var H := W / BB_ASPECT
+	var cy := 9.445 * S
+	var fx := 1.69 * S
+	var frame := MeshInstance3D.new()
+	frame.name = "Frame"
+	var bm := BoxMesh.new()
+	bm.size = Vector3(1.2 * S, H + 0.6, W + 0.6)
+	frame.mesh = bm
+	var fm := StandardMaterial3D.new()
+	fm.albedo_color = Color(0.42, 0.44, 0.47)
+	fm.metallic = 0.6
+	fm.roughness = 0.45
+	frame.material_override = fm
+	frame.position = Vector3(fx - bm.size.x * 0.5, cy, 0.0)
+	frame.visibility_range_end = 900.0
+	root.add_child(frame)
 	var q := QuadMesh.new()
-	q.size = Vector2(10.75, 4.32)
+	q.size = Vector2(W, H)
 	var mi := MeshInstance3D.new()
 	mi.name = "Poster"
 	mi.mesh = q
 	mi.material_override = ad_material(variant)
-	mi.position = Vector3(1.705, 9.445, 0.0)
+	mi.position = Vector3(fx + 0.02, cy, 0.0)
 	mi.rotation.y = PI * 0.5                    # quad normal (+Z) -> +X
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.visibility_range_end = 900.0
@@ -192,7 +217,7 @@ static func billboard(parent: Node3D, pos: Vector3, yaw: float, variant: int) ->
 	var body := StaticBody3D.new()
 	body.name = "BillboardBody"
 	root.add_child(body)
-	for spec in [[Vector3(0.0, 3.6, 0.0), Vector3(0.9, 7.2, 0.9)], [Vector3(1.0, 9.45, 0.0), Vector3(1.4, 4.6, 11.07)]]:
+	for spec in [[Vector3(0.0, 3.6 * S, 0.0), Vector3(0.9 * S, 7.2 * S, 0.9 * S)], [frame.position, bm.size]]:
 		var cs := CollisionShape3D.new()
 		var bs := BoxShape3D.new()
 		bs.size = spec[1]

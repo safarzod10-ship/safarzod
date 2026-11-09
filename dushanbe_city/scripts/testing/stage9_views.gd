@@ -31,6 +31,14 @@ func _ready() -> void:
 	cam.fov = 55.0
 	add_child(cam)
 	cam.make_current()
+	if OS.get_cmdline_user_args().has("junctions"):
+		var jn := [[-54, -963], [12, -2724], [-1233, -3203], [560, -7282], [4318, -4320], [722, -9042], [-1303, -2444], [525, -7068]]
+		for i in jn.size():
+			var c := Vector3(jn[i][0], 0, jn[i][1])
+			c.y = wd.height_at(c.x, c.z)
+			await _look("junction_%d" % i, c + Vector3(26, 30, 34), c)
+		get_tree().quit()
+		return
 	for spec in [["edge_country", "east", Vector3(3825, 26, -1985)], ["edge_city", "rudaki", Vector3(63, 28, -3172)]]:
 		var e := _edge(spec[1], spec[2])
 		var a: Vector3 = e[0]
@@ -61,16 +69,69 @@ func _ready() -> void:
 	await _snap("hud_fuel_window")
 	fs._panel.visible = false
 	car.fuel_l = 50.0
-	# the map: a station picked, the card
+	# the map: a station picked -> marker + route along the roads, the card
 	var wm: WorldMapScreen = main.get_node("WorldMap")
+	var nav: RoadNav = main.get_node("RoadNav")
+	while not nav.ready_graph:
+		await get_tree().process_frame
 	wm.toggle()
 	var f: Dictionary = wd.fuel[2]
-	wm.center = Vector2(f["x"], f["z"]) + Vector2(60, 40)
-	wm.mpp = 5.0
+	wm.center = Vector2(f["x"], f["z"]) * 0.5 + Vector2(car.global_position.x, car.global_position.z) * 0.5
+	wm.mpp = 6.0
 	await get_tree().process_frame
 	wm.select_at(wm.w2s(f["x"], f["z"]))
+	await get_tree().create_timer(1.0).timeout
+	await _snap("map_route")
+	wm._btn_go.pressed.emit()
+	await get_tree().create_timer(1.0).timeout
+	await _snap("minimap_route")
+	# the boat: its own fuel gauge
+	s.exit()
 	await get_tree().create_timer(0.5).timeout
-	await _snap("map_card")
+	var bt: VehiclePrado = (main.get("boats") as Array)[0]
+	s.player.teleport(bt.global_position + bt.global_transform.basis.x * 2.0, 0.0)
+	await get_tree().create_timer(0.3).timeout
+	s.enter_vehicle(bt)
+	bt.fuel_l = 9.0
+	await get_tree().create_timer(1.5).timeout
+	await _snap("hud_boat_fuel")
+	s.exit()
+	_ui(false)
+	# a billboard seen from its road, ~70 m before it
+	var bb: Dictionary = wd.billboards[2]
+	var e := _edge(str(bb["road"]), Vector3(bb["x"], bb["y"], bb["z"]))
+	var ap: Vector3 = e[0]
+	var dir: Vector3 = e[1]
+	var right: Vector3 = e[2]
+	var bp := Vector3(bb["x"], bb["y"], bb["z"])
+	var side := signf((bp - ap).dot(right))
+	var from := bp - dir * 70.0 - right * side * 6.0
+	from.y = wd.height_at(from.x, from.z) + 1.6
+	await _look("billboard_road", from, bp + Vector3(0, 12, 0))
+	var from2 := bp + dir * 70.0 - right * side * 6.0
+	from2.y = wd.height_at(from2.x, from2.z) + 1.6
+	await _look("billboard_road2", from2, bp + Vector3(0, 12, 0))
+	# a bridge over the Varzob (the water stays under the deck)
+	var done := false
+	for r in wd.roads:
+		for br in r["bridges"]:
+			var mid: Array = r["pts"][(int(br[0]) + int(br[1])) / 2]
+			var m := Vector3(mid[0], mid[1], mid[2])
+			var over := false
+			for rv in wd.rivers:
+				for q in rv["pts"]:
+					if Vector2(float(q[0]) - m.x, float(q[2]) - m.z).length() < 15.0:
+						over = true
+			if not over:
+				continue
+			var a2: Array = r["pts"][int(br[0])]
+			var d2 := (m - Vector3(a2[0], a2[1], a2[2])).normalized()
+			var rr := d2.cross(Vector3.UP).normalized()
+			await _look("bridge_river", m + rr * 40.0 + Vector3(0, 4, 0) - d2 * 12.0, m - Vector3(0, 3, 0))
+			done = true
+			break
+		if done:
+			break
 	get_tree().quit()
 
 

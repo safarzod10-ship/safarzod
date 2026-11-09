@@ -13,7 +13,7 @@ PASS did not roll over: up.y = 1.00
 PASS holding brake at standstill engages reverse: gear -1, 25.1 km/h backwards (limit 25)
 PASS gas brings it back into drive: gear 1
 PASS 10 cm bumps: wheel travel -0.068..0.125 m, body stays upright (up.y >= 1.00)
-PASS crash at 45 km/h: health 58 %, dents 1, impact 14.6 m/s
+PASS crash at 45 km/h: health 58 %, dents 1, impact 14.7 m/s
 PASS damaged car still drives: 72 km/h after 6 s (health 58 %)
 PASS critical damage (health 0 %): slow but moving, 23 km/h (limit ~30)
 PASS repair: health 100 %, dents 0, same car (1 vehicle in scene: 1)
