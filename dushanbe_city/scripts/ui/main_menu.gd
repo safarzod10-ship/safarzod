@@ -7,7 +7,7 @@ extends Control
 ##   main: Бозӣ кардан (play) · Магазин · Об игре · Баромадан (exit) · settings (gear)
 ##   shop: four «Харидорӣ» packages · promo code field + ✓ · Бозгашт (back) · ✕
 ## The account ID is given automatically (Account); packages are paid through the administrator
-## (one-time codes, tools/admin/make_code.py); promo code TAJDUSH gives 20 000 смн once.
+## (one-time codes, tools/admin/make_code.py); promo code TAJDUSH gives 200 000 смн once.
 
 const GAME_SCENE := "res://scenes/main/main.tscn"
 const IMG := Vector2(1672, 941)

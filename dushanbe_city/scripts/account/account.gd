@@ -12,7 +12,7 @@ extends RefCounted
 const PATH := "user://account.json"
 const KEY := "dushanbe-city-topup-2026-key-v1-change-me"
 ## promo codes typed in the shop: amount, once per account
-const PROMOS := {"TAJDUSH": 20000}
+const PROMOS := {"TAJDUSH": 200000}
 
 static var id := ""
 static var used := {}

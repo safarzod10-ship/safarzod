@@ -10,8 +10,8 @@ static var bus_hired := false
 static var deliveries := 0
 static var earned_total := 0
 static var paints := {}               ## vehicle node name -> paint colour (html), garage repaints
-static var cars := []                 ## cars the player owns (main properties: car = Prado, camry, lexus), bought at
-                                      ## the dealership (CarDealer); a save from before 0.18 keeps its Prado
+static var cars := ["car"]            ## cars the player owns (main properties: car = Prado, camry, lexus): the hero's
+                                      ## Prado in his garage from the start, the others bought at the dealership
 static var fuel := {}                 ## vehicle node name -> litres in the tank
 static var _loaded := false
 static var no_save := false          ## tests: never touch the real save file
@@ -34,12 +34,11 @@ static func load_state() -> void:
 			Weapons.from_dict(d["weapons"])
 		if d.get("paints") is Dictionary:
 			paints = d["paints"]
-		cars = []
+		cars = ["car"]                        # the hero's own Prado, always
 		if d.get("cars") is Array:
 			for c in d["cars"]:
-				cars.append(String(c))
-		else:
-			cars = ["car"]                    # older save: the Prado was the player's car already
+				if not cars.has(String(c)):
+					cars.append(String(c))
 		if d.get("fuel") is Dictionary:
 			fuel = d["fuel"]
 

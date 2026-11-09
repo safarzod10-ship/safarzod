@@ -52,6 +52,25 @@ func _ready() -> void:
 			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("home"):
+		var hh: HeroHome = main.get_node("HeroHome")
+		var c := Vector3(10, hh.global_position.y, -231)
+		await _look("home_overview", c + Vector3(-55, 32, -38), c + Vector3(0, 0, -6))
+		await _look("home_front", hh.spawn_point() + Vector3(-16, 3.5, -9), hh.spawn_point() + Vector3(4, 2.5, -8))
+		var gp := hh.garage_point()
+		await _look("home_garage", gp + Vector3(-11, 2.2, 3.5), gp + Vector3(0, 0.8, 0))
+		_ui(true)
+		var s: CarSession = main.get("car_session")
+		s.player.teleport(hh.spawn_point(), HeroHome.SPAWN_YAW)
+		for i in 120:
+			await get_tree().physics_frame
+		for c3 in s.player.find_children("*", "Camera3D", true, false):
+			(c3 as Camera3D).make_current()
+		for i in 30:
+			await get_tree().process_frame
+		await _snap("home_start")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("v18b"):
 		await _look("v18_lake", Vector3(-3300, 0, -7990), Vector3(-3300, 520, -8400), 30.0)
 		await _look("v18_lake2", Vector3(-3000, 0, -8150), Vector3(-3500, 520, -8350), 18.0)

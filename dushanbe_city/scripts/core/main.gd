@@ -50,6 +50,13 @@ func _build() -> void:
 	grass.city = world.city
 	add_child(grass)
 	var sp: Array = world.city.get("spawn", [0, 0.15, 0, 0])
+	# the hero's home: the game starts at its door, the Prado waits in its garage
+	if CityWorld.instance:
+		home = HeroHome.new()
+		home.name = "HeroHome"
+		add_child(home)
+		var hp := home.spawn_point()
+		sp = [hp.x, hp.y, hp.z, HeroHome.SPAWN_YAW]
 	if ResourceLoader.exists(PLAYER_SCENE):
 		player = (load(PLAYER_SCENE) as PackedScene).instantiate()
 		add_child(player)
@@ -102,8 +109,9 @@ func _build() -> void:
 		ag.queue_free()
 
 
-const CAR_SPAWN := Vector3(-49.0, 0.0, -12.0)    ## parked on the avenue's northbound lane, by the spawn
+const CAR_SPAWN := Vector3(-49.0, 0.0, -12.0)    ## (no home) parked on the avenue's northbound lane
 var car: VehiclePrado
+var home: HeroHome
 var car_session: CarSession
 
 
@@ -113,7 +121,15 @@ func _spawn_car(touch: CanvasLayer) -> void:
 	car.add_to_group(&"primary_vehicle")
 	add_child(car)
 	await get_tree().physics_frame
-	car.place(CAR_SPAWN, 0.0)
+	if home:
+		# in the hero's garage, nose to the door: on the floor (place() would land on the roof)
+		car.place(home.garage_point(), PI * 0.5)
+		var gp := car.global_position
+		gp.y = home.global_position.y + HeroHome.FLOOR + 0.02 - float(car.get("_ground_y"))
+		car.global_position = gp
+		car.reset_physics_interpolation()
+	else:
+		car.place(CAR_SPAWN, 0.0)
 	car_session = CarSession.new()
 	car_session.name = "CarSession"
 	car_session.player = player
@@ -283,7 +299,7 @@ func _start_hint() -> void:
 	var d := 0.0
 	if not laklak.depot.is_empty() and player:
 		d = (player as Node3D).global_position.distance_to(laklak.depot_point(Vector3.ZERO)) / 1000.0
-	laklak.toast("Рядом на дороге: Toyota Camry, Lexus RX, Land Cruiser.\nСклад LakLak — %.1f км на север. КАРТА → НАВИГАТОР" % d)
+	laklak.toast("Вы дома. Ваш Land Cruiser Prado — в гараже.\nАвтосалон и склад LakLak (%.1f км) — на КАРТЕ → НАВИГАТОР" % d)
 	laklak._toast_t = 9.0
 
 

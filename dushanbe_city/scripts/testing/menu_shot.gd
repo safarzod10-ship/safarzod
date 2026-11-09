@@ -29,7 +29,7 @@ func _ready() -> void:
 	await _snap("promo")
 	code.text = "TAJDUSH"
 	(m.get("_shop_btns")["ok"] as Button).pressed.emit()
-	print("PROMO again +", Wallet.money - m0 - 20000, " msg ", (m.get("_toast") as Label).text)
+	print("PROMO again +", Wallet.money - m0 - 200000, " msg ", (m.get("_toast") as Label).text)
 	(m.get("_shop_btns")["back"] as Button).pressed.emit()
 	(m.get("_main_btns")["about"] as Button).pressed.emit()
 	await _snap("about")

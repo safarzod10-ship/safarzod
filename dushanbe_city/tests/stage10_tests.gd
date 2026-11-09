@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -164,6 +164,39 @@ func _t_steer() -> void:
 	s.exit()
 
 
+func _t_home() -> void:
+	var hh: HeroHome = main.get_node_or_null("HeroHome")
+	_check("the hero's home on the lot by the avenue: %s" % (str(hh.door_point().round()) if hh else "none"), hh != null)
+	if hh == null:
+		return
+	var d := Vector2(s.player.global_position.x - hh.spawn_point().x, s.player.global_position.z - hh.spawn_point().z).length()
+	_check("the game starts at the home's door (%.1f m from it)" % d, d < 3.0)
+	var car: VehiclePrado = main.get("car")
+	var gp := hh.garage_point()
+	var dg := Vector2(car.global_position.x - gp.x, car.global_position.z - gp.z).length()
+	_check("the Prado stands in the home's garage (%.1f m), it's the hero's own (no purchase)" % dg, dg < 1.5 and Wallet.cars.has("car"))
+	# drive it out of the garage onto the drive
+	s.player.teleport(car.driver_door_point(0.7), car.rotation.y)
+	await _frames(20)
+	s._select(car)
+	s.enter()
+	await _frames(10)
+	VehicleInput.scripted = {"throttle": 0.5}
+	await _sec(4.0)
+	VehicleInput.scripted = {"brake": 1.0}
+	await _sec(1.5)
+	VehicleInput.scripted = null
+	var out := Vector2(car.global_position.x - gp.x, car.global_position.z - gp.z).length()
+	_check("drives out of the garage through the gate (%.0f m out, condition %.0f %%)" % [out, car.health], out > 12.0 and car.health > 90.0)
+	s.exit()
+	await _frames(30)
+	var m0 := Wallet.money
+	Account.no_save = true
+	var r: Variant = Account.redeem("TAJDUSH")
+	_check("promo TAJDUSH: +%s" % Wallet.fmt(Wallet.money - m0), r is int and int(r) == 200000)
+	Wallet.money = m0
+
+
 func _t_account() -> void:
 	Account.no_save = true
 	Account.ensure()
@@ -202,7 +235,7 @@ func _t_save() -> void:
 	Wallet._loaded = false
 	Wallet.load_state()
 	_check("restart: weapons %s, ammo %d / %d, selected %s, cars %s, money %s" % [str(Weapons.owned.keys()), Weapons.ammo_of("pistol"), Weapons.ammo_of("ak47"), Weapons.current, str(Wallet.cars), Wallet.fmt(Wallet.money)],
-		Weapons.has("pistol") and Weapons.has("ak47") and Weapons.ammo_of("ak47") == 45 and Weapons.current == "ak47" and Wallet.cars == ["camry"] and Wallet.money == 12345)
+		Weapons.has("pistol") and Weapons.has("ak47") and Weapons.ammo_of("ak47") == 45 and Weapons.current == "ak47" and Wallet.cars.has("camry") and Wallet.cars.has("car") and Wallet.money == 12345)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Wallet.path))
 	Wallet.path = Wallet.PATH
 	Wallet.no_save = keep[0]

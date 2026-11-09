@@ -117,7 +117,7 @@ func _die() -> void:
 
 
 func _respawn() -> void:
-	var p := Vector3(-58, 2.4, -90)
+	var p: Vector3 = HeroHome.instance.spawn_point() if HeroHome.instance else Vector3(-58, 2.4, -90)
 	var player: Node3D = session.player if session else null
 	if player:
 		var best := INF

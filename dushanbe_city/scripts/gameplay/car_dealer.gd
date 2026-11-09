@@ -86,7 +86,7 @@ func buy(node_name: String) -> String:
 	var key := String(CARS[node_name][0])
 	var price := int(CARS[node_name][2])
 	if Wallet.cars.has(key):
-		return "Эта машина уже ваша"
+		return "Эта машина уже ваша" + (" — стоит у вас в гараже" if key == "car" else "")
 	if Wallet.money < price:
 		return "Недостаточно денег: нужно %s" % Wallet.fmt(price)
 	Wallet.money -= price
