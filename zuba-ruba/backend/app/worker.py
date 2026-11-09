@@ -24,7 +24,7 @@ from app.db import dispose_engine, init_engine, sessionmaker
 from app.flyer import FlyerClient
 from app.logging_setup import setup_logging
 from app.models import Boost, Broadcast, Completion, Notification, User
-from app.services import referrals, tasks, withdrawals
+from app.services import analytics, referrals, tasks, withdrawals
 
 log = logging.getLogger("worker")
 MAX_ATTEMPTS = 8
@@ -140,7 +140,7 @@ async def process_broadcasts(bot: Bot, batch: int = 25) -> int:
             (
                 await session.execute(
                     select(User.id)
-                    .where(User.id > broadcast.cursor_user_id, User.bot_started_at.is_not(None), User.bot_blocked.is_(False), User.is_blocked.is_(False))
+                    .where(User.id > broadcast.cursor_user_id, analytics.recipients_condition(broadcast.audience))
                     .order_by(User.id)
                     .limit(batch)
                 )

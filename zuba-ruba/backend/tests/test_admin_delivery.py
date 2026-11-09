@@ -179,3 +179,19 @@ async def test_settings_disable_feature(env):
     await set_settings(tasks_enabled=False)
     data = (await env.client.get("/api/tasks", headers=auth(1))).json()
     assert data["items"] == [] and data["flyer_error"]
+
+
+async def test_broadcast_reaches_only_selected_audience(env):
+    await register(env.client, ADMIN_ID)
+    async with sessionmaker()() as session:
+        session.add(User(id=1, first_name="Rich", ref_code="aud1", bot_started_at=utcnow(), balance_available=500))
+        session.add(User(id=2, first_name="Empty", ref_code="aud2", bot_started_at=utcnow()))
+        await session.commit()
+    created = await env.client.post("/api/admin/broadcasts", headers=auth(ADMIN_ID), data={"text": "Для тех, у кого есть звёзды", "audience": "balance"})
+    broadcast_id = created.json()["id"]
+    sent = (await env.client.post(f"/api/admin/broadcasts/{broadcast_id}/send", headers=auth(ADMIN_ID))).json()
+    assert sent["total"] == 1
+    while await process_broadcasts(env.bot):
+        pass
+    await process_broadcasts(env.bot)
+    assert [chat for chat, _ in env.bot.messages] == [1]
