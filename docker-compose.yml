@@ -9,7 +9,8 @@ services:
       BOT_TOKEN: ${BOT_TOKEN:?запустите ./setup.sh}
       ADMIN_ID: ${ADMIN_ID:?запустите ./setup.sh}
       SUPPORT_USERNAME: ${SUPPORT_USERNAME:-}
-      CHANNEL_URL: ${CHANNEL_URL:-https://t.me/safroulette}
+      CHANNEL_URL: ${CHANNEL_URL:-https://t.me/rulixapp}
+      WITHDRAW_CHANNEL: ${WITHDRAW_CHANNEL:-}
       CHAT_URL: ${CHAT_URL:-https://t.me/safroulette_chat}
       PUBLIC_URL: https://${DOMAIN:?запустите ./setup.sh}/
       REF_PERCENT: ${REF_PERCENT:-15}

@@ -6,6 +6,7 @@ import { Game } from '../server/game.js';
 import { Bot } from '../server/bot.js';
 import { createAdminRoutes } from '../server/admin.js';
 import { AppError } from '../server/db.js';
+import { channelRef, config } from '../server/config.js';
 
 const TOKEN = '123456:TEST-token';
 const settings = { countdownMs: 30, spinMs: 30, resultMs: 30, houseCut: 0.1, houseFreeUpTo: 9, minBet: 1 };
@@ -337,7 +338,7 @@ test('/start: баннер с подписью, синяя «Играть», к�
     webAppUrl: 'https://x.test/',
     adminId: '999',
     supportUsername: 'bob_proger',
-    channelUrl: 'https://t.me/safroulette',
+    channelUrl: 'https://t.me/rulixapp',
     chatUrl: 'https://t.me/safroulette_chat',
     bannerPath: new URL('../public/banner.jpg', import.meta.url).pathname,
     limits: { minDeposit: 1, maxAmount: 1e6 },
@@ -373,7 +374,7 @@ test('/start: баннер с подписью, синяя «Играть», к�
   assert.deepEqual(kb[0][0], { text: '🎮 Играть', web_app: { url: 'https://x.test/' }, style: 'primary' });
   assert.deepEqual(
     kb[1].map((b) => b.url),
-    ['https://t.me/safroulette', 'https://t.me/safroulette_chat'],
+    ['https://t.me/rulixapp', 'https://t.me/safroulette_chat'],
   );
   assert.equal(kb[2][0].url, 'https://t.me/bob_proger');
   assert.equal(second.body.photo, 'BIG', 'повторно — по file_id, без загрузки');
@@ -516,15 +517,15 @@ test('вывод: без подписки на канал — понятная �
   const members = new Set();
   const bot = refBot(store, members);
   await assert.rejects(
-    bot.assertSubscribed('@safroulette', 1),
-    (e) => e.code === 'NOT_SUBSCRIBED' && /@safroulette/.test(e.message),
+    bot.assertSubscribed('@rulixapp', 1),
+    (e) => e.code === 'NOT_SUBSCRIBED' && /@rulixapp/.test(e.message),
   );
   members.add(1);
-  await bot.assertSubscribed('@safroulette', 1);
+  await bot.assertSubscribed('@rulixapp', 1);
   bot.api = async () => {
     throw new Error('400 Bad Request: member list is inaccessible');
   };
-  await assert.rejects(bot.assertSubscribed('@safroulette', 1), (e) => e.code === 'CHECK_FAILED');
+  await assert.rejects(bot.assertSubscribed('@rulixapp', 1), (e) => e.code === 'CHECK_FAILED');
 });
 
 test('startapp: параметр из подписанного initData доступен серверу, подделка ломает подпись', () => {
@@ -776,4 +777,15 @@ test('промокоды: бесплатная прокрутка, один ра
   assert.deepEqual(wheel.promos(), [{ code: 'GIFT2026', uses: 2, usesMax: 2, spins: 1 }]);
   wheel.removePromo('gift2026');
   assert.deepEqual(wheel.promos(), []);
+});
+
+test('канал вывода берётся из ссылки на канал', () => {
+  assert.equal(channelRef('https://t.me/rulixapp'), '@rulixapp');
+  assert.equal(channelRef('t.me/rulixapp/'), '@rulixapp');
+  assert.equal(channelRef('@rulixapp'), '@rulixapp');
+  assert.equal(channelRef('https://t.me/+abcdef'), '');
+  if (!process.env.CHANNEL_URL && !process.env.WITHDRAW_CHANNEL) {
+    assert.equal(config.channelUrl, 'https://t.me/rulixapp');
+    assert.equal(config.withdrawChannel, '@rulixapp');
+  }
 });

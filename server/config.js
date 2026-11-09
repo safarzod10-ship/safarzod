@@ -1,14 +1,23 @@
 const env = (name, fallback = '') => (process.env[name] ?? fallback).trim();
 
+export function channelRef(url) {
+  const m = String(url ?? '')
+    .trim()
+    .match(/^(?:@|(?:https?:\/\/)?(?:t\.me|telegram\.me)\/)([A-Za-z0-9_]{4,})\/?$/i);
+  return m ? `@${m[1]}` : '';
+}
+
+const channelUrl = env('CHANNEL_URL', 'https://t.me/rulixapp');
+
 export const config = Object.freeze({
   botToken: env('BOT_TOKEN'),
   publicUrl: env('PUBLIC_URL'),
   supportUsername: env('SUPPORT_USERNAME').replace(/^@/, ''),
   adminId: env('ADMIN_ID'),
-  channelUrl: env('CHANNEL_URL', 'https://t.me/safroulette'),
+  channelUrl,
   chatUrl: env('CHAT_URL', 'https://t.me/safroulette_chat'),
   refPercent: Number(env('REF_PERCENT', '15')),
-  withdrawChannel: env('WITHDRAW_CHANNEL', env('REF_CHANNEL', '@safroulette')),
+  withdrawChannel: env('WITHDRAW_CHANNEL') || channelRef(channelUrl),
   port: Number(env('PORT', '3000')),
   dataDir: env('DATA_DIR', './data'),
   devMode: env('DEV_MODE') === '1',
