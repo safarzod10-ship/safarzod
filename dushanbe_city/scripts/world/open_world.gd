@@ -235,7 +235,11 @@ func _build_lakes() -> void:
 		var mi := MeshInstance3D.new()
 		mi.name = "Lake_" + str(lk["id"])
 		mi.mesh = _mesh_from({"v": V, "n": N, "i": I})
-		mi.material_override = mats["water"]
+		if not mats.has("lake"):
+			var lm := (mats["water"] as ShaderMaterial).duplicate() as ShaderMaterial
+			lm.set_shader_parameter("lake", true)
+			mats["lake"] = lm
+		mi.material_override = mats["lake"]
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
 

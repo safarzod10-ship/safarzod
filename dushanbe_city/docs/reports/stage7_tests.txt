@@ -1,15 +1,15 @@
 PASS  1. imported models load and are placed by size: { "sky": (22.0, 114.0, 22.0), "villa1": (27.0, 11.1, 12.0), "villa2": (27.0, 11.1, 22.1), "villa3": (27.6, 11.1, 22.1), "villa4": (36.7, 11.1, 22.1), "billboard": (3.7, 12.2, 11.1), "guardrail": (0.5, 1.5, 10.0), "flag": (5.3, 7.5, 2.0), "laklak": (18.3, 9.6, 25.7), "rp_lamp_a": (5.3, 8.3, 0.5), "rp_bench": (4.9, 3.3, 3.1) } missing []
 PASS  2. model scale: skyscraper 114 m high (110..120), villa 4 36.7 x 22.1 m footprint (36.8 x 22.1)
-PASS  3. skyscrapers and villas in the world: { "villa1": 164, "villa3": 162, "villa2": 152, "sky": 32, "villa4": 4 }
+PASS  3. skyscrapers and villas in the world: { "villa1": 165, "villa3": 162, "villa2": 154, "sky": 32, "villa4": 1 }
 PASS  4. CC-BY 4.0 attribution of every imported model in docs/CREDITS.md
-PASS  5. advertising billboards: 97 along 135 km of roads (one per km: >= 70 % of the whole kilometres; dense city streets leave no room for a 15 m board)
-PASS  6. billboards ~1 km apart on each road: 0 pairs closer than 450 m
+PASS  5. advertising billboards: 246 along 129 km of roads (one per km: >= 70 % of the whole kilometres; dense city streets leave no room for a 15 m board)
+PASS  6. billboards ~400 m apart on each road (246 boards, was 97 in 0.17): 0 pairs closer than 290 m
 PASS  7. no billboard stands on a road (edge distance >= 3 m): 0 violations
 PASS  8. billboard in the scene with an advertising banner (res://assets/textures/ads/ad_dcnext.png)
 PASS  9. all 4 banners (DCnext, Orienbank, LakLak, Eskhata) are on the roads: 4 of 4 used
-PASS 10. billboard post has collision (a car stops at it): BillboardBody:<StaticBody3D#1037838626397>
-PASS 11. steel guardrails along drops of country / mountain roads: 16.0 km in 88 runs
-PASS 12. guardrails stand just outside the carriageway (0.3 .. 3 m from the edge): 0 of 4075 points off
+PASS 10. billboard post has collision (a car stops at it): BillboardBody:<StaticBody3D#1045992353578>
+PASS 11. steel guardrails along drops of country / mountain roads: 19.6 km in 88 runs
+PASS 12. guardrails stand just outside the carriageway (0.3 .. 3 m from the edge): 0 of 4982 points off
 PASS 13. guardrail collision across the barrier: WorldBuildings
 PASS 14. city streets follow curves (not ruler-straight): 20 of 20 deviate > 20 m from their chord
 PASS 15. ring road has no square corners: max turn between 4 m segments 0.9 deg (< 8)
@@ -18,7 +18,7 @@ PASS 17. rounded corner is drivable road surface (WorldRoad at 44.53 m, junction
 PASS 18. zebra crossings rendered in the loaded city sectors
 PASS 19. national flag of Tajikistan (imported model) at the Flag park: 151 m high (>= 140), cloth waving: true
 PASS 20. no 3D grass on roads (grass_ok on road centre lines): 0
-PASS 21. 3D grass grows on open-world lawns (9458 clumps around (300.0, 10.0, -2000.0))
+PASS 21. 3D grass grows on open-world lawns (3285 clumps around (300.0, 10.0, -2000.0))
 PASS 22. terrain / lawn shaders use the natural palette (#557A3B #668B45 #9A9255 #354D2C #829B54 via grass_palette)
 PASS 23. grass cost scales with the preset (radius, density per Low..Ultra): [[8.0, 0.4], [13.0, 0.6], [20.0, 0.85], [26.0, 1.0]]
 PASS 24. LakLak van spawned at the depot
@@ -28,11 +28,11 @@ PASS 27. player can get into the van (can_enter true, driving true, car = van tr
 PASS 28. van drives: 60 km/h after 6 s full throttle (> 35), turns 43 deg in 2 s, moved 95 m, brakes to 0.1 km/h
 PASS 29. office door is an interactable: «УСТРОИТЬСЯ В LAKLAK», selected by the player: true
 PASS 30. hired by LakLak (Wallet.laklak_hired)
-PASS 31. order assigned on getting into the van: улица Варзобская, дом 4, 1035 m away, pay 53 смн, beacon + map target true
-PASS 32. delivery completes when the van stops at the drop-off: money 68 смн (pay 53 смн + bonus), deliveries 1, next order true
+PASS 31. order assigned on getting into the van: Объездная дорога, дом 124, 2039 m away, pay 75 смн, beacon + map target true
+PASS 32. delivery completes when the van stops at the drop-off: money 90 смн (pay 75 смн + bonus), deliveries 1, next order true
 PASS 33. motorboats placed: 3 (sea + lakes)
-PASS 34. boat floats: 0.04 m above the water surface (|..| < 0.5), tilt 3.1 deg (< 12), in water true
+PASS 34. boat floats: 0.00 m above the water surface (|..| < 0.5), tilt 2.5 deg (< 12), in water true
 PASS 35. player boards the boat (can_enter true, driving true)
-PASS 36. boat drives: 62 km/h after 8 s (> 25), 183 m, turns 121 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
-PASS 37. getting off the boat: player in the scene again ((-602.0, -13.0, 140.0))
+PASS 36. boat drives: 62 km/h after 8 s (> 25), 183 m, turns 118 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
+PASS 37. getting off the boat: player in the scene again ((-605.0, -14.0, 137.0))
 PASS 38. parked vehicles sleep far from the camera (frozen at 900 m: true, awake near: true)

@@ -10,7 +10,7 @@ PASS  9. getting into a Camry with an empty tank opens the fuel window
 PASS 10. «full tank» from the window: Camry 60 / 60 l
 PASS 11. at the pumps: «ЗАПРАВИТЬ» shown
 PASS 12. tap «ЗАПРАВИТЬ»: Camry filled to 60 l, paid 771 смн
-PASS 13. navigator road graph built: 14750 nodes (world roads + city lanes), 0.0 s
+PASS 13. navigator road graph built: 14235 nodes (world roads + city lanes), 0.0 s
 PASS 14. map open; the touch controls stay off under it
 PASS 15. tap on a station -> marker there (target (-1910.0, 32.0, -3442.0)), card «АЗС · 4.3 км по дорогам»
 PASS 16. no teleport: the card offers «ПОЕХАЛИ» / «УБРАТЬ МЕТКУ» only
@@ -25,5 +25,5 @@ PASS 24. every vehicle has its tank (gauge): car 80 л, camry 60 л, lexus 72 л
 PASS 25. billboard poster 15.5 x 8.8 m (was 10.8 x 4.3), aspect 1.768 = photo 1.768 (no side margins)
 PASS 26. trees within 45 m of 6 billboards: 0
 PASS 27. river water above / at a road or bridge: 0 points (was 614 overlaps)
-PASS 28. found 20 stretches with the road above the ground beside it (country + city)
-PASS 29. Camry drives from the ground beside the road back onto it (square on, slowly): 10 / 10 stretches
+PASS 28. found 17 stretches with the road above the ground beside it (country + city)
+PASS 29. Camry drives from the ground beside the road back onto it (square on, slowly): 8 / 8 stretches

@@ -52,6 +52,15 @@ func _ready() -> void:
 			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("v18b"):
+		await _look("v18_lake", Vector3(-3300, 0, -7990), Vector3(-3300, 520, -8400), 30.0)
+		await _look("v18_lake2", Vector3(-3000, 0, -8150), Vector3(-3500, 520, -8350), 18.0)
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("v18"):
+		await _v18_shots()
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("cards"):
 		await _card_shots()
 		get_tree().quit()
@@ -459,3 +468,65 @@ func _weapon_shots() -> void:
 	await get_tree().create_timer(4.5).timeout
 	await _snap("w_after")
 	print("PLAYER HEALTH ", PlayerLife.health, " dead ", PlayerLife.dead)
+
+
+func _v18_shots() -> void:
+	var s: CarSession = main.get("car_session")
+	var dealer: CarDealer = main.get_node("CarDealer")
+	var dp := dealer.global_position
+	await _look("v18_dealer", dp + Vector3(34, 9, 26), dp + Vector3(2, 3, 0))
+	await _look("v18_dealer_inside", dp + Vector3(5.5, 2.2, 8.5), dp + Vector3(-2, 1.0, -3))
+	# the city garage + one along a country road (built near the player)
+	var svc: AutoService = main.get_node("AutoService")
+	var sp: Dictionary = svc.spots[svc.spots.size() - 1]
+	for k in [sp, svc.spots[min(8, svc.spots.size() - 1)]]:
+		var gp: Vector3 = k["pos"]
+		var yaw: float = k["yaw"]
+		var fwd := Vector3(cos(yaw), 0, -sin(yaw))
+		s.player.teleport(gp + fwd * 14.0 + Vector3(0, 1, 0), 0.0)
+		ow.preload_at(gp)
+		await _sec(2.5)
+		await _look("v18_garage_%d" % svc.spots.find(k), gp + fwd * 24.0 + fwd.cross(Vector3.UP) * 14.0 + Vector3(0, 6, 0), gp + Vector3(0, 2, 0))
+	# swimming in the lake Iskandar
+	var lake := Vector3(-3300, 520.0, -8050)
+	ow.preload_at(lake)
+	ow.hold = lake
+	await _sec(1.0)
+	s.player.teleport(lake + Vector3(0, 0.5, 0), 0.0)
+	await _sec(3.0)
+	var pw: Variant = s.player.get("water")
+	print("V18 lake: water level %.1f, mode %s, player y %.1f" % [pw.level if pw else -1.0, str(pw.mode) if pw else "-", s.player.global_position.y])
+	await _look("v18_lake_swim", s.player.global_position + Vector3(5, 2.5, 6), s.player.global_position)
+	ow.hold = Vector3.INF
+	# the pass road on the slope (no viaduct)
+	var ps := _road("pass")
+	var pts: Array = ps["pts"]
+	var pk: Array = pts[int(pts.size() * 0.55)]
+	var pp := Vector3(pk[0], pk[1], pk[2])
+	await _look("v18_mountain_road", pp + Vector3(90, 70, 60), pp)
+	# the boat (bow forward)
+	var boats: Array = main.get("boats")
+	if not boats.is_empty():
+		var b: Node3D = boats[0]
+		await _look("v18_boat", b.global_position + b.global_basis.x * 9.0 + Vector3(0, 3, 0) + b.global_basis.z * -4.0, b.global_position)
+	# Camry with its driver's door open
+	var camry: VehiclePrado = main.get("camry")
+	camry.set_door("door_lf_dummy", true)
+	await _sec(1.0)
+	await _look("v18_camry_door", camry.global_position + camry.global_basis.x * -6.0 + camry.global_basis.z * -4.0 + Vector3(0, 1.8, 0), camry.global_position + Vector3(0, 0.6, 0))
+	var lexus: VehiclePrado = main.get("lexus")
+	lexus.set_door("door_lf_dummy", true)
+	await _sec(1.0)
+	await _look("v18_lexus_door", lexus.global_position + lexus.global_basis.x * -6.0 + lexus.global_basis.z * -4.0 + Vector3(0, 1.8, 0), lexus.global_position + Vector3(0, 0.8, 0))
+
+
+func _sec(t: float) -> void:
+	for i in int(t * 60):
+		await get_tree().physics_frame
+
+
+func _road(id: String) -> Dictionary:
+	for r in wd.roads:
+		if r["id"] == id:
+			return r
+	return {}

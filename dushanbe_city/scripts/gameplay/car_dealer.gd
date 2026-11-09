@@ -1,12 +1,13 @@
 class_name CarDealer
 extends Node3D
-## The car dealership «АВТОСАЛОН» near the start (edge of the park, beside the gun shop): a glass
+## The car dealership «АВТОСАЛОН» near the start (the reserved lot at the corner of the avenue and
+## Gulistan street, 46 x 56 m): a glass
 ## showroom with a lit sign. At its door «АВТОСАЛОН» opens the catalogue: Toyota Camry 50 000,
 ## Lexus RX 350 100 000, Toyota Land Cruiser Prado 120 000 somoni. A bought car is delivered to the
 ## lot in front of the showroom and is the player's for good (Wallet.cars, saved); a car that is not
 ## the player's cannot be opened («ПРОДАЁТСЯ»). Job vehicles (LakLak van, bus, boats) are free.
 
-const POS := Vector3(-90.0, 0.0, -157.0)      ## showroom centre, front faces +X (the avenue)
+const POS := Vector3(-93.0, 0.0, 64.0)        ## showroom centre (reserved lot 2), front faces +X (the avenue)
 const SIZE := Vector3(14.0, 6.0, 20.0)
 ## node name in main -> [main property, display name, price]
 const CARS := {
