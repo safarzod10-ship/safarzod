@@ -274,7 +274,7 @@ def lamp():
 
 
 os.makedirs(OUT, exist_ok=True)
-if "extra" not in sys.argv:
+if "extra" not in sys.argv and "park" not in sys.argv:
     for f in (tower_a, tower_b, res_c, mall, rotunda, lamp):
         f()
 
@@ -342,3 +342,122 @@ def flagpole():
 if "extra" in sys.argv:
     median_bed()
     flagpole()
+
+
+# ------------------------------------------------------------------ I: Ferris wheel (~32 m)
+def ferris():
+    reset(); k = Kit()
+    k.M["cab"] = mat("cabin", (0.95, 0.35, 0.2), 0.2, 0.4)
+    k.M["cab2"] = mat("cabin2", (0.2, 0.55, 0.95), 0.2, 0.4)
+    R = 15.0; C = (0, 0, R + 2.5)
+    for sy in (-1.2, 1.2):                                         # two rims + spokes
+        bpy.ops.mesh.primitive_torus_add(major_radius=R, minor_radius=0.18, major_segments=64, minor_segments=6,
+                                         location=(0, sy, C[2]), rotation=(math.pi / 2, 0, 0))
+        k.add(bpy.context.object, "white")
+        for i in range(16):
+            a = i * math.tau / 16
+            k.box((0.12, 0.12, R), (math.cos(a) * R / 2, sy, C[2] + math.sin(a) * R / 2), "white", rot=(0, -a + math.pi / 2, 0))
+    k.cyl(0.8, 3.0, (0, 0, C[2]), "steel", verts=16)
+    k.objs[-1].rotation_euler = (math.pi / 2, 0, 0)
+    for sy in (-1, 1):                                              # A-frame legs
+        for sx in (-1, 1):
+            L = math.hypot(R * 0.55, C[2])
+            k.box((0.5, 0.5, L), (sx * R * 0.27, sy * 2.6, C[2] / 2), "white", rot=(0, sx * math.atan2(R * 0.55, C[2]), 0))
+    for i in range(16):                                             # gondolas
+        a = i * math.tau / 16
+        x, z = math.cos(a) * R, C[2] + math.sin(a) * R
+        k.box((1.6, 2.0, 1.6), (x, 0, z - 1.4), "cab" if i % 2 else "cab2")
+        k.box((1.8, 2.2, 0.15), (x, 0, z - 0.5), "white")
+    k.box((12, 8, 0.6), (0, 0, 0.3), "stone_d")
+    for o in k.objs:
+        bpy.context.view_layer.objects.active = o
+    k.export(os.path.join(OUT, "ferris_wheel.glb"))
+
+
+# ------------------------------------------------------------------ J: "I ♥ ДУШАНБЕ" letters (~2 m)
+def love_sign():
+    reset(); k = Kit()
+    k.M["red"] = mat("heart_red", (0.9, 0.06, 0.08), 0.0, 0.4, emit=(0.4, 0.0, 0.0))
+    k.box((15.0, 1.4, 0.4), (0, 0, 0.2), "stone_d")
+    k.text("I", (-6.4, 0, 1.4), 2.4, "white", extrude=0.3)
+    k.text("ДУШАНБЕ", (1.4, 0, 1.4), 2.4, "white", extrude=0.3)
+    # heart: two spheres + a rotated box
+    for sx in (-0.42, 0.42):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=0.55, location=(-4.6 + sx, 0, 1.75))
+        o = bpy.context.object
+        o.scale = (1, 0.5, 1)
+        bpy.ops.object.transform_apply(scale=True)
+        k.add(o, "red")
+    k.box((0.95, 0.5, 0.95), (-4.6, 0, 1.25), "red", rot=(0, math.pi / 4, 0))
+    for o in k.objs:
+        if o.name.startswith("Text"):
+            pass
+    k.export(os.path.join(OUT, "love_sign.glb"))
+
+
+# ------------------------------------------------------------------ K: park gate «БОҒИ КАЛОНИ ДУШАНБЕ»
+def park_gate():
+    reset(); k = Kit()
+    for sx in (-1, 1):
+        k.box((2.6, 2.6, 9.0), (sx * 6.2, 0, 4.5), "stone")
+        k.box((3.0, 3.0, 0.6), (sx * 6.2, 0, 9.3), "stone_d")
+        k.box((1.6, 1.0, 5.0), (sx * 6.2, -1.35, 3.6), "gold")
+        k.box((1.2, 1.2, 4.6), (sx * 9.4, 0, 2.3), "stone")             # side pylons
+        for i in range(6):                                              # wrought fence beyond the pylons
+            k.box((0.08, 0.08, 2.4), (sx * (11.0 + i * 0.6), 0, 1.2), "dark")
+        k.box((3.6, 0.1, 0.1), (sx * 12.5, 0, 2.3), "dark")
+    # the arch over the gate
+    bm_r_in, bm_r_out = 4.9, 6.2
+    bm = bmesh.new()
+    seg = 24
+    rings = []
+    for i in range(seg + 1):
+        a = math.pi * i / seg
+        ring = []
+        for (r, dy) in ((bm_r_in, -1.2), (bm_r_out, -1.2), (bm_r_out, 1.2), (bm_r_in, 1.2)):
+            ring.append(bm.verts.new((math.cos(a) * r, dy, 9.0 + math.sin(a) * r * 0.55)))
+        rings.append(ring)
+    for i in range(seg):
+        for j in range(4):
+            bm.faces.new((rings[i][j], rings[i][(j + 1) % 4], rings[i + 1][(j + 1) % 4], rings[i + 1][j]))
+    me = bpy.data.meshes.new("arch")
+    bm.to_mesh(me)
+    o = bpy.data.objects.new("arch", me)
+    bpy.context.collection.objects.link(o)
+    k.add(o, "stone")
+    k.box((11.0, 0.5, 2.4), (0, -1.3, 10.2), "dark")                    # name board
+    k.text("БОҒИ КАЛОНИ ДУШАНБЕ", (0, -1.6, 10.2), 0.75, "gold", extrude=0.05)
+    k.export(os.path.join(OUT, "park_gate.glb"))
+
+
+# ------------------------------------------------------------------ L: ornate lamp with two flag banners
+def lamp_flags():
+    reset(); k = Kit()
+    k.M["flag"] = mat("flag", (1, 1, 1), 0.0, 0.6, img=FLAG)
+    k.cyl(0.32, 0.8, (0, 0, 0.4), "white", verts=12)
+    k.cyl(0.14, 7.5, (0, 0, 4.4), "white", verts=10, r2=0.09)
+    for sx in (-1, 1):
+        k.box((1.4, 0.08, 0.08), (sx * 0.7, 0, 7.7), "white")
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=6, radius=0.3, location=(sx * 1.4, 0, 7.1))
+        lo = bpy.context.object
+        lo.scale = (1, 1, 1.25)
+        bpy.ops.object.transform_apply(scale=True)
+        k.add(lo, "white")
+        k.cyl(0.32, 0.12, (sx * 1.4, 0, 7.48), "white", verts=12)
+        # vertical banner with the flag (turned upright: stripes run down)
+        bpy.ops.mesh.primitive_plane_add(size=1, location=(sx * 0.42, 0, 4.6), rotation=(math.pi / 2, math.pi / 2, 0))
+        b = bpy.context.object
+        b.scale = (1.8, 0.7, 1)
+        bpy.ops.object.transform_apply(scale=True, rotation=True)
+        k.add(b, "flag")
+        k.box((0.75, 0.05, 0.05), (sx * 0.42, 0, 5.52), "white")
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=6, radius=0.32, location=(0, 0, 8.4))
+    k.add(bpy.context.object, "white")
+    k.export(os.path.join(OUT, "lamp_ornate.glb"))
+
+
+if "park" in sys.argv:
+    ferris()
+    love_sign()
+    park_gate()
+    lamp_flags()

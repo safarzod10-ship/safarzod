@@ -204,6 +204,37 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 			_cyl(root, body, "stone", Vector3(0, 0.1, -54), 2.0, 2.0)
 			_cyl(root, null, "gold", Vector3(0, 2.1, -54), 0.8, 2.6, 0.5, 12, false)
 			_dome(root, "gold", Vector3(0, 4.7, -54), 0.42, 1.4)
+			# after the owner's photos: gate «БОҒИ КАЛОНИ ДУШАНБЕ», Ferris wheel, «I ♥ ДУШАНБЕ», rotundas
+			for spec in [["park_gate", Vector3(0, 0.1, -D * 0.5 + 2.0), PI, Vector3(13.0, 10.0, 2.8)],
+					["ferris_wheel", Vector3(-L * 0.3, 0.1, D * 0.25), PI * 0.5, Vector3(12.0, 34.0, 8.0)],
+					["love_sign", Vector3(L * 0.22, 0.1, -D * 0.3), PI, Vector3(15.0, 3.0, 1.4)],
+					["rotunda", Vector3(L * 0.3, 0.1, D * 0.25), 0.0, Vector3(13.0, 8.0, 13.0)],
+					["rotunda", Vector3(-L * 0.28, 0.1, -D * 0.25), 0.0, Vector3(13.0, 8.0, 13.0)]]:
+				var m := Node3D.new()
+				m.name = String(spec[0])
+				m.position = spec[1]
+				m.rotation.y = spec[2]
+				root.add_child(m)
+				for part in WorldModels.parts(String(spec[0])):
+					var mi := MeshInstance3D.new()
+					mi.mesh = part[0]
+					mi.transform = part[1]
+					m.add_child(mi)
+				var cs := CollisionShape3D.new()
+				var bx := BoxShape3D.new()
+				var sz: Vector3 = spec[3]
+				bx.size = sz if spec[0] != "park_gate" else Vector3(2.6, 9.0, 2.6)
+				cs.shape = bx
+				cs.position = (spec[1] as Vector3) + Vector3(0, sz.y * 0.5, 0)
+				if spec[0] == "park_gate":
+					for sx: float in [-6.2, 6.2]:
+						var c2 := CollisionShape3D.new()
+						c2.shape = bx
+						c2.position = (spec[1] as Vector3) + Vector3(0, 4.5, 0) + Basis(Vector3.UP, spec[2]) * Vector3(sx, 0, 0)
+						body.add_child(c2)
+				elif spec[0] != "rotunda":
+					cs.rotation.y = spec[2]
+					body.add_child(cs)
 			if lod == 0:
 				WorldLandmarks._trees_ring(root, L, D)
 		"museum":
@@ -357,6 +388,13 @@ static func _trees_ring(root: Node3D, L: float, D: float) -> int:
 	for x in range(-int(L * 0.45), int(L * 0.45), 16):
 		for z in range(-int(D * 0.45), int(D * 0.45), 16):
 			if absf(x) < 14 or absf(z) < 14:
+				continue
+			# clearings around the park's attractions (Ferris wheel, rotundas, «I ♥ ДУШАНБЕ»)
+			var clear := false
+			for c in [Vector2(-L * 0.3, D * 0.25), Vector2(L * 0.3, D * 0.25), Vector2(-L * 0.28, -D * 0.25), Vector2(L * 0.22, -D * 0.3)]:
+				if Vector2(x, z).distance_to(c) < 26.0:
+					clear = true
+			if clear:
 				continue
 			pts.append(Vector3(x + (z % 5), 0, z))
 	mm.instance_count = pts.size()

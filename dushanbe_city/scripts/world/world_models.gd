@@ -58,10 +58,11 @@ static func parts(key: String) -> Array:
 			out = _extract("school.glb", func(_n: String) -> bool: return true, true, 25.0)
 		"hospital_m":
 			out = _extract("hospital.glb", func(_n: String) -> bool: return true, true)
-		"luxa_m", "luxb_m", "luxc_m", "mall_m", "rotunda", "lamp_ornate", "median_bed", "flagpole":
+		"luxa_m", "luxb_m", "luxc_m", "mall_m", "rotunda", "lamp_ornate", "median_bed", "flagpole", "ferris_wheel", "love_sign", "park_gate":
 			# the modern Dushanbe set (assets/models/city, own models after the owner's photos)
 			var f: String = {"luxa_m": "lux_tower_a", "luxb_m": "lux_tower_b", "luxc_m": "lux_res_c", "mall_m": "mall",
-				"rotunda": "rotunda", "lamp_ornate": "lamp_ornate", "median_bed": "median_bed", "flagpole": "flagpole"}[key]
+				"rotunda": "rotunda", "lamp_ornate": "lamp_ornate", "median_bed": "median_bed", "flagpole": "flagpole",
+				"ferris_wheel": "ferris_wheel", "love_sign": "love_sign", "park_gate": "park_gate"}[key]
 			out = _extract("../city/%s.glb" % f, func(_n: String) -> bool: return true, key.ends_with("_m"))
 		"rp_lamp_a", "rp_lamp_b", "rp_lamp_c", "rp_bench":
 			var obj: String = {"rp_lamp_a": "Object_43", "rp_lamp_b": "Object_45", "rp_lamp_c": "Object_47", "rp_bench": "Object_5"}[key]

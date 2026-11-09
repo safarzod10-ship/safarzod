@@ -998,7 +998,7 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				continue
 			for sgn: float in [-1.0, 1.0]:
 				var q := P[k] + Vector3(R[k].x, 0, R[k].y) * (float(r["w"]) * 0.5 + 4.6) * sgn
-				if wd.road_edge_dist(q.x, q.z) < 3.2 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 40.0) or _in_own_plot(q.x, q.z):
+				if wd.road_edge_dist(q.x, q.z) < 3.2 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 56.0) or _in_own_plot(q.x, q.z):
 					continue
 				var idx := int(k / step)
 				var id := ""
@@ -1043,8 +1043,27 @@ static func _near_board(boards: Array, x: float, z: float, r: float) -> bool:
 	return false
 
 
-## the plots the game builds on itself (hero's home, dealership, gun shop): no wild trees there
+## the plots the game builds on itself (hero's home, dealership, gun shop, filling stations, auto
+## services): no wild trees there
+var _station_cells := {}
+
+
 func _in_own_plot(x: float, z: float) -> bool:
+	if _station_cells.is_empty():
+		_station_cells["_"] = true
+		for f in wd.fuel + wd.services:
+			var p := Vector2(float(f.get("ox", f["x"])), float(f.get("oz", f["z"])))
+			var q := Vector2(float(f["x"]), float(f["z"]))
+			for pt in [p, q, (p + q) * 0.5]:
+				var key := Vector2i(floori(pt.x / 64.0), floori(pt.y / 64.0))
+				if not _station_cells.has(key):
+					_station_cells[key] = []
+				(_station_cells[key] as Array).append(pt)
+	for di in [-1, 0, 1]:
+		for dj in [-1, 0, 1]:
+			for pt: Vector2 in _station_cells.get(Vector2i(floori(x / 64.0) + di, floori(z / 64.0) + dj), []):
+				if pt.distance_to(Vector2(x, z)) < 30.0:
+					return true
 	for l in wd.landmarks:
 		if not String(l["id"]) in ["hero_home", "dealer", "gunshop"]:
 			continue

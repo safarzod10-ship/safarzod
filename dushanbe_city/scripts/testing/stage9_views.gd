@@ -66,6 +66,32 @@ func _ready() -> void:
 		var lmk: Dictionary = wd.landmark("somoni")
 		var c := Vector3(lmk["x"], lmk["y"], lmk["z"])
 		await _look("city_aerial", c + Vector3(260, 150, 260), c + Vector3(0, 0, -150))
+		var pk: Dictionary = wd.landmark("rudaki_park")
+		var pc := Vector3(pk["x"], pk["y"], pk["z"])
+		var pb := Basis(Vector3.UP, float(pk["yaw"]))
+		await _look("park_gate", pc + pb * Vector3(8, 6, -150), pc + pb * Vector3(0, 6, -110))
+		await _look("park_inside", pc + pb * Vector3(60, 45, -140), pc + pb * Vector3(-30, 8, 20))
+		# filling station + auto service on a city street
+		var fs: Dictionary = {}
+		for f in wd.fuel:
+			if Vector2(float(f["x"]), float(f["z"])).distance_to(Vector2(0, -2600)) < 2500.0:
+				fs = f
+				break
+		if not fs.is_empty():
+			var fp := Vector3(float(fs["x"]), float(fs["y"]), float(fs["z"]))
+			await _look("city_fuel", fp + Vector3(40, 18, 40), fp)
+		var svc: AutoService = main.get_node("AutoService")
+		var best := {}
+		for sp in svc.spots:
+			if (sp["pos"] as Vector3).distance_to(c) < 2500.0:
+				best = sp
+				break
+		if not best.is_empty():
+			var gp: Vector3 = best["pos"]
+			var s2: CarSession = main.get("car_session")
+			s2.player.teleport(gp + Vector3(0, 1, 18), 0.0)
+			await _sec(2.0)
+			await _look("city_service", gp + Vector3(30, 14, 26), gp)
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("somoni"):

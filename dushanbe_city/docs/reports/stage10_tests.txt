@@ -3,7 +3,7 @@ PASS  2. the game starts at the home's door (0.0 m from it)
 PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
 PASS  4. drives out of the garage through the gate (19 m out, condition 100 %)
 PASS  5. promo TAJDUSH: +200 000 смн
-PASS  6. account ID given automatically: 18942947 (8 digits)
+PASS  6. account ID given automatically: 30235106 (8 digits)
 PASS  7. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
 PASS  8. the same code again: refused (Этот код уже использован)
 PASS  9. a code made for another ID: refused (Код не подходит к вашему ID)

@@ -151,7 +151,7 @@ def _free_point(x, z, rad, road_tree, road_hw, bld_tree, bld_r, lm, water_ok):
     return water_ok(x, z)
 
 
-def billboards(roads, buildings, landmarks, H_at, water_ok, every=400.0):
+def billboards(roads, buildings, landmarks, H_at, water_ok, every=300.0):
     pts = []; hw = []
     for r in roads:
         pts.extend(r["P"].tolist()); hw.extend([NW.CLASSES[r["cls"]]["w"] / 2] * len(r["P"]))
@@ -161,9 +161,7 @@ def billboards(roads, buildings, landmarks, H_at, water_ok, every=400.0):
     bld_tree = cKDTree(bld) if bld is not None else None
     lm = [(l["x"], l["z"], l["L"], l["D"]) for l in landmarks]
     out = []
-    for r in roads:
-        if r["cls"] in ("lane", "dirt"):
-            continue
+    for r in roads:                         # 0.20: every road, dirt tracks too
         P = r["P"]; Hh = r["H"]
         hwr = NW.CLASSES[r["cls"]]["w"] / 2
         D = _dirs(P)
@@ -186,7 +184,7 @@ def billboards(roads, buildings, landmarks, H_at, water_ok, every=400.0):
                     g = float(H_at([x], [z])[0])
                     if abs(g - Hh[k]) > 5.0:
                         continue
-                    if any(math.hypot(x - b["x"], z - b["z"]) < (300.0 if b["road"] == r["id"] else 120.0) for b in out):
+                    if any(math.hypot(x - b["x"], z - b["z"]) < (230.0 if b["road"] == r["id"] else 100.0) for b in out):
                         continue          # ~400 m apart: never two boards close together (junctions, loops)
                     # the board is 11 m wide: both its ends must be free as well
                     ok = all(_free_point(x + d[0] * e, z + d[1] * e, 4.0, road_tree, road_hw, bld_tree, bld_r, lm, water_ok)

@@ -129,8 +129,11 @@ def build(roads, H, H_at, F, avoid=()):
             if d > road_hw[i] + D / 2 + 30 or not free(x, z, L + 8, D + 8, yaw, 4.0):
                 continue
             R = math.hypot(L, D) / 2
-            if any(math.hypot(x - bt.data[j][0], z - bt.data[j][1]) < R + br[j] + 3 for j in bt.query_ball_point((x, z), R + 60)):
+            hit = [j for j in bt.query_ball_point((x, z), R + 60) if math.hypot(x - bt.data[j][0], z - bt.data[j][1]) < R + br[j] + 3]
+            # the dense city leaves no empty lots: ordinary blocks give way to a school / hospital
+            if any(str(buildings[j][0]) not in CLEARABLE or j in KILL for j in hit):
                 continue
+            KILL.update(hit)
             add(kind, x, z, yaw, L, D, 3)
             bt = cKDTree(np.array([[b[1], b[2]] for b in buildings]))
             br.append(R)
@@ -166,10 +169,14 @@ def build(roads, H, H_at, F, avoid=()):
                 if d < road_hw[i] + 1.0:
                     raise SystemExit("landmark %s overlaps a road at (%.0f, %.0f)" % (lid, px, pz))
         landmarks.append({"id": lid, "name": nm, "x": x, "z": z, "yaw": yaw, "L": L, "D": D, "y": round(float(H_at([x], [z])[0]), 2)})
-    fuel = fuel_stations(roads, buildings, landmarks, H_at, free_fuel)
-    # auto services (garages): three times as many as filling stations, between them
-    services = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=930.0, sep=300.0, prefix="service",
-                             start=500.0, avoid=fuel, avoid_r=160.0)
+    # 0.20: on every road (city streets and lanes too): a filling station every ~1.6 km, an auto service
+    # every ~600 m between them
+    fuel = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=1600.0, sep=550.0, start=700.0)
+    services = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=600.0, sep=230.0, prefix="service",
+                             start=300.0, avoid=fuel, avoid_r=120.0)
+    if KILL:
+        print("buildings cleared for stations / services: %d" % len(KILL))
+        buildings[:] = [b for i, b in enumerate(buildings) if i not in KILL]
     signs = make_signs(roads, H_at)
     kms = make_kmposts(roads, H_at)
     places = [{"id": p[0], "name": p[1], "kind": p[2], "x": p[3], "z": p[4], "r": p[5]} for p in NW.PLACES]
@@ -676,6 +683,10 @@ def write_map(W, H, splat, biome, road_mask, path, px=4096):
     im.save(path)
 
 
+KILL = set()                 ## building indices cleared for filling stations / auto services
+CLEARABLE = {"house", "panel5", "panel9", "brick5", "luxc_m", "shop", "cottage", "office"}
+
+
 def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0, sep=700.0, prefix="fuel", start=1200.0, avoid=(), avoid_r=150.0):
     """filling stations along every road (model assets/models/extra/gas_station.glb): one every ~3.2 km
     of road, alternating sides, beside the road (the model's +X - pumps, canopy, price sign - faces
@@ -685,7 +696,7 @@ def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0, sep=
     bR = [math.hypot(b[4], b[5]) / 2 for b in buildings]
     out = []
     for r in roads:
-        if r["cls"] in ("lane", "dirt"):
+        if r["cls"] == "dirt":
             continue
         P = r["P"]; Hh = r["H"]
         hw = NW.CLASSES[r["cls"]]["w"] / 2
@@ -722,8 +733,14 @@ def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0, sep=
                         continue
                     if not free_fn(px, pz, 30.0, 22.0, yaw):
                         continue
-                    if bld is not None and any(math.hypot(px - bld.data[j][0], pz - bld.data[j][1]) < 22 + bR[j] for j in bld.query_ball_point((px, pz), 80)):
-                        continue
+                    if bld is not None:
+                        hit = [j for j in bld.query_ball_point((px, pz), 80) if math.hypot(px - bld.data[j][0], pz - bld.data[j][1]) < 22 + bR[j]]
+                        # in the city the plot is cleared (ordinary blocks / houses give way); never models
+                        if any(not str(buildings[j][0]) in CLEARABLE for j in hit):
+                            continue
+                        if hit and r["cls"] not in ("avenue", "highway", "street", "lane", "road"):
+                            continue
+                        KILL.update(hit)
                     if any(abs(px - l["x"]) < l["L"] / 2 + 20 and abs(pz - l["z"]) < l["D"] / 2 + 20 for l in landmarks):
                         continue
                     y = float(Hh[k] - 0.1)
