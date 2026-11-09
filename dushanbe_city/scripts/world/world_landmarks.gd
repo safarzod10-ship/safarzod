@@ -363,6 +363,26 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 				_box(root, null, "canvas" if k % 2 == 0 else "tile", Vector3(x, 3.2, z), Vector3(9, 0.15, 5), false)
 				for sx: float in [-1.0, 1.0]:
 					_box(root, null, "dark", Vector3(x + sx * 4.2, 1.6, z + 2.2), Vector3(0.12, 3.2, 0.12), false)
+		"tas":
+			# TAS Group: the planned landmark tower (own model, 168 m + spire), glass on a stone podium
+			_box(root, body, "plaza", Vector3(0, 0.05, 0), Vector3(L, 0.3, D), true)
+			var tw := Node3D.new()
+			tw.name = "TASTower"
+			tw.rotation.y = PI                     # the model's front (+Z) to the plot's street side (-Z)
+			root.add_child(tw)
+			for part in WorldModels.parts("tas_tower"):
+				var mi := MeshInstance3D.new()
+				mi.mesh = part[0]
+				mi.transform = part[1]
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+				tw.add_child(mi)
+			for c in [[Vector3(60, 12, 44), Vector3(0, 6, 0)], [Vector3(30, 156, 22), Vector3(0, 90, 0)]]:
+				var cs := CollisionShape3D.new()
+				var bx := BoxShape3D.new()
+				bx.size = c[0]
+				cs.shape = bx
+				cs.position = c[1]
+				body.add_child(cs)
 		"hero_home", "dealer", "gunshop":
 			pass                     # HeroHome / CarDealer / GunShop build their own buildings there
 		_:

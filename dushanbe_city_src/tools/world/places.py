@@ -28,6 +28,7 @@ LANDMARKS = [
     ("laklak", "LakLak — служба доставки", 1385.0, -3000.0, 0.0, (64.0, 74.0)),
     # the hero's home (HeroHome: house, garage with the Prado, start of the game) on the west side of
     # Rudaki avenue, the car dealership and the gun shop opposite (their own buildings, game side)
+    ("tas", "TAS Group", 120.0, -2470.0, 0.0, (66.0, 50.0)),
     ("hero_home", "Дом героя", -102.0, -2190.0, math.pi, (54.0, 124.0)),
     ("dealer", "Автосалон", 10.0, -2130.0, math.pi, (38.0, 48.0)),
     ("gunshop", "Оружейный магазин", 2.0, -2240.0, math.pi, (22.0, 26.0)),
@@ -210,8 +211,10 @@ def perimeter_block(add, free, a, b, c, d, tall):
                 if ring == 0:
                     # modern Dushanbe on the avenues: cream towers with blue glass and domes, round glass
                     # towers, cream residential blocks, shopping centres (assets/models/city)
-                    kind = str(RNG.choice(["luxa_m", "luxb_m", "luxc_m", "luxc_m", "luxa_m", "office", "hotel", "sky", "mall_m"] if tall
+                    kind = str(RNG.choice(["luxa_m", "luxb_m", "luxc_m", "luxc_m", "luxa_m", "office", "hotel", "sky", "mall_m", "amid_m"] if tall
                                           else ["luxc_m", "luxc_m", "luxa_m", "panel9", "brick5", "office"]))
+                    if kind == "amid_m" and RNG.random() < 0.6:
+                        kind = "mall_m"          # an AMID now and then, not on every block
                 elif ring == 3:
                     kind = str(RNG.choice(["luxc_m", "panel9", "panel5", "brick5"]))
                 elif ring == 2:
@@ -223,7 +226,7 @@ def perimeter_block(add, free, a, b, c, d, tall):
                     L = 46.0
                 if kind == "sky":
                     L = 24.0
-                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0)}
+                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0), "amid_m": (92.0, 80.0)}
                 if kind in LUXD:
                     L = LUXD[kind][0]
                     if length - s - 10 < L:
@@ -235,7 +238,7 @@ def perimeter_block(add, free, a, b, c, d, tall):
                 D = {"tower": 18.0, "school": 15.0, "panel5": 12.0, "brick5": 12.0, "sky": 24.0}.get(kind, LUXD.get(kind, (0, 14.0))[1])
                 x = sx + ux * (s + L / 2) + nx * D / 2
                 z = sz + uz * (s + L / 2) + nz * D / 2
-                floors = {"luxa_m": 22, "luxb_m": 18, "luxc_m": 12, "mall_m": 4, "panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
+                floors = {"amid_m": 3, "luxa_m": 22, "luxb_m": 18, "luxc_m": 12, "mall_m": 4, "panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
                           "admin": int(RNG.integers(4, 7)), "hotel": int(RNG.integers(7, 13)), "tower": int(RNG.integers(14, 23)), "sky": 30}[kind]
                 if free(x, z, L, D, yaw, 3.0):
                     add(kind, x, z, yaw, L, D, floors)

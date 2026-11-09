@@ -756,7 +756,7 @@ const TINTS := [Color(0.95, 0.91, 0.82), Color(0.93, 0.86, 0.74), Color(0.86, 0.
 const ROOF_TINTS := [Color(0.25, 0.45, 0.32), Color(0.28, 0.38, 0.55), Color(0.55, 0.22, 0.18), Color(0.55, 0.56, 0.58), Color(0.62, 0.62, 0.6)]
 
 
-const LUX := ["luxa_m", "luxb_m", "luxc_m", "mall_m"]
+const LUX := ["luxa_m", "luxb_m", "luxc_m", "mall_m", "amid_m"]
 
 
 func _buildings(sc: Vector2i, lod: int) -> Dictionary:
@@ -787,7 +787,7 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 			if not models.has(kind):
 				models[kind] = []
 			models[kind].append(xf)
-			var hh: float = 114.0 * sc2 if kind == "sky" else {"school_m": 11.5, "hospital_m": 12.3, "luxa_m": 80.0, "luxb_m": 62.0, "luxc_m": 42.0, "mall_m": 18.0}.get(kind, 11.0)
+			var hh: float = 114.0 * sc2 if kind == "sky" else {"school_m": 11.5, "hospital_m": 12.3, "luxa_m": 80.0, "luxb_m": 62.0, "luxc_m": 42.0, "mall_m": 18.0, "amid_m": 16.0}.get(kind, 11.0)
 			var fw := 22.0 * sc2 if kind == "sky" else L
 			var fd := 22.0 * sc2 if kind == "sky" else D
 			boxes.append([Vector3(x, y + hh * 0.5, z), Vector3(fw, hh, fd), yaw])

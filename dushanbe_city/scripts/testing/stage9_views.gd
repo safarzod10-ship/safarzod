@@ -52,6 +52,22 @@ func _ready() -> void:
 			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("v21"):
+		_hour(16.5)
+		var tl: Dictionary = wd.landmark("tas")
+		var tc := Vector3(tl["x"], tl["y"], tl["z"])
+		var tb := Basis(Vector3.UP, float(tl["yaw"]))
+		await _look("tas_street", tc + tb * Vector3(40, 30, -170), tc + Vector3(0, 80, 0))
+		await _look("tas_aerial", tc + tb * Vector3(220, 120, -260), tc + Vector3(0, 60, 0))
+		var n := 0
+		for b in wd.buildings:
+			if b[0] == "amid_m" and n < 2:
+				var bc := Vector3(b[1], b[8], b[2])
+				var bb := Basis(Vector3.UP, float(b[3]))
+				await _look("amid_%d" % n, bc + bb * Vector3(10, 45, -105), bc + Vector3(0, 6, 0))
+				n += 1
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("city20"):
 		var rr := _road("rudaki")
 		var pts: Array = rr["pts"]

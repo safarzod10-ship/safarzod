@@ -8,6 +8,7 @@ Front = Blender +Y (Godot -Z).
   blender -b --python somoni_monument.py -- <out.glb>
 """
 import bpy, bmesh, math, sys
+FONT_PATH = "/home/user/safarzod/dushanbe_city/assets/fonts/DejaVuSans-Bold.ttf"
 from mathutils import Vector, Matrix
 
 OUT = sys.argv[sys.argv.index("--") + 1]
@@ -89,6 +90,7 @@ box((8.0, 7.0, 0.6), (0, 0.6, TOP + 6.4 + 0.3), GRANITE_D)
 PED_TOP = TOP + 7.0
 bpy.ops.object.text_add(location=(0, 0.6 + 3.21, TOP + 3.9), rotation=(math.pi / 2, 0, math.pi))
 t = bpy.context.object
+t.data.font = bpy.data.fonts.load(FONT_PATH, check_existing=True)
 t.data.body = "ИСМОИЛИ\nСОМОНӢ"
 t.data.align_x = 'CENTER'
 t.data.align_y = 'CENTER'

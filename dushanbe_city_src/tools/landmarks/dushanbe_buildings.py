@@ -7,6 +7,7 @@ street front facing -Y (Godot +Z after export; the game turns them with the buil
   blender -b --python dushanbe_buildings.py -- <out dir>
 """
 import bpy, bmesh, math, sys, os
+FONT_PATH = "/home/user/safarzod/dushanbe_city/assets/fonts/DejaVuSans-Bold.ttf"
 from mathutils import Vector, Matrix
 
 OUT = sys.argv[sys.argv.index("--") + 1]
@@ -84,6 +85,7 @@ class Kit:
     def text(self, s, loc, size, m, rot_z=0.0, extrude=0.08):
         bpy.ops.object.text_add(location=loc)
         t = bpy.context.object
+        t.data.font = bpy.data.fonts.load(FONT_PATH, check_existing=True)
         t.data.body = s
         t.data.align_x = 'CENTER'
         t.data.align_y = 'CENTER'
