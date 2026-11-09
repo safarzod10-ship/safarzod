@@ -3,3 +3,36 @@ PASS  2. the game starts at the home's door (0.0 m from it)
 PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
 PASS  4. drives out of the garage through the gate (18 m out, condition 100 %)
 PASS  5. promo TAJDUSH: +200 000 смн
+PASS  6. account ID given automatically: 38014274 (8 digits)
+PASS  7. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
+PASS  8. the same code again: refused (Этот код уже использован)
+PASS  9. a code made for another ID: refused (Код не подходит к вашему ID)
+PASS 10. a forged amount: refused (Код не подходит к вашему ID)
+PASS 11. restart: weapons ["fist", "pistol", "ak47"], ammo 17 / 45, selected ak47, cars ["car", "camry"], money 12 345 смн
+PASS 12. dealership built near the start: (-93.0, 2.0, 64.0)
+PASS 13. a car that is not yours: can't get in, door says «ПРОДАЁТСЯ · 50 000 смн · АВТОСАЛОН»
+PASS 14. at the showroom door: «АВТОСАЛОН»
+PASS 15. Camry costs 50 000: with 40 000 refused (Недостаточно денег: нужно 50 000 смн)
+PASS 16. bought the Camry: money 60 000 -> 10 000 смн, delivered to the lot (17 m from the showroom)
+PASS 17. now it's yours: can get in
+PASS 18. prices: Camry 50 000 смн, Lexus 100 000 смн, Prado 120 000 смн
+PASS 19. camry: door (4 mesh parts) opens 65 deg and closes; real cabin fitted true
+PASS 20. lexus: door (7 mesh parts) opens 65 deg and closes; real cabin fitted true
+PASS 21. gun shop placed near the start ((-80.0, 2.0, -76.0)), on the map
+PASS 22. at the door: «МАГАЗИН ОРУЖИЯ»
+PASS 23. not enough money for the AK (3 500): refused
+PASS 24. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
+PASS 25. buy ammo: +60 AK rounds for 150
+PASS 26. select: unowned weapons can't be taken
+PASS 27. pistol: 5 shots fired (ammo 24 -> 19)
+PASS 28. bullets hit the Camry: condition 100 -> 80 %
+PASS 29. AK automatic: 9 rounds in 1 s (≈10)
+PASS 30. empty pistol: no shot, ammo stays 0
+PASS 31. condition 25 %%: the engine smokes
+PASS 32. condition 10 %%: on fire
+PASS 33. it explodes after burning: wreck true, can't get in true
+PASS 34. the blast killed the player standing 2.5 m away (dead true, health 0)
+PASS 35. respawn: alive at the hospital / start, health 100, fee 90 смн
+PASS 36. wreck restored at its parking place (condition 100 %)
+PASS 37. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 361.4 px)
+PASS 38. steer right -> the steering wheel turns clockwise for the driver (114 deg)

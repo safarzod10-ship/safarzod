@@ -94,6 +94,9 @@ func _t_tanks() -> void:
 
 func _t_consumption() -> void:
 	var car: VehiclePrado = main.get("car")
+	# 0.18: the Prado starts in the home's garage; this test drives it on the avenue (northbound)
+	car.place(Vector3(-49.0, 0.0, -12.0), 0.0)
+	await _frames(10)
 	await _board(car)
 	var f0 := car.fuel_l
 	var p0 := car.global_position
