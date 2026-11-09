@@ -66,6 +66,7 @@ export interface Column<T> {
   align?: "right";
   primary?: boolean;
   hideOnMobile?: boolean;
+  wide?: boolean;
 }
 
 export function DataTable<T>({
@@ -123,7 +124,7 @@ export function DataTable<T>({
                 <td
                   key={column.key}
                   data-label={column.label}
-                  className={[column.align === "right" ? "adm-right" : "", column.primary ? "adm-cell-primary" : "", column.hideOnMobile ? "adm-hide-sm" : ""].join(" ").trim() || undefined}
+                  className={[column.align === "right" ? "adm-right" : "", column.primary ? "adm-cell-primary" : "", column.hideOnMobile ? "adm-hide-sm" : "", column.wide ? "adm-cell-wide" : ""].join(" ").trim() || undefined}
                 >
                   {column.render(row)}
                 </td>
@@ -248,7 +249,7 @@ export function BarChart({ dates, values, unit }: { dates: string[]; values: num
 export function GiftThumb({ giftId, emoji, size = 40 }: { giftId: string | null | undefined; emoji?: string | null; size?: number }) {
   return (
     <span className="adm-gift" style={{ width: size, height: size, fontSize: Math.round(size * 0.6) }} aria-hidden="true">
-      {giftId && /^\d+$/.test(giftId) ? <Lottie src={giftAnimationUrl(giftId)} size={size} play={false} fallback={emoji ?? "★"} /> : <span>{emoji ?? "★"}</span>}
+      {giftId && /^\d+$/.test(giftId) ? <Lottie src={giftAnimationUrl(giftId)} size={size} play={false} frame={90} fallback={emoji ?? "★"} /> : <span>{emoji ?? "★"}</span>}
     </span>
   );
 }

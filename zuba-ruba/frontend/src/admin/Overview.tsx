@@ -19,6 +19,14 @@ const CHARTS: { key: SeriesKey; label: string; unit?: string; note?: string }[] 
   { key: "payouts", label: "Выведено подарками", unit: "⭐" },
 ];
 
+const WITHDRAWAL_STATUS: Record<string, string> = {
+  pending: "ждёт отправки",
+  approved: "отправка не подтверждена",
+  completed: "подарок отправлен",
+  rejected: "отклонён",
+  failed: "не выполнен",
+};
+
 const EVENT_LABEL: Record<FeedEvent["kind"], string> = {
   withdrawal: "Вывод",
   dispute: "Спор",
@@ -120,7 +128,7 @@ export function AdminOverviewView() {
                       <span className={`adm-tag adm-tag-${event.kind}`}>{EVENT_LABEL[event.kind]}</span>
                       <div className="adm-feed-main">
                         <span className="adm-feed-title">{event.title}</span>
-                        {event.status && <span className="adm-muted adm-clip">{event.status}</span>}
+                        {event.status && <span className="adm-muted adm-clip">{event.kind === "withdrawal" ? WITHDRAWAL_STATUS[event.status] ?? event.status : event.status}</span>}
                       </div>
                       <div className="adm-feed-side">
                         {event.user_id ? (

@@ -7,7 +7,7 @@ import { AdminError, Loading } from "./Admin";
 import { Panel } from "./kit";
 import type { SettingItem } from "./types";
 
-const UNIT: Record<string, string> = { stars: "⭐", rub: "₽", usd: "$", int: "", stars_list: "⭐" };
+const UNIT: Record<string, string> = { stars: "⭐", rub: "₽", usd: "$" };
 
 function normalize(item: SettingItem, value: string): string {
   if (item.type === "bool") return value === "true" ? "true" : "false";

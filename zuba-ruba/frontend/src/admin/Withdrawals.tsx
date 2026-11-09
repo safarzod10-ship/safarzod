@@ -157,6 +157,7 @@ export function AdminWithdrawalsView() {
                       : [
                           {
                             key: "actions",
+                            wide: true,
                             label: "Действия",
                             render: (row: AdminWithdrawal) => (
                               <span className="adm-actions">

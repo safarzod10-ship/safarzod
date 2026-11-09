@@ -91,7 +91,7 @@ async function assertNoOverflow(page: Page): Promise<void> {
 
 const SECTIONS = [
   { name: "overview", hash: "#/admin", ready: "text=Воронка новых пользователей" },
-  { name: "users", hash: "#/admin/users", ready: "text=Найдено: 1 284" },
+  { name: "users", hash: "#/admin/users", ready: "text=Найдено: 1284" },
   { name: "user", hash: "#/admin/users/802", ready: "text=Корректировка баланса" },
   { name: "withdrawals", hash: "#/admin/withdrawals", ready: "text=Пополнить баланс" },
   { name: "tasks", hash: "#/admin/tasks", ready: "text=По типам заданий" },
@@ -145,7 +145,7 @@ test("users table sorts on the server and exports csv", async ({ page }) => {
   await setup(page, "light", captured);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/#/admin/users");
-  await page.locator("text=Найдено: 1 284").waitFor();
+  await page.locator("text=Найдено: 1284").waitFor();
   await page.getByRole("button", { name: /Доступно/ }).click();
   await expect.poll(() => captured.usersQuery ?? "").toContain("sort=available");
   await page.getByRole("button", { name: "Выгрузить CSV" }).click();
@@ -157,9 +157,9 @@ test("star top-up opens a Telegram invoice", async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 900 });
   await page.goto("/#/admin/withdrawals");
   await expect(page.locator("text=не хватает 60 ⭐")).toBeVisible();
-  await page.getByRole("button", { name: "1 000", exact: true }).click();
+  await page.getByRole("button", { name: "1000", exact: true }).click();
   await page.getByRole("button", { name: /Пополнить на/ }).click();
-  await expect(page.locator("text=Оплачено 1 000 ⭐")).toBeVisible();
+  await expect(page.locator("text=Оплачено 1000 ⭐")).toBeVisible();
   const invoice = await page.evaluate(() => (window as unknown as { __captured: { invoice?: string } }).__captured.invoice);
   expect(invoice).toBe("https://t.me/$invoice-test");
 });

@@ -75,6 +75,7 @@ export function CompletionList({
           ? [
               {
                 key: "actions",
+                wide: true,
                 label: "Решение",
                 render: (row: AdminCompletion) =>
                   row.status === "disputed" || row.status === "waiting_payment" || row.status === "holding" ? (
