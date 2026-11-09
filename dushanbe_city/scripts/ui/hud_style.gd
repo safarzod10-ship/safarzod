@@ -115,3 +115,16 @@ static func open_map(tree: SceneTree) -> void:
 	for m in tree.get_nodes_in_group(&"world_map"):
 		if not m.call("is_open"):
 			m.call("toggle")
+
+
+## light round button of the on-foot HUD (mock-up 2): light grey disc, dark rim, dark icon
+static func light_button(ci: CanvasItem, c: Vector2, r: float, icon_id: String, pressed := false, accent := Color(0, 0, 0, 0)) -> void:
+	ci.draw_circle(c + Vector2(0, r * 0.06), r * 1.03, Color(0, 0, 0, 0.3))
+	ci.draw_circle(c, r, accent if accent.a > 0.0 else (Color(0.75, 0.76, 0.78, 0.9) if pressed else Color(0.93, 0.93, 0.95, 0.82)))
+	ci.draw_arc(c, r - r * 0.04, 0, TAU, 64, Color(0.12, 0.13, 0.15, 0.95), maxf(2.5, r * 0.08), true)
+	var tex := icon(icon_id)
+	if tex:
+		var s := r * 1.2
+		# line icons (white strokes) are drawn dark; the fist / door / hand keep their own outline
+		var mod := Color.WHITE if icon_id in ["fist", "door", "hand"] else Color(0.1, 0.11, 0.13)
+		ci.draw_texture_rect(tex, Rect2(c - Vector2(s, s) * 0.5, Vector2(s, s)), false, mod)

@@ -168,12 +168,12 @@ func _edge(id: String, near: Vector3) -> Array:
 ## the new HUD (mock-up style) on a phone layout: on foot, near a car, driving, the boat
 func _hud_shots() -> void:
 	_ui(true)
+	var s: CarSession = main.get("car_session")
 	var tc: Variant = s.get("walk_touch")
 	if tc is CanvasLayer:
 		(tc as CanvasLayer).visible = true
-		if (tc as Node).has_method("set_shown"):
-			(tc as Node).call("set_shown", true)
-	var s: CarSession = main.get("car_session")
+	if tc is Node and (tc as Node).has_method("set_shown"):
+		(tc as Node).call("set_shown", true)
 	s.set("_walk_touch_shown", true)
 	var car: VehiclePrado = main.get("car")
 	s.player.teleport(Vector3(-58, 2.4, -60), PI)

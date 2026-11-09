@@ -78,42 +78,43 @@ func _bottom() -> float:
 
 
 func _joy_radius() -> float:
-	return 1.4 * _unit()
+	return 1.15 * _unit()
 
 
 func _joy_home() -> Vector2:
 	var u := _unit()
 	var x0 := (_safe.position.x if _safe.size.x > 0 else 0.0) + 0.25 * u
-	return Vector2(x0 + 2.4 * u, _bottom() - 2.3 * u)
+	return Vector2(x0 + 1.6 * u, _bottom() - 1.55 * u)
 
 
+## right edge, as in the mock-up: FIST above, RUN under it; JUMP (small) left of RUN
 func _jump_rect() -> Array:                # [center, radius]
 	var u := _unit()
-	return [Vector2(_right() - 4.3 * u, _bottom() - 1.2 * u), 0.72 * u]
+	return [Vector2(_right() - 2.75 * u, _bottom() - 1.0 * u), 0.55 * u]
 
 
-func _punch_rect() -> Array:             # the big fist, right thumb
+func _punch_rect() -> Array:
 	var u := _unit()
-	return [Vector2(_right() - 1.75 * u, _bottom() - 2.55 * u), 1.05 * u]
+	return [Vector2(_right() - 0.95 * u, _bottom() - 3.05 * u), 0.8 * u]
 
 
 func _column_top() -> float:
 	return 16.0 + clampf(minf(size.x, size.y) * 0.22, 150.0, 320.0)
 
 
-func _run_rect() -> Array:               # left column, under the minimap
-	var u := minf(size.x, size.y) / 10.0
-	return [Vector2(0.95 * u, _column_top() + 0.75 * u), 0.55 * u]
-
-
-func _menu_rect() -> Array:
-	var u := minf(size.x, size.y) / 10.0
-	return [Vector2(0.95 * u, _column_top() + 2.0 * u), 0.55 * u]
-
-
-func _action_rect() -> Array:            # contextual: above-left of the fist (only when something is usable)
+func _run_rect() -> Array:
 	var u := _unit()
-	return [Vector2(_right() - 4.1 * u, _bottom() - 3.75 * u), 0.75 * u]
+	return [Vector2(_right() - 0.95 * u, _bottom() - 1.05 * u), 0.8 * u]
+
+
+func _menu_rect() -> Array:               # small pause button under the minimap
+	var u := minf(size.x, size.y) / 10.0
+	return [Vector2(0.8 * u, _column_top() + 0.65 * u), 0.45 * u]
+
+
+func _action_rect() -> Array:            # contextual: left of the fist (only when something is usable)
+	var u := _unit()
+	return [Vector2(_right() - 2.85 * u, _bottom() - 3.05 * u), 0.7 * u]
 
 
 func _in_circle(p: Vector2, c: Array) -> bool:
@@ -192,7 +193,7 @@ func _draw() -> void:
 	var o := _joy_origin if _joy_finger >= 0 else _joy_home()
 	var active := _joy_finger >= 0
 	draw_circle(o + Vector2(0, r * 0.04), r * 1.02, Color(0, 0, 0, 0.3))
-	draw_circle(o, r, Color(0.06, 0.07, 0.09, 0.62 if active else 0.5))
+	draw_circle(o, r, Color(0.45, 0.46, 0.5, 0.5 if active else 0.4))
 	draw_arc(o, r - 2.0, 0, TAU, 72, HudStyle.RIM, maxf(2.5, r * 0.04), true)
 	for k in 4:
 		var d := Vector2.from_angle(k * PI * 0.5)
@@ -204,14 +205,14 @@ func _draw() -> void:
 	draw_arc(knob, 0.4 * r, 0, TAU, 48, Color(1, 1, 1, 0.9), 2.0, true)
 	# RUN toggle, PAUSE (left column)
 	var run := _run_rect()
-	HudStyle.round_button(self, run[0], run[1], "run", false, Color(0.95, 0.55, 0.1, 0.85) if PlayerInput.run_toggle else Color(0, 0, 0, 0))
+	HudStyle.light_button(self, run[0], run[1], "run", false, Color(0.95, 0.55, 0.1, 0.85) if PlayerInput.run_toggle else Color(0, 0, 0, 0))
 	var mn := _menu_rect()
 	HudStyle.round_button(self, mn[0], mn[1], "pause")
 	# FIST, JUMP
 	var pr := _punch_rect()
-	HudStyle.round_button(self, pr[0], pr[1], "fist", _punch_finger >= 0, Color(0.75, 0.15, 0.12, 0.8) if _punch_finger >= 0 else Color(0, 0, 0, 0))
+	HudStyle.light_button(self, pr[0], pr[1], "fist", _punch_finger >= 0, Color(0.75, 0.15, 0.12, 0.8) if _punch_finger >= 0 else Color(0, 0, 0, 0))
 	var jp := _jump_rect()
-	HudStyle.round_button(self, jp[0], jp[1], "jump", _jump_finger >= 0)
+	HudStyle.light_button(self, jp[0], jp[1], "jump", _jump_finger >= 0)
 	# contextual button: a car door to get in, a hand + the label for anything else
 	if _action_label != "":
 		var ar := _action_rect()

@@ -99,9 +99,9 @@ func _draw_overlay() -> void:
 	# mission target (orange) / nearest filling station (green); radius of the map: 160 m
 	for mk in [[target, Color(1.0, 0.6, 0.1)], [fuel_marker, Color(0.2, 0.9, 0.35)]]:
 		_marker(mk[0], mk[1], c, R, yaw)
-	# rim: dark frame + green ring (mock-up style)
+	# rim: dark frame + light grey ring (mock-up style)
 	_overlay.draw_arc(c, R - R * 0.02, 0, TAU, 96, Color(0.04, 0.05, 0.06, 0.95), R * 0.07, true)
-	_overlay.draw_arc(c, R - R * 0.05, 0, TAU, 96, Color(0.2, 0.85, 0.3), R * 0.035, true)
+	_overlay.draw_arc(c, R - R * 0.05, 0, TAU, 96, Color(0.86, 0.87, 0.88), R * 0.03, true)
 	# north marker on the rim
 
 	var nd := Vector2(sin(yaw), -cos(yaw))
