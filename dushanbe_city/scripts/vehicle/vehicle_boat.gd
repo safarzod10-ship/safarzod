@@ -59,8 +59,8 @@ func _build_model() -> void:
 	holder.name = "Boat"
 	model.add_child(holder)
 	holder.add_child(src)
-	# source: length along X (bow at -X, outboard at +X), keel at y = -0.14: bow -> -Z, waterline at y = 0
-	holder.transform = Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(0.0, -0.157, 0.0))
+	# source: length along X (bow at +X, outboard at -X; checked with a forward marker), keel at y = -0.14: bow -> -Z, waterline at y = 0
+	holder.transform = Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.0, -0.157, 0.0))
 	for mi in src.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON

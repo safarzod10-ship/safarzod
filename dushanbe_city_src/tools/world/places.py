@@ -144,8 +144,10 @@ def build(roads, H, H_at, F, avoid=()):
             resort(add, free, px, pz)
     # roadside houses along the M34 in the gorge and the country roads (dachas, cafes, tea houses)
     for r in roads:
-        if r["id"] in ("m34", "east", "gissar", "gissar_n") :
-            roadside(add, free, r, every=380.0 if r["id"] == "m34" else 520.0)
+        if r["id"] in ("m34", "east", "gissar", "gissar_n"):
+            roadside(add, free, r, every=150.0 if r["id"] == "m34" else 200.0)
+        elif r["cls"] in ("mountain", "road") and r["id"] not in ("lake_down",):
+            roadside(add, free, r, every=420.0)
 
     # ---------------------------------------------------------------- landmarks, fuel, signs, km posts
     landmarks = []
@@ -160,11 +162,14 @@ def build(roads, H, H_at, F, avoid=()):
                     raise SystemExit("landmark %s overlaps a road at (%.0f, %.0f)" % (lid, px, pz))
         landmarks.append({"id": lid, "name": nm, "x": x, "z": z, "yaw": yaw, "L": L, "D": D, "y": round(float(H_at([x], [z])[0]), 2)})
     fuel = fuel_stations(roads, buildings, landmarks, H_at, free_fuel)
+    # auto services (garages): three times as many as filling stations, between them
+    services = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=930.0, sep=300.0, prefix="service",
+                             start=500.0, avoid=fuel, avoid_r=160.0)
     signs = make_signs(roads, H_at)
     kms = make_kmposts(roads, H_at)
     places = [{"id": p[0], "name": p[1], "kind": p[2], "x": p[3], "z": p[4], "r": p[5]} for p in NW.PLACES]
     print("buildings: city %d, villages/roadside %d" % (n_city, len(buildings) - n_city))
-    return {"buildings": buildings, "landmarks": landmarks, "fuel": fuel, "signs": signs, "kmposts": kms, "places": places}
+    return {"buildings": buildings, "landmarks": landmarks, "fuel": fuel, "services": services, "signs": signs, "kmposts": kms, "places": places}
 
 
 # -------------------------------------------------------------------- block layouts
@@ -272,7 +277,7 @@ def village(add, free, roads, px, pz, rad, town=False):
         if len(idx) < 4:
             continue
         hw = NW.CLASSES[r["cls"]]["w"] / 2
-        for k in idx[::7]:
+        for k in idx[::4]:
             if k + 2 >= len(P):
                 continue
             p = P[k]; q = P[k + 2]
@@ -282,9 +287,9 @@ def village(add, free, roads, px, pz, rad, town=False):
             nx, nz = dz / L0, -dx / L0
             yaw = math.atan2(dx, dz)
             for side in (-1, 1):
-                if RNG.random() < 0.15:
+                if RNG.random() < 0.08:
                     continue
-                off = hw + 8.0 + RNG.uniform(0, 2.5)
+                off = hw + 7.0 + RNG.uniform(0, 1.5)
                 x = p[0] + nx * off * side; z = p[1] + nz * off * side
                 L = float(RNG.uniform(10, 16)); D = float(RNG.uniform(8, 11))
                 kind = "house"
@@ -330,7 +335,7 @@ def roadside(add, free, r, every):
         p = P[k]; q = P[k + 2]; dx, dz = q - p; L0 = math.hypot(dx, dz)
         nx, nz = dz / L0, -dx / L0
         side = 1 if RNG.random() < 0.5 else -1
-        off = hw + 9.0
+        off = hw + 7.5
         x = p[0] + nx * off * side; z = p[1] + nz * off * side
         yaw = math.atan2(dx, dz) + (math.pi / 2 if side > 0 else -math.pi / 2)
         kind = str(RNG.choice(["house", "house", "shop", "cottage", "villa"]))
@@ -656,7 +661,7 @@ def write_map(W, H, splat, biome, road_mask, path, px=4096):
     im.save(path)
 
 
-def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0):
+def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0, sep=700.0, prefix="fuel", start=1200.0, avoid=(), avoid_r=150.0):
     """filling stations along every road (model assets/models/extra/gas_station.glb): one every ~3.2 km
     of road, alternating sides, beside the road (the model's +X - pumps, canopy, price sign - faces
     the road), on level free ground, never closer than 900 m to another station"""
@@ -673,11 +678,11 @@ def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0):
         bad = np.zeros(len(P), bool)
         for a, b in r["bridges"] + r["tunnels"]:
             bad[max(a - 10, 0):b + 11] = True
-        n = int((S[-1] - 1200.0) // every) + 1
+        n = int((S[-1] - start) // every) + 1
         for m in range(n):
             placed = False
             for shift in (0, 150, -150, 300, -300, 450, -450, 600, -600, 750, -750, 900, -900, 1050, -1050):
-                target = 1200.0 + m * every + shift
+                target = start + m * every + shift
                 if target < 60 or target > S[-1] - 60:
                     continue
                 k = int(np.searchsorted(S, target))
@@ -693,7 +698,9 @@ def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0):
                     cs, sn = math.cos(yaw), math.sin(yaw)
                     # plot centre (model local 2.5, 1.5): store at -12, price sign at +17.5 (2 m from the road edge)
                     px = ox + 2.5 * cs + 1.5 * sn; pz = oz - 2.5 * sn + 1.5 * cs
-                    if any(math.hypot(px - f["x"], pz - f["z"]) < 700.0 for f in out):
+                    if any(math.hypot(px - f["x"], pz - f["z"]) < sep for f in out):
+                        continue
+                    if any(math.hypot(px - f["x"], pz - f["z"]) < avoid_r for f in avoid):
                         continue
                     hs = H_at(np.array([px - 16, px + 16, px, px, px]), np.array([pz, pz, pz - 11, pz + 11, pz]))
                     if hs.max() - hs.min() > 6.0 or abs(float(H_at([ox], [oz])[0]) - Hh[k]) > 3.5:
@@ -705,11 +712,11 @@ def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0):
                     if any(abs(px - l["x"]) < l["L"] / 2 + 20 and abs(pz - l["z"]) < l["D"] / 2 + 20 for l in landmarks):
                         continue
                     y = float(Hh[k] - 0.1)
-                    out.append({"id": "fuel%d" % len(out), "x": round(px, 2), "z": round(pz, 2), "ox": round(ox, 2), "oz": round(oz, 2),
+                    out.append({"id": "%s%d" % (prefix, len(out)), "x": round(px, 2), "z": round(pz, 2), "ox": round(ox, 2), "oz": round(oz, 2),
                                 "y": round(y, 2), "yaw": round(yaw, 4), "road": r["id"]})
                     placed = True
                     break
                 if placed:
                     break
-    print("filling stations: %d" % len(out))
+    print("%s: %d" % ("filling stations" if prefix == "fuel" else prefix, len(out)))
     return out

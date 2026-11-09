@@ -56,7 +56,8 @@ func setup(p: CharacterBody3D, c: CharacterConfig, r: Node3D, s: SpringArm3D, ca
 func anchor() -> Vector3:
 	var a := player.global_position + Vector3(0.0, cfg.camera_height + vertical_offset, 0.0)
 	if swimming:
-		a.y = maxf(a.y, PlayerWater.SEA_LEVEL + cfg.swim_camera_height)
+		var wl: Variant = player.get("water")
+		a.y = maxf(a.y, (wl.level if wl else PlayerWater.SEA_LEVEL) + cfg.swim_camera_height)
 	return a
 
 

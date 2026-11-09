@@ -384,6 +384,8 @@ func pois() -> Array:
 		out.append(["Конечная автобуса №1 (работа)", (bj as BusJob).office_point(), Color(0.3, 0.9, 0.4)])
 	for gs in get_tree().get_nodes_in_group(&"gun_shop"):
 		out.append(["Оружейный магазин", (gs as Node3D).global_position, Color(0.9, 0.2, 0.15)])
+	for cd in get_tree().get_nodes_in_group(&"car_dealer"):
+		out.append(["Автосалон", (cd as Node3D).global_position, Color(1.0, 0.8, 0.3)])
 	var boats: Variant = main.get("boats")
 	if boats is Array and not (boats as Array).is_empty():
 		out.append(["Лодка", ((boats as Array)[0] as Node3D).global_position, Color(0.4, 0.9, 1.0)])

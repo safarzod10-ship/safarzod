@@ -106,6 +106,8 @@ func can_enter(v: VehiclePrado = null) -> bool:
 		v = nearest_enterable()
 	if driving or busy or player == null or v == null or not is_instance_valid(v) or v.wrecked or PlayerLife.dead:
 		return false
+	if not CarDealer.owns(v):
+		return false                 # not the player's: sold at the dealership
 	if v is VehicleBoat:
 		# a boat: from the pier / shore or swimming beside it, anywhere along the hull
 		var dh := Vector2(player.global_position.x - v.global_position.x, player.global_position.z - v.global_position.z).length()

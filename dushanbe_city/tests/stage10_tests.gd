@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["account", "shop", "shoot", "explode", "steer"]
+	var secs: Array = ["account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -180,3 +180,84 @@ func _t_account() -> void:
 	_check("a code made for another ID: refused (%s)" % str(Account.redeem(other)), Wallet.money == m0 + 5000)
 	_check("a forged amount: refused (%s)" % str(Account.redeem("DX-90000-%s-%s" % [nonce, Account.signature(Account.id, 5000, nonce)])), Wallet.money == m0 + 5000)
 	Wallet.money = m0
+
+
+func _t_save() -> void:
+	# 0.18: bought weapons / ammo / cars survive a restart (the save was written but never read back)
+	var keep := [Wallet.no_save, Wallet.money, Weapons.owned.duplicate(), Weapons.ammo.duplicate(), Wallet.cars.duplicate()]
+	Wallet.path = "user://test_save_game.json"
+	Wallet.no_save = false
+	Weapons.owned = {"fist": true, "pistol": true, "ak47": true}
+	Weapons.ammo = {"pistol": 17, "ak47": 45}
+	Weapons.current = "ak47"
+	Wallet.cars = ["camry"]
+	Wallet.money = 12345
+	Wallet.save_state()
+	# "restart": wipe the state in memory, load the file
+	Weapons.owned = {"fist": true}
+	Weapons.ammo = {"pistol": 0, "ak47": 0}
+	Weapons.current = "fist"
+	Wallet.cars = []
+	Wallet.money = 0
+	Wallet._loaded = false
+	Wallet.load_state()
+	_check("restart: weapons %s, ammo %d / %d, selected %s, cars %s, money %s" % [str(Weapons.owned.keys()), Weapons.ammo_of("pistol"), Weapons.ammo_of("ak47"), Weapons.current, str(Wallet.cars), Wallet.fmt(Wallet.money)],
+		Weapons.has("pistol") and Weapons.has("ak47") and Weapons.ammo_of("ak47") == 45 and Weapons.current == "ak47" and Wallet.cars == ["camry"] and Wallet.money == 12345)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Wallet.path))
+	Wallet.path = Wallet.PATH
+	Wallet.no_save = keep[0]
+	Wallet.money = keep[1]
+	Weapons.owned = keep[2]
+	Weapons.ammo = keep[3]
+	Wallet.cars = keep[4]
+
+
+func _t_dealer() -> void:
+	var dealer: CarDealer = main.get_node_or_null("CarDealer")
+	_check("dealership built near the start: %s" % (str(dealer.global_position.round()) if dealer else "none"), dealer != null)
+	if dealer == null:
+		return
+	CarDealer.strict = true
+	var camry: VehiclePrado = main.get("camry")
+	Wallet.cars = []
+	s.player.teleport(camry.driver_door_point(0.7), 0.0)
+	await _sec(0.6)
+	var it: Variant = s.player.get("interaction")
+	var lbl: String = (it as CharacterInteraction).label() if it else ""
+	_check("a car that is not yours: can't get in, door says «%s»" % lbl, not s.can_enter(camry) and lbl.begins_with("ПРОДАЁТСЯ"))
+	s.player.teleport(dealer.door_point(), PI * 0.5)
+	await _sec(0.5)
+	it = s.player.get("interaction")
+	lbl = (it as CharacterInteraction).label() if it else ""
+	_check("at the showroom door: «%s»" % lbl, lbl == "АВТОСАЛОН")
+	Wallet.money = 40000
+	var e1 := dealer.buy("Camry")
+	_check("Camry costs 50 000: with 40 000 refused (%s)" % e1, e1 != "" and Wallet.money == 40000 and not Wallet.cars.has("camry"))
+	Wallet.money = 60000
+	var e2 := dealer.buy("Camry")
+	await _sec(1.0)
+	_check("bought the Camry: money 60 000 -> %s, delivered to the lot (%.0f m from the showroom)" % [Wallet.fmt(Wallet.money), camry.global_position.distance_to(dealer.global_position)],
+		e2 == "" and Wallet.money == 10000 and Wallet.cars.has("camry") and camry.global_position.distance_to(dealer.global_position) < 30.0)
+	s.player.teleport(camry.driver_door_point(0.7), 0.0)
+	await _sec(0.6)
+	_check("now it's yours: can get in", s.can_enter(camry))
+	_check("prices: Camry %s, Lexus %s, Prado %s" % [Wallet.fmt(CarDealer.CARS["Camry"][2]), Wallet.fmt(CarDealer.CARS["Lexus"][2]), Wallet.fmt(CarDealer.CARS["Prado"][2])],
+		CarDealer.CARS["Camry"][2] == 50000 and CarDealer.CARS["Lexus"][2] == 100000 and CarDealer.CARS["Prado"][2] == 120000)
+	CarDealer.strict = false
+
+
+func _t_doors() -> void:
+	# Camry / Lexus: the driver's door is cut out of the body and swings on its hinge like the Prado's
+	for key in ["camry", "lexus"]:
+		var c: VehiclePrado = main.get(key)
+		var hinge: Node3D = c.model.get_node_or_null("door_lf_dummy")
+		var parts := hinge.get_child_count() if hinge else 0
+		if hinge == null:
+			_check("%s: door part found" % key, false)
+			continue
+		var r0 := hinge.transform.basis
+		await c.swing_door("door_lf_dummy", true)
+		var ang := rad_to_deg((r0.inverse() * hinge.transform.basis).get_euler().y)
+		await c.swing_door("door_lf_dummy", false)
+		var cab := c.model.find_child("Cabin", true, false)
+		_check("%s: door (%d mesh parts) opens %.0f deg and closes; real cabin fitted %s" % [key, parts, absf(ang), cab != null], parts > 0 and absf(ang) > 50.0 and cab != null)

@@ -38,6 +38,7 @@ static func select(id: String) -> bool:
 	if not has(id):
 		return false
 	current = id
+	Wallet.save_state()
 	return true
 
 

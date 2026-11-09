@@ -537,8 +537,8 @@ func _swim_physics(delta: float, inp: Vector2, running: bool, was_swim: bool) ->
 	if mag > 0.05:
 		facing = lerp_angle(facing, atan2(-wish.x, -wish.z), 1.0 - exp(-4.0 * delta))
 		rotation.y = facing
-	var wave := PlayerWater.wave_at(global_position.x, global_position.z, water.floor_depth)
-	var target_y := PlayerWater.SEA_LEVEL - PlayerWater.SWIM_BODY + wave.y * 0.85
+	var wave := PlayerWater.wave_at(global_position.x, global_position.z, water.floor_depth) if water.on_sea else Vector3.ZERO
+	var target_y := water.level - PlayerWater.SWIM_BODY + wave.y * 0.85
 	# follow the swell: feed-forward of the surface's vertical speed + a spring on the error
 	var ff := (target_y - _swim_prev_target) / delta if was_swim and _swim_prev_target > -1e8 else 0.0
 	_swim_prev_target = target_y

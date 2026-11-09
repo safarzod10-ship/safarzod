@@ -151,7 +151,7 @@ def _free_point(x, z, rad, road_tree, road_hw, bld_tree, bld_r, lm, water_ok):
     return water_ok(x, z)
 
 
-def billboards(roads, buildings, landmarks, H_at, water_ok, every=1000.0):
+def billboards(roads, buildings, landmarks, H_at, water_ok, every=400.0):
     pts = []; hw = []
     for r in roads:
         pts.extend(r["P"].tolist()); hw.extend([NW.CLASSES[r["cls"]]["w"] / 2] * len(r["P"]))
@@ -186,8 +186,8 @@ def billboards(roads, buildings, landmarks, H_at, water_ok, every=1000.0):
                     g = float(H_at([x], [z])[0])
                     if abs(g - Hh[k]) > 5.0:
                         continue
-                    if any(math.hypot(x - b["x"], z - b["z"]) < (600.0 if b["road"] == r["id"] else 150.0) for b in out):
-                        continue          # ~1 km apart: never two boards close together (junctions, loops)
+                    if any(math.hypot(x - b["x"], z - b["z"]) < (300.0 if b["road"] == r["id"] else 120.0) for b in out):
+                        continue          # ~400 m apart: never two boards close together (junctions, loops)
                     # the board is 11 m wide: both its ends must be free as well
                     ok = all(_free_point(x + d[0] * e, z + d[1] * e, 4.0, road_tree, road_hw, bld_tree, bld_r, lm, water_ok)
                              for e in (-7.5, 0.0, 7.5))      # the board is 15.5 m wide (x1.4 model)

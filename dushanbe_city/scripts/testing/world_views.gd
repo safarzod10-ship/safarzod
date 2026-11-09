@@ -48,7 +48,7 @@ func _ready() -> void:
 	await _look("varzob_bridge", bp + Vector3(80, 40, 70), bp)
 	await _look("varzob_gorge", _pt(m34, 1500) + Vector3(0, 60, 120), _pt(m34, 1900))
 	# ---- switchbacks (lake descent) from above, tunnel portal, pass, lake
-	var ld := _road("lake_down")
+	var ld := _road("pass")
 	await _look("serpentine", _pt(ld, 900) + Vector3(150, 160, 120), _pt(ld, 900))
 	var ps := _road("pass")
 	if not (ps["tunnels"] as Array).is_empty():

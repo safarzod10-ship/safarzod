@@ -1,6 +1,7 @@
 class_name AutoService
 extends Node
-## Car repair only at a garage («АВТОСЕРВИС»): one beside every second filling station along the
+## Car repair only at a garage («АВТОСЕРВИС»): generated along the roads (world.json "services",
+## three times as many as filling stations; older data: one beside every second filling station along the
 ## roads (half as many as the stations) + one in the city near the start. Drive onto the service
 ## pad, stop (< 3 km/h) -> «ПОЧИНИТЬ · N смн» (4 smn per % of damage) restores the condition and
 ## removes the dents. Garages are built only near the player (lazy, like the sectors).
@@ -27,7 +28,14 @@ var _t := 0.0
 func _ready() -> void:
 	add_to_group(&"auto_service")
 	var wd := WorldData.get_instance()
-	if wd.ok:
+	if wd.ok and not wd.services.is_empty():
+		# generated along the roads (3x the filling stations), the garage front (+X) to the road
+		for sv in wd.services:
+			var yaw := float(sv["yaw"])
+			var o := Vector3(float(sv["ox"]), float(sv["y"]), float(sv["oz"])) + Vector3(cos(yaw), 0, -sin(yaw)) * 6.0
+			o.y = wd.height_at(o.x, o.z)
+			spots.append({"pos": o, "yaw": yaw, "node": null})
+	elif wd.ok:
 		for i in range(0, wd.fuel.size(), 2):
 			var f: Dictionary = wd.fuel[i]
 			var yaw := float(f["yaw"])
@@ -268,65 +276,169 @@ func _mat(col: Color, rough := 0.8, metal := 0.0) -> StandardMaterial3D:
 
 
 func _garage(s: Dictionary) -> Node3D:
+	## a detailed roadside garage (local +X faces the road): two open bays (a two-post lift in the
+	## first, a half-open roller shutter in the second), an office with windows, lit ceiling, tool
+	## cabinet, tyre stacks, oil drums, cones, a pylon sign and the banner over the bays
 	var root := Node3D.new()
 	root.name = "AutoService"
 	get_tree().current_scene.add_child(root)
 	root.global_transform = Transform3D(Basis(Vector3.UP, float(s["yaw"])), s["pos"])
-	var wall := _mat(Color(0.86, 0.86, 0.84))
-	var blue := _mat(Color(0.12, 0.3, 0.62), 0.5)
-	var dark := _mat(Color(0.1, 0.11, 0.12), 0.6)
-	var conc := _mat(Color(0.55, 0.55, 0.53), 0.95)
-	var parts := [
-		[Vector3(12, 0.5, 20), Vector3(4, -0.15, 0), conc],           # concrete apron + pad (sunk into the slope)
-		[Vector3(9, 5.0, 16), Vector3(-2, 2.5, 0), wall],              # the garage
-		[Vector3(9.4, 0.5, 16.4), Vector3(-2, 5.2, 0), blue],          # roof band
-		[Vector3(0.15, 3.6, 5.5), Vector3(2.55, 1.8, -3.6), dark],     # bay door 1 (open: dark)
-		[Vector3(0.15, 3.6, 5.5), Vector3(2.55, 1.8, 3.6), dark],      # bay door 2
-		[Vector3(0.25, 1.1, 10.0), Vector3(2.65, 4.3, 0), blue],        # sign board
-	]
-	for p in parts:
+	var wall := _mat(Color(0.88, 0.88, 0.86))
+	var plinth := _mat(Color(0.42, 0.43, 0.46), 0.8)
+	var blue := _mat(Color(0.1, 0.32, 0.68), 0.45)
+	var dark := _mat(Color(0.12, 0.12, 0.13), 0.7)
+	var floor_m := _mat(Color(0.32, 0.33, 0.34), 0.6)
+	var conc := _mat(Color(0.56, 0.56, 0.54), 0.95)
+	var steel := _mat(Color(0.62, 0.64, 0.66), 0.35, 0.8)
+	var red := _mat(Color(0.75, 0.1, 0.08), 0.5)
+	var yellow := _mat(Color(0.95, 0.75, 0.1), 0.6)
+	var rubber := _mat(Color(0.06, 0.06, 0.065), 0.9)
+	var glass := _mat(Color(0.25, 0.4, 0.5), 0.1, 0.2)
+	glass.emission_enabled = true
+	glass.emission = Color(0.35, 0.45, 0.5)
+	glass.emission_energy_multiplier = 0.25
+	var lamp := _mat(Color(1, 1, 0.95), 0.4)
+	lamp.emission_enabled = true
+	lamp.emission = Color(1.0, 0.98, 0.9)
+	lamp.emission_energy_multiplier = 2.0
+	var bx := func(size: Vector3, pos: Vector3, m: Material) -> MeshInstance3D:
 		var mi := MeshInstance3D.new()
 		var bm := BoxMesh.new()
-		bm.size = p[0]
+		bm.size = size
 		mi.mesh = bm
-		mi.material_override = p[2]
-		mi.position = p[1]
+		mi.material_override = m
+		mi.position = pos
 		root.add_child(mi)
+		return mi
+	var cyl := func(r: float, h: float, pos: Vector3, m: Material) -> MeshInstance3D:
+		var mi := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = r
+		cm.bottom_radius = r
+		cm.height = h
+		cm.radial_segments = 16
+		mi.mesh = cm
+		mi.material_override = m
+		mi.position = pos
+		root.add_child(mi)
+		return mi
+	# ground: apron + yellow repair pad + painted bay lines
+	bx.call(Vector3(14, 0.5, 22), Vector3(4, -0.15, 0), conc)
+	bx.call(Vector3(8.5, 0.32, 15.6), Vector3(-2.1, 0.0, -0.2), floor_m)          # workshop floor
+	var pad := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(6, 9)
+	pad.mesh = pm
+	pad.material_override = yellow
+	pad.position = Vector3(8.0, 0.12, 0)
+	root.add_child(pad)
+	bx.call(Vector3(5.6, 0.02, 0.14), Vector3(8.0, 0.14, -4.4), _mat(Color(1, 1, 1), 0.6))
+	bx.call(Vector3(5.6, 0.02, 0.14), Vector3(8.0, 0.14, 4.4), _mat(Color(1, 1, 1), 0.6))
+	# shell: back + side walls, partitions, lintel over the bays, office front with windows, roof
+	bx.call(Vector3(0.3, 5.0, 16.0), Vector3(-6.35, 2.5, 0), wall)
+	for z: float in [-7.85, 7.85]:
+		bx.call(Vector3(9.0, 5.0, 0.3), Vector3(-2.0, 2.5, z), wall)
+	for z: float in [-1.75, 4.25]:
+		bx.call(Vector3(8.6, 5.0, 0.2), Vector3(-2.0, 2.5, z), wall)
+	bx.call(Vector3(0.3, 1.2, 12.0), Vector3(2.35, 4.4, -1.75), wall)              # lintel
+	bx.call(Vector3(0.32, 0.6, 16.2), Vector3(2.36, 0.3, 0), plinth)               # plinth strip
+	bx.call(Vector3(0.3, 3.8, 0.5), Vector3(2.35, 1.9, -1.75), wall)               # pier between the bays
+	bx.call(Vector3(0.3, 5.0, 3.6), Vector3(2.35, 2.5, 6.05), wall)                # office front
+	bx.call(Vector3(0.08, 1.4, 2.6), Vector3(2.52, 2.4, 6.05), glass)              # office window
+	bx.call(Vector3(0.08, 2.1, 0.9), Vector3(2.52, 1.05, 7.3), glass)              # office door
+	bx.call(Vector3(9.6, 0.35, 16.6), Vector3(-2.0, 5.15, 0), blue)                # roof band
+	bx.call(Vector3(9.0, 0.2, 16.0), Vector3(-2.0, 5.0, 0), _mat(Color(0.5, 0.5, 0.5), 0.9))
+	for k in 3:                                                                    # roof units
+		bx.call(Vector3(1.4, 0.8, 1.2), Vector3(-4.0 + k * 2.2, 5.7, 5.5), steel)
+	# ceiling lights in both bays
+	for z: float in [-4.6, 1.2]:
+		bx.call(Vector3(3.0, 0.08, 0.3), Vector3(-1.5, 4.85, z), lamp)
+	# bay 1: two-post lift with arms
+	for z: float in [-7.0, -2.6]:
+		bx.call(Vector3(0.35, 3.6, 0.35), Vector3(-1.0, 1.8, z), blue)
+		bx.call(Vector3(2.4, 0.12, 0.18), Vector3(-1.4, 0.55, z + (0.5 if z < -4.0 else -0.5)), steel)
+	bx.call(Vector3(0.3, 0.25, 4.7), Vector3(-1.0, 3.7, -4.8), blue)               # top beam
+	# bay 2: roller shutter half up (slats)
+	for k in 6:
+		bx.call(Vector3(0.1, 0.18, 5.5), Vector3(2.3, 2.6 + k * 0.2, 1.25), steel)
+	# tool cabinet + workbench + compressor at the back wall
+	bx.call(Vector3(0.6, 1.1, 1.8), Vector3(-5.8, 0.55, -6.6), red)
+	for k in 5:
+		bx.call(Vector3(0.62, 0.02, 1.7), Vector3(-5.78, 0.25 + k * 0.2, -6.6), dark)
+	bx.call(Vector3(0.8, 0.9, 2.6), Vector3(-5.7, 0.45, 2.2), steel)
+	bx.call(Vector3(0.9, 0.06, 2.8), Vector3(-5.7, 0.92, 2.2), _mat(Color(0.45, 0.32, 0.2), 0.7))
+	cyl.call(0.3, 1.0, Vector3(-5.6, 0.5, 0.0), red)
+	# tyre stacks by the office, oil drums, cones
+	for st in [Vector3(3.6, 0, 9.4), Vector3(4.6, 0, 9.6)]:
+		for k in 4:
+			var t := MeshInstance3D.new()
+			var tm := TorusMesh.new()
+			tm.inner_radius = 0.22
+			tm.outer_radius = 0.36
+			t.mesh = tm
+			t.material_override = rubber
+			t.position = st + Vector3(0, 0.12 + k * 0.24, 0)
+			t.scale = Vector3(1, 1.3, 1)
+			root.add_child(t)
+	for k in 3:
+		cyl.call(0.3, 0.9, Vector3(-4.5 + k * 0.7, 0.45, 8.6), [blue, red, blue][k])
+	for z: float in [-9.5, 9.0]:
+		var cone := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.03
+		cm.bottom_radius = 0.2
+		cm.height = 0.6
+		cone.mesh = cm
+		cone.material_override = _mat(Color(1.0, 0.45, 0.05), 0.6)
+		cone.position = Vector3(10.6, 0.4, z * 0.5)
+		root.add_child(cone)
+	# banner over the bays + pylon sign by the road
 	var lb := Label3D.new()
 	lb.text = "АВТОСЕРВИС"
 	lb.font = HudStyle.font()
 	lb.font_size = 72
 	lb.pixel_size = 0.012
-	lb.modulate = Color(1, 1, 1)
-	lb.position = Vector3(2.8, 4.3, 0)
+	lb.outline_size = 10
+	lb.position = Vector3(2.55, 4.4, -1.0)
 	lb.rotation.y = PI * 0.5
 	root.add_child(lb)
-	var ic := Sprite3D.new()
-	ic.texture = HudStyle.icon("wrench")
-	ic.pixel_size = 0.004
-	ic.position = Vector3(2.8, 4.3, -4.2)
-	ic.rotation.y = PI * 0.5
-	root.add_child(ic)
-	# the pad mark
-	var pad := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(6, 9)
-	pad.mesh = pm
-	pad.material_override = _mat(Color(0.95, 0.75, 0.1), 0.7)
-	pad.position = Vector3(8.0, 0.12, 0)
-	root.add_child(pad)
+	var lb2 := Label3D.new()
+	lb2.text = "РЕМОНТ · ПОКРАСКА · ШИНОМОНТАЖ"
+	lb2.font = HudStyle.font()
+	lb2.font_size = 40
+	lb2.pixel_size = 0.008
+	lb2.modulate = Color(1.0, 0.85, 0.3)
+	lb2.position = Vector3(2.55, 3.95, -1.0)
+	lb2.rotation.y = PI * 0.5
+	root.add_child(lb2)
+	bx.call(Vector3(0.3, 6.5, 0.3), Vector3(10.5, 3.25, -10.0), steel)
+	var panel := bx.call(Vector3(0.4, 2.0, 2.6), Vector3(10.5, 6.6, -10.0), blue) as MeshInstance3D
+	for side: float in [1.0, -1.0]:
+		var ic := Sprite3D.new()
+		ic.texture = HudStyle.icon("wrench")
+		ic.pixel_size = 0.006
+		ic.position = Vector3(10.5 + 0.22 * side, 6.95, -10.0)
+		ic.rotation.y = PI * 0.5 if side > 0 else -PI * 0.5
+		root.add_child(ic)
+		var pl := Label3D.new()
+		pl.text = "СЕРВИС"
+		pl.font = HudStyle.font()
+		pl.font_size = 64
+		pl.pixel_size = 0.009
+		pl.position = Vector3(10.5 + 0.22 * side, 6.0, -10.0)
+		pl.rotation.y = PI * 0.5 if side > 0 else -PI * 0.5
+		root.add_child(pl)
+	panel.name = "Pylon"
+	# collision: walls only (the bays are open, the player can walk in)
 	var body := StaticBody3D.new()
 	root.add_child(body)
-	var cs := CollisionShape3D.new()
-	var sh := BoxShape3D.new()
-	sh.size = Vector3(9, 5, 16)
-	cs.shape = sh
-	cs.position = Vector3(-2, 2.5, 0)
-	body.add_child(cs)
-	var cs2 := CollisionShape3D.new()
-	var sh2 := BoxShape3D.new()
-	sh2.size = Vector3(12, 0.5, 20)
-	cs2.shape = sh2
-	cs2.position = Vector3(4, -0.15, 0)
-	body.add_child(cs2)
+	for c in [[Vector3(0.3, 5, 16), Vector3(-6.35, 2.5, 0)], [Vector3(9, 5, 0.3), Vector3(-2, 2.5, -7.85)], [Vector3(9, 5, 0.3), Vector3(-2, 2.5, 7.85)],
+			[Vector3(8.6, 5, 0.2), Vector3(-2, 2.5, -1.75)], [Vector3(8.6, 5, 3.8), Vector3(-2, 2.5, 6.05)], [Vector3(14, 0.5, 22), Vector3(4, -0.15, 0)],
+			[Vector3(9, 0.3, 16), Vector3(-2, 5.1, 0)], [Vector3(0.3, 6.5, 0.3), Vector3(10.5, 3.25, -10.0)]]:
+		var cs := CollisionShape3D.new()
+		var sh := BoxShape3D.new()
+		sh.size = c[0]
+		cs.shape = sh
+		cs.position = c[1]
+		body.add_child(cs)
 	return root

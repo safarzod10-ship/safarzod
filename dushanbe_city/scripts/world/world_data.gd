@@ -32,6 +32,7 @@ var buildings: Array = []
 var signs: Array = []
 var kmposts: Array = []
 var fuel: Array = []
+var services: Array = []          ## auto services (garages), 3x the filling stations
 var waterfalls: Array = []
 var billboards: Array = []
 var guardrails: Array = []
@@ -70,6 +71,7 @@ func _load() -> void:
 	signs = meta.get("signs", [])
 	kmposts = meta.get("kmposts", [])
 	fuel = meta.get("fuel", [])
+	services = meta.get("services", [])
 	waterfalls = meta.get("waterfalls", [])
 	billboards = meta.get("billboards", [])
 	guardrails = meta.get("guardrails", [])

@@ -98,7 +98,10 @@ def main():
         P = r["P"]
         dirt = c["surf"] == "dirt" or r["cls"] == "lane"
         win = 120.0 if not r["routed"] else (16.0 if dirt else (45.0 if r["cls"] == "mountain" else 60.0))
-        hp, h = R.profile(P, lambda xs, zs: H_at(xs, zs, H), c["g"] * (1.6 if dirt else 1.0), win=win)
+        # mountain roads: the profile follows the slope (up to 15 %, real mountain roads) instead of
+        # hanging over the valley as a long viaduct; only water is bridged
+        gprof = c["g"] * (1.6 if dirt else (1.4 if r["cls"] == "mountain" else 1.0))
+        hp, h = R.profile(P, lambda xs, zs: H_at(xs, zs, H), gprof, win=win if r["cls"] != "mountain" else 24.0)
         h_orig = H_at(P[:, 0], P[:, 1])
         # pin points lying on earlier (major) roads to their height
         if done_pts:
@@ -133,7 +136,7 @@ def main():
         wd = T_sample(water_d, P)
         r["H"] = hp
         r["water"] = wd < 18.0
-        r["bridges"], r["tunnels"] = R.structures(P, hp, h_orig, r["water"], allow_tunnels=not dirt, bridge_h=99.0 if dirt else (20.0 if r["cls"] in ("mountain", "road") else 6.0))
+        r["bridges"], r["tunnels"] = R.structures(P, hp, h_orig, r["water"], allow_tunnels=not dirt, bridge_h=99.0 if dirt or r["cls"] == "mountain" else (20.0 if r["cls"] == "road" else 6.0))
         # city grid streets over the river are bridges at the river only (the basin is flat)
         for (a, b) in r["bridges"]:
             pass
@@ -159,7 +162,7 @@ def main():
     def water_ok(x, z):
         i = int(np.clip(round((x - T.X0) / T.STEP), 0, T.N - 1)); j = int(np.clip(round((z - T.Z0) / T.STEP), 0, T.N - 1))
         return water_all[j, i] > 30.0 and F["lake_d"][j, i] > 1.3 and F["kom_d"][j, i] > 1.35
-    avoid_lm = world["landmarks"] + [{"x": fs["x"], "z": fs["z"], "L": 44.0, "D": 36.0} for fs in world["fuel"]]
+    avoid_lm = world["landmarks"] + [{"x": fs["x"], "z": fs["z"], "L": 44.0, "D": 36.0} for fs in world["fuel"] + world["services"]]
     world["billboards"] = FU.billboards(roads, world["buildings"], avoid_lm, lambda xs, zs: H_at(xs, zs, H), water_ok)
     world["guardrails"] = FU.guardrails(roads, lambda xs, zs: H_at(xs, zs, H))
     world["fillets"] = fillets
@@ -599,7 +602,7 @@ def carve(H, H0, X, Z, P, hp, hw, bridges, tunnels, dirt=False, lock=None):
     w0 = hw + 1.5 + 4.0                     # + half a grid cell: the 8 m terrain never rises over the road edge
     under = hr - (0.05 if dirt else 0.25)
     cut = np.minimum(sub, under + np.maximum(d0 - w0, 0) / 1.5)
-    fill = np.maximum(sub, np.minimum(under - np.maximum(d0 - w0, 0) / 1.5, sub + 24.0))
+    fill = np.maximum(sub, np.minimum(under - np.maximum(d0 - w0, 0) / 1.5, sub + 60.0))
     new = np.where(d0 <= w0, under, np.where(sub > hr, cut, fill))
     new = np.where(ok, new, sub)
     if lock is not None:

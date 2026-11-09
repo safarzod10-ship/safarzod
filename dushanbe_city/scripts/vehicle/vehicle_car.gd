@@ -18,7 +18,10 @@ const PRESETS := {
 		"tank": 60.0, "l100": 7.8, "r": 0.336, "size": Vector3(1.84, 1.445, 4.885), "cd": 0.62, "brake": 19000.0,
 		"door": Vector3(-0.95, 0.55, -0.35), "seat": Vector3(-0.38, 0.52, 0.15), "lamp": Vector3(0, 0.65, -2.3),
 		"boxes": [[Vector3(1.8, 0.62, 4.8), Vector3(0, 0.16 + 0.31, 0)], [Vector3(1.58, 0.55, 2.4), Vector3(0, 0.78 + 0.27, 0.25)]],
-		"name": "Toyota Camry", "color": Color(0.02, 0.022, 0.026), "interior": true},
+		"name": "Toyota Camry", "color": Color(0.02, 0.022, 0.026), "interior": true,
+		"door_cut": {"x": -0.5, "y": [-0.27, 0.9], "z": [-0.76, 0.26]},
+		"cabin": Vector3(0.9, 0.84, 0.78), "cabin_clip": [0.72, 1.2],
+		"cut": [AABB(Vector3(-0.64, 0.18, -0.62), Vector3(0.5, 0.52, 0.55))]},
 	"lexus": {"file": "lexus_rx.glb", "yaw": 0.0, "wheels": "materials",
 		"wheel_mats": ["Material.056", "Material.057", "mat_0001_wheel", "mat_0003_rotor_j"], "paint": ["Material.049", "Material.051"],
 		"mass": 2050.0, "cg": 0.66, "front": 0.56, "kw": 220.0, "nm": 362.0, "vmax": 200.0, "split": 0.45,
@@ -26,7 +29,9 @@ const PRESETS := {
 		"tank": 72.0, "l100": 10.5, "r": 0.39, "size": Vector3(1.92, 1.71, 4.89), "cd": 0.85, "brake": 24000.0,
 		"door": Vector3(-1.0, 0.6, -0.4), "seat": Vector3(-0.38, 0.68, 0.1), "lamp": Vector3(0, 0.75, -2.35),
 		"boxes": [[Vector3(1.9, 0.75, 4.85), Vector3(0, 0.2 + 0.375, 0)], [Vector3(1.7, 0.65, 2.9), Vector3(0, 0.95 + 0.33, 0.2)]],
-		"name": "Lexus RX 350", "color": Color(0.03, 0.07, 0.2), "interior": true, "hide": ["Object_19", "Object_21"]},
+		"name": "Lexus RX 350", "color": Color(0.03, 0.07, 0.2), "interior": true, "hide": ["Object_19", "Object_21"],
+		"door_cut": {"x": -0.5, "y": [-0.2, 1.1], "z": [-0.74, 0.26]},
+		"cabin": Vector3(0.94, 0.92, 0.85), "cabin_clip": [0.9, 1.55]},
 	"bus": {"file": "city_bus.glb", "yaw": -PI * 0.5, "wheels": "names", "merge": true, "paint": ["paint"],
 		"mass": 12000.0, "cg": 1.05, "front": 0.36, "kw": 210.0, "nm": 1100.0, "vmax": 90.0, "split": 0.0,
 		"gears": [3.40, 1.90, 1.40, 1.00, 0.78, 0.70], "fd": 5.6, "mu": 0.85, "f": [1.25, 1.3], "arb": [160000.0, 120000.0],
@@ -149,12 +154,20 @@ func _build_model() -> void:
 		for d in model.get_children():
 			if String(d.name).begins_with("wheel_") and d.get_child_count() > 0:
 				_merge_by_material(d.get_child(0), d.get_child(0), "Rim")
+	# remove parts of the source's own crude cabin (spec "cut": boxes, triangles fully inside)
+	for bx in spec.get("cut", []):
+		_cut_box(holder, bx as AABB)
+	var door_done := false
+	if spec.has("door_cut"):
+		door_done = _split_door(holder)
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		_hi_meshes[m] = m.mesh
 		_apply_materials(m)
 	for spec2 in [["door_lf_dummy", spec["door"]], ["ped_frontseat", spec["seat"]], ["headlights", spec["lamp"]]]:
+		if door_done and spec2[0] == "door_lf_dummy":
+			continue
 		var n := Node3D.new()
 		n.name = spec2[0]
 		var v: Vector3 = spec2[1]                 # x, height above the ground, z
@@ -247,6 +260,149 @@ func _merge_by_material(src: Node3D, into: Node3D, label: String) -> void:
 ## the Camry: tyres + rims are part of the body meshes. Find the tyres' ground contacts (two axles,
 ## two sides), then move every triangle lying inside a wheel's cylinder (radius r + 2 cm, tyre width)
 ## into a separate mesh per wheel; returns the new wheel MeshInstances (under src's parents).
+## The driver's door is part of the one-piece body mesh in these models: every triangle inside the
+## door's outline (left side, between the A and B pillars, sill to window frame; spec "door_cut",
+## model space) moves into its own mesh under a hinge node "door_lf_dummy" at the door's front
+## edge, so it swings open like the Prado's real door part (VehiclePrado._update_doors).
+func _split_door(holder: Node3D) -> bool:
+	var dc: Dictionary = spec["door_cut"]
+	var xo := float(dc["x"])
+	var y0 := float(dc["y"][0])
+	var y1 := float(dc["y"][1])
+	var z0 := float(dc["z"][0])
+	var z1 := float(dc["z"][1])
+	var hinge := Node3D.new()
+	hinge.name = "door_lf_dummy"
+	var outer := -float((spec["size"] as Vector3).x) * 0.5
+	hinge.position = Vector3(outer, (y0 + y1) * 0.5, z0)
+	model.add_child(hinge)
+	var moved := 0
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if not m.visible or (spec.get("hide", []) as Array).has(String(m.name)):
+			continue
+		var lx := _rel(m, model)
+		var new_body := ArrayMesh.new()
+		var door_mesh := ArrayMesh.new()
+		for sidx in m.mesh.get_surface_count():
+			var a0: Array = m.mesh.surface_get_arrays(sidx)
+			var a: Array = []
+			a.resize(Mesh.ARRAY_MAX)
+			for ch in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_TANGENT, Mesh.ARRAY_COLOR, Mesh.ARRAY_TEX_UV, Mesh.ARRAY_TEX_UV2, Mesh.ARRAY_INDEX]:
+				a[ch] = a0[ch]
+			var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var I: PackedInt32Array = a[Mesh.ARRAY_INDEX] if a[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			if I.is_empty():
+				I.resize(V.size())
+				for q in V.size():
+					I[q] = q
+			var body_idx := PackedInt32Array()
+			var door_idx := PackedInt32Array()
+			for t in range(0, I.size(), 3):
+				var inside := true
+				for q in 3:
+					var c := lx * V[I[t + q]]
+					if not (c.x < xo and c.y > y0 and c.y < y1 and c.z > z0 and c.z < z1):
+						inside = false
+						break
+				if inside:
+					door_idx.append_array([I[t], I[t + 1], I[t + 2]])
+				else:
+					body_idx.append_array([I[t], I[t + 1], I[t + 2]])
+			var mat := m.mesh.surface_get_material(sidx)
+			if not body_idx.is_empty():
+				var ab := a.duplicate()
+				ab[Mesh.ARRAY_INDEX] = body_idx
+				new_body.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ab)
+				new_body.surface_set_material(new_body.get_surface_count() - 1, mat)
+			if not door_idx.is_empty():
+				# compact: only the door's vertices, in hinge space
+				var remap := {}
+				var nV := PackedVector3Array()
+				var keep := PackedInt32Array()
+				var nI := PackedInt32Array()
+				var to_hinge := hinge.transform.affine_inverse() * lx
+				for q in door_idx:
+					if not remap.has(q):
+						remap[q] = nV.size()
+						nV.append(to_hinge * V[q])
+						keep.append(q)
+					nI.append(int(remap[q]))
+				var ad: Array = []
+				ad.resize(Mesh.ARRAY_MAX)
+				ad[Mesh.ARRAY_VERTEX] = nV
+				ad[Mesh.ARRAY_INDEX] = nI
+				var N: Variant = a[Mesh.ARRAY_NORMAL]
+				if N != null:
+					var nn := PackedVector3Array()
+					for q in keep:
+						nn.append((to_hinge.basis * (N as PackedVector3Array)[q]).normalized())
+					ad[Mesh.ARRAY_NORMAL] = nn
+				var T: Variant = a[Mesh.ARRAY_TANGENT]
+				if T != null:
+					var tt := PackedFloat32Array()
+					for q in keep:
+						var tv := to_hinge.basis * Vector3((T as PackedFloat32Array)[q * 4], (T as PackedFloat32Array)[q * 4 + 1], (T as PackedFloat32Array)[q * 4 + 2])
+						tv = tv.normalized()
+						tt.append_array([tv.x, tv.y, tv.z, (T as PackedFloat32Array)[q * 4 + 3]])
+					ad[Mesh.ARRAY_TANGENT] = tt
+				for ch in [Mesh.ARRAY_TEX_UV, Mesh.ARRAY_TEX_UV2]:
+					if a[ch] != null:
+						var uv := PackedVector2Array()
+						for q in keep:
+							uv.append((a[ch] as PackedVector2Array)[q])
+						ad[ch] = uv
+				if a[Mesh.ARRAY_COLOR] != null:
+					var cl := PackedColorArray()
+					for q in keep:
+						cl.append((a[Mesh.ARRAY_COLOR] as PackedColorArray)[q])
+					ad[Mesh.ARRAY_COLOR] = cl
+				door_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ad)
+				door_mesh.surface_set_material(door_mesh.get_surface_count() - 1, mat)
+				moved += door_idx.size() / 3
+		if door_mesh.get_surface_count() > 0:
+			m.mesh = new_body
+			var dmi := MeshInstance3D.new()
+			dmi.name = "Door_" + String(m.name)
+			dmi.mesh = door_mesh
+			hinge.add_child(dmi)
+	print("door cut %s: %d triangles" % [preset, moved])
+	return moved > 0
+
+
+func _cut_box(holder: Node3D, box: AABB) -> void:
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var lx := _rel(m, model)
+		var out := ArrayMesh.new()
+		var changed := false
+		for si in m.mesh.get_surface_count():
+			var a0: Array = m.mesh.surface_get_arrays(si)
+			var a: Array = []
+			a.resize(Mesh.ARRAY_MAX)
+			for ch in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_TANGENT, Mesh.ARRAY_COLOR, Mesh.ARRAY_TEX_UV, Mesh.ARRAY_TEX_UV2, Mesh.ARRAY_INDEX]:
+				a[ch] = a0[ch]
+			var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var I: PackedInt32Array = a[Mesh.ARRAY_INDEX] if a[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			if I.is_empty():
+				I.resize(V.size())
+				for q in V.size():
+					I[q] = q
+			var keep := PackedInt32Array()
+			for t in range(0, I.size(), 3):
+				if box.has_point(lx * V[I[t]]) and box.has_point(lx * V[I[t + 1]]) and box.has_point(lx * V[I[t + 2]]):
+					changed = true
+					continue
+				keep.append_array([I[t], I[t + 1], I[t + 2]])
+			if keep.is_empty():
+				continue
+			a[Mesh.ARRAY_INDEX] = keep
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+			out.surface_set_material(out.get_surface_count() - 1, m.mesh.surface_get_material(si))
+		if changed:
+			m.mesh = out
+
+
 func _split_wheels(src: Node3D) -> Array:
 	var r := wheel_radius
 	var out: Array = []
@@ -394,6 +550,8 @@ func _build_interior() -> void:
 		var n := model.find_child(String(nm), true, false)
 		if n:
 			(n as Node3D).visible = false
+	if spec.has("cabin") and _prado_cabin():
+		return
 	var seat: Vector3 = spec["seat"]
 	var g := _ground_y
 	var sy := g + seat.y                       # hip height of the driver
@@ -407,11 +565,12 @@ func _build_interior() -> void:
 	var leather := _imat(Color(0.32, 0.22, 0.14) if preset == "lexus" else Color(0.12, 0.12, 0.13), 0.5)
 	var chrome := _imat(Color(0.7, 0.7, 0.72), 0.25, 0.9)
 	# dashboard: a long rounded slab + the upper pad towards the windscreen
-	_ibox(root, Vector3(hw * 2.0, 0.26, 0.42), Vector3(0, sy + 0.42, dz - 0.12), dash, 0.06)
-	_ibox(root, Vector3(hw * 2.0, 0.08, 0.5), Vector3(0, sy + 0.58, dz - 0.25), dash, 0.03)
-	_ibox(root, Vector3(hw * 1.9, 0.03, 0.03), Vector3(0, sy + 0.45, dz + 0.1), trim, 0.01)        # trim strip
+	# (kept under the hood / windscreen line: the old upper pad showed through the bonnet)
+	_ibox(root, Vector3(hw * 2.0, 0.24, 0.3), Vector3(0, sy + 0.38, dz - 0.03), dash, 0.06)
+	_ibox(root, Vector3(hw * 2.0, 0.06, 0.2), Vector3(0, sy + 0.5, dz + 0.15), dash, 0.03)
+	_ibox(root, Vector3(hw * 1.9, 0.03, 0.03), Vector3(0, sy + 0.4, dz + 0.26), trim, 0.01)        # trim strip
 	# instrument cluster hood + two lit dials
-	_ibox(root, Vector3(0.42, 0.14, 0.18), Vector3(seat.x, sy + 0.6, dz - 0.02), dash, 0.04)
+	_ibox(root, Vector3(0.42, 0.1, 0.16), Vector3(seat.x, sy + 0.5, dz + 0.16), dash, 0.04)
 	for k in 2:
 		var dial := MeshInstance3D.new()
 		var cm := SphereMesh.new()
@@ -424,7 +583,7 @@ func _build_interior() -> void:
 		dm.emission = Color(0.25, 0.55, 1.0) if k == 0 else Color(1.0, 0.45, 0.15)
 		dm.emission_energy_multiplier = 0.18
 		dial.material_override = dm
-		dial.position = Vector3(seat.x + (k - 0.5) * 0.16, sy + 0.58, dz + 0.07)
+		dial.position = Vector3(seat.x + (k - 0.5) * 0.16, sy + 0.46, dz + 0.25)
 		# the needle
 		var nd := MeshInstance3D.new()
 		var nb := BoxMesh.new()
@@ -443,7 +602,7 @@ func _build_interior() -> void:
 	scr.emission_enabled = true
 	scr.emission = Color(0.08, 0.16, 0.28)
 	scr.emission_energy_multiplier = 0.35
-	_ibox(root, Vector3(0.26, 0.15, 0.02), Vector3(0, sy + 0.55, dz + 0.1), scr, 0.0)
+	_ibox(root, Vector3(0.26, 0.15, 0.02), Vector3(0, sy + 0.44, dz + 0.26), scr, 0.0)
 	_ibox(root, Vector3(0.26, 0.22, 0.75), Vector3(0, sy + 0.08, seat.z - 0.35), dash, 0.04)
 	_ibox(root, Vector3(0.05, 0.08, 0.05), Vector3(0, sy + 0.24, seat.z - 0.3), chrome, 0.01)       # gear selector
 	# front seats (cushion + backrest + headrest)
@@ -499,6 +658,96 @@ func _build_interior() -> void:
 	colm.position = wheel.position + col_dir * 0.18
 	colm.look_at_from_position(colm.position, colm.position + col_dir, Vector3.UP)
 	colm.rotate_object_local(Vector3.RIGHT, PI * 0.5)
+
+
+## The real cabin of the Prado model (dashboard, instruments, seats, console: mesh "int", and its
+## steering wheel) fitted into this car: anchored at the driver's hip, scaled to the cabin
+## (spec "cabin" = width, height, length factors). Far better than boxes; the wheel keeps its
+## proportions (uniform scale) and turns about its own column like in the Prado.
+static var _prado_scene: PackedScene
+const PRADO_HIP := Vector3(0.0, -0.13, -0.24)     ## Prado: driver's hip height / seat z (model space)
+
+
+func _prado_cabin() -> bool:
+	if _prado_scene == null:
+		_prado_scene = load("res://assets/vehicles/prado/prado.glb")
+	if _prado_scene == null:
+		return false
+	var src: Node3D = _prado_scene.instantiate()
+	var intm := src.find_child("int", true, false) as MeshInstance3D
+	var sw := src.find_child("steeringwheel", true, false) as MeshInstance3D
+	if intm == null or sw == null:
+		src.free()
+		return false
+	var k: Vector3 = spec["cabin"]
+	var seat: Vector3 = spec["seat"]
+	var hip := Vector3(0.0, _ground_y + seat.y, seat.z)
+	var fit := Transform3D(Basis.from_scale(k), hip - PRADO_HIP * k)
+	var root := Node3D.new()
+	root.name = "Interior"
+	model.add_child(root)
+	var cab := MeshInstance3D.new()
+	cab.name = "Cabin"
+	# clip: no Prado headliner (y above "cabin_clip"[0]) or cargo area (z behind [1]) in a lower /
+	# shorter body; vertices go to model space so the test is direct
+	var clip: Array = spec.get("cabin_clip", [9.0, 9.0])
+	var to_model := fit * _rel(intm, src)
+	var cm := ArrayMesh.new()
+	for si in intm.mesh.get_surface_count():
+		var a0: Array = intm.mesh.surface_get_arrays(si)
+		var a: Array = []
+		a.resize(Mesh.ARRAY_MAX)
+		for ch in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_TANGENT, Mesh.ARRAY_TEX_UV, Mesh.ARRAY_INDEX]:
+			a[ch] = a0[ch]
+		var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var NV := PackedVector3Array()
+		NV.resize(V.size())
+		for q in V.size():
+			NV[q] = to_model * V[q]
+		a[Mesh.ARRAY_VERTEX] = NV
+		if a[Mesh.ARRAY_NORMAL] != null:
+			var NN: PackedVector3Array = (a[Mesh.ARRAY_NORMAL] as PackedVector3Array).duplicate()
+			var nb := to_model.basis.inverse().transposed()
+			for q in NN.size():
+				NN[q] = (nb * NN[q]).normalized()
+			a[Mesh.ARRAY_NORMAL] = NN
+		a[Mesh.ARRAY_TANGENT] = null
+		var I: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+		var keep := PackedInt32Array()
+		for t in range(0, I.size(), 3):
+			var ok := true
+			for q in 3:
+				var v := NV[I[t + q]]
+				# headliner / cargo area, and the Prado's (taller, wider) pillar trims above the belt
+				if v.y > float(clip[0]) or v.z > float(clip[1]) or (v.y > hip.y + 0.42 and absf(v.x) > 0.5):
+					ok = false
+					break
+			if ok:
+				keep.append_array([I[t], I[t + 1], I[t + 2]])
+		if keep.is_empty():
+			continue
+		a[Mesh.ARRAY_INDEX] = keep
+		cm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+		cm.surface_set_material(cm.get_surface_count() - 1, intm.mesh.surface_get_material(si))
+	cab.mesh = cm
+	cab.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(cab)
+	# the steering wheel: pivot where the Prado's would land, own orientation, uniform scale
+	var sxf := _rel(sw, src)
+	var wheel := Node3D.new()
+	wheel.name = "steeringwheel"
+	var u := (k.x + k.y) * 0.5
+	wheel.transform = Transform3D(sxf.basis.orthonormalized().scaled(Vector3.ONE * u), fit * sxf.origin)
+	root.add_child(wheel)
+	var wm := MeshInstance3D.new()
+	wm.mesh = sw.mesh
+	wm.transform = Transform3D(Basis.from_scale(sxf.basis.get_scale()), Vector3.ZERO)
+	wm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	wheel.add_child(wm)
+	_steering_wheel = wheel
+	_steering_rest = wheel.transform
+	src.free()
+	return true
 
 
 func _imat(col: Color, rough: float, metal := 0.0) -> StandardMaterial3D:

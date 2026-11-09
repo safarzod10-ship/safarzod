@@ -3,12 +3,16 @@ extends RefCounted
 ## The player's money (somoni, «смн») and the LakLak job record, saved in user://save_game.json.
 
 const PATH := "user://save_game.json"
+static var path := PATH               ## tests point it to a scratch file
 static var money := 500                 ## a new game starts with 500 smn (fuel, until the first job)
 static var laklak_hired := false
 static var bus_hired := false
 static var deliveries := 0
 static var earned_total := 0
 static var paints := {}               ## vehicle node name -> paint colour (html), garage repaints
+static var cars := []                 ## cars the player owns (main properties: car = Prado, camry, lexus), bought at
+                                      ## the dealership (CarDealer); a save from before 0.18 keeps its Prado
+static var fuel := {}                 ## vehicle node name -> litres in the tank
 static var _loaded := false
 static var no_save := false          ## tests: never touch the real save file
 
@@ -17,23 +21,35 @@ static func load_state() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if no_save or not FileAccess.file_exists(PATH):
+	if no_save or not FileAccess.file_exists(path):
 		return
-	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(PATH))
+	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if d is Dictionary:
 		money = int(d.get("money", 500))
 		laklak_hired = bool(d.get("laklak_hired", false))
 		bus_hired = bool(d.get("bus_hired", false))
 		deliveries = int(d.get("deliveries", 0))
 		earned_total = int(d.get("earned_total", 0))
+		if d.get("weapons") is Dictionary:
+			Weapons.from_dict(d["weapons"])
+		if d.get("paints") is Dictionary:
+			paints = d["paints"]
+		cars = []
+		if d.get("cars") is Array:
+			for c in d["cars"]:
+				cars.append(String(c))
+		else:
+			cars = ["car"]                    # older save: the Prado was the player's car already
+		if d.get("fuel") is Dictionary:
+			fuel = d["fuel"]
 
 
 static func save_state() -> void:
 	if no_save:
 		return
-	var f := FileAccess.open(PATH, FileAccess.WRITE)
+	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel}))
 
 
 static func earn(amount: int) -> void:

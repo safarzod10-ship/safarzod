@@ -917,6 +917,9 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 			var nrm := wd.normal_at(x, z)
 			if nrm.y < 0.72 or h > 1050.0:
 				continue
+			var wl := PlayerWater.surface_at(x, z)     # never in a lake / river
+			if wl != PlayerWater.SEA_LEVEL and h < wl + 1.0:
+				continue
 			var r := rng.randf()
 			var id := ""
 			var sc_ := 1.0

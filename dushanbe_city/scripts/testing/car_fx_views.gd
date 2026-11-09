@@ -20,6 +20,15 @@ func _ready() -> void:
 		(c as CanvasLayer).visible = false
 	var s: CarSession = main.get("car_session")
 	var car: VehiclePrado = s.car
+	var which := "car"
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("car="):
+			which = a.substr(4)
+	if which != "car":
+		while main.get("bus") == null:
+			await get_tree().physics_frame
+		car = main.get(which)
+		s._select(car)
 	cam = Camera3D.new()
 	cam.far = 9500.0
 	cam.fov = 60.0
@@ -40,6 +49,10 @@ func _ready() -> void:
 	var v := car.linear_velocity.normalized()
 	var side := v.cross(Vector3.UP).normalized()
 	await _shot("drift_smoke", p - v * 7.0 + side * 7.0 + Vector3(0, 2.0, 0), p)
+	await _shot("drift_close", p + side * 4.0 + Vector3(0, 1.2, 0) + v * 1.0, p)
+	if which != "car":
+		get_tree().quit()
+		return
 	VehicleInput.scripted = {"brake": 1.0}
 	await _sec(3.0)
 	p = car.global_position

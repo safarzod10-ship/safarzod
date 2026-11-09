@@ -35,8 +35,8 @@ var _wstep := 0.0
 func _ready() -> void:
 	var puff := _puff_texture()
 	for i in car.wheels.size():
-		_smoke.append(_emitter(puff, Color(0.86, 0.86, 0.86), 44, 2.4, 0.5, 3.6, -0.35))
-		_dust.append(_emitter(puff, Color(0.66, 0.58, 0.44), 36, 1.8, 0.6, 3.0, 0.4))
+		_smoke.append(_emitter(puff, Color(0.8, 0.8, 0.8), 44, 2.4, 0.5, 3.6, -0.35))
+		_dust.append(_emitter(puff, Color(0.6, 0.53, 0.41), 36, 1.8, 0.6, 3.0, 0.4))
 		var wp := _emitter(puff, Color(0.86, 0.92, 0.97), 40, 0.9, 0.25, 1.1, 9.8)
 		wp.direction = Vector3(0, 1, 0)
 		wp.spread = 35.0
@@ -109,6 +109,8 @@ func _emitter(tex: Texture2D, col: Color, amount: int, life: float, s0: float, s
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 	m.vertex_color_use_as_albedo = true
 	m.albedo_texture = tex
+	# unshaded: lit smoke in the car's own shadow turned into black blobs around the wheels
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.roughness = 1.0
 	m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	m.disable_receive_shadows = true

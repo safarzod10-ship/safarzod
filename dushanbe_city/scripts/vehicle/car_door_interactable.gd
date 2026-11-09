@@ -11,6 +11,9 @@ func _ready() -> void:
 
 
 func interaction_label(_player: Node) -> String:
+	var v := vehicle if vehicle else session.car
+	if not CarDealer.owns(v):
+		return "ПРОДАЁТСЯ · %s · АВТОСАЛОН" % Wallet.fmt(CarDealer.price_of(v))
 	return "В ЛОДКУ" if vehicle is VehicleBoat else "СЕСТЬ"
 
 
@@ -28,8 +31,15 @@ func interaction_point(_player: Node) -> Vector3:
 
 
 func can_interact(_player: Node) -> bool:
-	return session.can_enter(vehicle if vehicle else session.car)
+	var v := vehicle if vehicle else session.car
+	if not CarDealer.owns(v):
+		# show the price at the door: the car is sold at the dealership (on the map)
+		return not session.driving and session.player and session.player.global_position.distance_to(v.driver_door_point(0.6)) < CarSession.ENTER_DIST
+	return session.can_enter(v)
 
 
 func interact(_player: Node) -> void:
-	session.enter_vehicle(vehicle if vehicle else session.car)
+	var v := vehicle if vehicle else session.car
+	if not CarDealer.owns(v):
+		return
+	session.enter_vehicle(v)

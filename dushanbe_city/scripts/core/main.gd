@@ -125,6 +125,10 @@ func _spawn_car(touch: CanvasLayer) -> void:
 		var shop := GunShop.new()
 		shop.name = "GunShop"
 		add_child(shop)
+		var dealer := CarDealer.new()
+		dealer.name = "CarDealer"
+		dealer.main = self
+		add_child(dealer)
 	var svc := AutoService.new()
 	svc.name = "AutoService"
 	svc.session = car_session
@@ -218,6 +222,7 @@ func _spawn_extra_vehicles() -> void:
 		bus_job.bus = bus
 		car_session.add_vehicle(bus)
 	_start_hint()
+	_restore_fuel()
 	var sp: Array = world.city.get("spawn", [0, 0.15, 0, 0])
 	for spot in boat_spots(Vector3(sp[0], 0, sp[2])):
 		var b := VehicleBoat.new()
@@ -280,3 +285,24 @@ func _start_hint() -> void:
 		d = (player as Node3D).global_position.distance_to(laklak.depot_point(Vector3.ZERO)) / 1000.0
 	laklak.toast("Рядом на дороге: Toyota Camry, Lexus RX, Land Cruiser.\nСклад LakLak — %.1f км на север. КАРТА → НАВИГАТОР" % d)
 	laklak._toast_t = 9.0
+
+
+# ------------------------------------------------------------------------------------------ saving
+## everything is kept between sessions: money / weapons / ammo / paints / cars (Wallet) and the
+## litres in every vehicle's tank, written whenever the game goes to the background or quits
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_GO_BACK_REQUEST]:
+		save_all()
+
+
+func save_all() -> void:
+	for v in get_tree().get_nodes_in_group(&"vehicle"):
+		if v is VehiclePrado:
+			Wallet.fuel[String(v.name)] = snappedf((v as VehiclePrado).fuel_l, 0.1)
+	Wallet.save_state()
+
+
+func _restore_fuel() -> void:
+	for v in get_tree().get_nodes_in_group(&"vehicle"):
+		if v is VehiclePrado and Wallet.fuel.has(String(v.name)):
+			(v as VehiclePrado).fuel_l = clampf(float(Wallet.fuel[String(v.name)]), 0.0, (v as VehiclePrado).tank_l)

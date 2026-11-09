@@ -127,9 +127,61 @@ static func _drop_texture() -> Texture2D:
 
 ## Classify the water state for a body standing/swimming at `feet` (global position of the feet).
 ## `floor_y` is the sea-floor height under the body (ray), NAN if none.
+## the water surface the body is in: the lakes (inside their shore ellipse), the rivers (within
+## their width, at the ribbon's height), else the sea level (depth 0 on land anyway)
+var level := SEA_LEVEL
+var on_sea := true
+static var _river_cells := {}            ## Vector2i(64 m cell) -> [[a, b, half width], ...]
+static var _rivers_built := false
+
+
+static func surface_at(x: float, z: float) -> float:
+	var wd := WorldData.get_instance()
+	if wd == null or not wd.ok or not wd.contains(x, z):
+		return SEA_LEVEL
+	for lk in wd.lakes:
+		var c := Vector2(lk["c"][0], lk["c"][1])
+		var r := Vector2(lk["r"][0], lk["r"][1]) * 1.12
+		if Vector2((x - c.x) / r.x, (z - c.y) / r.y).length() < 1.0:
+			return float(lk["level"])
+	ensure_index()
+	var cell: Array = _river_cells.get(Vector2i(floori(x / 64.0), floori(z / 64.0)), [])
+	for seg in cell:
+		var a: Vector3 = seg[0]
+		var b: Vector3 = seg[1]
+		var ab := Vector2(b.x - a.x, b.z - a.z)
+		var t := clampf(Vector2(x - a.x, z - a.z).dot(ab) / maxf(ab.length_squared(), 0.001), 0.0, 1.0)
+		if Vector2(a.x + ab.x * t - x, a.z + ab.y * t - z).length() < float(seg[2]):
+			return lerpf(a.y, b.y, t)
+	return SEA_LEVEL
+
+
+## the river lookup grid (build on the main thread before sector threads ask)
+static func ensure_index() -> void:
+	if not _rivers_built:
+		_rivers_built = true
+		var wd := WorldData.get_instance()
+		for rv in wd.rivers:
+			var pts: Array = rv["pts"]
+			var hw := float(rv["w"]) * 0.5
+			for k in pts.size() - 1:
+				var a := Vector3(pts[k][0], pts[k][1], pts[k][2])
+				var b := Vector3(pts[k + 1][0], pts[k + 1][1], pts[k + 1][2])
+				var lo := Vector2i(floori((minf(a.x, b.x) - hw) / 64.0), floori((minf(a.z, b.z) - hw) / 64.0))
+				var hi := Vector2i(floori((maxf(a.x, b.x) + hw) / 64.0), floori((maxf(a.z, b.z) + hw) / 64.0))
+				for ci in range(lo.x, hi.x + 1):
+					for cj in range(lo.y, hi.y + 1):
+						var key := Vector2i(ci, cj)
+						if not _river_cells.has(key):
+							_river_cells[key] = []
+						(_river_cells[key] as Array).append([a, b, hw])
+
+
 func update_mode(feet: Vector3, floor_y: float) -> Mode:
-	depth = maxf(SEA_LEVEL - feet.y, 0.0)
-	floor_depth = SEA_LEVEL - floor_y if not is_nan(floor_y) else 0.0
+	level = surface_at(feet.x, feet.z)
+	on_sea = level == SEA_LEVEL
+	depth = maxf(level - feet.y, 0.0)
+	floor_depth = level - floor_y if not is_nan(floor_y) else 0.0
 	var prev := mode
 	if mode == Mode.SWIM:
 		if floor_depth < SWIM_EXIT:
@@ -140,7 +192,7 @@ func update_mode(feet: Vector3, floor_y: float) -> Mode:
 		mode = Mode.DRY if depth < 0.03 else (Mode.SHALLOW if depth < 0.45 else Mode.MEDIUM)
 	if prev != Mode.SWIM and mode == Mode.SWIM:
 		_play(_entry, -2.0)
-		_burst(Vector3(feet.x, SEA_LEVEL, feet.z), 1.4)
+		_burst(Vector3(feet.x, level, feet.z), 1.4)
 	return mode
 
 
@@ -165,14 +217,14 @@ func effects(delta: float, pos: Vector3, speed: float, stride: float, landed: bo
 		w = 1.0
 		if landed:
 			_play(_big if depth > 0.25 else _entry, -3.0)
-			_burst(Vector3(pos.x, SEA_LEVEL, pos.z), 1.2)
+			_burst(Vector3(pos.x, level, pos.z), 1.2)
 		if speed > 0.25:
 			_step_t += delta * speed / maxf(stride * 0.5, 0.2)      # one splash per footfall
 			if _step_t >= 1.0:
 				_step_t = 0.0
 				if not _steps.is_empty():
 					_play(_steps[randi() % _steps.size()], lerpf(-10.0, -2.0, clampf(speed / 4.0, 0.0, 1.0)))
-				_burst(Vector3(pos.x, SEA_LEVEL + 0.02, pos.z), lerpf(0.4, 1.0, clampf(speed / 4.0 + depth, 0.0, 1.0)))
+				_burst(Vector3(pos.x, level + 0.02, pos.z), lerpf(0.4, 1.0, clampf(speed / 4.0 + depth, 0.0, 1.0)))
 	elif mode == Mode.SWIM:
 		w = 2.0
 		_stroke_t += delta * (0.75 + speed * 0.6)                   # strokes faster when swimming fast
@@ -180,7 +232,7 @@ func effects(delta: float, pos: Vector3, speed: float, stride: float, landed: bo
 			_stroke_t = 0.0
 			if speed > 0.2:
 				var fwd := -global_transform.basis.z
-				_burst(Vector3(pos.x, SEA_LEVEL + 0.05, pos.z) + fwd * 0.6, 0.55)
+				_burst(Vector3(pos.x, level + 0.05, pos.z) + fwd * 0.6, 0.55)
 				if not _steps.is_empty():
 					_play(_steps[randi() % _steps.size()], -9.0)
 	if mode == Mode.SWIM:
@@ -189,7 +241,7 @@ func effects(delta: float, pos: Vector3, speed: float, stride: float, landed: bo
 		_swim_loop.volume_db = lerpf(-18.0, -5.0, clampf(speed / 1.6, 0.0, 1.0))
 	elif _swim_loop.playing:
 		_swim_loop.stop()
-	RenderingServer.global_shader_parameter_set(&"water_player", Vector4(pos.x, SEA_LEVEL, pos.z, w))
+	RenderingServer.global_shader_parameter_set(&"water_player", Vector4(pos.x, SEA_LEVEL, pos.z, w if on_sea else 0.0))
 
 
 func _burst(at: Vector3, strength: float) -> void:

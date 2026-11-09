@@ -1,6 +1,8 @@
 extends Control
-## The start menu, drawn by the owner (assets/ui/menu_main.png, menu_shop.png): the pictures fill the
-## screen without cropping (a blurred copy fills the side bars on wider phones) and every button
+## The start menu, drawn by the owner (assets/ui/menu_main.png, menu_shop.png): on phones (wider than
+## 16:9) the picture fills the whole screen (width fitted, a little sky / pavement cropped, centred on
+## the buttons); buttons that would fall into the cropped strip (gear, ✕, Бозгашт) are cut out of the
+## picture and pinned to their screen corner. Taller screens (tablets) fit it whole. Every button
 ## drawn in them is a real button placed exactly over it (rects in the pictures' 1672 x 941 pixels):
 ##   main: Бозӣ кардан (play) · Магазин · Об игре · Баромадан (exit) · settings (gear)
 ##   shop: four «Харидорӣ» packages · promo code field + ✓ · Бозгашт (back) · ✕
@@ -14,6 +16,9 @@ const MAIN_BTNS := {"play": Rect2(65, 462, 450, 86), "shop": Rect2(55, 563, 440,
 const SHOP_BTNS := {"close": Rect2(1570, 25, 75, 70), "buy0": Rect2(276, 578, 260, 64), "buy1": Rect2(617, 578, 240, 64),
 	"buy2": Rect2(942, 578, 244, 64), "buy3": Rect2(1275, 578, 257, 64), "promo": Rect2(1178, 724, 317, 62),
 	"ok": Rect2(1512, 722, 85, 66), "back": Rect2(32, 838, 373, 74)}
+## vertical centre of the visible part of each picture (image px), corner-pinned buttons
+const FOCUS := {"main": 470.0, "shop": 503.0}
+const PINS := {"settings": "tr", "close": "tr", "back": "bl"}
 const LINKS := {
 	"YouTube": "https://youtube.com/@dushanbe-x?si=6Kg6TmjxlxOiQ-g2",
 	"TikTok": "https://www.tiktok.com/@dushanbe_x?_r=1&_t=ZS-9BGBeNNHSGw",
@@ -98,14 +103,33 @@ func _ready() -> void:
 ## the picture fitted in the screen (no crop): its rect on screen
 func _pic_rect() -> Rect2:
 	var vs := get_viewport_rect().size
+	if vs.x / vs.y >= IMG.x / IMG.y - 0.001:
+		# cover: full width, crop top / bottom around the buttons
+		var sc := vs.x / IMG.x
+		var h := IMG.y * sc
+		var y := clampf(vs.y * 0.5 - float(FOCUS.get(_screen, 470.0)) * sc, vs.y - h, 0.0)
+		return Rect2(Vector2(0, y), Vector2(vs.x, h))
 	var s := minf(vs.x / IMG.x, vs.y / IMG.y)
 	var sz := IMG * s
 	return Rect2((vs - sz) * 0.5, sz)
 
 
-func _map(r: Rect2) -> Rect2:
+func _covering() -> bool:
+	var vs := get_viewport_rect().size
+	return vs.x / vs.y >= IMG.x / IMG.y - 0.001 and absf(vs.x / vs.y - IMG.x / IMG.y) > 0.01
+
+
+## a button's rect on screen; corner-pinned ones keep their distance to that screen corner
+func _map(r: Rect2, key := "") -> Rect2:
 	var pr := _pic_rect()
 	var s := pr.size.x / IMG.x
+	if key != "" and PINS.has(key) and _covering():
+		var vs := get_viewport_rect().size
+		match String(PINS[key]):
+			"tr":
+				return Rect2(Vector2(vs.x - (IMG.x - r.position.x) * s, r.position.y * s), r.size * s)
+			"bl":
+				return Rect2(Vector2(r.position.x * s, vs.y - (r.size.y * 0.85 + 4.0) * s), r.size * s * 0.85)
 	return Rect2(pr.position + r.position * s, r.size * s)
 
 
@@ -113,13 +137,13 @@ func _layout() -> void:
 	var vs := get_viewport_rect().size
 	for k in _main_btns:
 		var b: Button = _main_btns[k]
-		var r := _map(MAIN_BTNS[k])
+		var r := _map(MAIN_BTNS[k], k)
 		b.position = r.position
 		b.size = r.size
 		b.visible = _screen == "main"
 	for k in _shop_btns:
 		var b: Button = _shop_btns[k]
-		var r := _map(SHOP_BTNS[k])
+		var r := _map(SHOP_BTNS[k], k)
 		b.position = r.position
 		b.size = r.size
 		b.visible = _screen == "shop"
@@ -130,10 +154,10 @@ func _layout() -> void:
 	_code.visible = _screen == "shop"
 	var pic := _pic_rect()
 	_info.size = Vector2(700, 40)
-	_info.position = Vector2(pic.end.x - 720, pic.end.y - 52)
+	_info.position = Vector2(minf(pic.end.x, vs.x) - 720, minf(pic.end.y, vs.y) - 52)
 	_info.text = "ID: %s   ·   %s" % [Account.id, Wallet.fmt(Wallet.money)]
 	_toast.size = Vector2(vs.x, 60)
-	_toast.position = Vector2(0, pic.position.y + pic.size.y * 0.05)
+	_toast.position = Vector2(0, maxf(pic.position.y, 0.0) + vs.y * 0.05)
 	_loading.size = Vector2(vs.x, 80)
 	_loading.position = Vector2(0, vs.y * 0.45)
 	if _dialog.visible:
@@ -159,6 +183,16 @@ func _draw_bg() -> void:
 	var bt: Texture2D = _blur["shop" if _screen == "shop" else "main"]
 	_bg.draw_texture_rect(bt if bt else tex, Rect2((vs - cover) * 0.5, cover), false)
 	_bg.draw_texture_rect(tex, _pic_rect(), false)
+	if _covering():
+		if _screen == "shop":       # hide the original (cropped) back button under plain pavement
+			_bg.draw_texture_rect_region(tex, _map(Rect2(20, 826, 400, 115)), Rect2(470, 826, 400, 115))
+		var btns: Dictionary = SHOP_BTNS if _screen == "shop" else MAIN_BTNS
+		for k in btns:
+			if PINS.has(k):
+				var src: Rect2 = btns[k]
+				src = src.grow(6.0)
+				var dst := _map(src, k)
+				_bg.draw_texture_rect_region(tex, dst, src)
 
 
 func _process(delta: float) -> void:
