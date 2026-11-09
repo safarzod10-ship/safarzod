@@ -83,6 +83,20 @@ sudo bash setup.sh
 
 ## Обслуживание
 
+Обновление до последней версии (настройки берутся из сохранённого `.env`, вопросов нет):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/zuba-ruba-mini-app-83vt56/zuba-ruba/setup.sh | sudo bash
+```
+
+Обновление с полным удалением базы данных (перед удалением снимается резервная копия в `backups/`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/zuba-ruba-mini-app-83vt56/zuba-ruba/setup.sh | sudo ZR_RESET_DB=1 bash
+```
+
+Сменить токен, администратора, ключ Flyer или домен: передайте новые значения в `ZR_BOT_TOKEN`, `ZR_ADMIN_IDS`, `ZR_FLYER_API_KEY`, `ZR_DOMAIN`.
+
 ```bash
 cd /opt/zuba-ruba/zuba-ruba
 docker compose ps
