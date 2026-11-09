@@ -56,3 +56,13 @@ the glTF `asset.extras` of the file. The files are in `assets/models/extra/`.
 The LakLak logo on the van and the depot sign were made for this project.
 
 The models' own textures are unchanged apart from the van's colour.
+
+## HUD icons — game-icons.net (CC BY 3.0)
+Icons `assets/ui/icons/gi_*.svg` (fist, pistol, AK, bat, car, fuel, wrench, map, etc.) from
+https://game-icons.net by Lorc, Delapouite, Skoll and other contributors,
+licensed under Creative Commons Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/).
+Taken from the npm package `@iconify-json/game-icons`; recoloured only.
+
+## Main menu / shop artwork
+`assets/ui/menu_main.png`, `assets/ui/menu_shop.png` — provided by the project owner.
+Note: the artwork contains the text "GTA" — a third-party trademark; replace before store release.
