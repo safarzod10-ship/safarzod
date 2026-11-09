@@ -128,3 +128,31 @@ static func light_button(ci: CanvasItem, c: Vector2, r: float, icon_id: String, 
 		# line icons (white strokes) are drawn dark; the fist / door / hand keep their own outline
 		var mod := Color.WHITE if icon_id in ["fist", "door", "hand"] else Color(0.1, 0.11, 0.13)
 		ci.draw_texture_rect(tex, Rect2(c - Vector2(s, s) * 0.5, Vector2(s, s)), false, mod)
+
+
+static var _logo_font: FontVariation
+
+
+## the game's logo «Dushanbe-X»: bold italic white, thick black outline, the X in red; snowy peaks
+## behind the first letters (as in the mock-ups). p: top-left, u: size unit
+static func logo(ci: CanvasItem, p: Vector2, u: float) -> void:
+	if _logo_font == null:
+		_logo_font = FontVariation.new()
+		_logo_font.base_font = font()
+		_logo_font.variation_embolden = 0.7
+		_logo_font.variation_transform = Transform2D(Vector2(1, 0), Vector2(-0.25, 1), Vector2.ZERO)
+	var fs := int(u * 0.62)
+	var t1 := "Dushanbe-"
+	var w1 := _logo_font.get_string_size(t1, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var base := p + Vector2(0, fs * 0.95)
+	# peaks over the word
+	var s := fs * 0.55
+	var b0 := base + Vector2(fs * 0.3, -fs * 0.62)
+	ci.draw_colored_polygon(PackedVector2Array([b0, b0 + Vector2(s * 0.9, -s * 0.8), b0 + Vector2(s * 1.4, -s * 0.45),
+		b0 + Vector2(s * 2.2, -s * 1.1), b0 + Vector2(s * 3.3, -s * 0.2), b0 + Vector2(s * 3.6, 0)]), Color(0.06, 0.07, 0.1))
+	ci.draw_polyline(PackedVector2Array([b0 + Vector2(s * 0.6, -s * 0.55), b0 + Vector2(s * 0.9, -s * 0.8), b0 + Vector2(s * 1.15, -s * 0.6)]), Color.WHITE, s * 0.16, true)
+	ci.draw_polyline(PackedVector2Array([b0 + Vector2(s * 1.85, -s * 0.85), b0 + Vector2(s * 2.2, -s * 1.1), b0 + Vector2(s * 2.6, -s * 0.8)]), Color.WHITE, s * 0.16, true)
+	var ol := int(u * 0.17)
+	ci.draw_string_outline(_logo_font, base, t1 + "X", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ol, Color(0.03, 0.03, 0.04))
+	ci.draw_string(_logo_font, base, t1, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1))
+	ci.draw_string(_logo_font, base + Vector2(w1, 0), "X", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.92, 0.1, 0.1))

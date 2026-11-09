@@ -46,7 +46,7 @@ func _ready() -> void:
 	_root.add_to_group(TouchBlock.GROUP)          # the driving / walking touch controls stay off
 	add_child(_root)
 	var bg := ColorRect.new()
-	bg.color = Color(0.17, 0.38, 0.58)
+	bg.color = Color(0.08, 0.3, 0.55)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bg)
@@ -166,44 +166,59 @@ func _draw_map() -> void:
 		var src := Rect2(Vector2.ZERO, Vector2(_world_tex.get_width(), _world_tex.get_height() * seam_frac))
 		var dst := Rect2(wa, Vector2(wb.x - wa.x, (wb.y - wa.y) * seam_frac))
 		_canvas.draw_texture_rect_region(_world_tex, dst, src)
-		# names: places, landmarks, fuel
-		for p in wd.places:
-			var sp := w2s(p["x"], p["z"])
-			var big: bool = p["kind"] in ["city", "town"]
-			var fs := 30 if big else 20
-			if p["kind"] == "lake":
-				fs = 22
-			_label(sp, str(p["name"]), fs, Color(1, 1, 1) if p["kind"] != "lake" else Color(0.85, 0.95, 1.0))
-		if mpp < 6.0:
-			for lm in wd.landmarks:
-				var sp := w2s(lm["x"], lm["z"])
-				_canvas.draw_circle(sp, 6, Color(0.95, 0.75, 0.25))
-				_label(sp + Vector2(0, -16), str(lm["name"]), 15, Color(1.0, 0.92, 0.7))
-		for f in wd.fuel:
-			var sp := w2s(f["x"], f["z"])
-			_canvas.draw_rect(Rect2(sp - Vector2(9, 9), Vector2(18, 18)), Color(0.1, 0.5, 0.25))
-			_label(sp + Vector2(0, 2), "АЗС", 12, Color.WHITE)
 		# road names on the big roads (once per road, at the middle)
-		if mpp < 10.0:
+		if mpp < 5.0:
 			for r in wd.roads:
 				if str(r["name"]) == "" or r["cls"] in ["street", "lane"]:
 					continue
 				var pts: Array = r["pts"]
 				var m: Array = pts[pts.size() / 2]
 				_label(w2s(m[0], m[2]) + Vector2(0, 14), str(r["name"]), 13, Color(1.0, 0.95, 0.75))
-	_label(w2s(0, -150), "Душанбе (центр, набережная)", 20, Color.WHITE)
-	# always visible: the player's vehicles and the job places (any zoom)
+		# filling stations, hospitals, schools (closer zooms)
+		if mpp < 12.0:
+			for f in wd.fuel:
+				_badge(w2s(f["x"], f["z"]), "fuel", Color(0.1, 0.55, 0.25), 13.0)
+		if mpp < 7.0:
+			for bd in wd.buildings:
+				if bd[0] == "hospital_m":
+					var hp := w2s(bd[1], bd[2])
+					_canvas.draw_circle(hp + Vector2(1.5, 2), 13.0, Color(0, 0, 0, 0.45))
+					var ct := HudStyle.icon("cross")
+					if ct:
+						_canvas.draw_texture_rect(ct, Rect2(hp - Vector2(13, 13), Vector2(26, 26)), false)
+				elif bd[0] == "school_m":
+					_badge(w2s(bd[1], bd[2]), "school", Color(0.15, 0.4, 0.8), 13.0)
+		# photo cards of the sights (zoomed out)
+		if mpp >= 3.5:
+			_cards()
+		# places: icon + name (tourist-map style)
+		for p in wd.places:
+			var sp := w2s(p["x"], p["z"])
+			var kind := String(p["kind"])
+			var nm := String(p["name"])
+			if kind == "city":
+				_place(sp + Vector2(-60, 0), "office", nm, 44)
+				continue
+			var ic: String = {"town": "house", "village": "house", "lake": "waves", "pass": "mountain", "resort": "house"}.get(kind, "mountain")
+			if nm.contains("Водопад"):
+				ic = "waterfall"
+			elif nm.contains("отдыха"):
+				ic = "tree"
+			_place(sp, ic, nm, 26 if kind == "town" else 21)
+		if mpp < 9.0:
+			for lm in wd.landmarks:
+				var ic2: String = {"somoni": "monument", "rudaki_park": "tree", "flag": "tree", "museum": "museum", "library": "museum",
+					"palace": "museum", "opera": "museum", "navruz": "office", "mehrgon": "cart", "laklak": "box",
+					"hisor_fort": "museum", "hisor_bazaar": "cart"}.get(String(lm["id"]), "museum")
+				_place(w2s(lm["x"], lm["z"]), ic2, String(lm["name"]), 16)
+	_place(w2s(0, -150), "anchor", "Душанбе (центр, набережная)", 21)
+	# the player's vehicles and the job places (any zoom)
 	for poi in pois():
 		var pp0: Vector3 = poi[1]
 		var ps := w2s(pp0.x, pp0.z)
 		_canvas.draw_circle(ps, 12, Color(0.05, 0.05, 0.05, 0.85))
 		_canvas.draw_circle(ps, 9, poi[2])
 		_label(ps + Vector2(0, -24), String(poi[0]), 17, Color(1, 1, 1))
-	if Minimap.target != Vector3.INF:
-		var tp := w2s(Minimap.target.x, Minimap.target.z)
-		_canvas.draw_circle(tp, 15, Color(0.05, 0.05, 0.05, 0.85))
-		_canvas.draw_circle(tp, 11, Color(1.0, 0.6, 0.1))
-		_label(tp + Vector2(0, 26), "ЦЕЛЬ", 16, Color(1.0, 0.8, 0.4))
 	# the navigator's route along the roads (blue, with a dark outline)
 	var rt := RoadNav.route
 	if rt.size() >= 2:
@@ -212,18 +227,138 @@ func _draw_map() -> void:
 			line.append(w2s(q.x, q.z))
 		_canvas.draw_polyline(line, Color(0.02, 0.1, 0.25, 0.9), 11.0, true)
 		_canvas.draw_polyline(line, Color(0.2, 0.6, 1.0), 7.0, true)
+	if Minimap.target != Vector3.INF:
+		var tp := w2s(Minimap.target.x, Minimap.target.z)
+		_canvas.draw_circle(tp, 15, Color(0.05, 0.05, 0.05, 0.85))
+		_canvas.draw_circle(tp, 11, Color(1.0, 0.6, 0.1))
+		_label(tp + Vector2(0, 26), "ЦЕЛЬ", 16, Color(1.0, 0.8, 0.4))
 	if not _sel.is_empty() and _card.visible:
 		var sp3 := w2s((_sel["pos"] as Vector3).x, (_sel["pos"] as Vector3).z)
 		_canvas.draw_arc(sp3, 20, 0, TAU, 32, Color(1, 1, 1), 4.0)
 		_canvas.draw_arc(sp3, 26, 0, TAU, 32, Color(0.1, 0.1, 0.1, 0.7), 3.0)
-	# player / car marker + north arrow
+	# player / car marker
 	var pp := _player_pos()
 	var sp2 := w2s(pp.x, pp.z)
-	_canvas.draw_circle(sp2, 11, Color(0.1, 0.1, 0.1, 0.8))
-	_canvas.draw_circle(sp2, 8, Color(1.0, 0.82, 0.25))
+	_canvas.draw_circle(sp2, 13, Color(0.1, 0.1, 0.1, 0.85))
+	_canvas.draw_circle(sp2, 10, Color(1.0, 0.82, 0.25))
+	_overlay()
+
+
+## screen-fixed decoration of the map (as in the owner's mock-up): title, flag + slogan, compass,
+## legend, scale
+func _overlay() -> void:
 	var vs := _canvas.size
-	_label(Vector2(vs.x * 0.5, 40), "КАРТА · масштаб %d м / см" % int(mpp * 38), 22, Color.WHITE)
-	_label(Vector2(60, 60), "С ↑", 28, Color.WHITE)
+	var u := minf(vs.x, vs.y) / 10.0
+	HudStyle.logo(_canvas, Vector2(22, 0.45 * u), u * 0.95)
+	HudStyle.label_left(_canvas, "Открытый мир Таджикистана", Vector2(30, 1.45 * u), int(u * 0.26), Color(1, 1, 1), 6)
+	_flag(Rect2(vs.x - 3.0 * u, 1.0 * u, 2.4 * u, 1.35 * u))
+	HudStyle.label(_canvas, "Душанбе —", Vector2(vs.x - 1.8 * u, 2.75 * u), int(u * 0.28), Color(1, 1, 1))
+	HudStyle.label(_canvas, "город возможностей!", Vector2(vs.x - 1.8 * u, 3.12 * u), int(u * 0.28), Color(1, 0.86, 0.35))
+	_compass(Vector2(vs.x - 1.25 * u, 4.6 * u), 0.85 * u)
+	if not _nav_open:
+		_legend(Vector2(14, 2.6 * u), u)
+	_canvas.draw_rect(Rect2(vs.x * 0.5 - 300, vs.y - 32, 600, 28), Color(0.03, 0.05, 0.09, 0.7))
+	_label(Vector2(vs.x * 0.5, vs.y - 18), "масштаб: %d м / см · нажмите на место — маршрут" % int(mpp * 38), 16, Color(1, 1, 1, 0.9))
+
+
+func _legend(p: Vector2, u: float) -> void:
+	var rows := [["house", "Жилые районы"], ["office", "Бизнес и офисы"], ["cart", "Рынки и магазины"], ["fuel", "АЗС"],
+		["cross", "Больница"], ["school", "Школа"], ["tree", "Парки и зоны отдыха"], ["monument", "Достопримечательности"],
+		["box", "Работа: LakLak"], ["bus", "Автобус №1"], ["anchor", "Набережная, лодки"]]
+	var rh := u * 0.42
+	var rc := Rect2(p, Vector2(u * 3.3, rh * rows.size() + u * 0.3))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.04, 0.06, 0.1, 0.82)
+	sb.set_corner_radius_all(int(u * 0.18))
+	sb.border_color = Color(1, 1, 1, 0.35)
+	sb.set_border_width_all(2)
+	_canvas.draw_style_box(sb, rc)
+	for k in rows.size():
+		var y := p.y + u * 0.15 + rh * (k + 0.5)
+		var t := HudStyle.icon(rows[k][0])
+		if t:
+			_canvas.draw_texture_rect(t, Rect2(Vector2(p.x + u * 0.15, y - rh * 0.38), Vector2(rh * 0.76, rh * 0.76)), false)
+		HudStyle.label_left(_canvas, rows[k][1], Vector2(p.x + u * 0.15 + rh, y + rh * 0.2), int(rh * 0.5), Color(1, 1, 1), 3)
+
+
+func _compass(c: Vector2, r: float) -> void:
+	_canvas.draw_circle(c, r * 0.62, Color(0.04, 0.06, 0.1, 0.55))
+	_canvas.draw_arc(c, r * 0.62, 0, TAU, 48, Color(1, 1, 1, 0.8), 2.0, true)
+	for k in 4:
+		var d := Vector2.from_angle(-PI * 0.5 + k * PI * 0.5)
+		var n := Vector2(-d.y, d.x)
+		_canvas.draw_colored_polygon(PackedVector2Array([c + d * r * 0.8, c + n * r * 0.13, c - n * r * 0.13]), Color(1, 1, 1) if k == 0 else Color(0.85, 0.87, 0.9))
+		_canvas.draw_colored_polygon(PackedVector2Array([c + d * r * 0.8, c + n * r * 0.13, c]), Color(0.25, 0.3, 0.38))
+	for k in 4:
+		var d := Vector2.from_angle(-PI * 0.5 + k * PI * 0.5)
+		HudStyle.label(_canvas, ["N", "E", "S", "W"][k], c + d * r * 1.05, int(r * 0.32))
+
+
+## the flag of Tajikistan: red / white / green (2:3:2), the crown and seven stars in gold
+func _flag(rc: Rect2) -> void:
+	_canvas.draw_rect(rc.grow(3.0), Color(0, 0, 0, 0.35))
+	var h := rc.size.y
+	_canvas.draw_rect(Rect2(rc.position, Vector2(rc.size.x, h * 2.0 / 7.0)), Color(0.8, 0.1, 0.13))
+	_canvas.draw_rect(Rect2(rc.position + Vector2(0, h * 2.0 / 7.0), Vector2(rc.size.x, h * 3.0 / 7.0)), Color(1, 1, 1))
+	_canvas.draw_rect(Rect2(rc.position + Vector2(0, h * 5.0 / 7.0), Vector2(rc.size.x, h * 2.0 / 7.0)), Color(0.0, 0.53, 0.25))
+	var c := rc.get_center() + Vector2(0, h * 0.04)
+	var gold := Color(0.97, 0.76, 0.0)
+	var cw := h * 0.2
+	_canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(-cw, cw * 0.35), c + Vector2(-cw, -cw * 0.15), c + Vector2(-cw * 0.5, cw * 0.05),
+		c + Vector2(0, -cw * 0.4), c + Vector2(cw * 0.5, cw * 0.05), c + Vector2(cw, -cw * 0.15), c + Vector2(cw, cw * 0.35)]), gold)
+	for k in 7:
+		var ang := PI + PI * (k + 0.5) / 7.0
+		_canvas.draw_circle(c + Vector2(cos(ang), sin(ang) * 0.75) * h * 0.26 + Vector2(0, h * 0.02), h * 0.025, gold)
+
+
+## a map icon with a soft shadow on a small coloured disc (fuel, hospital, school)
+func _badge(sp: Vector2, icon_id: String, col: Color, r: float) -> void:
+	_canvas.draw_circle(sp + Vector2(1.5, 2), r, Color(0, 0, 0, 0.45))
+	_canvas.draw_circle(sp, r, col)
+	var t := HudStyle.icon(icon_id)
+	if t:
+		var m := Color(0.1, 0.1, 0.12) if col.v > 0.9 else Color.WHITE
+		_canvas.draw_texture_rect(t, Rect2(sp - Vector2(r, r) * 0.75, Vector2(r, r) * 1.5), false, m)
+
+
+## a place of the map: white icon (dark shadow) + its name to the right, white bold outlined
+func _place(sp: Vector2, icon_id: String, text: String, fs: int) -> void:
+	var s := fs * 1.5
+	var t := HudStyle.icon(icon_id)
+	if t:
+		_canvas.draw_texture_rect(t, Rect2(sp - Vector2(s, s) * 0.5 + Vector2(2, 2), Vector2(s, s)), false, Color(0, 0, 0, 0.75))
+		_canvas.draw_texture_rect(t, Rect2(sp - Vector2(s, s) * 0.5, Vector2(s, s)), false)
+	HudStyle.label_left(_canvas, text, sp + Vector2(s * 0.6, fs * 0.35), fs, Color(1, 1, 1), maxi(4, fs / 4))
+
+
+## photo cards (in-game pictures of the sights, assets/ui/cards) pinned beside their places
+const CARDS := [["iskandar", "Озеро Искандар", -3300.0, -8300.0, Vector2(-330, -200), -0.08],
+	["hisor", "Крепость Гиссар", -4500.0, -2900.0, Vector2(-320, 40), -0.06],
+	["romit", "Ромит", 4200.0, -2300.0, Vector2(110, 40), 0.06],
+	["embankment", "Душанбе, набережная", 0.0, -150.0, Vector2(140, 20), 0.05]]
+var _card_tex := {}
+
+
+func _cards() -> void:
+	for cd in CARDS:
+		var id: String = cd[0]
+		if not _card_tex.has(id):
+			var p := "res://assets/ui/cards/%s.jpg" % id
+			_card_tex[id] = load(p) if ResourceLoader.exists(p) else null
+		var tex: Texture2D = _card_tex[id]
+		if tex == null:
+			continue
+		var anchor := w2s(cd[2], cd[3]) + (cd[4] as Vector2)
+		var w := 230.0
+		var h := w * 0.62
+		_canvas.draw_set_transform(anchor, float(cd[5]), Vector2.ONE)
+		_canvas.draw_rect(Rect2(Vector2(-6, -6) + Vector2(4, 5), Vector2(w + 12, h + 44)), Color(0, 0, 0, 0.35))
+		_canvas.draw_rect(Rect2(Vector2(-6, -6), Vector2(w + 12, h + 44)), Color(0.98, 0.97, 0.94))
+		_canvas.draw_texture_rect(tex, Rect2(Vector2.ZERO, Vector2(w, h)), false)
+		var f := HudStyle.font()
+		var tw := f.get_string_size(String(cd[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+		_canvas.draw_string(f, Vector2((w - tw) * 0.5, h + 26), String(cd[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.12, 0.12, 0.14))
+		_canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _label(p: Vector2, t: String, fs: int, col: Color) -> void:
@@ -261,9 +396,26 @@ var _nav_box: VBoxContainer
 var _nav_target := Vector3.INF
 
 
+var _nav_open := false
+var _nav_btn: Button
+
+
 func _build_nav() -> void:
+	var vs := get_viewport().get_visible_rect().size
+	var u := minf(vs.x, vs.y) / 10.0
+	_nav_btn = Button.new()
+	_nav_btn.text = "НАВИГАТОР ▾"
+	_nav_btn.focus_mode = Control.FOCUS_NONE
+	_nav_btn.add_theme_font_size_override("font_size", 20)
+	_nav_btn.position = Vector2(16, 1.75 * u)
+	_nav_btn.pressed.connect(func() -> void:
+		_nav_open = not _nav_open
+		_nav_box.visible = _nav_open
+		_nav_btn.text = "НАВИГАТОР ▴" if _nav_open else "НАВИГАТОР ▾")
+	_root.add_child(_nav_btn)
 	_nav_box = VBoxContainer.new()
-	_nav_box.position = Vector2(16, 90)
+	_nav_box.position = Vector2(16, 1.75 * u + 50)
+	_nav_box.visible = false
 	_nav_box.add_theme_constant_override("separation", 6)
 	_root.add_child(_nav_box)
 	var t := Label.new()

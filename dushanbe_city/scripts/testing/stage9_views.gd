@@ -31,6 +31,31 @@ func _ready() -> void:
 	cam.fov = 55.0
 	add_child(cam)
 	cam.make_current()
+	if OS.get_cmdline_user_args().has("map"):
+		_ui(true)
+		var wm: WorldMapScreen = main.get_node("WorldMap")
+		wm.toggle()
+		wm.center = Vector2(0, -4600)
+		wm.mpp = 9.0
+		await get_tree().create_timer(1.0).timeout
+		await _snap("map_overview")
+		wm.center = Vector2(200, -3000)
+		wm.mpp = 3.0
+		await get_tree().create_timer(0.5).timeout
+		await _snap("map_city")
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("falls"):
+		_hour(17.2)
+		for k in 4:
+			var d := Vector3.FORWARD.rotated(Vector3.UP, k * PI * 0.5)
+			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("cards"):
+		await _card_shots()
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("hud"):
 		await _hud_shots()
 		get_tree().quit()
@@ -195,3 +220,41 @@ func _hud_shots() -> void:
 	car.fuel_l = car.tank_l * 0.08
 	await get_tree().create_timer(0.6).timeout
 	await _snap("hud_drive_lowfuel")
+
+
+## the map's photo cards: in-game pictures of the sights -> assets/ui/cards/<id>.jpg (512 x 320)
+func _card_shots() -> void:
+	_hour(17.2)
+	var specs := [
+		["iskandar", Vector3(-3050, 0, -8000), 90.0, Vector3(-3330, 0, -8320), 0.0],
+		["waterfall", Vector3(1460, 0, -7360), 25.0, Vector3(1460, 0, -7430), 18.0],
+		["hisor", Vector3(-4430, 0, -2800), 30.0, Vector3(-4500, 0, -2900), 10.0],
+		["romit", Vector3(4050, 0, -2050), 45.0, Vector3(4350, 0, -2600), 120.0],
+	]
+	for sp in specs:
+		var from: Vector3 = sp[1]
+		var at: Vector3 = sp[3]
+		await _look("card_" + str(sp[0]), from, at, float(sp[2]), float(sp[4]))
+		_save_card(str(sp[0]))
+	# the embankment (peninsula): along the promenade, towards the sea
+	var tp: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/terrain/paths.json"))
+	var pr: Array = tp["promenade"]
+	var q0: Array = pr[pr.size() / 3]
+	var q1: Array = pr[pr.size() / 3 + 12]
+	var a := Vector3(q0[0], 0, q0[1])
+	var b := Vector3(q1[0], 0, q1[1])
+	a.y = CityWorld.instance.terrain_height(a.x, a.z) + 6.0
+	b.y = CityWorld.instance.terrain_height(b.x, b.z) + 2.0
+	await _look("card_embankment", a - (b - a).normalized() * 30.0 + Vector3(0, 4, 0), b + Vector3(0, 0, 0))
+	_save_card("embankment")
+
+
+func _save_card(id: String) -> void:
+	var img := get_viewport().get_texture().get_image()
+	var w := img.get_width()
+	var h := img.get_height()
+	var cw := mini(w, int(h * 1.6))
+	img = img.get_region(Rect2i((w - cw) / 2, 0, cw, h))
+	img.resize(512, 320, Image.INTERPOLATE_LANCZOS)
+	img.save_jpg(ProjectSettings.globalize_path("res://assets/ui/cards/%s.jpg" % id), 0.86)
+	print("CARD ", id)

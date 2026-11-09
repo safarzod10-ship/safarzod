@@ -73,21 +73,6 @@ func _bar(rc: Rect2, v: float, col: Color) -> void:
 	draw_rect(Rect2(rc.position, Vector2(rc.size.x * clampf(v, 0.0, 1.0), rc.size.y)), col)
 
 
-static var _logo_font: FontVariation
-
-
-## «Dushanbe-X»: bold italic white, thick black outline, the X in red (as in the mock-ups)
+## «Dushanbe-X» (HudStyle.logo)
 func _logo(p: Vector2, u: float) -> void:
-	if _logo_font == null:
-		_logo_font = FontVariation.new()
-		_logo_font.base_font = HudStyle.font()
-		_logo_font.variation_embolden = 0.6
-		_logo_font.variation_transform = Transform2D(Vector2(1, 0), Vector2(-0.22, 1), Vector2.ZERO)
-	var fs := int(u * 0.62)
-	var t1 := "Dushanbe-"
-	var w1 := _logo_font.get_string_size(t1, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var base := p + Vector2(0, fs * 0.95)
-	var ol := int(u * 0.16)
-	draw_string_outline(_logo_font, base, t1 + "X", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ol, Color(0.03, 0.03, 0.04))
-	draw_string(_logo_font, base, t1, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1))
-	draw_string(_logo_font, base + Vector2(w1, 0), "X", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.92, 0.1, 0.1))
+	HudStyle.logo(self, p, u)

@@ -505,44 +505,83 @@ def rivers_under_roads(rivers, roads, clear=1.2, deck=2.6):
 
 # -------------------------------------------------------------------- world map
 def write_map(W, H, splat, biome, road_mask, path, px=4096):
-    s = H.shape[0]
+    """the world map texture in an illustrated tourist-map style: saturated valley greens, forests as
+    little tree crowns, strong relief shading with snowy peaks, bright rivers and lakes with a light
+    shore, city blocks, roads as coloured bands with dark outlines (motorways orange, roads yellow)"""
     rock, snow, earth, sand = [splat[..., i] for i in range(4)]
+    forest, fields, settle = biome[..., 0], biome[..., 1], biome[..., 2]
+    # relief: multi-directional hillshade + slope darkening (mountains read as mountains)
     gx = np.gradient(H, T.STEP, axis=1); gz = np.gradient(H, T.STEP, axis=0)
-    nrm = np.dstack([-gx, -gz, np.ones_like(H) * 2.5]); nrm /= np.linalg.norm(nrm, axis=2, keepdims=True)
-    sh = np.clip(nrm @ np.array([-0.45, -0.55, 0.7]), 0, 1)
-    c = np.zeros(H.shape + (3,)); c[:] = [0.56, 0.66, 0.38]
-    c = c * (1 - biome[..., 0:1] * 0.7) + np.array([0.27, 0.42, 0.22]) * biome[..., 0:1] * 0.7
-    c = c * (1 - biome[..., 1:2] * 0.6) + np.array([0.70, 0.68, 0.40]) * biome[..., 1:2] * 0.6
-    c = c * (1 - earth[..., None] * 0.6) + np.array([0.62, 0.54, 0.40]) * earth[..., None] * 0.6
-    c = c * (1 - rock[..., None]) + np.array([0.55, 0.52, 0.48]) * rock[..., None]
-    c = c * (1 - snow[..., None]) + np.array([0.96, 0.97, 0.99]) * snow[..., None]
-    c = c * (1 - biome[..., 2:3] * 0.5) + np.array([0.84, 0.80, 0.74]) * biome[..., 2:3] * 0.5
-    img = (np.clip(c * (0.45 + 0.7 * sh[..., None]), 0, 1) * 255).astype(np.uint8)
-    im = Image.fromarray(img).resize((px, px), Image.BILINEAR)
+    nrm = np.dstack([-gx, -gz, np.ones_like(H) * 3.0]); nrm /= np.linalg.norm(nrm, axis=2, keepdims=True)
+    sh = 0.0
+    for lx, lz, wgt in ((-0.5, -0.6, 0.6), (-0.8, 0.1, 0.25), (0.1, -0.9, 0.15)):
+        L = np.array([lx, lz, 0.75]); L = L / np.linalg.norm(L)
+        sh = sh + np.clip(nrm @ L, 0, 1) * wgt
+    slope = 1.0 - nrm[..., 2]
+    hn = np.clip((H - 0.0) / 2600.0, 0, 1)
+    c = np.zeros(H.shape + (3,))
+    low = np.array([0.33, 0.56, 0.2]); mid = np.array([0.3, 0.5, 0.2]); high = np.array([0.45, 0.5, 0.3])
+    c[:] = low
+    c = c * (1 - np.clip(hn * 2.2, 0, 1)[..., None]) + mid * np.clip(hn * 2.2, 0, 1)[..., None]
+    c = c * (1 - np.clip((hn - 0.35) * 2.0, 0, 1)[..., None]) + high * np.clip((hn - 0.35) * 2.0, 0, 1)[..., None]
+    c = c * (1 - fields[..., None] * 0.55) + np.array([0.72, 0.74, 0.36]) * fields[..., None] * 0.55
+    c = c * (1 - forest[..., None] * 0.75) + np.array([0.16, 0.38, 0.15]) * forest[..., None] * 0.75
+    c = c * (1 - earth[..., None] * 0.5) + np.array([0.66, 0.58, 0.42]) * earth[..., None] * 0.5
+    c = c * (1 - rock[..., None] * 0.6) + np.array([0.52, 0.5, 0.42]) * rock[..., None] * 0.6
+    c = c * (1 - snow[..., None]) + np.array([0.97, 0.98, 1.0]) * snow[..., None]
+    c = c * (1 - settle[..., None] * 0.3) + np.array([0.6, 0.6, 0.45]) * settle[..., None] * 0.3
+    shade = 0.5 + 0.75 * sh - 0.14 * np.clip(slope * 1.5, 0, 1)
+    img = np.clip(c * shade[..., None] * 1.08, 0, 1)
+    im = Image.fromarray((img * 255).astype(np.uint8)).resize((px, px), Image.BICUBIC)
     d = ImageDraw.Draw(im)
     k = px / T.SIZE
 
     def P(x, z):
         return ((x - T.X0) * k, (z - T.Z0) * k)
 
+    # forests: little tree crowns (dark rim, lighter top-left highlight)
+    rng = np.random.default_rng(7)
+    n = H.shape[0]
+    for _ in range(220000):
+        i, j = rng.integers(0, n), rng.integers(0, n)
+        f = forest[j, i]
+        # forests dense; scattered trees everywhere else in the green (not on rock / snow / city)
+        if snow[j, i] > 0.3 or rock[j, i] > 0.6 or settle[j, i] > 0.5:
+            continue
+        if rng.random() > (f if f >= 0.3 else 0.12):
+            continue
+        x = (i + rng.random()) * px / (n - 1); z = (j + rng.random()) * px / (n - 1)
+        r = 2.6 + rng.random() * 2.6
+        g = 0.75 + 0.5 * rng.random()
+        d.ellipse([x - r, z - r, x + r, z + r], fill=(int(18 * g), int(62 * g), int(22 * g)))
+        d.ellipse([x - r * 0.75, z - r * 0.85, x + r * 0.45, z + r * 0.35], fill=(int(46 * g), int(118 * g), int(40 * g)))
+    # water
     for lk in W["lakes"]:
         cx, cz = lk["c"]; rx, rz = lk["r"]
         a, b = P(cx - rx, cz - rz); c2, d2 = P(cx + rx, cz + rz)
-        d.ellipse([a, b, c2, d2], fill=(70, 130, 200))
+        d.ellipse([a - 4, b - 4, c2 + 4, d2 + 4], fill=(205, 232, 245))
+        d.ellipse([a, b, c2, d2], fill=(40, 120, 205))
+        d.ellipse([a + (c2 - a) * 0.2, b + (d2 - b) * 0.2, c2 - (c2 - a) * 0.3, d2 - (d2 - b) * 0.35], fill=(60, 145, 225))
     for rv in W["rivers"]:
-        d.line([P(p[0], p[2]) for p in rv["pts"]], fill=(70, 130, 210), width=max(2, int(rv["w"] * k * 1.5)))
+        pts = [P(p[0], p[2]) for p in rv["pts"]]
+        wpx = max(3, int(rv["w"] * k * 1.8))
+        d.line(pts, fill=(205, 232, 245), width=wpx + 4, joint="curve")
+        d.line(pts, fill=(40, 125, 215), width=wpx, joint="curve")
+    # buildings: light blocks with a darker roof
     for b in W["buildings"]:
         x, z = P(b[1], b[2])
-        r = max(1.0, b[4] * k * 0.5)
-        d.rectangle([x - r, z - r * 0.6, x + r, z + r * 0.6], fill=(150, 140, 130))
+        r = max(1.2, b[4] * k * 0.5)
+        d.rectangle([x - r, z - r * 0.65, x + r, z + r * 0.65], fill=(120, 112, 104))
+        d.rectangle([x - r * 0.8, z - r * 0.5, x + r * 0.8, z + r * 0.4], fill=(214, 206, 192))
     order = {"dirt": 0, "lane": 1, "street": 2, "road": 3, "mountain": 3, "highway": 4, "avenue": 5}
     for rd in sorted(W["roads"], key=lambda r: order[r["cls"]]):
-        col = {"dirt": (150, 120, 80), "lane": (235, 235, 230), "street": (245, 245, 240), "road": (250, 230, 150),
-               "mountain": (250, 210, 120), "highway": (250, 190, 90), "avenue": (255, 255, 255)}[rd["cls"]]
-        wpx = max(2, int(rd["w"] * k * 1.6))
+        col = {"dirt": (176, 140, 92), "lane": (240, 240, 232), "street": (250, 250, 244), "road": (252, 222, 110),
+               "mountain": (250, 210, 100), "highway": (250, 170, 60), "avenue": (255, 236, 150)}[rd["cls"]]
+        wpx = max(2, int(rd["w"] * k * 1.7))
         pts = [P(p[0], p[2]) for p in rd["pts"]]
-        d.line(pts, fill=(60, 60, 60), width=wpx + 2)
-        d.line(pts, fill=col, width=wpx)
+        d.line(pts, fill=(55, 45, 35), width=wpx + 3, joint="curve")
+        d.line(pts, fill=col, width=wpx, joint="curve")
+    im = im.filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
     im.save(path)
 
 
