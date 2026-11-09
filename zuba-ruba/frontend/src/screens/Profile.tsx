@@ -3,7 +3,7 @@ import { api } from "../api";
 import { useApp } from "../AppContext";
 import { formatDate, initials, plural } from "../format";
 import { IconCheck, IconCopy, IconGift, IconShare } from "../icons";
-import { Star } from "../stars";
+import { Amount, Star } from "../stars";
 import { navigate } from "../router";
 import { haptic, openExternal } from "../telegram";
 import type { Home, Referrals } from "../types";
@@ -76,6 +76,22 @@ export function ProfileScreen() {
         </div>
       </section>
 
+      <section className="payout">
+        <div className="payout-info">
+          <span className="payout-label">Доступно к выводу</span>
+          <Amount value={home.data?.balance.available ?? "0"} size={18} className="payout-value" />
+        </div>
+        <Button
+          variant="primary"
+          onClick={() => {
+            haptic("medium");
+            navigate("/withdraw?from=profile");
+          }}
+        >
+          Вывести
+        </Button>
+      </section>
+
       <dl className="stats-row">
         <div>
           <dt>Кейсов открыто</dt>
@@ -127,7 +143,6 @@ export function ProfileScreen() {
 
       <div className="group group-spaced menu">
         <NavRow label="История операций" onClick={() => navigate("/history")} />
-        <NavRow label="Вывод подарками" onClick={() => navigate("/withdraw?from=profile")} />
         {me.is_admin && <NavRow label="Панель управления →" accent onClick={() => navigate("/admin")} />}
         <NavRow label="Правила и вопросы" onClick={() => navigate("/rules")} />
         {config.support_url && <NavRow label="Поддержка" onClick={() => openExternal(config.support_url!)} />}

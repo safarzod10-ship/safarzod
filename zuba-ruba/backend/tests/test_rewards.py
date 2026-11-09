@@ -197,3 +197,18 @@ async def test_auto_withdrawals_send_gifts(env):
     items = (await env.client.get("/api/withdrawals", headers=auth(1))).json()["items"]
     assert items[0]["id"] == created["id"] and items[0]["status"] == "completed"
     assert await balances(1) == {"available": 5000, "pending": 0, "withdrawing": 0}
+
+
+async def test_manual_withdrawal_completion(env):
+    await register(env.client, 1)
+    await fund(env, 1, "20")
+    created = (await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "15"})).json()
+    done = await env.client.post(f"/api/admin/withdrawals/{created['id']}/complete", headers=auth(ADMIN_ID), json={"comment": ""})
+    assert done.status_code == 200 and done.json()["status"] == "completed"
+    assert env.bot.gifts_sent == []
+    assert await balances(1) == {"available": 5000, "pending": 0, "withdrawing": 0}
+    again = await env.client.post(f"/api/admin/withdrawals/{created['id']}/complete", headers=auth(ADMIN_ID), json={"comment": ""})
+    assert again.status_code == 409
+    async with sessionmaker()() as session:
+        kinds = [n.dedup_key for n in (await session.execute(select(Notification).where(Notification.user_id == 1))).scalars()]
+    assert f"withdrawal:{created['id']}:completed" in kinds

@@ -56,7 +56,8 @@
   --tg-safe-bottom: 0px;
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom));
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Unbounded", var(--font);
+  --font-display: var(--font);
+  --font-brand: "Unbounded", var(--font);
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
   color-scheme: light;
 }
@@ -174,7 +175,7 @@ p {
 
 .screen {
   padding: 0 var(--gutter);
-  max-width: 560px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
@@ -189,18 +190,17 @@ p {
 }
 
 .screen-title {
-  font-family: var(--font-display);
   font-size: 24px;
-  line-height: 1.15;
+  line-height: 1.2;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 .brand {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-family: var(--font-brand);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .lead {

@@ -16,7 +16,8 @@ export const TAB_PATHS: Record<TabId, string> = {
 };
 
 export function parseHash(hash: string): Route {
-  const cleaned = hash.replace(/^#/, "");
+  const raw = hash.replace(/^#/, "");
+  const cleaned = raw.startsWith("/") ? raw : "/";
   const [rawPath, rawQuery = ""] = cleaned.split("?");
   const segments = (rawPath ?? "").split("/").filter(Boolean).map((part) => decodeURIComponent(part));
   return { path: `/${segments.join("/")}`, segments, query: new URLSearchParams(rawQuery) };

@@ -135,22 +135,6 @@ export function TasksScreen() {
         </button>
       }
     >
-      <ol className="steps" aria-label="Как получить кейс">
-        <li>
-          <span className="steps-num">1</span>Перейди
-        </li>
-        <li>
-          <span className="steps-num">2</span>Выполни
-        </li>
-        <li>
-          <span className="steps-num">3</span>Проверь
-        </li>
-        <li className="steps-prize">
-          <Star size={18} />
-          Кейс
-        </li>
-      </ol>
-
       <div className="filters" role="tablist" aria-label="Тип заданий">
         {FILTERS.map((item) => (
           <button
@@ -165,7 +149,7 @@ export function TasksScreen() {
             }}
           >
             {item.label}
-            {tasks.data && <span className="filter-count">{counts[item.id]}</span>}
+            {counts[item.id] > 0 && <span className="filter-count">{counts[item.id]}</span>}
           </button>
         ))}
       </div>

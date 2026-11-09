@@ -44,6 +44,22 @@ export function AdminWithdrawalsView() {
     }
   };
 
+  const markSent = async (item: AdminWithdrawal) => {
+    if (!(await confirmDialog(`Вы отправили «${item.gift_name ?? "Подарок"}» (${formatStars(item.amount)}) пользователю ${userName(item)} сами? Заявка закроется как выполненная.`))) return;
+    setBusy(item.id);
+    setError(null);
+    try {
+      await api.post(`/admin/withdrawals/${item.id}/complete`, { comment: "" });
+      haptic("success");
+    } catch (err) {
+      haptic("error");
+      setError(err instanceof ApiError ? err.message : "Не удалось закрыть заявку.");
+    } finally {
+      setBusy(null);
+      await reloadAll();
+    }
+  };
+
   const topup = async () => {
     const value = Number(amount);
     if (!Number.isInteger(value) || value < 1 || value > 100000) {
@@ -80,7 +96,7 @@ export function AdminWithdrawalsView() {
     <div className="adm-stack">
       <div className="adm-grid adm-grid-side">
         <div className="adm-stack">
-          {short > 0 && (
+          {q?.auto && short > 0 && (
             <div className="adm-alert">
               На балансе бота не хватает {formatStars(String(short))} для заявок в очереди. Пополните баланс, иначе Telegram отклонит отправку подарков.
             </div>
@@ -162,9 +178,14 @@ export function AdminWithdrawalsView() {
                             render: (row: AdminWithdrawal) => (
                               <span className="adm-actions">
                                 {row.status === "pending" ? (
-                                  <button type="button" className="adm-btn adm-btn-sm" disabled={busy !== null} onClick={() => void approve(row)}>
-                                    {busy === row.id ? "Отправляем…" : "Отправить"}
-                                  </button>
+                                  <>
+                                    <button type="button" className="adm-btn adm-btn-sm" disabled={busy !== null} onClick={() => void markSent(row)}>
+                                      {busy === row.id ? "Сохраняем…" : "Отправил вручную"}
+                                    </button>
+                                    <button type="button" className="adm-btn adm-btn-sm adm-btn-ghost" disabled={busy !== null} onClick={() => void approve(row)}>
+                                      Отправить ботом
+                                    </button>
+                                  </>
                                 ) : (
                                   <button type="button" className="adm-btn adm-btn-sm" disabled={busy !== null} onClick={() => setPrompt({ item: row, mode: "complete" })}>
                                     Подарок дошёл
@@ -196,7 +217,10 @@ export function AdminWithdrawalsView() {
             {q?.auto && <p className="adm-note">Включена автоматическая отправка: новые заявки уходят без одобрения, пока на балансе хватает звёзд.</p>}
           </Panel>
           <Panel title="Пополнить баланс">
-            <p className="adm-note">Счёт в звёздах Telegram оплачивается с вашего аккаунта и зачисляется на баланс бота. С этого баланса отправляются подарки.</p>
+            <p className="adm-note">
+              Нужно только если подарки отправляет бот (кнопка «Отправить ботом» или автоотправка). Счёт в звёздах Telegram оплачивается с вашего аккаунта и
+              зачисляется на баланс бота. Если вы отправляете подарки сами, пополнять не нужно.
+            </p>
             <div className="adm-chips">
               {PRESETS.map((preset) => (
                 <button key={preset} type="button" className={String(preset) === amount ? "adm-chip adm-chip-active" : "adm-chip"} onClick={() => setAmount(String(preset))}>

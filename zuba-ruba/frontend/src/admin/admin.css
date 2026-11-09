@@ -451,6 +451,11 @@
   color: var(--danger);
 }
 
+.adm-btn-ghost {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
 .adm-btn-accent {
   background: var(--adm-accent);
   color: var(--adm-accent-ink);

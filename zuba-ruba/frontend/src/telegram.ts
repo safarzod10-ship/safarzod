@@ -77,6 +77,9 @@ function supports(version: string): boolean {
 }
 
 export function setupWebApp(): void {
+  if (window.location.hash && !window.location.hash.startsWith("#/")) {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/`);
+  }
   const app = webApp();
   if (!app) return;
   app.ready();

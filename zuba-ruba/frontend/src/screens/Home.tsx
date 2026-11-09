@@ -70,7 +70,7 @@ export function HomeScreen() {
                   navigate("/withdraw");
                 }}
               >
-                Вывести подарком
+                Вывести
               </button>
             </div>
           </section>

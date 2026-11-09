@@ -189,3 +189,17 @@ test("maintenance error switches to the maintenance screen", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Технические работы" })).toBeVisible();
   await expect(page.locator("text=Идут технические работы.")).toBeVisible();
 });
+
+test("tab bar is visible when Telegram opens the app with launch parameters in the hash", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await fakeTelegram(page, "light");
+  await mockApi(page);
+  await page.goto("/#tgWebAppData=query_id%3DAAH&tgWebAppVersion=8.0&tgWebAppPlatform=ios");
+  await page.locator("text=Общий баланс").waitFor();
+  await expect(page.locator(".tabbar")).toBeVisible();
+  const box = await page.locator(".tabbar-inner").boundingBox();
+  expect(box && box.y + box.height <= 780).toBeTruthy();
+  expect(new URL(page.url()).hash).toBe("#/");
+  await page.getByRole("button", { name: "Задания" }).click();
+  await expect(page.locator(".tab-active")).toContainText("Задания");
+});

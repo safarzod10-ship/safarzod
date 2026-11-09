@@ -8,6 +8,12 @@ describe("parseHash", () => {
     expect(parseHash("#/admin/users/42").segments).toEqual(["admin", "users", "42"]);
   });
 
+  it("treats Telegram launch parameters in the hash as the home screen", () => {
+    const route = parseHash("#tgWebAppData=query_id%3DAA%26user%3D%257B%257D&tgWebAppVersion=8.0&tgWebAppPlatform=ios");
+    expect(route.path).toBe("/");
+    expect(tabOf(route)).toBe("home");
+  });
+
   it("parses query parameters", () => {
     const route = parseHash("#/history?from=home");
     expect(route.path).toBe("/history");

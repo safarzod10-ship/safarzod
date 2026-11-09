@@ -106,7 +106,7 @@ function buildBlocks(config: Config): Block[] {
       head: ["Параметр", "Значение"],
       rows: config.features.withdrawals
         ? [
-            { label: "Как приходит", value: "Подарком Telegram от бота. Его можно оставить в профиле или обменять на звёзды." },
+            { label: "Как приходит", value: "Подарком Telegram на твой аккаунт. Его можно оставить в профиле или обменять на звёзды." },
             { label: "Номиналы", value: config.withdraw.gift_stars.map((value) => `${value} ⭐`).join(", ") },
             { label: "Минимум", value: stars(config.withdraw.min_stars) },
             { label: "Лимит", value: `${config.withdraw.per_day} ${plural(config.withdraw.per_day, "заявка", "заявки", "заявок")} в сутки` },

@@ -380,13 +380,13 @@ async def reject_withdrawal(withdrawal_id: int, body: CommentIn, c: Ctx = Depend
 
 @router.post("/withdrawals/{withdrawal_id}/complete")
 async def complete_withdrawal(withdrawal_id: int, body: CommentIn, c: Ctx = Depends(admin_ctx)):
-    if not body.comment.strip():
-        raise ApiError(422, "validation", "Опишите, как подтверждена отправка")
     withdrawal = (await c.session.execute(select(Withdrawal).where(Withdrawal.id == withdrawal_id))).scalar_one_or_none()
-    if withdrawal is None or withdrawal.status != "approved":
-        raise ApiError(409, "conflict", "Подтвердить вручную можно только заявку в статусе «Выполняется»")
-    withdrawal = await withdrawals.finish(c.session, withdrawal_id, True, None, body.comment.strip())
-    await audit.record(c.session, c.user.id, "withdrawal.manual_complete", withdrawal.id, comment=body.comment.strip())
+    if withdrawal is None or withdrawal.status not in ("pending", "approved"):
+        raise ApiError(409, "conflict", "Заявка уже обработана")
+    comment = body.comment.strip() or None
+    withdrawal = await withdrawals.finish(c.session, withdrawal_id, True, None, comment)
+    withdrawal.admin_id = c.user.id
+    await audit.record(c.session, c.user.id, "withdrawal.manual_complete", withdrawal.id, comment=comment or "")
     await c.session.commit()
     return withdrawals.view(withdrawal)
 

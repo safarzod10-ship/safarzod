@@ -35,7 +35,7 @@ export function WithdrawScreen() {
   const submit = async () => {
     if (!selected) return;
     const ok = await confirmDialog(
-      `Вывести «${selected.name}» за ${selected.stars} ⭐? Подарок придёт в Telegram от бота${config.withdraw.auto ? "" : " после проверки заявки"}.`,
+      `Вывести «${selected.name}» за ${selected.stars} ⭐? Подарок придёт в Telegram${config.withdraw.auto ? "" : " после проверки заявки"}.`,
     );
     if (!ok) return;
     setBusy(true);
@@ -81,7 +81,7 @@ export function WithdrawScreen() {
           {data.data.enabled && (
             <>
               <p className="wd-lead">
-                Выбери подарок — бот отправит его тебе в Telegram. Подарок можно оставить в профиле или обменять на звёзды. Минимум —{" "}
+                Выбери подарок — он придёт тебе в Telegram. Подарок можно оставить в профиле или обменять на звёзды. Минимум —{" "}
                 {config.withdraw.min_stars}
                 <Star size={13} className="star-inline" />.
               </p>

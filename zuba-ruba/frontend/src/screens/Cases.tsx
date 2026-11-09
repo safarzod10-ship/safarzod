@@ -11,9 +11,10 @@ import { Badge, Button, EmptyState, ErrorState, Loader, Screen, Section, clearRe
 const CARD = 92;
 const GAP = 10;
 const STEP = CARD + GAP;
-const STRIP = 54;
-const WIN_INDEX = 7;
-const SPIN_MS = 5600;
+const STRIP = 80;
+const START_INDEX = 3;
+const WIN_INDEX = 72;
+const SPIN_MS = 5200;
 
 type Tier = "common" | "rare" | "top";
 
@@ -41,7 +42,7 @@ function buildStrip(table: PrizeRow[], winner: string | null): string[] {
   return items;
 }
 
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 5);
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 function rewardNote(item: Case): string {
@@ -75,7 +76,7 @@ export function CasesScreen() {
 
   const startOffset = useCallback(() => {
     const width = viewport.current?.clientWidth ?? 360;
-    return width / 2 - ((STRIP - 4) * STEP + CARD / 2);
+    return width / 2 - (START_INDEX * STEP + CARD / 2);
   }, []);
 
   useEffect(() => {
@@ -86,8 +87,8 @@ export function CasesScreen() {
     const drift = (time: number) => {
       const delta = time - last;
       last = time;
-      let next = offset.current + delta * 0.018;
-      if (next > startOffset() + STEP * 6) next = startOffset();
+      let next = offset.current - delta * 0.02;
+      if (next < startOffset() - STEP * 8) next = startOffset();
       place(next);
       frame.current = requestAnimationFrame(drift);
     };
@@ -107,6 +108,7 @@ export function CasesScreen() {
       const duration = reducedMotion() ? 500 : SPIN_MS;
       const started = performance.now();
       let lastIndex = -1;
+      let lastHaptic = 0;
       place(from);
       const tick = (time: number) => {
         const progress = Math.min((time - started) / duration, 1);
@@ -115,7 +117,10 @@ export function CasesScreen() {
         const index = Math.floor((width / 2 - value) / STEP);
         if (index !== lastIndex) {
           lastIndex = index;
-          if (progress < 0.97) haptic("select");
+          if (progress < 0.98 && time - lastHaptic > 70) {
+            lastHaptic = time;
+            haptic("select");
+          }
         }
         if (progress < 1) {
           frame.current = requestAnimationFrame(tick);

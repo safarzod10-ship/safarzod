@@ -156,7 +156,8 @@ test("star top-up opens a Telegram invoice", async ({ page }) => {
   await setup(page, "dark");
   await page.setViewportSize({ width: 430, height: 900 });
   await page.goto("/#/admin/withdrawals");
-  await expect(page.locator("text=не хватает 60 ⭐")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Отправил вручную" }).first()).toBeVisible();
+  await expect(page.locator("text=не хватает 60 ⭐")).toHaveCount(0);
   await page.getByRole("button", { name: "1000", exact: true }).click();
   await page.getByRole("button", { name: /Пополнить на/ }).click();
   await expect(page.locator("text=Оплачено 1000 ⭐")).toBeVisible();
