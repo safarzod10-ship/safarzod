@@ -70,14 +70,15 @@ run_installer() {
 
 APP="$WORK/opt/zuba-ruba/zuba-ruba"
 
-answers "$TOKEN" "1000" "FL-abcdefgh-12345" "$DOMAIN" "admin@example.com"
-run_installer >"$WORK/first.log" 2>&1 || { cat "$WORK/first.log"; fail "first installation"; }
+answers
+ZR_BOT_TOKEN="$TOKEN" ZR_ADMIN_IDS="1000" ZR_FLYER_API_KEY="FL-abcdefgh-12345" ZR_DOMAIN="$DOMAIN" run_installer >"$WORK/first.log" 2>&1 || { cat "$WORK/first.log"; fail "first installation"; }
 stop_feeder
-pass "first installation"
+pass "first installation (non-interactive, one command)"
 
 [[ $(stat -c %a "$APP/.env") == 600 ]] || fail ".env permissions"
 grep -qx "BOT_USERNAME=zuba_ruba_bot" "$APP/.env" || fail "bot username from getMe"
 grep -qx "ADMIN_IDS=1000" "$APP/.env" || fail "admin ids"
+grep -qx "CADDY_GLOBAL_OPTIONS=" "$APP/.env" || fail "empty acme email"
 PG_PASSWORD=$(grep '^POSTGRES_PASSWORD=' "$APP/.env" | cut -d= -f2)
 HOOK_SECRET=$(grep '^FLYER_WEBHOOK_SECRET=' "$APP/.env" | cut -d= -f2)
 [[ ${#PG_PASSWORD} -eq 48 && ${#HOOK_SECRET} -eq 48 ]] || fail "generated secrets"

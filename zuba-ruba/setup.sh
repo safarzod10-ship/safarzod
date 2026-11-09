@@ -7,6 +7,8 @@ REPO_SUBDIR="zuba-ruba"
 INSTALL_DIR="${ZR_INSTALL_DIR:-/opt/zuba-ruba}"
 MIN_DISK_GB=5
 MIN_RAM_MB=900
+NONINTERACTIVE=0
+[[ -n ${ZR_BOT_TOKEN:-} ]] && NONINTERACTIVE=1
 
 if [[ -t 1 ]]; then
 	BOLD=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; RESET=$'\e[0m'
@@ -45,6 +47,10 @@ ask_secret() {
 
 confirm() {
 	local answer
+	if (( NONINTERACTIVE )); then
+		[[ ${2:-y} == y ]]
+		return
+	fi
 	answer=$(ask "$1 (y/n)" "${2:-y}")
 	[[ $answer =~ ^[YyДд] ]]
 }
@@ -199,7 +205,7 @@ prompt_admins() {
 }
 
 prompt_flyer() {
-	local current="$1" key response
+	local current="$1" key
 	while true; do
 		if [[ -n $current ]] && confirm "Использовать сохранённый ключ Flyer?"; then
 			key="$current"
@@ -211,19 +217,7 @@ prompt_flyer() {
 			warn "Неверный формат ключа Flyer"
 			continue
 		fi
-		response=$(curl -fsS --max-time 15 -H 'Content-Type: application/json' -d "{\"key\":\"$key\"}" https://api.flyerhubs.com/get_me 2>/dev/null || true)
-		if [[ -z $response ]]; then
-			warn "api.flyerhubs.com недоступен"
-		elif [[ $response == *'"error"'* ]] && [[ $response != *'"error":null'* ]] && [[ $response != *'"error":""'* ]]; then
-			warn "Flyer вернул ошибку: $(printf '%s' "$response" | json_field error)"
-		else
-			local type
-			type=$(printf '%s' "$response" | json_field type)
-			if [[ -n $type && $type != tasks ]]; then
-				warn "Тип бота во Flyer — «$type». Для заданий нужен тип «tasks» (методы get_tasks и check_task)."
-			else
-				ok "Ключ Flyer принят"
-			fi
+		if validate_flyer_key "$key"; then
 			FLYER_API_KEY="$key"
 			return
 		fi
@@ -234,10 +228,93 @@ prompt_flyer() {
 	done
 }
 
+server_ip() {
+	ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") {print $(i + 1); exit}}'
+}
+
+auto_domain() {
+	local address
+	address=$(server_ip)
+	if [[ -z $address || $address =~ ^(10\.|127\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.) ]]; then
+		return 1
+	fi
+	printf '%s.sslip.io' "${address//./-}"
+}
+
+check_domain() {
+	local value="$1" addresses local_ips matched=0
+	addresses=$( (getent ahostsv4 "$value" || true) | awk '{print $1}' | sort -u | tr '\n' ' ')
+	if [[ -z $addresses ]]; then
+		warn "Домен $value не резолвится. Создайте A-запись на IP этого сервера."
+		return 1
+	fi
+	local_ips="$(hostname -I 2>/dev/null || true) $(server_ip)"
+	for ip in $addresses; do
+		[[ " $local_ips " == *" $ip "* ]] && matched=1
+	done
+	if (( matched )); then
+		ok "Домен $value указывает на этот сервер"
+		return 0
+	fi
+	warn "Домен $value указывает на $addresses, а адреса сервера: $local_ips"
+	warn "Если сервер за NAT, это нормально. Иначе HTTPS-сертификат не будет выпущен."
+	return 1
+}
+
+validate_flyer_key() {
+	local key="$1" response type
+	response=$(curl -fsS --max-time 15 -H 'Content-Type: application/json' -d "{\"key\":\"$key\"}" https://api.flyerhubs.com/get_me 2>/dev/null || true)
+	if [[ -z $response ]]; then
+		warn "api.flyerhubs.com недоступен, ключ сохранён без проверки"
+		return 2
+	fi
+	if [[ $response == *'"error"'* ]] && [[ $response != *'"error":null'* ]] && [[ $response != *'"error":""'* ]]; then
+		warn "Flyer вернул ошибку: $(printf '%s' "$response" | json_field error)"
+		return 1
+	fi
+	type=$(printf '%s' "$response" | json_field type)
+	if [[ -n $type && $type != tasks ]]; then
+		warn "Тип бота во Flyer — «$type». Для заданий нужен тип «tasks» (методы get_tasks и check_task)."
+	else
+		ok "Ключ Flyer принят"
+	fi
+	return 0
+}
+
+configure_from_env() {
+	local env_file="$1" response
+	BOT_TOKEN="${ZR_BOT_TOKEN// /}"
+	[[ $BOT_TOKEN =~ ^[0-9]{6,12}:[A-Za-z0-9_-]{30,}$ ]] || die "ZR_BOT_TOKEN: неверный формат токена"
+	response=$(telegram_get_me "$BOT_TOKEN")
+	[[ $response == *'"ok":true'* ]] || die "Telegram не принял токен ZR_BOT_TOKEN (getMe)"
+	BOT_USERNAME=$(printf '%s' "$response" | json_field username)
+	ok "Бот @$BOT_USERNAME"
+	ADMIN_IDS="${ZR_ADMIN_IDS:-$(env_get "$env_file" ADMIN_IDS)}"
+	ADMIN_IDS="${ADMIN_IDS// /}"
+	[[ $ADMIN_IDS =~ ^[0-9]{3,15}(,[0-9]{3,15})*$ ]] || die "ZR_ADMIN_IDS: нужен числовой Telegram ID"
+	ok "Администраторы: $ADMIN_IDS"
+	FLYER_API_KEY="${ZR_FLYER_API_KEY:-$(env_get "$env_file" FLYER_API_KEY)}"
+	FLYER_API_KEY="${FLYER_API_KEY// /}"
+	[[ $FLYER_API_KEY =~ ^FL-[A-Za-z0-9-]{8,}$ ]] || die "ZR_FLYER_API_KEY: неверный формат ключа Flyer"
+	validate_flyer_key "$FLYER_API_KEY" || [[ $? -eq 2 ]] || die "Flyer не принял ключ ZR_FLYER_API_KEY"
+	DOMAIN="${ZR_DOMAIN:-$(env_get "$env_file" DOMAIN)}"
+	DOMAIN="${DOMAIN,,}"
+	DOMAIN="${DOMAIN#https://}"
+	DOMAIN="${DOMAIN%/}"
+	if [[ -z $DOMAIN ]]; then
+		DOMAIN=$(auto_domain) || die "не удалось определить публичный IP сервера. Укажите домен: ZR_DOMAIN=app.example.com"
+		info "Домен не указан, используется адрес $DOMAIN (публичный DNS sslip.io)"
+	fi
+	[[ $DOMAIN =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$ ]] || die "ZR_DOMAIN: некорректное доменное имя"
+	check_domain "$DOMAIN" || true
+	ACME_EMAIL="${ZR_ACME_EMAIL:-$(env_get "$env_file" ACME_EMAIL)}"
+}
+
 prompt_domain() {
-	local value addresses local_ips
+	local value suggested="$1"
+	[[ -z $suggested ]] && suggested=$(auto_domain || true)
 	while true; do
-		value=$(ask "Домен для Mini App (например, app.example.com)" "$1")
+		value=$(ask "Домен для Mini App (Enter — адрес вида IP.sslip.io)" "$suggested")
 		value=${value,,}
 		value=${value#https://}
 		value=${value%/}
@@ -245,23 +322,8 @@ prompt_domain() {
 			warn "Некорректное доменное имя"
 			continue
 		fi
-		addresses=$( (getent ahostsv4 "$value" || true) | awk '{print $1}' | sort -u | tr '\n' ' ')
-		if [[ -z $addresses ]]; then
-			warn "Домен $value не резолвится. Создайте A-запись на IP этого сервера."
-			confirm "Продолжить всё равно?" n || continue
-		else
-			local_ips=$(hostname -I 2>/dev/null || true)
-			local matched=0
-			for ip in $addresses; do
-				[[ " $local_ips " == *" $ip "* ]] && matched=1
-			done
-			if (( matched )); then
-				ok "Домен указывает на этот сервер ($addresses)"
-			else
-				warn "Домен указывает на $addresses, а адреса сервера: $local_ips"
-				warn "Если сервер за NAT, это нормально. Иначе HTTPS-сертификат не будет выпущен."
-				confirm "Продолжить?" y || continue
-			fi
+		if ! check_domain "$value"; then
+			confirm "Продолжить с этим доменом?" y || continue
 		fi
 		DOMAIN="$value"
 		return
@@ -271,7 +333,7 @@ prompt_domain() {
 configure() {
 	step "Настройка"
 	local env_file="$APP_DIR/.env" reuse=0
-	if [[ -f $env_file ]]; then
+	if [[ -f $env_file ]] && (( ! NONINTERACTIVE )); then
 		info "Найдена конфигурация $env_file"
 		if confirm "Оставить текущие настройки без изменений?"; then
 			reuse=1
@@ -280,7 +342,9 @@ configure() {
 	POSTGRES_PASSWORD=$(env_get "$env_file" POSTGRES_PASSWORD)
 	FLYER_WEBHOOK_SECRET=$(env_get "$env_file" FLYER_WEBHOOK_SECRET)
 	BACKUP_KEEP_DAYS=$(env_get "$env_file" BACKUP_KEEP_DAYS)
-	if (( reuse )); then
+	if (( NONINTERACTIVE )); then
+		configure_from_env "$env_file"
+	elif (( reuse )); then
 		BOT_TOKEN=$(env_get "$env_file" BOT_TOKEN)
 		local response
 		response=$(telegram_get_me "$BOT_TOKEN")
@@ -298,9 +362,9 @@ configure() {
 		prompt_domain "$(env_get "$env_file" DOMAIN)"
 		ACME_EMAIL=$(env_get "$env_file" ACME_EMAIL)
 		while true; do
-			ACME_EMAIL=$(ask "E-mail для регистрации HTTPS-сертификата Let's Encrypt" "$ACME_EMAIL")
-			[[ $ACME_EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] && break
-			warn "Введите корректный e-mail"
+			ACME_EMAIL=$(ask "E-mail для Let's Encrypt (Enter — пропустить)" "$ACME_EMAIL")
+			[[ -z $ACME_EMAIL || $ACME_EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] && break
+			warn "Введите корректный e-mail или оставьте поле пустым"
 		done
 	fi
 	if [[ -z $POSTGRES_PASSWORD ]]; then
@@ -323,6 +387,7 @@ FLYER_API_KEY=$FLYER_API_KEY
 FLYER_WEBHOOK_SECRET=$FLYER_WEBHOOK_SECRET
 DOMAIN=$DOMAIN
 ACME_EMAIL=$ACME_EMAIL
+CADDY_GLOBAL_OPTIONS=${ACME_EMAIL:+email $ACME_EMAIL}
 POSTGRES_USER=zuba
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=zuba
@@ -342,8 +407,19 @@ compose() {
 	docker compose --project-directory "$APP_DIR" -f "$APP_DIR/docker-compose.yml" "$@"
 }
 
+open_firewall() {
+	if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
+		ufw allow 80/tcp >/dev/null
+		ufw allow 443/tcp >/dev/null
+		ufw allow 443/udp >/dev/null
+		ok "В ufw открыты порты 80 и 443"
+	fi
+}
+
 deploy() {
 	step "Сборка и запуск"
+	open_firewall
+	systemctl enable docker >/dev/null 2>&1 || true
 	mkdir -p "$APP_DIR/backups"
 	chmod 700 "$APP_DIR/backups"
 	if compose ps --status running --services 2>/dev/null | grep -qx postgres; then
@@ -411,7 +487,9 @@ EOF
 }
 
 main() {
-	[[ -r $TTY_IN ]] || die "нужен интерактивный терминал (запустите в SSH-сессии)"
+	if (( ! NONINTERACTIVE )) && [[ ! -r $TTY_IN ]]; then
+		die "нужен интерактивный терминал или переменные ZR_BOT_TOKEN, ZR_ADMIN_IDS, ZR_FLYER_API_KEY"
+	fi
 	printf '%sУстановка ZUBA RUBA%s\n' "$BOLD" "$RESET"
 	info "Репозиторий: $REPO_URL ($REPO_BRANCH)"
 	info "Каталог установки: $INSTALL_DIR"

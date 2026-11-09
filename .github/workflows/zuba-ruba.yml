@@ -57,4 +57,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: shellcheck -S warning zuba-ruba/setup.sh zuba-ruba/deploy/backup.sh
-      - run: docker compose -f zuba-ruba/docker-compose.yml --env-file zuba-ruba/.env.example config -q
+      - run: cp zuba-ruba/.env.example zuba-ruba/.env && docker compose -f zuba-ruba/docker-compose.yml config -q
