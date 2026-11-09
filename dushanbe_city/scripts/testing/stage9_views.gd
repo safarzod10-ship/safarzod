@@ -52,6 +52,26 @@ func _ready() -> void:
 			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("somoni"):
+		var lmk: Dictionary = {}
+		var flg: Dictionary = {}
+		for l in wd.landmarks:
+			if l["id"] == "somoni":
+				lmk = l
+			if l["id"] == "flag":
+				flg = l
+		var c := Vector3(lmk["x"], lmk["y"], lmk["z"])
+		var yw := float(lmk["yaw"])
+		var fwd := Vector3(0, 0, -1).rotated(Vector3.UP, yw)
+		var rt := fwd.cross(Vector3.UP)
+		_hour(17.0)
+		await _look("somoni_front", c + fwd * 75.0 + rt * 18.0 + Vector3(0, 9, 0), c + Vector3(0, 18, 0))
+		await _look("somoni_close", c + fwd * 34.0 + Vector3(0, 6, 0), c + Vector3(0, 20, 0))
+		await _look("somoni_side", c - rt * 70.0 + fwd * 20.0 + Vector3(0, 12, 0), c + Vector3(0, 16, 0))
+		var fc := Vector3(flg["x"], flg["y"], flg["z"])
+		await _look("flag", fc + Vector3(150, 40, -220), fc + Vector3(0, 110, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("home"):
 		var hh: HeroHome = main.get_node("HeroHome")
 		var c := Vector3(10, hh.global_position.y, -231)

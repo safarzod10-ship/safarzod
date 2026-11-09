@@ -31,8 +31,8 @@ PASS 30. hired by LakLak (Wallet.laklak_hired)
 PASS 31. order assigned on getting into the van: Объездная дорога, дом 124, 2039 m away, pay 75 смн, beacon + map target true
 PASS 32. delivery completes when the van stops at the drop-off: money 90 смн (pay 75 смн + bonus), deliveries 1, next order true
 PASS 33. motorboats placed: 3 (sea + lakes)
-PASS 34. boat floats: 0.04 m above the water surface (|..| < 0.5), tilt 0.8 deg (< 12), in water true
+PASS 34. boat floats: 0.02 m above the water surface (|..| < 0.5), tilt 4.2 deg (< 12), in water true
 PASS 35. player boards the boat (can_enter true, driving true)
-PASS 36. boat drives: 62 km/h after 8 s (> 25), 184 m, turns 118 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
-PASS 37. getting off the boat: player in the scene again ((-610.0, -15.0, 132.0))
+PASS 36. boat drives: 62 km/h after 8 s (> 25), 184 m, turns 117 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
+PASS 37. getting off the boat: player in the scene again ((-601.0, -13.0, 142.0))
 PASS 38. parked vehicles sleep far from the camera (frozen at 900 m: true, awake near: true)

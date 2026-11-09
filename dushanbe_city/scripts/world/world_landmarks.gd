@@ -158,33 +158,32 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 	match str(d["id"]):
 		"somoni":
 			_box(root, body, "plaza", Vector3(0, 0.05, 0), Vector3(L, 0.3, D), true)
-			var mon := Node3D.new()
+			# the Ismoili Somoni monument (assets/models/landmarks/somoni_monument.glb, own model after
+			# the photos: ~42 m, stepped red-granite base, gilded statue, lions, marble arch, crown)
+			var mon: Node3D = (load("res://assets/models/landmarks/somoni_monument.glb") as PackedScene).instantiate()
 			mon.name = "Monument"
-			mon.scale = Vector3.ONE * 1.6          # the real arch is ~40 m high
-			mon.position = Vector3(0, 0, -10)
+			mon.position = Vector3(0, 0.15, 6)
 			root.add_child(mon)
-			root = mon
-			body = StaticBody3D.new()
-			mon.add_child(body)
-			for k in 3:                                          # stepped platform
-				_box(root, body, "marble", Vector3(0, 0.4 + k * 0.5, 18), Vector3(34 - k * 6, 0.5, 22 - k * 4))
-			_box(root, body, "stone", Vector3(0, 7.5, 18), Vector3(6, 12, 3.5))       # stele
-			_box(root, body, "gold", Vector3(0, 3.0, 16.0), Vector3(4, 0.4, 0.2), false)
-			for sx: float in [-1.0, 1.0]:                               # arch pillars + lions
-				_box(root, body, "marble", Vector3(sx * 9.5, 9.0, 18), Vector3(2.2, 16, 2.2))
-				_box(root, body, "gold", Vector3(sx * 12.5, 2.4, 9.5), Vector3(1.4, 1.6, 3.2))
-			_box(root, body, "marble", Vector3(0, 17.6, 18), Vector3(21.5, 1.6, 2.4))
-			# golden crown on top of the arch: ring of tall petals + small dome
-			for k in 12:
-				var a := TAU * k / 12.0
-				_box(root, null, "gold", Vector3(cos(a) * 3.2, 21.5, 18 + sin(a) * 1.4), Vector3(1.0, 5.0 + (1.6 if k % 2 == 0 else 0.0), 0.3), false, -a)
-			_dome(root, "gold", Vector3(0, 18.4, 18), 3.0, 0.8)
-			# statue: robed figure raising a sceptre
-			_cyl(root, body, "gold", Vector3(0, 3.0, 13.5), 1.3, 4.2, 0.7, 16)
-			_cyl(root, null, "gold", Vector3(0, 7.2, 13.5), 0.75, 1.6, 0.6, 12, false)
-			_dome(root, "gold", Vector3(0, 8.8, 13.5), 0.55, 1.4)
-			_box(root, null, "gold", Vector3(0.9, 9.0, 13.3), Vector3(0.25, 2.6, 0.25), false)
-			_box(root, null, "gold", Vector3(1.0, 10.9, 13.3), Vector3(0.12, 3.0, 0.12), false)
+			for mi in mon.find_children("*", "MeshInstance3D", true, false):
+				(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			# collision: the three tiers (stairs walkable as ramps front / back), pedestal, pillars
+			for k in 3:
+				var r: float = [20.0, 16.5, 13.0][k]
+				var cs := CollisionShape3D.new()
+				var cy := CylinderShape3D.new()
+				cy.radius = r
+				cy.height = 1.1
+				cs.shape = cy
+				cs.position = Vector3(0, 0.15 + k * 1.1 + 0.55, 6)
+				body.add_child(cs)
+			for c in [[Vector3(8.4, 7.4, 7.4), Vector3(0, 3.3 + 3.7, 6 - 0.6)], [Vector3(3.0, 27.0, 3.0), Vector3(-8.2, 3.3 + 13.5, 6 + 2.6)],
+					[Vector3(3.0, 27.0, 3.0), Vector3(8.2, 3.3 + 13.5, 6 + 2.6)]]:
+				var cs2 := CollisionShape3D.new()
+				var bx := BoxShape3D.new()
+				bx.size = c[0]
+				cs2.shape = bx
+				cs2.position = c[1]
+				body.add_child(cs2)
 			# fountains on the square
 			for fx in [-40.0, 40.0]:
 				_cyl(root, body, "marble", Vector3(fx, 0.2, -20), 9.0, 0.6)
