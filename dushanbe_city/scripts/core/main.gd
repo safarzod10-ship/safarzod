@@ -7,6 +7,7 @@ const TOUCH_SCENE := "res://scenes/ui/touch_controls.tscn"
 var env_rig: EnvironmentRig
 var world: CityWorld
 var open_world: OpenWorld
+var _top_hud: TopHud
 var player: Node3D
 
 
@@ -76,6 +77,14 @@ func _build() -> void:
 	map_layer.layer = 15
 	map_layer.add_child(Minimap.new())
 	add_child(map_layer)
+	var top_layer := CanvasLayer.new()
+	top_layer.name = "TopHudLayer"
+	top_layer.layer = 16
+	var top := TopHud.new()
+	top.name = "TopHud"
+	top_layer.add_child(top)
+	add_child(top_layer)
+	_top_hud = top
 	if OS.get_cmdline_user_args().has("menu"):
 		menu.call_deferred("set", "_open_on_start", true)
 	if OS.get_cmdline_user_args().has("diag"):
@@ -108,6 +117,8 @@ func _spawn_car(touch: CanvasLayer) -> void:
 	car_session = CarSession.new()
 	car_session.name = "CarSession"
 	car_session.player = player
+	if _top_hud:
+		_top_hud.session = car_session
 	car_session.car = car
 	car_session.walk_touch = touch
 	add_child(car_session)

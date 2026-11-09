@@ -22,6 +22,7 @@ var _font: Font
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_to_group(TouchBlock.GROUP)          # a tap on the minimap opens the big map
 	_mat = ShaderMaterial.new()
 	_mat.shader = load("res://assets/shaders/minimap.gdshader")
 	_mat.set_shader_parameter("map_tex", load("res://assets/ui/minimap.png"))
@@ -98,14 +99,17 @@ func _draw_overlay() -> void:
 	# mission target (orange) / nearest filling station (green); radius of the map: 160 m
 	for mk in [[target, Color(1.0, 0.6, 0.1)], [fuel_marker, Color(0.2, 0.9, 0.35)]]:
 		_marker(mk[0], mk[1], c, R, yaw)
+	# rim: dark frame + green ring (mock-up style)
+	_overlay.draw_arc(c, R - R * 0.02, 0, TAU, 96, Color(0.04, 0.05, 0.06, 0.95), R * 0.07, true)
+	_overlay.draw_arc(c, R - R * 0.05, 0, TAU, 96, Color(0.2, 0.85, 0.3), R * 0.035, true)
 	# north marker on the rim
 
 	var nd := Vector2(sin(yaw), -cos(yaw))
 	var np := c + nd * (R - R * 0.11)
 	_overlay.draw_circle(np, R * 0.1, Color(0.08, 0.09, 0.1, 0.85))
 	var fs := int(R * 0.13)
-	var tw := _font.get_string_size("С", HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
-	_overlay.draw_string(_font, np + Vector2(-tw.x * 0.5, tw.y * 0.33), "С", HORIZONTAL_ALIGNMENT_CENTER, -1, fs, Color(0.95, 0.95, 0.95))
+	var tw := _font.get_string_size("N", HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
+	_overlay.draw_string(_font, np + Vector2(-tw.x * 0.5, tw.y * 0.33), "N", HORIZONTAL_ALIGNMENT_CENTER, -1, fs, Color(0.95, 0.95, 0.95))
 
 
 func _marker(target_p: Vector3, col: Color, c: Vector2, R: float, yaw: float) -> void:
@@ -169,3 +173,17 @@ static func _clip(inside: Vector2, outside: Vector2, r: float) -> Vector2:
 		else:
 			hi = m
 	return inside.lerp(outside, lo)
+
+
+## tap on the round minimap -> the big map (navigator)
+func _input(event: InputEvent) -> void:
+	var tap: bool = (event is InputEventScreenTouch and event.pressed) or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and not event.is_echo())
+	if not tap or not is_visible_in_tree():
+		return
+	for m in get_tree().get_nodes_in_group(&"world_map"):
+		if m.call("is_open"):
+			return                          # the big map is over it: its own buttons get the tap
+	var p: Vector2 = event.position
+	if p.distance_to(get_global_rect().get_center()) < size.x * 0.5:
+		get_viewport().set_input_as_handled()
+		HudStyle.open_map(get_tree())

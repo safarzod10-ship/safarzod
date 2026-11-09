@@ -37,6 +37,8 @@ func _ready() -> void:
 	_btn.focus_mode = Control.FOCUS_NONE
 	_btn.pressed.connect(toggle)
 	add_child(_btn)
+	_btn.visible = false               # the map opens with a tap on the round minimap
+	add_to_group(&"world_map")
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.visible = false

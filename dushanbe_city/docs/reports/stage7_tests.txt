@@ -7,7 +7,7 @@ PASS  6. billboards ~1 km apart on each road: 0 pairs closer than 450 m
 PASS  7. no billboard stands on a road (edge distance >= 3 m): 0 violations
 PASS  8. billboard in the scene with an advertising banner (res://assets/textures/ads/ad_dcnext.png)
 PASS  9. all 4 banners (DCnext, Orienbank, LakLak, Eskhata) are on the roads: 4 of 4 used
-PASS 10. billboard post has collision (a car stops at it): BillboardBody:<StaticBody3D#1150665400015>
+PASS 10. billboard post has collision (a car stops at it): BillboardBody:<StaticBody3D#1132176907834>
 PASS 11. steel guardrails along drops of country / mountain roads: 16.0 km in 88 runs
 PASS 12. guardrails stand just outside the carriageway (0.3 .. 3 m from the edge): 0 of 4075 points off
 PASS 13. guardrail collision across the barrier: WorldBuildings
@@ -31,8 +31,8 @@ PASS 30. hired by LakLak (Wallet.laklak_hired)
 PASS 31. order assigned on getting into the van: проспект Борбад, дом 110, 1385 m away, pay 60 смн, beacon + map target true
 PASS 32. delivery completes when the van stops at the drop-off: money 75 смн (pay 60 смн + bonus), deliveries 1, next order true
 PASS 33. motorboats placed: 3 (sea + lakes)
-PASS 34. boat floats: -0.01 m above the water surface (|..| < 0.5), tilt 0.4 deg (< 12), in water true
-FAIL 35. player boards the boat (can_enter false, driving false)
-FAIL 36. boat drives: 0 km/h after 8 s (> 25), 1 m, turns 0 deg in 3 s, stays afloat true, slows down by itself (0 km/h)
-PASS 37. getting off the boat: player in the scene again ((-465.0, -3.0, 17.0))
+PASS 34. boat floats: 0.07 m above the water surface (|..| < 0.5), tilt 4.3 deg (< 12), in water true
+PASS 35. player boards the boat (can_enter true, driving true)
+PASS 36. boat drives: 62 km/h after 8 s (> 25), 183 m, turns 118 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
+PASS 37. getting off the boat: player in the scene again ((-602.0, -13.0, 141.0))
 PASS 38. parked vehicles sleep far from the camera (frozen at 900 m: true, awake near: true)

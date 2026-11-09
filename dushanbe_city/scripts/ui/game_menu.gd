@@ -25,8 +25,16 @@ var _open_on_start := false:
 			_refresh()
 
 
+## the round pause button of the HUD (HudStyle.toggle_menu) opens / closes the menu
+func toggle_menu() -> void:
+	_panel.visible = not _panel.visible
+	_layout()
+	_refresh()
+
+
 func _ready() -> void:
 	layer = 20
+	add_to_group(&"game_menu")
 	# top-right: the top-left corner belongs to the round minimap
 	_btn = Button.new()
 	var btn := _btn
@@ -35,6 +43,7 @@ func _ready() -> void:
 	btn.size = Vector2(72, 72)
 	btn.add_theme_font_size_override("font_size", 34)
 	add_child(btn)
+	btn.visible = false               # replaced by the HUD's round pause button
 	_fps = _outlined_label(Vector2(0, 0), 22)
 	_fps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_diag = _outlined_label(Vector2(16, 16), 18)
@@ -142,7 +151,9 @@ func _layout() -> void:
 	var w := get_viewport().get_visible_rect().size.x
 	_btn.position = Vector2(w - 16 - _btn.size.x, 16)
 	_fps.size = Vector2(420, 30)
-	_fps.position = Vector2(w - 16 - 420, 96)
+	var vs := get_viewport().get_visible_rect().size
+	_fps.position = Vector2(w - 16 - 420, minf(vs.x, vs.y) * 0.19)      # under the money / bars
+	_fps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_panel.position = Vector2(maxf(16.0, w - 16 - _panel.get_combined_minimum_size().x), 100)
 
 

@@ -1,8 +1,9 @@
 extends Control
-## MobileInputController (stage 4) - multitouch surface, pure Control drawing, no textures:
-## * left: dynamic analog joystick (dead zone 12 %, rescaled -> smooth start, diagonals);
-## * right: JUMP, RUN (toggle), PUNCH and a contextual ACTION button that appears only when an
-##   interactable is in range and carries its label («СЕСТЬ», ...);
+## MobileInputController - multitouch surface in the HUD style of the owner's mock-ups (HudStyle):
+## * left: analog joystick (round pad with ▲▼◄► marks; dead zone 12 %, rescaled -> smooth start);
+## * right: big FIST (punch), JUMP, and a contextual button that appears only when something is
+##   usable: a car door icon for getting in, a hand + its label («УСТРОИТЬСЯ», ...) otherwise;
+## * left column under the minimap: RUN (toggle), PAUSE (the game menu);
 ## * swipe anywhere else on the right half rotates the camera (sensitivity from the settings);
 ## every finger is tracked separately: walk + look + jump / run at the same time.
 ## Sizes scale with PlayerInput.ui_scale; everything stays inside the display safe area (notches,
@@ -77,7 +78,7 @@ func _bottom() -> float:
 
 
 func _joy_radius() -> float:
-	return 1.25 * _unit()
+	return 1.4 * _unit()
 
 
 func _joy_home() -> Vector2:
@@ -88,22 +89,31 @@ func _joy_home() -> Vector2:
 
 func _jump_rect() -> Array:                # [center, radius]
 	var u := _unit()
-	return [Vector2(_right() - 1.65 * u, _bottom() - 1.8 * u), 1.0 * u]
+	return [Vector2(_right() - 4.3 * u, _bottom() - 1.2 * u), 0.72 * u]
 
 
-func _punch_rect() -> Array:             # above-left of JUMP, on the thumb's natural arc
+func _punch_rect() -> Array:             # the big fist, right thumb
 	var u := _unit()
-	return [Vector2(_right() - 2.25 * u, _bottom() - 4.15 * u), 0.95 * u]
+	return [Vector2(_right() - 1.75 * u, _bottom() - 2.55 * u), 1.05 * u]
 
 
-func _run_rect() -> Array:
+func _column_top() -> float:
+	return 16.0 + clampf(minf(size.x, size.y) * 0.22, 150.0, 320.0)
+
+
+func _run_rect() -> Array:               # left column, under the minimap
+	var u := minf(size.x, size.y) / 10.0
+	return [Vector2(0.95 * u, _column_top() + 0.75 * u), 0.55 * u]
+
+
+func _menu_rect() -> Array:
+	var u := minf(size.x, size.y) / 10.0
+	return [Vector2(0.95 * u, _column_top() + 2.0 * u), 0.55 * u]
+
+
+func _action_rect() -> Array:            # contextual: above-left of the fist (only when something is usable)
 	var u := _unit()
-	return [Vector2(_right() - 4.05 * u, _bottom() - 1.3 * u), 0.8 * u]
-
-
-func _action_rect() -> Array:            # contextual: left of PUNCH (only when something is usable)
-	var u := _unit()
-	return [Vector2(_right() - 4.6 * u, _bottom() - 3.9 * u), 0.85 * u]
+	return [Vector2(_right() - 4.1 * u, _bottom() - 3.75 * u), 0.75 * u]
 
 
 func _in_circle(p: Vector2, c: Array) -> bool:
@@ -132,6 +142,8 @@ func _input(event: InputEvent) -> void:
 				PlayerInput.queue_action()
 			elif _in_circle(p, _run_rect()):
 				PlayerInput.run_toggle = not PlayerInput.run_toggle
+			elif _in_circle(p, _menu_rect()):
+				HudStyle.toggle_menu(get_tree())
 			elif _joy_finger < 0 and _in_joy_zone(p):
 				_joy_finger = event.index
 				# dynamic origin: where the thumb lands (kept inside the screen)
@@ -173,72 +185,36 @@ func _input(event: InputEvent) -> void:
 
 # ---------------------------------------------------------------- drawing
 func _draw() -> void:
-	var u := _unit()
-	# joystick
+	if size.x < 50.0 or size.y < 50.0:
+		return
+	# joystick: dark round pad, white rim, ▲▼◄► marks, light knob
 	var r := _joy_radius()
 	var o := _joy_origin if _joy_finger >= 0 else _joy_home()
 	var active := _joy_finger >= 0
-	draw_circle(o, r, Color(1, 1, 1, 0.10 if active else 0.06))
-	draw_arc(o, r, 0, TAU, 64, Color(1, 1, 1, 0.45 if active else 0.25), 0.04 * u, true)
-	var knob := o + _joy_vec * r
-	draw_circle(knob, 0.48 * r, Color(1, 1, 1, 0.45 if active else 0.28))
-	draw_arc(knob, 0.48 * r, 0, TAU, 48, Color(1, 1, 1, 0.6), 0.025 * u, true)
-	# RUN toggle
+	draw_circle(o + Vector2(0, r * 0.04), r * 1.02, Color(0, 0, 0, 0.3))
+	draw_circle(o, r, Color(0.06, 0.07, 0.09, 0.62 if active else 0.5))
+	draw_arc(o, r - 2.0, 0, TAU, 72, HudStyle.RIM, maxf(2.5, r * 0.04), true)
+	for k in 4:
+		var d := Vector2.from_angle(k * PI * 0.5)
+		var n := Vector2(-d.y, d.x)
+		var t := o + d * r * 0.8
+		draw_colored_polygon(PackedVector2Array([t + d * r * 0.1, t - d * r * 0.06 + n * r * 0.1, t - d * r * 0.06 - n * r * 0.1]), Color(1, 1, 1, 0.9))
+	var knob := o + _joy_vec * r * 0.62
+	draw_circle(knob, 0.4 * r, Color(0.86, 0.87, 0.89, 0.92 if active else 0.8))
+	draw_arc(knob, 0.4 * r, 0, TAU, 48, Color(1, 1, 1, 0.9), 2.0, true)
+	# RUN toggle, PAUSE (left column)
 	var run := _run_rect()
-	var on := PlayerInput.run_toggle
-	draw_circle(run[0], run[1], Color(1.0, 0.58, 0.15, 0.55) if on else Color(0, 0, 0, 0.32))
-	draw_arc(run[0], run[1], 0, TAU, 48, Color(1.0, 0.75, 0.35, 0.95) if on else Color(1, 1, 1, 0.5), 0.04 * u, true)
-	_draw_chevrons(run[0] + Vector2(0, -0.22 * run[1]), 0.32 * run[1], Color(1, 1, 1, 0.95 if on else 0.75))
-	_label(run[0] + Vector2(0, 0.42 * run[1]), "БЕГ", int(0.28 * u), Color(1, 1, 1, 0.95 if on else 0.8))
-	# JUMP
-	var jp := _jump_rect()
-	var pressed := _jump_finger >= 0
-	draw_circle(jp[0], jp[1], Color(1, 1, 1, 0.28) if pressed else Color(0, 0, 0, 0.32))
-	draw_arc(jp[0], jp[1], 0, TAU, 48, Color(1, 1, 1, 0.6), 0.04 * u, true)
-	var a: Vector2 = jp[0] + Vector2(0, -0.25 * jp[1])
-	var s: float = 0.28 * jp[1]
-	draw_colored_polygon(PackedVector2Array([a + Vector2(0, -s), a + Vector2(s, s * 0.6), a + Vector2(-s, s * 0.6)]),
-			Color(1, 1, 1, 0.85))
-	_label(jp[0] + Vector2(0, 0.42 * jp[1]), "ПРЫЖОК", int(0.24 * u), Color(1, 1, 1, 0.85))
-	# PUNCH
+	HudStyle.round_button(self, run[0], run[1], "run", false, Color(0.95, 0.55, 0.1, 0.85) if PlayerInput.run_toggle else Color(0, 0, 0, 0))
+	var mn := _menu_rect()
+	HudStyle.round_button(self, mn[0], mn[1], "pause")
+	# FIST, JUMP
 	var pr := _punch_rect()
-	var pp := _punch_finger >= 0
-	draw_circle(pr[0], pr[1], Color(0.9, 0.25, 0.2, 0.5) if pp else Color(0, 0, 0, 0.32))
-	draw_arc(pr[0], pr[1], 0, TAU, 48, Color(1, 0.6, 0.55, 0.9) if pp else Color(1, 1, 1, 0.6), 0.04 * u, true)
-	_draw_fist(pr[0] + Vector2(0, -0.2 * pr[1]), 0.36 * pr[1], Color(1, 1, 1, 0.9))
-	_label(pr[0] + Vector2(0, 0.55 * pr[1]), "УДАР", int(0.24 * u), Color(1, 1, 1, 0.85))
-	# ACTION (contextual)
+	HudStyle.round_button(self, pr[0], pr[1], "fist", _punch_finger >= 0, Color(0.75, 0.15, 0.12, 0.8) if _punch_finger >= 0 else Color(0, 0, 0, 0))
+	var jp := _jump_rect()
+	HudStyle.round_button(self, jp[0], jp[1], "jump", _jump_finger >= 0)
+	# contextual button: a car door to get in, a hand + the label for anything else
 	if _action_label != "":
 		var ar := _action_rect()
-		var ap := _action_finger >= 0
-		draw_circle(ar[0], ar[1], Color(0.15, 0.5, 0.95, 0.75) if not ap else Color(0.4, 0.7, 1.0, 0.85))
-		draw_arc(ar[0], ar[1], 0, TAU, 48, Color(1, 1, 1, 0.85), 0.04 * u, true)
-		_label(ar[0], _action_label, int(0.26 * u), Color(1, 1, 1, 0.98))
-
-
-func _draw_fist(c: Vector2, s: float, col: Color) -> void:
-	## Simple, readable fist icon: four knuckles, palm block, thumb across the front.
-	var palm := Rect2(c + Vector2(-0.62 * s, -0.25 * s), Vector2(1.24 * s, 0.95 * s))
-	draw_rect(palm, col, true)
-	for i in 4:
-		var k := c + Vector2(-0.47 * s + i * 0.31 * s, -0.32 * s)
-		draw_circle(k, 0.2 * s, col)
-	draw_line(c + Vector2(-0.6 * s, 0.22 * s), c + Vector2(0.25 * s, 0.22 * s), Color(0, 0, 0, 0.55), 0.09 * s, true)
-	draw_circle(c + Vector2(0.38 * s, 0.22 * s), 0.17 * s, col)
-	for i in 3:
-		var x := -0.31 * s + i * 0.31 * s
-		draw_line(c + Vector2(x, -0.45 * s), c + Vector2(x, 0.05 * s), Color(0, 0, 0, 0.45), 0.05 * s, true)
-	draw_rect(Rect2(c + Vector2(-0.45 * s, 0.7 * s), Vector2(0.9 * s, 0.25 * s)), col, true)   # wrist
-
-
-func _draw_chevrons(c: Vector2, s: float, col: Color) -> void:
-	for dx in [-0.45 * s, 0.35 * s]:
-		var p := c + Vector2(dx, 0)
-		draw_polyline(PackedVector2Array([p + Vector2(-0.35 * s, -0.6 * s), p + Vector2(0.35 * s, 0), p + Vector2(-0.35 * s, 0.6 * s)]),
-				col, 0.18 * s, true)
-
-
-func _label(center: Vector2, text: String, fs: int, col: Color) -> void:
-	var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
-	var asc := _font.get_ascent(fs)
-	draw_string(_font, center + Vector2(-w * 0.5, asc * 0.35), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+		var car_like := _action_label.contains("СЕСТЬ") or _action_label.contains("ЛОДК") or _action_label.contains("МАШИН")
+		HudStyle.round_button(self, ar[0], ar[1], "door" if car_like else "hand", _action_finger >= 0, Color(0.12, 0.42, 0.85, 0.85))
+		HudStyle.label(self, _action_label, ar[0] + Vector2(0, ar[1] * 1.35), int(ar[1] * 0.36))

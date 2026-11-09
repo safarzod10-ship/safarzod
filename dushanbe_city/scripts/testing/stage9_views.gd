@@ -31,6 +31,10 @@ func _ready() -> void:
 	cam.fov = 55.0
 	add_child(cam)
 	cam.make_current()
+	if OS.get_cmdline_user_args().has("hud"):
+		await _hud_shots()
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("junctions"):
 		var jn := [[-54, -963], [12, -2724], [-1233, -3203], [560, -7282], [4318, -4320], [722, -9042], [-1303, -2444], [525, -7068]]
 		for i in jn.size():
@@ -159,3 +163,35 @@ func _edge(id: String, near: Vector3) -> Array:
 		var dir := (b - a).normalized()
 		return [a, dir, dir.cross(Vector3.UP).normalized(), float(r["w"]) * 0.5]
 	return []
+
+
+## the new HUD (mock-up style) on a phone layout: on foot, near a car, driving, the boat
+func _hud_shots() -> void:
+	_ui(true)
+	var tc: Variant = s.get("walk_touch")
+	if tc is CanvasLayer:
+		(tc as CanvasLayer).visible = true
+		if (tc as Node).has_method("set_shown"):
+			(tc as Node).call("set_shown", true)
+	var s: CarSession = main.get("car_session")
+	s.set("_walk_touch_shown", true)
+	var car: VehiclePrado = main.get("car")
+	s.player.teleport(Vector3(-58, 2.4, -60), PI)
+	s.player.get_camera().make_current()
+	await get_tree().create_timer(2.0).timeout
+	await _snap("hud_walk")
+	s.player.teleport(car.driver_door_point(1.0), 0.0)
+	await get_tree().create_timer(1.5).timeout
+	await _snap("hud_walk_car")
+	s._select(car)
+	s.enter()
+	s.controls.touch_mode = true
+	car.fuel_l = car.tank_l * 0.72
+	await get_tree().create_timer(2.0).timeout
+	VehicleInput.scripted = {"throttle": 0.6}
+	await get_tree().create_timer(3.0).timeout
+	VehicleInput.scripted = null
+	await _snap("hud_drive")
+	car.fuel_l = car.tank_l * 0.08
+	await get_tree().create_timer(0.6).timeout
+	await _snap("hud_drive_lowfuel")

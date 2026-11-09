@@ -1,13 +1,13 @@
 class_name CarControls
 extends Control
-## Touch controls while driving the Prado (multitouch: every control tracks its own finger, so gas,
-## steering and handbrake can be held together):
-##   bottom-left  : steer LEFT / RIGHT arrows (the car's steering returns to centre when released)
-##   bottom-right : GAS pedal (tall), BRAKE pedal (brake at standstill = reverse), HANDBRAKE
-##   top centre   : КАМЕРА (3rd person / cabin / orbit), ВОССТАНОВИТЬ (repair), ВЫЙТИ (leave the car)
-##   above the arrows: ◄ left indicator, ФАРЫ (off / dipped / main beam), АВАР. (hazards), ► right
-##   HUD (right, above the pedals): speedometer (real body speed, km/h), tachometer, gear,
-##   condition %, telltales: indicators (blinking), dipped / main beam, handbrake (P), check engine
+## Touch controls while driving (look of the owner's mock-ups, HudStyle; multitouch: every control
+## tracks its own finger, so gas, steering and handbrake can be held together):
+##   bottom-left  : big round steering arrows ◄ ►
+##   bottom-right : pedals ТОРМОЗ (at standstill = reverse) and ГАЗ (dotted rubber plates)
+##   right        : round DOOR (leave the vehicle) and (P) handbrake; headlights, hazards
+##   left column  : camera view, pause (the game menu), repair
+##   bottom centre: dashboard panel: speed, gear | fuel % + bar (every vehicle: its own tank),
+##                  ◄ ► indicator buttons beside it, condition above it
 ## Free drags elsewhere orbit the camera.
 
 signal exit_pressed
@@ -36,24 +36,31 @@ func _u() -> float:
 	return minf(size.x, size.y) / 10.0
 
 
+## circle buttons are stored as their bounding squares (hit test = the square grown by 15 %)
 func _rects() -> Dictionary:
 	var u := _u()
 	var w := size.x
 	var h := size.y
+	var top := 16.0 + clampf(minf(w, h) * 0.22, 150.0, 320.0)     # under the round minimap
 	return {
-		"left": Rect2(0.5 * u, h - 3.1 * u, 2.2 * u, 2.4 * u),
-		"right": Rect2(3.0 * u, h - 3.1 * u, 2.2 * u, 2.4 * u),
-		"gas": Rect2(w - 2.5 * u, h - 4.6 * u, 1.9 * u, 4.0 * u),
-		"brake": Rect2(w - 4.8 * u, h - 3.3 * u, 2.0 * u, 2.7 * u),
-		"handbrake": Rect2(w - 4.8 * u, h - 5.5 * u, 2.0 * u, 1.8 * u),
-		"orbit": Rect2(w * 0.5 - 4.9 * u, 0.35 * u, 3.0 * u, 0.95 * u),
-		"repair": Rect2(w * 0.5 - 1.7 * u, 0.35 * u, 3.4 * u, 0.95 * u),
-		"exit": Rect2(w * 0.5 + 1.9 * u, 0.35 * u, 3.0 * u, 0.95 * u),
-		"tleft": Rect2(0.5 * u, h - 4.45 * u, 1.05 * u, 1.0 * u),
-		"lights": Rect2(1.7 * u, h - 4.45 * u, 1.5 * u, 1.0 * u),
-		"hazard": Rect2(3.35 * u, h - 4.45 * u, 1.05 * u, 1.0 * u),
-		"tright": Rect2(4.55 * u, h - 4.45 * u, 1.05 * u, 1.0 * u),
+		"left": _sq(Vector2(1.95 * u, h - 1.8 * u), 1.3 * u),
+		"right": _sq(Vector2(4.9 * u, h - 1.8 * u), 1.3 * u),
+		"gas": Rect2(w - 1.95 * u, h - 3.55 * u, 1.6 * u, 3.2 * u),
+		"brake": Rect2(w - 4.2 * u, h - 2.55 * u, 2.05 * u, 2.2 * u),
+		"exit": _sq(Vector2(w - 1.35 * u, h - 6.05 * u), 0.72 * u),
+		"handbrake": _sq(Vector2(w - 1.35 * u, h - 4.45 * u), 0.72 * u),
+		"lights": _sq(Vector2(w - 3.0 * u, h - 6.2 * u), 0.5 * u),
+		"hazard": _sq(Vector2(w - 3.0 * u, h - 4.95 * u), 0.5 * u),
+		"orbit": _sq(Vector2(0.95 * u, top + 0.75 * u), 0.55 * u),
+		"menu": _sq(Vector2(0.95 * u, top + 2.0 * u), 0.55 * u),
+		"repair": _sq(Vector2(0.95 * u, top + 3.25 * u), 0.55 * u),
+		"tleft": _sq(Vector2(w * 0.5 - 1.75 * u, h - 1.85 * u), 0.4 * u),
+		"tright": _sq(Vector2(w * 0.5 + 1.75 * u, h - 1.85 * u), 0.4 * u),
 	}
+
+
+static func _sq(c: Vector2, r: float) -> Rect2:
+	return Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
 
 
 func _hit(p: Vector2) -> String:
@@ -91,6 +98,8 @@ func _input(event: InputEvent) -> void:
 					repair_pressed.emit()
 				"exit":
 					exit_pressed.emit()
+				"menu":
+					HudStyle.toggle_menu(get_tree())
 			get_viewport().set_input_as_handled()
 		else:
 			_fingers.erase(event.index)
@@ -136,168 +145,75 @@ func _process(_d: float) -> void:
 
 
 func _draw() -> void:
-	var u := _u()
+	if size.x < 50.0 or size.y < 50.0:
+		return
 	var r := _rects()
 	var held := _fingers.values()
 	if not touch_mode:
 		if car:
-			_hud(_gauge_center(), 1.3 * u)
+			_dash_panel()
 		return
-	var base := Color(0, 0, 0, 0.34)
-	var on := Color(1, 1, 1, 0.32)
-	# steering arrows
-	for k in ["left", "right"]:
-		var rc: Rect2 = r[k]
-		draw_rect(rc, on if held.has(k) or (k == "left" and Input.is_action_pressed(&"car_left")) or (k == "right" and Input.is_action_pressed(&"car_right")) else base)
-		var c := rc.get_center()
-		var s := 0.55 * u * (-1.0 if k == "left" else 1.0)
-		draw_colored_polygon(PackedVector2Array([c + Vector2(s, 0), c + Vector2(-s * 0.6, -0.65 * u), c + Vector2(-s * 0.6, 0.65 * u)]), Color(1, 1, 1, 0.9))
-	# pedals
-	_pedal(r["gas"], "ГАЗ", Color(0.25, 0.75, 0.3, 0.55) if held.has("gas") else base)
-	_pedal(r["brake"], "ТОРМОЗ", Color(0.85, 0.25, 0.2, 0.55) if held.has("brake") else base)
-	_pedal(r["handbrake"], "РУЧНИК", Color(1.0, 0.6, 0.1, 0.6) if held.has("handbrake") else base)
-	# top buttons
-	_button(r["orbit"], "ВИД: " + camera_label, base)
-	_button(r["repair"], "ВОССТАНОВИТЬ", base)
-	_button(r["exit"], "ВЫЙТИ", base)
+	# steering arrows, pedals
+	HudStyle.arrow_button(self, (r["left"] as Rect2).get_center(), (r["left"] as Rect2).size.x * 0.5, -1, held.has("left") or Input.is_action_pressed(&"car_left"))
+	HudStyle.arrow_button(self, (r["right"] as Rect2).get_center(), (r["right"] as Rect2).size.x * 0.5, 1, held.has("right") or Input.is_action_pressed(&"car_right"))
+	HudStyle.pedal(self, r["brake"], "ТОРМОЗ", held.has("brake"))
+	HudStyle.pedal(self, r["gas"], "ГАЗ", held.has("gas"))
+	# round buttons
+	_rb(r, "exit", "door", false)
+	_rb(r, "handbrake", "parking", held.has("handbrake") or (car != null and car.handbrake), Color(0.75, 0.12, 0.1, 0.8) if car != null and car.handbrake else Color(0, 0, 0, 0))
+	_rb(r, "orbit", "camera", false)
+	_rb(r, "menu", "pause", false)
+	_rb(r, "repair", "wrench", false)
 	if car and car.lights:
 		var L := car.lights
-		var amber := Color(1.0, 0.6, 0.1, 0.65)
-		_button(r["tleft"], "◄", amber if L.turn < 0 else base)
-		var bl: String = ["ФАРЫ", "БЛИЖН.", "ДАЛЬН."][L.beam]
-		_button(r["lights"], bl, Color(0.2, 0.7, 0.3, 0.6) if L.beam == 1 else (Color(0.2, 0.4, 0.95, 0.65) if L.beam == 2 else base))
-		_button(r["hazard"], "АВАР.", Color(0.9, 0.2, 0.15, 0.6) if L.hazard else base)
-		_button(r["tright"], "►", amber if L.turn > 0 else base)
+		_rb(r, "lights", "lights", false, Color(0.15, 0.55, 0.25, 0.85) if L.beam == 1 else (Color(0.15, 0.35, 0.85, 0.85) if L.beam == 2 else Color(0, 0, 0, 0)))
+		_rb(r, "hazard", "hazard", false, Color(0.85, 0.2, 0.12, 0.85) if L.hazard and L.blink_on else Color(0, 0, 0, 0))
+		var amber := Color(1.0, 0.6, 0.1, 0.9)
+		var tl := (r["tleft"] as Rect2)
+		var tr := (r["tright"] as Rect2)
+		HudStyle.round_button(self, tl.get_center(), tl.size.x * 0.5, "", false, amber if L.turn < 0 and L.blink_on else Color(0, 0, 0, 0), "◄")
+		HudStyle.round_button(self, tr.get_center(), tr.size.x * 0.5, "", false, amber if L.turn > 0 and L.blink_on else Color(0, 0, 0, 0), "►")
 	if car:
-		_hud(_gauge_center(), 1.3 * u)
+		_dash_panel()
 
 
-func _gauge_center() -> Vector2:
-	## right side above the pedals: never covers the car (which sits at the bottom centre)
+func _rb(r: Dictionary, key: String, icon_id: String, pressed: bool, accent := Color(0, 0, 0, 0)) -> void:
+	var rc: Rect2 = r[key]
+	HudStyle.round_button(self, rc.get_center(), rc.size.x * 0.5, icon_id, pressed, accent)
+
+
+## the dashboard panel at the bottom centre (as in the mock-up): speedometer icon + km/h + gear |
+## fuel pump icon + % + bar (red and blinking when low); the camera view name above it
+func _dash_panel() -> void:
 	var u := _u()
-	return Vector2(size.x - 3.7 * u, size.y - 6.9 * u)
-
-
-func _pedal(rc: Rect2, label: String, col: Color) -> void:
-	draw_rect(rc, col)
-	draw_rect(rc, Color(1, 1, 1, 0.5), false, 2.0)
-	# tread lines
-	for i in range(1, 5):
-		var y := rc.position.y + rc.size.y * i / 5.0
-		draw_line(Vector2(rc.position.x + 8, y), Vector2(rc.end.x - 8, y), Color(1, 1, 1, 0.18), 2.0)
-	_text(label, rc.get_center(), int(_u() * 0.32))
-
-
-func _button(rc: Rect2, label: String, col: Color) -> void:
-	draw_rect(rc, col)
-	draw_rect(rc, Color(1, 1, 1, 0.45), false, 2.0)
-	_text(label, rc.get_center(), int(_u() * 0.34))
-
-
-func _text(t: String, c: Vector2, fs: int) -> void:
-	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
-	draw_string_outline(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.8))
-	draw_string(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
-
-
-func _hud(c: Vector2, rad: float) -> void:
-	_speedometer(c, rad)
-	_tachometer(c + Vector2(-rad * 2.25, rad * 0.25), rad * 0.72)
-	_fuel_gauge(c + Vector2(rad * 1.72, rad * 0.32), rad * 0.6)
-	_telltales(c + Vector2(-rad * 1.15, rad * 1.25), rad)
-
-
-func _tachometer(c: Vector2, rad: float) -> void:
-	## 0..5000 rpm, red zone from the 4400 rpm fuel cut
-	draw_circle(c, rad * 1.05, Color(0, 0, 0, 0.45))
-	var a0 := PI * 0.8
-	var a1 := PI * 2.2
-	draw_arc(c, rad * 0.92, a0, a1, 40, Color(1, 1, 1, 0.3), 3.0)
-	draw_arc(c, rad * 0.92, lerpf(a0, a1, 4400.0 / 5000.0), a1, 8, Color(0.95, 0.15, 0.1, 0.9), 5.0)
-	for k in 6:
-		var a := lerpf(a0, a1, k / 5.0)
-		var d := Vector2(cos(a), sin(a))
-		draw_line(c + d * rad * 0.74, c + d * rad * 0.92, Color(1, 1, 1, 0.75), 2.0)
-		_text("%d" % k, c + d * rad * 0.56, int(rad * 0.2))
-	var an := lerpf(a0, a1, clampf(car.rpm / 5000.0, 0.0, 1.0))
-	draw_line(c, c + Vector2(cos(an), sin(an)) * rad * 0.86, Color(1.0, 0.35, 0.2), 3.0)
-	draw_circle(c, rad * 0.08, Color(0.9, 0.9, 0.9))
-	_text("об/мин ×1000", c + Vector2(0, rad * 0.45), int(rad * 0.15))
-
-
-func _telltales(c: Vector2, rad: float) -> void:
-	## indicator arrows (blink), beam, handbrake, damage warning
-	var fs := int(rad * 0.3)
-	var L := car.lights
-	var dim := Color(1, 1, 1, 0.18)
-	var x := c.x
-	var items := [
-		["◄", Color(0.2, 1.0, 0.3) if L and L.blink_on and (L.turn < 0 or L.hazard) else dim],
-		["►", Color(0.2, 1.0, 0.3) if L and L.blink_on and (L.turn > 0 or L.hazard) else dim],
-		["≡D", (Color(0.3, 0.5, 1.0) if L.beam == 2 else Color(0.3, 1.0, 0.4)) if L and L.beam > 0 else dim],
-		["(P)", Color(1.0, 0.2, 0.15) if car.handbrake else dim],
-		["!", Color(1.0, 0.7, 0.1) if car.health < 50.0 else dim],
-	]
-	for it in items:
-		var w := _font.get_string_size(it[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string_outline(_font, Vector2(x, c.y), it[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.7))
-		draw_string(_font, Vector2(x, c.y), it[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, it[1])
-		x += w + rad * 0.22
-
-
-func _speedometer(c: Vector2, rad: float) -> void:
-	## analog arc 0..220 km/h + digital readout of the physical body speed, gear and condition
-	draw_circle(c, rad * 1.05, Color(0, 0, 0, 0.45))
-	var a0 := PI * 1.05
-	var a1 := PI * 1.95
-	draw_arc(c, rad * 0.92, a0, a1, 48, Color(1, 1, 1, 0.35), 3.0)
-	for k in range(0, 221, 20):
-		var a := lerpf(a0, a1, k / 220.0)
-		var d := Vector2(cos(a), sin(a))
-		draw_line(c + d * rad * 0.8, c + d * rad * 0.92, Color(1, 1, 1, 0.7), 2.0 if k % 40 == 0 else 1.0)
-	var v := clampf(car.speed_kmh, 0.0, 220.0)
-	var an := lerpf(a0, a1, v / 220.0)
-	draw_line(c, c + Vector2(cos(an), sin(an)) * rad * 0.86, Color(1.0, 0.35, 0.2), 3.0)
-	var fs := int(rad * 0.42)
-	_text("%d" % roundi(car.speed_kmh), c + Vector2(0, -rad * 0.38), fs)
+	var pw := 4.6 * u
+	var ph := 1.05 * u
+	var rc := Rect2(size.x * 0.5 - pw * 0.5, size.y - ph - 0.25 * u, pw, ph)
+	HudStyle.panel(self, rc)
+	var cy := rc.get_center().y
+	var x0 := rc.position.x
+	var ic := ph * 0.72
+	var sp := HudStyle.icon("speed")
+	if sp:
+		draw_texture_rect(sp, Rect2(Vector2(x0 + ph * 0.18, cy - ic * 0.5), Vector2(ic, ic)), false)
+	HudStyle.label(self, "%d" % roundi(car.speed_kmh), Vector2(x0 + pw * 0.33, cy - ph * 0.1), int(ph * 0.5))
 	var g := "R" if car.gear == -1 else ("N" if car.gear == 0 else "D%d" % car.gear)
-	_text("км/ч  %s" % g, c + Vector2(0, -rad * 0.05), int(rad * 0.2))
-	# condition bar
-	var bw := rad * 1.4
-	var br := Rect2(c.x - bw * 0.5, c.y + rad * 0.55, bw, rad * 0.09)
-	draw_rect(br, Color(0, 0, 0, 0.5))
-	var hcol := Color(0.3, 0.85, 0.35).lerp(Color(0.95, 0.25, 0.2), 1.0 - car.health / 100.0)
-	draw_rect(Rect2(br.position, Vector2(bw * car.health / 100.0, br.size.y)), hcol)
-	_text("состояние %d%%" % roundi(car.health), c + Vector2(0, rad * 0.38), int(rad * 0.16))
-
-
-
-## fuel gauge of the vehicle being driven (every car, the van, the bus, the boat): E .. F dial with a
-## needle, red zone under 15 %, litres left / tank size; blinks when the tank is (nearly) empty
-func _fuel_gauge(c: Vector2, rad: float) -> void:
+	HudStyle.label(self, "КМ/Ч · %s" % g, Vector2(x0 + pw * 0.33, cy + ph * 0.3), int(ph * 0.2))
+	draw_line(Vector2(x0 + pw * 0.52, rc.position.y + ph * 0.18), Vector2(x0 + pw * 0.52, rc.end.y - ph * 0.18), Color(1, 1, 1, 0.45), 2.0)
 	var fr := clampf(car.fuel_l / maxf(car.tank_l, 1.0), 0.0, 1.0)
-	draw_circle(c, rad * 1.08, Color(0, 0, 0, 0.5))
-	var a0 := PI * 0.75
-	var a1 := PI * 0.25 + TAU
-	draw_arc(c, rad * 0.9, a0, a1, 32, Color(1, 1, 1, 0.35), 3.0)
-	draw_arc(c, rad * 0.9, a0, lerpf(a0, a1, 0.15), 8, Color(0.95, 0.15, 0.1, 0.95), 6.0)
-	for k in 5:
-		var a := lerpf(a0, a1, k / 4.0)
-		var d := Vector2(cos(a), sin(a))
-		draw_line(c + d * rad * 0.7, c + d * rad * 0.9, Color(1, 1, 1, 0.8), 2.0 if k % 2 == 0 else 1.0)
-	_text("E", c + Vector2(cos(a0), sin(a0)) * rad * 0.5, int(rad * 0.28))
-	_text("F", c + Vector2(cos(a1), sin(a1)) * rad * 0.5, int(rad * 0.28))
 	var low := fr < 0.15
 	var blink := low and int(Time.get_ticks_msec() / 400) % 2 == 0
-	var an := lerpf(a0, a1, fr)
-	draw_line(c, c + Vector2(cos(an), sin(an)) * rad * 0.85, Color(1.0, 0.35, 0.2), 3.0)
-	draw_circle(c, rad * 0.1, Color(0.9, 0.9, 0.9))
-	var col := Color(1.0, 0.25, 0.2) if blink else (Color(1.0, 0.8, 0.2) if low else Color(0.6, 0.85, 1.0))
-	_text_col("БЕНЗИН", c + Vector2(0, rad * 0.42), int(rad * 0.2), col)
-	_text("%.0f / %.0f л" % [car.fuel_l, car.tank_l], c + Vector2(0, rad * 0.78), int(rad * 0.22))
-
-
-func _text_col(t: String, c: Vector2, fs: int, col: Color) -> void:
-	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
-	draw_string_outline(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0, 0, 0, 0.8))
-	draw_string(_font, c + Vector2(-w.x * 0.5, fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	var fu := HudStyle.icon("fuel")
+	if fu:
+		draw_texture_rect(fu, Rect2(Vector2(x0 + pw * 0.56, cy - ic * 0.5), Vector2(ic, ic)), false, Color(1.0, 0.35, 0.3) if blink else Color.WHITE)
+	HudStyle.label(self, "%d%%" % roundi(fr * 100.0), Vector2(x0 + pw * 0.82, cy - ph * 0.17), int(ph * 0.36), Color(1.0, 0.4, 0.35) if low else Color.WHITE)
+	var bar := Rect2(x0 + pw * 0.69, cy + ph * 0.14, pw * 0.27, ph * 0.17)
+	draw_rect(bar, Color(0, 0, 0, 0.6))
+	var fcol := Color(0.95, 0.2, 0.15) if low else (Color(1.0, 0.75, 0.15) if fr < 0.3 else Color(0.2, 0.85, 0.3))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * fr, bar.size.y)), fcol)
+	draw_rect(bar, Color(1, 1, 1, 0.5), false, 1.5)
+	# condition / telltales line above the panel
+	var tt := "состояние %d%%" % roundi(car.health)
+	if car.handbrake:
+		tt += "  ·  (P)"
+	HudStyle.label(self, tt, Vector2(size.x * 0.5, rc.position.y - ph * 0.3), int(ph * 0.2), Color(1, 0.75, 0.3) if car.health < 50.0 else Color(1, 1, 1, 0.9))

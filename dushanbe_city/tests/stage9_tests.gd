@@ -235,7 +235,7 @@ func _t_world() -> void:
 		names.append("%s %.0f л" % [key, v.tank_l])
 	var bt: VehiclePrado = (main.get("boats") as Array)[0]
 	names.append("лодка %.0f л" % bt.tank_l)
-	_check("every vehicle has its tank (gauge): " + ", ".join(names), s.controls.has_method("_fuel_gauge"))
+	_check("every vehicle has its tank (gauge): " + ", ".join(names), s.controls.has_method("_dash_panel"))
 	# billboards: bigger, the photo over the whole 16:9 panel
 	var bb: Dictionary = wd.billboards[2]
 	ow.preload_at(Vector3(bb["x"], bb["y"], bb["z"]))

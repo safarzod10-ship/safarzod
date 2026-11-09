@@ -327,8 +327,8 @@ func _build_ui() -> void:
 func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	var d := clampf(minf(vs.x, vs.y) * 0.22, 150.0, 320.0)
-	_hud.position = Vector2(18, 16 + d + 72)
-	_hud.size = Vector2(minf(vs.x * 0.42, 560.0), 60)
+	_hud.position = Vector2(16 + d + 24, minf(vs.x, vs.y) * 0.175 + 34)
+	_hud.size = Vector2(minf(vs.x * 0.45, 620.0), 60)
 	_toast.position = Vector2(vs.x * 0.5 - 500, vs.y * 0.3)
 	_toast.size = Vector2(1000, 100)
 

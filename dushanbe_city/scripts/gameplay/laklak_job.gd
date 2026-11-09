@@ -229,9 +229,10 @@ func _build_ui() -> void:
 func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	var d := clampf(minf(vs.x, vs.y) * 0.22, 150.0, 320.0)      # the minimap's size (Minimap._layout)
-	_money.position = Vector2(18, 16 + d + 8)
-	_job.position = Vector2(18, 16 + d + 42)
-	_job.size = Vector2(minf(vs.x * 0.42, 560.0), 60)
+	# money: drawn by TopHud (top-right, green); the job line at the top, right of the minimap
+	_money.visible = false
+	_job.position = Vector2(16 + d + 24, minf(vs.x, vs.y) * 0.175)
+	_job.size = Vector2(minf(vs.x * 0.45, 620.0), 60)
 
 
 func _build_beacon() -> void:

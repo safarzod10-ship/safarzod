@@ -21,3 +21,9 @@ PASS 20. «ПОЕХАЛИ» closes the map, marker + route stay (minimap draws i
 PASS 21. driver off the old route -> route rebuilt from the car (start 0 m from the car)
 PASS 22. «УБРАТЬ МЕТКУ» clears the marker and the route
 PASS 23. route from the city (peninsula) to Varzob: 9.1 km
+PASS 24. every vehicle has its tank (gauge): car 80 л, camry 60 л, lexus 72 л, van 70 л, bus 250 л, лодка 40 л
+PASS 25. billboard poster 15.5 x 8.8 m (was 10.8 x 4.3), aspect 1.768 = photo 1.768 (no side margins)
+PASS 26. trees within 45 m of 6 billboards: 0
+PASS 27. river water above / at a road or bridge: 0 points (was 614 overlaps)
+PASS 28. found 20 stretches with the road above the ground beside it (country + city)
+PASS 29. Camry drives from the ground beside the road back onto it (square on, slowly): 9 / 9 stretches
