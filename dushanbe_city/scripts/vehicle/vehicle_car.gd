@@ -18,7 +18,7 @@ const PRESETS := {
 		"tank": 60.0, "l100": 7.8, "r": 0.336, "size": Vector3(1.84, 1.445, 4.885), "cd": 0.62, "brake": 19000.0,
 		"door": Vector3(-0.95, 0.55, -0.35), "seat": Vector3(-0.38, 0.52, 0.15), "lamp": Vector3(0, 0.65, -2.3),
 		"boxes": [[Vector3(1.8, 0.62, 4.8), Vector3(0, 0.16 + 0.31, 0)], [Vector3(1.58, 0.55, 2.4), Vector3(0, 0.78 + 0.27, 0.25)]],
-		"name": "Toyota Camry"},
+		"name": "Toyota Camry", "color": Color(0.02, 0.022, 0.026), "interior": true},
 	"lexus": {"file": "lexus_rx.glb", "yaw": 0.0, "wheels": "materials",
 		"wheel_mats": ["Material.056", "Material.057", "mat_0001_wheel", "mat_0003_rotor_j"], "paint": ["Material.049", "Material.051"],
 		"mass": 2050.0, "cg": 0.66, "front": 0.56, "kw": 220.0, "nm": 362.0, "vmax": 200.0, "split": 0.45,
@@ -26,7 +26,7 @@ const PRESETS := {
 		"tank": 72.0, "l100": 10.5, "r": 0.39, "size": Vector3(1.92, 1.71, 4.89), "cd": 0.85, "brake": 24000.0,
 		"door": Vector3(-1.0, 0.6, -0.4), "seat": Vector3(-0.38, 0.68, 0.1), "lamp": Vector3(0, 0.75, -2.35),
 		"boxes": [[Vector3(1.9, 0.75, 4.85), Vector3(0, 0.2 + 0.375, 0)], [Vector3(1.7, 0.65, 2.9), Vector3(0, 0.95 + 0.33, 0.2)]],
-		"name": "Lexus RX 350"},
+		"name": "Lexus RX 350", "color": Color(0.03, 0.07, 0.2), "interior": true, "hide": ["Object_19", "Object_21"]},
 	"bus": {"file": "city_bus.glb", "yaw": -PI * 0.5, "wheels": "names", "merge": true, "paint": ["paint"],
 		"mass": 12000.0, "cg": 1.05, "front": 0.36, "kw": 210.0, "nm": 1100.0, "vmax": 90.0, "split": 0.0,
 		"gears": [3.40, 1.90, 1.40, 1.00, 0.78, 0.70], "fd": 5.6, "mu": 0.85, "f": [1.25, 1.3], "arb": [160000.0, 120000.0],
@@ -162,13 +162,20 @@ func _build_model() -> void:
 		model.add_child(n)
 	_update_part_uniforms()
 
+	if bool(spec.get("interior", false)):
+		_build_interior()
+
 
 func _style_material(sm: ShaderMaterial, key: String, src: BaseMaterial3D) -> void:
 	super(sm, key, src)
 	if (spec.get("paint", []) as Array).has(key):
 		sm.set_shader_parameter("paint", 1.0)
-		sm.set_shader_parameter("roughness", 0.22)
-		sm.set_shader_parameter("specular", 0.6)
+		sm.set_shader_parameter("roughness", 0.2)
+		sm.set_shader_parameter("specular", 0.65)
+		if spec.has("color"):
+			# factory metallic paint (Camry: black, Lexus: deep blue); the garage can repaint it
+			sm.set_shader_parameter("albedo_color", spec["color"])
+			sm.set_shader_parameter("metallic", 0.45)
 
 
 func _build_collision() -> void:
@@ -374,3 +381,141 @@ static func _compact(a: Array, idx: PackedInt32Array) -> Array:
 		out[Mesh.ARRAY_TANGENT] = nt
 	out[Mesh.ARRAY_INDEX] = ni
 	return out
+
+
+# ------------------------------------------------------------------------------------------ interior
+## a proper cabin for the imported cars whose own interior is missing / untextured (Camry: black,
+## Lexus: white dashboard with a second, right-hand steering wheel - removed): soft-touch dark
+## dashboard, instrument cluster with lit dials, centre screen, console, leather seats and a
+## steering wheel that turns with the steering (named "steeringwheel": VehiclePrado rotates it)
+func _build_interior() -> void:
+	var body := model.get_node_or_null("Body")
+	for nm in spec.get("hide", []):
+		var n := model.find_child(String(nm), true, false)
+		if n:
+			(n as Node3D).visible = false
+	var seat: Vector3 = spec["seat"]
+	var g := _ground_y
+	var sy := g + seat.y                       # hip height of the driver
+	var hw := float((spec["size"] as Vector3).x) * 0.5 - 0.12
+	var dz := seat.z - 0.95                    # dashboard face
+	var root := Node3D.new()
+	root.name = "Interior"
+	model.add_child(root)
+	var dash := _imat(Color(0.14, 0.14, 0.15), 0.7)
+	var trim := _imat(Color(0.16, 0.14, 0.12), 0.6, 0.0)
+	var leather := _imat(Color(0.32, 0.22, 0.14) if preset == "lexus" else Color(0.12, 0.12, 0.13), 0.5)
+	var chrome := _imat(Color(0.7, 0.7, 0.72), 0.25, 0.9)
+	# dashboard: a long rounded slab + the upper pad towards the windscreen
+	_ibox(root, Vector3(hw * 2.0, 0.26, 0.42), Vector3(0, sy + 0.42, dz - 0.12), dash, 0.06)
+	_ibox(root, Vector3(hw * 2.0, 0.08, 0.5), Vector3(0, sy + 0.58, dz - 0.25), dash, 0.03)
+	_ibox(root, Vector3(hw * 1.9, 0.03, 0.03), Vector3(0, sy + 0.45, dz + 0.1), trim, 0.01)        # trim strip
+	# instrument cluster hood + two lit dials
+	_ibox(root, Vector3(0.42, 0.14, 0.18), Vector3(seat.x, sy + 0.6, dz - 0.02), dash, 0.04)
+	for k in 2:
+		var dial := MeshInstance3D.new()
+		var cm := SphereMesh.new()
+		cm.radius = 0.062
+		cm.height = 0.124
+		dial.mesh = cm
+		dial.scale = Vector3(1, 1, 0.12)
+		var dm := _imat(Color(0.02, 0.02, 0.03), 0.4)
+		dm.emission_enabled = true
+		dm.emission = Color(0.25, 0.55, 1.0) if k == 0 else Color(1.0, 0.45, 0.15)
+		dm.emission_energy_multiplier = 0.18
+		dial.material_override = dm
+		dial.position = Vector3(seat.x + (k - 0.5) * 0.16, sy + 0.58, dz + 0.07)
+		# the needle
+		var nd := MeshInstance3D.new()
+		var nb := BoxMesh.new()
+		nb.size = Vector3(0.006, 0.05, 0.004)
+		nd.mesh = nb
+		var nm := _imat(Color(1, 0.3, 0.2), 0.4)
+		nm.emission_enabled = true
+		nm.emission = Color(1, 0.3, 0.2)
+		nd.material_override = nm
+		nd.position = dial.position + Vector3(0.01, 0.012, 0.012)
+		nd.rotation.z = deg_to_rad(-40.0)
+		root.add_child(nd)
+		root.add_child(dial)
+	# centre screen + console
+	var scr := _imat(Color(0.02, 0.03, 0.05), 0.15)
+	scr.emission_enabled = true
+	scr.emission = Color(0.08, 0.16, 0.28)
+	scr.emission_energy_multiplier = 0.35
+	_ibox(root, Vector3(0.26, 0.15, 0.02), Vector3(0, sy + 0.55, dz + 0.1), scr, 0.0)
+	_ibox(root, Vector3(0.26, 0.22, 0.75), Vector3(0, sy + 0.08, seat.z - 0.35), dash, 0.04)
+	_ibox(root, Vector3(0.05, 0.08, 0.05), Vector3(0, sy + 0.24, seat.z - 0.3), chrome, 0.01)       # gear selector
+	# front seats (cushion + backrest + headrest)
+	for sx: float in [seat.x, -seat.x]:
+		_ibox(root, Vector3(0.5, 0.12, 0.52), Vector3(sx, sy - 0.02, seat.z + 0.05), leather, 0.05)
+		var back := _ibox(root, Vector3(0.5, 0.62, 0.12), Vector3(sx, sy + 0.32, seat.z + 0.33), leather, 0.05)
+		back.rotation.x = deg_to_rad(-12.0)
+		_ibox(root, Vector3(0.26, 0.17, 0.1), Vector3(sx, sy + 0.72, seat.z + 0.42), leather, 0.04)
+	# the steering wheel on its column; local +Z = along the column, away from the driver
+	var col_dir := Vector3(0, -0.42, -0.91).normalized()
+	var wheel := Node3D.new()
+	wheel.name = "steeringwheel"
+	var zb := col_dir
+	var xb := Vector3.RIGHT
+	var yb := zb.cross(xb).normalized()
+	wheel.transform = Transform3D(Basis(xb, yb, zb), Vector3(seat.x, sy + 0.44, seat.z - 0.5))
+	root.add_child(wheel)
+	_steering_wheel = wheel                  # VehiclePrado turns it with the steering
+	_steering_rest = wheel.transform
+	var rim := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.165
+	tm.outer_radius = 0.19
+	tm.rings = 32
+	tm.ring_segments = 10
+	rim.mesh = tm
+	rim.material_override = leather
+	rim.rotation.x = PI * 0.5
+	wheel.add_child(rim)
+	var hub := MeshInstance3D.new()
+	var hm := CylinderMesh.new()
+	hm.top_radius = 0.065
+	hm.bottom_radius = 0.075
+	hm.height = 0.06
+	hub.mesh = hm
+	hub.material_override = dash
+	hub.rotation.x = PI * 0.5
+	wheel.add_child(hub)
+	for a: float in [PI * 0.5, -PI * 0.5, PI]:
+		var sp := _ibox(wheel, Vector3(0.17, 0.035, 0.025), Vector3(cos(a) * 0.095, sin(a) * 0.095, 0.0), dash, 0.01)
+		sp.rotation.z = a
+	var logo := _ibox(wheel, Vector3(0.05, 0.03, 0.01), Vector3(0, 0, -0.035), chrome, 0.0)
+	logo.name = "Logo"
+	# column
+	var colm := MeshInstance3D.new()
+	var cc := CylinderMesh.new()
+	cc.top_radius = 0.035
+	cc.bottom_radius = 0.045
+	cc.height = 0.32
+	colm.mesh = cc
+	colm.material_override = dash
+	root.add_child(colm)
+	colm.position = wheel.position + col_dir * 0.18
+	colm.look_at_from_position(colm.position, colm.position + col_dir, Vector3.UP)
+	colm.rotate_object_local(Vector3.RIGHT, PI * 0.5)
+
+
+func _imat(col: Color, rough: float, metal := 0.0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col
+	m.roughness = rough
+	m.metallic = metal
+	return m
+
+
+func _ibox(parent: Node3D, size: Vector3, pos: Vector3, mat: Material, bevel: float) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	mi.material_override = mat
+	mi.position = pos
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mi)
+	return mi

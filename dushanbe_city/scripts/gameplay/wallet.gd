@@ -8,6 +8,7 @@ static var laklak_hired := false
 static var bus_hired := false
 static var deliveries := 0
 static var earned_total := 0
+static var paints := {}               ## vehicle node name -> paint colour (html), garage repaints
 static var _loaded := false
 static var no_save := false          ## tests: never touch the real save file
 
@@ -32,7 +33,7 @@ static func save_state() -> void:
 		return
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict()}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints}))
 
 
 static func earn(amount: int) -> void:

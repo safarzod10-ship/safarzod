@@ -6,6 +6,10 @@ extends Node
 ## removes the dents. Garages are built only near the player (lazy, like the sectors).
 
 const PRICE_PER_PCT := 4
+const PAINT_PRICE := 500
+const COLORS := [["Белый", Color(0.85, 0.86, 0.87)], ["Чёрный", Color(0.02, 0.022, 0.026)], ["Серебро", Color(0.55, 0.57, 0.6)],
+	["Красный", Color(0.45, 0.02, 0.03)], ["Синий", Color(0.03, 0.07, 0.2)], ["Зелёный", Color(0.03, 0.18, 0.08)],
+	["Жёлтый", Color(0.75, 0.55, 0.02)], ["Вишня", Color(0.22, 0.02, 0.06)]]
 const PAD_RADIUS := 9.0
 const BUILD_DIST := 450.0
 
@@ -13,6 +17,8 @@ var session: CarSession
 var spots: Array = []             ## [{pos: Vector3, yaw: float, node: Node3D}]
 var _ui: CanvasLayer
 var _btn: Button
+var _paint_btn: Button
+var _paint_panel: PanelContainer
 var _msg: Label
 var _msg_t := 0.0
 var _t := 0.0
@@ -39,6 +45,11 @@ func _ready() -> void:
 		cp.y = CityWorld.instance.terrain_height(cp.x, cp.z)
 		spots.append({"pos": cp, "yaw": 0.0, "node": null})
 	_build_ui()
+	# the saved garage colours, once every vehicle has spawned
+	get_tree().create_timer(4.0, false).timeout.connect(func() -> void:
+		for v in get_tree().get_nodes_in_group(&"vehicle"):
+			if v is VehiclePrado and Wallet.paints.has(String(v.name)):
+				(v as VehiclePrado).set_paint(Color.html(String(Wallet.paints[String(v.name)]))))
 
 
 static func _free(wd: WorldData, p: Vector3) -> bool:
@@ -89,7 +100,19 @@ func _process(delta: float) -> void:
 			if s["node"] != null and pad_point(s).distance_to(car.global_position) < PAD_RADIUS:
 				show = true
 				break
+	var at_pad := false
+	if car and not car.wrecked and car.speed_kmh < 3.0:
+		for s2 in spots:
+			if s2["node"] != null and pad_point(s2).distance_to(car.global_position) < PAD_RADIUS:
+				at_pad = true
+	_paint_btn.visible = at_pad and not _paint_panel.visible
+	if not at_pad:
+		_paint_panel.visible = false
 	_btn.visible = show
+	if _paint_btn.visible:
+		var vs2 := get_viewport().get_visible_rect().size
+		_paint_btn.reset_size()
+		_paint_btn.position = Vector2(vs2.x * 0.5 - _paint_btn.size.x * 0.5, vs2.y * 0.6 + (96.0 if show else 0.0))
 	if show:
 		_btn.text = "ПОЧИНИТЬ · %s" % Wallet.fmt(price(car))
 		var vs := get_viewport().get_visible_rect().size
@@ -142,6 +165,56 @@ func _build_ui() -> void:
 	_btn.visible = false
 	_btn.pressed.connect(func() -> void: repair())
 	_ui.add_child(_btn)
+	_paint_btn = Button.new()
+	_paint_btn.focus_mode = Control.FOCUS_NONE
+	_paint_btn.add_theme_font_override("font", HudStyle.font())
+	_paint_btn.add_theme_font_size_override("font_size", 28)
+	_paint_btn.custom_minimum_size = Vector2(0, 76)
+	var sb2 := sb.duplicate() as StyleBoxFlat
+	sb2.bg_color = Color(0.5, 0.15, 0.45)
+	_paint_btn.add_theme_stylebox_override("normal", sb2)
+	_paint_btn.add_theme_stylebox_override("hover", sb2)
+	_paint_btn.add_theme_stylebox_override("pressed", sb2)
+	_paint_btn.text = "ПОКРАСИТЬ · %s" % Wallet.fmt(PAINT_PRICE)
+	_paint_btn.add_to_group(TouchBlock.GROUP)
+	_paint_btn.visible = false
+	_paint_btn.pressed.connect(_open_paint)
+	_ui.add_child(_paint_btn)
+	_paint_panel = PanelContainer.new()
+	var ps := StyleBoxFlat.new()
+	ps.bg_color = Color(0.05, 0.06, 0.08, 0.94)
+	ps.set_corner_radius_all(14)
+	ps.content_margin_left = 18
+	ps.content_margin_right = 18
+	ps.content_margin_top = 14
+	ps.content_margin_bottom = 14
+	_paint_panel.add_theme_stylebox_override("panel", ps)
+	_paint_panel.add_to_group(TouchBlock.GROUP)
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	_paint_panel.add_child(grid)
+	for cc in COLORS:
+		var cb := Button.new()
+		cb.text = cc[0]
+		cb.focus_mode = Control.FOCUS_NONE
+		cb.custom_minimum_size = Vector2(150, 72)
+		cb.add_theme_font_size_override("font_size", 20)
+		var csb := StyleBoxFlat.new()
+		csb.bg_color = (cc[1] as Color).lightened(0.12)
+		csb.set_corner_radius_all(10)
+		csb.border_color = Color(1, 1, 1, 0.6)
+		csb.set_border_width_all(2)
+		cb.add_theme_stylebox_override("normal", csb)
+		cb.add_theme_stylebox_override("hover", csb)
+		cb.add_theme_stylebox_override("pressed", csb)
+		cb.add_theme_color_override("font_color", Color.BLACK if (cc[1] as Color).get_luminance() > 0.4 else Color.WHITE)
+		var colr: Color = cc[1]
+		cb.pressed.connect(func() -> void: paint(colr))
+		grid.add_child(cb)
+	_paint_panel.visible = false
+	_ui.add_child(_paint_panel)
 	_msg = Label.new()
 	_msg.add_theme_font_override("font", HudStyle.font())
 	_msg.add_theme_font_size_override("font_size", 26)
@@ -156,7 +229,33 @@ func _build_ui() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	TouchBlock.tap(event, [_btn])
+	var b: Array = [_btn, _paint_btn]
+	if _paint_panel.visible:
+		b.append_array(_paint_panel.find_children("*", "Button", true, false))
+	TouchBlock.tap(event, b)
+
+
+func _open_paint() -> void:
+	_paint_panel.visible = true
+	_paint_panel.reset_size()
+	var vs := get_viewport().get_visible_rect().size
+	_paint_panel.position = (vs - _paint_panel.size) * 0.5
+
+
+func paint(c: Color) -> bool:
+	var car := session.car if session and session.driving else null
+	_paint_panel.visible = false
+	if car == null:
+		return false
+	if Wallet.money < PAINT_PRICE:
+		_say("Недостаточно денег: покраска стоит %s" % Wallet.fmt(PAINT_PRICE))
+		return false
+	Wallet.money -= PAINT_PRICE
+	car.set_paint(c)
+	Wallet.paints[String(car.name)] = c.to_html()
+	Wallet.save_state()
+	_say("Машина перекрашена · −%s" % Wallet.fmt(PAINT_PRICE))
+	return true
 
 
 # ------------------------------------------------------------------------------------------ garage

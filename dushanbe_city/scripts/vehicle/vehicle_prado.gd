@@ -985,3 +985,16 @@ func weapon_hit(amount: float) -> void:
 		return
 	health = maxf(0.0, health - amount)
 	damaged.emit(health)
+
+
+## repaint the body (the paint surfaces of the model), e.g. at a garage (AutoService)
+func set_paint(c: Color) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null:
+			continue
+		for si in m.mesh.get_surface_count():
+			var mat := m.get_active_material(si) as ShaderMaterial
+			if mat and float(mat.get_shader_parameter("paint")) > 0.5:
+				mat.set_shader_parameter("albedo_color", c)
+				mat.set_shader_parameter("metallic", 0.45)

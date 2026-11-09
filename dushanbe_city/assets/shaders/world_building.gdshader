@@ -146,7 +146,9 @@ void fragment() {
 		float group = floor(u / (bay * 3.0));
 		float row = floor(hash(vec3(group, seed * 31.0, 5.0)) * 16.0);
 		float col = step(0.5, hash(vec3(group, 2.0, seed)));
-		vec2 suv = vec2((col + fract(u / (bay * 3.0))) / 2.0, (row + 1.0 - (v - (g0 - 0.95)) / 0.8) / 16.0);
+		// u grows right-to-left as seen from outside (the facade runs a->b with the outward normal on
+		// its right): mirror it, or the shop signs read backwards
+		vec2 suv = vec2((col + 1.0 - fract(u / (bay * 3.0))) / 2.0, (row + 1.0 - (v - (g0 - 0.95)) / 0.8) / 16.0);
 		vec3 sg = texture(sign_tex, suv).rgb;
 		wall = sg;
 		rough = 0.4;

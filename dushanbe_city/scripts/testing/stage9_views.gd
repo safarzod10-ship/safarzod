@@ -98,6 +98,61 @@ func _ready() -> void:
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("cabins"):
+		_ui(false)
+		var sc2: CarSession = main.get("car_session")
+		for key in ["camry", "lexus"]:
+			var cv: VehiclePrado = main.get(key)
+			if sc2.driving:
+				sc2.exit()
+				await get_tree().create_timer(0.5).timeout
+			sc2.player.teleport(cv.driver_door_point(0.7), 0.0)
+			await get_tree().create_timer(0.5).timeout
+			sc2._select(cv)
+			sc2.enter()
+			await get_tree().create_timer(1.5).timeout
+			for k in 3:
+				if sc2.cam.mode == 1:
+					break
+				sc2.cam.cycle()
+				await get_tree().process_frame
+			await get_tree().create_timer(1.0).timeout
+			await _snap("cabin_" + key)
+			sc2.cam.cycle()
+			sc2.cam.cycle()
+			await get_tree().create_timer(1.0).timeout
+			await _snap("ext_" + key)
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("matdebug"):
+		_ui(false)
+		var sc3: CarSession = main.get("car_session")
+		var lx: VehiclePrado = main.get("lexus")
+		var cols := [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.MAGENTA, Color.CYAN, Color.ORANGE, Color.PURPLE, Color.BROWN, Color.WHITE]
+		var k2 := 0
+		for mi in lx.model.find_children("*", "MeshInstance3D", true, false):
+			var m := mi as MeshInstance3D
+			for si in m.mesh.get_surface_count():
+				var mat := m.get_active_material(si)
+				print("MAT ", m.name, " s", si, " ", m.mesh.surface_get_name(si) if m.mesh is ArrayMesh else "", " -> ", cols[k2 % cols.size()], " ", mat.resource_name if mat else "")
+				var sm := StandardMaterial3D.new()
+				sm.albedo_color = cols[k2 % cols.size()]
+				m.set_surface_override_material(si, sm)
+				k2 += 1
+		sc3.player.teleport(lx.driver_door_point(0.7), 0.0)
+		await get_tree().create_timer(0.5).timeout
+		sc3._select(lx)
+		sc3.enter()
+		await get_tree().create_timer(1.5).timeout
+		for k in 3:
+			if sc3.cam.mode == 1:
+				break
+			sc3.cam.cycle()
+			await get_tree().process_frame
+		await get_tree().create_timer(1.0).timeout
+		await _snap("lexus_mats")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("cabin"):
 		_ui(false)
 		var sc: CarSession = main.get("car_session")
