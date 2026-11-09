@@ -29,6 +29,12 @@ func _ready() -> void:
 	_hour(10.5)
 	var fs: FuelService = main.get("fuel")
 	Wallet.money = 1500
+	var bus_only := OS.get_cmdline_user_args().has("bus_only")
+	if bus_only:
+		Wallet.money = 746
+		await _bus_clip()
+		get_tree().quit()
+		return
 	# ---- 1. Camry
 	var camry: VehicleCar = main.get("camry")
 	_caption("Toyota Camry: бак 60 л, та же физика")
@@ -235,3 +241,36 @@ func _drive_pts(v: VehiclePrado, route: Array, near: Vector3, secs: float, vmax:
 			if v.speed_kmh < 1.0:
 				break
 	VehicleInput.scripted = null
+
+
+## the bus clip: placed ~150 m before each of two stops (edited cuts), pulls in, serves the stop
+func _bus_clip() -> void:
+	var job: BusJob = main.get("bus_job")
+	var bus: VehicleCar = main.get("bus")
+	Wallet.bus_hired = true
+	_caption("Автобус №1: остановка — посадка и высадка пассажиров, оплата")
+	s.player.teleport(bus.driver_door_point(0.8), 0.0)
+	await _frames(3)
+	s._select(bus)
+	s.enter()
+	for leg in 2:
+		var st: Dictionary = job.stops[job.next_stop]
+		var k: int = st["k"]
+		var k0 := maxi(k - 38, 1)
+		var a: Vector3 = job.route[k0]
+		var dir := (job.route[k0 + 2] - job.route[k0 - 1]).normalized()
+		var start := a + dir.cross(Vector3.UP) * 3.0
+		await _wait(start)
+		bus.place(start + Vector3(0, 1.0, 0), atan2(-dir.x, -dir.z))
+		bus.linear_velocity = -bus.global_transform.basis.z * 7.0
+		s.cam.snap()
+		var served := job.next_stop
+		var route: Array = []
+		for q in job.route:
+			route.append(q)
+		await _drive_pts(bus, route, bus.global_position, 30.0, 32.0, 0.0, st["p"], false)
+		for i in 300:
+			await get_tree().physics_frame
+			if job.next_stop != served:
+				break
+		await _sec(3.5)
