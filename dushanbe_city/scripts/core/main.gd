@@ -117,6 +117,18 @@ func _spawn_car(touch: CanvasLayer) -> void:
 	car_session = CarSession.new()
 	car_session.name = "CarSession"
 	car_session.player = player
+	var life := PlayerLife.new()
+	life.name = "PlayerLife"
+	life.session = car_session
+	add_child(life)
+	if CityWorld.instance:
+		var shop := GunShop.new()
+		shop.name = "GunShop"
+		add_child(shop)
+	var combat := PlayerCombat.new()
+	combat.name = "PlayerCombat"
+	combat.player = player
+	add_child(combat)
 	if _top_hud:
 		_top_hud.session = car_session
 	car_session.car = car

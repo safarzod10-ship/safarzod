@@ -77,19 +77,20 @@ void vertex() {
 	if (use_palette) {
 		// the ground's palette colour at this clump: blades a bit lighter at the tip, dark at the root
 		vec3 pc = grass_palette(opos.xz, palette_noise, 1.0);
-		c_root = pc * 0.38;
-		c_mid = pc * 0.85;
-		c_tip = pc * 1.18;
+		// darker roots, natural mid, tips slightly sun-bleached (no lime): deeper, more real lawn
+		c_root = pc * 0.26;
+		c_mid = pc * 0.72;
+		c_tip = mix(pc * 1.02, GP_DRY * 0.95, 0.12 + 0.18 * ih2);
 	}
 	vec3 c = hgt < 0.45 ? mix(c_root, c_mid, hgt / 0.45)
 			: mix(c_mid, c_tip, (hgt - 0.45) / 0.55);
 	float patchn = vnoise(opos.xz * patch_scale);
 	float dry = smoothstep(1.0 - dry_amount, 1.0, patchn * 0.7 + fract(COLOR.b * 7.13 + ih) * 0.3);
 	c = mix(c, (use_palette ? GP_DRY : color_dry.rgb) * mix(0.55, 1.0, hgt), dry);
-	c = veg_variation(c, ih, ih2 * 0.5 + patchn * 0.5, hue_variation, brightness_variation);
+	c = veg_variation(c, ih, ih2 * 0.5 + patchn * 0.5, hue_variation * 1.4, brightness_variation * 1.6);
 	c *= mix(1.0, COLOR.r, ao_strength);
 	v_col = c;
-	vec3 n = normalize(mix(NORMAL, vec3(0.0, 1.0, 0.0), normal_up_blend));
+	vec3 n = normalize(mix(NORMAL, vec3(0.0, 1.0, 0.0), normal_up_blend * 0.6));   // more light / shade across the blades
 	v_vnormal = normalize((MODELVIEW_MATRIX * vec4(n, 0.0)).xyz);
 }
 
@@ -98,5 +99,5 @@ void fragment() {
 	NORMAL = normalize(v_vnormal);
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
-	BACKLIGHT = v_col * translucency;
+	BACKLIGHT = v_col * translucency * 0.7;
 }

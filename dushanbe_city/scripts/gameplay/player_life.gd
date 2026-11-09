@@ -1,0 +1,103 @@
+class_name PlayerLife
+extends Node
+## The player's health (100). Explosions / falls take it; at 0 the player dies: «ВЫ ПОГИБЛИ», then
+## wakes up at the nearest hospital (or the start point on the peninsula), paying 10 % of the money
+## (max 500 smn) for the treatment. Health slowly comes back (1 / s after 8 s without damage).
+
+static var health := 100.0
+static var dead := false
+static var instance: PlayerLife
+
+var session: CarSession
+var _since_hit := 99.0
+var _ui: CanvasLayer
+var _label: Label
+var _dim: ColorRect
+
+
+func _ready() -> void:
+	instance = self
+	health = 100.0
+	dead = false
+	_ui = CanvasLayer.new()
+	_ui.layer = 45
+	add_child(_ui)
+	_dim = ColorRect.new()
+	_dim.color = Color(0.25, 0.0, 0.0, 0.0)
+	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui.add_child(_dim)
+	_label = Label.new()
+	_label.set_anchors_preset(Control.PRESET_CENTER)
+	_label.offset_left = -500
+	_label.offset_right = 500
+	_label.offset_top = -80
+	_label.offset_bottom = 80
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_label.add_theme_font_override("font", HudStyle.font())
+	_label.add_theme_font_size_override("font_size", 64)
+	_label.add_theme_color_override("font_color", Color(0.85, 0.08, 0.08))
+	_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_label.add_theme_constant_override("outline_size", 14)
+	_label.visible = false
+	_ui.add_child(_label)
+
+
+static func damage(amount: float) -> void:
+	if instance == null or dead or amount <= 0.0:
+		return
+	health = maxf(0.0, health - amount)
+	instance._since_hit = 0.0
+	if health <= 0.0:
+		instance._die()
+
+
+func _process(delta: float) -> void:
+	_since_hit += delta
+	if not dead and _since_hit > 8.0 and health < 100.0:
+		health = minf(100.0, health + delta)
+	if not dead:
+		_dim.color.a = clampf((40.0 - health) / 40.0, 0.0, 1.0) * 0.35 + clampf(0.6 - _since_hit, 0.0, 0.6) * 0.4
+
+
+func _die() -> void:
+	dead = true
+	if session and session.driving:
+		session.exit()
+	_label.text = "ВЫ ПОГИБЛИ"
+	_label.visible = true
+	_dim.color = Color(0.25, 0.0, 0.0, 0.55)
+	await get_tree().create_timer(4.0, false).timeout
+	_respawn()
+
+
+func _respawn() -> void:
+	var p := Vector3(-58, 2.4, -90)
+	var player: Node3D = session.player if session else null
+	if player:
+		var best := INF
+		var wd := WorldData.get_instance()
+		if wd.ok:
+			for b in wd.buildings:
+				if b[0] == "hospital_m":
+					var q := Vector3(b[1], b[8], b[2])
+					var d := q.distance_to(player.global_position)
+					if d < best:
+						best = d
+						p = q + Vector3(0, 0, maxf(float(b[5]), 10.0) * 0.5 + 5.0)
+		if best < INF:
+			var ow: Variant = get_parent().get("open_world")
+			if ow:
+				(ow as OpenWorld).preload_at(p)
+			await get_tree().physics_frame
+		player.call("teleport", p, 0.0)
+	var fee := mini(500, Wallet.money / 10)
+	Wallet.money -= fee
+	Wallet.save_state()
+	health = 100.0
+	dead = false
+	_label.text = "Больница: лечение −%s" % Wallet.fmt(fee) if fee > 0 else ""
+	_dim.color.a = 0.0
+	await get_tree().create_timer(3.0, false).timeout
+	_label.visible = false

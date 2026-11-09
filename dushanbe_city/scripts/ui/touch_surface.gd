@@ -137,7 +137,8 @@ func _input(event: InputEvent) -> void:
 				PlayerInput.queue_jump()
 			elif _in_circle(p, _punch_rect()):
 				_punch_finger = event.index
-				PlayerInput.queue_punch()
+				PlayerInput.queue_fire()
+				PlayerInput.fire_held = true
 			elif _action_label != "" and _in_circle(p, _action_rect()):
 				_action_finger = event.index
 				PlayerInput.queue_action()
@@ -167,6 +168,7 @@ func _input(event: InputEvent) -> void:
 				_jump_finger = -1
 			elif event.index == _punch_finger:
 				_punch_finger = -1
+				PlayerInput.fire_held = false
 			elif event.index == _action_finger:
 				_action_finger = -1
 		queue_redraw()
@@ -209,7 +211,7 @@ func _draw() -> void:
 	HudStyle.round_button(self, mn[0], mn[1], "pause")
 	# FIST, JUMP
 	var pr := _punch_rect()
-	HudStyle.light_button(self, pr[0], pr[1], "fist", _punch_finger >= 0, Color(0.75, 0.15, 0.12, 0.8) if _punch_finger >= 0 else Color(0, 0, 0, 0))
+	HudStyle.light_button(self, pr[0], pr[1], Weapons.icon_of(Weapons.current), _punch_finger >= 0, Color(0.75, 0.15, 0.12, 0.8) if _punch_finger >= 0 else Color(0, 0, 0, 0))
 	var jp := _jump_rect()
 	HudStyle.light_button(self, jp[0], jp[1], "jump", _jump_finger >= 0)
 	# contextual button: a car door to get in, a hand + the label for anything else

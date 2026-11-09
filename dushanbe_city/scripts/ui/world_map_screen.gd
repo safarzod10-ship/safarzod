@@ -257,7 +257,7 @@ func _overlay() -> void:
 func _legend(p: Vector2, u: float) -> void:
 	var rows := [["house", "Жилые районы"], ["office", "Бизнес и офисы"], ["cart", "Рынки и магазины"], ["fuel", "АЗС"],
 		["cross", "Больница"], ["school", "Школа"], ["tree", "Парки и зоны отдыха"], ["monument", "Достопримечательности"],
-		["box", "Работа: LakLak"], ["bus", "Автобус №1"], ["anchor", "Набережная, лодки"]]
+		["box", "Работа: LakLak"], ["shop", "Оружейный магазин"], ["bus", "Автобус №1"], ["anchor", "Набережная, лодки"]]
 	var rh := u * 0.42
 	var rc := Rect2(p, Vector2(u * 3.3, rh * rows.size() + u * 0.3))
 	var sb := StyleBoxFlat.new()
@@ -378,6 +378,8 @@ func pois() -> Array:
 	var bj: Variant = main.get("bus_job")
 	if bj is BusJob and not (bj as BusJob).stops.is_empty():
 		out.append(["Конечная автобуса №1 (работа)", (bj as BusJob).office_point(), Color(0.3, 0.9, 0.4)])
+	for gs in get_tree().get_nodes_in_group(&"gun_shop"):
+		out.append(["Оружейный магазин", (gs as Node3D).global_position, Color(0.9, 0.2, 0.15)])
 	var boats: Variant = main.get("boats")
 	if boats is Array and not (boats as Array).is_empty():
 		out.append(["Лодка", ((boats as Array)[0] as Node3D).global_position, Color(0.4, 0.9, 1.0)])

@@ -1,0 +1,17 @@
+PASS  1. gun shop placed near the start ((-80.0, 2.0, -76.0)), on the map
+PASS  2. at the door: «МАГАЗИН ОРУЖИЯ»
+PASS  3. not enough money for the AK (3 500): refused
+PASS  4. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
+PASS  5. buy ammo: +60 AK rounds for 150
+PASS  6. select: unowned weapons can't be taken
+PASS  7. pistol: 5 shots fired (ammo 24 -> 19)
+PASS  8. bullets hit the Camry: condition 100 -> 80 %
+PASS  9. AK automatic: 9 rounds in 1 s (≈10)
+PASS 10. empty pistol: no shot, ammo stays 0
+PASS 11. condition 25 %%: the engine smokes
+PASS 12. condition 10 %%: on fire
+PASS 13. it explodes after burning: wreck true, can't get in true
+PASS 14. the blast killed the player standing 2.5 m away (dead true, health 0)
+PASS 15. respawn: alive at the hospital / start, health 100, fee 90 смн
+PASS 16. wreck restored at its parking place (condition 100 %)
+FAIL 17. steer right -> the steering wheel turns clockwise for the driver (-114 deg)

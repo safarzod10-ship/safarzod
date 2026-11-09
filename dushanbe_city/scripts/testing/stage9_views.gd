@@ -56,6 +56,58 @@ func _ready() -> void:
 		await _card_shots()
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("wclose"):
+		_ui(false)
+		var s0: CarSession = main.get("car_session")
+		var cmb: PlayerCombat = main.get_node("PlayerCombat")
+		Wallet.money = 9000
+		Weapons.buy("pistol")
+		Weapons.buy("ak47")
+		Weapons.buy("bat")
+		s0.player.teleport(Vector3(-58, 2.4, -60), PI * 0.5)
+		s0.player.get_camera().make_current()
+		s0.player.cam_yaw = PI * 0.5
+		await get_tree().create_timer(1.5).timeout
+		add_child(cam)
+		for wid in ["pistol", "ak47", "bat"]:
+			Weapons.select(wid)
+			var pp := s0.player.global_position
+			cam.global_position = pp + Vector3(0.6, 1.6, 2.6)
+			cam.look_at(pp + Vector3(-0.6, 1.2, 0))
+			cam.make_current()
+			for k in 30:
+				if wid != "bat":
+					PlayerInput.fire_held = true
+					PlayerInput.queue_fire()
+				await get_tree().physics_frame
+			await _post()
+			get_viewport().get_texture().get_image().save_png("%s/s9_close_%s.png" % [out, wid])
+			PlayerInput.fire_held = false
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("cabin"):
+		_ui(false)
+		var sc: CarSession = main.get("car_session")
+		var car0: VehiclePrado = main.get("car")
+		sc.player.teleport(car0.driver_door_point(0.7), 0.0)
+		await get_tree().create_timer(0.5).timeout
+		sc._select(car0)
+		sc.enter()
+		await get_tree().create_timer(1.5).timeout
+		while sc.cam.mode != 1:
+			sc.cam.cycle()
+			await get_tree().process_frame
+		for st in [-1.0, 0.0, 1.0]:
+			VehicleInput.scripted = {"steer": st, "brake": 1.0}
+			await get_tree().create_timer(1.2).timeout
+			await _snap("cabin_steer_%d" % int(st))
+		VehicleInput.scripted = null
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("weapons"):
+		await _weapon_shots()
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("hud"):
 		await _hud_shots()
 		get_tree().quit()
@@ -258,3 +310,84 @@ func _save_card(id: String) -> void:
 	img.resize(512, 320, Image.INTERPOLATE_LANCZOS)
 	img.save_jpg(ProjectSettings.globalize_path("res://assets/ui/cards/%s.jpg" % id), 0.86)
 	print("CARD ", id)
+
+
+func _post() -> void:
+	for i in 3:
+		await RenderingServer.frame_post_draw
+
+
+func _weapon_shots() -> void:
+	_ui(true)
+	var s: CarSession = main.get("car_session")
+	var tc: Variant = s.get("walk_touch")
+	if tc is Node and (tc as Node).has_method("set_shown"):
+		(tc as Node).call("set_shown", true)
+	var shop: GunShop = main.get_node("GunShop")
+	var combat: PlayerCombat = main.get_node("PlayerCombat")
+	var camry: VehiclePrado = main.get("camry")
+	Wallet.money = 8000
+	# the shop from the avenue
+	s.player.teleport(shop.door_point() + Vector3(9, 0, 4), PI * 0.5 + 0.35)
+	s.player.get_camera().make_current()
+	s.player.cam_yaw = PI * 0.5 + 0.35
+	await get_tree().create_timer(2.0).timeout
+	await _snap("w_shop_outside")
+	shop.open()
+	await get_tree().create_timer(0.5).timeout
+	await _snap("w_shop_panel")
+	shop._buy("pistol")
+	shop._buy("ak47")
+	shop._buy("bat")
+	shop._ammo("ak47")
+	await get_tree().create_timer(0.3).timeout
+	await _snap("w_shop_bought")
+	shop._panel.visible = false
+	# the wheel
+	var top: TopHud = main.get_node("TopHudLayer/TopHud")
+	top.set_wheel(true)
+	await get_tree().create_timer(0.4).timeout
+	await _snap("w_wheel")
+	top.set_wheel(false)
+	# pistol at the Camry
+	var tp := camry.global_position + camry.global_transform.basis.x * 9.0
+	var yaw := atan2(-(camry.global_position - tp).x, -(camry.global_position - tp).z)
+	s.player.teleport(tp, yaw)
+	s.player.cam_yaw = yaw
+	s.player.cam_pitch = deg_to_rad(-6.0)
+	Weapons.select("pistol")
+	await get_tree().create_timer(1.5).timeout
+	for k in 3:
+		PlayerInput.queue_fire()
+		await get_tree().create_timer(0.35).timeout
+	PlayerInput.queue_fire()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	await _post()
+	get_viewport().get_texture().get_image().save_png("%s/s9_w_pistol.png" % out)
+	# AK burst
+	Weapons.select("ak47")
+	await get_tree().create_timer(0.6).timeout
+	PlayerInput.fire_held = true
+	await get_tree().create_timer(0.45).timeout
+	await _post()
+	get_viewport().get_texture().get_image().save_png("%s/s9_w_ak.png" % out)
+	PlayerInput.fire_held = false
+	# bat
+	Weapons.select("bat")
+	await get_tree().create_timer(0.8).timeout
+	await _snap("w_bat")
+	# smoke / fire / explosion
+	camry.health = 25.0
+	await get_tree().create_timer(2.5).timeout
+	await _snap("w_car_smoke")
+	camry.health = 8.0
+	await get_tree().create_timer(2.0).timeout
+	await _snap("w_car_fire")
+	var vf: VehicleFire = camry.get_node("Fire")
+	vf.explode()
+	await get_tree().create_timer(0.25).timeout
+	await _snap("w_explosion")
+	await get_tree().create_timer(4.5).timeout
+	await _snap("w_after")
+	print("PLAYER HEALTH ", PlayerLife.health, " dead ", PlayerLife.dead)

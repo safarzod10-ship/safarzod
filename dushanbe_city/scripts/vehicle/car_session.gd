@@ -26,6 +26,7 @@ const DOOR := "door_lf_dummy"              ## driver's door part of the model (L
 
 
 func _ready() -> void:
+	add_to_group(&"car_session")
 	VehicleInput.ensure_actions()
 	_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
 	cam = VehicleCamera.new()
@@ -103,7 +104,7 @@ func _draw_prompt() -> void:
 func can_enter(v: VehiclePrado = null) -> bool:
 	if v == null:
 		v = nearest_enterable()
-	if driving or busy or player == null or v == null or not is_instance_valid(v):
+	if driving or busy or player == null or v == null or not is_instance_valid(v) or v.wrecked or PlayerLife.dead:
 		return false
 	if v is VehicleBoat:
 		# a boat: from the pier / shore or swimming beside it, anywhere along the hull

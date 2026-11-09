@@ -91,6 +91,7 @@ var engine_brake_force := 0.0             ## N at the wheels while coasting (tes
 var speed_kmh := 0.0                      ## |v| of the physical body in km/h (speedometer)
 var forward_speed := 0.0                  ## m/s along the car (signed)
 var health := 100.0
+var wrecked := false                      ## burnt out after an explosion (VehicleFire)
 var driven := false                       ## player in control
 var wheels: Array[Dictionary] = []
 var slip_amount := 0.0                    ## 0..1 tyre slip (audio / smoke)
@@ -135,6 +136,10 @@ func _ready() -> void:
 	linear_damp = 0.0
 	angular_damp = 0.15
 	add_to_group(&"vehicle")
+	if not is_class_boat():
+		var vf := VehicleFire.new()
+		vf.name = "Fire"
+		add_child.call_deferred(vf)
 	easy_drift = easy_drift or PlayerInput.arcade_assist
 	_build_model()
 	_build_collision()
@@ -369,7 +374,7 @@ func _read_input(delta: float) -> void:
 	var s := 0.0
 	var hb := false
 	if driven or scripted_here():
-		t = VehicleInput.throttle() if fuel_l > 0.0 else 0.0       # empty tank: the gas pedal does nothing
+		t = VehicleInput.throttle() if fuel_l > 0.0 and not wrecked else 0.0       # empty tank: the gas pedal does nothing
 		b = VehicleInput.brake()
 		s = VehicleInput.steer()
 		hb = VehicleInput.handbrake()
@@ -673,7 +678,7 @@ func _process(delta: float) -> void:
 		# spin about the axle (pivot X axis); negative angle = top of the tyre moves forward (-Z)
 		mesh.transform = Transform3D(Basis(Vector3.RIGHT, -float(w["spin"])) * mr.basis, mr.origin)
 	if _steering_wheel:
-		_steering_wheel.transform = Transform3D(_steering_rest.basis * Basis(Vector3.FORWARD, steer * deg_to_rad(240.0)), _steering_rest.origin)
+		_steering_wheel.transform = Transform3D(_steering_rest.basis * Basis(Vector3.BACK, steer * deg_to_rad(240.0)), _steering_rest.origin)
 	if _driver and _driver.visible:
 		_driver.pose(steer)
 	_update_doors(delta)
@@ -829,6 +834,8 @@ func driver_eye() -> Vector3:
 ## Full repair: dents and scratches gone (the geometry itself was never modified), suspension,
 ## engine power and handling back to 100 %. The same car object keeps driving.
 func repair() -> void:
+	if wrecked:
+		return
 	_dents.clear()
 	_push_dents()
 	health = 100.0
@@ -966,3 +973,15 @@ func set_driver_visible(on: bool) -> void:
 
 const DRIVER_SEAT_UP := 0.06       ## hips above the seat point (cushion)
 const DRIVER_SEAT_BACK := 0.05     ## towards the seat back
+
+
+func is_class_boat() -> bool:
+	return get_script() != null and String(get_script().resource_path).ends_with("vehicle_boat.gd")
+
+
+## a hit by a weapon (bullet / bat / fist): condition drops (the car smokes, burns, explodes)
+func weapon_hit(amount: float) -> void:
+	if wrecked:
+		return
+	health = maxf(0.0, health - amount)
+	damaged.emit(health)

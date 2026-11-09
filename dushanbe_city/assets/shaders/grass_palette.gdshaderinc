@@ -1,16 +1,17 @@
 // Natural lawn / grass colouring shared by every grass surface (open-world terrain, peninsula
 // terrain, city lawns, the 3D grass blades). The palette (sRGB):
-//   main lawn  #557A3B   lush green #668B45   dry grass #9A9255   dark patches #354D2C   light grass #829B54
+//   main lawn  #4D6B33   lush green #587A38   dry grass #8F8550   dark patches #2C4123   light grass #728A48
+//   (0.17: deeper, less saturated than the first #557A3B set - the lawns read as real grass, not lime)
 // The colour is chosen in WORLD space by four octaves of a tileable noise (large patches ~400 m,
 // patches ~90 m, small dry / dark spots ~20 m, tufts ~6 m) with smooth transitions, so no surface
 // is one flat colour and there is no acid green. The grass texture only adds its luminance detail
 // (its own hue is discarded), normalised by its average (last mip) so the palette stays exact.
 
-const vec3 GP_MAIN = vec3(0.0908, 0.1946, 0.0437);    // #557A3B in linear
-const vec3 GP_LUSH = vec3(0.1329, 0.2582, 0.0595);    // #668B45
-const vec3 GP_DRY = vec3(0.3231, 0.2874, 0.0908);     // #9A9255
-const vec3 GP_DARK = vec3(0.0356, 0.0742, 0.0252);    // #354D2C
-const vec3 GP_LIGHT = vec3(0.2232, 0.3279, 0.0887);   // #829B54
+const vec3 GP_MAIN = vec3(0.0742, 0.1470, 0.0331);    // #4D6B33
+const vec3 GP_LUSH = vec3(0.0976, 0.1946, 0.0395);    // #587A38
+const vec3 GP_DRY = vec3(0.2747, 0.2346, 0.0802);    // #8F8550
+const vec3 GP_DARK = vec3(0.0252, 0.0529, 0.0168);    // #2C4123
+const vec3 GP_LIGHT = vec3(0.1683, 0.2542, 0.0648);    // #728A48
 
 // p: world xz; noise: a tileable greyscale noise texture (repeat enabled); detail: 0 (Low) .. 1
 vec3 grass_palette(vec2 p, sampler2D noise, float detail) {

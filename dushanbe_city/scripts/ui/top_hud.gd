@@ -7,11 +7,61 @@ extends Control
 ## The money / job labels of the jobs move here (LakLak, bus: one line under the logo).
 
 var session: CarSession
+var wheel_open := false
+var _slot_area: Control          ## the weapon slot, kept off the touch controls (TouchBlock)
+var _wheel_area: Control         ## the open wheel covers the screen
+var _note := ""
+var _note_t := 0.0
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_slot_area = Control.new()
+	_slot_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_slot_area.add_to_group(TouchBlock.GROUP)
+	add_child(_slot_area)
+	_wheel_area = Control.new()
+	_wheel_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wheel_area.add_to_group(TouchBlock.GROUP)
+	_wheel_area.visible = false
+	add_child(_wheel_area)
+
+
+## tap on the weapon slot (top-right) opens the weapon wheel; a tap on a weapon takes it
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventScreenTouch and event.pressed):
+		return
+	var p: Vector2 = event.position
+	if wheel_open:
+		get_viewport().set_input_as_handled()
+		for k in Weapons.LIST.size():
+			var c := _wheel_slot(k)
+			if p.distance_to(c) < _u() * 1.0:
+				var id: String = Weapons.LIST[k]
+				if Weapons.select(id):
+					Wallet.save_state()
+					set_wheel(false)
+				else:
+					_note = "%s — купите в оружейном магазине (%s)" % [Weapons.DATA[id]["name"], Wallet.fmt(int(Weapons.DATA[id]["price"]))]
+					_note_t = 3.0
+				return
+		set_wheel(false)
+	elif weapon_rect().grow(8.0).has_point(p) and not (session and session.driving):
+		get_viewport().set_input_as_handled()
+		set_wheel(true)
+
+
+func set_wheel(on: bool) -> void:
+	wheel_open = on
+	_wheel_area.visible = on
+
+
+func _wheel_slot(k: int) -> Vector2:
+	var c := size * 0.5
+	var r := _u() * 2.3
+	var a := -PI * 0.5 + k * TAU / Weapons.LIST.size()
+	return c + Vector2(cos(a), sin(a)) * r
 
 
 func _process(_d: float) -> void:
@@ -19,6 +69,10 @@ func _process(_d: float) -> void:
 	if size != vs:
 		position = Vector2.ZERO
 		size = vs
+	_slot_area.position = weapon_rect().position
+	_slot_area.size = weapon_rect().size
+	_wheel_area.size = size
+	_note_t -= _d
 	queue_redraw()
 
 
@@ -69,6 +123,16 @@ func _draw() -> void:
 		fuel = session.car.fuel_l / maxf(session.car.tank_l, 1.0)
 	_bar(Rect2(right - bw, 0.8 * u, bw, 0.2 * u), hp, Color(0.86, 0.1, 0.1))
 	_bar(Rect2(right - bw, 1.1 * u, bw, 0.2 * u), fuel, Color(0.97, 0.97, 0.97))
+	# crosshair while a gun is out (on foot)
+	if Weapons.uses_ammo(Weapons.current) and not (session and session.driving):
+		var cc := size * 0.5
+		for dvec: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
+			draw_line(cc + dvec * 6.0, cc + dvec * 16.0, Color(0, 0, 0, 0.6), 4.0)
+			draw_line(cc + dvec * 6.0, cc + dvec * 16.0, Color(1, 1, 1, 0.95), 2.0)
+	if wheel_open:
+		_draw_wheel(u)
+	if _note_t > 0.0:
+		HudStyle.label(self, _note, Vector2(size.x * 0.5, size.y * 0.85), int(u * 0.3), Color(1, 0.85, 0.4))
 
 
 
@@ -81,3 +145,25 @@ func _bar(rc: Rect2, v: float, col: Color) -> void:
 ## «Dushanbe-X» (HudStyle.logo)
 func _logo(p: Vector2, u: float) -> void:
 	HudStyle.logo(self, p, u)
+
+
+func _draw_wheel(u: float) -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
+	var c := size * 0.5
+	draw_arc(c, u * 2.3, 0, TAU, 96, Color(1, 1, 1, 0.25), u * 1.7, true)
+	for k in Weapons.LIST.size():
+		var id: String = Weapons.LIST[k]
+		var p := _wheel_slot(k)
+		var own := Weapons.has(id)
+		var cur := Weapons.current == id
+		draw_circle(p, u * 0.85, Color(0.95, 0.75, 0.2, 0.9) if cur else Color(0.03, 0.03, 0.05, 0.75))
+		draw_arc(p, u * 0.85, 0, TAU, 48, Color(1, 1, 1, 0.8 if own else 0.3), 2.0, true)
+		var t := HudStyle.icon(Weapons.icon_of(id))
+		if t:
+			draw_texture_rect(t, Rect2(p - Vector2(u, u) * 0.55, Vector2(u, u) * 1.1), false, Color(1, 1, 1, 1.0 if own else 0.3))
+		var wname: String = Weapons.DATA[id]["name"]
+		var sub := ("патр. %d" % Weapons.ammo_of(id)) if own and Weapons.uses_ammo(id) else ("" if own else Wallet.fmt(int(Weapons.DATA[id]["price"])))
+		HudStyle.label(self, wname, p + Vector2(0, u * 1.12), int(u * 0.28))
+		if sub != "":
+			HudStyle.label(self, sub, p + Vector2(0, u * 1.45), int(u * 0.22), Color(0.8, 0.9, 1.0) if own else Color(1, 0.6, 0.5))
+	HudStyle.label(self, "ОРУЖИЕ", c, int(u * 0.36))

@@ -1,7 +1,7 @@
 // Procedural lawn grass: root->tip colour gradient, per-clump hue variation, wind sway,
 // shrinks to zero near the streaming radius so the border is invisible.
 shader_type spatial;
-render_mode cull_disabled, diffuse_burley, specular_disabled;
+render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
 #include "res://assets/shaders/grass_palette.gdshaderinc"
 uniform sampler2D palette_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
 varying vec3 pal;
@@ -27,10 +27,15 @@ void vertex() {
 	VERTEX.xz += vec2(0.05, 0.03) * w * t * t;
 }
 void fragment() {
-	vec3 tip = mix(pal * 1.18, GP_DRY, var_.x * var_.y * 0.5);
-	ALBEDO = mix(pal * 0.38, tip, t) * (0.88 + 0.24 * var_.y);
-	ROUGHNESS = 0.85;
-	BACKLIGHT = vec3(0.25, 0.3, 0.1) * t;
-	AO = mix(0.45, 1.0, t);
-	AO_LIGHT_AFFECT = 0.6;
+	// per clump: a slightly different hue (olive <-> blue-green), some clumps drier at the tips
+	vec3 hue = mix(vec3(1.06, 1.0, 0.82), vec3(0.88, 1.02, 1.0), var_.x);
+	vec3 base = pal * hue;
+	vec3 tip = mix(base * 1.22, GP_DRY * 1.05, smoothstep(0.55, 1.0, var_.x * var_.y) * 0.55);
+	// dark, shadowed roots -> lit tips
+	ALBEDO = mix(base * 0.3, tip, smoothstep(0.0, 1.0, t)) * (0.86 + 0.26 * var_.y);
+	ROUGHNESS = 0.62;
+	SPECULAR = 0.35;
+	BACKLIGHT = vec3(0.32, 0.38, 0.12) * t * t;
+	AO = mix(0.3, 1.0, t);
+	AO_LIGHT_AFFECT = 0.75;
 }

@@ -244,7 +244,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		cam_ctl.rotate_by(event.relative * cfg.mouse_sensitivity)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		PlayerInput.queue_punch()
+		PlayerInput.queue_fire()
 	elif event.is_action_pressed(&"run_toggle"):
 		PlayerInput.run_toggle = not PlayerInput.run_toggle
 

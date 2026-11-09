@@ -23,6 +23,8 @@ static var arcade_assist := false
 static var _action_queued := false
 static var _jump_queued := false
 static var _punch_queued := false
+static var _fire_queued := false
+static var fire_held := false          ## the attack button is held (automatic weapons)
 static var _actions_ready := false
 
 
@@ -138,3 +140,14 @@ static func reset() -> void:
 	_jump_queued = false
 	_punch_queued = false
 	_action_queued = false
+
+
+## attack button pressed (PlayerCombat: punch / bat swing / one shot)
+static func queue_fire() -> void:
+	_fire_queued = true
+
+
+static func consume_fire() -> bool:
+	var q := _fire_queued
+	_fire_queued = false
+	return q
