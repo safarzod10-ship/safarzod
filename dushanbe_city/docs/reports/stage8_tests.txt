@@ -6,11 +6,11 @@ PASS  5. tank runs dry: out_of_fuel true, fuel 0.00 l, the car does not accelera
 PASS  6. the fuel delivery window opens (18 smn/l): Бензин закончился! Доставка топлива: 18 смн/л · у вас 500 смн
 PASS  7. buy 10 l delivered: +10.0 l, money 500 смн -> 320 смн (−180)
 PASS  8. with fuel the car drives again (53 km/h after 5 s of gas)
-PASS  9. filling stations along the roads: 20
-PASS 10. nearest station from any road point: at most 1.9 km
+PASS  9. filling stations along the roads: 51
+PASS 10. nearest station from any road point: at most 1.5 km
 PASS 11. at the pumps: «ЗАПРАВИТЬ» offered (station found true, button true)
 PASS 12. filled at 14 smn/l: +60.0 l to 80 / 80 l, paid 840 смн (60 x 14)
-PASS 13. low fuel: nearest station marked on the minimap ((6.0, 19.0, -2573.0))
+PASS 13. low fuel: nearest station marked on the minimap ((-45.0, 5.0, -1048.0))
 PASS 14. no money: no fuel is given (fuel 10.00 l, money 0 смн)
 PASS 15. Toyota Camry: 4 wheels (4) with spinning meshes (8), radius 0.339 m, on the ground 4
 PASS 16. Lexus RX 350: 4 wheels (4) with spinning meshes (20), radius 0.403 m, on the ground 4
@@ -27,6 +27,6 @@ PASS 26. in the bus: next stop «Оружейный магазин» marked (bea
 PASS 27. stop served after 2.5 s standing: passengers 10, pay 35 смн, next stop 2
 PASS 28. driving past a stop misses it (next stop now 3)
 PASS 29. a full loop pays the bonus: loops 0 -> 1, earned 278 смн this shift 313 смн
-FAIL 30. school and hospital models in the city: { "hospital_m": 4 }
+PASS 30. school and hospital models in the city: { "school_m": 6, "hospital_m": 4 }
 PASS 31. model sizes: school (65.0, 12.0, 55.0), hospital (31.0, 12.0, 18.0) (real-world metres)
-FAIL 32. school model rendered in its sector
+PASS 32. school model rendered in its sector

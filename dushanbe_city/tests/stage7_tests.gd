@@ -110,10 +110,10 @@ func _t_billboards() -> void:
 		var arr: Array = by_road[rid]
 		for i in arr.size():
 			for j in range(i + 1, arr.size()):
-				if (arr[i] as Vector3).distance_to(arr[j]) < 290.0:
+				if (arr[i] as Vector3).distance_to(arr[j]) < 220.0:
 					too_close += 1
-	# 0.18: twice as many boards (one per ~400 m), still never two close together
-	_check("billboards ~400 m apart on each road (%d boards, was 97 in 0.17): %d pairs closer than 290 m" % [wd.billboards.size(), too_close], too_close == 0 and wd.billboards.size() >= 194)
+	# 0.20: boards on every road, one per ~300 m, still never two close together
+	_check("billboards ~300 m apart on every road (%d boards, was 97 in 0.17): %d pairs closer than 220 m" % [wd.billboards.size(), too_close], too_close == 0 and wd.billboards.size() >= 350)
 	var on_road := 0
 	for b in wd.billboards:
 		if wd.road_edge_dist(float(b["x"]), float(b["z"])) < 3.0:
