@@ -1,0 +1,60 @@
+name: zuba-ruba
+
+on:
+  push:
+    paths: ["zuba-ruba/**", ".github/workflows/zuba-ruba.yml"]
+  pull_request:
+    paths: ["zuba-ruba/**", ".github/workflows/zuba-ruba.yml"]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: zr
+          POSTGRES_PASSWORD: zr
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U zr" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    defaults:
+      run:
+        working-directory: zuba-ruba/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://zr:zr@localhost/zuba_pytest
+          TEST_REDIS_URL: redis://localhost:6379/15
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: zuba-ruba/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck -S warning zuba-ruba/setup.sh zuba-ruba/deploy/backup.sh
+      - run: docker compose -f zuba-ruba/docker-compose.yml --env-file zuba-ruba/.env.example config -q
