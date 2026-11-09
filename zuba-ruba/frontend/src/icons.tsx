@@ -93,3 +93,87 @@ export const IconShare = ({ size = 20 }: { size?: number }) => (
     <path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" />
   </Svg>
 );
+
+export const IconGift = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M4 11h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM3 7h18v4H3zM12 7v14" />
+    <path d="M12 7c-1.5-3.5-5.5-3.5-5.5-1S10 7 12 7c2 0 5.5.5 5.5-1s-4-2.5-5.5 1" />
+  </Svg>
+);
+
+export const IconChannel = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M4 12.5 20 5l-3.5 14.5-5-4.5-2.5 3.5v-5.2L20 5" />
+  </Svg>
+);
+
+export const IconBot = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <rect x="4.5" y="8" width="15" height="11.5" rx="3.5" />
+    <path d="M12 8V4.5M9.5 13.5h.01M14.5 13.5h.01M2.5 13v2M21.5 13v2" />
+  </Svg>
+);
+
+export const IconBolt = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M13 3 5.5 13.5H11L10 21l7.5-10.5H12z" />
+  </Svg>
+);
+
+export const IconSearch = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.2-4.2" />
+  </Svg>
+);
+
+export const IconArrowDown = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Svg>
+);
+
+export const IconArrowUp = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Svg>
+);
+
+export const IconUndo = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </Svg>
+);
+
+export const IconUsers = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="9" cy="8.5" r="3.5" />
+    <path d="M2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5M16 5.2a3.5 3.5 0 0 1 0 6.6M18 14.8c1.9.8 3.1 2.6 3.5 5.2" />
+  </Svg>
+);
+
+export const IconBook = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6" />
+  </Svg>
+);
+
+export const IconChat = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4A8 8 0 1 1 20 12z" />
+  </Svg>
+);
+
+export const IconClock = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </Svg>
+);
+
+export const IconShield = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M12 3 5 6v5.5c0 4.3 2.9 8 7 9.5 4.1-1.5 7-5.2 7-9.5V6z" />
+  </Svg>
+);

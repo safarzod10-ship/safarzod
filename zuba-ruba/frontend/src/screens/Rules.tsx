@@ -1,89 +1,213 @@
+import { useMemo, useState } from "react";
 import { useApp } from "../AppContext";
-import { formatStars, hours, plural } from "../format";
+import { formatNumber, hours, plural } from "../format";
+import { IconSearch } from "../icons";
 import { parentOf, type Route } from "../router";
-import { Screen } from "../ui";
+import type { Config } from "../types";
+import { withStars } from "../stars";
+import { EmptyState, Screen } from "../ui";
+
+interface Row {
+  label: string;
+  value: string;
+}
+
+interface Block {
+  id: string;
+  title: string;
+  head?: [string, string];
+  rows: Row[];
+}
+
+function stars(value: string | number): string {
+  return `${formatNumber(String(value))} ⭐`;
+}
+
+function buildBlocks(config: Config): Block[] {
+  const holdChannel = config.hold_hours.channel;
+  const holdBot = config.hold_hours.bot;
+  const threshold = config.referral_threshold;
+  const blocks: Block[] = [
+    {
+      id: "start",
+      title: "Как это работает",
+      rows: [
+        { label: "1. Задание", value: "Открой задание в разделе «Задания» и выполни его: подпишись, запусти бота или отдай буст." },
+        { label: "2. Проверка", value: "Вернись в приложение и нажми «Проверить». Проверку выполняет рекламная платформа Flyer." },
+        { label: "3. Кейс", value: "За подтверждённое задание на канал или бота выдаётся кейс. Открой его в разделе «Кейсы»." },
+        { label: "4. Звёзды", value: "Выпавшие звёзды попадают на баланс. Пока идёт проверка — в «В ожидании», потом в «Доступно»." },
+        { label: "5. Подарок", value: `Накопи от ${config.withdraw.min_stars} ⭐ и выведи подарком Telegram в разделе «Вывод».` },
+      ],
+    },
+    {
+      id: "tasks",
+      title: "Задания",
+      head: ["Тип", "Награда и условие"],
+      rows: [
+        {
+          label: "Подписка на канал",
+          value: holdChannel > 0 ? `Кейс. Не отписывайся ${hours(holdChannel)} после проверки.` : "Кейс сразу после подтверждения.",
+        },
+        { label: "Запуск бота", value: holdBot > 0 ? `Кейс. Награда в ожидании ${hours(holdBot)}.` : "Кейс сразу после подтверждения." },
+        ...(config.features.boosts
+          ? [
+              {
+                label: "Буст канала",
+                value: config.boost.recurring
+                  ? `${stars(config.rewards.boost)} за первый период, затем за каждый подтверждённый период: первая проверка через ${hours(config.boost.first_check_hours)}, дальше каждые ${hours(config.boost.interval_hours)}.`
+                  : `${stars(config.rewards.boost)} после подтверждения буста.`,
+              },
+            ]
+          : []),
+        { label: "Проверка", value: `Не чаще ${config.limits.checks_per_minute} проверок в минуту. Одно задание засчитывается один раз.` },
+        { label: "Задание не засчиталось", value: "Убедись, что действие выполнено с этого аккаунта, подожди минуту и нажми «Проверить» ещё раз." },
+      ],
+    },
+    {
+      id: "cases",
+      title: "Шансы кейса",
+      head: ["Награда", "Шанс"],
+      rows: [...config.case_prizes]
+        .sort((a, b) => Number(b.amount) - Number(a.amount))
+        .map((row) => ({ label: stars(row.amount), value: `${formatNumber(row.chance)}%` })),
+    },
+    {
+      id: "cases-info",
+      title: "Кейсы",
+      rows: [
+        { label: "Когда выдаётся", value: "За каждое подтверждённое задание на канал или бота и за приглашённых друзей." },
+        { label: "Кто решает исход", value: "Сервер в момент открытия. Рулетка показывает уже определённый результат." },
+        { label: "Средняя награда", value: stars(config.case_expected) },
+        { label: "Повторное открытие", value: "Невозможно: результат кейса сохраняется навсегда." },
+      ],
+    },
+    {
+      id: "balance",
+      title: "Баланс",
+      rows: [
+        { label: "Доступно", value: "Звёзды, которые можно вывести прямо сейчас." },
+        { label: "В ожидании", value: "Награды за задания, которые ещё проходят проверку или срок удержания." },
+        { label: "На выводе", value: "Сумма заявок на вывод, которые ещё обрабатываются." },
+        { label: "История", value: "Каждое начисление и списание видно в «Профиль → История операций»." },
+      ],
+    },
+    {
+      id: "hold",
+      title: "Удержание и отмена",
+      rows: [
+        { label: "Отписка раньше срока", value: "Награда за это задание отменяется. Других списаний и штрафов нет." },
+        { label: "Задание снято платформой", value: "Решение принимает администратор вручную, награда остаётся в ожидании." },
+        { label: "Уведомления", value: "О подтверждении и отмене бот пишет в личные сообщения." },
+      ],
+    },
+    {
+      id: "withdraw",
+      title: "Вывод",
+      head: ["Параметр", "Значение"],
+      rows: config.features.withdrawals
+        ? [
+            { label: "Как приходит", value: "Подарком Telegram от бота. Его можно оставить в профиле или обменять на звёзды." },
+            { label: "Номиналы", value: config.withdraw.gift_stars.map((value) => `${value} ⭐`).join(", ") },
+            { label: "Минимум", value: stars(config.withdraw.min_stars) },
+            { label: "Лимит", value: `${config.withdraw.per_day} ${plural(config.withdraw.per_day, "заявка", "заявки", "заявок")} в сутки` },
+            { label: "Срок", value: config.withdraw.auto ? "Обычно несколько минут." : "После проверки заявки администратором." },
+            { label: "Если не получилось", value: "Звёзды автоматически возвращаются на доступный баланс." },
+          ]
+        : [{ label: "Статус", value: "Вывод временно недоступен. Звёзды сохраняются на балансе." }],
+    },
+  ];
+  if (config.features.referrals) {
+    blocks.push({
+      id: "friends",
+      title: "Друзья",
+      rows: [
+        { label: "Награда", value: `Подарочный кейс за каждые ${threshold} подтверждённых кейса приглашённого друга.` },
+        { label: "Кто считается", value: "Новый пользователь, который впервые зашёл по твоей ссылке." },
+        { label: "Не учитываются", value: "Отменённые и ожидающие задания, подарочные кейсы, приглашение самого себя и подозрительные аккаунты." },
+        { label: "Лимит", value: `До ${config.limits.referral_daily_cases} подарочных кейсов в сутки.` },
+      ],
+    });
+  }
+  blocks.push({
+    id: "forbidden",
+    title: "Запрещено",
+    rows: [
+      { label: "Несколько аккаунтов", value: "Блокировка всех связанных аккаунтов." },
+      { label: "Боты и автоматизация", value: "Блокировка аккаунта." },
+      { label: "Накрутка приглашений", value: "Реферальные кейсы не выдаются, аккаунт может быть заблокирован." },
+    ],
+  });
+  return blocks;
+}
 
 export function RulesScreen({ route }: { route: Route }) {
   const { config } = useApp();
-  const threshold = config.referral_threshold;
+  const blocks = useMemo(() => buildBlocks(config), [config]);
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const filtered = needle
+    ? blocks
+        .map((block) => ({
+          ...block,
+          rows: block.title.toLowerCase().includes(needle)
+            ? block.rows
+            : block.rows.filter((row) => `${row.label} ${row.value}`.toLowerCase().includes(needle)),
+        }))
+        .filter((block) => block.rows.length > 0)
+    : blocks;
+
   return (
-    <Screen title="Правила проекта" back={parentOf(route)}>
-      <article className="rules">
-        <h2>Награды</h2>
-        {config.stars_are_internal ? (
-          <p>
-            Звёзды ⭐ в приложении — внутренние баллы проекта ZUBA RUBA. Это не Telegram Stars на вашем счёте: они превращаются в Telegram
-            Stars только при одобренной заявке на вывод, если вывод включён.
-          </p>
-        ) : (
-          <p>Награды начисляются в звёздах ⭐ и отображаются на балансе.</p>
-        )}
-        <p>Размер награды фиксирован и указан у каждого задания до выполнения:</p>
-        <ul>
-          <li>подписка на канал — {formatStars(config.rewards.channel)};</li>
-          <li>запуск бота — {formatStars(config.rewards.bot)};</li>
-          {config.features.boosts && <li>буст канала — {formatStars(config.rewards.boost)} за подтверждённый период;</li>}
-          {config.features.referrals && <li>подарочный кейс за друзей — {formatStars(config.rewards.referral_case)}.</li>}
-        </ul>
-
-        <h2>Задания и кейсы</h2>
-        <p>
-          Откройте ресурс задания, выполните условие и нажмите «Проверить». Проверка выполняется на сервере рекламной платформы. После
-          подтверждения появляется кейс — при открытии вы увидите сумму награды.
-        </p>
-
-        <h2>Ожидание подтверждения</h2>
-        {config.hold_hours.channel > 0 ? (
-          <p>
-            Награда за подписку находится в ожидании, пока не пройдёт {hours(config.hold_hours.channel)} и платформа не подтвердит оплату
-            задания. Всё это время подписку нужно сохранять.
-          </p>
-        ) : (
-          <p>Награда за подписку становится доступной после подтверждения оплаты задания платформой.</p>
-        )}
-        {config.hold_hours.bot > 0 && <p>Награда за запуск бота находится в ожидании {hours(config.hold_hours.bot)}.</p>}
-        <p>
-          Если подписка отменена до окончания срока или задание не подтверждено, награда в ожидании аннулируется. Дополнительные штрафы не
-          применяются. Спорные случаи рассматривает администратор.
-        </p>
-
-        {config.features.boosts && (
-          <>
-            <h2>Бусты</h2>
-            <p>Награда за буст начисляется после подтверждения буста платформой.</p>
-            {config.boost.recurring && (
-              <p>
-                Повторная проверка проходит через {hours(config.boost.first_check_hours)}, затем каждые {hours(config.boost.interval_hours)}.
-                Начисление за период создаётся только при успешной проверке. Если буст снят, начисления прекращаются.
-              </p>
+    <Screen title="Правила" back={parentOf(route)}>
+      <label className="rules-search">
+        <IconSearch size={18} />
+        <input
+          className="input"
+          type="search"
+          placeholder="Найти: вывод, отписка, друзья…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          enterKeyHint="search"
+        />
+      </label>
+      {!needle && (
+        <nav className="rules-jump" aria-label="Разделы правил">
+          {blocks.map((block) => (
+            <a key={block.id} href={`#rules-${block.id}`} onClick={(event) => {
+              event.preventDefault();
+              document.getElementById(`rules-${block.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}>
+              {block.title}
+            </a>
+          ))}
+        </nav>
+      )}
+      {filtered.length === 0 && <EmptyState title="Ничего не найдено" text="Попробуй другое слово или напиши в поддержку." />}
+      {filtered.map((block) => (
+        <section key={block.id} id={`rules-${block.id}`} className="rules-block">
+          <h2 className="rules-title">{block.title}</h2>
+          <table className="rules-table">
+            {block.head && (
+              <thead>
+                <tr>
+                  <th>{block.head[0]}</th>
+                  <th>{block.head[1]}</th>
+                </tr>
+              </thead>
             )}
-          </>
-        )}
-
-        {config.features.referrals && (
-          <>
-            <h2>Приглашения</h2>
-            <p>
-              За каждые {threshold} {plural(threshold, "подтверждённое задание", "подтверждённых задания", "подтверждённых заданий")} приглашённого
-              друга вы получаете один подарочный кейс. Не учитываются отменённые задания, подарочные кейсы, самоприглашения и дублирующиеся
-              аккаунты.
-            </p>
-          </>
-        )}
-
-        <h2>Вывод</h2>
-        {config.features.withdrawals ? (
-          <p>
-            Вывод доступен из доступного баланса. Сумма резервируется на время рассмотрения заявки и возвращается на баланс, если выплата не
-            состоялась.
-          </p>
-        ) : (
-          <p>Вывод сейчас недоступен. О его включении будет сообщено в боте.</p>
-        )}
-
-        <h2>Нарушения</h2>
-        <p>Использование нескольких аккаунтов и автоматизации запрещено. При нарушениях доступ к приложению может быть ограничен.</p>
-      </article>
+            <tbody>
+              {block.rows.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{withStars(row.label)}</th>
+                  <td>{withStars(row.value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+      {config.stars_are_internal && (
+        <p className="hint rules-foot">Звёзды на балансе — внутренние баллы проекта. Telegram Stars они становятся только при выводе.</p>
+      )}
     </Screen>
   );
 }

@@ -9,7 +9,7 @@ from app.flyer import FlyerClient, FlyerError, FlyerTaskData
 from app.models import Boost, BoostPeriod, Case, Completion, FlyerTask, TaskCheck, User
 from app.models import FlyerError as FlyerErrorRow
 from app.money import milli_to_str
-from app.services import ledger, notifications, referrals
+from app.services import ledger, notifications, prizes, referrals
 from app.settings_store import RuntimeSettings
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,9 @@ CANCEL_REASON = {
 
 
 def reward_for(settings: RuntimeSettings, task_type: str) -> int:
-    return settings.milli({"channel": "reward_channel", "bot": "reward_bot", "boost": "reward_boost"}.get(task_type, "reward_other"))
+    if task_type == "boost":
+        return settings.milli("reward_boost")
+    return prizes.draw(settings)
 
 
 def income_for(settings: RuntimeSettings, task_type: str) -> int:
@@ -54,9 +56,9 @@ def hold_hours(settings: RuntimeSettings, task_type: str) -> int:
 
 
 def is_type_enabled(settings: RuntimeSettings, task_type: str) -> bool:
-    if task_type == "boost" and not settings.bool("boosts_enabled"):
-        return False
-    return reward_for(settings, task_type) > 0
+    if task_type == "boost":
+        return settings.bool("boosts_enabled") and settings.milli("reward_boost") > 0
+    return settings.bool({"channel": "tasks_channel_enabled", "bot": "tasks_bot_enabled"}.get(task_type, "tasks_other_enabled"))
 
 
 def conditions(settings: RuntimeSettings, task_type: str) -> str:
@@ -140,7 +142,7 @@ async def list_tasks(session: AsyncSession, flyer: FlyerClient, user: User, sett
     return tasks, error_text
 
 
-def task_view(task: FlyerTask, settings: RuntimeSettings, reward_milli: int | None = None) -> dict:
+def task_view(task: FlyerTask, settings: RuntimeSettings) -> dict:
     return {
         "signature": task.signature,
         "type": task.task_type,
@@ -149,7 +151,8 @@ def task_view(task: FlyerTask, settings: RuntimeSettings, reward_milli: int | No
         "conditions": conditions(settings, task.task_type),
         "link": task.links[0] if task.links else None,
         "photo": task.photo,
-        "reward": milli_to_str(reward_milli if reward_milli is not None else reward_for(settings, task.task_type)),
+        "reward_kind": "stars" if task.task_type == "boost" else "case",
+        "reward": milli_to_str(settings.milli("reward_boost") if task.task_type == "boost" else prizes.max_milli(settings)),
         "status": task.status,
         "status_label": STATUS_LABELS[task.status],
         "can_check": task.status in ("new", "incomplete") and task.is_offered,

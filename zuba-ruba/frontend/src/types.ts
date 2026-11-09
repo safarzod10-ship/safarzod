@@ -14,12 +14,22 @@ export interface Config {
   bot_username: string;
   support_url: string | null;
   maintenance: boolean;
-  features: { withdrawals: boolean; boosts: boolean; referrals: boolean };
-  rewards: { channel: string; bot: string; boost: string; referral_case: string };
+  features: { withdrawals: boolean; boosts: boolean; referrals: boolean; tasks: boolean };
+  rewards: { boost: string };
+  case_prizes: PrizeRow[];
+  case_expected: string;
+  withdraw: { min_stars: number; gift_stars: number[]; per_day: number; auto: boolean };
+  limits: { checks_per_minute: number; referral_daily_cases: number };
   hold_hours: { channel: number; bot: number };
   referral_threshold: number;
   boost: { first_check_hours: number; interval_hours: number; recurring: boolean };
   stars_are_internal: boolean;
+}
+
+export interface PrizeRow {
+  amount: string;
+  weight: number;
+  chance: string;
 }
 
 export interface Balance {
@@ -76,6 +86,7 @@ export interface Task {
   conditions: string;
   link: string;
   photo: string | null;
+  reward_kind: "case" | "stars";
   reward: string;
   status: TaskStatus;
   status_label: string;
@@ -120,9 +131,20 @@ export interface Referrals {
 
 export type WithdrawalStatus = "pending" | "approved" | "completed" | "rejected" | "failed";
 
+export interface GiftOption {
+  gift_id: string;
+  stars: number;
+  emoji: string | null;
+  name: string;
+}
+
 export interface Withdrawal {
   id: number;
   amount: string;
+  stars: number;
+  gift_id: string | null;
+  gift_emoji: string | null;
+  gift_name: string;
   status: WithdrawalStatus;
   status_label: string;
   comment: string | null;
@@ -134,153 +156,6 @@ export interface WithdrawalsResponse {
   enabled: boolean;
   disabled_reason: string | null;
   balance: Balance;
-  options: string[];
+  options: GiftOption[];
   items: Withdrawal[];
-}
-
-export interface AdminOverview {
-  users_total: number;
-  users_active_24h: number;
-  users_new_24h: number;
-  tasks_completed: number;
-  tasks_paid: number;
-  tasks_waiting: number;
-  tasks_disputed: number;
-  boosts_active: number;
-  income: string;
-  reward_expenses: string;
-  net_profit: string;
-  warning: string | null;
-}
-
-export interface AdminUserRow {
-  id: number;
-  username: string | null;
-  first_name: string;
-  registered_at: string;
-  last_seen_at: string | null;
-  available: string;
-  pending: string;
-  is_blocked: boolean;
-}
-
-export interface AdminUserFull extends AdminUserRow {
-  last_name: string | null;
-  language_code: string | null;
-  referrer_id: number | null;
-  block_reason: string | null;
-  is_suspicious: boolean;
-  withdrawing: string;
-}
-
-export interface AdminCompletion {
-  id: number;
-  user_id: number;
-  signature: string;
-  type: TaskType;
-  title: string;
-  status: "waiting_payment" | "holding" | "confirmed" | "cancelled" | "disputed";
-  status_label: string;
-  flyer_status: string | null;
-  reward: string;
-  income: string;
-  completed_at: string;
-  hold_until: string | null;
-  next_check_at: string | null;
-  note: string | null;
-}
-
-export interface AdminBoost {
-  id: number;
-  user_id: number;
-  channel: string;
-  link: string | null;
-  status: "active" | "ended";
-  assigned_at: string;
-  last_check_at: string | null;
-  next_check_at: string | null;
-  periods_paid: number;
-  rewarded: string;
-}
-
-export interface AdminUserCard {
-  user: AdminUserFull;
-  operations: Operation[];
-  referrals: { id: number; username: string | null; first_name: string; registered_at: string; confirmed_tasks: number }[];
-  completions: AdminCompletion[];
-  boosts: AdminBoost[];
-  withdrawals: Withdrawal[];
-}
-
-export interface AdminTasks {
-  by_type: { type: TaskType; label: string; completed: number; paid: number; waiting: number; cancelled: number; checks: number; checks_success: number }[];
-  flyer_errors: { created_at: string; method: string; error: string }[];
-  unpaid: AdminCompletion[];
-  disputed: AdminCompletion[];
-  history: { created_at: string; user_id: number; signature: string; flyer_status: string | null; source: string }[];
-}
-
-export interface AdminWithdrawal extends Withdrawal {
-  user_id: number;
-  username: string | null;
-}
-
-export interface AdminAdjustment extends Operation {
-  user_id: number;
-  admin_id: number;
-}
-
-export interface AdminFinance {
-  income_gross: string;
-  income_confirmed: string;
-  income_flyer_reported: string;
-  rewards_pending: string;
-  reward_expenses: string;
-  referral_expenses: string;
-  commissions: string;
-  liabilities: string;
-  net_profit: string;
-  unopened_cases: string;
-  flyer_withdraw_threshold: string;
-  warning: string | null;
-  bot_star_balance: number | null;
-  withdrawals: AdminWithdrawal[];
-  adjustments: AdminAdjustment[];
-}
-
-export type SettingType = "stars" | "rub" | "int" | "bool" | "string" | "usd";
-
-export interface SettingItem {
-  key: string;
-  label: string;
-  group: string;
-  type: SettingType;
-  value: string | number | boolean | null;
-}
-
-export interface BroadcastButton {
-  text: string;
-  url: string;
-}
-
-export interface Broadcast {
-  id: number;
-  text: string;
-  image_url: string | null;
-  buttons: BroadcastButton[][];
-  status: "draft" | "queued" | "sending" | "done" | "cancelled";
-  total: number;
-  sent: number;
-  failed: number;
-  created_at: string;
-  finished_at: string | null;
-}
-
-export interface AuditEntry {
-  id: number;
-  admin_id: number;
-  action: string;
-  target: string | null;
-  details: Record<string, unknown> | null;
-  created_at: string;
 }

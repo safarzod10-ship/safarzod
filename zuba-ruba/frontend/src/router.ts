@@ -38,7 +38,8 @@ export function parentOf(route: Route): string {
     return "/profile";
   }
   if (first === "history" || first === "rules") return route.query.get("from") === "home" ? "/" : "/profile";
-  if (first === "notifications" || first === "withdraw") return "/";
+  if (first === "withdraw") return route.query.get("from") === "profile" ? "/profile" : "/";
+  if (first === "notifications") return "/";
   return "/";
 }
 

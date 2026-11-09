@@ -47,10 +47,12 @@ def test_init_data_valid_and_tampered():
 
 
 def test_settings_validation():
-    assert normalize("reward_channel", "0,40") == "0.4"
+    assert normalize("reward_boost", "0,40") == "0.4"
+    assert normalize("case_prizes", "0.5:10; 0.1:90") == "0.1:90,0.5:10"
+    assert normalize("withdraw_gift_stars", "100, 15,25") == "15,25,100"
     assert normalize("maintenance", True) == "true"
     assert normalize("hold_hours_channel", "30") == "30"
-    for key, value in [("reward_channel", "-1"), ("hold_hours_channel", "1.5"), ("support_url", "http://x"), ("unknown", "1"), ("tasks_limit", "11")]:
+    for key, value in [("reward_boost", "-1"), ("case_prizes", "0.1:1"), ("case_prizes", "0.1:5,0.1:5"), ("case_prizes", "x:1,0.2:1"), ("withdraw_gift_stars", "15,abc"), ("hold_hours_channel", "1.5"), ("support_url", "http://x"), ("unknown", "1"), ("tasks_limit", "11")]:
         with pytest.raises(SettingError):
             normalize(key, value)
 
@@ -89,3 +91,17 @@ async def test_flyer_client_errors():
     await client.close()
     with pytest.raises(FlyerError):
         await FlyerClient("").get_tasks(1, "ru", 5)
+
+
+def test_case_prize_draw_distribution():
+    from collections import Counter
+
+    from app.services import prizes
+    from app.settings_store import RuntimeSettings
+
+    settings = RuntimeSettings({"case_prizes": "0.1:70,0.5:25,2:5"})
+    counts = Counter(prizes.draw(settings) for _ in range(20000))
+    assert set(counts) == {100, 500, 2000}
+    assert 0.67 < counts[100] / 20000 < 0.73 and 0.035 < counts[2000] / 20000 < 0.065
+    assert prizes.expected_milli(settings) == 295
+    assert [row["chance"] for row in prizes.table_view(settings)] == ["70.0", "25.0", "5.0"]

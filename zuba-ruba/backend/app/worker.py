@@ -24,7 +24,7 @@ from app.db import dispose_engine, init_engine, sessionmaker
 from app.flyer import FlyerClient
 from app.logging_setup import setup_logging
 from app.models import Boost, Broadcast, Completion, Notification, User
-from app.services import referrals, tasks
+from app.services import referrals, tasks, withdrawals
 
 log = logging.getLogger("worker")
 MAX_ATTEMPTS = 8
@@ -170,6 +170,26 @@ async def process_broadcasts(bot: Bot, batch: int = 25) -> int:
         return len(recipients)
 
 
+async def process_auto_withdrawals(bot: Bot) -> int:
+    async with sessionmaker()() as session:
+        settings = await settings_store.load(session)
+        if not settings.bool("withdraw_auto") or not settings.bool("withdrawals_enabled"):
+            return 0
+        ids = await withdrawals.due_auto(session)
+    processed = 0
+    for withdrawal_id in ids:
+        async with sessionmaker()() as session:
+            try:
+                await withdrawals.send_gift(session, bot, withdrawal_id, None)
+                processed += 1
+            except withdrawals.WithdrawalError as exc:
+                await session.rollback()
+                log.warning("auto withdrawal %s: %s", withdrawal_id, exc)
+                if exc.code == "uncertain":
+                    return processed
+    return processed
+
+
 async def reevaluate_referrals() -> None:
     async with sessionmaker()() as session:
         settings = await settings_store.load(session)
@@ -225,11 +245,12 @@ async def main() -> None:
             asyncio.create_task(loop("notifications", 2, lambda: process_notifications(bot))),
             asyncio.create_task(loop("broadcasts", 3, lambda: process_broadcasts(bot))),
             asyncio.create_task(loop("referrals", 3600, reevaluate_referrals)),
+            asyncio.create_task(loop("withdrawals", 20, lambda: process_auto_withdrawals(bot))),
         ]
         log.info("worker started")
         await wait_for_telegram(bot)
         await configure_bot(bot)
-        await dispatcher.start_polling(bot, allowed_updates=["message", "my_chat_member"], handle_signals=True)
+        await dispatcher.start_polling(bot, allowed_updates=["message", "my_chat_member", "pre_checkout_query"], handle_signals=True)
     finally:
         for job in jobs:
             job.cancel()

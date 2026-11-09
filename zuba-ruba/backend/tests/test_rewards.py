@@ -121,22 +121,24 @@ async def fund(env, user_id: int, stars: str) -> None:
     assert response.status_code == 200, response.text
 
 
-async def test_withdrawal_disabled_by_default(env):
+async def test_withdrawal_can_be_disabled(env):
     await register(env.client, 1)
+    await set_settings(withdrawals_enabled=False)
     data = (await env.client.get("/api/withdrawals", headers=auth(1))).json()
     assert data["enabled"] is False and data["disabled_reason"] and data["options"] == []
-    response = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"amount": "15"})
+    response = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "15"})
     assert response.status_code == 403
 
 
 async def test_withdrawal_flow_and_concurrency(env):
     await register(env.client, 1)
     await fund(env, 1, "20")
-    await set_settings(withdrawals_enabled=True, withdrawals_per_day=5)
+    await set_settings(withdrawals_per_day=5)
     data = (await env.client.get("/api/withdrawals", headers=auth(1))).json()
-    assert data["enabled"] is True and data["options"] == ["15", "25", "50"]
+    assert data["enabled"] is True
+    assert [(o["gift_id"], o["stars"], o["name"]) for o in data["options"]] == [("15", 15, "Мишка"), ("25", 25, "Роза"), ("50", 50, "Ракета"), ("100", 100, "Алмаз")]
     responses = await asyncio.gather(
-        *[env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"amount": "15"}) for _ in range(5)]
+        *[env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "15"}) for _ in range(5)]
     )
     codes = sorted(r.status_code for r in responses)
     assert codes.count(200) == 1 and all(c == 409 for c in codes if c != 200)
@@ -144,13 +146,13 @@ async def test_withdrawal_flow_and_concurrency(env):
     key = str(uuid.uuid4())
     await fund(env, 1, "15")
     await env.redis.flushdb()
-    first = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": key}, json={"amount": "15"})
-    second = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": key}, json={"amount": "15"})
+    first = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": key}, json={"gift_id": "15"})
+    second = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": key}, json={"gift_id": "15"})
     assert first.json()["id"] == second.json()["id"]
     ids = sorted(w["id"] for w in (await env.client.get("/api/withdrawals", headers=auth(1))).json()["items"])
     approved = await env.client.post(f"/api/admin/withdrawals/{ids[0]}/approve", headers=auth(ADMIN_ID), json={})
-    assert approved.json()["status"] == "completed" and env.bot.gifts_sent == [("g15", 1)]
-    env.bot.gift_error = TelegramBadRequest(method=SendGift(gift_id="g15", user_id=1), message="BALANCE_TOO_LOW")
+    assert approved.json()["status"] == "completed" and env.bot.gifts_sent == [("15", 1)]
+    env.bot.gift_error = TelegramBadRequest(method=SendGift(gift_id="15", user_id=1), message="BALANCE_TOO_LOW")
     failed = await env.client.post(f"/api/admin/withdrawals/{ids[1]}/approve", headers=auth(ADMIN_ID), json={})
     assert failed.json()["status"] == "failed"
     assert await balances(1) == {"available": 20000, "pending": 0, "withdrawing": 0}
@@ -163,8 +165,7 @@ async def test_withdrawal_flow_and_concurrency(env):
 async def test_withdrawal_reject_returns_funds(env):
     await register(env.client, 1)
     await fund(env, 1, "15")
-    await set_settings(withdrawals_enabled=True)
-    created = (await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"amount": "15"})).json()
+    created = (await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "15"})).json()
     assert (await env.client.post(f"/api/admin/withdrawals/{created['id']}/reject", headers=auth(ADMIN_ID), json={"comment": ""})).status_code == 422
     rejected = await env.client.post(f"/api/admin/withdrawals/{created['id']}/reject", headers=auth(ADMIN_ID), json={"comment": "проверка"})
     assert rejected.json()["status"] == "rejected"
@@ -172,3 +173,27 @@ async def test_withdrawal_reject_returns_funds(env):
     async with sessionmaker()() as session:
         wd = (await session.execute(select(Operation).where(Operation.kind == "withdrawal"))).scalar_one()
     assert wd.status == "failed"
+
+
+async def test_withdrawal_rejects_gift_outside_allowed_list(env):
+    await register(env.client, 1)
+    await fund(env, 1, "600")
+    response = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "500"})
+    assert response.status_code == 422
+    response = await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "100"})
+    assert response.status_code == 200 and response.json()["gift_name"] == "Алмаз" and response.json()["stars"] == 100
+
+
+async def test_auto_withdrawals_send_gifts(env):
+    from app.worker import process_auto_withdrawals
+
+    await register(env.client, 1)
+    await fund(env, 1, "30")
+    created = (await env.client.post("/api/withdrawals", headers={**auth(1), "Idempotency-Key": str(uuid.uuid4())}, json={"gift_id": "25"})).json()
+    assert await process_auto_withdrawals(env.bot) == 0
+    await set_settings(withdraw_auto=True)
+    assert await process_auto_withdrawals(env.bot) == 1
+    assert env.bot.gifts_sent == [("25", 1)]
+    items = (await env.client.get("/api/withdrawals", headers=auth(1))).json()["items"]
+    assert items[0]["id"] == created["id"] and items[0]["status"] == "completed"
+    assert await balances(1) == {"available": 5000, "pending": 0, "withdrawing": 0}

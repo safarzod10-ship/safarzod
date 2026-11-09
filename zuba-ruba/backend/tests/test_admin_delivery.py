@@ -31,16 +31,17 @@ async def test_admin_routes_require_admin(env):
 
 async def test_admin_settings_and_audit(env):
     await register(env.client, ADMIN_ID)
-    response = await env.client.patch("/api/admin/settings", headers=auth(ADMIN_ID), json={"values": {"reward_channel": "-1", "hold_hours_channel": "x"}})
-    assert response.status_code == 422 and set(response.json()["error"]["fields"]) == {"reward_channel", "hold_hours_channel"}
-    response = await env.client.patch("/api/admin/settings", headers=auth(ADMIN_ID), json={"values": {"reward_channel": "0.5", "boost_recurring_enabled": True}})
-    items = {i["key"]: i["value"] for i in response.json()["items"]}
-    assert items["reward_channel"] == "0.5" and items["boost_recurring_enabled"] == "true"
+    response = await env.client.patch("/api/admin/settings", headers=auth(ADMIN_ID), json={"values": {"reward_boost": "-1", "hold_hours_channel": "x"}})
+    assert response.status_code == 422 and set(response.json()["error"]["fields"]) == {"reward_boost", "hold_hours_channel"}
+    response = await env.client.patch("/api/admin/settings", headers=auth(ADMIN_ID), json={"values": {"reward_boost": "0.5", "boost_recurring_enabled": True}})
+    items = {i["key"]: i for i in response.json()["items"]}
+    assert items["reward_boost"]["value"] == "0.5" and items["reward_boost"]["default"] == "0.2"
+    assert items["boost_recurring_enabled"]["value"] == "true" and items["boost_recurring_enabled"]["hint"]
     config = (await env.client.get("/api/config", headers=auth(ADMIN_ID))).json()
-    assert config["rewards"]["channel"] == "0.5" and config["boost"]["recurring"] is True
+    assert config["boost"]["recurring"] is True
     audit = (await env.client.get("/api/admin/audit", headers=auth(ADMIN_ID))).json()["items"]
-    assert {a["target"] for a in audit} == {"reward_channel", "boost_recurring_enabled"}
-    assert any(a["details"] == {"old": "0.3", "new": "0.5"} for a in audit)
+    assert {a["target"] for a in audit} == {"reward_boost", "boost_recurring_enabled"}
+    assert any(a["details"] == {"old": "0.2", "new": "0.5"} for a in audit)
 
 
 async def test_adjustment_idempotent_and_audited(env):

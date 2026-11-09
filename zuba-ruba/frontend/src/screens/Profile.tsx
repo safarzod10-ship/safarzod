@@ -2,11 +2,12 @@ import { useState } from "react";
 import { api } from "../api";
 import { useApp } from "../AppContext";
 import { formatDate, initials, plural } from "../format";
-import { IconCheck, IconCopy, IconShare } from "../icons";
+import { IconCheck, IconCopy, IconGift, IconShare } from "../icons";
+import { Star } from "../stars";
 import { navigate } from "../router";
 import { haptic, openExternal } from "../telegram";
 import type { Home, Referrals } from "../types";
-import { Avatar, Button, InfoRow, NavRow, Screen, Section, useResource } from "../ui";
+import { Avatar, Button, NavRow, Screen, useResource } from "../ui";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -57,65 +58,78 @@ export function ProfileScreen() {
   };
 
   const share = () => {
-    const text = "Выполняй задания, открывай кейсы и собирай награды в ZUBA RUBA.";
+    haptic("light");
+    const text = "Выполняй задания, открывай кейсы и выводи подарки в ZUBA RUBA.";
     openExternal(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
   };
 
   return (
     <Screen title="Профиль">
-      <div className="profile-head">
+      <section className="me-card">
         <Avatar url={me.photo_url} label={initials(me.first_name, me.last_name)} size={64} />
-        <div className="profile-name">
-          <span className="profile-title">{name || "Без имени"}</span>
-          {me.username && <span className="profile-sub">@{me.username}</span>}
+        <div className="me-info">
+          <span className="me-name">{name || "Без имени"}</span>
+          {me.username && <span className="me-sub">@{me.username}</span>}
+          <span className="me-meta">
+            ID <span className="mono">{me.id}</span> · с {formatDate(me.registered_at)}
+          </span>
         </div>
-      </div>
+      </section>
 
-      <div className="group">
-        <InfoRow label="Telegram ID" value={me.id} mono />
-        <InfoRow label="Дата регистрации" value={formatDate(me.registered_at)} />
-        <InfoRow label="Открыто кейсов" value={home.data?.cases_opened ?? "—"} />
-        <InfoRow label="Приглашено друзей" value={referrals.data?.invited ?? "—"} />
-      </div>
+      <dl className="stats-row">
+        <div>
+          <dt>Кейсов открыто</dt>
+          <dd>{home.data?.cases_opened ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Друзей</dt>
+          <dd>{referrals.data?.invited ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Подарочных кейсов</dt>
+          <dd>{referrals.data?.cases_received ?? "—"}</dd>
+        </div>
+      </dl>
 
       {config.features.referrals && (
-        <Section title="Приглашай друзей">
-          <p className="section-text">
-            За каждые {threshold} {plural(threshold, "подтверждённое задание", "подтверждённых задания", "подтверждённых заданий")} приглашённого друга
-            ты получаешь подарочный кейс.
+        <section className="invite">
+          <h2 className="invite-title">Приглашай друзей</h2>
+          <p className="invite-text">
+            Друг открывает {threshold} {plural(threshold, "подтверждённый кейс", "подтверждённых кейса", "подтверждённых кейсов")} — ты получаешь подарочный кейс.
+            И так за каждые {threshold}.
           </p>
-          <div className="ref-link">
-            <span className="ref-link-text mono">{link}</span>
-            <button type="button" className="icon-btn" aria-label="Скопировать ссылку" onClick={() => void copy()}>
-              {copied ? <IconCheck /> : <IconCopy />}
-            </button>
-          </div>
-          {copied === true && <p className="hint">Ссылка скопирована</p>}
-          {copied === false && <p className="form-error">Не удалось скопировать. Выделите ссылку вручную.</p>}
-          <Button variant="secondary" block onClick={share}>
-            <IconShare /> Поделиться ссылкой
-          </Button>
-          <div className="ref-progress">
-            <div className="ref-progress-head">
-              <span>До следующего кейса</span>
-              <span className="mono">
-                {progress}/{threshold}
+          <div className="invite-progress" role="progressbar" aria-valuemin={0} aria-valuemax={threshold} aria-valuenow={progress} aria-label="До следующего кейса">
+            {Array.from({ length: threshold }, (_, index) => (
+              <span key={index} className={index < progress ? "invite-step invite-step-done" : "invite-step"}>
+                {index < progress ? <Star size={18} /> : index + 1}
               </span>
-            </div>
-            <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={threshold} aria-valuenow={progress}>
-              {Array.from({ length: threshold }, (_, index) => (
-                <span key={index} className={index < progress ? "progress-step progress-step-done" : "progress-step"} />
-              ))}
-            </div>
-            <InfoRow label="Получено подарочных кейсов" value={referrals.data?.cases_received ?? "—"} />
+            ))}
+            <span className="invite-step invite-step-prize">
+              <IconGift size={18} />
+            </span>
           </div>
-        </Section>
+          <p className="invite-hint">Прогресс ближайшего к кейсу друга</p>
+          <div className="invite-link">
+            <span className="mono">{link.replace("https://", "")}</span>
+          </div>
+          <div className="invite-actions">
+            <Button variant="accent" onClick={() => void copy()}>
+              {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
+              {copied === true ? "Скопировано" : "Копировать"}
+            </Button>
+            <Button variant="secondary" onClick={share}>
+              <IconShare size={18} /> Поделиться
+            </Button>
+          </div>
+          {copied === false && <p className="form-error">Не удалось скопировать. Выделите ссылку вручную.</p>}
+        </section>
       )}
 
-      <div className="group group-spaced">
+      <div className="group group-spaced menu">
         <NavRow label="История операций" onClick={() => navigate("/history")} />
-        {me.is_admin && <NavRow label="Панель управления" accent onClick={() => navigate("/admin")} />}
-        <NavRow label="Правила проекта" onClick={() => navigate("/rules")} />
+        <NavRow label="Вывод подарками" onClick={() => navigate("/withdraw?from=profile")} />
+        {me.is_admin && <NavRow label="Панель управления →" accent onClick={() => navigate("/admin")} />}
+        <NavRow label="Правила и вопросы" onClick={() => navigate("/rules")} />
         {config.support_url && <NavRow label="Поддержка" onClick={() => openExternal(config.support_url!)} />}
       </div>
     </Screen>

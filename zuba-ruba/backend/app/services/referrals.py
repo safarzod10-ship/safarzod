@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Case, Operation, ReferralReward, User
-from app.services import notifications
+from app.services import notifications, prizes
 from app.settings_store import RuntimeSettings
 
 
@@ -37,7 +37,6 @@ async def evaluate(session: AsyncSession, invitee_id: int, settings: RuntimeSett
         await session.execute(select(func.count(ReferralReward.id)).where(ReferralReward.inviter_id == inviter.id, ReferralReward.created_at >= since))
     ).scalar_one()
     daily_limit = settings.int("referral_daily_cases_limit")
-    amount = settings.milli("reward_referral_case")
     name = f"@{invitee.username}" if invitee.username else invitee.first_name or "друга"
     created: list[Case] = []
     for group_index in range(existing, groups):
@@ -48,7 +47,7 @@ async def evaluate(session: AsyncSession, invitee_id: int, settings: RuntimeSett
             source="referral",
             label=f"Подарочный кейс за {name}",
             referral_key=f"ref:{invitee.id}:{group_index}",
-            amount_milli=amount,
+            amount_milli=prizes.draw(settings),
         )
         session.add(case)
         await session.flush()

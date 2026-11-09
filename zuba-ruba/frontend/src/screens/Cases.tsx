@@ -1,159 +1,303 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api";
-import { formatDateTime, formatStars } from "../format";
-import { IconCase } from "../icons";
+import { useApp } from "../AppContext";
+import { formatDateTime, formatNumber, plural } from "../format";
 import { navigate } from "../router";
+import { Amount, Star } from "../stars";
 import { haptic } from "../telegram";
-import type { Case, CasesResponse } from "../types";
-import { Badge, Button, EmptyState, ErrorState, Loader, Screen, Section, Sheet, clearResourceCache, useResource } from "../ui";
+import type { Case, CasesResponse, PrizeRow } from "../types";
+import { Badge, Button, EmptyState, ErrorState, Loader, Screen, Section, clearResourceCache, useResource } from "../ui";
 
-const MIN_ANIMATION_MS = 850;
+const CARD = 92;
+const GAP = 10;
+const STEP = CARD + GAP;
+const STRIP = 54;
+const WIN_INDEX = 7;
+const SPIN_MS = 5600;
 
-function rewardBadge(item: Case) {
-  if (item.state === "cancelled" || item.reward_status === "cancelled") return <Badge tone="danger">Отменено</Badge>;
-  if (item.reward_status === "pending") return <Badge tone="pending">В ожидании</Badge>;
-  if (item.reward_status === "completed") return <Badge tone="success">Зачислено</Badge>;
-  return null;
+type Tier = "common" | "rare" | "top";
+
+function tierOf(amount: string, table: PrizeRow[]): Tier {
+  const sorted = table.map((row) => Number(row.amount)).sort((a, b) => a - b);
+  const value = Number(amount);
+  if (value >= sorted[sorted.length - 1]) return "top";
+  if (sorted.length > 2 && value >= sorted[sorted.length - 2]) return "rare";
+  return "common";
 }
 
+function pick(table: PrizeRow[]): string {
+  const total = table.reduce((sum, row) => sum + row.weight, 0);
+  let roll = Math.random() * total;
+  for (const row of table) {
+    roll -= row.weight;
+    if (roll <= 0) return row.amount;
+  }
+  return table[table.length - 1].amount;
+}
+
+function buildStrip(table: PrizeRow[], winner: string | null): string[] {
+  const items = Array.from({ length: STRIP }, () => pick(table));
+  if (winner !== null) items[WIN_INDEX] = winner;
+  return items;
+}
+
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
+const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
 function rewardNote(item: Case): string {
-  if (item.reward_status === "pending") return "Награда в ожидании. Она станет доступной после проверки выполнения условий задания.";
-  if (item.reward_status === "completed") return "Награда зачислена на доступный баланс.";
-  if (item.reward_status === "cancelled") return "Награда отменена: условия задания не подтвердились.";
+  if (item.reward_status === "pending") return "Награда в ожидании: станет доступной после проверки условий задания.";
+  if (item.reward_status === "completed") return "Зачислено на доступный баланс.";
+  if (item.reward_status === "cancelled" || item.state === "cancelled") return "Отменено: условия задания не подтвердились.";
   return "";
 }
 
-export function CasesScreen() {
-  const cases = useResource("cases", () => api.get<CasesResponse>("/cases"));
-  const [opening, setOpening] = useState<Case | null>(null);
-  const [result, setResult] = useState<Case | null>(null);
-  const [error, setError] = useState<string | null>(null);
+type Phase = { kind: "idle" } | { kind: "requesting" } | { kind: "spinning"; result: Case } | { kind: "done"; result: Case };
 
-  const openCase = async (item: Case) => {
+export function CasesScreen() {
+  const { config } = useApp();
+  const table = config.case_prizes;
+  const cases = useResource("cases", () => api.get<CasesResponse>("/cases"));
+  const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+  const [error, setError] = useState<string | null>(null);
+  const [strip, setStrip] = useState<string[]>(() => buildStrip(table, null));
+  const viewport = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const offset = useRef(0);
+  const frame = useRef(0);
+
+  const ready = cases.data?.ready ?? [];
+  const current = ready[0] ?? null;
+
+  const place = useCallback((value: number) => {
+    offset.current = value;
+    if (track.current) track.current.style.transform = `translate3d(${value}px,0,0)`;
+  }, []);
+
+  const startOffset = useCallback(() => {
+    const width = viewport.current?.clientWidth ?? 360;
+    return width / 2 - ((STRIP - 4) * STEP + CARD / 2);
+  }, []);
+
+  useEffect(() => {
+    if (phase.kind !== "idle") return;
+    place(startOffset());
+    if (reducedMotion()) return;
+    let last = performance.now();
+    const drift = (time: number) => {
+      const delta = time - last;
+      last = time;
+      let next = offset.current + delta * 0.018;
+      if (next > startOffset() + STEP * 6) next = startOffset();
+      place(next);
+      frame.current = requestAnimationFrame(drift);
+    };
+    frame.current = requestAnimationFrame(drift);
+    return () => cancelAnimationFrame(frame.current);
+  }, [phase.kind, place, startOffset, strip]);
+
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+
+  const spin = useCallback(
+    (result: Case) => {
+      cancelAnimationFrame(frame.current);
+      const width = viewport.current?.clientWidth ?? 360;
+      const jitter = (Math.random() - 0.5) * (CARD * 0.6);
+      const target = width / 2 - (WIN_INDEX * STEP + CARD / 2) + jitter;
+      const from = startOffset();
+      const duration = reducedMotion() ? 500 : SPIN_MS;
+      const started = performance.now();
+      let lastIndex = -1;
+      place(from);
+      const tick = (time: number) => {
+        const progress = Math.min((time - started) / duration, 1);
+        const value = from + (target - from) * easeOut(progress);
+        place(value);
+        const index = Math.floor((width / 2 - value) / STEP);
+        if (index !== lastIndex) {
+          lastIndex = index;
+          if (progress < 0.97) haptic("select");
+        }
+        if (progress < 1) {
+          frame.current = requestAnimationFrame(tick);
+        } else {
+          haptic(result.reward_status === "cancelled" ? "warning" : "success");
+          setPhase({ kind: "done", result });
+        }
+      };
+      frame.current = requestAnimationFrame(tick);
+    },
+    [place, startOffset],
+  );
+
+  const open = async () => {
+    if (!current || phase.kind === "requesting" || phase.kind === "spinning") return;
     haptic("medium");
-    setOpening(item);
-    setResult(null);
     setError(null);
-    const started = Date.now();
+    setPhase({ kind: "requesting" });
     try {
-      const opened = await api.post<Case>(`/cases/${item.id}/open`);
-      const wait = MIN_ANIMATION_MS - (Date.now() - started);
-      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-      haptic("success");
-      setResult(opened);
+      const opened = await api.post<Case>(`/cases/${current.id}/open`);
       clearResourceCache("home");
-      if (cases.data) {
-        cases.setData({
-          ready: cases.data.ready.filter((c) => c.id !== opened.id),
-          opened: [opened, ...cases.data.opened.filter((c) => c.id !== opened.id)],
-        });
+      if (opened.state !== "opened" || opened.amount === null) {
+        setPhase({ kind: "idle" });
+        setError(rewardNote(opened) || "Кейс недоступен.");
+        void cases.reload();
+        return;
       }
+      setStrip(buildStrip(table, opened.amount));
+      setPhase({ kind: "spinning", result: opened });
+      requestAnimationFrame(() => spin(opened));
     } catch (err) {
       haptic("error");
+      setPhase({ kind: "idle" });
       setError(err instanceof ApiError ? err.message : "Не удалось открыть кейс.");
     }
   };
 
-  const close = () => {
-    setOpening(null);
-    setResult(null);
-    setError(null);
-    void cases.reload();
+  const next = () => {
+    if (phase.kind === "done" && cases.data) {
+      const result = phase.result;
+      cases.setData({
+        ready: cases.data.ready.filter((c) => c.id !== result.id),
+        opened: [result, ...cases.data.opened.filter((c) => c.id !== result.id)],
+      });
+    }
+    setStrip(buildStrip(table, null));
+    setPhase({ kind: "idle" });
   };
 
-  return (
-    <Screen title="Кейсы">
-      <p className="lead">Кейс становится доступен после подтверждённого задания или за приглашённых друзей.</p>
-      {!cases.data && cases.error && <ErrorState error={cases.error} onRetry={() => void cases.reload()} />}
-      {!cases.data && !cases.error && <Loader />}
-      {cases.data && (
-        <>
-          <Section title={`Готовы к открытию${cases.data.ready.length ? ` · ${cases.data.ready.length}` : ""}`}>
-            {cases.data.ready.length === 0 ? (
-              <EmptyState
-                title="Нет кейсов к открытию"
-                text="Выполните задание — после проверки здесь появится кейс."
-                action={
-                  <Button variant="secondary" size="sm" onClick={() => navigate("/tasks")}>
-                    К заданиям
-                  </Button>
-                }
-              />
-            ) : (
-              <ul className="list">
-                {cases.data.ready.map((item) => (
-                  <li key={item.id} className="case-row">
-                    <span className="case-icon">
-                      <IconCase size={22} />
-                    </span>
-                    <div className="case-info">
-                      <span className="case-title">{item.source === "referral" ? "Подарочный кейс" : "Кейс за задание"}</span>
-                      <span className="case-sub">{item.source_label}</span>
-                    </div>
-                    <Button size="sm" onClick={() => void openCase(item)}>
-                      Открыть
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
-          {cases.data.opened.length > 0 && (
-            <Section title="Открытые">
-              <ul className="list">
-                {cases.data.opened.map((item) => (
-                  <li key={item.id} className="case-row">
-                    <div className="case-info">
-                      <span className="case-title">{item.source_label}</span>
-                      <span className="case-sub">{formatDateTime(item.opened_at ?? item.created_at)}</span>
-                    </div>
-                    <div className="op-side">
-                      <span className={item.reward_status === "cancelled" ? "op-amount op-amount-struck" : "op-amount"}>
-                        {item.amount ? formatStars(item.amount, { sign: "+" }) : "—"}
-                      </span>
-                      {rewardBadge(item)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-        </>
-      )}
+  const busy = phase.kind === "requesting" || phase.kind === "spinning";
+  const result = phase.kind === "done" ? phase.result : null;
+  const chances = useMemo(() => [...table].sort((a, b) => Number(b.amount) - Number(a.amount)), [table]);
+  const maxChance = Math.max(...table.map((row) => Number(row.chance)));
 
-      <Sheet open={opening !== null} onClose={close} dismissible={result !== null || error !== null}>
-        <div className="case-open">
-          <div className={result ? "case-box case-box-open" : error ? "case-box" : "case-box case-box-shake"} aria-hidden="true">
-            <svg viewBox="0 0 120 120">
-              <g className="case-lid">
-                <rect x="14" y="30" width="92" height="22" rx="6" />
-                <path d="M60 30v22" />
-              </g>
-              <rect x="20" y="52" width="80" height="52" rx="6" />
-              <path d="M60 52v52" />
-            </svg>
+  return (
+    <Screen title="Кейсы" aside={ready.length > 0 ? <span className="count-chip">{ready.length}</span> : undefined}>
+      <section className="roulette" aria-label="Рулетка кейса">
+        <div className="roulette-viewport" ref={viewport}>
+          <div className="roulette-track" ref={track}>
+            {strip.map((amount, index) => (
+              <PrizeCard
+                key={index}
+                amount={amount}
+                tier={tierOf(amount, table)}
+                won={result !== null && index === WIN_INDEX}
+              />
+            ))}
           </div>
-          {!result && !error && <p className="case-open-status">Открываем кейс…</p>}
-          {error && (
-            <>
-              <p className="case-open-status">{error}</p>
-              <Button block onClick={close}>
-                Закрыть
-              </Button>
-            </>
-          )}
-          {result && (
-            <div className="case-reveal">
-              <span className="case-reveal-amount">{result.amount ? formatStars(result.amount, { sign: "+" }) : "—"}</span>
-              <span className="case-reveal-source">{result.source_label}</span>
-              <p className="case-reveal-note">{rewardNote(result)}</p>
-              <Button block onClick={close}>
-                Готово
+          <span className="roulette-pointer roulette-pointer-top" aria-hidden="true" />
+          <span className="roulette-pointer roulette-pointer-bottom" aria-hidden="true" />
+          <span className="roulette-line" aria-hidden="true" />
+        </div>
+
+        <div className="roulette-panel">
+          {result ? (
+            <div className="roulette-result" role="status">
+              <span className="roulette-result-label">Выпало</span>
+              <Amount value={result.amount ?? "0"} sign="+" size={26} className="roulette-result-amount" />
+              <span className="roulette-result-note">{rewardNote(result)}</span>
+              <Button variant="primary" block onClick={next}>
+                {ready.length > 1 ? "Следующий кейс" : "Готово"}
               </Button>
             </div>
+          ) : cases.data && !current ? (
+            <div className="roulette-empty">
+              <strong>Нет кейсов к открытию</strong>
+              <span>Кейс выдаётся за каждое подтверждённое задание и за друзей.</span>
+              <Button variant="secondary" block onClick={() => navigate("/tasks")}>
+                К заданиям
+              </Button>
+            </div>
+          ) : (
+            <>
+              {current && (
+                <p className="roulette-source">
+                  {current.source === "referral" ? "Подарочный кейс" : "Кейс за задание"}
+                  <span>{current.source_label}</span>
+                </p>
+              )}
+              {error && <p className="form-error">{error}</p>}
+              <Button variant="accent" block loading={phase.kind === "requesting"} disabled={busy || !current} onClick={() => void open()}>
+                {phase.kind === "spinning" ? "Крутим…" : "Открыть кейс"}
+              </Button>
+              {ready.length > 1 && (
+                <span className="roulette-more">
+                  Ещё {ready.length - 1} {plural(ready.length - 1, "кейс", "кейса", "кейсов")} в очереди
+                </span>
+              )}
+            </>
           )}
         </div>
-      </Sheet>
+      </section>
+
+      {!cases.data && cases.error && <ErrorState error={cases.error} onRetry={() => void cases.reload()} />}
+      {!cases.data && !cases.error && <Loader />}
+
+      <Section title="Что может выпасть">
+        <ul className="chances">
+          {chances.map((row) => (
+            <li key={row.amount} className={`chance chance-${tierOf(row.amount, table)}`}>
+              <span className="chance-amount">
+                {formatNumber(row.amount)}
+                <Star size={14} />
+              </span>
+              <span className="chance-bar">
+                <span style={{ width: `${Math.max(4, (Number(row.chance) / maxChance) * 100)}%` }} />
+              </span>
+              <span className="chance-value">{formatNumber(row.chance)}%</span>
+            </li>
+          ))}
+        </ul>
+        <p className="hint">Результат определяет сервер в момент открытия. Средняя награда — {formatNumber(config.case_expected)}
+          <Star size={13} className="star-inline" />.
+        </p>
+      </Section>
+
+      {cases.data && (
+        <Section title="История открытий">
+          {cases.data.opened.length === 0 ? (
+            <EmptyState title="Пока пусто" text="Открытые кейсы появятся здесь." />
+          ) : (
+            <ul className="card-list list">
+              {cases.data.opened.map((item) => (
+                <li key={item.id} className="op-row">
+                  <span className={item.state === "cancelled" ? "op-icon op-icon-muted" : "op-icon op-icon-star"}>
+                    <Star size={22} />
+                  </span>
+                  <div className="op-main">
+                    <span className="op-title">{item.source === "referral" ? "Подарочный кейс" : "Кейс за задание"}</span>
+                    <span className="op-reason">{item.source_label}</span>
+                    <span className="op-date">{formatDateTime(item.opened_at ?? item.created_at)}</span>
+                  </div>
+                  <div className="op-side">
+                    {item.amount !== null ? (
+                      <Amount
+                        value={item.amount}
+                        sign="+"
+                        size={14}
+                        className={item.reward_status === "cancelled" ? "op-amount op-amount-struck" : "op-amount op-amount-in"}
+                      />
+                    ) : (
+                      <span className="op-amount">—</span>
+                    )}
+                    <Badge tone={item.reward_status === "completed" ? "success" : item.reward_status === "pending" ? "pending" : "danger"}>
+                      {item.reward_status === "completed" ? "Зачислено" : item.reward_status === "pending" ? "В ожидании" : "Отменено"}
+                    </Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      )}
     </Screen>
+  );
+}
+
+function PrizeCard({ amount, tier, won }: { amount: string; tier: Tier; won: boolean }) {
+  return (
+    <div className={`prize prize-${tier}${won ? " prize-won" : ""}`}>
+      <Star size={48} className="prize-star" />
+      <span className="prize-amount">{formatNumber(amount)}</span>
+    </div>
   );
 }

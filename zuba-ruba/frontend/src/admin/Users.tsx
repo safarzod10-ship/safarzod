@@ -1,65 +1,115 @@
-import { useState } from "react";
-import { api } from "../api";
-import { formatDateTime, formatStars } from "../format";
+import { useRef, useState } from "react";
+import { ApiError, api } from "../api";
+import { formatDate, formatDateTime, formatNumber, formatStars } from "../format";
 import { navigate } from "../router";
-import type { AdminUserRow } from "../types";
-import { Badge, Button, EmptyState, Loader, useResource } from "../ui";
-import { AdminError } from "./Admin";
+import { useResource } from "../ui";
+import { AdminError, Loading } from "./Admin";
+import { DataTable, Pager, Panel, Segmented, downloadExport, useDebounced, userName } from "./kit";
+import type { AdminUserRow, AdminUsersPage } from "./types";
+
+type Status = "" | "blocked" | "suspicious" | "withdrawing";
 
 export function AdminUsersView() {
-  const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
-  const users = useResource(`admin:users:${query}`, () =>
-    api.get<{ items: AdminUserRow[] }>(`/admin/users${query ? `?q=${encodeURIComponent(query)}` : ""}`),
-  );
+  const [status, setStatus] = useState<Status>("");
+  const [sort, setSort] = useState<{ key: string; order: "asc" | "desc" }>({ key: "last_seen_at", order: "desc" });
+  const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState<string | null>(null);
+  const q = useDebounced(query.trim());
+  const params = new URLSearchParams({ q, status, sort: sort.key, order: sort.order, page: String(page), per_page: "50" });
+  const data = useResource(`admin:users:${params}`, () => api.get<AdminUsersPage>(`/admin/users?${params}`));
+  const last = useRef<AdminUsersPage | undefined>(undefined);
+  if (data.data) last.current = data.data;
+  const shown = data.data ?? last.current;
+
+  const changeSort = (key: string) => {
+    setPage(1);
+    setSort((current) => (current.key === key ? { key, order: current.order === "asc" ? "desc" : "asc" } : { key, order: "desc" }));
+  };
+
+  const exportUsers = async () => {
+    setExporting(null);
+    try {
+      await downloadExport("users");
+    } catch (err) {
+      setExporting(err instanceof ApiError ? err.message : "Не удалось подготовить выгрузку.");
+    }
+  };
 
   return (
-    <>
-      <form
-        className="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setQuery(input.trim().replace(/^@/, ""));
-        }}
-      >
+    <div className="adm-stack">
+      <div className="adm-toolbar">
         <input
-          className="input"
+          className="adm-input adm-search"
           type="search"
           inputMode="search"
-          placeholder="Telegram ID или username"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          aria-label="Поиск пользователя"
+          placeholder="ID, @username или имя"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setPage(1);
+          }}
+          aria-label="Поиск пользователей"
         />
-        <Button size="sm" type="submit">
-          Найти
-        </Button>
-      </form>
-      {!users.data && users.error && <AdminError error={users.error} onRetry={() => void users.reload()} />}
-      {!users.data && !users.error && <Loader />}
-      {users.data && users.data.items.length === 0 && <EmptyState title="Никого не найдено" />}
-      {users.data && users.data.items.length > 0 && (
-        <ul className="list">
-          {users.data.items.map((user) => (
-            <li key={user.id}>
-              <button type="button" className="user-row" onClick={() => navigate(`/admin/users/${user.id}`)}>
-                <div className="op-main">
-                  <span className="op-title">
-                    {user.first_name}
-                    {user.username ? ` · @${user.username}` : ""}
-                  </span>
-                  <span className="op-reason mono">ID {user.id}</span>
-                  <span className="op-date">Был: {formatDateTime(user.last_seen_at)}</span>
-                </div>
-                <div className="op-side">
-                  <span className="op-amount">{formatStars(user.available)}</span>
-                  {user.is_blocked ? <Badge tone="danger">Заблокирован</Badge> : <span className="op-date">ожид. {formatStars(user.pending)}</span>}
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+        <Segmented
+          label="Фильтр"
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+            setPage(1);
+          }}
+          options={[
+            { value: "", label: "Все" },
+            { value: "withdrawing", label: "С выводом" },
+            { value: "suspicious", label: "Подозрительные" },
+            { value: "blocked", label: "Заблокированные" },
+          ]}
+        />
+        <button type="button" className="adm-ghost" onClick={() => void exportUsers()}>
+          Выгрузить CSV
+        </button>
+      </div>
+      {exporting && <div className="adm-alert">{exporting}</div>}
+      <Panel
+        title={shown ? `Найдено: ${formatNumber(shown.total)}` : "Пользователи"}
+        aside={data.loading && shown ? <span className="adm-muted">Обновление…</span> : undefined}
+      >
+        {!shown ? (
+          data.error ? <AdminError error={data.error} onRetry={() => void data.reload()} /> : <Loading />
+        ) : (
+          <>
+            <DataTable<AdminUserRow>
+              rows={shown.items}
+              rowKey={(row) => row.id}
+              sort={sort}
+              onSort={changeSort}
+              onRowClick={(row) => navigate(`/admin/users/${row.id}`)}
+              empty={q || status ? "Никого не нашли" : "Пользователей пока нет"}
+              columns={[
+                {
+                  key: "user",
+                  label: "Пользователь",
+                  primary: true,
+                  render: (row) => (
+                    <span className="adm-user-cell">
+                      <span className="adm-user-name">{userName(row)}</span>
+                      <span className="adm-muted adm-mono">{row.id}</span>
+                      {row.is_blocked && <span className="adm-tag adm-tag-danger">блок</span>}
+                      {row.is_suspicious && <span className="adm-tag adm-tag-warn">подозр.</span>}
+                    </span>
+                  ),
+                },
+                { key: "registered_at", label: "Регистрация", sortable: true, hideOnMobile: true, render: (row) => formatDate(row.registered_at) },
+                { key: "last_seen_at", label: "Был в сети", sortable: true, render: (row) => formatDateTime(row.last_seen_at) },
+                { key: "available", label: "Доступно", sortable: true, align: "right", render: (row) => formatStars(row.available) },
+                { key: "pending", label: "Ожидает", align: "right", hideOnMobile: true, render: (row) => formatStars(row.pending) },
+                { key: "earned", label: "Заработал", sortable: true, align: "right", render: (row) => formatStars(row.earned ?? "0") },
+              ]}
+            />
+            <Pager page={page} pages={shown.pages} onChange={setPage} />
+          </>
+        )}
+      </Panel>
+    </div>
   );
 }

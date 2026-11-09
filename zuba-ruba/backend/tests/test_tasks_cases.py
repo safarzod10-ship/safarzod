@@ -36,7 +36,9 @@ async def test_task_list_and_filters(env):
     assert data["flyer_error"] is None
     assert sorted(t["type"] for t in data["items"]) == ["boost", "bot", "channel"]
     channel = next(t for t in data["items"] if t["type"] == "channel")
-    assert channel["reward"] == "0.3" and channel["status"] == "new" and channel["can_check"] is True
+    assert channel["reward_kind"] == "case" and channel["reward"] == "2" and channel["status"] == "new" and channel["can_check"] is True
+    boost = next(t for t in data["items"] if t["type"] == "boost")
+    assert boost["reward_kind"] == "stars" and boost["reward"] == "0.2"
     assert "30 ч" in channel["conditions"]
     only_bots = (await env.client.get("/api/tasks?type=bot", headers=auth(1))).json()["items"]
     assert [t["type"] for t in only_bots] == ["bot"]

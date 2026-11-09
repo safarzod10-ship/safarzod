@@ -17,12 +17,23 @@ export const config = {
   bot_username: "zuba_ruba_bot",
   support_url: "https://t.me/zuba_support",
   maintenance: false,
-  features: { withdrawals: true, boosts: true, referrals: true },
-  rewards: { channel: "0.3", bot: "0.3", boost: "0.2", referral_case: "0.3" },
+  features: { withdrawals: true, boosts: true, referrals: true, tasks: true },
+  rewards: { boost: "0.2" },
+  case_prizes: [
+    { amount: "0.1", weight: 40, chance: "40.0" },
+    { amount: "0.2", weight: 25, chance: "25.0" },
+    { amount: "0.3", weight: 15, chance: "15.0" },
+    { amount: "0.5", weight: 12, chance: "12.0" },
+    { amount: "1", weight: 6, chance: "6.0" },
+    { amount: "2", weight: 2, chance: "2.0" },
+  ],
+  case_expected: "0.295",
+  withdraw: { min_stars: 15, gift_stars: [15, 25, 50, 100], per_day: 3, auto: false },
+  limits: { checks_per_minute: 20, referral_daily_cases: 10 },
   hold_hours: { channel: 30, bot: 0 },
   referral_threshold: 3,
   boost: { first_check_hours: 48, interval_hours: 24, recurring: false },
-  stars_are_internal: true,
+  stars_are_internal: false,
 };
 
 const balance = { total: "21.45", available: "18.3", pending: "3.15", withdrawing: "0" };
@@ -39,10 +50,10 @@ export const home = { balance, cases_opened: 14, cases_ready: 2, unread_notifica
 
 export const tasks = {
   items: [
-    { signature: "s1", type: "channel", type_label: "Подписка на канал", title: "Новости технологий и науки каждый день", conditions: "Подпишись и не отписывайся 30 ч", link: "https://t.me/example_channel", photo: null, reward: "0.3", status: "new", status_label: "Не выполнено", can_check: true },
-    { signature: "s2", type: "bot", type_label: "Запуск бота", title: "Weather Bot", conditions: "Запусти бота командой /start", link: "https://t.me/example_bot", photo: null, reward: "0.3", status: "incomplete", status_label: "Не выполнено", can_check: true },
-    { signature: "s3", type: "boost", type_label: "Буст канала", title: "Дизайн", conditions: "Отдай буст каналу и сохраняй его", link: "https://t.me/boost/example", photo: null, reward: "0.2", status: "waiting", status_label: "Ожидает подтверждения", can_check: false },
-    { signature: "s4", type: "channel", type_label: "Подписка на канал", title: "Кулинария", conditions: "Подпишись и не отписывайся 30 ч", link: "https://t.me/example_food", photo: null, reward: "0.3", status: "completed", status_label: "Выполнено", can_check: false },
+    { signature: "s1", type: "channel", type_label: "Подписка на канал", title: "Новости технологий и науки каждый день", conditions: "Подпишись и не отписывайся 30 ч", link: "https://t.me/example_channel", photo: null, reward_kind: "case", reward: "2", status: "new", status_label: "Не выполнено", can_check: true },
+    { signature: "s2", type: "bot", type_label: "Запуск бота", title: "Weather Bot", conditions: "Запусти бота командой /start", link: "https://t.me/example_bot", photo: null, reward_kind: "case", reward: "2", status: "incomplete", status_label: "Не выполнено", can_check: true },
+    { signature: "s3", type: "boost", type_label: "Буст канала", title: "Дизайн", conditions: "Отдай буст каналу и сохраняй его", link: "https://t.me/boost/example", photo: null, reward_kind: "stars", reward: "0.2", status: "waiting", status_label: "Ожидает подтверждения", can_check: false },
+    { signature: "s4", type: "channel", type_label: "Подписка на канал", title: "Кулинария", conditions: "Подпишись и не отписывайся 30 ч", link: "https://t.me/example_food", photo: null, reward_kind: "case", reward: "2", status: "completed", status_label: "Выполнено", can_check: false },
   ],
   flyer_error: null,
 };
@@ -74,10 +85,19 @@ export const withdrawals = {
   enabled: true,
   disabled_reason: null,
   balance,
-  options: ["15", "25", "50"],
+  options: [
+    { gift_id: "5170145012310081615", stars: 15, emoji: "💝", name: "Сердце" },
+    { gift_id: "5170233102089322756", stars: 15, emoji: "🧸", name: "Мишка" },
+    { gift_id: "5168103777563050263", stars: 25, emoji: "🌹", name: "Роза" },
+    { gift_id: "5170250947678437525", stars: 25, emoji: "🎁", name: "Подарок" },
+    { gift_id: "5170144170496491616", stars: 50, emoji: "🎂", name: "Торт" },
+    { gift_id: "5170564780938756245", stars: 50, emoji: "🚀", name: "Ракета" },
+    { gift_id: "5168043875654172773", stars: 100, emoji: "🏆", name: "Кубок" },
+    { gift_id: "5170521118301225164", stars: 100, emoji: "💎", name: "Алмаз" },
+  ],
   items: [
-    { id: 4, amount: "15", status: "pending", status_label: "На рассмотрении", comment: null, created_at: iso(30), updated_at: iso(30) },
-    { id: 3, amount: "15", status: "completed", status_label: "Выплачено", comment: null, created_at: iso(4000), updated_at: iso(3900) },
+    { id: 4, amount: "15", stars: 15, gift_id: "5170233102089322756", gift_emoji: "🧸", gift_name: "Мишка", status: "pending", status_label: "На рассмотрении", comment: null, created_at: iso(30), updated_at: iso(30) },
+    { id: 3, amount: "25", stars: 25, gift_id: "5168103777563050263", gift_emoji: "🌹", gift_name: "Роза", status: "completed", status_label: "Отправлено", comment: null, created_at: iso(4000), updated_at: iso(3900) },
   ],
 };
 
@@ -89,27 +109,3 @@ export const notifications = {
 };
 
 export const operationsPage = { items: operations, next_cursor: null };
-
-export const adminOverview = {
-  users_total: 1284,
-  users_active_24h: 312,
-  users_new_24h: 47,
-  tasks_completed: 5310,
-  tasks_paid: 4870,
-  tasks_waiting: 390,
-  tasks_disputed: 3,
-  boosts_active: 41,
-  income: "5126.40",
-  reward_expenses: "2191.50",
-  net_profit: "2934.90",
-  warning: "Ожидаемые расходы превышают подтверждённый доход на 120,00 ₽.",
-};
-
-export const adminFinance = {
-  income_gross: "5400.00", income_confirmed: "5126.40", income_flyer_reported: "5098.10",
-  rewards_pending: "210.00", reward_expenses: "2191.50", referral_expenses: "120.00",
-  commissions: "540.00", liabilities: "3020.50", net_profit: "2274.90", unopened_cases: "45.00",
-  flyer_withdraw_threshold: "1000.00", warning: null, bot_star_balance: 120,
-  withdrawals: [{ ...withdrawals.items[0], user_id: me.id, username: me.username }],
-  adjustments: [],
-};

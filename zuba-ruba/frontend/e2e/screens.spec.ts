@@ -27,8 +27,6 @@ async function mockApi(page: Page, options: MockOptions = {}): Promise<void> {
     if (path.startsWith("/cases/") && path.endsWith("/open")) return json(fx.openedCase);
     if (path === "/referrals") return json(fx.referrals);
     if (path === "/withdrawals") return json(fx.withdrawals);
-    if (path === "/admin/overview") return json(fx.adminOverview);
-    if (path === "/admin/finance") return json(fx.adminFinance);
     return json({ error: { code: "not_found", message: "Не найдено." } }, 404);
   });
 }
@@ -74,10 +72,11 @@ async function assertNoOverflow(page: Page): Promise<void> {
 const SCREENS = [
   { name: "home", hash: "#/", ready: "text=Общий баланс" },
   { name: "tasks", hash: "#/tasks", ready: "text=Новости технологий и науки каждый день" },
-  { name: "cases", hash: "#/cases", ready: "text=Готовы к открытию · 2" },
+  { name: "cases", hash: "#/cases", ready: "text=Что может выпасть" },
   { name: "profile", hash: "#/profile", ready: "text=Приглашай друзей" },
   { name: "withdraw", hash: "#/withdraw", ready: "text=Доступно к выводу" },
-  { name: "admin", hash: "#/admin", ready: "text=Чистая прибыль" },
+  { name: "rules", hash: "#/rules", ready: "text=Шансы кейса" },
+  { name: "history", hash: "#/history", ready: "text=Награда за кейс" },
 ];
 
 const WIDTHS = [320, 360, 390, 430];
@@ -108,8 +107,9 @@ for (const scheme of SCHEMES) {
       await page.screenshot({ path: `e2e/screenshots/${scheme}-${width}-onboarding-1.png` });
       await page.getByRole("button", { name: "Далее" }).click();
       await expect(page.locator(".onb-title")).toHaveText("Выполняй задания");
+      await page.screenshot({ path: `e2e/screenshots/${scheme}-${width}-onboarding-2.png` });
       await page.getByRole("button", { name: "Далее" }).click();
-      await expect(page.locator(".onb-title")).toHaveText("Следи за наградами");
+      await expect(page.locator(".onb-title")).toHaveText("Забирай подарки");
       await page.screenshot({ path: `e2e/screenshots/${scheme}-${width}-onboarding-3.png` });
       await page.getByRole("button", { name: "Начать" }).click();
       await expect(page.locator("text=Общий баланс")).toBeVisible();
@@ -122,25 +122,29 @@ test("task check shows result and case link", async ({ page }) => {
   await fakeTelegram(page, "light");
   await mockApi(page);
   await page.goto("/#/tasks");
-  const row = page.locator(".task").first();
+  const row = page.locator(".task-card").first();
   await row.getByRole("button", { name: "Проверить" }).click();
-  await expect(row.locator(".task-message")).toContainText("Задание выполнено");
+  await expect(row.locator(".task-note")).toContainText("Задание выполнено");
   await expect(row.getByRole("button", { name: "Открыть кейс" })).toBeVisible();
   await expect(row.getByRole("button", { name: "Проверить" })).toHaveCount(0);
   await page.getByRole("tab", { name: "Боты" }).click();
   await expect(page.getByRole("tab", { name: "Боты" })).toHaveAttribute("aria-selected", "true");
 });
 
-test("case opening reveals amount", async ({ page }) => {
+test("case roulette spins to the server result", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   await fakeTelegram(page, "light");
   await mockApi(page);
   await page.goto("/#/cases");
-  await page.locator(".case-row").first().getByRole("button", { name: "Открыть" }).click();
-  await expect(page.locator(".case-reveal-amount")).toHaveText("+0,3 ⭐");
+  await page.getByRole("button", { name: "Открыть кейс" }).click();
+  await expect(page.locator(".roulette-result-amount")).toContainText("+0,3");
+  await expect(page.locator(".prize-won .prize-amount")).toHaveText("0,3");
+  const pointer = await page.locator(".roulette-line").boundingBox();
+  const won = await page.locator(".prize-won").boundingBox();
+  expect(pointer && won && pointer.x >= won.x && pointer.x <= won.x + won.width).toBeTruthy();
   await page.screenshot({ path: "e2e/screenshots/light-390-case-open.png" });
-  await page.getByRole("button", { name: "Готово" }).click();
-  await expect(page.locator(".sheet")).toHaveCount(0);
+  await page.getByRole("button", { name: "Следующий кейс" }).click();
+  await expect(page.locator(".roulette-result")).toHaveCount(0);
 });
 
 test("withdraw request flow", async ({ page }) => {
@@ -148,18 +152,22 @@ test("withdraw request flow", async ({ page }) => {
   await fakeTelegram(page, "dark");
   await mockApi(page);
   let idempotencyKey: string | null = null;
+  let body: unknown = null;
   await page.route("**/api/withdrawals", async (route) => {
     if (route.request().method() === "POST") {
       idempotencyKey = route.request().headers()["idempotency-key"] ?? null;
+      body = route.request().postDataJSON();
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fx.withdrawals.items[0]) });
     }
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fx.withdrawals) });
   });
   await page.goto("/#/withdraw");
-  await page.getByRole("radio", { name: "15 ⭐" }).click();
-  await page.getByRole("button", { name: "Вывести 15 ⭐" }).click();
-  await expect(page.locator("text=Заявка №4 создана")).toBeVisible();
+  await page.getByRole("button", { name: /Мишка/ }).click();
+  await page.getByRole("button", { name: "Вывести «Мишка» · 15 ⭐" }).click();
+  await expect(page.locator("text=Заявка №4 принята")).toBeVisible();
   expect(idempotencyKey).toBeTruthy();
+  expect(body).toEqual({ gift_id: "5170233102089322756" });
+  await page.screenshot({ path: "e2e/screenshots/dark-360-withdraw-done.png", fullPage: true });
 });
 
 test("outside telegram shows the bot link", async ({ page }) => {

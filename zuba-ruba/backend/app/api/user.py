@@ -2,15 +2,15 @@ import re
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select, tuple_, update
 
 from app.api.common import ApiError, Ctx, balance_view, ctx, me_view, operation_view, rate_limit
 from app.config import Config, get_config
 from app.models import Notification, Operation, User, Withdrawal
-from app.money import AmountError, _decimal
+from app.money import milli_to_str
 from app.services import cases as cases_service
-from app.services import referrals, tasks, withdrawals
+from app.services import prizes, referrals, tasks, withdrawals
 from app.services import users as users_service
 
 router = APIRouter(prefix="/api")
@@ -53,12 +53,16 @@ async def app_config(c: Ctx = Depends(ctx), config: Config = Depends(get_config)
             "referrals": s.bool("referrals_enabled"),
             "tasks": s.bool("tasks_enabled"),
         },
-        "rewards": {
-            "channel": s.raw("reward_channel"),
-            "bot": s.raw("reward_bot"),
-            "boost": s.raw("reward_boost"),
-            "referral_case": s.raw("reward_referral_case"),
+        "rewards": {"boost": s.raw("reward_boost")},
+        "case_prizes": prizes.table_view(s),
+        "case_expected": milli_to_str(prizes.expected_milli(s)),
+        "withdraw": {
+            "min_stars": s.int("withdraw_min_stars"),
+            "gift_stars": s.int_list("withdraw_gift_stars"),
+            "per_day": s.int("withdrawals_per_day"),
+            "auto": s.bool("withdraw_auto"),
         },
+        "limits": {"checks_per_minute": s.int("checks_per_minute"), "referral_daily_cases": s.int("referral_daily_cases_limit")},
         "hold_hours": {"channel": s.int("hold_hours_channel"), "bot": s.int("hold_hours_bot")},
         "referral_threshold": s.int("referral_threshold"),
         "boost": {
@@ -66,7 +70,7 @@ async def app_config(c: Ctx = Depends(ctx), config: Config = Depends(get_config)
             "interval_hours": s.int("boost_interval_hours"),
             "recurring": s.bool("boost_recurring_enabled"),
         },
-        "stars_are_internal": True,
+        "stars_are_internal": not s.bool("withdrawals_enabled"),
     }
 
 
@@ -162,7 +166,7 @@ async def task_check(signature: str, request: Request, c: Ctx = Depends(ctx)):
     if result["task"] is None:
         raise ApiError(404, "not_found", result["message"])
     return {
-        "task": tasks.task_view(result["task"], c.settings, result.get("reward_milli")),
+        "task": tasks.task_view(result["task"], c.settings),
         "result": result["result"],
         "message": result["message"],
         "case_id": result["case_id"],
@@ -221,13 +225,13 @@ async def withdrawal_list(request: Request, c: Ctx = Depends(ctx)):
         "enabled": reason is None,
         "disabled_reason": reason,
         "balance": balance_view(c.user),
-        "options": [str(option.stars) for option in options],
+        "options": [option.view() for option in options],
         "items": [withdrawals.view(w) for w in rows],
     }
 
 
 class WithdrawalIn(BaseModel):
-    amount: str
+    gift_id: str = Field(min_length=1, max_length=64, pattern=r"^[0-9]+$")
 
 
 @router.post("/withdrawals")
@@ -235,15 +239,9 @@ async def withdrawal_create(body: WithdrawalIn, request: Request, idempotency_ke
     if not idempotency_key or not IDEMPOTENCY_RE.match(idempotency_key):
         raise ApiError(422, "validation", "Отсутствует ключ идемпотентности")
     await rate_limit(request, f"withdraw:{c.user.id}", 5)
-    try:
-        amount = _decimal(body.amount)
-    except AmountError:
-        raise ApiError(422, "validation", "Некорректная сумма") from None
-    if amount != amount.to_integral_value() or amount <= 0:
-        raise ApiError(422, "validation", "Сумма вывода — целое число ⭐")
     options = await _options(request, c)
     try:
-        withdrawal = await withdrawals.create(c.session, c.user.id, int(amount), idempotency_key, c.settings, options)
+        withdrawal = await withdrawals.create(c.session, c.user.id, body.gift_id, idempotency_key, c.settings, options)
     except withdrawals.WithdrawalError as exc:
         await c.session.rollback()
         status = {"feature_disabled": 403, "insufficient_funds": 409, "rate_limited": 429}.get(exc.code, 422)

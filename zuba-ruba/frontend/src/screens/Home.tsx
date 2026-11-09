@@ -1,87 +1,129 @@
-import { useEffect } from "react";
 import { api } from "../api";
+import { plural } from "../format";
+import { IconBell, IconChevron } from "../icons";
 import { OperationList } from "../components/OperationList";
-import { formatStars } from "../format";
-import { IconBell } from "../icons";
 import { navigate } from "../router";
+import { Amount, Star } from "../stars";
 import { haptic } from "../telegram";
 import type { Home } from "../types";
-import { Button, EmptyState, ErrorState, Loader, NavRow, Section, useResource } from "../ui";
+import { EmptyState, ErrorState, Loader, useResource } from "../ui";
 
 export function HomeScreen() {
   const home = useResource("home", () => api.get<Home>("/home"));
-
-  useEffect(() => {
-    const onVisible = () => document.visibilityState === "visible" && void home.reload();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [home.reload]);
-
-  const unread = home.data?.unread_notifications ?? 0;
+  const data = home.data;
 
   return (
-    <div className="screen">
+    <div className="screen home">
       <header className="topbar">
         <span className="brand">ZUBA RUBA</span>
         <button
           type="button"
           className="icon-btn"
-          aria-label={unread ? `Уведомления, непрочитанных: ${unread}` : "Уведомления"}
+          aria-label={data?.unread_notifications ? `Уведомления: ${data.unread_notifications} новых` : "Уведомления"}
           onClick={() => {
-            haptic("select");
+            haptic("light");
             navigate("/notifications");
           }}
         >
           <IconBell />
-          {unread > 0 && <span className="dot" />}
+          {data && data.unread_notifications > 0 && <span className="dot" />}
         </button>
       </header>
 
-      {!home.data && home.error && <ErrorState error={home.error} onRetry={() => void home.reload()} />}
-      {!home.data && !home.error && <Loader />}
-      {home.data && (
+      {!data && home.error && <ErrorState error={home.error} onRetry={() => void home.reload()} />}
+      {!data && !home.error && <Loader />}
+
+      {data && (
         <>
-          <section className="balance">
-            <span className="balance-label">Общий баланс</span>
-            <span className="balance-total">{formatStars(home.data.balance.total)}</span>
-            <div className="balance-split">
-              <div className="balance-cell">
-                <span className="balance-cell-label">Доступно</span>
-                <span className="balance-cell-value">{formatStars(home.data.balance.available)}</span>
-              </div>
-              <div className="balance-cell">
-                <span className="balance-cell-label">В ожидании</span>
-                <span className="balance-cell-value">{formatStars(home.data.balance.pending)}</span>
-              </div>
+          <section className="ticket" aria-label="Баланс">
+            <div className="ticket-top">
+              <span className="ticket-label">Общий баланс</span>
+              <Amount value={data.balance.total} size={34} className="ticket-total" />
+              <dl className="ticket-split">
+                <div>
+                  <dt>Доступно</dt>
+                  <dd>
+                    <Amount value={data.balance.available} size={14} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>В ожидании</dt>
+                  <dd>
+                    <Amount value={data.balance.pending} size={14} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>На выводе</dt>
+                  <dd>
+                    <Amount value={data.balance.withdrawing} size={14} />
+                  </dd>
+                </div>
+              </dl>
             </div>
-            <Button block onClick={() => navigate("/withdraw")}>
-              Вывести
-            </Button>
+            <div className="ticket-cut" aria-hidden="true" />
+            <div className="ticket-bottom">
+              <button
+                type="button"
+                className="btn btn-accent btn-md btn-block"
+                onClick={() => {
+                  haptic("medium");
+                  navigate("/withdraw");
+                }}
+              >
+                Вывести подарком
+              </button>
+            </div>
           </section>
 
-          <div className="group">
-            <NavRow label="Открыто кейсов" value={home.data.cases_opened} onClick={() => navigate("/cases")} />
-            {home.data.cases_ready > 0 && (
-              <NavRow label="Готовы к открытию" value={<span className="pill">{home.data.cases_ready}</span>} accent onClick={() => navigate("/cases")} />
-            )}
-          </div>
+          <button
+            type="button"
+            className={data.cases_ready > 0 ? "cases-strip cases-strip-ready" : "cases-strip"}
+            onClick={() => {
+              haptic("light");
+              navigate("/cases");
+            }}
+          >
+            <span className="cases-strip-stars" aria-hidden="true">
+              <Star size={30} />
+              {data.cases_ready > 0 && <Star size={22} className="cases-strip-star-2" />}
+            </span>
+            <span className="cases-strip-text">
+              {data.cases_ready > 0 ? (
+                <>
+                  <strong>
+                    {data.cases_ready} {plural(data.cases_ready, "кейс ждёт", "кейса ждут", "кейсов ждут")} открытия
+                  </strong>
+                  <span>Открыто за всё время: {data.cases_opened}</span>
+                </>
+              ) : (
+                <>
+                  <strong>
+                    Открыто {data.cases_opened} {plural(data.cases_opened, "кейс", "кейса", "кейсов")}
+                  </strong>
+                  <span>Новый кейс — за каждое выполненное задание</span>
+                </>
+              )}
+            </span>
+            <IconChevron size={20} />
+          </button>
 
-          <Section
-            title="Последние операции"
-            aside={
-              home.data.recent_operations.length > 0 && (
+          <section className="section">
+            <div className="section-head">
+              <h2 className="section-title">Последние операции</h2>
+              {data.recent_operations.length > 0 && (
                 <button type="button" className="link-btn" onClick={() => navigate("/history?from=home")}>
                   Вся история
                 </button>
-              )
-            }
-          >
-            {home.data.recent_operations.length > 0 ? (
-              <OperationList items={home.data.recent_operations} />
+              )}
+            </div>
+            {data.recent_operations.length > 0 ? (
+              <div className="card-list">
+                <OperationList items={data.recent_operations} />
+              </div>
             ) : (
-              <EmptyState title="Операций пока нет" text="Здесь появятся начисления за кейсы, бусты и приглашения." />
+              <EmptyState title="Операций пока нет" text="Выполни задание и открой кейс — первая награда появится здесь." />
             )}
-          </Section>
+          </section>
         </>
       )}
     </div>

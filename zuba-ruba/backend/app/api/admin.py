@@ -6,17 +6,18 @@ from datetime import datetime
 from pathlib import Path
 
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
-from fastapi import APIRouter, Depends, File, Form, Header, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import String, cast, func, or_, select, tuple_
 from sqlalchemy import case as sql_case
-from sqlalchemy import func, or_, select, tuple_
 
 from app import settings_store
 from app.api.common import ApiError, Ctx, admin_ctx, operation_view
 from app.bot.messages import send_broadcast
 from app.clock import utcnow
 from app.config import get_config
+from app.db import sessionmaker
 from app.models import (
     AuditLog,
     Boost,
@@ -25,12 +26,13 @@ from app.models import (
     FlyerError,
     FlyerTask,
     Operation,
+    StarTopup,
     TaskCheck,
     User,
     Withdrawal,
 )
 from app.money import AmountError, kopecks_to_str, milli_to_str, stars_to_milli
-from app.services import audit, economics, ledger, tasks, withdrawals
+from app.services import analytics, audit, economics, ledger, tasks, topups, withdrawals
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin")
@@ -92,17 +94,40 @@ async def overview(c: Ctx = Depends(admin_ctx)):
     return await economics.overview(c.session, c.settings)
 
 
+@router.get("/analytics")
+async def analytics_view(days: int = Query(30), c: Ctx = Depends(admin_ctx)):
+    if days not in (7, 30, 90):
+        raise ApiError(422, "validation", "Период: 7, 30 или 90 дней")
+    data = await analytics.series(c.session, days)
+    return {
+        **data,
+        "funnel": await analytics.funnel(c.session, days),
+        "top_referrers": await analytics.top_referrers(c.session),
+        "top_earners": await analytics.top_earners(c.session),
+        "events": await analytics.events(c.session),
+    }
+
+
 @router.get("/users")
-async def users(q: str = "", c: Ctx = Depends(admin_ctx)):
-    stmt = select(User)
-    query = q.strip().lstrip("@")
-    if query:
-        conditions = [func.lower(User.username).like(f"%{query.lower()}%")]
-        if query.isdigit():
-            conditions.append(User.id == int(query))
-        stmt = stmt.where(or_(*conditions))
-    rows = (await c.session.execute(stmt.order_by(User.last_seen_at.desc()).limit(50))).scalars()
-    return {"items": [user_row(u) for u in rows]}
+async def users(
+    q: str = "",
+    status: str = "",
+    invited_by: int | None = None,
+    sort: str = "last_seen_at",
+    order: str = "desc",
+    page: int = Query(1, ge=1, le=100000),
+    per_page: int = Query(50, ge=1, le=200),
+    c: Ctx = Depends(admin_ctx),
+):
+    if sort not in analytics.USER_SORTS or order not in ("asc", "desc") or status not in analytics.USER_FILTERS:
+        raise ApiError(422, "validation", "Некорректные параметры списка")
+    rows, total = await analytics.users_page(c.session, q, status, invited_by, sort, order, page, per_page)
+    return {
+        "items": [{**user_row(u), "earned": milli_to_str(earned), "is_suspicious": u.is_suspicious, "withdrawing": milli_to_str(u.balance_withdrawing)} for u, earned in rows],
+        "total": total,
+        "page": page,
+        "pages": max(1, -(-total // per_page)),
+    }
 
 
 async def _user_or_404(c: Ctx, user_id: int) -> User:
@@ -116,7 +141,12 @@ async def _user_or_404(c: Ctx, user_id: int) -> User:
 async def user_card(user_id: int, c: Ctx = Depends(admin_ctx)):
     user = await _user_or_404(c, user_id)
     s = c.session
-    ops = (await s.execute(select(Operation).where(Operation.user_id == user.id).order_by(Operation.created_at.desc()).limit(100))).scalars()
+    ops = (await s.execute(select(Operation).where(Operation.user_id == user.id).order_by(Operation.created_at.desc()).limit(200))).scalars()
+    referrer = None
+    if user.referrer_id is not None:
+        ref_user = (await s.execute(select(User).where(User.id == user.referrer_id))).scalar_one_or_none()
+        if ref_user is not None:
+            referrer = {"id": ref_user.id, "username": ref_user.username, "first_name": ref_user.first_name}
     confirmed = (
         select(Completion.user_id, func.count(Completion.id).label("n")).where(Completion.status == "confirmed").group_by(Completion.user_id).subquery()
     )
@@ -141,7 +171,12 @@ async def user_card(user_id: int, c: Ctx = Depends(admin_ctx)):
             "block_reason": user.block_reason,
             "is_suspicious": user.is_suspicious,
             "withdrawing": milli_to_str(user.balance_withdrawing),
+            "earned": milli_to_str(await analytics.user_earned(s, user.id)),
+            "onboarded": user.onboarded_at is not None,
+            "bot_blocked": user.bot_blocked,
         },
+        "referrer": referrer,
+        "cases": await analytics.user_cases(s, user.id),
         "operations": [operation_view(op) for op in ops],
         "referrals": [
             {"id": r.id, "username": r.username, "first_name": r.first_name, "registered_at": r.registered_at, "confirmed_tasks": n} for r, n in refs
@@ -313,32 +348,18 @@ class CommentIn(BaseModel):
 
 @router.post("/withdrawals/{withdrawal_id}/approve")
 async def approve_withdrawal(withdrawal_id: int, request: Request, body: CommentIn | None = None, c: Ctx = Depends(admin_ctx)):
+    comment = body.comment.strip() if body and body.comment.strip() else None
     try:
-        withdrawal = await withdrawals.mark_processing(c.session, withdrawal_id, c.user.id)
+        withdrawal = await withdrawals.send_gift(c.session, request.app.state.bot, withdrawal_id, c.user.id, comment)
     except withdrawals.WithdrawalError as exc:
         await c.session.rollback()
+        if exc.code == "uncertain":
+            await audit.record(c.session, c.user.id, "withdrawal.uncertain", withdrawal_id)
+            await c.session.commit()
+            raise ApiError(502, "telegram_unavailable", str(exc)) from None
         raise ApiError(409 if exc.code == "conflict" else 404, exc.code, str(exc)) from None
     await audit.record(c.session, c.user.id, "withdrawal.approve", withdrawal.id, stars=withdrawal.stars, user_id=withdrawal.user_id)
-    await c.session.commit()
-    bot = request.app.state.bot
-    comment = body.comment.strip() if body else None
-    try:
-        sent = await bot.send_gift(gift_id=withdrawal.gift_id, user_id=withdrawal.user_id, text="ZUBA RUBA")
-    except (TelegramBadRequest, TelegramForbiddenError) as exc:
-        withdrawal = await withdrawals.finish(c.session, withdrawal.id, False, str(exc)[:500], comment)
-        await audit.record(c.session, c.user.id, "withdrawal.failed", withdrawal.id, error=str(exc)[:500])
-        await c.session.commit()
-        return withdrawals.view(withdrawal)
-    except Exception as exc:
-        log.error("send_gift uncertain result for withdrawal %s: %s", withdrawal.id, exc)
-        await audit.record(c.session, c.user.id, "withdrawal.uncertain", withdrawal.id, error=str(exc)[:500])
-        await c.session.commit()
-        raise ApiError(502, "telegram_unavailable", "Telegram не подтвердил отправку. Проверьте баланс бота и историю подарков, затем завершите заявку вручную.") from None
-    if not sent:
-        withdrawal = await withdrawals.finish(c.session, withdrawal.id, False, "Telegram вернул отказ", comment)
-    else:
-        withdrawal = await withdrawals.finish(c.session, withdrawal.id, True, None, comment)
-    await audit.record(c.session, c.user.id, f"withdrawal.{withdrawal.status}", withdrawal.id)
+    await audit.record(c.session, c.user.id, f"withdrawal.{withdrawal.status}", withdrawal.id, error=withdrawal.error)
     await c.session.commit()
     return withdrawals.view(withdrawal)
 
@@ -370,10 +391,36 @@ async def complete_withdrawal(withdrawal_id: int, body: CommentIn, c: Ctx = Depe
     return withdrawals.view(withdrawal)
 
 
+SETTING_HINTS = {
+    "case_prizes": "Сумма приза и её вес. Шанс = вес / сумма всех весов. Пример: 0.1:40,0.5:10.",
+    "reward_boost": "Начисляется за каждый период буста, подтверждённый Flyer.",
+    "hold_hours_channel": "Сколько часов пользователь должен оставаться подписанным до зачисления награды.",
+    "hold_hours_bot": "Обычно 0: Flyer подтверждает запуск бота сразу.",
+    "recheck_hours": "Как часто перепроверять задания, ожидающие оплаты Flyer.",
+    "waiting_max_hours": "После этого срока неоплаченное задание уходит на ручную проверку.",
+    "boost_recurring_enabled": "Включайте, только если Flyer подтверждает посуточную оплату бустов.",
+    "referral_threshold": "Сколько подтверждённых кейсов друга дают пригласившему один подарочный кейс.",
+    "withdrawals_enabled": "Подарки отправляются со Stars-баланса бота. Следите за балансом в разделе «Выводы».",
+    "withdraw_auto": "Подарки уходят без ручного одобрения, если на балансе бота хватает Stars.",
+    "withdraw_gift_stars": "Какие номиналы подарков Telegram доступны пользователям.",
+    "star_cost_rub": "Расчётная стоимость одной звезды для экономики.",
+    "flyer_withdraw_threshold_rub": "Используется для оценки числа выводов из Flyer и комиссий.",
+    "maintenance": "Пользователи видят экран технических работ. Администраторы работают как обычно.",
+    "support_url": "Ссылка открывается по кнопке «Поддержка» и в ответе на /paysupport.",
+}
+
+
+def settings_items(current) -> list[dict]:
+    return [
+        {**item, "default": settings_store.BY_KEY[item["key"]].default, "hint": SETTING_HINTS.get(item["key"], "")}
+        for item in current.items()
+    ]
+
+
 @router.get("/settings")
 async def get_settings(c: Ctx = Depends(admin_ctx)):
     current = await settings_store.load(c.session, fresh=True)
-    return {"items": current.items()}
+    return {"items": settings_items(current)}
 
 
 class SettingsIn(BaseModel):
@@ -391,7 +438,7 @@ async def patch_settings(body: SettingsIn, c: Ctx = Depends(admin_ctx)):
         await audit.record(c.session, c.user.id, "settings.update", key, old=old, new=new)
     await c.session.commit()
     current = await settings_store.load(c.session, fresh=True)
-    return {"items": current.items()}
+    return {"items": settings_items(current)}
 
 
 def broadcast_view(b: Broadcast) -> dict:
@@ -400,6 +447,8 @@ def broadcast_view(b: Broadcast) -> dict:
         "text": b.text,
         "image_url": f"/api/admin/broadcasts/{b.id}/image" if b.image_path else None,
         "buttons": b.buttons,
+        "audience": b.audience or "all",
+        "audience_label": analytics.AUDIENCES.get(b.audience or "all", analytics.AUDIENCES["all"]),
         "status": b.status,
         "total": b.total,
         "sent": b.sent,
@@ -443,9 +492,12 @@ async def broadcast_list(c: Ctx = Depends(admin_ctx)):
 async def broadcast_create(
     text: str = Form(default=""),
     buttons: str = Form(default="[]"),
+    audience: str = Form(default="all"),
     image: UploadFile | None = File(default=None),
     c: Ctx = Depends(admin_ctx),
 ):
+    if audience not in analytics.AUDIENCES:
+        raise ApiError(422, "validation", "Неизвестная аудитория")
     text = text.strip()
     if len(text) > 4096:
         raise ApiError(422, "validation", "Текст длиннее 4096 символов")
@@ -465,7 +517,7 @@ async def broadcast_create(
         image_path = str(path)
     if not text and image_path is None:
         raise ApiError(422, "validation", "Добавьте текст или изображение")
-    broadcast = Broadcast(admin_id=c.user.id, text=text, buttons=rows, image_path=image_path)
+    broadcast = Broadcast(admin_id=c.user.id, text=text, buttons=rows, image_path=image_path, audience=audience)
     c.session.add(broadcast)
     await c.session.flush()
     await audit.record(c.session, c.user.id, "broadcast.create", broadcast.id)
@@ -511,9 +563,7 @@ async def broadcast_send(broadcast_id: int, c: Ctx = Depends(admin_ctx)):
     broadcast = await _broadcast(c, broadcast_id, lock=True)
     if broadcast.status != "draft":
         raise ApiError(409, "conflict", "Рассылка уже запущена")
-    broadcast.total = (
-        await c.session.execute(select(func.count(User.id)).where(User.bot_started_at.is_not(None), User.bot_blocked.is_(False), User.is_blocked.is_(False)))
-    ).scalar_one()
+    broadcast.total = (await c.session.execute(select(func.count(User.id)).where(analytics.recipients_condition(broadcast.audience)))).scalar_one()
     broadcast.status = "queued"
     await audit.record(c.session, c.user.id, "broadcast.send", broadcast.id, total=broadcast.total)
     await c.session.commit()
@@ -533,9 +583,30 @@ async def broadcast_cancel(broadcast_id: int, c: Ctx = Depends(admin_ctx)):
     return broadcast_view(broadcast)
 
 
+@router.get("/audience")
+async def audience_sizes(c: Ctx = Depends(admin_ctx)):
+    sizes = {}
+    for key in analytics.AUDIENCES:
+        sizes[key] = (await c.session.execute(select(func.count(User.id)).where(analytics.recipients_condition(key)))).scalar_one()
+    return {"items": [{"key": key, "label": label, "count": sizes[key]} for key, label in analytics.AUDIENCES.items()]}
+
+
 @router.get("/audit")
-async def audit_log(cursor: str | None = None, c: Ctx = Depends(admin_ctx)):
+async def audit_log(
+    cursor: str | None = None,
+    action: str = "",
+    admin_id: int | None = None,
+    q: str = Query("", max_length=100),
+    c: Ctx = Depends(admin_ctx),
+):
     stmt = select(AuditLog)
+    if action:
+        stmt = stmt.where(AuditLog.action.like(f"{action}%"))
+    if admin_id is not None:
+        stmt = stmt.where(AuditLog.admin_id == admin_id)
+    if q.strip():
+        pattern = f"%{q.strip().lower()}%"
+        stmt = stmt.where(or_(func.lower(AuditLog.target).like(pattern), func.lower(cast(AuditLog.details, String)).like(pattern)))
     if cursor:
         try:
             created, row_id = cursor.split("|", 1)
@@ -553,4 +624,126 @@ async def audit_log(cursor: str | None = None, c: Ctx = Depends(admin_ctx)):
             for r in rows
         ],
         "next_cursor": next_cursor,
+        "actions": [row[0] for row in (await c.session.execute(select(AuditLog.action).distinct().order_by(AuditLog.action))).all()],
+        "admins": [row[0] for row in (await c.session.execute(select(AuditLog.admin_id).distinct().order_by(AuditLog.admin_id))).all()],
     }
+
+
+WITHDRAWAL_TABS = {"pending": ("pending",), "processing": ("approved",), "done": ("completed", "rejected", "failed")}
+
+
+async def _star_balance(request: Request) -> int | None:
+    try:
+        return (await request.app.state.bot.get_my_star_balance()).amount
+    except Exception as exc:
+        log.info("star balance unavailable: %s", exc)
+        return None
+
+
+@router.get("/withdrawals")
+async def withdrawal_queue(
+    request: Request,
+    tab: str = "pending",
+    page: int = Query(1, ge=1, le=100000),
+    c: Ctx = Depends(admin_ctx),
+):
+    if tab not in WITHDRAWAL_TABS:
+        raise ApiError(422, "validation", "Неизвестная вкладка")
+    per_page = 50
+    statuses = WITHDRAWAL_TABS[tab]
+    base = select(Withdrawal).where(Withdrawal.status.in_(statuses))
+    total = (await c.session.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    rows = (
+        await c.session.execute(
+            select(Withdrawal, User.username, User.first_name)
+            .join(User, User.id == Withdrawal.user_id)
+            .where(Withdrawal.status.in_(statuses))
+            .order_by(Withdrawal.created_at.asc() if tab != "done" else Withdrawal.updated_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+        )
+    ).all()
+    counts = dict((await c.session.execute(select(Withdrawal.status, func.count()).group_by(Withdrawal.status))).all())
+    pending_stars = (
+        await c.session.execute(select(func.coalesce(func.sum(Withdrawal.stars), 0)).where(Withdrawal.status.in_(("pending", "approved"))))
+    ).scalar_one()
+    return {
+        "items": [
+            {**withdrawals.view(w), "user_id": w.user_id, "username": username, "first_name": first_name, "error": w.error}
+            for w, username, first_name in rows
+        ],
+        "total": total,
+        "pages": max(1, -(-total // per_page)),
+        "counts": {name: sum(counts.get(status, 0) for status in statuses) for name, statuses in WITHDRAWAL_TABS.items()},
+        "pending_stars": int(pending_stars),
+        "bot_star_balance": await _star_balance(request),
+        "auto": c.settings.bool("withdraw_auto"),
+    }
+
+
+@router.get("/stars")
+async def stars_overview(request: Request, c: Ctx = Depends(admin_ctx)):
+    rows = (await c.session.execute(select(StarTopup).order_by(StarTopup.created_at.desc()).limit(30))).scalars()
+    paid_total = (await c.session.execute(select(func.coalesce(func.sum(StarTopup.amount), 0)).where(StarTopup.status == "paid"))).scalar_one()
+    gifted = (await c.session.execute(select(func.coalesce(func.sum(Withdrawal.stars), 0)).where(Withdrawal.status == "completed"))).scalar_one()
+    pending = (
+        await c.session.execute(select(func.coalesce(func.sum(Withdrawal.stars), 0)).where(Withdrawal.status.in_(("pending", "approved"))))
+    ).scalar_one()
+    return {
+        "balance": await _star_balance(request),
+        "topped_up": int(paid_total),
+        "gifted": int(gifted),
+        "pending_withdrawals": int(pending),
+        "topups": [topups.view(t) for t in rows],
+    }
+
+
+class TopupIn(BaseModel):
+    amount: int = Field(ge=topups.MIN_AMOUNT, le=topups.MAX_AMOUNT)
+
+
+@router.post("/stars/topup")
+async def stars_topup(body: TopupIn, request: Request, c: Ctx = Depends(admin_ctx)):
+    try:
+        topup, url = await topups.create(c.session, request.app.state.bot, c.user.id, body.amount)
+    except topups.TopupError as exc:
+        await c.session.rollback()
+        raise ApiError(422, "validation", str(exc)) from None
+    except TelegramAPIError as exc:
+        await c.session.rollback()
+        log.warning("create_invoice_link failed: %s", exc)
+        raise ApiError(502, "telegram_unavailable", "Telegram не создал счёт. Попробуйте позже.") from None
+    await audit.record(c.session, c.user.id, "stars.topup_created", str(topup.id), amount=body.amount)
+    await c.session.commit()
+    return {"id": str(topup.id), "url": url, "amount": body.amount}
+
+
+@router.post("/export/{kind}/link")
+async def export_link(kind: str, user_id: int | None = None, c: Ctx = Depends(admin_ctx)):
+    if kind not in analytics.EXPORT_KINDS:
+        raise ApiError(404, "not_found", "Неизвестная выгрузка")
+    config = get_config()
+    token = analytics.make_export_token(analytics.export_secret(config.bot_token), c.user.id, kind, user_id)
+    suffix = f"-{user_id}" if user_id else ""
+    return {
+        "url": f"{config.app_url.rstrip('/')}/api/admin/export/{kind}.csv?token={token}",
+        "file_name": f"zuba-{kind}{suffix}-{utcnow():%Y%m%d-%H%M}.csv",
+        "expires_in": analytics.EXPORT_TTL,
+    }
+
+
+@router.get("/export/{kind}.csv")
+async def export_csv(kind: str, token: str = Query(..., max_length=300)):
+    config = get_config()
+    if kind not in analytics.EXPORT_KINDS:
+        raise ApiError(404, "not_found", "Неизвестная выгрузка")
+    parsed = analytics.read_export_token(analytics.export_secret(config.bot_token), token, kind)
+    if parsed is None or not config.is_admin(parsed[0]):
+        raise ApiError(403, "forbidden", "Ссылка на выгрузку недействительна или устарела")
+    _, user_id = parsed
+    name = f"zuba-{kind}-{utcnow():%Y%m%d-%H%M}.csv"
+    return StreamingResponse(
+        analytics.export_rows(sessionmaker(), kind, user_id),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
+    )

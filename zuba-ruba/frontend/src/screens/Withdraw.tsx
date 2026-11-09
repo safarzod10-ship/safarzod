@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ApiError, api, newIdempotencyKey } from "../api";
 import { useApp } from "../AppContext";
-import { formatDateTime, formatStars } from "../format";
+import { formatDateTime, formatNumber } from "../format";
+import { Lottie, giftAnimationUrl } from "../lottie";
+import { parentOf, useRoute } from "../router";
+import { Amount, Star } from "../stars";
 import { confirmDialog, haptic } from "../telegram";
-import type { Withdrawal, WithdrawalStatus, WithdrawalsResponse } from "../types";
-import { Badge, Button, EmptyState, ErrorState, InfoRow, Loader, Notice, Screen, Section, clearResourceCache, useResource } from "../ui";
+import type { GiftOption, Withdrawal, WithdrawalStatus, WithdrawalsResponse } from "../types";
+import { Badge, Button, EmptyState, ErrorState, Loader, Notice, Screen, Section, clearResourceCache, useResource } from "../ui";
 
 const TONE: Record<WithdrawalStatus, "neutral" | "pending" | "success" | "danger"> = {
   pending: "pending",
@@ -14,27 +17,33 @@ const TONE: Record<WithdrawalStatus, "neutral" | "pending" | "success" | "danger
   failed: "danger",
 };
 
-function compare(a: string, b: string): number {
-  return Number(a) - Number(b);
-}
-
 export function WithdrawScreen() {
   const { config } = useApp();
+  const route = useRoute();
   const data = useResource("withdrawals", () => api.get<WithdrawalsResponse>("/withdrawals"));
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<GiftOption | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
+  const available = Number(data.data?.balance.available ?? "0");
+  const groups = useMemo(() => {
+    const map = new Map<number, GiftOption[]>();
+    for (const option of data.data?.options ?? []) map.set(option.stars, [...(map.get(option.stars) ?? []), option]);
+    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+  }, [data.data]);
+
   const submit = async () => {
-    if (!selected || !data.data) return;
-    const ok = await confirmDialog(`Создать заявку на вывод ${formatStars(selected)}? Сумма будет зарезервирована до рассмотрения заявки.`);
+    if (!selected) return;
+    const ok = await confirmDialog(
+      `Вывести «${selected.name}» за ${selected.stars} ⭐? Подарок придёт в Telegram от бота${config.withdraw.auto ? "" : " после проверки заявки"}.`,
+    );
     if (!ok) return;
     setBusy(true);
     setMessage(null);
     try {
-      const created = await api.post<Withdrawal>("/withdrawals", { amount: selected }, { "Idempotency-Key": newIdempotencyKey() });
+      const created = await api.post<Withdrawal>("/withdrawals", { gift_id: selected.gift_id }, { "Idempotency-Key": newIdempotencyKey() });
       haptic("success");
-      setMessage({ tone: "ok", text: `Заявка №${created.id} создана. Мы сообщим о результате в чате с ботом.` });
+      setMessage({ tone: "ok", text: `Заявка №${created.id} принята. Статус придёт сообщением от бота.` });
       setSelected(null);
       clearResourceCache("home");
       await data.reload();
@@ -46,81 +55,97 @@ export function WithdrawScreen() {
     }
   };
 
-  const available = data.data?.balance.available ?? "0";
-
   return (
-    <Screen title="Вывод" back="/">
+    <Screen title="Вывод" back={parentOf(route)}>
       {!data.data && data.error && <ErrorState error={data.error} onRetry={() => void data.reload()} />}
       {!data.data && !data.error && <Loader />}
       {data.data && (
         <>
-          <section className="balance balance-compact">
-            <span className="balance-label">Доступно к выводу</span>
-            <span className="balance-total">{formatStars(data.data.balance.available)}</span>
-          </section>
-          <div className="group">
-            <InfoRow label="Общий баланс" value={formatStars(data.data.balance.total)} />
-            <InfoRow label="В ожидании" value={formatStars(data.data.balance.pending)} />
-            <InfoRow label="На выводе" value={formatStars(data.data.balance.withdrawing)} />
+          <div className="wd-balance">
+            <div>
+              <span className="wd-balance-label">Доступно к выводу</span>
+              <Amount value={data.data.balance.available} size={24} className="wd-balance-value" />
+            </div>
+            <div className="wd-balance-side">
+              <span>
+                В ожидании <Amount value={data.data.balance.pending} size={12} />
+              </span>
+              <span>
+                На выводе <Amount value={data.data.balance.withdrawing} size={12} />
+              </span>
+            </div>
           </div>
 
-          {!data.data.enabled ? (
-            <Notice>{data.data.disabled_reason ?? "Вывод временно недоступен."}</Notice>
-          ) : (
-            <Section title="Сумма вывода">
-              {data.data.options.length === 0 ? (
-                <p className="section-text">Сейчас нет доступных вариантов вывода.</p>
-              ) : (
-                <div className="chips" role="radiogroup" aria-label="Сумма вывода">
-                  {data.data.options.map((option) => {
-                    const affordable = compare(option, available) <= 0;
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected === option}
-                        disabled={!affordable}
-                        className={selected === option ? "chip chip-active" : "chip"}
-                        onClick={() => {
-                          haptic("select");
-                          setSelected(option);
-                        }}
-                      >
-                        {formatStars(option)}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {data.data.options.length > 0 && data.data.options.every((option) => compare(option, available) > 0) && (
-                <p className="section-text">Недостаточно доступных средств для минимальной суммы вывода.</p>
-              )}
-              <p className="hint">
-                Заявку рассматривает администратор. {config.stars_are_internal ? "Внутренние баллы ⭐ выплачиваются в Telegram Stars только после одобрения. " : ""}
-                Результат придёт сообщением в чате с ботом.
+          {!data.data.enabled && <Notice tone="warning">{data.data.disabled_reason}</Notice>}
+
+          {data.data.enabled && (
+            <>
+              <p className="wd-lead">
+                Выбери подарок — бот отправит его тебе в Telegram. Подарок можно оставить в профиле или обменять на звёзды. Минимум —{" "}
+                {config.withdraw.min_stars}
+                <Star size={13} className="star-inline" />.
               </p>
-              {message && <p className={message.tone === "ok" ? "hint" : "form-error"}>{message.text}</p>}
-              <Button block disabled={!selected} loading={busy} onClick={() => void submit()}>
-                {selected ? `Вывести ${formatStars(selected)}` : "Выберите сумму"}
-              </Button>
-            </Section>
+              {groups.map(([stars, options]) => (
+                <section key={stars} className="gift-group">
+                  <h2 className="gift-group-title">
+                    {stars}
+                    <Star size={16} />
+                    {available < stars && <span className="gift-group-need">не хватает {formatNumber(String(Math.round((stars - available) * 1000) / 1000))}</span>}
+                  </h2>
+                  <div className="gifts">
+                    {options.map((option) => {
+                      const affordable = available >= option.stars;
+                      const active = selected?.gift_id === option.gift_id;
+                      return (
+                        <button
+                          key={option.gift_id}
+                          type="button"
+                          className={["gift", active ? "gift-active" : "", affordable ? "" : "gift-locked"].join(" ").trim()}
+                          aria-pressed={active}
+                          disabled={!affordable}
+                          onClick={() => {
+                            haptic("select");
+                            setSelected(active ? null : option);
+                            setMessage(null);
+                          }}
+                        >
+                          <Lottie src={giftAnimationUrl(option.gift_id)} size={76} play={affordable} fallback={option.emoji} />
+                          <span className="gift-name">{option.name}</span>
+                          <span className="gift-price">
+                            {option.stars}
+                            <Star size={12} />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+              {groups.length === 0 && <EmptyState title="Подарков нет" text="Telegram сейчас не предлагает подарков подходящего номинала." />}
+            </>
           )}
 
-          <Section title="Заявки">
+          {message && <p className={message.tone === "ok" ? "notice notice-ok" : "form-error"}>{message.text}</p>}
+
+          <Section title="Мои заявки">
             {data.data.items.length === 0 ? (
               <EmptyState title="Заявок пока нет" />
             ) : (
-              <ul className="list">
+              <ul className="card-list list">
                 {data.data.items.map((item) => (
                   <li key={item.id} className="op-row">
+                    <span className="op-icon op-icon-gift">
+                      {item.gift_id ? <Lottie src={giftAnimationUrl(item.gift_id)} size={34} play={false} frame={30} fallback={item.gift_emoji} /> : null}
+                    </span>
                     <div className="op-main">
-                      <span className="op-title">Заявка №{item.id}</span>
+                      <span className="op-title">
+                        {item.gift_name} · №{item.id}
+                      </span>
                       {item.comment && <span className="op-reason">{item.comment}</span>}
                       <span className="op-date">{formatDateTime(item.created_at)}</span>
                     </div>
                     <div className="op-side">
-                      <span className="op-amount">{formatStars(item.amount)}</span>
+                      <Amount value={String(item.stars)} sign="-" size={14} className="op-amount" />
                       <Badge tone={TONE[item.status]}>{item.status_label}</Badge>
                     </div>
                   </li>
@@ -128,6 +153,14 @@ export function WithdrawScreen() {
               </ul>
             )}
           </Section>
+
+          {data.data.enabled && (
+            <div className="sticky-cta">
+              <Button variant="accent" block loading={busy} disabled={!selected} onClick={() => void submit()}>
+                {selected ? `Вывести «${selected.name}» · ${selected.stars} ⭐` : "Выбери подарок"}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </Screen>

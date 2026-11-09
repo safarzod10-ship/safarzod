@@ -260,6 +260,7 @@ class Broadcast(Base):
     text: Mapped[str] = mapped_column(Text, default="")
     image_path: Mapped[str | None] = mapped_column(Text)
     buttons: Mapped[list] = mapped_column(JSONB, default=list)
+    audience: Mapped[str | None] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(16), default="draft", index=True)
     cursor_user_id: Mapped[int] = mapped_column(BigInteger, default=0)
     total: Mapped[int] = mapped_column(Integer, default=0)
@@ -288,3 +289,16 @@ class AuditLog(Base):
     target: Mapped[str] = mapped_column(Text, default="")
     details: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = _now()
+
+
+class StarTopup(Base):
+    __tablename__ = "star_topups"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    admin_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    amount: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="created")
+    payer_id: Mapped[int | None] = mapped_column(BigInteger)
+    telegram_payment_charge_id: Mapped[str | None] = mapped_column(String(256), unique=True)
+    created_at: Mapped[datetime] = _now()
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

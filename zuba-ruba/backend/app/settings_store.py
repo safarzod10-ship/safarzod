@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Setting
-from app.money import AmountError, _decimal, rub_to_kopecks, stars_to_milli
+from app.money import AmountError, _decimal, milli_to_str, rub_to_kopecks, stars_to_milli
 
 
 @dataclass(frozen=True)
@@ -22,11 +22,11 @@ class SettingDef:
 
 
 DEFINITIONS: list[SettingDef] = [
-    SettingDef("reward_channel", "Награда за подписку на канал, ⭐", "Награды", "stars", "0.3", Decimal("0"), Decimal("100")),
-    SettingDef("reward_bot", "Награда за запуск бота, ⭐", "Награды", "stars", "0.3", Decimal("0"), Decimal("100")),
+    SettingDef("case_prizes", "Призы кейса: сумма ⭐ : вес, через запятую", "Награды", "prizes", "0.1:40,0.2:25,0.3:15,0.5:12,1:6,2:2"),
     SettingDef("reward_boost", "Награда за оплаченный период буста, ⭐", "Награды", "stars", "0.2", Decimal("0"), Decimal("100")),
-    SettingDef("reward_other", "Награда за прочие задания Flyer, ⭐ (0 — не показывать)", "Награды", "stars", "0", Decimal("0"), Decimal("100")),
-    SettingDef("reward_referral_case", "Подарочный реферальный кейс, ⭐", "Награды", "stars", "0.3", Decimal("0"), Decimal("100")),
+    SettingDef("tasks_channel_enabled", "Задания: подписки на каналы", "Награды", "bool", "true"),
+    SettingDef("tasks_bot_enabled", "Задания: запуск ботов", "Награды", "bool", "true"),
+    SettingDef("tasks_other_enabled", "Задания: прочие типы Flyer", "Награды", "bool", "false"),
     SettingDef("hold_hours_channel", "Удержание подписки, ч", "Ожидание", "int", "30", Decimal("0"), Decimal("720")),
     SettingDef("hold_hours_bot", "Удержание для ботов, ч", "Ожидание", "int", "0", Decimal("0"), Decimal("720")),
     SettingDef("recheck_hours", "Интервал повторной проверки, ч", "Ожидание", "int", "6", Decimal("1"), Decimal("72")),
@@ -40,9 +40,11 @@ DEFINITIONS: list[SettingDef] = [
     SettingDef("referral_daily_cases_limit", "Подарочных кейсов на пользователя в сутки", "Рефералы", "int", "10", Decimal("0"), Decimal("1000")),
     SettingDef("tasks_limit", "Заданий за запрос к Flyer", "Лимиты", "int", "10", Decimal("1"), Decimal("10")),
     SettingDef("checks_per_minute", "Проверок заданий в минуту на пользователя", "Лимиты", "int", "20", Decimal("1"), Decimal("120")),
-    SettingDef("withdrawals_enabled", "Вывод Telegram Stars", "Вывод", "bool", "false"),
+    SettingDef("withdrawals_enabled", "Вывод подарками Telegram", "Вывод", "bool", "true"),
+    SettingDef("withdraw_gift_stars", "Номиналы подарков для вывода, ⭐ через запятую", "Вывод", "stars_list", "15,25,50,100"),
     SettingDef("withdraw_min_stars", "Минимальная сумма вывода, ⭐", "Вывод", "int", "15", Decimal("1"), Decimal("100000")),
-    SettingDef("withdrawals_per_day", "Заявок на вывод в сутки", "Вывод", "int", "1", Decimal("1"), Decimal("100")),
+    SettingDef("withdrawals_per_day", "Заявок на вывод в сутки", "Вывод", "int", "3", Decimal("1"), Decimal("100")),
+    SettingDef("withdraw_auto", "Отправлять подарки автоматически, без одобрения", "Вывод", "bool", "false"),
     SettingDef("income_channel_rub", "Доход за подписку, ₽", "Экономика", "rub", "1.00", Decimal("0"), Decimal("10000")),
     SettingDef("income_bot_rub", "Доход за запуск бота, ₽", "Экономика", "rub", "1.00", Decimal("0"), Decimal("10000")),
     SettingDef("income_boost_day_rub", "Доход за оплаченный день буста, ₽", "Экономика", "rub", "0.40", Decimal("0"), Decimal("10000")),
@@ -57,6 +59,28 @@ DEFINITIONS: list[SettingDef] = [
 ]
 
 BY_KEY = {d.key: d for d in DEFINITIONS}
+
+
+def parse_prizes(raw: str) -> list[tuple[int, int]]:
+    table: list[tuple[int, int]] = []
+    for part in raw.replace(";", ",").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        amount_text, _, weight_text = part.partition(":")
+        try:
+            amount = stars_to_milli(amount_text)
+            weight = int(weight_text.strip())
+        except (AmountError, ValueError) as exc:
+            raise ValueError(f"Ошибка в «{part}»: нужен формат сумма:вес") from exc
+        if not 1 <= amount <= 100_000 or not 1 <= weight <= 1_000_000:
+            raise ValueError(f"Ошибка в «{part}»: сумма 0,001–100 ⭐, вес от 1")
+        table.append((amount, weight))
+    if not 2 <= len(table) <= 20:
+        raise ValueError("Нужно от 2 до 20 призов")
+    if len({amount for amount, _ in table}) != len(table):
+        raise ValueError("Суммы призов не должны повторяться")
+    return sorted(table)
 
 
 class SettingError(ValueError):
@@ -78,6 +102,17 @@ def normalize(key: str, raw) -> str:
         if text in ("false", "0", "no", "off"):
             return "false"
         raise SettingError(key, "Ожидается да или нет")
+    if definition.type == "prizes":
+        try:
+            table = parse_prizes(str(raw))
+        except ValueError as exc:
+            raise SettingError(key, str(exc)) from exc
+        return ",".join(f"{milli_to_str(amount)}:{weight}" for amount, weight in table)
+    if definition.type == "stars_list":
+        parts = [part.strip() for part in str(raw).replace(";", ",").split(",") if part.strip()]
+        if not parts or not all(part.isdigit() and 1 <= int(part) <= 100000 for part in parts):
+            raise SettingError(key, "Целые номиналы через запятую, например 15,25,50,100")
+        return ",".join(str(value) for value in sorted({int(part) for part in parts}))
     if definition.type == "string":
         text = str(raw).strip()
         if len(text) > 500:
@@ -125,6 +160,15 @@ class RuntimeSettings:
 
     def kopecks(self, key: str) -> int:
         return rub_to_kopecks(self._values[key])
+
+    def prizes(self) -> list[tuple[int, int]]:
+        try:
+            return parse_prizes(self._values["case_prizes"])
+        except ValueError:
+            return parse_prizes(BY_KEY["case_prizes"].default)
+
+    def int_list(self, key: str) -> list[int]:
+        return [int(part) for part in self._values[key].split(",") if part.strip().isdigit()]
 
     def decimal(self, key: str) -> Decimal:
         return Decimal(self._values[key])

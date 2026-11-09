@@ -109,8 +109,10 @@ class FakeBot:
         return SimpleNamespace(message_id=len(self.messages))
 
     async def get_available_gifts(self):
-        gift = lambda gid, stars: SimpleNamespace(id=gid, star_count=stars, remaining_count=None, personal_remaining_count=None)  # noqa: E731
-        return SimpleNamespace(gifts=[gift("g15", 15), gift("g25", 25), gift("g50", 50)])
+        def gift(gid, stars, emoji):
+            return SimpleNamespace(id=gid, star_count=stars, remaining_count=None, personal_remaining_count=None, sticker=SimpleNamespace(emoji=emoji))
+
+        return SimpleNamespace(gifts=[gift("15", 15, "🧸"), gift("25", 25, "🌹"), gift("50", 50, "🚀"), gift("100", 100, "💎"), gift("500", 500, "🗿")])
 
     async def send_gift(self, gift_id, user_id, text=None):
         if self.gift_error is not None:
@@ -168,7 +170,8 @@ async def redis():
 
 
 @pytest.fixture
-async def env(redis):
+async def env(redis, monkeypatch):
+    monkeypatch.setattr("app.services.prizes.draw", lambda settings: 300)
     init_engine(TEST_DB)
     async with sessionmaker()() as session:
         await session.execute(text(f"TRUNCATE {', '.join(TABLES)} RESTART IDENTITY CASCADE"))

@@ -1,77 +1,64 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ApiError, api } from "../api";
 import { useApp } from "../AppContext";
+import { formatNumber } from "../format";
 import { haptic } from "../telegram";
-import type { Me } from "../types";
+import type { Config, Me } from "../types";
+import { withStars } from "../stars";
 import { Button } from "../ui";
 
-const STEPS = [
-  {
-    title: ["Задания.", "Кейсы.", "Звёзды."],
-    text: "Выполняй задания, открывай кейсы и получай награды.",
-    action: "Далее",
-  },
-  {
-    title: ["Выполняй задания"],
-    text: "Подписывайся на каналы, запускай ботов и поддерживай проекты.",
-    action: "Далее",
-  },
-  {
-    title: ["Следи за наградами"],
-    text: "Проверяй начисления, историю и доступный баланс.",
-    action: "Начать",
-  },
-];
+interface Step {
+  image: string;
+  title: string;
+  text: string;
+  action: string;
+}
 
-function Illustration({ step }: { step: number }) {
-  if (step === 0) {
-    return (
-      <svg className="onb-art" viewBox="0 0 240 120" aria-hidden="true">
-        <rect x="8" y="28" width="64" height="64" rx="10" />
-        <path d="M24 60l10 10 22-22" />
-        <rect x="88" y="28" width="64" height="64" rx="10" />
-        <path d="M88 50h64M112 62h16" />
-        <rect x="168" y="28" width="64" height="64" rx="10" />
-        <path d="M200 44l6 12 13 2-9 9 2 13-12-6-12 6 2-13-9-9 13-2z" />
-      </svg>
-    );
-  }
-  if (step === 1) {
-    return (
-      <svg className="onb-art" viewBox="0 0 240 120" aria-hidden="true">
-        <rect x="8" y="10" width="224" height="28" rx="8" />
-        <path d="M22 24l5 5 9-9M50 24h110" />
-        <rect x="8" y="46" width="224" height="28" rx="8" />
-        <path d="M22 60l5 5 9-9M50 60h80" />
-        <rect x="8" y="82" width="224" height="28" rx="8" />
-        <circle cx="29" cy="96" r="6" />
-        <path d="M50 96h96" />
-      </svg>
-    );
-  }
-  return (
-    <svg className="onb-art" viewBox="0 0 240 120" aria-hidden="true">
-      <path d="M8 18h150M8 36h96" />
-      <path d="M8 66h224M8 90h224M8 114h224" />
-      <path d="M190 44h42M206 30v28" />
-    </svg>
-  );
+function steps(config: Config): Step[] {
+  const amounts = config.case_prizes.map((row) => Number(row.amount));
+  const min = formatNumber(String(Math.min(...amounts)));
+  const max = formatNumber(String(Math.max(...amounts)));
+  return [
+    {
+      image: "/img/onboarding-1.png",
+      title: "Задания. Кейсы. Звёзды.",
+      text: `За каждое выполненное задание — кейс. В кейсе от ${min} до ${max} ⭐, рулетка крутится прямо в приложении.`,
+      action: "Далее",
+    },
+    {
+      image: "/img/onboarding-2.png",
+      title: "Выполняй задания",
+      text: "Подписывайся на каналы, запускай ботов и поддерживай проекты бустами. Выполнил — нажми «Проверить».",
+      action: "Далее",
+    },
+    {
+      image: "/img/onboarding-3.png",
+      title: config.features.withdrawals ? "Забирай подарки" : "Следи за наградами",
+      text: config.features.withdrawals
+        ? `Копи звёзды и выводи их подарками Telegram: мишка, роза, кубок и другие — от ${config.withdraw.min_stars} ⭐.`
+        : "Проверяй начисления, историю и доступный баланс в любой момент.",
+      action: "Начать",
+    },
+  ];
 }
 
 export function Onboarding() {
-  const { setMe } = useApp();
+  const { setMe, config } = useApp();
+  const list = steps(config);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const current = STEPS[step]!;
-  const last = step === STEPS.length - 1;
+  const touch = useRef<number | null>(null);
+  const last = step === list.length - 1;
+  const dark = document.documentElement.dataset.theme === "dark";
 
-  const next = async () => {
-    if (!last) {
-      haptic("select");
-      setStep(step + 1);
-      return;
-    }
+  const go = (index: number) => {
+    if (index < 0 || index >= list.length || index === step) return;
+    haptic("select");
+    setStep(index);
+  };
+
+  const finish = async () => {
     setBusy(true);
     setError(null);
     try {
@@ -79,40 +66,68 @@ export function Onboarding() {
       haptic("success");
       setMe(me);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось продолжить. Попробуйте ещё раз.");
+      setError(err instanceof ApiError ? err.message : "Не удалось продолжить. Попробуй ещё раз.");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="onb">
-      <div className="onb-top">
-        <span className="onb-brand">ZUBA RUBA</span>
-        <span className="onb-count">
-          {step + 1}/{STEPS.length}
+    <div
+      className="onb"
+      onTouchStart={(event) => {
+        touch.current = event.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(event) => {
+        const start = touch.current;
+        const end = event.changedTouches[0]?.clientX;
+        touch.current = null;
+        if (start === null || end === undefined || Math.abs(end - start) < 48) return;
+        go(end < start ? step + 1 : step - 1);
+      }}
+    >
+      <header className="onb-top">
+        <span className="brand">ZUBA RUBA</span>
+        {!last && (
+          <button type="button" className="link-btn onb-skip" onClick={() => go(list.length - 1)}>
+            Пропустить
+          </button>
+        )}
+      </header>
+
+      <div className="onb-stage">
+        {list.map((item, index) => (
+          <img
+            key={item.image}
+            className={index === step ? "onb-art onb-art-active" : "onb-art"}
+            src={dark ? item.image.replace(".png", "-dark.png") : item.image}
+            alt=""
+            width={360}
+            height={300}
+            draggable={false}
+          />
+        ))}
+      </div>
+
+      <div className="onb-copy" key={step}>
+        <span className="onb-step">
+          Шаг {step + 1} из {list.length}
         </span>
+        <h1 className="onb-title">{list[step]!.title}</h1>
+        <p className="onb-text">{withStars(list[step]!.text, 16)}</p>
       </div>
-      <div className="onb-body" key={step}>
-        <Illustration step={step} />
-        <h1 className="onb-title">
-          {current.title.map((line) => (
-            <span key={line}>{line}</span>
-          ))}
-        </h1>
-        <p className="onb-text">{current.text}</p>
-      </div>
-      <div className="onb-bottom">
-        <div className="onb-dots" role="tablist" aria-label="Шаги">
-          {STEPS.map((_, index) => (
-            <span key={index} className={index === step ? "onb-dot onb-dot-active" : "onb-dot"} />
+
+      <footer className="onb-bottom">
+        <div className="onb-dots" aria-hidden="true">
+          {list.map((_, index) => (
+            <button key={index} type="button" tabIndex={-1} className={index === step ? "onb-dot onb-dot-active" : "onb-dot"} onClick={() => go(index)} />
           ))}
         </div>
         {error && <p className="form-error">{error}</p>}
-        <Button block loading={busy} onClick={() => void next()}>
-          {current.action}
+        <Button variant={last ? "accent" : "primary"} block loading={busy} onClick={() => (last ? void finish() : go(step + 1))}>
+          {list[step]!.action}
         </Button>
-      </div>
+      </footer>
     </div>
   );
 }

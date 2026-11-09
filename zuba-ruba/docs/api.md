@@ -39,12 +39,16 @@
   "bot_username": "zuba_ruba_bot",
   "support_url": "https://t.me/support_username",
   "maintenance": false,
-  "features": { "withdrawals": false, "boosts": true, "referrals": true },
-  "rewards": { "channel": "0.3", "bot": "0.3", "boost": "0.2", "referral_case": "0.3" },
+  "features": { "withdrawals": true, "boosts": true, "referrals": true, "tasks": true },
+  "rewards": { "boost": "0.2" },
+  "case_prizes": [{ "amount": "0.1", "weight": 40, "chance": "40.0" }, { "amount": "2", "weight": 2, "chance": "2.0" }],
+  "case_expected": "0.295",
+  "withdraw": { "min_stars": 15, "gift_stars": [15, 25, 50, 100], "per_day": 3, "auto": false },
+  "limits": { "checks_per_minute": 20, "referral_daily_cases": 10 },
   "hold_hours": { "channel": 30, "bot": 0 },
   "referral_threshold": 3,
   "boost": { "first_check_hours": 48, "interval_hours": 24, "recurring": false },
-  "stars_are_internal": true
+  "stars_are_internal": false
 }
 ```
 
@@ -105,12 +109,15 @@
   "conditions": "Подпишись и не отписывайся 30 ч",
   "link": "https://t.me/...",
   "photo": "https://... | null",
-  "reward": "0.3",
+  "reward_kind": "case | stars",
+  "reward": "2",
   "status": "new | incomplete | waiting | completed | cancelled | unavailable",
   "status_label": "Не выполнено",
   "can_check": true
 }
 ```
+Для `reward_kind = case` поле `reward` — максимальный приз кейса, для `stars` — фиксированная награда.
+
 `flyer_error` — текст для пользователя, если Flyer недоступен (список тогда содержит ранее сохранённые незавершённые задания или пуст).
 
 ### `POST /api/tasks/{signature}/check`
@@ -142,7 +149,7 @@
   "opened_at": "... | null"
 }
 ```
-`amount` не раскрывается до открытия (`null`).
+`amount` не раскрывается до открытия (`null`). Сумма кейса выбирается сервером по таблице `case_prizes` в момент выдачи кейса и не меняется.
 
 ### `POST /api/cases/{id}/open` → `Case` (идемпотентно, повторный вызов возвращает тот же результат)
 
@@ -167,17 +174,17 @@
   "enabled": false,
   "disabled_reason": "Вывод временно недоступен",
   "balance": { "total": "1.2", "available": "0.6", "pending": "0.6", "withdrawing": "0" },
-  "options": ["15", "25", "50"],
+  "options": [{ "gift_id": "5170233102089322756", "stars": 15, "emoji": "🧸", "name": "Мишка" }],
   "items": [Withdrawal]
 }
 ```
 `Withdrawal`:
 ```json
-{ "id": 3, "amount": "15", "status": "pending | approved | completed | rejected | failed", "status_label": "На рассмотрении", "comment": null, "created_at": "...", "updated_at": "..." }
+{ "id": 3, "amount": "15", "stars": 15, "gift_id": "5170233102089322756", "gift_emoji": "🧸", "gift_name": "Мишка", "status": "pending | approved | completed | rejected | failed", "status_label": "На рассмотрении", "comment": null, "created_at": "...", "updated_at": "..." }
 ```
 
 ### `POST /api/withdrawals`
-Заголовок `Idempotency-Key: <uuid>`. Тело `{ "amount": "15" }` → `Withdrawal`.
+Заголовок `Idempotency-Key: <uuid>`. Тело `{ "gift_id": "5170233102089322756" }` → `Withdrawal`. Подарок должен быть в `options`; с баланса резервируется его цена в ⭐.
 
 ## Администрирование
 

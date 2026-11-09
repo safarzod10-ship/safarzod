@@ -61,7 +61,7 @@ export function useResource<T>(key: string | null, fetcher: () => Promise<T>): R
   return { data, error, loading, reload, setData };
 }
 
-type Variant = "primary" | "secondary" | "plain" | "danger";
+type Variant = "primary" | "secondary" | "plain" | "danger" | "accent";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;

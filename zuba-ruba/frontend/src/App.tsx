@@ -19,7 +19,7 @@ import { AdminScreen } from "./admin/Admin";
 
 const BOT_USERNAME = "zuba_ruba_bot";
 
-const CHROME = { light: "#FFFFFF", dark: "#0F0F0F" } as const;
+const CHROME = { light: "#F2EFE7", dark: "#121110" } as const;
 
 function useTheme(): void {
   useEffect(() => {
@@ -142,9 +142,7 @@ export function App() {
 function Gate({ title, text, children }: { title: string; text: string; children?: ReactNode }) {
   return (
     <div className="gate">
-      <div className="gate-mark" aria-hidden="true">
-        ZR
-      </div>
+      <img className="gate-mark" src="/img/star.png" width={72} height={72} alt="" />
       <h1 className="gate-title">{title}</h1>
       <p className="gate-text">{text}</p>
       {children && <div className="gate-actions">{children}</div>}
@@ -202,6 +200,7 @@ const TABS: { id: TabId; label: string; Icon: (props: { size?: number }) => Reac
 function TabBar({ active }: { active: TabId }) {
   return (
     <nav className="tabbar" aria-label="Разделы">
+      <div className="tabbar-inner">
       {TABS.map(({ id, label, Icon }) => (
         <button
           key={id}
@@ -213,10 +212,11 @@ function TabBar({ active }: { active: TabId }) {
             navigate(TAB_PATHS[id]);
           }}
         >
-          <Icon size={24} />
+          <Icon size={22} />
           <span className="tab-label">{label}</span>
         </button>
       ))}
+      </div>
     </nav>
   );
 }
