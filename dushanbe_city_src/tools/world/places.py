@@ -183,9 +183,8 @@ def perimeter_block(add, free, a, b, c, d, tall):
     shops on the ground floors), a second ring of lower blocks and a school in the courtyard"""
     # three rings: the street front right behind the sidewalk, then two inner rows (no empty
     # 400 m courtyards)
-    for ring, inset in ((0, 17.0), (1, 58.0), (2, 102.0)):
-        if ring == 2 and RNG.random() < 0.3:
-            continue
+    # four rings (0.20: no empty courtyards): the street front, then three inner rows
+    for ring, inset in ((0, 17.0), (1, 58.0), (2, 102.0), (3, 146.0)):
         x0, x1, zs_, zn = a + inset, b - inset, d + inset, c - inset
         # edges as (start, end); the building's local +Z points into the block
         for (sx, sz, ex, ez) in [(x0, zn, x1, zn), (x1, zs_, x0, zs_), (x0, zs_, x0, zn), (x1, zn, x1, zs_)]:
@@ -202,7 +201,12 @@ def perimeter_block(add, free, a, b, c, d, tall):
             s = 14.0
             while s < length - 14.0:
                 if ring == 0:
-                    kind = str(RNG.choice(["panel9", "panel9", "office", "hotel", "admin", "tower", "sky"] if tall else ["panel9", "panel5", "brick5", "office", "panel9"]))
+                    # modern Dushanbe on the avenues: cream towers with blue glass and domes, round glass
+                    # towers, cream residential blocks, shopping centres (assets/models/city)
+                    kind = str(RNG.choice(["luxa_m", "luxb_m", "luxc_m", "luxc_m", "luxa_m", "office", "hotel", "sky", "mall_m"] if tall
+                                          else ["luxc_m", "luxc_m", "luxa_m", "panel9", "brick5", "office"]))
+                elif ring == 3:
+                    kind = str(RNG.choice(["luxc_m", "panel9", "panel5", "brick5"]))
                 elif ring == 2:
                     kind = str(RNG.choice(["panel5", "panel9", "brick5", "panel5"]))
                 else:
@@ -212,17 +216,23 @@ def perimeter_block(add, free, a, b, c, d, tall):
                     L = 46.0
                 if kind == "sky":
                     L = 24.0
+                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0)}
+                if kind in LUXD:
+                    L = LUXD[kind][0]
+                    if length - s - 10 < L:
+                        kind = "luxc_m" if length - s - 10 >= 42 else "panel5"
+                        L = LUXD.get(kind, (36.0, 12.0))[0]
                 L = min(L, length - s - 10)
                 if L < 24:
                     break
-                D = {"tower": 18.0, "school": 15.0, "panel5": 12.0, "brick5": 12.0, "sky": 24.0}.get(kind, 14.0)
+                D = {"tower": 18.0, "school": 15.0, "panel5": 12.0, "brick5": 12.0, "sky": 24.0}.get(kind, LUXD.get(kind, (0, 14.0))[1])
                 x = sx + ux * (s + L / 2) + nx * D / 2
                 z = sz + uz * (s + L / 2) + nz * D / 2
-                floors = {"panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
+                floors = {"luxa_m": 22, "luxb_m": 18, "luxc_m": 12, "mall_m": 4, "panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
                           "admin": int(RNG.integers(4, 7)), "hotel": int(RNG.integers(7, 13)), "tower": int(RNG.integers(14, 23)), "sky": 30}[kind]
                 if free(x, z, L, D, yaw, 3.0):
                     add(kind, x, z, yaw, L, D, floors)
-                s += L + float(RNG.choice([6, 8, 12]))
+                s += L + float(RNG.choice([4, 6, 8]))
 
 
 def micro_block(add, free, a, b, c, d):
@@ -230,11 +240,11 @@ def micro_block(add, free, a, b, c, d):
     x0, x1 = a + 17, b - 17
     zn, zs_ = c - 17, d + 17
     rot = RNG.random() < 0.5
-    rows = np.arange(zs_ + 6, zn - 6, 42.0)
+    rows = np.arange(zs_ + 6, zn - 6, 36.0)
     for k, z in enumerate(rows):
         x = x0
         while x < x1 - 30:
-            kind = RNG.choice(["panel5", "panel5", "panel9", "brick5"])
+            kind = RNG.choice(["panel5", "panel5", "panel9", "brick5", "luxc_m"])
             L = float(RNG.choice([48, 60, 72, 84]))
             L = min(L, x1 - x - 4)
             if L < 30:
@@ -242,7 +252,7 @@ def micro_block(add, free, a, b, c, d):
             cx = x + L / 2
             yaw = 0.0 if not rot else 0.0
             if free(cx, z, L, 12.0, yaw, 4.0):
-                add(kind, cx, z, yaw, L, 12.0 if kind != "panel9" else 13.0, {"panel5": 5, "panel9": 9, "brick5": 5}[kind])
+                add(kind, cx, z, yaw, L if kind != "luxc_m" else 42.0, {"panel9": 13.0, "luxc_m": 16.0}.get(kind, 12.0), {"panel5": 5, "panel9": 9, "brick5": 5, "luxc_m": 12}[kind])
             x += L + float(RNG.choice([12, 16, 22]))
     if RNG.random() < 0.6:
         cx = (a + b) / 2 + RNG.uniform(-40, 40); cz = (c + d) / 2

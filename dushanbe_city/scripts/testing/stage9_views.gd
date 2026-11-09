@@ -52,6 +52,22 @@ func _ready() -> void:
 			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("city20"):
+		var rr := _road("rudaki")
+		var pts: Array = rr["pts"]
+		_hour(16.5)
+		for frac in [0.35, 0.5, 0.62]:
+			var k := int(pts.size() * frac)
+			var a := Vector3(pts[k][0], pts[k][1], pts[k][2])
+			var b := Vector3(pts[k + 25][0], pts[k + 25][1], pts[k + 25][2])
+			var d := (b - a).normalized()
+			var rt := d.cross(Vector3.UP)
+			await _look("city_rudaki_%d" % int(frac * 100), a - d * 10.0 + rt * 6.0 + Vector3(0, 7, 0), b + Vector3(0, 6, 0))
+		var lmk: Dictionary = wd.landmark("somoni")
+		var c := Vector3(lmk["x"], lmk["y"], lmk["z"])
+		await _look("city_aerial", c + Vector3(260, 150, 260), c + Vector3(0, 0, -150))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("somoni"):
 		var lmk: Dictionary = {}
 		var flg: Dictionary = {}

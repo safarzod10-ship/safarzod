@@ -360,12 +360,31 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 						if not _on_other_road(lp, ri, 2.0):
 							lights.append(lp + Vector3(0, 8.6, 0) - ra * sgn2 * 2.0)
 							# lamp arm over the carriageway
-							if r["cls"] == "street" or int(S[k] / 32.0) % 3 == 1:
+							if r["cls"] in ["avenue", "highway"]:
+								# Dushanbe boulevards: white ornate lamps with two lanterns (assets/models/city)
+								_prop(props, "lamp_ornate", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI * 0.5)
+							elif r["cls"] == "street" or int(S[k] / 32.0) % 3 == 1:
 								# modular city road pack lamp (x3.2), arm over the carriageway
 								_prop(props, "rp_lamp_a", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI * 0.5)
 							else:
 								_prop(props, "light_street_single", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI)
 							pboxes.append([lp + Vector3(0, 4.5, 0), Vector3(0.26, 9.0, 0.26), 0.0])
+				# avenues: a planted median (curb, hedges, flowers) with ornate lamps and national flags,
+				# like Rudaki / Ismoili Somoni avenues; gaps at junctions and crossings
+				if r["cls"] == "avenue" and int(S[k] / 10.0) != int(S[k + 1] / 10.0):
+					var mc := a + Vector3(0, 0.02, 0)
+					if not _on_other_road(mc, ri, 6.0) and not _in_fillet(mc):
+						var dy := atan2((b - a).x, (b - a).z)
+						_prop(props, "median_bed", mc, dy)
+						pboxes.append([mc + Vector3(0, 0.2, 0), Vector3(2.8, 0.4, 10.0), dy])
+						var slot := int(S[k] / 10.0) % 4
+						if slot == 0:
+							_prop(props, "lamp_ornate", mc + Vector3(0, 0.25, 0), dy + PI * 0.5)
+							pboxes.append([mc + Vector3(0, 4.5, 0), Vector3(0.3, 9.0, 0.3), 0.0])
+							lights.append(mc + Vector3(0, 7.4, 0))
+						elif slot == 2:
+							_prop(props, "flagpole", mc + Vector3(0, 0.25, 0), dy + PI * 0.5)
+							pboxes.append([mc + Vector3(0, 4.5, 0), Vector3(0.2, 9.0, 0.2), 0.0])
 				# benches / bins on the sidewalks now and then
 				if int(S[k] / 70.0) != int(S[k + 1] / 70.0) and r["cls"] != "highway":
 					var bp := a + ra * (hw + 2.9) + Vector3(0, 0.15, 0)
@@ -737,6 +756,9 @@ const TINTS := [Color(0.95, 0.91, 0.82), Color(0.93, 0.86, 0.74), Color(0.86, 0.
 const ROOF_TINTS := [Color(0.25, 0.45, 0.32), Color(0.28, 0.38, 0.55), Color(0.55, 0.22, 0.18), Color(0.55, 0.56, 0.58), Color(0.62, 0.62, 0.6)]
 
 
+const LUX := ["luxa_m", "luxb_m", "luxc_m", "mall_m"]
+
+
 func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 	var fac := _Mesh.new()
 	var roof := _Mesh.new()
@@ -759,11 +781,13 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 		if kind == "sky" or kind.begins_with("villa") or kind.ends_with("_m"):
 			# imported models (WorldModels): transform + collision box (+ occluder for the tower)
 			var sc2 := 1.0 if kind != "sky" else 0.85 + float(seed % 7) * 0.05
-			var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * sc2), Vector3(x, y - 0.3, z))
+			# the Dushanbe set has its street front on the model's +Z; the plan's street side is -Z
+			var myaw := yaw + (PI if kind in LUX else 0.0)
+			var xf := Transform3D(Basis(Vector3.UP, myaw).scaled(Vector3.ONE * sc2), Vector3(x, y - 0.3, z))
 			if not models.has(kind):
 				models[kind] = []
 			models[kind].append(xf)
-			var hh: float = 114.0 * sc2 if kind == "sky" else {"school_m": 11.5, "hospital_m": 12.3}.get(kind, 11.0)
+			var hh: float = 114.0 * sc2 if kind == "sky" else {"school_m": 11.5, "hospital_m": 12.3, "luxa_m": 80.0, "luxb_m": 62.0, "luxc_m": 42.0, "mall_m": 18.0}.get(kind, 11.0)
 			var fw := 22.0 * sc2 if kind == "sky" else L
 			var fd := 22.0 * sc2 if kind == "sky" else D
 			boxes.append([Vector3(x, y + hh * 0.5, z), Vector3(fw, hh, fd), yaw])
@@ -957,6 +981,40 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 			if not out.has(id):
 				out[id] = []
 			out[id].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc_), Vector3(x, wd.height_at(x, z) - 0.1, z)))
+	# city streets: rows of trees right behind the sidewalks (avenues: plane trees and cypresses in turn,
+	# like Rudaki avenue; streets: elms / acacias / mulberries), never on another road or a plot
+	for seg in sector_segs.get(sc, []):
+		var r: Dictionary = wd.roads[seg[0]]
+		if not r["cls"] in ["avenue", "highway", "street"]:
+			continue
+		var F: Dictionary = road_frames[seg[0]]
+		var P: PackedVector3Array = F["p"]
+		var R: PackedVector2Array = F["r"]
+		if not _in_city(P[seg[1]]):
+			continue
+		var step := 2 if r["cls"] != "street" else 3
+		for k in range(seg[1], seg[2], step):
+			if bridge_mask[seg[0]][k] != 0 or _in_fillet(P[k]):
+				continue
+			for sgn: float in [-1.0, 1.0]:
+				var q := P[k] + Vector3(R[k].x, 0, R[k].y) * (float(r["w"]) * 0.5 + 4.6) * sgn
+				if wd.road_edge_dist(q.x, q.z) < 3.2 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 40.0) or _in_own_plot(q.x, q.z):
+					continue
+				var idx := int(k / step)
+				var id := ""
+				var scl := 1.0
+				if r["cls"] == "street":
+					id = ["elm_a", "acacia", "mulberry", "elm_b"][(idx + (1 if sgn > 0 else 0)) % 4]
+					scl = rng.randf_range(0.8, 1.0)
+				elif idx % 2 == 0:
+					id = "thuja_cone"
+					scl = rng.randf_range(1.5, 1.9)
+				else:
+					id = ["chinar_middle", "elm_a"][idx / 2 % 2]
+					scl = rng.randf_range(0.85, 1.05)
+				if not out.has(id):
+					out[id] = []
+				out[id].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * scl), Vector3(q.x, wd.height_at(q.x, q.z) - 0.1, q.z)))
 	# poplar rows along the country roads in the lowlands (typical of the Gissar valley)
 	for seg in sector_segs.get(sc, []):
 		var r: Dictionary = wd.roads[seg[0]]

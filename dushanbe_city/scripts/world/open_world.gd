@@ -141,7 +141,7 @@ func _load_props() -> void:
 
 func _place_props(node: Node3D, props: Dictionary) -> void:
 	for id in props:
-		if String(id).begins_with("rp_"):
+		if String(id).begins_with("rp_") or id in ["lamp_ornate", "rotunda", "median_bed", "flagpole"]:
 			# modular city road pack (WorldModels parts, scaled x3.2)
 			WorldModels.multi(node, id, props[id], 140.0, false)
 			continue
