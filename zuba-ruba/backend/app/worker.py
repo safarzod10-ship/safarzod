@@ -17,7 +17,7 @@ from sqlalchemy import func, select, update
 
 from app import settings_store
 from app.bot.handlers import router
-from app.bot.messages import send_broadcast, send_notification, webapp_url
+from app.bot.messages import BOT_NAME, DESCRIPTION, SHORT_DESCRIPTION, send_broadcast, send_notification, webapp_url
 from app.clock import utcnow
 from app.config import get_config
 from app.db import dispose_engine, init_engine, sessionmaker
@@ -211,8 +211,14 @@ async def loop(name: str, interval: float, job: Callable[[], Awaitable[object]])
 
 async def configure_bot(bot: Bot) -> None:
     try:
-        await bot.set_my_commands([BotCommand(command="start", description="Открыть ZUBA RUBA")])
+        await bot.set_my_commands([BotCommand(command="start", description="Открыть ZUBA RUBA"), BotCommand(command="paysupport", description="Вопросы по выводу")])
         await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=webapp_url())))
+        if (await bot.get_my_name()).name != BOT_NAME:
+            await bot.set_my_name(name=BOT_NAME)
+        if (await bot.get_my_short_description()).short_description != SHORT_DESCRIPTION:
+            await bot.set_my_short_description(short_description=SHORT_DESCRIPTION)
+        if (await bot.get_my_description()).description != DESCRIPTION:
+            await bot.set_my_description(description=DESCRIPTION)
     except Exception:
         log.exception("bot configuration failed")
 

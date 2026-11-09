@@ -1,12 +1,26 @@
 from pathlib import Path
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 from app.config import get_config
 from app.models import Broadcast, Notification
 
 CAPTION_LIMIT = 1024
+WELCOME_VIDEO = Path(__file__).parent / "assets" / "welcome.mp4"
+BOT_NAME = "ZUBA RUBA"
+SHORT_DESCRIPTION = "Задания за кейсы со звёздами. Открывай кейсы и выводи звёзды подарками Telegram."
+DESCRIPTION = (
+    "ZUBA RUBA — задания, кейсы и подарки Telegram.\n\n"
+    "• Подписывайся на каналы, запускай ботов и поддерживай проекты бустами.\n"
+    "• За каждое выполненное задание — кейс со звёздами.\n"
+    "• Копи звёзды и выводи их подарками Telegram.\n\n"
+    "Нажми «Запустить», чтобы начать."
+)
+OPEN_BUTTON = "Открыть ZUBA RUBA"
+
+_welcome_file_id: str | None = None
 
 
 def webapp_url(path: str = "") -> str:
@@ -29,7 +43,7 @@ def markup(rows: list[list[dict]]) -> InlineKeyboardMarkup | None:
 
 
 def open_app_markup() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Открыть ZUBA RUBA", web_app=WebAppInfo(url=webapp_url()))]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=OPEN_BUTTON, web_app=WebAppInfo(url=webapp_url()))]])
 
 
 async def send_notification(bot: Bot, notification: Notification) -> int:
@@ -49,9 +63,30 @@ async def send_broadcast(bot: Bot, chat_id: int, broadcast: Broadcast) -> int:
     return message.message_id
 
 
-WELCOME = (
-    "<b>Добро пожаловать в ZUBA RUBA!</b>\n\n"
-    "Выполняй задания, открывай кейсы и собирай награды.\n\n"
-    "Подписывайся на каналы, запускай ботов и следи за своими начислениями.\n\n"
-    "Нажми кнопку ниже, чтобы открыть приложение."
-)
+
+
+def welcome_text(prize_min: str, prize_max: str, withdraw_min: int) -> str:
+    return (
+        "<b>Добро пожаловать в ZUBA RUBA!</b>\n\n"
+        "Здесь звёзды получают за простые задания:\n\n"
+        "1. Подпишись на канал, запусти бота или отдай буст.\n"
+        f"2. Открой кейс — в нём от {prize_min} до {prize_max} ⭐.\n"
+        f"3. Копи звёзды и выводи их подарками Telegram от {withdraw_min} ⭐.\n\n"
+        "Приглашай друзей — за их задания ты получаешь подарочные кейсы.\n\n"
+        "Нажми «Открыть ZUBA RUBA», чтобы начать."
+    )
+
+
+async def send_welcome(bot: Bot, chat_id: int, text: str) -> None:
+    global _welcome_file_id
+    markup = open_app_markup()
+    if WELCOME_VIDEO.exists():
+        try:
+            media = _welcome_file_id or FSInputFile(WELCOME_VIDEO, filename="zuba-ruba.mp4")
+            message = await bot.send_animation(chat_id, media, caption=text, parse_mode="HTML", reply_markup=markup, width=1280, height=720)
+            if message.animation is not None:
+                _welcome_file_id = message.animation.file_id
+            return
+        except TelegramBadRequest:
+            _welcome_file_id = None
+    await bot.send_message(chat_id, text, parse_mode="HTML", reply_markup=markup)

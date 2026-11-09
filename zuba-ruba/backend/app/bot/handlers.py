@@ -6,9 +6,10 @@ from aiogram.types import ChatMemberUpdated, Message, PreCheckoutQuery
 from sqlalchemy import update
 
 from app import settings_store
-from app.bot.messages import WELCOME, open_app_markup
+from app.bot.messages import open_app_markup, send_welcome, welcome_text
 from app.db import sessionmaker
 from app.models import User
+from app.money import milli_to_display
 from app.services import topups
 from app.services import users as users_service
 from app.telegram_auth import TelegramUser
@@ -40,7 +41,10 @@ async def start(message: Message, command: CommandObject) -> None:
         if user.is_blocked:
             await message.answer("Аккаунт заблокирован. Обратитесь в поддержку.")
             return
-    await message.answer(WELCOME, reply_markup=open_app_markup())
+        settings = await settings_store.load(session)
+    amounts = [amount for amount, _ in settings.prizes()]
+    text = welcome_text(milli_to_display(min(amounts)), milli_to_display(max(amounts)), settings.int("withdraw_min_stars"))
+    await send_welcome(message.bot, message.chat.id, text)
 
 
 @router.message(Command("paysupport"), F.chat.type == "private")

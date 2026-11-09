@@ -195,3 +195,26 @@ async def test_broadcast_reaches_only_selected_audience(env):
         pass
     await process_broadcasts(env.bot)
     assert [chat for chat, _ in env.bot.messages] == [1]
+
+
+async def test_welcome_uses_video_and_caches_file_id():
+    from types import SimpleNamespace
+
+    from aiogram.types import FSInputFile
+
+    from app.bot import messages
+
+    sent = []
+
+    class Bot:
+        async def send_animation(self, chat_id, media, **kwargs):
+            sent.append((chat_id, media, kwargs))
+            return SimpleNamespace(animation=SimpleNamespace(file_id="cached-id"))
+
+    messages._welcome_file_id = None
+    text = messages.welcome_text("0,1", "2", 15)
+    await messages.send_welcome(Bot(), 1, text)
+    await messages.send_welcome(Bot(), 2, text)
+    assert isinstance(sent[0][1], FSInputFile) and sent[1][1] == "cached-id"
+    assert "от 0,1 до 2 ⭐" in sent[0][2]["caption"] and sent[0][2]["reply_markup"].inline_keyboard[0][0].text == "Открыть ZUBA RUBA"
+    assert len(messages.SHORT_DESCRIPTION) <= 120 and len(messages.DESCRIPTION) <= 512
