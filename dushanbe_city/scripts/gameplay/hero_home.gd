@@ -1,6 +1,7 @@
 class_name HeroHome
 extends Node3D
-## The hero's home on the reserved lot by the avenue (x -16.5..36, z -296..-166): a modern two-storey
+## The hero's home in Dushanbe, on the west side of Rudaki avenue (world landmark "hero_home"; the
+## layout below is in local lot coordinates, front = local -X towards the avenue): a modern two-storey
 ## house with a balcony, a garage with the Prado parked inside (raised door, drive out to the
 ## avenue), a paved drive, a fenced lawn with a pool. The game starts at the front door; at the door
 ## «ДОМ · ОТДЫХ» saves the game and restores the health. On the map as «Дом».
@@ -23,8 +24,15 @@ func _ready() -> void:
 	add_to_group(&"interactable")
 	add_to_group(&"hero_home")
 	var c := LOT.get_center()
-	var y := CityWorld.instance.terrain_height(c.x, c.y) if CityWorld.instance else 2.4
-	global_position = Vector3(0, y, 0)
+	var wd := WorldData.get_instance()
+	var lm: Dictionary = wd.landmark("hero_home") if wd and wd.ok else {}
+	if lm.is_empty():
+		# old data: the reserved lot on the peninsula
+		var y := CityWorld.instance.terrain_height(c.x, c.y) if CityWorld.instance else 2.4
+		global_position = Vector3(0, y, 0)
+	else:
+		var b := Basis(Vector3.UP, float(lm["yaw"]))
+		global_transform = Transform3D(b, Vector3(float(lm["x"]), float(lm["y"]), float(lm["z"])) - b * Vector3(c.x, 0, c.y))
 	_build()
 	var ui := CanvasLayer.new()
 	ui.layer = 31
@@ -49,20 +57,33 @@ func _process(delta: float) -> void:
 
 ## where the hero appears: on the path in front of the door, facing the drive / avenue
 func spawn_point() -> Vector3:
-	return Vector3(HOUSE.position.x - 7.5, global_position.y + FLOOR + 0.1, HOUSE.position.y + 6.0)
+	return to_global(Vector3(HOUSE.position.x - 7.5, FLOOR + 0.1, HOUSE.position.y + 6.0))
 
 
-const SPAWN_YAW := PI * 0.5                           ## facing -X (towards the avenue)
+const SPAWN_YAW := PI * 0.5                           ## local: facing -X (towards the avenue)
+
+
+func spawn_yaw() -> float:
+	return SPAWN_YAW + global_rotation.y
 
 
 ## the Prado's parking place inside the garage, nose to the door (-X)
 func garage_point() -> Vector3:
 	var g := GARAGE.get_center()
-	return Vector3(g.x + 0.4, global_position.y, g.y)
+	return to_global(Vector3(g.x + 0.4, 0.0, g.y))
+
+
+func garage_yaw() -> float:
+	return PI * 0.5 + global_rotation.y
+
+
+## the garage floor height (world)
+func floor_y() -> float:
+	return global_position.y + FLOOR
 
 
 func door_point() -> Vector3:
-	return Vector3(HOUSE.position.x - 1.0, global_position.y + 0.2, HOUSE.position.y + 6.0)
+	return to_global(Vector3(HOUSE.position.x - 1.0, 0.2, HOUSE.position.y + 6.0))
 
 
 # ------------------------------------------------------------------------------------------ interactable

@@ -312,6 +312,12 @@ func _t_van() -> void:
 	for mi in van.find_children("LakLakLogo*", "MeshInstance3D", true, false):
 		logos += 1
 	_check("van painted LakLak blue + LakLak logo on both sides and the rear (%d logos)" % logos, blue and logos == 3)
+	# parked vehicles far from the camera sleep (frozen): walk up to it first
+	var s7: CarSession = main.get("car_session")
+	s7.player.teleport(van.global_position + van.global_basis.x * -4.0 + Vector3(0, 0.5, 0), 0.0)
+	(main.get("open_world") as OpenWorld).preload_at(van.global_position)
+	for i in 90:
+		await get_tree().physics_frame
 	_check("van has 4 wheels on the ground after spawning (%d)" % van.wheels_on_ground, van.wheels.size() == 4 and van.wheels_on_ground == 4)
 	# board it: player next to the driver's door (the player's camera follows: sectors stay loaded)
 	s.player.teleport(van.driver_door_point(0.7), 0.0)

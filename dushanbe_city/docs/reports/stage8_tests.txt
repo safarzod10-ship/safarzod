@@ -19,11 +19,11 @@ PASS 18. bus: 829 source parts merged into 26 meshes (draw calls)
 PASS 19. Camry drives on the shared physics: 0-100 km/h in 12.4 s (6..14), 141 km/h after 25 s
 PASS 20. bus: 0-60 km/h in 11.5 s (8..20), limited to 85 km/h (<= 92)
 PASS 21. bus route №1: a 5.9 km loop over 4 city roads, 12 stops
-PASS 22. stops in the kerb lane (0.5 .. 4 m inside the edge): 0 off; names ["Театр оперы и балета", "Памятник Исмоили Сомони и площадь Дусти", "Парк Рудаки", "остановка 4", "Национальный музей"]
+PASS 22. stops in the kerb lane (0.5 .. 4 m inside the edge): 0 off; names ["Театр оперы и балета", "Оружейный магазин", "Парк Рудаки", "остановка 4", "Национальный музей"]
 PASS 23. a shelter + sign at every stop (12)
 PASS 24. terminus sign is an interactable «СТАТЬ ВОДИТЕЛЕМ АВТОБУСА», selected: true
 PASS 25. hired as a bus driver
-PASS 26. in the bus: next stop «Памятник Исмоили Сомони и площадь Дусти» marked (beacon true, minimap true)
+PASS 26. in the bus: next stop «Оружейный магазин» marked (beacon true, minimap true)
 PASS 27. stop served after 2.5 s standing: passengers 10, pay 35 смн, next stop 2
 PASS 28. driving past a stop misses it (next stop now 3)
 PASS 29. a full loop pays the bonus: loops 0 -> 1, earned 278 смн this shift 313 смн

@@ -50,7 +50,9 @@ func _sec(t: float) -> void:
 
 func _t_shop() -> void:
 	var shop: GunShop = main.get_node("GunShop")
-	_check("gun shop placed near the start (%s), on the map" % str(shop.global_position.round()), shop.global_position.distance_to(Vector3(-58, 2, -90)) < 60.0)
+	var hh: HeroHome = main.get_node_or_null("HeroHome")
+	var dh := shop.global_position.distance_to(hh.door_point()) if hh else INF
+	_check("gun shop across the avenue from the hero's home (%s, %.0f m), on the map" % [str(shop.global_position.round()), dh], dh < 300.0)
 	s.player.teleport(shop.door_point(), PI * 0.5)
 	await _sec(0.5)
 	var it: Variant = s.player.get("interaction")

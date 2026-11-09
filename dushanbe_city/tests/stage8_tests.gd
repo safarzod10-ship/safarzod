@@ -227,6 +227,13 @@ func _t_cars() -> void:
 		if v == null:
 			_check("%s spawned" % nm, false)
 			continue
+		# parked vehicles far from the camera sleep (frozen): walk up to it first
+		if s.driving:
+			s.exit()
+			await _frames(10)
+		s.player.teleport(v.global_position + v.global_basis.x * -4.0 + Vector3(0, 0.5, 0), 0.0)
+		ow.preload_at(v.global_position)
+		await _sec(1.5)
 		var spin_meshes := 0
 		for w in v.wheels:
 			spin_meshes += (w["mesh"] as Node).find_children("*", "MeshInstance3D", true, false).size()

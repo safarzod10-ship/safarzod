@@ -20,6 +20,7 @@ static var instance: CarDealer
 static var strict := false        ## tests: apply the ownership rule although the save is off
 
 var main: Node
+var in_city := false                ## placed on the Dushanbe lot (world landmark "dealer")
 var _ui: CanvasLayer
 var _panel: PanelContainer
 var _rows := {}
@@ -31,8 +32,16 @@ func _ready() -> void:
 	instance = self
 	add_to_group(&"interactable")
 	add_to_group(&"car_dealer")
-	var y := CityWorld.instance.terrain_height(POS.x, POS.z) if CityWorld.instance else 2.4
-	global_position = Vector3(POS.x, y, POS.z)
+	var wd := WorldData.get_instance()
+	var lm: Dictionary = wd.landmark("dealer") if wd and wd.ok else {}
+	if lm.is_empty():
+		var y := CityWorld.instance.terrain_height(POS.x, POS.z) if CityWorld.instance else 2.4
+		global_position = Vector3(POS.x, y, POS.z)
+	else:
+		# lot centre = local (6, 0, 0): the plaza spans x -12..24 in front of the showroom
+		var b := Basis(Vector3.UP, float(lm["yaw"]))
+		global_transform = Transform3D(b, Vector3(float(lm["x"]), float(lm["y"]), float(lm["z"])) - b * Vector3(6, 0, 0))
+		in_city = true
 	_build_house()
 	_build_ui()
 
@@ -54,11 +63,15 @@ static func price_of(v: Node) -> int:
 
 
 func door_point() -> Vector3:
-	return global_position + Vector3(SIZE.x * 0.5 + 1.4, 0.2, 4.0)
+	return to_global(Vector3(SIZE.x * 0.5 + 1.4, 0.2, 4.0))
 
 
 func delivery_point(k: int) -> Vector3:
-	return global_position + Vector3(SIZE.x * 0.5 + 9.0, 0.0, -6.0 + k * 6.0)
+	return to_global(Vector3(SIZE.x * 0.5 + 9.0, 0.3, -6.0 + k * 6.0))
+
+
+func delivery_yaw() -> float:
+	return PI * 0.5 + global_rotation.y
 
 
 # ------------------------------------------------------------------------------------------ interactable
@@ -98,7 +111,7 @@ func buy(node_name: String) -> String:
 		var k := ["Camry", "Lexus", "Prado"].find(node_name)
 		var ow: Variant = main.get("open_world")
 		var p := delivery_point(k)
-		(car as VehiclePrado).place(p, PI * 0.5)
+		(car as VehiclePrado).place(p, delivery_yaw())
 		if ow:
 			(ow as OpenWorld).preload_at(p)
 	return ""

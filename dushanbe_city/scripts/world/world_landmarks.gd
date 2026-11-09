@@ -332,6 +332,8 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 				_box(root, null, "canvas" if k % 2 == 0 else "tile", Vector3(x, 3.2, z), Vector3(9, 0.15, 5), false)
 				for sx: float in [-1.0, 1.0]:
 					_box(root, null, "dark", Vector3(x + sx * 4.2, 1.6, z + 2.2), Vector3(0.12, 3.2, 0.12), false)
+		"hero_home", "dealer", "gunshop":
+			pass                     # HeroHome / CarDealer / GunShop build their own buildings there
 		_:
 			_box(root, body, "marble", Vector3(0, 6, 0), Vector3(L * 0.7, 12, D * 0.7))
 

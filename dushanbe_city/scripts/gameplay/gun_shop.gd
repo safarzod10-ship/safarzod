@@ -17,14 +17,21 @@ var _msg: Label
 func _ready() -> void:
 	add_to_group(&"interactable")
 	add_to_group(&"gun_shop")
-	var y := CityWorld.instance.terrain_height(POS.x, POS.z) if CityWorld.instance else 2.4
-	global_position = Vector3(POS.x, y, POS.z)
+	var wd := WorldData.get_instance()
+	var lm: Dictionary = wd.landmark("gunshop") if wd and wd.ok else {}
+	if lm.is_empty():
+		var y := CityWorld.instance.terrain_height(POS.x, POS.z) if CityWorld.instance else 2.4
+		global_position = Vector3(POS.x, y, POS.z)
+	else:
+		# Dushanbe, across Rudaki avenue from the hero's home (world landmark "gunshop")
+		global_position = Vector3(float(lm["x"]), float(lm["y"]), float(lm["z"]))
+		rotation.y = float(lm["yaw"])
 	_build_house()
 	_build_ui()
 
 
 func door_point() -> Vector3:
-	return global_position + Vector3(SIZE.x * 0.5 + 1.2, 0.2, 0)
+	return to_global(Vector3(SIZE.x * 0.5 + 1.2, 0.2, 0))
 
 
 # ------------------------------------------------------------------------------------------ interactable

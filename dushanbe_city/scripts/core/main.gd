@@ -56,7 +56,9 @@ func _build() -> void:
 		home.name = "HeroHome"
 		add_child(home)
 		var hp := home.spawn_point()
-		sp = [hp.x, hp.y, hp.z, HeroHome.SPAWN_YAW]
+		open_world.preload_at(hp)                 # ground + collision there before the hero stands on it
+		open_world.preload_at(home.garage_point())
+		sp = [hp.x, hp.y, hp.z, home.spawn_yaw()]
 	if ResourceLoader.exists(PLAYER_SCENE):
 		player = (load(PLAYER_SCENE) as PackedScene).instantiate()
 		add_child(player)
@@ -123,9 +125,9 @@ func _spawn_car(touch: CanvasLayer) -> void:
 	await get_tree().physics_frame
 	if home:
 		# in the hero's garage, nose to the door: on the floor (place() would land on the roof)
-		car.place(home.garage_point(), PI * 0.5)
+		car.place(home.garage_point(), home.garage_yaw())
 		var gp := car.global_position
-		gp.y = home.global_position.y + HeroHome.FLOOR + 0.02 - float(car.get("_ground_y"))
+		gp.y = home.floor_y() + 0.02 - float(car.get("_ground_y"))
 		car.global_position = gp
 		car.reset_physics_interpolation()
 	else:
@@ -211,7 +213,13 @@ func _spawn_extra_vehicles() -> void:
 		c.collision_mask = 1
 		add_child(c)
 		await get_tree().physics_frame
-		c.place(spec[1], 0.0)
+		var dealer: CarDealer = get_node_or_null("CarDealer")
+		if dealer and dealer.in_city:
+			var k := 0 if spec[0] == "camry" else 1
+			open_world.preload_at(dealer.delivery_point(k))
+			c.place(dealer.delivery_point(k), dealer.delivery_yaw())     # for sale on the dealership's lot
+		else:
+			c.place(spec[1], 0.0)
 		car_session.add_vehicle(c)
 		if spec[0] == "camry":
 			camry = c

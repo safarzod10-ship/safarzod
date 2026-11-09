@@ -173,3 +173,11 @@ func grass_ok(x: float, z: float) -> bool:
 		if absf(x - float(l["x"])) < float(l["L"]) * 0.5 + 2.0 and absf(z - float(l["z"])) < float(l["D"]) * 0.5 + 2.0:
 			return false
 	return true
+
+
+## a landmark plot by id ({} if none): x, y, z, yaw, L, D
+func landmark(id: String) -> Dictionary:
+	for l in landmarks:
+		if String(l["id"]) == id:
+			return l
+	return {}

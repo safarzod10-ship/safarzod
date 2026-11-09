@@ -74,14 +74,18 @@ func _ready() -> void:
 		return
 	if OS.get_cmdline_user_args().has("home"):
 		var hh: HeroHome = main.get_node("HeroHome")
-		var c := Vector3(10, hh.global_position.y, -231)
-		await _look("home_overview", c + Vector3(-55, 32, -38), c + Vector3(0, 0, -6))
-		await _look("home_front", hh.spawn_point() + Vector3(-16, 3.5, -9), hh.spawn_point() + Vector3(4, 2.5, -8))
+		var c := hh.to_global(Vector3(10, 0, -231))
+		await _look("home_overview", hh.to_global(Vector3(-55, 32, -38) + Vector3(10, 0, -231)), c)
+		await _look("home_front", hh.to_global(Vector3(-10, 3.5, -235)), hh.to_global(Vector3(6, 2.5, -224)))
 		var gp := hh.garage_point()
-		await _look("home_garage", gp + Vector3(-11, 2.2, 3.5), gp + Vector3(0, 0.8, 0))
+		await _look("home_garage", hh.to_global(Vector3(-12, 2.2, -241.5)), gp + Vector3(0, 0.8, 0))
+		var dl: CarDealer = main.get_node("CarDealer")
+		await _look("dealer_city", dl.to_global(Vector3(45, 12, 30)), dl.to_global(Vector3(6, 2, 0)))
+		var gs: GunShop = main.get_node("GunShop")
+		await _look("gunshop_city", gs.to_global(Vector3(20, 4, 12)), gs.global_position + Vector3(0, 2, 0))
 		_ui(true)
 		var s: CarSession = main.get("car_session")
-		s.player.teleport(hh.spawn_point(), HeroHome.SPAWN_YAW)
+		s.player.teleport(hh.spawn_point(), hh.spawn_yaw())
 		for i in 120:
 			await get_tree().physics_frame
 		for c3 in s.player.find_children("*", "Camera3D", true, false):

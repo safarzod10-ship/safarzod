@@ -949,7 +949,7 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				sc_ = rng.randf_range(0.7, 1.1)
 			if id == "":
 				continue
-			if _near_building(x, z, sc) or _near_board(boards, x, z, 55.0):
+			if _near_building(x, z, sc) or _near_board(boards, x, z, 55.0) or _in_own_plot(x, z):
 				continue
 			# never on a road / its shoulder: the coarse surface map misses narrow tracks
 			if wd.road_edge_dist(x, z) < 3.5 + sc_ * 1.5:
@@ -981,6 +981,17 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 static func _near_board(boards: Array, x: float, z: float, r: float) -> bool:
 	for b: Vector2 in boards:
 		if absf(b.x - x) < r and absf(b.y - z) < r and Vector2(b.x - x, b.y - z).length() < r:
+			return true
+	return false
+
+
+## the plots the game builds on itself (hero's home, dealership, gun shop): no wild trees there
+func _in_own_plot(x: float, z: float) -> bool:
+	for l in wd.landmarks:
+		if not String(l["id"]) in ["hero_home", "dealer", "gunshop"]:
+			continue
+		var p := Vector2(x - float(l["x"]), z - float(l["z"])).rotated(-float(l["yaw"]))
+		if absf(p.x) < float(l["L"]) * 0.5 + 3.0 and absf(p.y) < float(l["D"]) * 0.5 + 3.0:
 			return true
 	return false
 

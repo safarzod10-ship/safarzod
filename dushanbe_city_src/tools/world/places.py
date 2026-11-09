@@ -26,6 +26,11 @@ LANDMARKS = [
     ("opera", "Театр оперы и балета", -230.0, -1800.0, 0.0, (110.0, 80.0)),
     ("mehrgon", "Рынок Мехргон", 620.0, -2200.0, 0.0, (180.0, 140.0)),
     ("laklak", "LakLak — служба доставки", 1385.0, -3000.0, 0.0, (64.0, 74.0)),
+    # the hero's home (HeroHome: house, garage with the Prado, start of the game) on the west side of
+    # Rudaki avenue, the car dealership and the gun shop opposite (their own buildings, game side)
+    ("hero_home", "Дом героя", -102.0, -2190.0, math.pi, (54.0, 124.0)),
+    ("dealer", "Автосалон", 10.0, -2130.0, math.pi, (38.0, 48.0)),
+    ("gunshop", "Оружейный магазин", 2.0, -2240.0, math.pi, (22.0, 26.0)),
     ("hisor_fort", "Гиссарская крепость", -4500.0, -2900.0, 0.3, (150.0, 110.0)),
     ("hisor_bazaar", "Гиссарский рынок", -4050.0, -2300.0, 0.0, (100.0, 70.0)),
 ]

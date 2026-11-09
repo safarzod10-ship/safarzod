@@ -125,7 +125,7 @@ func restore() -> void:
 	# parked under a roof (the hero's garage): back onto the floor, not onto the roof
 	if HeroHome.instance and Vector2(_home.origin.x - HeroHome.instance.garage_point().x, _home.origin.z - HeroHome.instance.garage_point().z).length() < 4.0:
 		var p := car.global_position
-		p.y = HeroHome.instance.global_position.y + HeroHome.FLOOR + 0.02 - float(car.get("_ground_y"))
+		p.y = HeroHome.instance.floor_y() + 0.02 - float(car.get("_ground_y"))
 		car.global_position = p
 
 
