@@ -125,7 +125,7 @@ pass "API and Mini App reachable over HTTPS"
 
 AUTH="Authorization: tma $(signed_init_data 1000)"
 curl -sk --resolve "$DOMAIN:443:127.0.0.1" -X POST -H "$AUTH" "https://$DOMAIN/api/session" | grep -q '"is_admin":true' || fail "admin session"
-curl -sk --resolve "$DOMAIN:443:127.0.0.1" -X PATCH -H "$AUTH" -H 'Content-Type: application/json' -d '{"values":{"reward_channel":"0.45"}}' "https://$DOMAIN/api/admin/settings" >/dev/null
+curl -sk --resolve "$DOMAIN:443:127.0.0.1" -X PATCH -H "$AUTH" -H 'Content-Type: application/json' -d '{"values":{"reward_boost":"0.25"}}' "https://$DOMAIN/api/admin/settings" >/dev/null
 pass "admin session and settings change"
 
 answers "y"
@@ -137,6 +137,6 @@ grep -q "Резервная копия базы перед обновление�
 ls "$APP"/backups/zuba-*.dump >/dev/null 2>&1 || fail "backup file"
 AUTH="Authorization: tma $(signed_init_data 1000)"
 settings=$(curl -sk --resolve "$DOMAIN:443:127.0.0.1" -H "$AUTH" "https://$DOMAIN/api/admin/settings")
-[[ $settings == *'"key":"reward_channel"'*'"value":"0.45"'* ]] || fail "settings lost after update"
+[[ $settings == *'"key":"reward_boost"'*'"value":"0.25"'* ]] || fail "settings lost after update"
 curl -sk --resolve "$DOMAIN:443:127.0.0.1" -H "$AUTH" "https://$DOMAIN/api/me" | grep -q '"id":1000' || fail "user lost after update"
 pass "repeated installation keeps database, settings and secrets"
