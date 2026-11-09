@@ -10,7 +10,7 @@ PASS  9. filling stations along the roads: 51
 PASS 10. nearest station from any road point: at most 1.5 km
 PASS 11. at the pumps: «ЗАПРАВИТЬ» offered (station found true, button true)
 PASS 12. filled at 14 smn/l: +60.0 l to 80 / 80 l, paid 840 смн (60 x 14)
-PASS 13. low fuel: nearest station marked on the minimap ((-45.0, 5.0, -1048.0))
+PASS 13. low fuel: nearest station marked on the minimap ((-97.0, 5.0, -1033.0))
 PASS 14. no money: no fuel is given (fuel 10.00 l, money 0 смн)
 PASS 15. Toyota Camry: 4 wheels (4) with spinning meshes (8), radius 0.339 m, on the ground 4
 PASS 16. Lexus RX 350: 4 wheels (4) with spinning meshes (20), radius 0.403 m, on the ground 4

@@ -3,7 +3,7 @@ PASS  2. the game starts at the home's door (0.0 m from it)
 PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
 PASS  4. drives out of the garage through the gate (19 m out, condition 100 %)
 PASS  5. promo TAJDUSH: +200 000 смн
-PASS  6. account ID given automatically: 61181412 (8 digits)
+PASS  6. account ID given automatically: 10000000 (8 digits)
 PASS  7. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
 PASS  8. the same code again: refused (Этот код уже использован)
 PASS  9. a code made for another ID: refused (Код не подходит к вашему ID)
@@ -34,5 +34,5 @@ PASS 33. it explodes after burning: wreck true, can't get in true
 PASS 34. the blast killed the player standing 2.5 m away (dead true, health 0)
 PASS 35. respawn: alive at the hospital / start, health 100, fee 90 смн
 PASS 36. wreck restored at its parking place (condition 100 %)
-PASS 37. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 359.9 px)
+PASS 37. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 360.0 px)
 PASS 38. steer right -> the steering wheel turns clockwise for the driver (114 deg)

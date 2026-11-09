@@ -165,6 +165,8 @@ def main():
     avoid_lm = world["landmarks"] + [{"x": fs["x"], "z": fs["z"], "L": 44.0, "D": 36.0} for fs in world["fuel"] + world["services"]]
     world["billboards"] = FU.billboards(roads, world["buildings"], avoid_lm, lambda xs, zs: H_at(xs, zs, H), water_ok)
     world["guardrails"] = FU.guardrails(roads, lambda xs, zs: H_at(xs, zs, H))
+    nd = add_driveways(roads, world, lambda xs, zs: H_at(xs, zs, H))
+    log("driveways (shops, malls, auto services -> the nearest road): %d" % nd)
     world["fillets"] = fillets
     world["crossings"] = crossings
     log("billboards %d, guardrail runs %d (%.1f km)" % (len(world["billboards"]), len(world["guardrails"]),
@@ -534,6 +536,42 @@ def connect_ends(roads, reach=150.0):
                 r["P"] = T.resample(np.concatenate([keep, curve[::-1][1:]]), 4.0)
                 r["P"][-1] = q
             print("  connector: %s %s -> %s, trimmed %d pts, %.0f m" % (r["id"], "start" if end == 0 else "end", o["id"], first if end == 0 else len(P) - 1 - first, L))
+
+
+def add_driveways(roads, world, H_at):
+    """0.21: every shop / mall / auto service gets a real asphalt lane (6 m) from its front (car park,
+    repair pad) to the nearest road, so the player never has to cross a lawn; they join the road
+    network (navigator) like any other road"""
+    pts = []; owner = []
+    for i, r in enumerate(roads):
+        for p in r["P"]:
+            pts.append(p); owner.append(i)
+    tree = cKDTree(np.array(pts))
+    starts = []
+    for b in world["buildings"]:
+        if b[0] in ("amid_m", "mall_m"):
+            yaw = b[3]
+            fx, fz = -math.sin(yaw), -math.cos(yaw)          # the plan's street side (local -Z)
+            starts.append((b[1] + fx * (b[5] / 2 - 2.0), b[2] + fz * (b[5] / 2 - 2.0), "mall"))
+    for sv in world.get("services", []):
+        yaw = sv["yaw"]
+        dx, dz = math.cos(yaw), -math.sin(yaw)                # garage front (+X) towards the road
+        starts.append((sv["ox"] + dx * 14.0, sv["oz"] + dz * 14.0, "service"))
+    n = 0
+    for (x, z, kind) in starts:
+        d, j = tree.query((x, z))
+        if d < 3.0 or d > 140.0:
+            continue
+        rx, rz = pts[j]
+        L = math.hypot(rx - x, rz - z)
+        k = max(2, int(L / 4.0) + 1)
+        P = np.array([[x + (rx - x) * t, z + (rz - z) * t] for t in np.linspace(0.0, 1.0, k)])
+        Hh = H_at(P[:, 0], P[:, 1])
+        Hh[-1] = float(roads[owner[j]]["H"][min(j - sum(len(roads[q]["P"]) for q in range(owner[j])), len(roads[owner[j]]["H"]) - 1)])
+        roads.append({"id": "drive%d" % n, "name": "", "cls": "lane", "P": P, "H": np.asarray(Hh, float),
+                      "routed": False, "bridges": [], "tunnels": [], "water": np.zeros(len(P), bool)})
+        n += 1
+    return n
 
 
 def T_sample(A, P):

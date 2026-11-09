@@ -65,7 +65,23 @@ func _ready() -> void:
 				var bc := Vector3(b[1], b[8], b[2])
 				var bb := Basis(Vector3.UP, float(b[3]))
 				await _look("amid_%d" % n, bc + bb * Vector3(10, 45, -105), bc + Vector3(0, 6, 0))
+				await _look("amid_%d_top" % n, bc + bb * Vector3(0, 140, -60), bc + bb * Vector3(0, 0, -50))
+				await _look("amid_%d_side" % n, bc + bb * Vector3(-90, 20, -70), bc + bb * Vector3(0, 4, -40))
 				n += 1
+		var svc: AutoService = main.get_node("AutoService")
+		var m := 0
+		for sp in svc.spots:
+			if m >= 2:
+				break
+			var gp: Vector3 = sp["pos"]
+			if gp.distance_to(tc) > 3000.0:
+				continue
+			var s2: CarSession = main.get("car_session")
+			s2.player.teleport(gp + Vector3(0, 1, 16), 0.0)
+			await _sec(2.0)
+			await _look("service_%d_top" % m, gp + Vector3(0, 90, 30), gp + Vector3(0, 0, 8))
+			await _look("service_%d" % m, gp + Vector3(36, 12, 30), gp)
+			m += 1
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("city20"):
