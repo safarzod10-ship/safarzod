@@ -121,6 +121,11 @@ func _spawn_car(touch: CanvasLayer) -> void:
 var van: VehicleVan
 var boats: Array[VehicleBoat] = []
 var laklak: LakLakJob
+var camry: VehicleCar
+var lexus: VehicleCar
+var bus: VehicleCar
+var bus_job: BusJob
+var fuel: FuelService
 
 
 ## the LakLak delivery van at its depot, motorboats on the sea by the peninsula and on the lakes,
@@ -142,6 +147,46 @@ func _spawn_extra_vehicles() -> void:
 		van.place(xf.origin, xf.basis.get_euler().y)
 		laklak.van = van
 		car_session.add_vehicle(van)
+	# fuel for every vehicle: filling stations + delivery when the tank runs dry
+	fuel = FuelService.new()
+	fuel.name = "FuelService"
+	fuel.session = car_session
+	add_child(fuel)
+	# Toyota Camry + Lexus RX parked behind the Prado on the avenue (same physics, own tanks)
+	for spec in [["camry", Vector3(-49.0, 0.0, 2.0)], ["lexus", Vector3(-49.0, 0.0, 16.0)]]:
+		var c := VehicleCar.new()
+		c.configure(spec[0])
+		c.name = "Camry" if spec[0] == "camry" else "Lexus"
+		c.collision_layer = 1
+		c.collision_mask = 1
+		add_child(c)
+		await get_tree().physics_frame
+		c.place(spec[1], 0.0)
+		car_session.add_vehicle(c)
+		if spec[0] == "camry":
+			camry = c
+		else:
+			lexus = c
+	# city bus route №1: the job, the stops, the bus at the terminus
+	bus_job = BusJob.new()
+	bus_job.name = "BusJob"
+	bus_job.session = car_session
+	add_child(bus_job)
+	if not bus_job.stops.is_empty():
+		var shelter: Mesh = (open_world._props.get("bus_stop_shelter", {}) as Dictionary).get("lod0")
+		bus_job.build_stops(shelter)
+		bus = VehicleCar.new()
+		bus.configure("bus")
+		bus.name = "Bus"
+		bus.collision_layer = 1
+		bus.collision_mask = 1
+		add_child(bus)
+		await get_tree().physics_frame
+		var bxf := bus_job.bus_spawn()
+		open_world.preload_at(bxf.origin)
+		bus.place(bxf.origin, bxf.basis.get_euler().y)
+		bus_job.bus = bus
+		car_session.add_vehicle(bus)
 	var sp: Array = world.city.get("spawn", [0, 0.15, 0, 0])
 	for spot in boat_spots(Vector3(sp[0], 0, sp[2])):
 		var b := VehicleBoat.new()

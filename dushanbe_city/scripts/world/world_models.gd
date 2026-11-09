@@ -52,6 +52,12 @@ static func parts(key: String) -> Array:
 				p[1] = xf2
 		"laklak":
 			out = _extract("laklak_building.glb", func(_n: String) -> bool: return true, true)
+		"gas_station":
+			out = _extract("gas_station.glb", func(_n: String) -> bool: return true, false)
+		"school_m":
+			out = _extract("school.glb", func(_n: String) -> bool: return true, true, 25.0)
+		"hospital_m":
+			out = _extract("hospital.glb", func(_n: String) -> bool: return true, true)
 		"rp_lamp_a", "rp_lamp_b", "rp_lamp_c", "rp_bench":
 			var obj: String = {"rp_lamp_a": "Object_43", "rp_lamp_b": "Object_45", "rp_lamp_c": "Object_47", "rp_bench": "Object_5"}[key]
 			if key == "rp_bench":

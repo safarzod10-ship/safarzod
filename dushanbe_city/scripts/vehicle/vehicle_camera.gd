@@ -102,7 +102,8 @@ func _process(delta: float) -> void:
 		if hv.length() > 3.0 and car.forward_speed > 0.0:
 			heading = lerp_angle(heading, atan2(-v.x, -v.z), 0.35)
 		_yaw = lerp_angle(_yaw, heading, 1.0 - exp(-3.2 * delta))
-		var tgt := car.global_position + Vector3.UP * 1.5
+		var cs: float = car.cam_scale
+		var tgt := car.global_position + Vector3.UP * 1.5 * cs
 		_target = _target.lerp(tgt, 1.0 - exp(-14.0 * delta))
 		_target.y = lerpf(_target.y, tgt.y, 1.0 - exp(-5.0 * delta))
 		var sp := clampf(car.speed_kmh / 160.0, 0.0, 1.0)
@@ -110,7 +111,7 @@ func _process(delta: float) -> void:
 		var acc := (car.forward_speed - _prev_speed) / maxf(delta, 1e-3)
 		_prev_speed = car.forward_speed
 		_acc_pull = lerpf(_acc_pull, clampf(acc * 0.09, -0.5, 0.7), 1.0 - exp(-1.5 * delta))
-		_dist = lerpf(_dist, (8.0 if mode == Mode.ORBIT else 6.4) + sp * 2.4 + _acc_pull, 1.0 - exp(-2.0 * delta))
+		_dist = lerpf(_dist, ((8.0 if mode == Mode.ORBIT else 6.4) + sp * 2.4 + _acc_pull) * cs, 1.0 - exp(-2.0 * delta))
 		want_fov = 62.0 + sp * 8.0
 		_place(delta)
 	# blend from the previous camera after a mode switch

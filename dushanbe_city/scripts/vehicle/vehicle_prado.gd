@@ -64,6 +64,20 @@ var _wet_poll := 0.0
 @export var brake_force := 26000.0       ## total N at full pedal (ABS keeps it under the grip limit)
 @export var brake_front := 0.65
 @export var cd_a := 1.02                 ## drag area Cd*A (m^2): Cd 0.35 x 2.9 m^2
+@export_group("Size")
+@export var wheel_radius := 0.398        ## tyre radius (m): gearing, suspension contact, wheel spin
+@export var body_size := Vector3(1.885, 1.85, 4.83)   ## W, H, L (m): inertia
+@export var cam_scale := 1.0             ## chase camera distance / height factor (bus: larger)
+@export_group("Fuel")
+## fuel: every vehicle has its own tank; the engine stops when it is empty (CarSession / FuelService
+## offer fuel: 14 smn/l at a filling station, 18 smn/l delivered on the road)
+@export var tank_l := 80.0               ## Prado J150: 80 l (game; the real one 87 l)
+@export var consumption_l100 := 11.0     ## average l / 100 km (scaled by FUEL_GAME_MULT)
+@export var idle_lph := 0.9              ## l / h idling
+const FUEL_GAME_MULT := 8.0              ## the game world is ~40 km across: x8 so the tank matters
+signal out_of_fuel
+var fuel_l := 48.0
+var _fuel_empty_sent := false
 
 # --- state readable by UI / audio / camera / tests
 var throttle := 0.0
@@ -127,9 +141,9 @@ func _ready() -> void:
 	var cg_z := _wheel_z(true) + (1.0 - front_weight) * (_wheel_z(false) - _wheel_z(true))
 	center_of_mass = Vector3(0.0, _ground_y + cg_height, cg_z)
 	# principal inertia of a mass-weighted box (0.8: mass concentrated towards the centre)
-	var L := 4.83
-	var W := 1.885
-	var H := 1.85
+	var W := body_size.x
+	var H := body_size.y
+	var L := body_size.z
 	inertia = Vector3(mass / 12.0 * (H * H + L * L), mass / 12.0 * (W * W + L * L), mass / 12.0 * (W * W + H * H)) * 0.8
 	_setup_wheels()
 	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
@@ -253,7 +267,7 @@ func _setup_wheels() -> void:
 		var k: float = corner_m * pow(TAU * f, 2.0)
 		wheels.append({
 			"node": dummy, "mesh": mesh, "mesh_rest": mesh.transform, "rest": dummy.transform,
-			"front": front, "left": names[n][1], "hub": hub, "radius": 0.398,
+			"front": front, "left": names[n][1], "hub": hub, "radius": wheel_radius,
 			"static_load": load_n, "k": k, "c": 2.0 * damping_ratio * sqrt(k * corner_m),
 			"offset": 0.0, "offset_vel": 0.0, "contact": false, "normal": Vector3.UP, "load": 0.0,
 			"spin": 0.0, "omega": 0.0, "steer": 0.0, "slide": 0.0, "slip_lat": 0.0, "slip_long": 0.0,
@@ -270,6 +284,7 @@ func _wheel_z(front: bool) -> float:
 # ------------------------------------------------------------------------------------------- physics
 func _physics_process(delta: float) -> void:
 	_read_input(delta)
+	_burn_fuel(delta)
 	_hit_cooldown = maxf(0.0, _hit_cooldown - delta)
 	# parked far from the camera: frozen (static) so it neither falls through unloaded ground nor
 	# keeps open-world sectors loaded around it; wakes up when the camera comes within 300 m
@@ -283,6 +298,27 @@ func _physics_process(delta: float) -> void:
 
 
 var _far_t := 0.0
+
+
+## fuel use while the engine runs (driven): per metre (more under load) + idling
+func _burn_fuel(delta: float) -> void:
+	if not (driven or scripted_here()) or fuel_l <= 0.0:
+		return
+	var per_m := consumption_l100 / 100000.0 * (0.55 + 0.9 * engine_load)
+	var used := (absf(forward_speed) * delta * per_m + idle_lph / 3600.0 * delta) * FUEL_GAME_MULT
+	fuel_l = maxf(0.0, fuel_l - used)
+	if fuel_l <= 0.0 and not _fuel_empty_sent:
+		_fuel_empty_sent = true
+		out_of_fuel.emit()
+
+
+## add fuel (litres, clamped to the tank); returns the litres actually added
+func refuel(litres: float) -> float:
+	var add := clampf(litres, 0.0, tank_l - fuel_l)
+	fuel_l += add
+	if fuel_l > 0.05:
+		_fuel_empty_sent = false
+	return add
 
 
 ## does the scripted (test) input drive this vehicle? the driven one, else the primary one (Prado)
@@ -308,7 +344,7 @@ func _read_input(delta: float) -> void:
 	var s := 0.0
 	var hb := false
 	if driven or scripted_here():
-		t = VehicleInput.throttle()
+		t = VehicleInput.throttle() if fuel_l > 0.0 else 0.0       # empty tank: the gas pedal does nothing
 		b = VehicleInput.brake()
 		s = VehicleInput.steer()
 		hb = VehicleInput.handbrake()
@@ -423,7 +459,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		arb[front] = (l - r) * (arb_front if front else arb_rear)
 
 	# ---- engine / gearbox
-	var wheel_omega := absf(forward_speed) / 0.398
+	var wheel_omega := absf(forward_speed) / wheel_radius
 	_update_gearbox(dt, wheel_omega)
 	var ratio := (gears[gear - 1] if gear >= 1 else (reverse_ratio if gear == -1 else 0.0)) * final_drive
 	var eng_omega := maxf(wheel_omega * ratio, 800.0 * TAU / 60.0)
@@ -451,17 +487,17 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	if rpm > 4400.0:
 		torque = 0.0                           # fuel cut (rev limiter)
 	var limit: float = (top_speed_kmh if gear >= 1 else 25.0) * float(dmg["vmax"]) / MPS_TO_KMH
-	var drive_total: float = torque * converter * ratio * 0.90 / 0.398 * throttle
+	var drive_total: float = torque * converter * ratio * 0.90 / wheel_radius * throttle
 	# rotating inertia (engine + converter ~0.3 kg m^2 through the gearbox, 4 wheels 1.2 kg m^2 each):
 	# the same torque accelerates the car less in low gears (equivalent mass +17 % in 1st)
-	drive_total /= 1.0 + (0.3 * ratio * ratio + 4.8) / (0.398 * 0.398 * mass)
+	drive_total /= 1.0 + (0.3 * ratio * ratio + 4.8) / (wheel_radius * wheel_radius * mass)
 	if absf(forward_speed) > limit:
 		drive_total = 0.0
 	drive_total *= signf(ratio) if gear >= 1 else -1.0
 	# engine braking: pumping + friction torque of the diesel through the gearbox when lifting off
 	# (~30 N m at idle .. ~90 N m at 4000 rpm), only while the converter is coupled
 	if throttle < 0.05 and gear != 0 and absf(forward_speed) > 1.0:
-		var fric := (30.0 + 0.017 * maxf(rpm - 800.0, 0.0)) * absf(ratio) * 0.9 / 0.398 * coupled
+		var fric := (30.0 + 0.017 * maxf(rpm - 800.0, 0.0)) * absf(ratio) * 0.9 / wheel_radius * coupled
 		drive_total -= signf(forward_speed) * fric * (1.0 - throttle * 20.0)
 	engine_brake_force = absf(drive_total) if throttle < 0.05 else 0.0
 	engine_load = throttle * (0.0 if absf(forward_speed) > limit or rpm > 4400.0 else 1.0)

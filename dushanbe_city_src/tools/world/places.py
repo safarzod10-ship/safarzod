@@ -78,6 +78,9 @@ def build(roads, H, H_at, F, avoid=()):
 
     buildings = []
 
+    def free_fuel(x, z, L, D, yaw):
+        return free(x, z, L, D, yaw, 1.5)
+
     def add(kind, x, z, yaw, L, D, floors):
         y = float(H_at([x], [z])[0])
         buildings.append([kind, round(x, 2), round(z, 2), round(yaw, 4), round(L, 1), round(D, 1), int(floors), int(RNG.integers(0, 1 << 20)), round(y, 2)])
@@ -105,6 +108,32 @@ def build(roads, H, H_at, F, avoid=()):
                 perimeter_block(addw, freew, a, b, c, d, tall=abs(cx) < 700)
             else:
                 micro_block(addw, freew, a, b, c, d)
+    # model buildings (assets/models/extra): schools (65 x 55 m) and hospitals (31 x 18.5 m) on free
+    # city ground, turned along the nearest street, never overlapping other buildings
+    def place_models(kind, L, D, count):
+        bt = cKDTree(np.array([[b[1], b[2]] for b in buildings]))
+        br = [math.hypot(b[4], b[5]) / 2 for b in buildings]
+        placed = 0
+        for attempt in range(4000):
+            if placed >= count:
+                break
+            x = float(RNG.uniform(-1800, 1800)); z = float(RNG.uniform(-4500, -1150))
+            d, i = rtree.query((x, z))
+            q = road_pts[min(i + 1, len(road_pts) - 1)] - road_pts[max(i - 1, 0)]
+            yaw = math.atan2(-q[1], q[0]) if np.hypot(*q) > 1e-6 else 0.0
+            if d > road_hw[i] + D / 2 + 30 or not free(x, z, L + 8, D + 8, yaw, 4.0):
+                continue
+            R = math.hypot(L, D) / 2
+            if any(math.hypot(x - bt.data[j][0], z - bt.data[j][1]) < R + br[j] + 3 for j in bt.query_ball_point((x, z), R + 60)):
+                continue
+            add(kind, x, z, yaw, L, D, 3)
+            bt = cKDTree(np.array([[b[1], b[2]] for b in buildings]))
+            br.append(R)
+            placed += 1
+        return placed
+    ns = place_models("school_m", 65.0, 55.0, 6)
+    nh = place_models("hospital_m", 31.0, 18.5, 4)
+    print("model schools %d, hospitals %d" % (ns, nh))
     n_city = len(buildings)
 
     # ---------------------------------------------------------------- villages / towns / resorts
@@ -130,20 +159,7 @@ def build(roads, H, H_at, F, avoid=()):
                 if d < road_hw[i] + 1.0:
                     raise SystemExit("landmark %s overlaps a road at (%.0f, %.0f)" % (lid, px, pz))
         landmarks.append({"id": lid, "name": nm, "x": x, "z": z, "yaw": yaw, "L": L, "D": D, "y": round(float(H_at([x], [z])[0]), 2)})
-    fuel = []
-    by_id = {r["id"]: r for r in roads}
-    for fid, rid, x, z in FUEL:
-        r = by_id[rid]
-        if fid == "fuel_v":
-            k = len(r["P"]) // 3
-        else:
-            k = int(np.argmin(np.hypot(r["P"][:, 0] - x, r["P"][:, 1] - z)))
-        p = r["P"][k]; q = r["P"][min(k + 3, len(r["P"]) - 1)]
-        dx, dz = q - p; L = math.hypot(dx, dz); nx, nz = dz / L, -dx / L
-        off = NW.CLASSES[r["cls"]]["w"] / 2 + 22.0
-        fx, fz = p[0] + nx * off, p[1] + nz * off
-        fuel.append({"id": fid, "x": round(fx, 2), "z": round(fz, 2), "yaw": round(math.atan2(dx, dz), 4), "y": round(float(H_at([fx], [fz])[0]), 2),
-                     "road": rid})
+    fuel = fuel_stations(roads, buildings, landmarks, H_at, free_fuel)
     signs = make_signs(roads, H_at)
     kms = make_kmposts(roads, H_at)
     places = [{"id": p[0], "name": p[1], "kind": p[2], "x": p[3], "z": p[4], "r": p[5]} for p in NW.PLACES]
@@ -484,3 +500,62 @@ def write_map(W, H, splat, biome, road_mask, path, px=4096):
         d.line(pts, fill=(60, 60, 60), width=wpx + 2)
         d.line(pts, fill=col, width=wpx)
     im.save(path)
+
+
+def fuel_stations(roads, buildings, landmarks, H_at, free_fn, every=2800.0):
+    """filling stations along every road (model assets/models/extra/gas_station.glb): one every ~3.2 km
+    of road, alternating sides, beside the road (the model's +X - pumps, canopy, price sign - faces
+    the road), on level free ground, never closer than 900 m to another station"""
+    from scipy.spatial import cKDTree
+    bld = cKDTree(np.array([[b[1], b[2]] for b in buildings])) if buildings else None
+    bR = [math.hypot(b[4], b[5]) / 2 for b in buildings]
+    out = []
+    for r in roads:
+        if r["cls"] in ("lane", "dirt"):
+            continue
+        P = r["P"]; Hh = r["H"]
+        hw = NW.CLASSES[r["cls"]]["w"] / 2
+        S = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(P, axis=0).T))])
+        bad = np.zeros(len(P), bool)
+        for a, b in r["bridges"] + r["tunnels"]:
+            bad[max(a - 10, 0):b + 11] = True
+        n = int((S[-1] - 1200.0) // every) + 1
+        for m in range(n):
+            placed = False
+            for shift in (0, 150, -150, 300, -300, 450, -450, 600, -600, 750, -750, 900, -900, 1050, -1050):
+                target = 1200.0 + m * every + shift
+                if target < 60 or target > S[-1] - 60:
+                    continue
+                k = int(np.searchsorted(S, target))
+                if bad[max(k - 8, 0):k + 8].any():
+                    continue
+                d = P[min(k + 2, len(P) - 1)] - P[max(k - 2, 0)]
+                d = d / max(np.linalg.norm(d), 1e-6)
+                for side in ((1, -1) if (m + len(out)) % 2 == 0 else (-1, 1)):
+                    nx, nz = -d[1] * side, d[0] * side          # away from the road
+                    off = hw + 21.0
+                    ox, oz = P[k][0] + nx * off, P[k][1] + nz * off
+                    yaw = math.atan2(nz, -nx)                  # model +X -> towards the road (-n)
+                    cs, sn = math.cos(yaw), math.sin(yaw)
+                    # plot centre (model local 2.5, 1.5): store at -12, price sign at +17.5 (2 m from the road edge)
+                    px = ox + 2.5 * cs + 1.5 * sn; pz = oz - 2.5 * sn + 1.5 * cs
+                    if any(math.hypot(px - f["x"], pz - f["z"]) < 700.0 for f in out):
+                        continue
+                    hs = H_at(np.array([px - 16, px + 16, px, px, px]), np.array([pz, pz, pz - 11, pz + 11, pz]))
+                    if hs.max() - hs.min() > 6.0 or abs(float(H_at([ox], [oz])[0]) - Hh[k]) > 3.5:
+                        continue
+                    if not free_fn(px, pz, 30.0, 22.0, yaw):
+                        continue
+                    if bld is not None and any(math.hypot(px - bld.data[j][0], pz - bld.data[j][1]) < 22 + bR[j] for j in bld.query_ball_point((px, pz), 80)):
+                        continue
+                    if any(abs(px - l["x"]) < l["L"] / 2 + 20 and abs(pz - l["z"]) < l["D"] / 2 + 20 for l in landmarks):
+                        continue
+                    y = float(Hh[k] - 0.1)
+                    out.append({"id": "fuel%d" % len(out), "x": round(px, 2), "z": round(pz, 2), "ox": round(ox, 2), "oz": round(oz, 2),
+                                "y": round(y, 2), "yaw": round(yaw, 4), "road": r["id"]})
+                    placed = True
+                    break
+                if placed:
+                    break
+    print("filling stations: %d" % len(out))
+    return out

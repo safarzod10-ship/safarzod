@@ -17,6 +17,25 @@ the glTF `asset.extras` of the file. The files are in `assets/models/extra/`.
 | `skyscraper.glb` | Skyscraper | Jampre (sketchfab.com/jampre) | CC-BY 4.0 | https://sketchfab.com/3d-models/skyscraper-a5dfa1cfd4564bbeb0bd335ef8b9a333 |
 | `houses_lowpoly.glb` | Low-poly Houses Free | Nicholas-3D (sketchfab.com/Nicholas01) | CC-BY 4.0 | https://sketchfab.com/3d-models/low-poly-houses-free-afc6e8745a4542cba687104cf90d309d |
 
+### Stage 8
+
+| File in the game | Title | Author | Licence | Source |
+|---|---|---|---|---|
+| `camry.glb` | Toyota Camry 2020 | ItsDiyor (sketchfab.com/ItsDiyor) | CC-BY 4.0 | https://sketchfab.com/3d-models/toyota-camry-2020-236a5a6e2fa6420fbdf641f4800cd544 |
+| `gas_station.glb` | Lowpoly Gas Station | AspectStudios (sketchfab.com/AspectStudio) | CC-BY 4.0 | https://sketchfab.com/3d-models/lowpoly-gas-station-02a11319cb744999adddd7236a46bf8e |
+| `school.glb` | school building | swjeta (sketchfab.com/swjeta) | CC-BY 4.0 | https://sketchfab.com/3d-models/school-building-d34ac09a3ca544df999485c4b311abcc |
+| `hospital.glb` | Jejungwon Hospital | Gwangju Arts & Culture Humanities Story Platform (sketchfab.com/gwangju_inmunstory) | CC-BY 4.0 | https://sketchfab.com/3d-models/jejungwon-hospital-0a2e305f66154fe2bb7e075e82ed3cf0 |
+| `lexus_rx.glb` | 2022 Lexus RX 350 | ActsOfDoge (sketchfab.com/ActsOfDoge) | **Sketchfab Standard** (not CC) | https://sketchfab.com/3d-models/2022-lexus-rx-350-4493802f0abd4b0b8c401f17b57633b2 |
+| `city_bus.glb` | city bus | not stated in the file (supplied by the project owner) | **unknown** | — |
+
+**Licence notes for the owner:**
+
+- **Lexus RX 350.** The Sketchfab Standard licence allows use inside a game, for whoever downloaded
+  the model under that licence. It does not allow redistributing the model file on its own. If this
+  repository or the raw `.glb` is public, keep that in mind.
+- **City bus.** The file carries no author or licence information. Please confirm where it comes
+  from before a public release.
+
 ## Changes made to the models
 
 - **Delivery van:**
@@ -30,6 +49,9 @@ the glTF `asset.extras` of the file. The files are in `assets/models/extra/`.
 - **Flag:** the cloth waves via a vertex shader, and the model is scaled ×20 (a 150 m flagpole).
 - **Road pack:** the street lamps and the bench are used at ×3.2 scale.
 - **Factory building:** used as the LakLak depot, with a sign drawn for the game.
+- **Camry:** the wheels were cut out of the body mesh at runtime, so they can spin and steer.
+- **Bus:** its 829 parts are merged per material, and the wheels are given pivot nodes.
+- **School:** scaled ×25 to real size (≈65 × 55 × 12 m).
 
 The LakLak logo on the van and the depot sign were made for this project.
 

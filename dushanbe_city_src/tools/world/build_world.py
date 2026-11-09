@@ -159,7 +159,8 @@ def main():
     def water_ok(x, z):
         i = int(np.clip(round((x - T.X0) / T.STEP), 0, T.N - 1)); j = int(np.clip(round((z - T.Z0) / T.STEP), 0, T.N - 1))
         return water_all[j, i] > 30.0 and F["lake_d"][j, i] > 1.3 and F["kom_d"][j, i] > 1.35
-    world["billboards"] = FU.billboards(roads, world["buildings"], world["landmarks"], lambda xs, zs: H_at(xs, zs, H), water_ok)
+    avoid_lm = world["landmarks"] + [{"x": fs["x"], "z": fs["z"], "L": 44.0, "D": 36.0} for fs in world["fuel"]]
+    world["billboards"] = FU.billboards(roads, world["buildings"], avoid_lm, lambda xs, zs: H_at(xs, zs, H), water_ok)
     world["guardrails"] = FU.guardrails(roads, lambda xs, zs: H_at(xs, zs, H))
     world["fillets"] = fillets
     world["crossings"] = crossings

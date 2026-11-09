@@ -88,14 +88,18 @@ func _process(delta: float) -> void:
 			complete()
 		_beacon.visible = true
 		_beacon.global_position = dest
-		Minimap.target = dest
+		if in_van or Minimap.target_owner == null or Minimap.target_owner == self:
+			Minimap.target = dest
+			Minimap.target_owner = self
 	else:
 		_beacon.visible = false
-		Minimap.target = Vector3.INF
+		if Minimap.target_owner == self or Minimap.target_owner == null:
+			Minimap.target = Vector3.INF
+			Minimap.target_owner = null
 		if Wallet.laklak_hired:
 			_job.text = "LakLak · садитесь в синий фургон" if not in_van else "LakLak · новый заказ…"
 		else:
-			_job.text = "Работа: склад LakLak (пр. Айни) — устройтесь курьером" if not depot.is_empty() else ""
+			_job.text = "Работа: склад LakLak (пр. Айни) — устройтесь курьером" if not depot.is_empty() and not (session and session.driving) else ""
 	_job.visible = _job.text != ""
 
 

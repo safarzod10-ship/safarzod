@@ -21,7 +21,7 @@ PASS 22. camera at a wall: pulled in to 0.54 m (normal 3.6), view not through th
 PASS 23. multitouch: walking (moved 0.75 m) + camera swipe (57 deg) + JUMP (true) at the same time
 PASS 16. into the water: shallow true -> medium true (slowed to 0.78 m/s) -> swimming true, splashes true
 PASS 17. swimming: state 'swim', turns while swimming (27 deg), rides the waves (±0.00 m), camera above water (0.44 > -1.60)
-PASS 18. back out of the water: mode 0 (0 dry), on floor true, no teleport (max 0.02 m/frame)
+PASS 18. back out of the water: mode 0 (0 dry), on floor true, no teleport (max 0.03 m/frame)
 PASS 26. footsteps by surface on real foot contact: asphalt:asphalt 4 steps/3 s (idle 0, y 2.12), grass:grass 4 steps/3 s (idle 0, y 0.70), sand:sand 4 steps/3 s (idle 0, y -0.23)
 PASS 19. get in: ACTION label «СЕСТЬ», walked to the door, door anim true, sit-down anim true, driving true after 2.8 s, no jump through the body (max 0.04 m/frame)
 PASS 20. get out: car stopped, get-up anim true, on foot beside the door (1.4 m), on floor true, not inside the car/wall (0 overlaps), walker camera true

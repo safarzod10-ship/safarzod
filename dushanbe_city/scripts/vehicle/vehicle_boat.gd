@@ -28,6 +28,10 @@ func _init() -> void:
 	vehicle_mass = 820.0
 	cg_height = 0.0               ## centre of mass at the waterline - 0.22 m (stable)
 	top_speed_kmh = 62.0
+	tank_l = 40.0
+	consumption_l100 = 26.0
+	idle_lph = 1.5
+	fuel_l = 28.0
 
 
 func _ready() -> void:
@@ -189,8 +193,9 @@ func _read_input(delta: float) -> void:
 		brake = 0.0
 		steer = move_toward(steer, 0.0, delta * 3.0)
 		return
-	throttle = move_toward(throttle, VehicleInput.throttle(), delta * 2.0)
-	brake = move_toward(brake, VehicleInput.brake(), delta * 2.0)
+	var has_fuel := fuel_l > 0.0
+	throttle = move_toward(throttle, VehicleInput.throttle() if has_fuel else 0.0, delta * 2.0)
+	brake = move_toward(brake, VehicleInput.brake() if has_fuel else 0.0, delta * 2.0)
 	steer = move_toward(steer, VehicleInput.steer(), delta * 2.5)
 
 

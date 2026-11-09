@@ -1,0 +1,4 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://scripts/testing/stage8_video.gd" id="1"]
+[node name="Stage8Video" type="Node"]
+script = ExtResource("1")

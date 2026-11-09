@@ -669,8 +669,7 @@ func _items(node: Node3D, items: Array, lod: int) -> void:
 			"km":
 				_kmpost(node, p, float(d["yaw"]), int(d["km"]))
 			"fuel":
-				if lod == 0:
-					_fuel(node, p, float(d["yaw"]))
+				_fuel_station(node, d, lod)
 			"landmark":
 				WorldLandmarks.build(node, d, lod)
 			"billboard":
@@ -826,6 +825,40 @@ func _fuel(node: Node3D, p: Vector3, yaw: float) -> void:
 	cs2.shape = b2
 	cs2.position = Vector3(0, 1.8, 12)
 	body.add_child(cs2)
+
+
+## filling station (Lowpoly Gas Station, AspectStudios, CC-BY 4.0): the model's +X (pumps, canopy,
+## price sign) faces the road; shop + sign collide; FuelService finds it by the group "fuel_station"
+func _fuel_station(node: Node3D, d: Dictionary, lod: int) -> void:
+	var o := Vector3(float(d.get("ox", d["x"])), float(d["y"]), float(d.get("oz", d["z"])))
+	var xf := Transform3D(Basis(Vector3.UP, float(d["yaw"])), o)
+	var root := WorldModels.place(node, "gas_station", xf, 1200.0, lod == 0)
+	root.name = "FuelStation"
+	root.add_to_group(&"fuel_station")
+	root.set_meta("pump", xf * Vector3(7.5, 0.0, 0.3))
+	var body := StaticBody3D.new()
+	body.name = "FuelStationBody"
+	root.add_child(body)
+	for spec in [[Vector3(-6.0, 2.8, 0.4), Vector3(12.2, 5.6, 17.4)], [Vector3(17.7, 3.3, -5.9), Vector3(1.0, 6.7, 1.0)]]:
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = spec[1]
+		cs.shape = bs
+		cs.position = spec[0]
+		body.add_child(cs)
+	# price board, both faces: AI-92 14 smn / l
+	for side: float in [1.0, -1.0]:
+		var lb := Label3D.new()
+		lb.text = "АЗС\nАИ-92  14 смн/л"
+		lb.font = _sign_font
+		lb.font_size = 72
+		lb.pixel_size = 0.012
+		lb.modulate = Color(1.0, 0.95, 0.4)
+		lb.outline_size = 10
+		lb.outline_modulate = Color(0.05, 0.2, 0.1)
+		lb.position = Vector3(18.4 if side > 0 else 17.0, 5.6, 0.2)
+		lb.rotation.y = PI * 0.5 if side > 0 else -PI * 0.5
+		root.add_child(lb)
 
 
 func _street_lamp(node: Node3D, p: Vector3) -> void:

@@ -714,14 +714,14 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 		var floors := int(b[6])
 		var seed := int(b[7])
 		var y := float(b[8])
-		if kind == "sky" or kind.begins_with("villa"):
+		if kind == "sky" or kind.begins_with("villa") or kind.ends_with("_m"):
 			# imported models (WorldModels): transform + collision box (+ occluder for the tower)
 			var sc2 := 1.0 if kind != "sky" else 0.85 + float(seed % 7) * 0.05
 			var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * sc2), Vector3(x, y - 0.3, z))
 			if not models.has(kind):
 				models[kind] = []
 			models[kind].append(xf)
-			var hh := 114.0 * sc2 if kind == "sky" else 11.0
+			var hh: float = 114.0 * sc2 if kind == "sky" else {"school_m": 11.5, "hospital_m": 12.3}.get(kind, 11.0)
 			var fw := 22.0 * sc2 if kind == "sky" else L
 			var fd := 22.0 * sc2 if kind == "sky" else D
 			boxes.append([Vector3(x, y + hh * 0.5, z), Vector3(fw, hh, fd), yaw])

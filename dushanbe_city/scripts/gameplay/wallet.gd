@@ -3,8 +3,9 @@ extends RefCounted
 ## The player's money (somoni, «смн») and the LakLak job record, saved in user://save_game.json.
 
 const PATH := "user://save_game.json"
-static var money := 0
+static var money := 500                 ## a new game starts with 500 smn (fuel, until the first job)
 static var laklak_hired := false
+static var bus_hired := false
 static var deliveries := 0
 static var earned_total := 0
 static var _loaded := false
@@ -19,8 +20,9 @@ static func load_state() -> void:
 		return
 	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(PATH))
 	if d is Dictionary:
-		money = int(d.get("money", 0))
+		money = int(d.get("money", 500))
 		laklak_hired = bool(d.get("laklak_hired", false))
+		bus_hired = bool(d.get("bus_hired", false))
 		deliveries = int(d.get("deliveries", 0))
 		earned_total = int(d.get("earned_total", 0))
 
@@ -30,7 +32,7 @@ static func save_state() -> void:
 		return
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "deliveries": deliveries, "earned_total": earned_total}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total}))
 
 
 static func earn(amount: int) -> void:

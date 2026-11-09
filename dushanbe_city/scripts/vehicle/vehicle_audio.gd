@@ -140,10 +140,10 @@ func _process(delta: float) -> void:
 		return
 	_skid_cd = maxf(0.0, _skid_cd - delta)
 	_bump_cd = maxf(0.0, _bump_cd - delta)
-	if car.driven and not running:
+	if car.driven and not running and car.fuel_l > 0.0:
 		start_engine()
-	elif not car.driven and running:
-		stop_engine()
+	elif (not car.driven or car.fuel_l <= 0.0) and running:
+		stop_engine()                              # also: the tank ran dry
 	# cabin: closed doors / glass / insulation: low-pass + about -9 dB (the listener sits at the engine
 	# instead of 6 m away, so without this the cabin would be louder than outside)
 	# the shared "Vehicle" bus is set by the vehicle being driven only (parked vans / boats never

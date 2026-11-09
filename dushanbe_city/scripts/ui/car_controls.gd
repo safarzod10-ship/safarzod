@@ -266,3 +266,10 @@ func _speedometer(c: Vector2, rad: float) -> void:
 	var hcol := Color(0.3, 0.85, 0.35).lerp(Color(0.95, 0.25, 0.2), 1.0 - car.health / 100.0)
 	draw_rect(Rect2(br.position, Vector2(bw * car.health / 100.0, br.size.y)), hcol)
 	_text("состояние %d%%" % roundi(car.health), c + Vector2(0, rad * 0.38), int(rad * 0.16))
+	# fuel: bar + litres (red under 15 %), under the speedometer
+	var fr := clampf(car.fuel_l / maxf(car.tank_l, 1.0), 0.0, 1.0)
+	var fb := Rect2(c.x - bw * 0.5, c.y + rad * 1.12, bw, rad * 0.12)
+	draw_rect(fb.grow(2.0), Color(0, 0, 0, 0.55))
+	var fcol := Color(0.95, 0.2, 0.15) if fr < 0.15 else (Color(1.0, 0.75, 0.15) if fr < 0.3 else Color(0.25, 0.75, 1.0))
+	draw_rect(Rect2(fb.position, Vector2(bw * fr, fb.size.y)), fcol)
+	_text("топливо %.0f / %.0f л" % [car.fuel_l, car.tank_l], c + Vector2(0, rad * 0.97), int(rad * 0.16))

@@ -172,7 +172,7 @@ func _drive_pts(v: VehiclePrado, route: Array, near: Vector3, secs: float, vmax:
 	var a: Vector3 = route[k]
 	var b: Vector3 = route[k + 3]
 	var dir := (b - a).normalized()
-	var start := a + dir.cross(Vector3.UP) * -2.0
+	var start := a + dir.cross(Vector3.UP) * 3.0             # right-hand traffic: the right lane
 	await _wait(start)
 	if not s.driving or s.car != v:
 		if s.driving:
@@ -204,7 +204,7 @@ func _drive_pts(v: VehiclePrado, route: Array, near: Vector3, secs: float, vmax:
 			tgt += 1
 		var tp: Vector3 = route[tgt]
 		var rd := ((route[mini(tgt + 1, route.size() - 1)] as Vector3) - tp).normalized()
-		tp += rd.cross(Vector3.UP) * -2.0
+		tp += rd.cross(Vector3.UP) * 3.0
 		var to := tp - pos
 		var ang := atan2(to.dot(v.global_transform.basis.x), to.dot(-v.global_transform.basis.z))
 		var err := vmax - v.speed_kmh

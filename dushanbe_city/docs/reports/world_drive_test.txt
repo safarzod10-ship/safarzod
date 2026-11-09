@@ -2,7 +2,7 @@ PASS route: 12 legs, 37.6 km, continuous (gaps > 12 m between consecutive points
 PASS journey completed: 37.4 km driven in 67 min (game time), route progress 9249 / 9252 points, max 67 km/h
     autopilot recoveries (backing up after touching a wall / kerb): 0
 PASS no teleport: 0 frames with a position jump (max excess 0.00 m per frame)
-PASS stayed on the roads: 0 of 239766 frames off the road surface (> 3 m beyond the edge), max 0.4 m
+PASS stayed on the roads: 0 of 239774 frames off the road surface (> 3 m beyond the edge), max 0.4 m
 PASS never fell through the ground: 0 frames below the terrain
 PASS streaming kept up: 0 frames without loaded collision under the car
 PASS regions crossed without borders / loading screens: ["Душанбе (полуостров)", "Душанбе", "Сельская местность", "Зона отдыха «Чормағзак»", "Турбаза «Варзоб»", "Варзоб", "Горы", "Перевал Анзоб", "Озеро Искандар", "Ханака", "Гиссар"]

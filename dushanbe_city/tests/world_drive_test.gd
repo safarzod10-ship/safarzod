@@ -204,6 +204,7 @@ func _drive() -> void:
 	car.place(Vector3(route[0].x, 0.0, route[0].z), 0.0)
 	s.player.teleport(car.driver_door_point(1.0), 0.0)
 	await _sec(1.0)
+	car.fuel_l = car.tank_l          # a full tank for the 38 km journey (fuel is tested in stage 8)
 	s.enter()
 	await _sec(1.0)
 	var idx := 0

@@ -28,6 +28,10 @@ func _init() -> void:
 	front_split = 0.0
 	brake_force = 23000.0
 	cd_a = 1.55
+	tank_l = 70.0
+	consumption_l100 = 11.5
+	fuel_l = 42.0
+	body_size = Vector3(2.25, 2.5, 5.26)
 
 
 func _build_model() -> void:
