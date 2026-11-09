@@ -174,6 +174,11 @@ func _draw_map() -> void:
 				var m: Array = pts[pts.size() / 2]
 				_label(w2s(m[0], m[2]) + Vector2(0, 14), str(r["name"]), 13, Color(1.0, 0.95, 0.75))
 	_label(w2s(0, -150), "Душанбе (центр, набережная)", 20, Color.WHITE)
+	if Minimap.target != Vector3.INF:
+		var tp := w2s(Minimap.target.x, Minimap.target.z)
+		_canvas.draw_circle(tp, 13, Color(0.05, 0.05, 0.05, 0.85))
+		_canvas.draw_circle(tp, 10, Color(1.0, 0.6, 0.1))
+		_label(tp + Vector2(0, -24), "LakLak: доставка", 16, Color(1.0, 0.8, 0.4))
 	# player / car marker + north arrow
 	var pp := _player_pos()
 	var sp2 := w2s(pp.x, pp.z)

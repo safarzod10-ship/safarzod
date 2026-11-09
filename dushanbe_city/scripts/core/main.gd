@@ -101,6 +101,7 @@ var car_session: CarSession
 func _spawn_car(touch: CanvasLayer) -> void:
 	car = (load("res://scenes/vehicles/prado.tscn") as PackedScene).instantiate()
 	car.name = "Prado"
+	car.add_to_group(&"primary_vehicle")
 	add_child(car)
 	await get_tree().physics_frame
 	car.place(CAR_SPAWN, 0.0)
@@ -110,7 +111,84 @@ func _spawn_car(touch: CanvasLayer) -> void:
 	car_session.car = car
 	car_session.walk_touch = touch
 	add_child(car_session)
+	_spawn_extra_vehicles()
 	if OS.get_cmdline_user_args().has("drive"):
 		await get_tree().physics_frame
 		player.teleport(car.driver_door_point(1.0), 0.0)
 		car_session.enter()
+
+
+var van: VehicleVan
+var boats: Array[VehicleBoat] = []
+var laklak: LakLakJob
+
+
+## the LakLak delivery van at its depot, motorboats on the sea by the peninsula and on the lakes,
+## and the LakLak delivery job
+func _spawn_extra_vehicles() -> void:
+	laklak = LakLakJob.new()
+	laklak.name = "LakLakJob"
+	laklak.session = car_session
+	add_child(laklak)
+	if not laklak.depot.is_empty():
+		van = VehicleVan.new()
+		van.name = "LakLakVan"
+		van.collision_layer = 1
+		van.collision_mask = 1
+		add_child(van)
+		await get_tree().physics_frame
+		var xf := laklak.van_spawn()
+		open_world.preload_at(xf.origin)
+		van.place(xf.origin, xf.basis.get_euler().y)
+		laklak.van = van
+		car_session.add_vehicle(van)
+	var sp: Array = world.city.get("spawn", [0, 0.15, 0, 0])
+	for spot in boat_spots(Vector3(sp[0], 0, sp[2])):
+		var b := VehicleBoat.new()
+		b.name = "Boat%d" % boats.size()
+		b.collision_layer = 1
+		b.collision_mask = 1
+		add_child(b)
+		await get_tree().physics_frame
+		b.place(spot[0], spot[1])
+		boats.append(b)
+		car_session.add_vehicle(b)
+
+
+## where the boats wait: the sea nearest to the spawn (>= 1.6 m deep, close to the shore), the lake
+## Iskandar by its western road, the Komsomol lake in the city
+func boat_spots(near: Vector3) -> Array:
+	var out: Array = []
+	var found := false
+	for r in range(60, 1800, 20):
+		for k in 48:
+			var a := TAU * k / 48.0
+			var p := near + Vector3(cos(a), 0, sin(a)) * r
+			var g := world.terrain_height(p.x, p.z)
+			if g > PlayerWater.SEA_LEVEL - 3.0 or is_nan(VehicleBoat.water_level_at(p.x, p.z)):
+				continue
+			# bow towards deeper water (down the seabed slope), 120 m of open water ahead
+			var gx := world.terrain_height(p.x + 4.0, p.z) - world.terrain_height(p.x - 4.0, p.z)
+			var gz := world.terrain_height(p.x, p.z + 4.0) - world.terrain_height(p.x, p.z - 4.0)
+			var dir := Vector3(-gx, 0, -gz).normalized() if Vector2(gx, gz).length() > 0.001 else Vector3(cos(a), 0, sin(a))
+			var clear := true
+			for s2 in range(10, 130, 10):
+				var q := p + dir * s2
+				if world.terrain_height(q.x, q.z) > PlayerWater.SEA_LEVEL - 2.0:
+					clear = false
+					break
+			if not clear:
+				continue
+			out.append([p, atan2(-dir.x, -dir.z)])
+			found = true
+			break
+		if found:
+			break
+	var wd := WorldData.get_instance()
+	if wd.ok:
+		for lk in wd.lakes:
+			var c := Vector3(lk["c"][0], 0, lk["c"][1])
+			var p2 := c if lk["id"] == "komsomol" else c + Vector3(-float(lk["r"][0]) * 0.72, 0, 0)
+			if not is_nan(VehicleBoat.water_level_at(p2.x, p2.z)):
+				out.append([p2, PI * 0.5])
+	return out

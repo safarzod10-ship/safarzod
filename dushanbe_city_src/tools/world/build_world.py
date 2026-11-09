@@ -23,6 +23,7 @@ import terrain as T
 import roads as R
 import network as NW
 import places as PL
+import furniture as FU
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 GAME = os.path.join(ROOT, "dushanbe_city")
@@ -57,9 +58,14 @@ def main():
     log("router ready")
     roads = []
     for rid, nm, cls, wps in NW.GRID:
-        P = T.resample(wps, 4.0)
+        P = T.resample(wps, 2.0)
+        if rid not in ("ring", "rudaki", "d_link", "e_link"):
+            P = clip_to_ring(P)
+        Wx, Wz = NW.city_warp(P[:, 0], P[:, 1])
+        P = T.resample(np.stack([Wx, Wz], 1), 4.0)
         roads.append({"id": rid, "name": nm, "cls": cls, "P": P, "routed": False})
-    for rid, nm, cls, wps in NW.ROUTED + NW.DIRT:
+    for rid, nm, cls, wps0 in NW.ROUTED + NW.DIRT:
+        wps = [NW.warp_pt(x, z) for (x, z) in wps0]
         g = NW.CLASSES[cls]["g"]
         pts = []
         for a, b in zip(wps[:-1], wps[1:]):
@@ -141,7 +147,24 @@ def main():
             r["id"], r["cls"], np.sum(np.hypot(*np.diff(r["P"], axis=0).T)), r["H"].min(), r["H"].max(), len(r["bridges"]), len(r["tunnels"])))
 
     # ------------------------------------------------------------------ places, buildings, signs
-    world = PL.build(roads, H, H_at, F)
+    fillets, crossings = FU.fillets_and_crossings(roads)
+    log("junction fillets %d, zebra crossings %d" % (len(fillets), len(crossings)))
+    kites = []
+    for fl in fillets:
+        C = np.array([fl["c"][0], fl["c"][2]]); O = np.array(fl["o"])
+        kites.append(((C + O) / 2, np.linalg.norm(C - O) / 2 + 1.5))
+    world = PL.build(roads, H, H_at, F, avoid=kites)
+    water_all = np.minimum(np.minimum(F["d_var"], F["d_gis"]), np.minimum(F["d_east"], F["d_trib"]))
+
+    def water_ok(x, z):
+        i = int(np.clip(round((x - T.X0) / T.STEP), 0, T.N - 1)); j = int(np.clip(round((z - T.Z0) / T.STEP), 0, T.N - 1))
+        return water_all[j, i] > 30.0 and F["lake_d"][j, i] > 1.3 and F["kom_d"][j, i] > 1.35
+    world["billboards"] = FU.billboards(roads, world["buildings"], world["landmarks"], lambda xs, zs: H_at(xs, zs, H), water_ok)
+    world["guardrails"] = FU.guardrails(roads, lambda xs, zs: H_at(xs, zs, H))
+    world["fillets"] = fillets
+    world["crossings"] = crossings
+    log("billboards %d, guardrail runs %d (%.1f km)" % (len(world["billboards"]), len(world["guardrails"]),
+        sum(np.sum(np.hypot(*np.diff(np.array(g["p"])[:, [0, 2]], axis=0).T)) for g in world["guardrails"]) / 1000))
     log("places: %d buildings, %d landmarks, %d signs" % (len(world["buildings"]), len(world["landmarks"]), len(world["signs"])))
     # flatten building plots (never the cells under / next to a road)
     rm0, _ = rasterize_roads(roads, X, Z)
@@ -156,6 +179,7 @@ def main():
     H = enforce_tunnels(H, roads)
     H = enforce_roads(H, roads, it=12)       # last: nothing may end up above a road surface
     H = enforce_nodes(H, X, Z, roads)
+    H = enforce_fillets(H, X, Z, world["fillets"])
     log("terrain above any road after enforcement: %d samples" % check_roads(H, roads))
 
     # ------------------------------------------------------------------ surfaces, splat, biome
@@ -215,6 +239,56 @@ def main():
     log("world.json %.1f MB" % (os.path.getsize(os.path.join(OUT, "world.json")) / 1e6))
     PL.write_map(W, H, splat, biome, road_mask, os.path.join(GAME, "assets", "ui", "world_map.png"))
     log("map written. done")
+
+
+def enforce_fillets(H, X, Z, fillets, clearance=0.22):
+    """terrain under the rounded junction corners (kite C-T1-O-T2 + 2 m) stays under their surface"""
+    def contains(poly, pts):
+        """convex polygon (any winding): all edge cross products of one sign"""
+        sgn = None
+        res = np.ones(len(pts), bool)
+        cr_all = []
+        for a, b in zip(poly, poly[1:] + poly[:1]):
+            cr_all.append((b[0] - a[0]) * (pts[:, 1] - a[1]) - (b[1] - a[1]) * (pts[:, 0] - a[0]))
+        cr = np.array(cr_all)
+        return (cr >= 0).all(0) | (cr <= 0).all(0)
+    for fl in fillets:
+        C = np.array([fl["c"][0], fl["c"][2]]); O = np.array(fl["o"]); T1 = np.array(fl["t1"]); T2 = np.array(fl["t2"])
+        cen = (C + O) / 2
+        poly = [cen + (p - cen) * (1 + 2.5 / max(np.linalg.norm(p - cen), 1)) for p in (C, T1, O, T2)]
+        lo = np.min(poly, 0); hi = np.max(poly, 0)
+        i0 = int(max((lo[0] - T.X0) / T.STEP - 1, 0)); i1 = int(min((hi[0] - T.X0) / T.STEP + 2, T.N))
+        j0 = int(max((lo[1] - T.Z0) / T.STEP - 1, 0)); j1 = int(min((hi[1] - T.Z0) / T.STEP + 2, T.N))
+        sub = np.stack([X[j0:j1, i0:i1].ravel(), Z[j0:j1, i0:i1].ravel()], 1)
+        inside = contains(poly, sub).reshape(j1 - j0, i1 - i0)
+        blk = H[j0:j1, i0:i1]
+        H[j0:j1, i0:i1] = np.where(inside, np.minimum(blk, fl["c"][1] - clearance), blk)
+    return H
+
+
+def clip_to_ring(P):
+    """keep the part of a city street inside the rounded ring; its ends exactly on the ring line"""
+    inside = np.array([NW.in_ring(x, z) for x, z in P])
+    if inside.all():
+        return P
+    idx = np.nonzero(inside)[0]
+    a, b = idx[0], idx[-1]
+    out = [P[k] for k in range(a, b + 1)]
+
+    def edge(pin, pout):
+        lo, hi = np.array(pin, float), np.array(pout, float)
+        for _ in range(30):
+            m = (lo + hi) / 2
+            if NW.in_ring(m[0], m[1]):
+                lo = m
+            else:
+                hi = m
+        return lo
+    if a > 0:
+        out.insert(0, edge(P[a], P[a - 1]))
+    if b < len(P) - 1:
+        out.append(edge(P[b], P[b + 1]))
+    return np.array(out)
 
 
 def enforce_roads(H, roads, clearance=0.22, it=4):

@@ -32,6 +32,7 @@ const HARD := [CityWorld.Surface.ASPHALT, CityWorld.Surface.PAVED, CityWorld.Sur
 
 var car: VehiclePrado
 var interior := false                         ## set by VehicleCamera (cabin view)
+var _bus_owner := false
 var running := false
 var log_events: Array[String] = []            ## one-shots played (tests / demo)
 var levels := {}                              ## current linear gain of every loop (tests / HUD debug)
@@ -145,9 +146,14 @@ func _process(delta: float) -> void:
 		stop_engine()
 	# cabin: closed doors / glass / insulation: low-pass + about -9 dB (the listener sits at the engine
 	# instead of 6 m away, so without this the cabin would be louder than outside)
-	var bi := AudioServer.get_bus_index(BUS)
-	AudioServer.set_bus_effect_enabled(bi, 0, interior)
-	AudioServer.set_bus_volume_db(bi, -9.0 if interior else 0.0)
+	# the shared "Vehicle" bus is set by the vehicle being driven only (parked vans / boats never
+	# undo the cabin filter); after getting out it is reset once
+	if car.driven or _bus_owner:
+		var bi := AudioServer.get_bus_index(BUS)
+		var on := interior and car.driven
+		AudioServer.set_bus_effect_enabled(bi, 0, on)
+		AudioServer.set_bus_volume_db(bi, -9.0 if on else 0.0)
+		_bus_owner = car.driven
 	_engine(delta)
 	_tyres(delta)
 	_suspension()

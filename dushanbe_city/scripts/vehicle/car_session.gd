@@ -10,7 +10,8 @@ extends Node
 
 const ENTER_DIST := 1.9
 var player: PlayerController
-var car: VehiclePrado
+var car: VehiclePrado                   ## the vehicle being driven / last driven (Prado, LakLak van, boat)
+var vehicles: Array[VehiclePrado] = []  ## every vehicle the player can get into
 var walk_touch: CanvasLayer             # walking touch UI (hidden while driving)
 var cam: VehicleCamera
 var controls: CarControls
@@ -50,10 +51,37 @@ func _ready() -> void:
 	_prompt.visible = false
 	_prompt.draw.connect(_draw_prompt)
 	_layer.add_child(_prompt)
-	door = CarDoorInteractable.new()
-	door.name = "DriverDoor"
-	door.session = self
-	add_child(door)
+	if not vehicles.has(car):
+		vehicles.push_front(car)
+	for v in vehicles:
+		_add_door(v)
+
+
+func _add_door(v: VehiclePrado) -> void:
+	var d := CarDoorInteractable.new()
+	d.name = "Door_" + String(v.name)
+	d.session = self
+	d.vehicle = v
+	add_child(d)
+	if v == car:
+		door = d
+
+
+## a vehicle added later (spawned vans / boats)
+func add_vehicle(v: VehiclePrado) -> void:
+	if vehicles.has(v):
+		return
+	vehicles.append(v)
+	if is_inside_tree():
+		_add_door(v)
+
+
+func _select(v: VehiclePrado) -> void:
+	if v == null or v == car:
+		return
+	car = v
+	cam.car = v
+	controls.car = v
 
 
 func _prompt_rect() -> Rect2:
@@ -72,11 +100,30 @@ func _draw_prompt() -> void:
 	_prompt.draw_string(_font, r.get_center() + Vector2(-w.x * 0.5, fs * 0.36), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
 
 
-func can_enter() -> bool:
-	if driving or busy or player == null or car == null:
+func can_enter(v: VehiclePrado = null) -> bool:
+	if v == null:
+		v = nearest_enterable()
+	if driving or busy or player == null or v == null or not is_instance_valid(v):
 		return false
-	var d := player.global_position.distance_to(car.driver_door_point(0.6))
-	return d < ENTER_DIST and car.speed_kmh < 5.0 and player.is_on_floor()
+	if v is VehicleBoat:
+		# a boat: from the pier / shore or swimming beside it, anywhere along the hull
+		var dh := Vector2(player.global_position.x - v.global_position.x, player.global_position.z - v.global_position.z).length()
+		return dh < 4.2 and absf(player.global_position.y - v.global_position.y) < 4.0 and v.speed_kmh < 6.0
+	var d := player.global_position.distance_to(v.driver_door_point(0.6))
+	return d < ENTER_DIST and v.speed_kmh < 5.0 and player.is_on_floor()
+
+
+func nearest_enterable() -> VehiclePrado:
+	var best: VehiclePrado = null
+	var bd := INF
+	for v in vehicles:
+		if not is_instance_valid(v):
+			continue
+		var d := player.global_position.distance_to(v.global_position) if player else INF
+		if d < bd and d < 8.0:
+			bd = d
+			best = v
+	return best if best else car
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -101,7 +148,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _input(event: InputEvent) -> void:
 	if _prompt.visible and event is InputEventScreenTouch and event.pressed and _prompt_rect().has_point(event.position):
 		get_viewport().set_input_as_handled()
-		enter_animated()
+		enter_vehicle(nearest_enterable())
 
 
 func _process(_d: float) -> void:
@@ -142,6 +189,17 @@ func enter() -> void:
 	controls.visible = true
 	Minimap.focus = car
 	Minimap.focus_camera = cam
+
+
+## get into a given vehicle: animated for cars (door), direct for a boat (step / climb aboard)
+func enter_vehicle(v: VehiclePrado) -> void:
+	if v == null or not can_enter(v):
+		return
+	_select(v)
+	if v is VehicleBoat:
+		enter()
+	else:
+		enter_animated()
 
 
 ## Animated get-in: walk to the door (normal locomotion, no teleport), face the car, open the door
@@ -235,6 +293,11 @@ func exit() -> void:
 	if not driving:
 		return
 	var spot := find_exit_spot()
+	if car is VehicleBoat and CityWorld.instance:
+		# off a boat out at sea: the swimmer may cross the wading-depth boundary back to the shore
+		var bounds := CityWorld.instance.get_node_or_null("Bounds")
+		if bounds:
+			player.add_collision_exception_with(bounds)
 	driving = false
 	car.driven = false
 	car.set_driver_visible(false)

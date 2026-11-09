@@ -1,20 +1,20 @@
-PASS route: 12 legs, 37.8 km, continuous (gaps > 12 m between consecutive points: [])
-PASS journey completed: 37.5 km driven in 67 min (game time), route progress 9277 / 9280 points, max 68 km/h
+PASS route: 12 legs, 37.6 km, continuous (gaps > 12 m between consecutive points: [])
+PASS journey completed: 37.4 km driven in 67 min (game time), route progress 9249 / 9252 points, max 67 km/h
     autopilot recoveries (backing up after touching a wall / kerb): 0
 PASS no teleport: 0 frames with a position jump (max excess 0.00 m per frame)
-PASS stayed on the roads: 0 of 240081 frames off the road surface (> 3 m beyond the edge), max 0.4 m
+PASS stayed on the roads: 0 of 239766 frames off the road surface (> 3 m beyond the edge), max 0.4 m
 PASS never fell through the ground: 0 frames below the terrain
 PASS streaming kept up: 0 frames without loaded collision under the car
 PASS regions crossed without borders / loading screens: ["Душанбе (полуостров)", "Душанбе", "Сельская местность", "Зона отдыха «Чормағзак»", "Турбаза «Варзоб»", "Варзоб", "Горы", "Перевал Анзоб", "Озеро Искандар", "Ханака", "Гиссар"]
     leg Душанбе (полуостров): проспект: 21 s
     leg Загородная дорога к материку: 38 s
-    leg Проспект Рудаки на север (материк): 220 s
-    leg М34 по ущелью Варзоба: 367 s
-    leg Перевальная дорога (серпантин, тоннель): 1643 s
+    leg Проспект Рудаки на север (материк): 221 s
+    leg М34 по ущелью Варзоба: 366 s
+    leg Перевальная дорога (серпантин, тоннель): 1644 s
     leg Озёрная дорога (западный берег): 183 s
     leg Спуск в Гиссар (серпантин): 830 s
     leg Гиссар — с гор в город (сельская местность): 303 s
-    leg Гиссарская трасса на восток: 137 s
-    leg Проспект Дусти: 114 s
-    leg Проспект Рудаки на юг (другим путём): 99 s
+    leg Гиссарская трасса на восток: 135 s
+    leg Проспект Дусти: 113 s
+    leg Проспект Рудаки на юг (другим путём): 95 s
     leg Обратно на полуостров: 47 s

@@ -103,6 +103,10 @@ func _make_materials() -> void:
 	wm.shader = load("res://assets/shaders/world_water.gdshader")
 	wm.set_shader_parameter("noise_tex", load(tex + "noise_macro.png"))
 	mats["water"] = wm
+	var zb := ShaderMaterial.new()
+	zb.shader = load("res://assets/shaders/zebra.gdshader")
+	zb.set_shader_parameter("macro_tex", load(tex + "noise_macro.png"))
+	mats["zebra"] = zb
 
 
 static func _vc_mat(m: Material) -> Material:
@@ -136,6 +140,10 @@ func _load_props() -> void:
 
 func _place_props(node: Node3D, props: Dictionary) -> void:
 	for id in props:
+		if String(id).begins_with("rp_"):
+			# modular city road pack (WorldModels parts, scaled x3.2)
+			WorldModels.multi(node, id, props[id], 140.0, false)
+			continue
 		var meta: Dictionary = _props.get(id, {})
 		if meta.is_empty():
 			continue
@@ -310,6 +318,8 @@ func _focus_points() -> Array[Vector3]:
 	for n in get_tree().get_nodes_in_group(&"player"):
 		pts.append((n as Node3D).global_position)
 	for n in get_tree().get_nodes_in_group(&"vehicle"):
+		if n is RigidBody3D and (n as RigidBody3D).freeze:
+			continue                     # parked far away (frozen): no sectors kept loaded for it
 		pts.append((n as Node3D).global_position)
 	return pts
 
@@ -400,12 +410,22 @@ func _process(_delta: float) -> void:
 
 
 func _start_job(s: Vector2i, lod: int) -> void:
+	var m := _mutex
+	var res := _results
+	var b := builder
 	var id := WorkerThreadPool.add_task(func() -> void:
-		var r := builder.build(s, lod)
-		_mutex.lock()
-		_results[s] = r
-		_mutex.unlock())
+		var r := b.build(s, lod)
+		m.lock()
+		res[s] = r
+		m.unlock())
 	_jobs[s] = id
+
+
+## leaving the game / a test: let the sector builders finish (no worker touches a freed node)
+func _exit_tree() -> void:
+	for id in _jobs.values():
+		WorkerThreadPool.wait_for_task_completion(id)
+	_jobs.clear()
 
 
 ## synchronous load around a point (tests / spawning far from the city)
@@ -445,6 +465,17 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 		mi.material_override = mats["road"] if k in ["asphalt", "dirt"] else (mats["side"] if k == "side" else (mats["lamp"] if k == "lamps" else mats["conc"]))
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if k == "conc" else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(mi)
+	var za: Array = rd.get("zebra", [])
+	if not za.is_empty() and not (za[Mesh.ARRAY_VERTEX] as PackedVector3Array).is_empty():
+		var zm := ArrayMesh.new()
+		zm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, za)
+		var zmi := MeshInstance3D.new()
+		zmi.name = "Zebra"
+		zmi.mesh = zm
+		zmi.material_override = mats["zebra"]
+		zmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		zmi.visibility_range_end = 260.0
+		node.add_child(zmi)
 	var wa: Array = res["water"]
 	if not wa.is_empty():
 		var m := ArrayMesh.new()
@@ -477,6 +508,10 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 		mi.mesh = m
 		mi.material_override = mats["roof"] if k == "roof" else mats["wall"]
 		node.add_child(mi)
+	var models: Dictionary = bd.get("models", {})
+	for kind in models:
+		# imported building models: towers visible from far, villas near
+		WorldModels.multi(node, kind, models[kind], 4000.0 if kind == "sky" else 700.0, lod == 0)
 	var ov: PackedVector3Array = bd["occ_v"]
 	if not ov.is_empty():
 		var occ := ArrayOccluder3D.new()
@@ -485,12 +520,15 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 		oi.name = "Occluders"
 		oi.occluder = occ
 		node.add_child(oi)
+	var gd: Dictionary = res.get("guard", {})
+	if lod == 0 and not (gd.get("xfs", []) as Array).is_empty():
+		WorldModels.multi(node, "guardrail", gd["xfs"], 400.0, false)
 	_trees(node, res["trees"], lod)
 	_items(node, res["items"], lod)
 	_place_props(node, rd["props"])
 	sectors[s] = {"node": node, "lod": lod, "col": false, "res_hm": res.get("hm", PackedFloat32Array()),
 		"faces": res.get("terrain_faces", PackedVector3Array()),
-		"road_col": rd["col"], "boxes": bd["boxes"] + rd["pboxes"], "lamps": rd["lights"],
+		"road_col": rd["col"], "boxes": bd["boxes"] + rd["pboxes"] + (gd.get("boxes", []) as Array), "lamps": rd["lights"],
 		"x0": wd.origin.x + s.x * SECTOR, "z0": wd.origin.y + s.y * SECTOR}
 	_refresh_lights()
 
@@ -635,6 +673,8 @@ func _items(node: Node3D, items: Array, lod: int) -> void:
 					_fuel(node, p, float(d["yaw"]))
 			"landmark":
 				WorldLandmarks.build(node, d, lod)
+			"billboard":
+				WorldModels.billboard(node, p, float(d["yaw"]), int(d.get("variant", 0)))
 
 
 func _sign(node: Node3D, p: Vector3, yaw: float, text: String, town: bool, end: bool) -> void:

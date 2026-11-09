@@ -23,8 +23,78 @@ GRID.append(("ave_w", "проспект Исмоили Сомони", "avenue", 
 GRID.append(("ave_e", "проспект Айни", "highway", [(1300.0, -1000.0), (1300.0, -4750.0)]))
 for z, nm in [(-1600.0, "проспект Борбад"), (-2400.0, "проспект Дусти"), (-3200.0, "проспект Шотемур"), (-4000.0, "улица Варзобская")]:
     GRID.append(("ew%d" % int(-z), nm, "highway", [(-1950.0, z), (1950.0, z)]))
-# ring road (bypass)
-GRID.append(("ring", "Объездная дорога", "highway", [(-1950.0, -1000.0), (-1950.0, -4750.0), (1950.0, -4750.0), (1950.0, -1000.0), (-1950.0, -1000.0)]))
+# ring road (bypass): a rounded rectangle (corner radius RING_R), not a square
+RING_R = 820.0
+
+
+def ring_points(step=8.0):
+    import math
+    x0, x1 = CITY_X
+    zs, zn = CITY_Z[1], CITY_Z[0]          # south (more negative) / north edge
+    R = RING_R
+    pts = []
+    # corners (centre x, centre z, start angle, end angle); point = centre + R (cos a, sin a)
+    corners = [(x0 + R, zn - R, math.pi, math.pi * 0.5),          # (-x, z = -1000 edge)
+               (x1 - R, zn - R, math.pi * 0.5, 0.0),
+               (x1 - R, zs + R, 0.0, -math.pi * 0.5),
+               (x0 + R, zs + R, -math.pi * 0.5, -math.pi)]
+    for (cx, cz, a0, a1) in corners:
+        n = max(4, int(R * abs(a1 - a0) / step))
+        for k in range(n + 1):
+            a = a0 + (a1 - a0) * k / n
+            pts.append((cx + R * math.cos(a), cz + R * math.sin(a)))
+    pts.append(pts[0])
+    return pts
+
+
+def in_ring(x, z):
+    """inside the rounded ring rectangle (unwarped coordinates)"""
+    import math
+    x0, x1 = CITY_X
+    zs, zn = CITY_Z[1], CITY_Z[0]
+    R = RING_R
+    if not (x0 <= x <= x1 and zs <= z <= zn):
+        return False
+    cx = min(max(x, x0 + R), x1 - R)
+    cz = min(max(z, zs + R), zn - R)
+    return math.hypot(x - cx, z - cz) <= R
+
+
+def city_warp(x, z):
+    """smooth organic deformation of the whole city plan (streets, blocks, landmarks): no straight
+    ruler-drawn grid, gentle bends like real streets; fades out 600 m outside the city and towards
+    the peninsula seam (z -800), where the old roads join unchanged"""
+    import numpy as np
+    x = np.asarray(x, float); z = np.asarray(z, float)
+    ox = np.maximum(np.maximum(CITY_X[0] - x, x - CITY_X[1]), 0.0)
+    oz = np.maximum(np.maximum(CITY_Z[1] - z, z - CITY_Z[0]), 0.0)
+    out = np.hypot(ox, oz)
+    w = np.clip(1.0 - out / 600.0, 0.0, 1.0)
+    w = w * w * (3 - 2 * w)
+    seam = np.clip((-850.0 - z) / 450.0, 0.0, 1.0)
+    w = w * seam * seam * (3 - 2 * seam)
+    dx = 95.0 * np.sin(z / 650.0 + 0.8) + 26.0 * np.sin(z / 280.0 + x / 800.0)
+    dz = 80.0 * np.sin(x / 700.0 + 1.7) + 22.0 * np.sin(x / 300.0 - z / 1000.0)
+    return x + dx * w, z + dz * w
+
+
+def warp_pt(x, z):
+    a, b = city_warp(x, z)
+    return float(a), float(b)
+
+
+def warp_yaw(x, z, yaw):
+    """yaw (building local +X = (cos yaw, -sin yaw)) after the warp"""
+    import math
+    e = 2.0
+    ux, uz = math.cos(yaw), -math.sin(yaw)
+    a = warp_pt(x, z); b = warp_pt(x + ux * e, z + uz * e)
+    return math.atan2(-(b[1] - a[1]), b[0] - a[0])
+
+
+GRID.append(("ring", "Объездная дорога", "highway", ring_points()))
+# a curved boulevard across the western districts (breaks the grid like a real city's diagonal)
+GRID.append(("sino", "проспект Сино", "highway", "CURVE:" ))
 # streets
 for x in (-1700.0, -900.0, -500.0, 400.0, 1650.0):
     GRID.append(("sx%d" % int(x), "", "street", [(x, -1000.0), (x, -4750.0)]))
@@ -58,7 +128,7 @@ ROUTED = [
 # dirt tracks / village lanes
 DIRT = [
     ("fall", "К водопаду", "dirt", [(480.0, -7300.0), (900.0, -7330.0), (1380.0, -7470.0)]),
-    ("view", "Смотровая площадка", "dirt", [(-1300.0, -4750.0), (-1550.0, -5150.0)]),
+    ("view", "Смотровая площадка", "dirt", [(-1300.0, -4600.0), (-1550.0, -5150.0)]),
     ("orch", "Сады Гиссара", "dirt", [(-3000.0, -2380.0), (-3200.0, -3300.0), (-3000.0, -4200.0), (-4300.0, -4600.0)]),
     ("farm_e", "Фермы", "dirt", [(3000.0, -2150.0), (2800.0, -3200.0), (3300.0, -3700.0), (4250.0, -3500.0)]),
     ("forest", "Лесная дорога", "dirt", [(300.0, -8000.0), (1100.0, -8400.0), (1700.0, -9000.0)]),
@@ -86,3 +156,11 @@ PLACES = [
     ("tourbase1", "Турбаза «Варзоб»", "resort", 320.0, -6350.0, 150.0),
     ("tourbase2", "Зона отдыха «Чормағзак»", "resort", 330.0, -5450.0, 150.0),
 ]
+
+
+def _sino():
+    import terrain as T
+    return T.chaikin([(-1950.0, -4250.0), (-1650.0, -3750.0), (-1350.0, -3250.0), (-1050.0, -2850.0), (-760.0, -2620.0), (-500.0, -2540.0)], 4)
+
+
+GRID = [(a, b, c, (_sino() if d == "CURVE:" else d)) for (a, b, c, d) in GRID]

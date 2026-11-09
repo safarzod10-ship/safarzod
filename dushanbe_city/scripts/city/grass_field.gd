@@ -10,6 +10,7 @@ var mask := PackedByteArray()      ## 600x600, 1 = lawn
 var _mmi: MultiMeshInstance3D
 var _last := Vector3(INF, 0, INF)
 var override_camera: Camera3D
+var wd: WorldData                  ## open world (3D grass on its grass surfaces too)
 var _task := -1                    ## WorkerThreadPool task building the next instance buffer
 var _pending: PackedFloat32Array
 var _pending_center := Vector3.ZERO
@@ -24,6 +25,7 @@ func _ready() -> void:
 	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
 		set_process(false)   # GLES3 fallback: blades shade incorrectly there; lawn texture only
 		return
+	wd = WorldData.get_instance() if WorldData.get_instance().ok else null
 	mask.resize(W * W)
 	for l in city.get("lawns", []):
 		var r: Array = l[1]
@@ -41,6 +43,9 @@ func _ready() -> void:
 	mm.use_colors = true      # white instance colour: GLES3 multiplies vertex COLOR by it (0 without colours)
 	mm.use_custom_data = true # full 20-float layout (transform 12 + colour 4 + custom 4) for the raw buffer
 	mm.mesh = _grass_mesh()
+	var gm := mm.mesh.surface_get_material(0) as ShaderMaterial
+	if gm:
+		gm.set_shader_parameter("palette_noise", load("res://assets/textures/noise_macro.png"))
 	_mmi.multimesh = mm
 	add_child(_mmi)
 	Settings.quality_changed.connect(func(_q: int) -> void: _last = Vector3(INF, 0, INF))
@@ -128,6 +133,7 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 	var xs: PackedFloat32Array = []
 	var cnt := 0
 	var r2 := radius * radius
+	var cell_ok := {}                     ## open world: grass_ok per 2 m cell (one check for ~25 clumps)
 	var gx0 := floori((center.x - radius) / step)
 	var gx1 := ceili((center.x + radius) / step)
 	var gz0 := floori((center.z - radius) / step)
@@ -147,7 +153,19 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 				continue
 			var mx := int(x + 300.0)
 			var mz := int(z + 300.0)
-			if mx < 0 or mz < 0 or mx >= W or mz >= W or mask[mz * W + mx] == 0:
+			var gy := 0.0
+			if mx >= 0 and mz >= 0 and mx < W and mz < W:
+				if mask[mz * W + mx] == 0:
+					continue
+				gy = 0.15 + CityWorld.city_relief(x, z)
+			elif wd != null:
+				var ck := Vector2i(floori(x * 0.5), floori(z * 0.5))
+				if not cell_ok.has(ck):
+					cell_ok[ck] = wd.grass_ok(x, z)
+				if not cell_ok[ck]:
+					continue
+				gy = wd.height_at(x, z) - 0.02            # open world: on the terrain itself
+			else:
 				continue
 			var rot := float((hsh >> 20) & 1023) / 1023.0 * TAU
 			var s := 0.9 + float((h2 >> 12) & 255) / 255.0 * 0.7
@@ -155,7 +173,7 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 			var sn := sin(rot) * s
 			var o := cnt * STRIDE
 			xs[o] = c; xs[o + 1] = 0.0; xs[o + 2] = sn; xs[o + 3] = x
-			xs[o + 4] = 0.0; xs[o + 5] = s; xs[o + 6] = 0.0; xs[o + 7] = 0.15 + CityWorld.city_relief(x, z)
+			xs[o + 4] = 0.0; xs[o + 5] = s; xs[o + 6] = 0.0; xs[o + 7] = gy
 			xs[o + 8] = -sn; xs[o + 9] = 0.0; xs[o + 10] = c; xs[o + 11] = z
 			xs[o + 12] = 1.0; xs[o + 13] = 1.0; xs[o + 14] = 1.0; xs[o + 15] = 1.0   # instance colour
 			xs[o + 16] = jx; xs[o + 17] = jz; xs[o + 18] = 0.0; xs[o + 19] = 0.0     # custom (unused by shaders)
@@ -176,3 +194,9 @@ func _apply(xs: PackedFloat32Array, center: Vector3, radius: float) -> void:
 		m.set_shader_parameter("fade_end", radius * 0.95)
 	RenderingServer.global_shader_parameter_set(&"grass_center", Vector3(center.x, 0, center.z))
 	RenderingServer.global_shader_parameter_set(&"grass_radius", radius)
+
+
+func _exit_tree() -> void:
+	if _task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_task)
+		_task = -1

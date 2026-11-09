@@ -9,6 +9,8 @@ var player: PlayerController
 ## while driving: follow this node (the car) and rotate with this camera instead of the player
 static var focus: Node3D = null
 static var focus_camera: Camera3D = null
+## a mission target (LakLak drop-off): drawn on the map, or on the rim as an arrow when out of range
+static var target := Vector3.INF
 var _map: ColorRect
 var _overlay: Control              # arrow + north marker, drawn above the map
 var _mat: ShaderMaterial
@@ -88,6 +90,23 @@ func _draw_overlay() -> void:
 	for q in pts:
 		inner.append(c + (q - c) * 0.78)
 	_overlay.draw_colored_polygon(inner, Color(1.0, 0.82, 0.25))
+	# mission target (radius of the map: 160 m)
+	if target != Vector3.INF:
+		var p := focus.global_position if is_instance_valid(focus) else player.global_position
+		var f := Vector2(-sin(yaw), -cos(yaw))
+		var rt := Vector2(-f.y, f.x)
+		var d := Vector2(target.x - p.x, target.z - p.z)
+		var sp := Vector2(d.dot(rt), -d.dot(f)) * (R / 160.0)
+		var on_map := sp.length() < R * 0.86
+		if not on_map:
+			sp = sp.normalized() * R * 0.86
+		var tc := c + sp
+		_overlay.draw_circle(tc, R * 0.085, Color(0.05, 0.05, 0.05, 0.8))
+		_overlay.draw_circle(tc, R * 0.065, Color(1.0, 0.6, 0.1))
+		if not on_map:
+			var dn := sp.normalized()
+			var sd := Vector2(-dn.y, dn.x)
+			_overlay.draw_colored_polygon(PackedVector2Array([tc + dn * R * 0.14, tc + sd * R * 0.06, tc - sd * R * 0.06]), Color(1.0, 0.6, 0.1))
 	# north marker on the rim
 	var nd := Vector2(sin(yaw), -cos(yaw))
 	var np := c + nd * (R - R * 0.11)

@@ -16,5 +16,6 @@ shader_parameter/macro_tex = ExtResource("5")
 shader_parameter/uv_scale = Vector2(0.40000, 0.40000)
 shader_parameter/macro_strength = 0.35
 shader_parameter/macro_scale = 0.03
-shader_parameter/roughness_add = 0.4
 shader_parameter/tint = Color(0.62, 0.7, 0.48, 1)
+shader_parameter/lawn_palette = true
+shader_parameter/roughness_add = 0.45

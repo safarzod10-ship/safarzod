@@ -7,6 +7,7 @@ shader_type spatial;
 render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
 
 #include "res://assets/shaders/vegetation_common.gdshaderinc"
+#include "res://assets/shaders/grass_palette.gdshaderinc"
 
 group_uniforms colour;
 uniform vec4 color_root : source_color = vec4(0.13, 0.17, 0.06, 1.0);
@@ -23,6 +24,8 @@ uniform float specular : hint_range(0.0, 1.0) = 0.3;
 uniform float translucency : hint_range(0.0, 2.0) = 0.45;
 uniform float normal_up_blend : hint_range(0.0, 1.0) = 0.55; // softens lighting like a lawn
 uniform bool use_instance_custom = false;
+uniform bool use_palette = true;          // colours from the natural lawn palette (same as the ground)
+uniform sampler2D palette_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
 group_uniforms wind;
 uniform float bend_amount = 0.10;   // tip displacement (m) at wind strength 1
 uniform float flutter_amount = 0.02;
@@ -68,11 +71,21 @@ void vertex() {
 	VERTEX += wd * bend + side * hgt * flutter_amount * veg_wind_strength * sin(t * 6.3 + COLOR.b * 17.0);
 	VERTEX.y -= abs(bend) * hgt * 0.35;
 	// colour
-	vec3 c = hgt < 0.45 ? mix(color_root.rgb, color_mid.rgb, hgt / 0.45)
-			: mix(color_mid.rgb, color_tip.rgb, (hgt - 0.45) / 0.55);
+	vec3 c_root = color_root.rgb;
+	vec3 c_mid = color_mid.rgb;
+	vec3 c_tip = color_tip.rgb;
+	if (use_palette) {
+		// the ground's palette colour at this clump: blades a bit lighter at the tip, dark at the root
+		vec3 pc = grass_palette(opos.xz, palette_noise, 1.0);
+		c_root = pc * 0.38;
+		c_mid = pc * 0.85;
+		c_tip = pc * 1.18;
+	}
+	vec3 c = hgt < 0.45 ? mix(c_root, c_mid, hgt / 0.45)
+			: mix(c_mid, c_tip, (hgt - 0.45) / 0.55);
 	float patchn = vnoise(opos.xz * patch_scale);
 	float dry = smoothstep(1.0 - dry_amount, 1.0, patchn * 0.7 + fract(COLOR.b * 7.13 + ih) * 0.3);
-	c = mix(c, color_dry.rgb * mix(0.55, 1.0, hgt), dry);
+	c = mix(c, (use_palette ? GP_DRY : color_dry.rgb) * mix(0.55, 1.0, hgt), dry);
 	c = veg_variation(c, ih, ih2 * 0.5 + patchn * 0.5, hue_variation, brightness_variation);
 	c *= mix(1.0, COLOR.r, ao_strength);
 	v_col = c;

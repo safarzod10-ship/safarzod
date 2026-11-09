@@ -25,14 +25,17 @@ LANDMARKS = [
     ("navruz", "Кохи Навруз", -700.0, -1800.0, 0.0, (170.0, 140.0)),
     ("opera", "Театр оперы и балета", -230.0, -1800.0, 0.0, (110.0, 80.0)),
     ("mehrgon", "Рынок Мехргон", 620.0, -2200.0, 0.0, (180.0, 140.0)),
+    ("laklak", "LakLak — служба доставки", 1385.0, -3000.0, 0.0, (64.0, 74.0)),
     ("hisor_fort", "Гиссарская крепость", -4500.0, -2900.0, 0.3, (150.0, 110.0)),
     ("hisor_bazaar", "Гиссарский рынок", -4050.0, -2300.0, 0.0, (100.0, 70.0)),
 ]
+# low-poly villas (assets/models/extra/houses_lowpoly.glb, sub-models 1..4): footprint L x D (m)
+VILLA = {1: (27.0, 12.0), 2: (27.0, 22.1), 3: (27.6, 22.1), 4: (36.8, 22.1)}
 FUEL = [("fuel_n", "rudaki", -40.0, -4350.0), ("fuel_g", "gissar", -3300.0, -2385.0),
         ("fuel_v", "m34", 0, 0), ("fuel_e", "east", 3000.0, -2150.0)]
 
 
-def build(roads, H, H_at, F):
+def build(roads, H, H_at, F, avoid=()):
     road_pts = []; road_hw = []
     for r in roads:
         c = NW.CLASSES[r["cls"]]
@@ -45,13 +48,21 @@ def build(roads, H, H_at, F):
         i = int(np.clip(round((x - T.X0) / T.STEP), 0, T.N - 1)); j = int(np.clip(round((z - T.Z0) / T.STEP), 0, T.N - 1))
         return water_d[j, i], F["lake_d"][j, i], F["kom_d"][j, i]
 
-    lm_rects = [(x - L / 2 - 5, z - D / 2 - 5, x + L / 2 + 5, z + D / 2 + 5) for (_, _, x, z, _, (L, D)) in LANDMARKS]
+    # the city plan is warped (network.city_warp): landmarks move / turn with their blocks
+    LMW = []
+    for (lid, nm, x, z, yaw, LD) in LANDMARKS:
+        wx, wz = NW.warp_pt(x, z)
+        LMW.append((lid, nm, wx, wz, NW.warp_yaw(x, z, yaw), LD))
+    lm_rects = [(x - L / 2 - 5, z - D / 2 - 5, x + L / 2 + 5, z + D / 2 + 5) for (_, _, x, z, _, (L, D)) in LMW]
 
     def free(x, z, L, D, yaw, clear=4.0):
         """footprint clear of roads, water, landmarks"""
         r = math.hypot(L, D) / 2
         for (a, b, c2, d) in lm_rects:
             if a - r < x < c2 + r and b - r < z < d + r:
+                return False
+        for (cc, rr) in avoid:
+            if abs(x - cc[0]) < rr + r and abs(z - cc[1]) < rr + r and math.hypot(x - cc[0], z - cc[1]) < rr + r * 0.8:
                 return False
         w, ld, kd = wd_at(x, z)
         if w < r + 25 or ld < 1.15 or kd < 1.25:
@@ -72,6 +83,14 @@ def build(roads, H, H_at, F):
         buildings.append([kind, round(x, 2), round(z, 2), round(yaw, 4), round(L, 1), round(D, 1), int(floors), int(RNG.integers(0, 1 << 20)), round(y, 2)])
 
     # ---------------------------------------------------------------- Dushanbe blocks
+    def addw(kind, x, z, yaw, L, D, floors):
+        wx, wz = NW.warp_pt(x, z)
+        add(kind, wx, wz, NW.warp_yaw(x, z, yaw), L, D, floors)
+
+    def freew(x, z, L, D, yaw, clear=4.0):
+        wx, wz = NW.warp_pt(x, z)
+        return free(wx, wz, L, D, NW.warp_yaw(x, z, yaw), clear)
+
     xs = sorted({-1950, -1700, -1300, -900, -500, -40, 400, 1300, 1650, 1950})
     zs = sorted({-1000, -1200, -1600, -2000, -2400, -2800, -3200, -3600, -4000, -4400, -4750})
     for a, b in zip(xs[:-1], xs[1:]):
@@ -81,11 +100,11 @@ def build(roads, H, H_at, F):
             center = abs(cx) < 1300 and cz > -3400
             outer = abs(cx) > 1450 or cz < -4050
             if outer:
-                houses_block(add, free, a, b, c, d)
+                houses_block(addw, freew, a, b, c, d)
             elif center:
-                perimeter_block(add, free, a, b, c, d, tall=abs(cx) < 700)
+                perimeter_block(addw, freew, a, b, c, d, tall=abs(cx) < 700)
             else:
-                micro_block(add, free, a, b, c, d)
+                micro_block(addw, freew, a, b, c, d)
     n_city = len(buildings)
 
     # ---------------------------------------------------------------- villages / towns / resorts
@@ -101,7 +120,7 @@ def build(roads, H, H_at, F):
 
     # ---------------------------------------------------------------- landmarks, fuel, signs, km posts
     landmarks = []
-    for (lid, nm, x, z, yaw, (L, D)) in LANDMARKS:
+    for (lid, nm, x, z, yaw, (L, D)) in LMW:
         # a landmark's plaza must never cover a road
         cs, sn = math.cos(yaw), math.sin(yaw)
         for u in np.linspace(-L / 2, L / 2, 9):
@@ -155,20 +174,22 @@ def perimeter_block(add, free, a, b, c, d, tall):
             s = 14.0
             while s < length - 14.0:
                 if ring == 0:
-                    kind = str(RNG.choice(["panel9", "panel9", "office", "hotel", "admin", "tower"] if tall else ["panel9", "panel5", "brick5", "office", "panel9"]))
+                    kind = str(RNG.choice(["panel9", "panel9", "office", "hotel", "admin", "tower", "sky"] if tall else ["panel9", "panel5", "brick5", "office", "panel9"]))
                 else:
                     kind = str(RNG.choice(["panel5", "brick5", "panel5", "school"]))
                 L = 30.0 if kind == "tower" else float(RNG.choice([36, 42, 48, 54, 60]))
                 if kind == "school":
                     L = 46.0
+                if kind == "sky":
+                    L = 24.0
                 L = min(L, length - s - 10)
                 if L < 24:
                     break
-                D = {"tower": 18.0, "school": 15.0, "panel5": 12.0, "brick5": 12.0}.get(kind, 14.0)
+                D = {"tower": 18.0, "school": 15.0, "panel5": 12.0, "brick5": 12.0, "sky": 24.0}.get(kind, 14.0)
                 x = sx + ux * (s + L / 2) + nx * D / 2
                 z = sz + uz * (s + L / 2) + nz * D / 2
                 floors = {"panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
-                          "admin": int(RNG.integers(4, 7)), "hotel": int(RNG.integers(7, 13)), "tower": int(RNG.integers(14, 23))}[kind]
+                          "admin": int(RNG.integers(4, 7)), "hotel": int(RNG.integers(7, 13)), "tower": int(RNG.integers(14, 23)), "sky": 30}[kind]
                 if free(x, z, L, D, yaw, 3.0):
                     add(kind, x, z, yaw, L, D, floors)
                 s += L + float(RNG.choice([8, 12, 18]))
@@ -211,6 +232,12 @@ def houses_block(add, free, a, b, c, d):
                 continue
             L = float(RNG.uniform(11, 17)); D = float(RNG.uniform(8, 11))
             yaw = 0.0 if (int((zrow - d) / 32) % 2 == 0) else math.pi
+            if RNG.random() < 0.07:
+                vk = int(RNG.integers(1, 4))
+                VL, VD = VILLA[vk]
+                if free(x, zrow, VL + 4, VD + 4, yaw, 3.0):
+                    add("villa%d" % vk, x, zrow, yaw, VL, VD, 2)
+                    continue
             if free(x, zrow, L + 6, D + 8, yaw, 3.0):
                 add("house", x + RNG.uniform(-2, 2), zrow, yaw, L, D, int(RNG.choice([1, 1, 2])))
 
@@ -263,6 +290,11 @@ def resort(add, free, px, pz):
         if k == 0:
             if free(x, z, 40, 14, a, 3.0):
                 add("hotel", x, z, a, 40.0, 14.0, 4)
+        elif k < 4:
+            vk = int(RNG.integers(1, 5))
+            VL, VD = VILLA[vk]
+            if free(x, z, VL + 4, VD + 4, a, 3.0):
+                add("villa%d" % vk, x, z, a, VL, VD, 2)
         elif free(x, z, 10, 8, a, 3.0):
             add("cottage", x, z, a, 9.0, 7.0, 1)
 
@@ -281,8 +313,17 @@ def roadside(add, free, r, every):
         off = hw + 14.0
         x = p[0] + nx * off * side; z = p[1] + nz * off * side
         yaw = math.atan2(dx, dz) + (math.pi / 2 if side > 0 else -math.pi / 2)
-        kind = RNG.choice(["house", "house", "shop", "cottage"])
+        kind = str(RNG.choice(["house", "house", "shop", "cottage", "villa"]))
         L, D = (20.0, 12.0) if kind == "shop" else (float(RNG.uniform(10, 15)), 9.0)
+        if kind == "villa":
+            vk = int(RNG.integers(1, 5))
+            kind = "villa%d" % vk
+            L, D = VILLA[vk]
+            off = hw + 8.0 + D / 2
+            x = p[0] + nx * off * side; z = p[1] + nz * off * side
+            if free(x, z, L + 4, D + 6, yaw, 3.0):
+                add(kind, x, z, yaw + math.pi, L, D, 2)
+            continue
         if free(x, z, L + 8, D + 30, yaw, 3.0):
             add(kind, x, z, yaw + math.pi, L, D, 1 if kind != "house" else int(RNG.choice([1, 2])))
 

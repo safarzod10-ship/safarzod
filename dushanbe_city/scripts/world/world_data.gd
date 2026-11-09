@@ -33,6 +33,11 @@ var signs: Array = []
 var kmposts: Array = []
 var fuel: Array = []
 var waterfalls: Array = []
+var billboards: Array = []
+var guardrails: Array = []
+var fillets: Array = []
+var crossings: Array = []
+var _road_hash := {}                 ## Vector2i (16 m) -> PackedFloat32Array [x, z, y, half width, ...]
 
 
 static func get_instance() -> WorldData:
@@ -66,6 +71,21 @@ func _load() -> void:
 	kmposts = meta.get("kmposts", [])
 	fuel = meta.get("fuel", [])
 	waterfalls = meta.get("waterfalls", [])
+	billboards = meta.get("billboards", [])
+	guardrails = meta.get("guardrails", [])
+	fillets = meta.get("fillets", [])
+	crossings = meta.get("crossings", [])
+	# (PackedFloat32Array is a value type: build plain Arrays first, then pack once)
+	var tmp := {}
+	for r in roads:
+		var hw := float(r["w"]) * 0.5
+		for p in r["pts"]:
+			var c := Vector2i(floori(float(p[0]) / 16.0), floori(float(p[2]) / 16.0))
+			if not tmp.has(c):
+				tmp[c] = []
+			(tmp[c] as Array).append_array([float(p[0]), float(p[2]), float(p[1]), hw])
+	for c in tmp:
+		_road_hash[c] = PackedFloat32Array(tmp[c])
 	ok = true
 
 
@@ -122,3 +142,32 @@ func place_at(x: float, z: float) -> Dictionary:
 			br = float(p["r"])
 			best = p
 	return best
+
+
+## nearest road edge distance (m, negative = on the carriageway), within ~32 m; INF when none
+func road_edge_dist(x: float, z: float) -> float:
+	var c := Vector2i(floori(x / 16.0), floori(z / 16.0))
+	var best := INF
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			var a: PackedFloat32Array = _road_hash.get(c + Vector2i(di, dj), PackedFloat32Array())
+			for k in range(0, a.size(), 4):
+				var d := Vector2(a[k] - x, a[k + 1] - z).length() - a[k + 3]
+				if d < best:
+					best = d
+	return best
+
+
+## may 3D grass blades grow here? (open world: grass surface, off the roads + sidewalks, off the
+## landmark plazas, below the alpine zone)
+func grass_ok(x: float, z: float) -> bool:
+	if not contains(x, z) or surface_at(x, z) != 0:
+		return false
+	if height_at(x, z) > 900.0:
+		return false
+	if road_edge_dist(x, z) < 5.0:
+		return false
+	for l in landmarks:
+		if absf(x - float(l["x"])) < float(l["L"]) * 0.5 + 2.0 and absf(z - float(l["z"])) < float(l["D"]) * 0.5 + 2.0:
+			return false
+	return true

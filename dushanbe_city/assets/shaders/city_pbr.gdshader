@@ -5,6 +5,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 
 global uniform float city_wetness;
 global uniform float city_macro_detail;   // 0 on Low: skip the two macro-noise fetches
+#include "res://assets/shaders/grass_palette.gdshaderinc"
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -21,6 +22,7 @@ uniform float macro_strength = 0.18;
 uniform float macro_scale = 0.021;
 uniform bool use_vertex_color = true;
 uniform float wet_receptive = 0.0;     // 1 for horizontal ground surfaces
+uniform bool lawn_palette = false;     // lawns: natural grass palette in world space (+ texture detail)
 
 varying vec3 wpos;
 varying vec3 wnrm;
@@ -32,14 +34,14 @@ void vertex() {
 
 void fragment() {
 	vec2 uv = UV * uv_scale;
-	vec3 alb = texture(albedo_tex, uv).rgb * tint;
+	vec3 alb = lawn_palette ? grass_palette(wpos.xz, macro_tex, city_macro_detail) * grass_detail(albedo_tex, uv) : texture(albedo_tex, uv).rgb * tint;
 	vec3 orm = texture(orm_tex, uv).rgb;
 	// macro variation: two octaves of a tileable noise in world space
 	vec2 mp = abs(wnrm.y) > 0.5 ? wpos.xz : vec2(wpos.x + wpos.z, wpos.y);
 	float m = 0.5;
 	if (city_macro_detail > 0.5) {
 		m = texture(macro_tex, mp * macro_scale).r * 0.65 + texture(macro_tex, mp * macro_scale * 4.3).r * 0.35;
-		alb *= mix(1.0, 0.75 + 0.5 * m, macro_strength * 2.0);
+		alb *= mix(1.0, 0.75 + 0.5 * m, lawn_palette ? 0.0 : macro_strength * 2.0);
 	}
 	if (use_vertex_color) {
 		alb *= COLOR.rgb;

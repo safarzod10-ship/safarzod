@@ -19,6 +19,10 @@ var sector_buildings := {}           ## Vector2i -> Array of building indices
 var sector_items := {}               ## Vector2i -> Array of [kind, dict]
 var bridge_mask: Array = []          ## per road: PackedByteArray (1 bridge, 2 tunnel) per point
 var _hash := {}                      ## Vector2i (16 m cell) -> Array of [road index, point index]
+var sector_guard := {}               ## Vector2i -> Array of [a: Vector3, b: Vector3, side]
+var sector_fillets := {}             ## Vector2i -> Array of fillet dicts (rounded junction corners)
+var sector_cross := {}               ## Vector2i -> Array of zebra crossing dicts
+var _fillet_hash := {}               ## Vector2i (64 m cell) -> Array of fillet dicts (sidewalk skipping)
 
 
 func _init(data: WorldData) -> void:
@@ -35,6 +39,25 @@ func _init(data: WorldData) -> void:
 		_bucket(sector_items, _sec(float(s["x"]), float(s["z"]))).append(["fuel", s])
 	for s in wd.landmarks:
 		_bucket(sector_items, _sec(float(s["x"]), float(s["z"]))).append(["landmark", s])
+	for i in wd.billboards.size():
+		var bb: Dictionary = (wd.billboards[i] as Dictionary).duplicate()
+		bb["variant"] = i % 3
+		_bucket(sector_items, _sec(float(bb["x"]), float(bb["z"]))).append(["billboard", bb])
+	for g in wd.guardrails:
+		var pts: Array = g["p"]
+		for k in pts.size() - 1:
+			var a := Vector3(pts[k][0], pts[k][1], pts[k][2])
+			var b := Vector3(pts[k + 1][0], pts[k + 1][1], pts[k + 1][2])
+			var m := (a + b) * 0.5
+			_bucket(sector_guard, _sec(m.x, m.z)).append([a, b, int(g["s"])])
+	for fl in wd.fillets:
+		_bucket(sector_fillets, _sec(float(fl["c"][0]), float(fl["c"][2]))).append(fl)
+		var hc := Vector2i(floori(float(fl["c"][0]) / 64.0), floori(float(fl["c"][2]) / 64.0))
+		for dj in range(-1, 2):
+			for di in range(-1, 2):
+				_bucket(_fillet_hash, hc + Vector2i(di, dj)).append(fl)
+	for cr in wd.crossings:
+		_bucket(sector_cross, _sec(float(cr["x"]), float(cr["z"]))).append(cr)
 
 
 func _sec(x: float, z: float) -> Vector2i:
@@ -125,7 +148,35 @@ func build(sc: Vector2i, lod: int) -> Dictionary:
 	out["buildings"] = _buildings(sc, lod)
 	out["trees"] = _trees(sc, x0, z0, lod)
 	out["items"] = sector_items.get(sc, [])
+	out["guard"] = _guardrails(sc)
 	return out
+
+
+## guardrail segments: model transforms (10 m segment scaled to each 4 m piece) + collision boxes
+func _guardrails(sc: Vector2i) -> Dictionary:
+	var xfs: Array = []
+	var boxes: Array = []
+	for g in sector_guard.get(sc, []):
+		var a: Vector3 = g[0]
+		var b: Vector3 = g[1]
+		var side: int = g[2]
+		var d := b - a
+		var L := Vector2(d.x, d.z).length()
+		if L < 0.3:
+			continue
+		var z := d.normalized()
+		# perpendicular towards the road (the beam faces the traffic)
+		var inward := Vector3(d.z, 0, -d.x).normalized() * float(side)
+		var x := inward
+		var y := z.cross(x).normalized()
+		if y.y < 0.0:
+			x = -x
+			y = -y
+		var basis := Basis(x, y * 0.62, z * (L / 10.04 * 1.03))
+		var o := (a + b) * 0.5 + Vector3(0, -0.32, 0)
+		xfs.append(Transform3D(basis, o))
+		boxes.append([o + Vector3(0, 0.5, 0), Vector3(0.35, 1.0, L + 0.1), atan2(z.x, z.z)])
+	return {"xfs": xfs, "boxes": boxes}
 
 
 # ------------------------------------------------------------------------------------------ terrain
@@ -275,7 +326,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				# sidewalks 3.5 m (+0.15 m) with curbs on both sides (not across other roads)
 				for sgn: float in [-1.0, 1.0]:
 					var mid_w := (a + b) * 0.5 + (ra + rb) * 0.5 * (hw + 1.75) * sgn
-					if _on_other_road(mid_w, ri, 2.5):
+					if _on_other_road(mid_w, ri, 2.5) or _in_fillet(mid_w):
 						continue
 					var a0 := a + ra * hw * sgn
 					var b0 := b + rb * hw * sgn
@@ -299,13 +350,18 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 						if not _on_other_road(lp, ri, 2.0):
 							lights.append(lp + Vector3(0, 8.6, 0) - ra * sgn2 * 2.0)
 							# lamp arm over the carriageway
-							_prop(props, "light_street_single", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI)
+							if r["cls"] == "street" or int(S[k] / 32.0) % 3 == 1:
+								# modular city road pack lamp (x3.2), arm over the carriageway
+								_prop(props, "rp_lamp_a", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI * 0.5)
+							else:
+								_prop(props, "light_street_single", lp, atan2(ra.x * sgn2, ra.z * sgn2) + PI)
 							pboxes.append([lp + Vector3(0, 4.5, 0), Vector3(0.26, 9.0, 0.26), 0.0])
 				# benches / bins on the sidewalks now and then
 				if int(S[k] / 70.0) != int(S[k + 1] / 70.0) and r["cls"] != "highway":
 					var bp := a + ra * (hw + 2.9) + Vector3(0, 0.15, 0)
 					if not _on_other_road(bp, ri, 2.0):
-						_prop(props, "bench_park_soviet" if int(S[k] / 70.0) % 2 == 0 else "container_trash_green", bp, atan2(ra.x, ra.z))
+						var bk := int(S[k] / 70.0) % 3
+						_prop(props, ["bench_park_soviet", "container_trash_green", "rp_bench"][bk], bp, atan2(ra.x, ra.z) + (PI * 0.5 if bk == 2 else 0.0))
 			elif not tunnel and not bridge and r["cls"] in ["road", "highway", "mountain", "lane"]:
 				# country road: concrete utility poles on one side, bus stops in villages
 				if int(S[k] / 45.0) != int(S[k + 1] / 45.0):
@@ -349,8 +405,119 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				_portal(conc, col, a, ra, hw, (b - a).normalized())
 			if mask[k + 1] == 2 and k + 2 < P.size() and mask[k + 2] != 2:
 				_portal(conc, col, b, rb, hw, (a - b).normalized())
+	for fl in sector_fillets.get(sc, []):
+		_fillet(fl, asph, side, col)
+	var zebra := _Mesh.new()
+	for cr in sector_cross.get(sc, []):
+		_crossing(cr, zebra)
 	return {"asphalt": asph.arrays(), "dirt": dirt.arrays(), "side": side.arrays(), "conc": conc.arrays(),
-			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes}
+			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes, "zebra": zebra.arrays()}
+
+
+## rounded kerb corner (curb return) at a junction: asphalt between the corner C of the two
+## carriageway edges and the tangent arc (radius r, centre O), a 3.5 m raised sidewalk following the
+## arc on its inner side, and the curb face; all of it is drivable / walkable collision
+func _fillet(fl: Dictionary, asph: _Mesh, side: _Mesh, col: PackedVector3Array) -> void:
+	var y := float(fl["c"][1]) + 0.045
+	var C := Vector3(fl["c"][0], y, fl["c"][2])
+	var O := Vector3(fl["o"][0], y, fl["o"][1])
+	var T1 := Vector3(fl["t1"][0], y, fl["t1"][1])
+	var T2 := Vector3(fl["t2"][0], y, fl["t2"][1])
+	var R := float(fl["r"])
+	var a1 := atan2(T1.z - O.z, T1.x - O.x)
+	var a2 := atan2(T2.z - O.z, T2.x - O.x)
+	var da := wrapf(a2 - a1, -PI, PI)
+	var n := maxi(4, int(absf(da) * R / 1.5))
+	var arc: Array[Vector3] = []
+	for k in n + 1:
+		var a := a1 + da * k / n
+		arc.append(O + Vector3(cos(a), 0, sin(a)) * R)
+	var u2 := Vector2(100.0, 2.0)            # no lane paint on the corner (road shader)
+	for k in n:
+		_tri_up(asph, C, arc[k], arc[k + 1], Vector2(50.0, 0.0), u2)
+		col.append_array([C, arc[k], arc[k + 1]])
+	# sidewalk on the arc (between R - 3.5 and R from the centre), 0.15 m up, + curb face
+	var up := Vector3(0, 0.15, 0)
+	for k in n:
+		var p0: Vector3 = arc[k]
+		var p1: Vector3 = arc[k + 1]
+		var q0 := O + (p0 - O) * ((R - 3.5) / R)
+		var q1 := O + (p1 - O) * ((R - 3.5) / R)
+		_tri_up(side, p0 + up, q0 + up, q1 + up, Vector2.ZERO, Vector2.ZERO)
+		_tri_up(side, p0 + up, q1 + up, p1 + up, Vector2.ZERO, Vector2.ZERO)
+		col.append_array([p0 + up, q0 + up, q1 + up, p0 + up, q1 + up, p1 + up])
+		side.quad_flat(p0, p1, p1 + up, p0 + up)
+		col.append_array([p0, p1, p1 + up, p0, p1 + up, p0 + up])
+
+
+## triangle with an upward normal (consistent winding) and constant UVs
+func _tri_up(m: _Mesh, a: Vector3, b: Vector3, c: Vector3, uv: Vector2, u2: Vector2) -> void:
+	if (c - a).cross(b - a).y < 0.0:
+		var t := b
+		b = c
+		c = t
+	var s0 := m.v.size()
+	m.v.append_array([a, b, c])
+	m.n.append_array([Vector3.UP, Vector3.UP, Vector3.UP])
+	m.uv.append_array([uv, uv, uv])
+	m.uv2.append_array([u2, u2, u2])
+	m.c.append_array([m.tint, m.tint, m.tint])
+	m.i.append_array([s0, s0 + 1, s0 + 2])
+
+
+## zebra crossing: a 4 m band across the carriageway, 2 cm above the asphalt (UV.x across in m)
+func _crossing(cr: Dictionary, m: _Mesh) -> void:
+	var p := Vector3(cr["x"], 0.0, cr["z"])
+	var yaw := float(cr["yaw"])
+	var along := Vector3(sin(yaw), 0, cos(yaw))
+	var across := Vector3(along.z, 0, -along.x)
+	var w := float(cr["w"]) * 0.5
+	var corners: Array[Vector3] = []
+	for c in [[-w, -2.0], [w, -2.0], [w, 2.0], [-w, 2.0]]:
+		var q := p + across * float(c[0]) + along * float(c[1])
+		q.y = _road_y(q, float(cr["y"])) + 0.022
+		corners.append(q)
+	m.quad(corners[0], corners[1], corners[2], corners[3], Vector2(-w, 0), Vector2(w, 0), Vector2(w, 4), Vector2(-w, 4), Vector2(w, 0))
+
+
+## height of the road surface under p (nearest road sample at about the expected level)
+func _road_y(p: Vector3, near_y: float) -> float:
+	var c := Vector2i(floori(p.x / 16.0), floori(p.z / 16.0))
+	var best := INF
+	var y := near_y
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			for e in _hash.get(c + Vector2i(di, dj), []):
+				var q: Vector3 = (road_frames[e[0]]["p"] as PackedVector3Array)[e[1]]
+				if absf(q.y - near_y) > 2.0:
+					continue
+				var d := Vector2(q.x - p.x, q.z - p.z).length()
+				if d < best:
+					best = d
+					y = q.y
+	return y
+
+
+## inside the kite (C, T1, O, T2) of a rounded junction corner?
+func _in_fillet(p: Vector3) -> bool:
+	for fl in _fillet_hash.get(Vector2i(floori(p.x / 64.0), floori(p.z / 64.0)), []):
+		if absf(float(fl["c"][1]) - p.y) > 3.0:
+			continue
+		var poly := [Vector2(fl["c"][0], fl["c"][2]), Vector2(fl["t1"][0], fl["t1"][1]), Vector2(fl["o"][0], fl["o"][1]), Vector2(fl["t2"][0], fl["t2"][1])]
+		var q := Vector2(p.x, p.z)
+		var pos := 0
+		var neg := 0
+		for k in 4:
+			var a: Vector2 = poly[k]
+			var b: Vector2 = poly[(k + 1) % 4]
+			var cr := (b - a).cross(q - a)
+			if cr > 0.0:
+				pos += 1
+			elif cr < 0.0:
+				neg += 1
+		if pos == 0 or neg == 0:
+			return true
+	return false
 
 
 static func _prop(d: Dictionary, id: String, p: Vector3, yaw: float) -> void:
@@ -535,6 +702,7 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 	var boxes: Array = []
 	var occ_v := PackedVector3Array()
 	var occ_i := PackedInt32Array()
+	var models := {}                       ## model kind -> Array of Transform3D
 	for bi in sector_buildings.get(sc, []):
 		var b: Array = wd.buildings[bi]
 		var kind: String = b[0]
@@ -546,6 +714,27 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 		var floors := int(b[6])
 		var seed := int(b[7])
 		var y := float(b[8])
+		if kind == "sky" or kind.begins_with("villa"):
+			# imported models (WorldModels): transform + collision box (+ occluder for the tower)
+			var sc2 := 1.0 if kind != "sky" else 0.85 + float(seed % 7) * 0.05
+			var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * sc2), Vector3(x, y - 0.3, z))
+			if not models.has(kind):
+				models[kind] = []
+			models[kind].append(xf)
+			var hh := 114.0 * sc2 if kind == "sky" else 11.0
+			var fw := 22.0 * sc2 if kind == "sky" else L
+			var fd := 22.0 * sc2 if kind == "sky" else D
+			boxes.append([Vector3(x, y + hh * 0.5, z), Vector3(fw, hh, fd), yaw])
+			if kind == "sky":
+				var o1 := occ_v.size()
+				var Xo := Vector3(cos(yaw), 0, -sin(yaw)) * (fw * 0.5 - 0.6)
+				var Zo := Vector3(sin(yaw), 0, cos(yaw)) * (fd * 0.5 - 0.6)
+				for yy in [y, y + hh - 1.0]:
+					for corner in [-Xo - Zo, Xo - Zo, Xo + Zo, -Xo + Zo]:
+						occ_v.append(Vector3(x, yy, z) + corner)
+				for f in [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7]]:
+					occ_i.append_array([o1 + f[0], o1 + f[1], o1 + f[2], o1 + f[0], o1 + f[2], o1 + f[3]])
+			continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed = seed
 		var fh: float = FH.get(kind, 3.0)
@@ -654,7 +843,7 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 					occ_v.append(Vector3(c.x, yy, c.z) + corner)
 			for f in [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7]]:
 				occ_i.append_array([o0 + f[0], o0 + f[1], o0 + f[2], o0 + f[0], o0 + f[2], o0 + f[3]])
-	return {"facade": fac.arrays(true), "roof": roof.arrays(), "walls": walls.arrays(), "boxes": boxes, "occ_v": occ_v, "occ_i": occ_i}
+	return {"facade": fac.arrays(true), "roof": roof.arrays(), "walls": walls.arrays(), "boxes": boxes, "occ_v": occ_v, "occ_i": occ_i, "models": models}
 
 
 # ------------------------------------------------------------------------------------------ trees

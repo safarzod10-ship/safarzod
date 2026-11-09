@@ -222,19 +222,54 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 		"flag":
 			_box(root, null, "grass", Vector3(0, 0.08, 0), Vector3(L, 0.15, D), false)
 			_cyl(root, body, "marble", Vector3(0, 0.1, 0), 12.0, 1.2)
-			_cyl(root, body, "white", Vector3(0, 1.3, 0), 1.2, 120.0, 0.45, 16)
-			var fl := MeshInstance3D.new()
-			var pm := PlaneMesh.new()
-			pm.size = Vector2(30, 15)
-			pm.subdivide_width = 16
-			pm.subdivide_depth = 8
-			pm.orientation = PlaneMesh.FACE_Z
-			fl.mesh = pm
-			var sm := ShaderMaterial.new()
-			sm.shader = load("res://assets/shaders/flag.gdshader")
-			fl.material_override = sm
-			fl.position = Vector3(15.5, 112, 0)
-			root.add_child(fl)
+			# the imported flag of Tajikistan on its pole, x20: a 150 m flagpole, 97 x 67 m cloth
+			var fl := WorldModels.place(root, "flag", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 20.0), Vector3(0, 1.3, 0)), 0.0, true)
+			fl.name = "NationalFlag"
+			wave_flag(fl, root.global_position)
+			var pcs := CollisionShape3D.new()
+			var pcy := CylinderShape3D.new()
+			pcy.radius = 2.0
+			pcy.height = 150.0
+			pcs.shape = pcy
+			pcs.position = Vector3(0, 76, 0)
+			body.add_child(pcs)
+		"laklak":
+			# LakLak delivery depot: concrete yard, warehouse, signs, van bays; the office door is the
+			# job interaction point (LakLakJob.DEPOT_JOB_POINT, west face of the warehouse)
+			_box(root, body, "plaza", Vector3(0, 0.05, 0), Vector3(L, 0.3, D), true)
+			var wh := WorldModels.place(root, "laklak", Transform3D(Basis.IDENTITY, Vector3(12, 0.2, 6)), 0.0, true)
+			wh.name = "Warehouse"
+			var wcs := CollisionShape3D.new()
+			var wbs := BoxShape3D.new()
+			wbs.size = Vector3(18.0, 9.6, 25.7)
+			wcs.shape = wbs
+			wcs.position = Vector3(12, 5.0, 6)
+			body.add_child(wcs)
+			var sm := StandardMaterial3D.new()
+			sm.albedo_texture = load("res://assets/vehicles/laklak/laklak_sign.png")
+			sm.emission_enabled = true
+			sm.emission_texture = sm.albedo_texture
+			sm.emission_energy_multiplier = 0.35
+			for spec in [[Vector3(2.85, 7.4, 6.0), -PI * 0.5, Vector2(16.0, 4.0)], [Vector3(-30.0, 6.2, -34.0), -PI * 0.5, Vector2(8.0, 2.0)]]:
+				var q := QuadMesh.new()
+				q.size = spec[2]
+				var qi := MeshInstance3D.new()
+				qi.name = "LakLakSign"
+				qi.mesh = q
+				qi.material_override = sm
+				qi.position = spec[0]
+				qi.rotation.y = spec[1]
+				root.add_child(qi)
+			# roadside sign: pole + panel (both faces)
+			_box(root, body, "dark", Vector3(-30.0, 2.6, -34.0), Vector3(0.25, 5.2, 0.25))
+			_box(root, null, "dark", Vector3(-29.85, 6.2, -34.0), Vector3(0.2, 2.2, 8.2), false)
+			# office door (blue) and the van bays (white lines)
+			_box(root, null, "blue_glass", Vector3(2.95, 1.4, 2.0), Vector3(0.12, 2.6, 2.0), false)
+			for k in 3:
+				_box(root, null, "white", Vector3(-16.0, 0.22, -20.0 + k * 6.0), Vector3(9.0, 0.02, 0.15), false)
+			_label(root, "LakLak · ОФИС", Vector3(2.8, 3.2, 2.0), -PI * 0.5, 0.012)
+			var sfl := WorldModels.place(root, "flag", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 1.6), Vector3(-26.0, 0.2, 30.0)), 300.0, true)
+			wave_flag(sfl, root.global_transform * Vector3(-26.0, 0.2, 30.0), 0.2)
 		"palace":
 			_box(root, body, "plaza", Vector3(0, 0.05, -D * 0.5 + 10), Vector3(L, 0.3, 20))
 			_box(root, body, "marble", Vector3(0, 11, 10), Vector3(L * 0.85, 22, D * 0.55))
@@ -331,3 +366,28 @@ static func _trees_ring(root: Node3D, L: float, D: float) -> int:
 	mmi.multimesh = mm
 	root.add_child(mmi)
 	return pts.size()
+
+
+## the imported flag's cloth parts get the waving shader (their own texture); pole at `pole_w`
+static func wave_flag(fl: Node3D, pole_w: Vector3, amp := 2.6) -> void:
+	for mi in fl.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var src := m.mesh.surface_get_material(0) as BaseMaterial3D
+		if src == null or src.albedo_texture == null or m.mesh.get_aabb().size.y > m.mesh.get_aabb().size.x * 1.5:
+			continue                       # the pole (no texture) stays as it is
+		var wb := m.global_transform * m.mesh.get_aabb()
+		var c := wb.get_center()
+		var along_w := Vector3(c.x - pole_w.x, 0, c.z - pole_w.z)
+		var lw := along_w.length() * 2.0
+		along_w = along_w.normalized()
+		var normal_w := Vector3.UP.cross(along_w).normalized()
+		var inv := m.global_transform.affine_inverse()
+		var sm := ShaderMaterial.new()
+		sm.shader = load("res://assets/shaders/flag_model.gdshader")
+		sm.set_shader_parameter("tex", src.albedo_texture)
+		sm.set_shader_parameter("pole_l", inv * pole_w)
+		sm.set_shader_parameter("along_l", (inv.basis * along_w).normalized())
+		sm.set_shader_parameter("normal_l", inv.basis * normal_w)
+		sm.set_shader_parameter("len_l", (inv.basis * (along_w * lw)).length())
+		sm.set_shader_parameter("amp", amp)
+		m.material_override = sm

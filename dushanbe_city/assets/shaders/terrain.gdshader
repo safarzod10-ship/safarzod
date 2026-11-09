@@ -8,6 +8,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 
 global uniform float city_macro_detail;
 global uniform float city_wetness;
+#include "res://assets/shaders/grass_palette.gdshaderinc"
 
 uniform sampler2D grass_alb : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D grass_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -45,7 +46,7 @@ void fragment() {
 	vec2 rock_uv = abs(wn.y) > 0.75 ? p / 6.0 : (abs(wn.x) > abs(wn.z) ? wp.zy : wp.xy) / 6.0;
 	// layers are fetched only where they have weight (weights are spatially coherent -> cheap branches;
 	// most of the terrain is grass-only and costs one albedo fetch)
-	vec3 g = wg > 0.003 ? texture(grass_alb, p / 3.0).rgb : vec3(0.0);
+	vec3 g = wg > 0.003 ? grass_palette(p, macro_tex, city_macro_detail) * grass_detail(grass_alb, p / 3.0) : vec3(0.0);
 	vec3 s = w.r > 0.003 ? texture(sand_alb, p / 4.0).rgb : vec3(0.0);
 	vec3 r = w.g > 0.003 ? texture(rock_alb, rock_uv).rgb : vec3(0.0);
 	vec3 e = w.b > 0.003 ? texture(earth_alb, p / 3.0).rgb : vec3(0.0);
@@ -55,12 +56,12 @@ void fragment() {
 		m = texture(macro_tex, p * 0.004).r * 0.6 + texture(macro_tex, p * 0.019).r * 0.4;
 	}
 	// grass: lush/dry variation, darker in hollows
-	g *= mix(grass_tint, dry_tint, smoothstep(0.55, 0.85, m) * 0.8);
+	// (grass colour: natural palette, see grass_palette.gdshaderinc)
 	// wet sand band at the waterline
 	float wet = 1.0 - smoothstep(sea_level + 0.05, sea_level + 0.9, wp.y);
 	s *= mix(1.0, 0.62, wet);
 	vec3 alb = g * wg + s * w.r + r * w.g + e * w.b + a * w.a;
-	alb *= mix(1.0, 0.82 + 0.36 * m, 0.5 * city_macro_detail);
+	alb *= mix(1.0, 0.82 + 0.36 * m, 0.5 * city_macro_detail * (1.0 - wg));
 	// seabed seen through the clear shallows: wet, darker, blue-green with depth
 	float uw = smoothstep(sea_level + 0.05, sea_level - 2.5, wp.y);
 	alb *= mix(vec3(1.0), vec3(0.55, 0.72, 0.70), uw);

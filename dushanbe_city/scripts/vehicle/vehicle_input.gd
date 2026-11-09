@@ -11,6 +11,8 @@ static var touch_handbrake := false
 static var look_delta := Vector2.ZERO          ## camera orbit drag (pixels)
 ## scripted input for tests: {"throttle": f, "brake": f, "steer": f, "handbrake": b}
 static var scripted = null
+## which vehicle the scripted input drives: the one being driven, else the group "primary_vehicle"
+## (the Prado); parked vans / boats never react to it
 static var _ready := false
 
 

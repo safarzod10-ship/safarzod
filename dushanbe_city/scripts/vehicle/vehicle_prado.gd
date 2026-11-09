@@ -271,6 +271,35 @@ func _wheel_z(front: bool) -> float:
 func _physics_process(delta: float) -> void:
 	_read_input(delta)
 	_hit_cooldown = maxf(0.0, _hit_cooldown - delta)
+	# parked far from the camera: frozen (static) so it neither falls through unloaded ground nor
+	# keeps open-world sectors loaded around it; wakes up when the camera comes within 300 m
+	_far_t -= delta
+	if _far_t <= 0.0:
+		_far_t = 0.5
+		var cam := get_viewport().get_camera_3d()
+		var far := not driven and not scripted_here() and cam != null and cam.global_position.distance_to(global_position) > 300.0
+		if far != freeze:
+			freeze = far
+
+
+var _far_t := 0.0
+
+
+## does the scripted (test) input drive this vehicle? the driven one, else the primary one (Prado)
+## when nobody drives
+func scripted_here() -> bool:
+	if VehicleInput.scripted == null:
+		return false
+	if driven:
+		return true
+	var has_primary := false
+	for v in get_tree().get_nodes_in_group(&"vehicle"):
+		if v.get("driven"):
+			return false
+		if v.is_in_group(&"primary_vehicle"):
+			has_primary = true
+	# the game scene: the primary vehicle (Prado); a standalone vehicle test scene: every vehicle
+	return is_in_group(&"primary_vehicle") or not has_primary
 
 
 func _read_input(delta: float) -> void:
@@ -278,7 +307,7 @@ func _read_input(delta: float) -> void:
 	var b := 0.0
 	var s := 0.0
 	var hb := false
-	if driven or VehicleInput.scripted != null:
+	if driven or scripted_here():
 		t = VehicleInput.throttle()
 		b = VehicleInput.brake()
 		s = VehicleInput.steer()
