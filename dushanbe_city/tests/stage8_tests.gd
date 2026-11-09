@@ -156,6 +156,7 @@ func _t_station() -> void:
 	_check("nearest station from any road point: at most %.1f km" % (worst / 1000.0), worst < 7000.0)
 	# drive to one: the Prado parked at the pumps
 	var car: VehiclePrado = main.get("car")
+	car.repair()                 # the earlier drives may have damaged it (a burning car explodes)
 	var f: Dictionary = wd.fuel[0]
 	var pump := fs.nearest_station_pos(Vector3(float(f.get("ox", f["x"])), 0, float(f.get("oz", f["z"]))))
 	car.place(pump + Vector3(0, 40, 0), float(f["yaw"]))       # first above it: the camera follows

@@ -139,6 +139,7 @@ func _t_touch_fuel() -> void:
 	# at a station: the fill button, tapped with finger 1
 	var f: Dictionary = wd.fuel[3]
 	var pump := fs.nearest_station_pos(Vector3(f["x"], f["y"], f["z"]))
+	ow.hold = pump
 	ow.preload_at(pump)
 	await _frames(10)
 	camry.place(pump + Vector3(0, 1, 0), 0.0)
@@ -155,6 +156,7 @@ func _t_touch_fuel() -> void:
 	await _sec(10.0)
 	_check("tap «ЗАПРАВИТЬ»: Camry filled to %.0f l, paid %s" % [camry.fuel_l, Wallet.fmt(m0 - Wallet.money)], camry.fuel_l > 50.0 and m0 > Wallet.money)
 	s.controls.touch_mode = false
+	ow.hold = Vector3.INF
 	s.exit()
 	await _frames(10)
 

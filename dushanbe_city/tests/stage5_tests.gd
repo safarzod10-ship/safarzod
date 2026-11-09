@@ -615,13 +615,16 @@ func _t_damage() -> void:
 	var v100 := car.speed_kmh
 	_check("degradation: after 8 s full throttle %.0f km/h at 40 %% vs %.0f km/h at 100 %%; power x%.2f, steering x%.2f, springs x%.2f" % [v40, v100, f["power"], f["steer"], f["spring"]],
 		v40 < v100 * 0.9 and f["power"] < 1.0 and f["steer"] < 1.0)
-	# wrecked: slow but drives
+	# 0 %: since 0.17 a destroyed car catches fire (VehicleFire: then it explodes); put out by
+	# bringing the condition back up before it blows
 	await _place(Vector3(0, 0, 60))
 	car.health = 0.0
-	VehicleInput.scripted = {"throttle": 1.0}
-	await _sec(8.0)
-	var v0 := car.speed_kmh
-	_check("wrecked car (0 %%) still drives slowly: %.0f km/h" % v0, v0 > 15.0 and v0 < 45.0)
+	await _sec(1.0)
+	var vf: VehicleFire = car.get_node("Fire")
+	var burning := vf._burn >= 0.0 and vf._fire != null
+	car.health = 50.0
+	await _sec(0.5)
+	_check("destroyed car (0 %%): catches fire %s (put out again %s)" % [burning, vf._burn < 0.0], burning and vf._burn < 0.0 and not car.wrecked)
 	# full repair, same object
 	car.damage_at(car.global_position + Vector3(0, 0.8, -2.3), Vector3(0, 0, 1), 12.0)
 	var n_cars := get_tree().get_nodes_in_group(&"vehicle").size()

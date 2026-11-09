@@ -159,6 +159,7 @@ func _t_steer() -> void:
 	VehicleInput.scripted = {"brake": 1.0}
 	await _sec(1.5)
 	VehicleInput.scripted = null
+	var spin := q.get_axis().dot(Vector3.FORWARD) * q.get_angle()
 	_check("steer right -> the steering wheel turns clockwise for the driver (%.0f deg)" % rad_to_deg(spin), spin > deg_to_rad(30.0))
 	s.exit()
 

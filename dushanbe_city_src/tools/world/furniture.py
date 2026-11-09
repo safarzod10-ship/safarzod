@@ -172,7 +172,7 @@ def billboards(roads, buildings, landmarks, H_at, water_ok, every=1000.0):
         n = int(S[-1] // every)
         for m in range(1, n + 1):
             placed = False
-            for shift in (0, 60, -60, 120, -120, 180, -180, 240, -240, 300, -300, 360, -360):
+            for shift in (0, 60, -60, 120, -120, 180, -180, 240, -240, 300, -300, 360, -360, 420, -420, 480, -480):
                 target = m * every - every * 0.5 + shift
                 if target < 30 or target > S[-1] - 30:
                     continue
@@ -180,8 +180,8 @@ def billboards(roads, buildings, landmarks, H_at, water_ok, every=1000.0):
                 if bad[max(k - 8, 0):k + 8].any():
                     continue
                 d = D[k]; nrm = np.array([-d[1], d[0]])
-                for side in ((1, -1) if m % 2 else (-1, 1)):
-                    off = hwr + 9.0
+                for side, off in [(sd, o) for o in (hwr + 9.0, hwr + 6.5, hwr + 13.0) for sd in ((1, -1) if m % 2 else (-1, 1))]:
+                    # dense city streets: also just behind the kerb / a little further out
                     x, z = P[k] + nrm * off * side
                     g = float(H_at([x], [z])[0])
                     if abs(g - Hh[k]) > 5.0:
@@ -190,7 +190,7 @@ def billboards(roads, buildings, landmarks, H_at, water_ok, every=1000.0):
                         continue          # ~1 km apart: never two boards close together (junctions, loops)
                     # the board is 11 m wide: both its ends must be free as well
                     ok = all(_free_point(x + d[0] * e, z + d[1] * e, 4.0, road_tree, road_hw, bld_tree, bld_r, lm, water_ok)
-                             for e in (-5.5, 0.0, 5.5))
+                             for e in (-7.5, 0.0, 7.5))      # the board is 15.5 m wide (x1.4 model)
                     if not ok:
                         continue
                     # the poster faces the oncoming traffic, turned 25 deg towards the road
