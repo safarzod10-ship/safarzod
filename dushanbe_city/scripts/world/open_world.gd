@@ -310,8 +310,14 @@ func _waterfalls() -> void:
 
 
 # ------------------------------------------------------------------------------------------ streaming
+## an extra point kept loaded with collision (a teleport destination, until the player is there)
+var hold := Vector3.INF
+
+
 func _focus_points() -> Array[Vector3]:
 	var pts: Array[Vector3] = []
+	if hold != Vector3.INF:
+		pts.append(hold)
 	var cam := get_viewport().get_camera_3d()
 	if cam:
 		pts.append(cam.global_position)

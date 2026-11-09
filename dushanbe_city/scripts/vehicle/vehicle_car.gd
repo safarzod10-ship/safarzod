@@ -172,11 +172,17 @@ func _style_material(sm: ShaderMaterial, key: String, src: BaseMaterial3D) -> vo
 
 
 func _build_collision() -> void:
+	var first := true
 	for b in spec["boxes"]:
 		var cs := CollisionShape3D.new()
-		var bs := BoxShape3D.new()
-		bs.size = b[0]
-		cs.shape = bs
+		if first:
+			# lower body: bevelled bumper edges (longer on the 12 m bus: its big overhangs)
+			cs.shape = chamfered_box(b[0], 0.24 if (b[0] as Vector3).z < 8.0 else 0.3, 0.8 if (b[0] as Vector3).z < 8.0 else 1.4)
+		else:
+			var bs := BoxShape3D.new()
+			bs.size = b[0]
+			cs.shape = bs
+		first = false
 		cs.position = (b[1] as Vector3) + Vector3(0, _ground_y, 0)
 		add_child(cs)
 

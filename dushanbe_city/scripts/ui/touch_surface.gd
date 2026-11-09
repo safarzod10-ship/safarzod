@@ -119,6 +119,8 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var p: Vector2 = event.position
 		if event.pressed:
+			if TouchBlock.hit(get_tree(), p):
+				return
 			if _in_circle(p, _jump_rect()):
 				_jump_finger = event.index
 				PlayerInput.queue_jump()

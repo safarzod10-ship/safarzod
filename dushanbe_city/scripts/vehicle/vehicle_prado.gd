@@ -243,14 +243,39 @@ func _update_part_uniforms() -> void:
 
 func _build_collision() -> void:
 	# lower body (bumpers, sills: 0.42 m ground clearance at rest) + cabin
+	var first := true
 	for spec in [[Vector3(1.84, 0.70, 4.50), Vector3(0.0, _ground_y + 0.42 + 0.35, -0.05)],
 			[Vector3(1.70, 0.72, 3.05), Vector3(0.0, _ground_y + 1.12 + 0.36, 0.45)]]:
 		var cs := CollisionShape3D.new()
-		var bs := BoxShape3D.new()
-		bs.size = spec[0]
-		cs.shape = bs
+		if first:
+			cs.shape = chamfered_box(spec[0])
+		else:
+			var bs := BoxShape3D.new()
+			bs.size = spec[0]
+			cs.shape = bs
+		first = false
 		cs.position = spec[1]
 		add_child(cs)
+
+
+## the lower body as a box whose bottom front / rear edges are bevelled like real bumpers (rising
+## `rise` m over the last `run` m): ramps, kerbs and road embankments meet the tyres, not a sharp
+## corner of the collision box
+static func chamfered_box(size: Vector3, rise := 0.24, run := 0.8) -> ConvexPolygonShape3D:
+	var hx := size.x * 0.5
+	var hy := size.y * 0.5
+	var hz := size.z * 0.5
+	var r := minf(rise, size.y * 0.6)
+	var l := minf(run, hz * 0.4)
+	var pts := PackedVector3Array()
+	for x: float in [-hx, hx]:
+		for z: float in [-hz, hz]:
+			pts.append(Vector3(x, hy, z))                     # top corners
+			pts.append(Vector3(x, -hy + r, z))                # bumper bottom edge (raised)
+			pts.append(Vector3(x, -hy, z - signf(z) * l))     # floor starts behind the bevel
+	var sh := ConvexPolygonShape3D.new()
+	sh.points = pts
+	return sh
 
 
 func _setup_wheels() -> void:

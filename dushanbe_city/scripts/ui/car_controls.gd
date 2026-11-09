@@ -70,6 +70,8 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var p: Vector2 = event.position
 		if event.pressed:
+			if TouchBlock.hit(get_tree(), p):
+				return
 			var k := _hit(p)
 			if k == "":
 				k = "look"

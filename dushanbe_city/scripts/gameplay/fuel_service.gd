@@ -11,7 +11,7 @@ extends Node
 
 const PRICE_STATION := 14
 const PRICE_DELIVERY := 18
-const PUMP_RADIUS := 12.0
+const PUMP_RADIUS := 16.0
 const FILL_RATE := 8.0                 ## l / s at the pump
 
 var session: CarSession
@@ -30,6 +30,7 @@ var _fill_target := 0.0
 var _station: Node3D = null
 var _warned := false
 var _last_car: VehiclePrado = null
+var _was_fill_vis := false
 
 
 func _ready() -> void:
@@ -60,7 +61,7 @@ func _button(text: String, col: Color) -> Button:
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_override("font", _font)
-	b.add_theme_font_size_override("font_size", 24)
+	b.add_theme_font_size_override("font_size", 30)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = col
 	sb.set_corner_radius_all(14)
@@ -73,6 +74,8 @@ func _button(text: String, col: Color) -> Button:
 	sh.bg_color = col.lightened(0.15)
 	b.add_theme_stylebox_override("hover", sh)
 	b.add_theme_stylebox_override("pressed", sh)
+	b.custom_minimum_size = Vector2(0, 84)
+	b.add_to_group(TouchBlock.GROUP)
 	b.visible = false
 	_ui.add_child(b)
 	return b
@@ -102,23 +105,27 @@ func _build_panel() -> void:
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.add_theme_font_override("font", _font)
-		b.add_theme_font_size_override("font_size", 23)
-		b.custom_minimum_size = Vector2(460, 52)
+		b.add_theme_font_size_override("font_size", 28)
+		b.custom_minimum_size = Vector2(520, 76)
+		b.add_to_group(TouchBlock.GROUP)
 		var bi := i
 		b.pressed.connect(func() -> void: _panel_choice(bi))
 		v.add_child(b)
 		_panel_btns.append(b)
+	_panel.add_to_group(TouchBlock.GROUP)
 	_panel.visible = false
 	_ui.add_child(_panel)
 
 
 func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
-	_btn_fill.position = Vector2(vs.x * 0.5 - 170, vs.y * 0.62)
-	_btn_buy.position = Vector2(vs.x * 0.5 - 130, vs.y * 0.62)
-	_status.position = Vector2(vs.x * 0.5 - 400, vs.y * 0.52)
+	for b: Button in [_btn_fill, _btn_buy]:
+		b.reset_size()
+		b.position = Vector2(vs.x * 0.5 - b.size.x * 0.5, vs.y * 0.6)
+	_status.position = Vector2(vs.x * 0.5 - 400, vs.y * 0.5)
 	_status.size = Vector2(800, 40)
-	_panel.position = Vector2(vs.x * 0.5 - 260, vs.y * 0.22)
+	_panel.reset_size()
+	_panel.position = Vector2(vs.x * 0.5 - _panel.size.x * 0.5, maxf(vs.y * 0.12, 90.0))
 
 
 func toast(t: String, secs := 3.0) -> void:
@@ -128,6 +135,13 @@ func toast(t: String, secs := 3.0) -> void:
 
 func current_car() -> VehiclePrado:
 	return session.car if session and session.driving else null
+
+
+## taps (any finger, also while the gas pedal is held) on the fuel buttons / the window
+func _input(event: InputEvent) -> void:
+	var btns: Array = [_btn_fill, _btn_buy]
+	btns.append_array(_panel_btns)
+	TouchBlock.tap(event, btns)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -179,6 +193,8 @@ func _process(delta: float) -> void:
 		_filling = false
 		if car == null or car.fuel_l > 0.0:
 			_panel.visible = false
+		elif car.fuel_l <= 0.0 and station_near(car.global_position) == null:
+			open_delivery()                    # got into a car with an empty tank
 	if car == null:
 		_btn_fill.visible = false
 		_btn_buy.visible = false
@@ -187,9 +203,21 @@ func _process(delta: float) -> void:
 		return
 	# at the pumps
 	_station = station_near(car.global_position) if car.speed_kmh < 3.0 else null
+	if _station == null and car.speed_kmh >= 3.0 and car.fuel_l < car.tank_l - 1.0 and station_near(car.global_position) != null:
+		if _status_t <= 0.0:
+			toast("АЗС: остановитесь у колонок, чтобы заправиться", 1.5)
 	var full := car.fuel_l >= car.tank_l - 0.05
 	_btn_fill.visible = _station != null and not _filling and not full and not _panel.visible
-	_btn_buy.visible = car.fuel_l <= 0.0 and _station == null and not _panel.visible
+	# the delivery button: tank empty, or low (< 15 %) away from a station
+	_btn_buy.visible = car.fuel_l < car.tank_l * 0.15 and _station == null and not _panel.visible
+	if _btn_buy.visible:
+		var t := "КУПИТЬ БЕНЗИН · 18 смн/л" if car.fuel_l <= 0.0 else "ДОЗАПРАВКА · 18 смн/л"
+		if _btn_buy.text != t:
+			_btn_buy.text = t
+			_layout()
+	if _btn_fill.visible and not _was_fill_vis:
+		_layout()
+	_was_fill_vis = _btn_fill.visible
 	if _filling:
 		if _station == null:
 			_finish_fill()
@@ -270,9 +298,10 @@ func open_delivery() -> void:
 			b.text = "На все деньги: %.0f л — %s" % [afford, Wallet.fmt(int(afford) * PRICE_DELIVERY)]
 			b.set_meta("litres", afford)
 			b.disabled = false
-	_panel_btns[3].text = "Закрыть" if afford >= 1.0 else "Закрыть (нет денег: подработайте в LakLak или водителем)"
+	_panel_btns[3].text = "Закрыть" if afford >= 1.0 else "Закрыть · нет денег (работа: LakLak / автобус)"
 	_panel_btns[3].set_meta("litres", 0.0)
 	_panel.visible = true
+	_layout()
 
 
 func _panel_choice(i: int) -> void:

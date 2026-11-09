@@ -22,14 +22,14 @@ const PRESETS := {
 		"macro_detail": false,
 	},
 	Quality.MEDIUM: {
-		"render_scale": 0.72, "scale_min": 0.5, "msaa": 0, "fxaa": true, "shadows": true, "shadow_distance": 55.0,
+		"render_scale": 0.8, "scale_min": 0.5, "msaa": 0, "fxaa": true, "shadows": true, "shadow_distance": 55.0,
 		"shadow_size": 2048, "shadow_splits": 2, "tree_shadows": false, "grass_radius": 13.0, "grass_density": 0.6,
 		"tree_lod0_dist": 40.0, "tree_draw_dist": 360.0, "detail_dist": 70.0, "prop_dist": 90.0,
 		"building_detail_dist": 60.0, "city_draw_dist": 600.0, "fog": true, "glow": false, "sky_radiance": 64,
 		"macro_detail": true,
 	},
 	Quality.HIGH: {
-		"render_scale": 0.85, "scale_min": 0.6, "msaa": 0, "fxaa": true, "shadows": true, "shadow_distance": 90.0,
+		"render_scale": 0.92, "scale_min": 0.6, "msaa": 2, "fxaa": false, "shadows": true, "shadow_distance": 90.0,
 		"shadow_size": 2048, "shadow_splits": 4, "tree_shadows": true, "grass_radius": 20.0, "grass_density": 0.85,
 		"tree_lod0_dist": 65.0, "tree_draw_dist": 500.0, "detail_dist": 110.0, "prop_dist": 130.0,
 		"building_detail_dist": 100.0, "city_draw_dist": 900.0, "fog": true, "glow": true, "sky_radiance": 128,

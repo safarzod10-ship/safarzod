@@ -141,7 +141,7 @@ func _look(label: String, from: Vector3, at: Vector3, h := -1.0, th := NAN, sett
 			await get_tree().process_frame
 	for i in 6:
 		await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png("%s/s8_%s.png" % [out, label])
+	get_viewport().get_texture().get_image().save_png("%s/%s%s.png" % [out, "s9_" if get_script().resource_path.contains("stage9") else "s8_", label])
 	print("S8 shot ", label)
 
 

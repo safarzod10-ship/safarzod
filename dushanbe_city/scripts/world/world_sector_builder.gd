@@ -334,14 +334,19 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 					var b1 := b + rb * (hw + 3.5) * sgn + Vector3(0, 0.15, 0)
 					var a0u := a0 + Vector3(0, 0.15, 0)
 					var b0u := b0 + Vector3(0, 0.15, 0)
+					# behind the sidewalk a gentle slope down to the ground (no ledge to get stuck on)
+					var af := _foot(a1, ra * sgn)
+					var bf := _foot(b1, rb * sgn)
 					if sgn > 0:
 						side.quad_flat(a0, a0u, b0u, b0)
 						side.quad_flat(a0u, a1, b1, b0u)
-						col.append_array([a0u, a1, b1, a0u, b1, b0u])
+						side.quad_flat(a1, af, bf, b1)
+						col.append_array([a0u, a1, b1, a0u, b1, b0u, a1, af, bf, a1, bf, b1])
 					else:
 						side.quad_flat(b0, b0u, a0u, a0)
 						side.quad_flat(b0u, b1, a1, a0u)
-						col.append_array([b0u, b1, a1, b0u, a1, a0u])
+						side.quad_flat(b1, bf, af, a1)
+						col.append_array([b0u, b1, a1, b0u, a1, a0u, b1, bf, af, b1, af, a1])
 				if int(S[k] / 32.0) != int(S[k + 1] / 32.0):
 					for sgn2: float in [-1.0, 1.0]:
 						if r["cls"] == "street" and sgn2 < 0:
@@ -393,9 +398,16 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				dirt.quad(ar, arO, brO, br, Vector2(hw, S[k]), Vector2(hw + sw, S[k]), Vector2(hw + sw, S[k + 1]), Vector2(hw, S[k + 1]), u2)
 				dirt.quad(alO, al, bl, blO, Vector2(-hw - sw, S[k]), Vector2(-hw, S[k]), Vector2(-hw, S[k + 1]), Vector2(-hw - sw, S[k + 1]), u2)
 				col.append_array([ar, arO, brO, ar, brO, br, alO, al, bl, alO, bl, blO])
-				var d2 := Vector3(0, -1.2, 0)
-				dirt.quad_flat(arO, arO + d2 + ra * 0.8, brO + d2 + rb * 0.8, brO)
-				dirt.quad_flat(blO, blO + d2 - rb * 0.8, alO + d2 - ra * 0.8, alO)
+				# embankment: a gentle drivable slope (<= 1:4) from the shoulder edge down to (a bit
+				# under) the terrain - part of the collision, so a car that left the road climbs back
+				# on instead of hitting a step
+				var afR := _foot(arO, ra)
+				var bfR := _foot(brO, rb)
+				var afL := _foot(alO, -ra)
+				var bfL := _foot(blO, -rb)
+				dirt.quad(arO, afR, bfR, brO, Vector2(hw + sw, S[k]), Vector2(hw + sw + 3.0, S[k]), Vector2(hw + sw + 3.0, S[k + 1]), Vector2(hw + sw, S[k + 1]), u2)
+				dirt.quad(afL, alO, blO, bfL, Vector2(-hw - sw - 3.0, S[k]), Vector2(-hw - sw, S[k]), Vector2(-hw - sw, S[k + 1]), Vector2(-hw - sw - 3.0, S[k + 1]), u2)
+				col.append_array([arO, afR, bfR, arO, bfR, brO, afL, alO, blO, afL, blO, bfL])
 			if bridge:
 				_bridge_segment(conc, col, a, b, ra, rb, hw, k, S, ri)
 			if tunnel and mask[k] == 2 and mask[k + 1] == 2:
@@ -412,6 +424,21 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 		_crossing(cr, zebra)
 	return {"asphalt": asph.arrays(), "dirt": dirt.arrays(), "side": side.arrays(), "conc": conc.arrays(),
 			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes, "zebra": zebra.arrays()}
+
+
+## the foot of a road embankment that starts at the edge point e and goes outwards (dir, unit,
+## horizontal): run = 4 x the drop to the terrain (1:4, 14 degrees; 0.8 .. 10 m), ending 6 cm
+## under the ground
+func _foot(e: Vector3, dir: Vector3) -> Vector3:
+	var g := wd.height_at(e.x, e.z)
+	var run := clampf((e.y - g) * 4.0, 0.8, 10.0)
+	var f := e + dir * run
+	# the ground falling away under the foot: lengthen once more so the slope stays ~1:4
+	g = wd.height_at(f.x, f.z)
+	run = clampf((e.y - g) * 4.0, 0.8, 10.0)
+	f = e + dir * run
+	f.y = minf(wd.height_at(f.x, f.z), e.y + 0.4) - 0.06
+	return f
 
 
 ## rounded kerb corner (curb return) at a junction: asphalt between the corner C of the two

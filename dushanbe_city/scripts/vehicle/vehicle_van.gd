@@ -134,9 +134,12 @@ func _build_collision() -> void:
 	for spec in [[Vector3(2.2, 1.25, 5.15), Vector3(0.0, _ground_y + 0.38 + 0.625, 0.17)],
 			[Vector3(2.1, 0.8, 4.4), Vector3(0.0, _ground_y + 1.63 + 0.4, 0.5)]]:
 		var cs := CollisionShape3D.new()
-		var bs := BoxShape3D.new()
-		bs.size = spec[0]
-		cs.shape = bs
+		if (spec[0] as Vector3).y > 1.0:
+			cs.shape = chamfered_box(spec[0], 0.26, 0.7)
+		else:
+			var bs := BoxShape3D.new()
+			bs.size = spec[0]
+			cs.shape = bs
 		cs.position = spec[1]
 		add_child(cs)
 
