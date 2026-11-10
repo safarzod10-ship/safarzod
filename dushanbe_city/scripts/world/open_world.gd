@@ -54,6 +54,10 @@ func _ready() -> void:
 	patches.name = "PlotPatches"
 	add_child(patches)
 	patches.build(wd, mats["terrain"])
+	var decor := PlazaDecor.new()
+	decor.name = "PlazaDecor"
+	add_child(decor)
+	decor.build(patches, self)
 	PlayerWater.ensure_index()
 	_build_lakes()
 	_build_edges()

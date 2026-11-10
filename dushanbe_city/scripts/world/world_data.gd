@@ -172,22 +172,33 @@ func grass_ok(x: float, z: float) -> bool:
 	for l in landmarks:
 		if absf(x - float(l["x"])) < float(l["L"]) * 0.5 + 2.0 and absf(z - float(l["z"])) < float(l["D"]) * 0.5 + 2.0:
 			return false
-	# inside the AMID supermarkets (they can be entered) and on their car parks
-	if _amids.is_empty():
-		_amids.append(Vector4.INF)
-		for b in buildings:
-			if String(b[0]) == "amid_m":
-				_amids.append(Vector4(float(b[1]), float(b[2]), float(b[3]), 0.0))
-	for a: Vector4 in _amids:
-		if a.x == INF:
-			continue
-		var p := Vector2(x - a.x, z - a.y).rotated(-a.z)
-		if absf(p.x) < 48.0 and absf(p.y) < 42.0:
-			return false
+	# inside the AMID supermarkets (they can be entered), on the car parks and the front plazas
+	if in_plaza(x, z):
+		return false
 	return true
 
 
-var _amids: Array = []
+var _bigs: Array = []
+
+
+## on a supermarket / mall plot or its front plaza (down to the street)? (no wild grass, trees there)
+func in_plaza(x: float, z: float) -> bool:
+	if _bigs.is_empty():
+		_bigs.append([INF])
+		for b in buildings:
+			if String(b[0]) in ["amid_m", "mall_m"]:
+				_bigs.append([float(b[1]), float(b[2]), float(b[3]), float(b[4]), float(b[5])])
+	for a: Array in _bigs:
+		if a[0] == INF:
+			continue
+		var dx := x - float(a[0])
+		var dz := z - float(a[1])
+		var yaw := float(a[2])
+		var lx := dx * cos(yaw) - dz * sin(yaw)
+		var fz := -(dx * sin(yaw) + dz * cos(yaw))
+		if absf(lx) < float(a[3]) * 0.5 + 6.0 and fz > -float(a[4]) * 0.5 - 2.0 and fz < float(a[4]) * 0.5 + 26.0:
+			return true
+	return false
 
 
 ## a landmark plot by id ({} if none): x, y, z, yaw, L, D

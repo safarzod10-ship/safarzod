@@ -1050,6 +1050,8 @@ var _station_cells := {}
 
 
 func _in_own_plot(x: float, z: float) -> bool:
+	if wd.in_plaza(x, z):
+		return true
 	if _station_cells.is_empty():
 		_station_cells["_"] = true
 		for f in wd.fuel + wd.services:
