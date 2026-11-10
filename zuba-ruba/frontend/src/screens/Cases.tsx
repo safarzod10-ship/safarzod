@@ -2,11 +2,12 @@ import { useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api";
 import { useApp } from "../AppContext";
 import { formatDateTime, formatNumber, plural } from "../format";
-import { navigate } from "../router";
+import { navigate, useRoute } from "../router";
 import { Amount, Star } from "../stars";
 import { haptic } from "../telegram";
 import { Roulette, tierOf, type RouletteHandle } from "../components/Roulette";
 import type { Case, CasesResponse } from "../types";
+import { CaseShop } from "./CaseShop";
 import { Badge, Button, EmptyState, ErrorState, Loader, Screen, Section, clearResourceCache, useResource } from "../ui";
 
 function rewardNote(item: Case): string {
@@ -19,6 +20,44 @@ function rewardNote(item: Case): string {
 type Phase = { kind: "idle" } | { kind: "requesting" } | { kind: "spinning"; result: Case } | { kind: "done"; result: Case };
 
 export function CasesScreen() {
+  const { config } = useApp();
+  const route = useRoute();
+  const [tab, setTab] = useState<"mine" | "shop">(() => (config.paid_cases && route.query.get("tab") === "shop" ? "shop" : "mine"));
+  const cases = useResource("cases", () => api.get<CasesResponse>("/cases"));
+  const ready = cases.data?.ready.length ?? 0;
+  return (
+    <Screen title="Кейсы">
+      {config.paid_cases && (
+        <div className="filters case-tabs" role="tablist" aria-label="Раздел кейсов">
+          {(
+            [
+              ["mine", "Мои кейсы"],
+              ["shop", "Магазин"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              className={tab === id ? "filter filter-active" : "filter"}
+              onClick={() => {
+                if (tab !== id) haptic("select");
+                setTab(id);
+              }}
+            >
+              {label}
+              {id === "mine" && ready > 0 && <span className="filter-count">{ready}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {tab === "shop" ? <CaseShop /> : <MyCases />}
+    </Screen>
+  );
+}
+
+function MyCases() {
   const { config, me } = useApp();
   const table = config.case_prizes;
   const cases = useResource("cases", () => api.get<CasesResponse>("/cases"));
@@ -97,7 +136,7 @@ export function CasesScreen() {
   const maxChance = Math.max(...table.map((row) => Number(row.chance)));
 
   return (
-    <Screen title="Кейсы" aside={ready.length > 0 ? <span className="count-chip">{ready.length}</span> : undefined}>
+    <>
       <section className="roulette" aria-label="Рулетка кейса">
         <Roulette ref={roulette} table={table} label="Лента призов кейса" />
 
@@ -218,7 +257,7 @@ export function CasesScreen() {
           )}
         </Section>
       )}
-    </Screen>
+    </>
   );
 }
 

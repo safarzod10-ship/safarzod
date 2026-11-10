@@ -24,6 +24,9 @@ async function mockApi(page: Page, options: MockOptions = {}): Promise<void> {
     if (path === "/tasks") return json(fx.tasks);
     if (path.endsWith("/check") && method === "POST") return json(fx.checkResult);
     if (path === "/cases") return json(fx.cases);
+    if (path === "/paid-cases") return json(fx.paidCatalog);
+    if (path.startsWith("/paid-cases/") && path.endsWith("/open")) return json(fx.paidOpen);
+    if (path === "/deposits") return json({ id: "d1", stars: 50, url: "https://t.me/$invoice" });
     if (path.startsWith("/cases/") && path.endsWith("/open")) return json(fx.openedCase);
     if (path === "/referrals") return json(fx.referrals);
     if (path === "/withdrawals") return json(fx.withdrawals);
@@ -56,6 +59,7 @@ async function fakeTelegram(page: Page, scheme: Scheme): Promise<void> {
         openLink: noop,
         openTelegramLink: noop,
         showConfirm: (_message: string, cb: (ok: boolean) => void) => cb(true),
+        openInvoice: (_url: string, cb: (status: string) => void) => cb("paid"),
         showAlert: (_message: string, cb?: () => void) => cb?.(),
         onEvent: noop,
         offEvent: noop,
@@ -76,6 +80,7 @@ const SCREENS = [
   { name: "profile", hash: "#/profile", ready: "text=Приглашай друзей" },
   { name: "withdraw", hash: "#/withdraw", ready: "text=Доступно к выводу" },
   { name: "rules", hash: "#/rules", ready: "text=Шансы кейса" },
+  { name: "shop", hash: "#/cases?tab=shop", ready: "text=Легендарный" },
   { name: "history", hash: "#/history", ready: "text=Награда за кейс" },
 ];
 
@@ -265,4 +270,29 @@ test("admin can run unlimited test spins and test cases without credit", async (
   await expect(page.locator("text=звёзды не начисляются")).toBeVisible();
   await page.getByRole("button", { name: "Готово" }).click();
   await expect(page.getByRole("button", { name: "Тестовый кейс" })).toBeVisible();
+});
+
+test("case shop opens a paid case and offers a top-up", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fakeTelegram(page, "light");
+  await mockApi(page);
+  let deposits = 0;
+  await page.route("**/api/deposits", (route) => {
+    deposits += 1;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ id: "d1", stars: 50, url: "https://t.me/$invoice" }) });
+  });
+  await page.goto("/#/cases?tab=shop");
+  await page.locator("#splash").waitFor({ state: "detached" });
+  await expect(page.getByRole("radio", { name: /Серебряный/ })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "Открыть за 5 ⭐" }).click();
+  await expect(page.locator(".shop-won")).toContainText("+10");
+  await expect(page.locator(".shop-won-mult")).toHaveText("×2");
+  await expect(page.locator(".shop-balance")).toContainText("23,3");
+  await page.screenshot({ path: "e2e/screenshots/light-390-shop-won.png", fullPage: true });
+  await page.getByRole("radio", { name: /Легендарный/ }).click();
+  await page.getByRole("button", { name: /Пополнить на/ }).click();
+  await page.getByRole("button", { name: "100", exact: true }).click();
+  await page.getByRole("button", { name: "Оплатить 100 ⭐" }).click();
+  await expect.poll(() => deposits).toBe(1);
+  await expect(page.locator(".sheet")).toHaveCount(0);
 });

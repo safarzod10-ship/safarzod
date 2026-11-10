@@ -215,6 +215,12 @@ export type AdminAdjustment = Operation & {
 };
 
 export interface AdminFinance {
+  deposits_stars: string;
+  paid_cases_spent: string;
+  paid_cases_won: string;
+  paid_cases_margin: string;
+  paid_cases_margin_percent: string;
+  prize_fund: string;
   income_gross: string;
   income_confirmed: string;
   income_flyer_reported: string;

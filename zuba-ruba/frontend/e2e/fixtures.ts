@@ -30,6 +30,7 @@ export const config = {
   case_expected: "0.295",
   withdraw: { min_stars: 15, gift_stars: [15, 25, 50, 100], per_day: 3, auto: false },
   limits: { checks_per_minute: 20, referral_daily_cases: 10 },
+  paid_cases: true,
   daily_spin: {
     enabled: true,
     tasks_required: 5,
@@ -135,3 +136,21 @@ export const notifications = {
 };
 
 export const operationsPage = { items: operations, next_cursor: null };
+
+const paidTable = (price: number) =>
+  [
+    [0.2, 42],
+    [0.5, 28],
+    [1, 17],
+    [2, 8],
+    [3, 4],
+    [5, 1],
+  ].map(([k, w]) => ({ amount: String(Math.round(k * price * 10) / 10), weight: w, chance: `${w}.0` }));
+
+export const paidCatalog = {
+  enabled: true,
+  balance,
+  tiers: [1, 5, 25, 100].map((price) => ({ price, prizes: paidTable(price), max: String(5 * price), max_now: String(5 * price), expected: String(Math.round(price * 0.724 * 100) / 100) })),
+};
+
+export const paidOpen = { id: 1, price: 5, prize: "10", balance: { ...balance, available: "23.3" }, tiers: paidCatalog.tiers };

@@ -38,6 +38,7 @@ from app.main import create_app  # noqa: E402
 from app.telegram_auth import sign  # noqa: E402
 
 TABLES = [
+    "paid_case_opens", "prize_fund", "deposits", "daily_spins", "star_topups",
     "audit_log", "broadcasts", "notifications", "referral_rewards", "boost_periods", "boosts", "withdrawals",
     "operations", "cases", "completions", "task_checks", "flyer_errors", "flyer_tasks", "settings", "users",
 ]

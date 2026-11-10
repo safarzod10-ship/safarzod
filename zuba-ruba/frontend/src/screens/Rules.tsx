@@ -89,6 +89,22 @@ function buildBlocks(config: Config): Block[] {
         .sort((a, b) => Number(b.amount) - Number(a.amount))
         .map((row) => ({ label: stars(row.amount), value: `${formatNumber(row.chance)}%` })),
     },
+    ...(config.paid_cases
+      ? [
+          {
+            id: "paid",
+            title: "Платные кейсы",
+            rows: [
+              { label: "Цены", value: "1, 5, 25 и 100 ⭐. Кейс открывается за звёзды с баланса." },
+              { label: "Пополнение", value: "Звёздами Telegram в разделе «Кейсы → Магазин» или в профиле." },
+              { label: "Призовой фонд", value: "80% стоимости каждого открытого кейса. Приз не может быть больше фонда." },
+              { label: "Шансы", value: "Для каждого кейса открыты в магазине под рулеткой." },
+              { label: "Выигрыш", value: "Сразу зачисляется на доступный баланс, его можно вывести подарком." },
+              { label: "Вопросы по оплате", value: "Команда /paysupport в чате с ботом." },
+            ],
+          },
+        ]
+      : []),
     {
       id: "cases-info",
       title: "Кейсы",

@@ -101,6 +101,19 @@
 ### `POST /api/cases/test`
 Только для администратора: тестовое открытие кейса по таблице `case_prizes` без начисления. Ответ `{ "amount": "0.3", "test": true }`.
 
+### `GET /api/paid-cases`
+Платные кейсы (включаются настройкой `paid_cases_enabled`).
+```json
+{ "enabled": true, "balance": Balance, "tiers": [{ "price": 5, "prizes": [PrizeRow], "max": "25", "max_now": "10", "expected": "3.62" }] }
+```
+`max_now` — самый крупный приз, который сейчас позволяет призовой фонд.
+
+### `POST /api/paid-cases/{price}/open`
+Заголовок `Idempotency-Key`. Списывает цену, 80% цены добавляет в призовой фонд, выбирает приз среди тех, что не больше фонда, и зачисляет его. Ответ `{ "id": 1, "price": 5, "prize": "10", "balance": Balance, "tiers": [...] }`. 409 — не хватает звёзд.
+
+### `POST /api/deposits`
+Тело `{ "stars": 50 }` → `{ "id": "uuid", "stars": 50, "url": "https://t.me/$..." }`. Ссылку открывает `Telegram.WebApp.openInvoice`. Звёзды зачисляются после `successful_payment` (операция `deposit`).
+
 ### `GET /api/operations?cursor=<string>&limit=30`
 ```json
 { "items": [Operation], "next_cursor": "string | null" }

@@ -10,7 +10,7 @@ from app.config import Config, get_config
 from app.models import Notification, Operation, User, Withdrawal
 from app.money import milli_to_str
 from app.services import cases as cases_service
-from app.services import prizes, referrals, spins, tasks, withdrawals
+from app.services import deposits, paid_cases, prizes, referrals, spins, tasks, withdrawals
 from app.services import users as users_service
 
 router = APIRouter(prefix="/api")
@@ -62,6 +62,7 @@ async def app_config(c: Ctx = Depends(ctx), config: Config = Depends(get_config)
             "per_day": s.int("withdrawals_per_day"),
             "auto": s.bool("withdraw_auto"),
         },
+        "paid_cases": s.bool("paid_cases_enabled"),
         "limits": {"checks_per_minute": s.int("checks_per_minute"), "referral_daily_cases": s.int("referral_daily_cases_limit")},
         "hold_hours": {"channel": s.int("hold_hours_channel"), "bot": s.int("hold_hours_bot")},
         "referral_threshold": s.int("referral_threshold"),
@@ -212,6 +213,50 @@ async def case_list(c: Ctx = Depends(ctx)):
         "ready": [cases_service.case_view(case) for case in ready],
         "opened": [cases_service.case_view(case, status) for case, status in opened],
     }
+
+
+@router.get("/paid-cases")
+async def paid_case_catalog(c: Ctx = Depends(ctx)):
+    data = await paid_cases.catalog(c.session, c.settings)
+    return {**data, "balance": balance_view(c.user)}
+
+
+@router.post("/paid-cases/{price}/open")
+async def paid_case_open(price: int, request: Request, idempotency_key: str | None = Header(default=None), c: Ctx = Depends(ctx)):
+    if not idempotency_key or not IDEMPOTENCY_RE.match(idempotency_key):
+        raise ApiError(422, "validation", "Отсутствует ключ идемпотентности")
+    await rate_limit(request, f"paidcase:{c.user.id}", 40)
+    try:
+        record = await paid_cases.open_case(c.session, c.user.id, price, idempotency_key, c.settings)
+    except paid_cases.PaidCaseError as exc:
+        await c.session.rollback()
+        status = {"feature_disabled": 403, "not_found": 404, "insufficient_funds": 409}.get(exc.code, 422)
+        raise ApiError(status, exc.code, str(exc)) from None
+    await c.session.commit()
+    await c.session.refresh(c.user)
+    catalog = await paid_cases.catalog(c.session, c.settings)
+    return {"id": record.id, "price": record.price, "prize": milli_to_str(record.prize_milli), "balance": balance_view(c.user), "tiers": catalog["tiers"]}
+
+
+class DepositIn(BaseModel):
+    stars: int = Field(ge=deposits.MIN_STARS, le=deposits.MAX_STARS)
+
+
+@router.post("/deposits")
+async def deposit_create(body: DepositIn, request: Request, c: Ctx = Depends(ctx)):
+    if not c.settings.bool("paid_cases_enabled"):
+        raise ApiError(403, "feature_disabled", "Пополнение сейчас недоступно")
+    await rate_limit(request, f"deposit:{c.user.id}", 10)
+    try:
+        deposit, url = await deposits.create(c.session, request.app.state.bot, c.user.id, body.stars)
+    except deposits.DepositError as exc:
+        await c.session.rollback()
+        raise ApiError(422, "validation", str(exc)) from None
+    except Exception:
+        await c.session.rollback()
+        raise ApiError(502, "telegram_unavailable", "Telegram не выставил счёт. Попробуй позже.") from None
+    await c.session.commit()
+    return {"id": str(deposit.id), "stars": deposit.stars, "url": url}
 
 
 @router.post("/cases/test")

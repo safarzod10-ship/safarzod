@@ -30,6 +30,11 @@ DEFINITIONS: list[SettingDef] = [
     SettingDef("daily_spin_enabled", "Ежедневная рулетка на главной", "Ежедневная рулетка", "bool", "true"),
     SettingDef("daily_spin_tasks", "Заданий за день, чтобы открыть прокрутку", "Ежедневная рулетка", "int", "5", Decimal("1"), Decimal("100")),
     SettingDef("daily_spin_prizes", "Призы ежедневной рулетки: сумма ⭐ : вес", "Ежедневная рулетка", "prizes", "0.5:40,0.6:25,0.7:15,0.8:10,0.9:6,1:4"),
+    SettingDef("paid_cases_enabled", "Платные кейсы и пополнение звёздами", "Платные кейсы", "bool", "false"),
+    SettingDef("paid_case_1_prizes", "Кейс за 1 ⭐: сумма : вес (отдача не выше 80%)", "Платные кейсы", "prizes", "0.2:42,0.5:28,1:17,2:8,3:4,5:1"),
+    SettingDef("paid_case_5_prizes", "Кейс за 5 ⭐: сумма : вес (отдача не выше 80%)", "Платные кейсы", "prizes", "1:42,2.5:28,5:17,10:8,15:4,25:1"),
+    SettingDef("paid_case_25_prizes", "Кейс за 25 ⭐: сумма : вес (отдача не выше 80%)", "Платные кейсы", "prizes", "5:42,12:28,25:17,50:8,75:4,150:1"),
+    SettingDef("paid_case_100_prizes", "Кейс за 100 ⭐: сумма : вес (отдача не выше 80%)", "Платные кейсы", "prizes", "20:42,50:28,100:17,200:8,300:4,500:1"),
     SettingDef("hold_hours_channel", "Удержание подписки, ч", "Ожидание", "int", "30", Decimal("0"), Decimal("720")),
     SettingDef("hold_hours_bot", "Удержание для ботов, ч", "Ожидание", "int", "0", Decimal("0"), Decimal("720")),
     SettingDef("recheck_hours", "Интервал повторной проверки, ч", "Ожидание", "int", "6", Decimal("1"), Decimal("72")),
@@ -76,14 +81,19 @@ def parse_prizes(raw: str) -> list[tuple[int, int]]:
             weight = int(weight_text.strip())
         except (AmountError, ValueError) as exc:
             raise ValueError(f"Ошибка в «{part}»: нужен формат сумма:вес") from exc
-        if not 1 <= amount <= 100_000 or not 1 <= weight <= 1_000_000:
-            raise ValueError(f"Ошибка в «{part}»: сумма 0,001–100 ⭐, вес от 1")
+        if not 1 <= amount <= 10_000_000 or not 1 <= weight <= 1_000_000:
+            raise ValueError(f"Ошибка в «{part}»: сумма 0,001–10 000 ⭐, вес от 1")
         table.append((amount, weight))
     if not 2 <= len(table) <= 20:
         raise ValueError("Нужно от 2 до 20 призов")
     if len({amount for amount, _ in table}) != len(table):
         raise ValueError("Суммы призов не должны повторяться")
     return sorted(table)
+
+
+PAID_CASE_PRICES = (1, 5, 25, 100)
+PAID_CASE_KEYS = {f"paid_case_{price}_prizes": price for price in PAID_CASE_PRICES}
+PAID_RETURN_LIMIT = 0.8
 
 
 class SettingError(ValueError):
@@ -110,6 +120,14 @@ def normalize(key: str, raw) -> str:
             table = parse_prizes(str(raw))
         except ValueError as exc:
             raise SettingError(key, str(exc)) from exc
+        price = PAID_CASE_KEYS.get(key)
+        if price is not None:
+            total = sum(weight for _, weight in table)
+            expected = sum(amount * weight for amount, weight in table) / total
+            if expected > price * 1000 * PAID_RETURN_LIMIT:
+                raise SettingError(key, f"Средний приз {expected / 1000:.2f} ⭐ выше 80% цены кейса ({price * PAID_RETURN_LIMIT:.2f} ⭐)")
+            if table[0][0] > price * 1000 * PAID_RETURN_LIMIT:
+                raise SettingError(key, "Самый маленький приз должен быть не больше 80% цены кейса")
         return ",".join(f"{milli_to_str(amount)}:{weight}" for amount, weight in table)
     if definition.type == "stars_list":
         parts = [part.strip() for part in str(raw).replace(";", ",").split(",") if part.strip()]

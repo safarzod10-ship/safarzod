@@ -316,3 +316,40 @@ class DailySpin(Base):
     created_at: Mapped[datetime] = _now()
 
     __table_args__ = (UniqueConstraint("user_id", "day", name="uq_daily_spin_user_day"),)
+
+
+class Deposit(Base):
+    __tablename__ = "deposits"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
+    stars: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="created")
+    telegram_payment_charge_id: Mapped[str | None] = mapped_column(String(256), unique=True)
+    operation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = _now()
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaidCaseOpen(Base):
+    __tablename__ = "paid_case_opens"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
+    price: Mapped[int] = mapped_column(Integer)
+    prize_milli: Mapped[int] = mapped_column(BigInteger)
+    fund_before_milli: Mapped[int] = mapped_column(BigInteger)
+    idempotency_key: Mapped[str] = mapped_column(String(200), unique=True)
+    created_at: Mapped[datetime] = _now()
+
+
+class PrizeFund(Base):
+    __tablename__ = "prize_fund"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    fund_milli: Mapped[int] = mapped_column(BigInteger, default=0)
+    paid_in_milli: Mapped[int] = mapped_column(BigInteger, default=0)
+    paid_out_milli: Mapped[int] = mapped_column(BigInteger, default=0)
+    updated_at: Mapped[datetime] = _now()
+
+    __table_args__ = (CheckConstraint("fund_milli >= 0", name="ck_prize_fund_nonneg"),)

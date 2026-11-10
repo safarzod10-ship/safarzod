@@ -7,7 +7,8 @@ import { Amount, Star } from "../stars";
 import { navigate } from "../router";
 import { haptic, openExternal } from "../telegram";
 import type { Home, Referrals } from "../types";
-import { Avatar, Button, NavRow, Screen, useResource } from "../ui";
+import { DepositSheet } from "../components/DepositSheet";
+import { Avatar, Button, NavRow, Screen, clearResourceCache, useResource } from "../ui";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -44,6 +45,7 @@ export function ProfileScreen() {
   const home = useResource("home", () => api.get<Home>("/home"));
   const referrals = useResource("referrals", () => api.get<Referrals>("/referrals"));
   const [copied, setCopied] = useState<boolean | null>(null);
+  const [deposit, setDeposit] = useState(false);
 
   const name = [me.first_name, me.last_name].filter(Boolean).join(" ");
   const link = referrals.data?.ref_link ?? me.ref_link;
@@ -81,16 +83,32 @@ export function ProfileScreen() {
           <span className="payout-label">Доступно к выводу</span>
           <Amount value={home.data?.balance.available ?? "0"} size={18} className="payout-value" />
         </div>
-        <Button
-          variant="primary"
-          onClick={() => {
-            haptic("medium");
-            navigate("/withdraw?from=profile");
-          }}
-        >
-          Вывести
-        </Button>
+        <div className="payout-actions">
+          {config.paid_cases && (
+            <Button variant="secondary" onClick={() => setDeposit(true)}>
+              Пополнить
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            onClick={() => {
+              haptic("medium");
+              navigate("/withdraw?from=profile");
+            }}
+          >
+            Вывести
+          </Button>
+        </div>
       </section>
+      <DepositSheet
+        open={deposit}
+        onClose={() => setDeposit(false)}
+        onPaid={() => {
+          clearResourceCache("paid-cases");
+          window.setTimeout(() => void home.reload(), 1500);
+          window.setTimeout(() => void home.reload(), 5000);
+        }}
+      />
 
       <dl className="stats-row">
         <div>

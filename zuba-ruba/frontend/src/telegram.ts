@@ -48,6 +48,7 @@ export interface WebApp {
   showConfirm?(message: string, cb: (ok: boolean) => void): void;
   showAlert?(message: string, cb?: () => void): void;
   showPopup?(params: { title?: string; message: string; buttons?: PopupButton[] }, cb?: (id: string) => void): void;
+  openInvoice?(url: string, cb?: (status: "paid" | "cancelled" | "failed" | "pending") => void): void;
   onEvent(event: string, cb: () => void): void;
   offEvent(event: string, cb: () => void): void;
 }
@@ -199,4 +200,13 @@ export function parseInitData(raw: string): { user: { id: number; first_name?: s
     startParam: params.get("start_param"),
     authDate: Number.isFinite(authDate) && authDate > 0 ? authDate : null,
   };
+}
+
+export function payInvoice(url: string): Promise<"paid" | "cancelled" | "failed" | "pending" | "external"> {
+  const app = webApp();
+  if (app?.openInvoice && supports("6.1")) {
+    return new Promise((resolve) => app.openInvoice!(url, (status) => resolve(status)));
+  }
+  window.open(url, "_blank", "noopener");
+  return Promise.resolve("external");
 }

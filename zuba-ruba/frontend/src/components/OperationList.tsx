@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { formatDateTime } from "../format";
-import { IconArrowUp, IconBolt, IconCase, IconGift, IconStarLine, IconUndo, IconUsers } from "../icons";
+import { IconArrowDown, IconArrowUp, IconBolt, IconCase, IconGift, IconStarLine, IconUndo, IconUsers } from "../icons";
 import { Amount } from "../stars";
 import type { Operation, OperationKind, OperationStatus } from "../types";
 import { Badge } from "../ui";
@@ -17,6 +17,9 @@ const ICONS: Record<OperationKind, ReactNode> = {
   boost_reward: <IconBolt size={20} />,
   referral_reward: <IconUsers size={20} />,
   daily_spin: <IconStarLine size={20} />,
+  deposit: <IconArrowDown size={20} />,
+  case_purchase: <IconCase size={20} />,
+  paid_case_reward: <IconStarLine size={20} />,
   reversal: <IconUndo size={20} />,
   adjustment: <IconArrowUp size={20} />,
   withdrawal: <IconGift size={20} />,

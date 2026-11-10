@@ -49,6 +49,13 @@ export function AdminFinanceView() {
           <Line label="Чистая прибыль" value={formatRub(d.net_profit)} strong />
         </Panel>
       </div>
+      <Panel title="Платные кейсы">
+        <Line label="Пополнено пользователями" value={formatStars(d.deposits_stars)} />
+        <Line label="Потрачено на кейсы" value={formatStars(d.paid_cases_spent)} />
+        <Line label="Выплачено призами" value={formatStars(d.paid_cases_won)} />
+        <Line label="Ваша маржа" value={`${formatStars(d.paid_cases_margin)} · ${d.paid_cases_margin_percent}%`} hint="не меньше 20%: призы не могут превысить призовой фонд" strong />
+        <Line label="Призовой фонд" value={formatStars(d.prize_fund)} hint="80% стоимости открытых кейсов минус выплаченные призы" />
+      </Panel>
       <div className="adm-grid adm-grid-2">
         <Panel
           title="Звёзды бота"

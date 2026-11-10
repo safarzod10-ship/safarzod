@@ -204,6 +204,12 @@ export const tasks = {
 };
 
 export const finance = {
+  deposits_stars: "1240",
+  paid_cases_spent: "1180",
+  paid_cases_won: "861.4",
+  paid_cases_margin: "318.6",
+  paid_cases_margin_percent: "27.0",
+  prize_fund: "82.6",
   income_gross: "5400.00",
   income_confirmed: "5126.40",
   income_flyer_reported: "5098.10",

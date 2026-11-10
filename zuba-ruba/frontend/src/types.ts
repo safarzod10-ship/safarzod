@@ -25,6 +25,7 @@ export interface Config {
   boost: { first_check_hours: number; interval_hours: number; recurring: boolean };
   stars_are_internal: boolean;
   daily_spin: { enabled: boolean; tasks_required: number; prizes: PrizeRow[] };
+  paid_cases: boolean;
 }
 
 export interface PrizeRow {
@@ -40,7 +41,17 @@ export interface Balance {
   withdrawing: string;
 }
 
-export type OperationKind = "case_reward" | "boost_reward" | "referral_reward" | "daily_spin" | "reversal" | "adjustment" | "withdrawal";
+export type OperationKind =
+  | "case_reward"
+  | "boost_reward"
+  | "referral_reward"
+  | "daily_spin"
+  | "deposit"
+  | "case_purchase"
+  | "paid_case_reward"
+  | "reversal"
+  | "adjustment"
+  | "withdrawal";
 export type OperationStatus = "pending" | "completed" | "cancelled" | "failed";
 
 export interface Operation {
@@ -53,6 +64,28 @@ export interface Operation {
   reason: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PaidTier {
+  price: number;
+  prizes: PrizeRow[];
+  max: string;
+  max_now: string;
+  expected: string;
+}
+
+export interface PaidCatalog {
+  enabled: boolean;
+  tiers: PaidTier[];
+  balance: Balance;
+}
+
+export interface PaidOpenResult {
+  id: number;
+  price: number;
+  prize: string;
+  balance: Balance;
+  tiers: PaidTier[];
 }
 
 export interface SpinStatus {

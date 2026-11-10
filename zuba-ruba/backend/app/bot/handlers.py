@@ -10,7 +10,7 @@ from app.bot.messages import open_app_markup, send_welcome, welcome_text
 from app.db import sessionmaker
 from app.models import User
 from app.money import milli_to_display
-from app.services import topups
+from app.services import deposits, topups
 from app.services import users as users_service
 from app.telegram_auth import TelegramUser
 
@@ -61,7 +61,10 @@ async def paysupport(message: Message) -> None:
 @router.pre_checkout_query()
 async def pre_checkout(query: PreCheckoutQuery) -> None:
     async with sessionmaker()() as session:
-        error = await topups.validate_checkout(session, query.invoice_payload, query.currency, query.total_amount)
+        if deposits.is_deposit(query.invoice_payload):
+            error = await deposits.validate_checkout(session, query.invoice_payload, query.currency, query.total_amount, query.from_user.id)
+        else:
+            error = await topups.validate_checkout(session, query.invoice_payload, query.currency, query.total_amount)
     if error:
         await query.answer(ok=False, error_message=error)
     else:
@@ -71,6 +74,11 @@ async def pre_checkout(query: PreCheckoutQuery) -> None:
 @router.message(F.successful_payment)
 async def successful_payment(message: Message) -> None:
     payment = message.successful_payment
+    if deposits.is_deposit(payment.invoice_payload):
+        async with sessionmaker()() as session:
+            await deposits.mark_paid(session, payment.invoice_payload, payment.telegram_payment_charge_id, message.from_user.id, payment.total_amount)
+            await session.commit()
+        return
     async with sessionmaker()() as session:
         topup = await topups.mark_paid(
             session, payment.invoice_payload, payment.telegram_payment_charge_id, message.from_user.id, payment.total_amount

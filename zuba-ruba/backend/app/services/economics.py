@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Boost, BoostPeriod, Case, Completion, Operation, User
-from app.money import kopecks_to_str, milli_to_kopecks
+from app.models import Boost, BoostPeriod, Case, Completion, Operation, PrizeFund, User
+from app.money import kopecks_to_str, milli_to_kopecks, milli_to_str
 from app.settings_store import RuntimeSettings
 
 
@@ -70,6 +70,26 @@ async def compute(session: AsyncSession, settings: RuntimeSettings) -> dict:
         "unopened_cases": kopecks_to_str(unopened_kop),
         "flyer_withdraw_threshold": kopecks_to_str(threshold),
         "warning": warning,
+        **(await paid_case_stats(session)),
+    }
+
+
+async def paid_case_stats(session: AsyncSession) -> dict:
+    def total(kind):
+        return select(func.sum(Operation.amount_milli)).where(Operation.kind == kind, Operation.status == "completed")
+
+    deposits = await _sum(session, total("deposit"))
+    spent = -await _sum(session, total("case_purchase"))
+    won = await _sum(session, total("paid_case_reward"))
+    fund = await _sum(session, select(func.sum(PrizeFund.fund_milli)).where(PrizeFund.id == 1))
+    margin = spent - won
+    return {
+        "deposits_stars": milli_to_str(deposits),
+        "paid_cases_spent": milli_to_str(spent),
+        "paid_cases_won": milli_to_str(won),
+        "paid_cases_margin": milli_to_str(margin),
+        "paid_cases_margin_percent": f"{(margin * 100 / spent):.1f}" if spent else "0",
+        "prize_fund": milli_to_str(fund),
     }
 
 

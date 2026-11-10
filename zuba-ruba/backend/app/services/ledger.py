@@ -4,7 +4,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clock import utcnow
 from app.models import Operation, User
 
-KINDS = {"case_reward", "boost_reward", "referral_reward", "daily_spin", "reversal", "adjustment", "withdrawal"}
+KINDS = {
+    "case_reward",
+    "boost_reward",
+    "referral_reward",
+    "daily_spin",
+    "deposit",
+    "case_purchase",
+    "paid_case_reward",
+    "reversal",
+    "adjustment",
+    "withdrawal",
+}
 
 
 class LedgerError(Exception):
@@ -108,6 +119,21 @@ async def reverse_completed(session: AsyncSession, user: User, operation: Operat
     user.balance_available -= operation.amount_milli
     await session.flush()
     return reversal
+
+
+async def debit(session: AsyncSession, user: User, *, kind: str, amount_milli: int, reason: str, key: str) -> Operation:
+    if kind not in KINDS or amount_milli <= 0:
+        raise LedgerError("invalid debit")
+    existing = await find(session, key)
+    if existing is not None:
+        return existing
+    if user.balance_available < amount_milli:
+        raise InsufficientFunds("Недостаточно звёзд на балансе")
+    operation = Operation(user_id=user.id, kind=kind, amount_milli=-amount_milli, status="completed", reason=reason, idempotency_key=key)
+    session.add(operation)
+    user.balance_available -= amount_milli
+    await session.flush()
+    return operation
 
 
 async def adjust(session: AsyncSession, user: User, amount_milli: int, reason: str, key: str, admin_id: int) -> Operation:
