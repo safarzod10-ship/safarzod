@@ -41,6 +41,8 @@ static func load_state() -> void:
 					cars.append(String(c))
 		if d.get("fuel") is Dictionary:
 			fuel = d["fuel"]
+		if d.get("food") is Dictionary:
+			Food.from_dict(d["food"])
 
 
 static func save_state() -> void:
@@ -48,7 +50,7 @@ static func save_state() -> void:
 		return
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "food": Food.to_dict()}))
 
 
 static func earn(amount: int) -> void:

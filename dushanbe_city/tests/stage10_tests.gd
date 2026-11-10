@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer"]
+	var secs: Array = ["amid", "home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -296,3 +296,40 @@ func _t_doors() -> void:
 		await c.swing_door("door_lf_dummy", false)
 		var cab := c.model.find_child("Cabin", true, false)
 		_check("%s: door (%d mesh parts) opens %.0f deg and closes; real cabin fitted %s" % [key, parts, absf(ang), cab != null], parts > 0 and absf(ang) > 50.0 and cab != null)
+
+
+func _t_amid() -> void:
+	# 0.22: AMID supermarkets can be entered; food bought at the till restores health
+	var am: AmidStores = main.get_node_or_null("AmidStores")
+	_check("AMID supermarkets in the city: %d" % (am.stores.size() if am else 0), am != null and am.stores.size() >= 3)
+	if am == null or am.stores.is_empty():
+		return
+	var st: Dictionary = am.stores[0]
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(am.door_point(st))
+	ow.hold = am.door_point(st)
+	s.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
+	await _sec(2.0)
+	_check("interior built when the player is near", st["node"] != null)
+	# walk in through the entrance to the first till (scripted walk)
+	var target := am.till_point(st, 0)
+	var ok: bool = await s.player.walk_to(target, 0.0, 25.0)
+	await _sec(0.5)
+	var d := Vector2(s.player.global_position.x - target.x, s.player.global_position.z - target.z).length()
+	var it: Variant = s.player.get("interaction")
+	var lbl: String = (it as CharacterInteraction).label() if it else ""
+	_check("walked in through the doors to the till (%.1f m from it): «%s»" % [d, lbl], d < 2.0 and lbl == "КАССА · ПРОДУКТЫ")
+	Wallet.money = 100
+	Food.bag = {}
+	PlayerLife.health = 40.0
+	var b1 := Food.buy("plov")
+	var b2 := Food.buy("non")
+	_check("bought plov (25) + non (5): money %s, bag %d" % [Wallet.fmt(Wallet.money), Food.count()], b1 and b2 and Wallet.money == 70 and Food.count() == 2)
+	var g := Food.eat("plov")
+	_check("ate the plov: health 40 -> %.0f (+%.0f)" % [PlayerLife.health, g], is_equal_approx(PlayerLife.health, 90.0))
+	var g2 := Food.eat()
+	_check("ate the non: health -> %.0f (max 100), bag %d" % [PlayerLife.health, Food.count()], PlayerLife.health == 100.0 and Food.count() == 0 and g2 > 0.0)
+	Wallet.money = 2
+	_check("not enough money: refused", not Food.buy("plov") and Wallet.money == 2)
+	ow.hold = Vector3.INF
+	Wallet.money = 500

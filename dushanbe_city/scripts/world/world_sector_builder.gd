@@ -790,7 +790,8 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 			var hh: float = 114.0 * sc2 if kind == "sky" else {"school_m": 11.5, "hospital_m": 12.3, "luxa_m": 80.0, "luxb_m": 62.0, "luxc_m": 42.0, "mall_m": 18.0, "amid_m": 16.0}.get(kind, 11.0)
 			var fw := 22.0 * sc2 if kind == "sky" else L
 			var fd := 22.0 * sc2 if kind == "sky" else D
-			boxes.append([Vector3(x, y + hh * 0.5, z), Vector3(fw, hh, fd), yaw])
+			if kind != "amid_m":                    # AMID: hollow, its walls come with the store (AmidStores)
+				boxes.append([Vector3(x, y + hh * 0.5, z), Vector3(fw, hh, fd), yaw])
 			if kind == "sky":
 				var o1 := occ_v.size()
 				var Xo := Vector3(cos(yaw), 0, -sin(yaw)) * (fw * 0.5 - 0.6)

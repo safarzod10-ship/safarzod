@@ -140,6 +140,26 @@ def build(roads, H, H_at, F, avoid=()):
             br.append(R)
             placed += 1
         return placed
+    # big models (AMID with its car park, malls, towers) own their footprint: the ordinary buildings of
+    # the inner block rows that overlap them go (the AMID can be entered, nothing may stand inside)
+    BIG = {"amid_m": (92.0, 82.0), "mall_m": (100.0, 56.0), "luxa_m": (28.0, 28.0), "luxb_m": (32.0, 32.0)}
+    big = [(i, b) for i, b in enumerate(buildings) if b[0] in BIG]
+    drop = set()
+    for i, b in big:
+        L2, D2 = BIG[b[0]][0] / 2, BIG[b[0]][1] / 2
+        c, s_ = math.cos(b[3]), math.sin(b[3])
+        for j, o in enumerate(buildings):
+            if j == i or j in drop or o[0] in BIG or o[0].endswith("_m"):
+                continue
+            dx, dz = o[1] - b[1], o[2] - b[2]
+            lx = dx * c - dz * s_
+            lz = dx * s_ + dz * c
+            r = max(o[4], o[5]) / 2
+            if abs(lx) < L2 + r and abs(lz) < D2 + r:
+                drop.add(j)
+    if drop:
+        print("buildings removed under big models: %d" % len(drop))
+        buildings[:] = [b for k, b in enumerate(buildings) if k not in drop]
     ns = place_models("school_m", 65.0, 55.0, 6)
     nh = place_models("hospital_m", 31.0, 18.5, 4)
     print("model schools %d, hospitals %d" % (ns, nh))

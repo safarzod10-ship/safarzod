@@ -386,6 +386,9 @@ func pois() -> Array:
 		out.append(["Оружейный магазин", (gs as Node3D).global_position, Color(0.9, 0.2, 0.15)])
 	for hh in get_tree().get_nodes_in_group(&"hero_home"):
 		out.append(["Дом", (hh as HeroHome).door_point(), Color(0.3, 1.0, 0.5)])
+	for am in get_tree().get_nodes_in_group(&"amid_stores"):
+		for st in (am as AmidStores).stores:
+			out.append(["Супермаркет АМИД", (am as AmidStores).door_point(st), Color(0.2, 1.0, 0.35)])
 	for cd in get_tree().get_nodes_in_group(&"car_dealer"):
 		out.append(["Автосалон", (cd as Node3D).global_position, Color(1.0, 0.8, 0.3)])
 	var boats: Variant = main.get("boats")

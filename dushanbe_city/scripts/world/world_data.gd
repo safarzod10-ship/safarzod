@@ -172,7 +172,22 @@ func grass_ok(x: float, z: float) -> bool:
 	for l in landmarks:
 		if absf(x - float(l["x"])) < float(l["L"]) * 0.5 + 2.0 and absf(z - float(l["z"])) < float(l["D"]) * 0.5 + 2.0:
 			return false
+	# inside the AMID supermarkets (they can be entered) and on their car parks
+	if _amids.is_empty():
+		_amids.append(Vector4.INF)
+		for b in buildings:
+			if String(b[0]) == "amid_m":
+				_amids.append(Vector4(float(b[1]), float(b[2]), float(b[3]), 0.0))
+	for a: Vector4 in _amids:
+		if a.x == INF:
+			continue
+		var p := Vector2(x - a.x, z - a.y).rotated(-a.z)
+		if absf(p.x) < 48.0 and absf(p.y) < 42.0:
+			return false
 	return true
+
+
+var _amids: Array = []
 
 
 ## a landmark plot by id ({} if none): x, y, z, yaw, L, D

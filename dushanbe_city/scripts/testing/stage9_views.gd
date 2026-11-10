@@ -52,6 +52,32 @@ func _ready() -> void:
 			await _look("falls_%d" % k, Vector3(1460, 246, -7430) + d * 60.0, Vector3(1460, 250, -7430))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("amid_in"):
+		_hour(13.0)
+		var am: AmidStores = main.get_node("AmidStores")
+		var st: Dictionary = am.stores[0]
+		var xf: Transform3D = st["xf"]
+		var s3: CarSession = main.get("car_session")
+		ow.hold = am.door_point(st)
+		s3.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
+		await _sec(2.5)
+		await _look("amid_door", xf * Vector3(8, 3.0, 40), xf * Vector3(0, 3, 20))
+		await _look("amid_up", xf * Vector3(0, 2.0, 0), xf * Vector3(0.5, 10.0, 0.1))
+		await _look("amid_inside", xf * Vector3(0, 2.2, 21), xf * Vector3(-8, 1.5, -10))
+		await _look("amid_aisle", xf * Vector3(-9, 1.7, 8), xf * Vector3(-9, 1.2, -18))
+		await _look("amid_tills", xf * Vector3(20, 3.0, 20), xf * Vector3(0, 1.0, 14))
+		await _look("amid_fruit", xf * Vector3(-20, 2.5, 21), xf * Vector3(-30, 1.0, 12))
+		_ui(true)
+		s3.player.teleport(am.till_point(st, 0), PI)
+		await _sec(1.0)
+		am.open()
+		for c3 in s3.player.find_children("*", "Camera3D", true, false):
+			(c3 as Camera3D).make_current()
+		for i in 20:
+			await get_tree().process_frame
+		await _snap("amid_till_menu")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("v21"):
 		_hour(16.5)
 		var tl: Dictionary = wd.landmark("tas")
