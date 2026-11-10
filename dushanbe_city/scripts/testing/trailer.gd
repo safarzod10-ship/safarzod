@@ -74,7 +74,7 @@ func _shots() -> void:
 func _city(home: Vector3, avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vector3, prado: VehiclePrado) -> void:
 	# 1. title: over the Somoni square at golden hour
 	_hour(17.6)
-	await _line(somoni + Vector3(-160, 70, 160), somoni + Vector3(-60, 40, 90), somoni + Vector3(0, 10, 0), somoni + Vector3(0, 15, 0), 5.0,
+	await _line(somoni + Vector3(-170, 115, 170), somoni + Vector3(-80, 62, 100), somoni + Vector3(0, 10, 0), somoni + Vector3(0, 15, 0), 5.0,
 		"DUSHANBE CITY", "Открытый мир · Таджикистан")
 	# 2. living avenue: traffic and pedestrians
 	_hour(15.5)
@@ -128,12 +128,13 @@ func _city(home: Vector3, avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vect
 	# 11. taxi client
 	var taxi: TaxiJob = main.get_node_or_null("TaxiJob")
 	if taxi:
-		var kp := taxi._random_kerb(home, 60.0, 500.0)
+		var kp := taxi.laklak._kerb_near(avp + avr * 30.0) if taxi.laklak else Vector3.INF
 		if kp != Vector3.INF:
 			taxi._spawn_client(kp, kp + Vector3(6, 0, 3))
-			await _wait(kp)
+			kp.y = maxf(kp.y, wd.height_at(kp.x, kp.z))
 			var cf := Vector3(6, 0, 3).normalized()
-			await _line(kp + cf * 6.0 + Vector3(2, 1.8, 0), kp + cf * 3.5 + Vector3(1, 1.6, 0), kp + Vector3(0, 1.3, 0), kp + Vector3(0, 1.4, 0), 3.0,
+			var cs := cf.cross(Vector3.UP)
+			await _line(kp + cf * 7.0 + cs * 2.0 + Vector3(0, 2.0, 0), kp + cf * 4.0 + cs * 1.0 + Vector3(0, 1.7, 0), kp + Vector3(0, 1.2, 0), kp + Vector3(0, 1.3, 0), 3.0,
 				"Работа", "такси · курьер LakLak · автобус")
 			taxi._remove_client()
 	# 12. realty
@@ -318,7 +319,7 @@ func _build_titles() -> void:
 	var unit := minf(vs.x, vs.y)
 	_title = Label.new()
 	_title.add_theme_font_override("font", font)
-	_title.add_theme_font_size_override("font_size", int(unit * (0.085 if not vertical else 0.1)))
+	_title.add_theme_font_size_override("font_size", int(unit * (0.085 if not vertical else 0.082)))
 	_title.add_theme_color_override("font_color", Color(1, 1, 1))
 	_title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_title.add_theme_constant_override("outline_size", int(unit * 0.012))
@@ -326,32 +327,30 @@ func _build_titles() -> void:
 	_title.add_theme_constant_override("shadow_offset_y", int(unit * 0.006))
 	_sub = Label.new()
 	_sub.add_theme_font_override("font", font)
-	_sub.add_theme_font_size_override("font_size", int(unit * (0.042 if not vertical else 0.05)))
+	_sub.add_theme_font_size_override("font_size", int(unit * (0.042 if not vertical else 0.046)))
 	_sub.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3))
 	_sub.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_sub.add_theme_constant_override("outline_size", int(unit * 0.008))
 	_bar = ColorRect.new()
 	_bar.color = Color(1.0, 0.75, 0.15)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", int(unit * 0.01))
+	_layer.add_child(box)
+	box.add_child(_title)
+	box.add_child(_sub)
+	_layer.add_child(_bar)
 	for l in [_title, _sub]:
 		(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_layer.add_child(l)
-	_layer.add_child(_bar)
-	if vertical:
-		# Shorts: centred in the lower third (clear of the UI of the Shorts player at the very bottom)
-		for l in [_title, _sub]:
+		(l as Label).custom_minimum_size.x = vs.x * (0.9 if vertical else 0.85)
+		if vertical:
 			(l as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			(l as Label).size = Vector2(vs.x * 0.9, 0)
-			(l as Label).position.x = vs.x * 0.05
-		_title.position.y = vs.y * 0.6
+	if vertical:
+		box.position = Vector2(vs.x * 0.05, vs.y * 0.62)
 		_bar.size = Vector2(vs.x * 0.3, unit * 0.012)
-		_bar.position = Vector2(vs.x * 0.35, vs.y * 0.6 - unit * 0.03)
-		_sub.position.y = vs.y * 0.6 + unit * 0.13
+		_bar.position = Vector2(vs.x * 0.35, vs.y * 0.62 - unit * 0.03)
 	else:
-		_title.position = Vector2(vs.x * 0.06, vs.y * 0.68)
-		_title.size = Vector2(vs.x * 0.85, 0)
+		box.position = Vector2(vs.x * 0.06, vs.y * 0.66)
 		_bar.size = Vector2(vs.x * 0.12, unit * 0.012)
-		_bar.position = Vector2(vs.x * 0.06, vs.y * 0.68 - unit * 0.02)
-		_sub.position = Vector2(vs.x * 0.06, vs.y * 0.68 + unit * 0.11)
-		_sub.size = Vector2(vs.x * 0.85, 0)
+		_bar.position = Vector2(vs.x * 0.06, vs.y * 0.66 - unit * 0.02)
 	_bar.pivot_offset = Vector2.ZERO
 	_set_titles("", "")
