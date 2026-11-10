@@ -7,6 +7,7 @@ extends "res://scripts/testing/stage8_video.gd"
 
 var out := "user://trailer"
 var vertical := false
+var part := 0                 ## 0 all, 1 city, 2 mountains + night + end (separate runs: memory)
 var _rec := false
 var _n := 0
 var _cam: Camera3D
@@ -24,6 +25,8 @@ func _ready() -> void:
 			out = a.substr(4)
 		if a == "vertical":
 			vertical = true
+		if a.begins_with("part="):
+			part = int(a.substr(5))
 	DirAccess.make_dir_recursive_absolute(out)
 	Wallet.no_save = true
 	Settings.set_mode("high")
@@ -61,6 +64,14 @@ func _shots() -> void:
 	var avd: Vector3 = av[1]
 	var avr := avd.cross(Vector3.UP)
 	var somoni := _lm("somoni")
+	var prado: VehiclePrado = main.get("car")
+	if part != 2:
+		await _city(home, avp, avd, avr, somoni, prado)
+	if part != 1:
+		await _nature_night(avp, avd, avr, somoni, prado)
+
+
+func _city(home: Vector3, avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vector3, prado: VehiclePrado) -> void:
 	# 1. title: over the Somoni square at golden hour
 	_hour(17.6)
 	await _line(somoni + Vector3(-160, 70, 160), somoni + Vector3(-60, 40, 90), somoni + Vector3(0, 10, 0), somoni + Vector3(0, 15, 0), 5.0,
@@ -70,14 +81,13 @@ func _shots() -> void:
 	await _line(avp - avd * 40.0 + avr * 9.0 + Vector3(0, 2.2, 0), avp - avd * 10.0 + avr * 9.0 + Vector3(0, 3.0, 0),
 		avp + avd * 30.0 + Vector3(0, 1.0, 0), avp + avd * 40.0 + Vector3(0, 1.0, 0), 4.0, "Живой город", "трафик · прохожие · светофоры")
 	# 3. the Prado, with the game's HUD
-	var prado: VehiclePrado = main.get("car")
 	_show_hud(true)
 	await _drive(prado, avp, 5.0, 75.0, "Toyota Land Cruiser Prado", "реальная физика · звук дизеля")
 	_show_hud(false)
 	# 4. GLS black
 	var gls: VehiclePrado = main.get("gls")
 	if gls:
-		await _drive(gls, avp + avd * 300.0, 4.0, 80.0, "Mercedes GLS · BMW E30 · W123", "таджикские номера · свой гараж")
+		await _drive(gls, avp + avd * 300.0, 4.0, 80.0, "Mercedes GLS · BMW E30", "таджикские номера · свой гараж")
 	# 5. showroom
 	var mb: Node3D = main.get_node_or_null("CarDealer_mb")
 	if mb:
@@ -87,7 +97,7 @@ func _shots() -> void:
 	var e30: VehiclePrado = main.get("e30")
 	if e30:
 		e30.set_tuning({"tint": 0.9, "rims": "d9a520", "spoiler": true})
-		await _orbit(e30.global_position, 6.5, 1.6, 2.4, 4.2, e30.global_basis, 3.5, "Тюнинг", "диски · тонировка · спойлер · покраска")
+		await _orbit(e30.global_position, 7.5, 2.2, -1.2, 0.6, e30.global_basis, 3.5, "Тюнинг", "диски · тонировка · спойлер · покраска")
 	# 7-8. AMID
 	var am: AmidStores = main.get_node_or_null("AmidStores")
 	if am and not am.stores.is_empty():
@@ -129,21 +139,24 @@ func _shots() -> void:
 	# 12. realty
 	var re: Realty = main.get_node_or_null("Realty")
 	if re and re.props.size() > 1:
-		var P: Dictionary = re.props[1]
+		var P: Dictionary = re.props.filter(func(q: Dictionary) -> bool: return q["kind"] == "house")[0]
 		var pp2: Vector3 = P["pos"]
 		var fw := Vector3(sin(float(P["yaw"])), 0, cos(float(P["yaw"])))
 		var sd := fw.cross(Vector3.UP)
-		await _line(pp2 + fw * 9.0 + sd * 4.0 + Vector3(0, 3.0, 0), pp2 + fw * 5.0 + sd * 1.5 + Vector3(0, 2.3, 0),
+		await _line(pp2 + fw * 8.0 + sd * 5.0 + Vector3(0, 4.5, 0), pp2 + fw * 4.5 + sd * 2.0 + Vector3(0, 3.0, 0),
 			pp2 + Vector3(0, 2.0, 0) - fw * 4.0, pp2 + Vector3(0, 2.0, 0) - fw * 4.0, 2.5, "Недвижимость", "дом · квартира · гараж")
 	# 13. flag park
 	var flag := _lm("flag")
 	await _orbit(flag, 150.0, 75.0, 0.0, 0.7, Basis.IDENTITY, 3.5, "Площадь флага", "")
+
+
+func _nature_night(avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vector3, prado: VehiclePrado) -> void:
 	# 14. mountains: the Anzob pass serpentine
 	_hour(14.0)
 	await _drive_road_shot(prado, "pass", Vector3(-1500, 0, -7750), 5.0, 55.0, "Горы Варзоба", "серпантины · перевал Анзоб")
 	# 15. waterfall
 	var fall := Vector3(1460, 250, -7430)
-	await _orbit(fall, 70.0, 6.0, 0.4, 1.0, Basis.IDENTITY, 3.0, "Водопады и озёра", "")
+	await _orbit(fall, 120.0, 45.0, 0.4, 0.9, Basis.IDENTITY, 3.0, "Водопады и озёра", "")
 	# 16. night rain on the avenue
 	_hour(21.5)
 	_weather(2)
