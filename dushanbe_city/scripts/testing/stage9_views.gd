@@ -62,20 +62,33 @@ func _ready() -> void:
 		s3.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
 		await _sec(2.5)
 		await _look("amid_door", xf * Vector3(8, 3.0, 40), xf * Vector3(0, 3, 20))
-		await _look("amid_up", xf * Vector3(0, 2.0, 0), xf * Vector3(0.5, 10.0, 0.1))
 		await _look("amid_inside", xf * Vector3(0, 2.2, 21), xf * Vector3(-8, 1.5, -10))
 		await _look("amid_aisle", xf * Vector3(-9, 1.7, 8), xf * Vector3(-9, 1.2, -18))
+		await _look("amid_shelf_close", xf * Vector3(-10.4, 1.4, 2.0), xf * Vector3(-11.5, 1.0, -1.0))
+		await _look("amid_endcap", xf * Vector3(-12, 1.8, 10.5), xf * Vector3(-12, 1.0, 6.4))
+		await _look("amid_fridges", xf * Vector3(-30, 1.8, -17), xf * Vector3(-30, 1.2, -24))
+		await _look("amid_fruit", xf * Vector3(-22, 2.2, 18.5), xf * Vector3(-27, 1.0, 13.4))
 		await _look("amid_tills", xf * Vector3(20, 3.0, 20), xf * Vector3(0, 1.0, 14))
-		await _look("amid_fruit", xf * Vector3(-20, 2.5, 21), xf * Vector3(-30, 1.0, 12))
+		await _look("amid_baskets", xf * Vector3(9.5, 1.6, 21.0), xf * Vector3(7.5, 0.8, 22.8))
+		# shopping with the hero: basket in the hand in an aisle, then the bag at the till
 		_ui(true)
-		s3.player.teleport(am.till_point(st, 0), PI)
-		await _sec(1.0)
-		am.open()
+		Food.hand = ""
+		Food.take_basket()
+		Food.pick("rice")
+		Food.pick("oil")
+		s3.player.teleport(xf * Vector3(-15.0, 0.3, 0.0), xf.basis.get_euler().y + PI)
+		await _sec(1.5)
 		for c3 in s3.player.find_children("*", "Camera3D", true, false):
 			(c3 as Camera3D).make_current()
-		for i in 20:
+		for i in 30:
 			await get_tree().process_frame
-		await _snap("amid_till_menu")
+		await _snap("amid_basket_hand")
+		Food.pay()
+		s3.player.teleport(am.till_point(st, 0), xf.basis.get_euler().y)
+		await _sec(1.0)
+		for i in 30:
+			await get_tree().process_frame
+		await _snap("amid_bag_hand")
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("v21"):

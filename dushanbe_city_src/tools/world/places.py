@@ -233,7 +233,7 @@ def perimeter_block(add, free, a, b, c, d, tall):
                     # towers, cream residential blocks, shopping centres (assets/models/city)
                     kind = str(RNG.choice(["luxa_m", "luxb_m", "luxc_m", "luxc_m", "luxa_m", "office", "hotel", "sky", "mall_m", "amid_m"] if tall
                                           else ["luxc_m", "luxc_m", "luxa_m", "panel9", "brick5", "office"]))
-                    if kind == "amid_m" and RNG.random() < 0.6:
+                    if kind == "amid_m" and RNG.random() < 0.15:
                         kind = "mall_m"          # an AMID now and then, not on every block
                 elif ring == 3:
                     kind = str(RNG.choice(["luxc_m", "panel9", "panel5", "brick5"]))

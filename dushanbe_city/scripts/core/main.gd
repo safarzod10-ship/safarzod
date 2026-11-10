@@ -147,6 +147,11 @@ func _spawn_car(touch: CanvasLayer) -> void:
 		dealer.name = "CarDealer"
 		dealer.main = self
 		add_child(dealer)
+	var trunks := CarTrunks.new()
+	trunks.name = "CarTrunks"
+	trunks.main = self
+	trunks.session = car_session
+	add_child(trunks)
 	var amid := AmidStores.new()
 	amid.name = "AmidStores"
 	amid.session = car_session

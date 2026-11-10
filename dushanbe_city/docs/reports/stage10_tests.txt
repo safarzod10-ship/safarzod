@@ -1,7 +1,17 @@
-PASS  1. AMID supermarkets in the city: 6
+PASS  1. AMID supermarkets in the city: 11
 PASS  2. interior built when the player is near
-PASS  3. walked in through the doors to the till (0.1 m from it): «КАССА · ПРОДУКТЫ»
-PASS  4. bought plov (25) + non (5): money 70 смн, bag 2
-PASS  5. ate the plov: health 40 -> 90 (+50)
-PASS  6. ate the non: health -> 100 (max 100), bag 0
-PASS  7. not enough money: refused
+PASS  3. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
+PASS  4. basket in the hand
+PASS  5. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
+PASS  6. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
+PASS  7. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
+PASS  8. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
+PASS  9. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
+PASS 10. the bag is in the boot (hands free, 1 shown in the car)
+PASS 11. took the bag out of the boot
+PASS 12. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
+PASS 13. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
+PASS 14. plov can be cooked (rice, meat, carrot, onion, oil)
+PASS 15. cooked plov ×4: fridge Нон ×1, Плов ×4
+PASS 16. ate plov: hunger 30 -> 99, health 50 -> 85
+PASS 17. starving: health falls (85.0 -> 82.5), no regeneration

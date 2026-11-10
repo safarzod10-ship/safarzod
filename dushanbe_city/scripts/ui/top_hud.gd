@@ -116,13 +116,28 @@ func _draw() -> void:
 	draw_string(f, Vector2(mx, my), mt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, HudStyle.MONEY)
 	# two bars under the money: red / white. Driving: the vehicle's condition / fuel; on foot: full
 	# (no health system for the character yet)
-	var hp := 1.0
+	# driving: the vehicle's condition / fuel; on foot: the hero's health / (white) the stronger need
+	var hp := PlayerLife.health / 100.0
 	var fuel := 1.0
 	if session and session.driving and session.car:
 		hp = session.car.health / 100.0
 		fuel = session.car.fuel_l / maxf(session.car.tank_l, 1.0)
 	_bar(Rect2(right - bw, 0.8 * u, bw, 0.2 * u), hp, Color(0.86, 0.1, 0.1))
 	_bar(Rect2(right - bw, 1.1 * u, bw, 0.2 * u), fuel, Color(0.97, 0.97, 0.97))
+	# hunger (orange) and thirst (blue), with their icons; blink when low
+	var low := Engine.get_frames_drawn() % 40 < 20
+	for k in 2:
+		var v: float = (Food.hunger if k == 0 else Food.thirst) / 100.0
+		var col: Color = Color(1.0, 0.6, 0.12) if k == 0 else Color(0.3, 0.7, 1.0)
+		if v < 0.15 and low:
+			col = Color(1, 0.15, 0.1)
+		var y := 1.4 * u + k * 0.3 * u
+		_bar(Rect2(right - bw + 0.34 * u, y, bw - 0.34 * u, 0.16 * u), v, col)
+		var ic := HudStyle.icon("food" if k == 0 else "water")
+		if ic:
+			draw_texture_rect(ic, Rect2(Vector2(right - bw - 0.04 * u, y - 0.06 * u), Vector2(0.28, 0.28) * u), false, col)
+		else:
+			HudStyle.label_left(self, "Е" if k == 0 else "В", Vector2(right - bw, y + 0.14 * u), int(u * 0.2), col)
 	# crosshair while a gun is out (on foot)
 	if Weapons.uses_ammo(Weapons.current) and not (session and session.driving):
 		var cc := size * 0.5

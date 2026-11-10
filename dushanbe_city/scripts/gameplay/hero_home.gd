@@ -88,7 +88,7 @@ func door_point() -> Vector3:
 
 # ------------------------------------------------------------------------------------------ interactable
 func interaction_label(_player: Node) -> String:
-	return "ДОМ · ОТДЫХ"
+	return "ДОМ · РАЗОБРАТЬ ПАКЕТ" if Food.hand == "bag" else "ДОМ · КУХНЯ"
 
 
 func interaction_point(_player: Node) -> Vector3:
@@ -100,14 +100,146 @@ func can_interact(_player: Node) -> bool:
 
 
 func interact(_player: Node) -> void:
-	PlayerLife.health = 100.0
-	var m: Node = get_parent()
-	if m and m.has_method("save_all"):
-		m.call("save_all")
-	else:
-		Wallet.save_state()
-	_toast.text = "Дома: здоровье восстановлено, игра сохранена"
+	if Food.hand == "bag":
+		var n := Food.unpack()
+		_say("Пакет разобран: %d продуктов в холодильнике" % n)
+	open_kitchen()
+
+
+# ------------------------------------------------------------------------------------------ kitchen
+## the home kitchen: the fridge (groceries and cooked dishes), recipes, eat / drink, rest + save
+var _panel: PanelContainer
+var _kbox: VBoxContainer
+
+
+func _say(t: String) -> void:
+	_toast.text = t
 	_toast_t = 3.0
+
+
+func _kbtn(t: String, col: Color, w := 150.0) -> Button:
+	var b := Button.new()
+	b.text = t
+	b.custom_minimum_size = Vector2(w, 50)
+	b.add_theme_font_override("font", HudStyle.font())
+	b.add_theme_font_size_override("font_size", 18)
+	for stl in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = col.darkened(0.25 if stl == "pressed" else (0.6 if stl == "disabled" else 0.0))
+		sb.set_corner_radius_all(10)
+		sb.content_margin_left = 8
+		sb.content_margin_right = 8
+		b.add_theme_stylebox_override(stl, sb)
+	return b
+
+
+func _klabel(t: String, size := 18, col := Color.WHITE) -> Label:
+	var l := Label.new()
+	l.text = t
+	l.add_theme_font_override("font", HudStyle.font())
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", col)
+	return l
+
+
+func open_kitchen() -> void:
+	if _panel == null:
+		_panel = PanelContainer.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.06, 0.05, 0.04, 0.95)
+		sb.set_corner_radius_all(16)
+		sb.border_color = Color(1.0, 0.75, 0.3)
+		sb.set_border_width_all(2)
+		sb.content_margin_left = 22
+		sb.content_margin_right = 22
+		sb.content_margin_top = 14
+		sb.content_margin_bottom = 14
+		_panel.add_theme_stylebox_override("panel", sb)
+		_panel.add_to_group(TouchBlock.GROUP)
+		_toast.get_parent().add_child(_panel)
+		_kbox = VBoxContainer.new()
+		_kbox.add_theme_constant_override("separation", 8)
+		_panel.add_child(_kbox)
+	_panel.visible = true
+	_refresh_kitchen()
+
+
+func is_kitchen_open() -> bool:
+	return _panel != null and _panel.visible
+
+
+func _refresh_kitchen() -> void:
+	for c in _kbox.get_children():
+		c.queue_free()
+	var t := _klabel("ДОМ · КУХНЯ", 28, Color(1.0, 0.8, 0.35))
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_kbox.add_child(t)
+	var st := _klabel("Голод %d · Жажда %d · Здоровье %d" % [int(Food.hunger), int(Food.thirst), int(PlayerLife.health)], 18, Color(0.85, 0.9, 1.0))
+	st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_kbox.add_child(st)
+	# the fridge
+	_kbox.add_child(_klabel("Холодильник:", 20, Color(0.6, 0.85, 1.0)))
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 4)
+	_kbox.add_child(grid)
+	if Food.fridge.is_empty():
+		_kbox.add_child(_klabel("пусто — купите продукты в супермаркете АМИД", 17, Color(0.7, 0.7, 0.7)))
+	for id in Food.fridge:
+		var row := HBoxContainer.new()
+		row.add_child(_klabel("%s ×%d" % [Food.name_of(id), int(Food.fridge[id])], 17))
+		row.custom_minimum_size = Vector2(280, 0)
+		if Food.edible(id):
+			var b := _kbtn("СЪЕСТЬ" if not (id in ["water", "juice", "cola", "milk", "chai"]) else "ВЫПИТЬ", Color(0.75, 0.45, 0.1), 110)
+			var iid: String = id
+			b.pressed.connect(func() -> void:
+				_say(Food.consume(iid, Food.fridge))
+				_refresh_kitchen())
+			row.add_child(b)
+		grid.add_child(row)
+	# recipes
+	_kbox.add_child(_klabel("Приготовить:", 20, Color(1.0, 0.75, 0.4)))
+	var rg := GridContainer.new()
+	rg.columns = 2
+	rg.add_theme_constant_override("h_separation", 12)
+	rg.add_theme_constant_override("v_separation", 4)
+	_kbox.add_child(rg)
+	for rid in Food.RECIPES:
+		var r: Dictionary = Food.RECIPES[rid]
+		var names: PackedStringArray = []
+		for n in r["needs"]:
+			names.append(Food.name_of(n))
+		var b2 := _kbtn("%s ×%d  (%s)" % [String(r["name"]), int(r["makes"]), ", ".join(names)], Color(0.15, 0.5, 0.25), 430)
+		b2.disabled = not Food.can_cook(rid)
+		var rid2: String = rid
+		b2.pressed.connect(func() -> void:
+			if Food.cook(rid2):
+				_say("Приготовлено: %s" % String(Food.RECIPES[rid2]["name"]))
+			_refresh_kitchen())
+		rg.add_child(b2)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 16)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	_kbox.add_child(h)
+	var rest := _kbtn("ОТДОХНУТЬ И СОХРАНИТЬ", Color(0.2, 0.35, 0.65), 280)
+	rest.pressed.connect(func() -> void:
+		PlayerLife.health = minf(100.0, PlayerLife.health + 25.0) if Food.ok_to_heal() else PlayerLife.health
+		var m: Node = get_parent()
+		if m and m.has_method("save_all"):
+			m.call("save_all")
+		else:
+			Wallet.save_state()
+		_say("Отдохнули, игра сохранена" + ("" if Food.ok_to_heal() else " (поешьте, чтобы восстановить здоровье)"))
+		_refresh_kitchen())
+	h.add_child(rest)
+	var close := _kbtn("ЗАКРЫТЬ", Color(0.4, 0.12, 0.1), 180)
+	close.pressed.connect(func() -> void: _panel.visible = false)
+	h.add_child(close)
+	await get_tree().process_frame
+	_panel.reset_size()
+	var vs := get_viewport().get_visible_rect().size
+	_panel.position = (vs - _panel.size) * 0.5
 
 
 # ------------------------------------------------------------------------------------------ building

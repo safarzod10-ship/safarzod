@@ -299,11 +299,17 @@ func _t_doors() -> void:
 
 
 func _t_amid() -> void:
-	# 0.22: AMID supermarkets can be entered; food bought at the till restores health
+	# 0.23: the whole shopping chain - basket, shelves, till, bag in the hand, the car's boot, home
+	# kitchen (unpack, cook plov), eat; hunger / thirst
 	var am: AmidStores = main.get_node_or_null("AmidStores")
-	_check("AMID supermarkets in the city: %d" % (am.stores.size() if am else 0), am != null and am.stores.size() >= 3)
+	_check("AMID supermarkets in the city: %d" % (am.stores.size() if am else 0), am != null and am.stores.size() >= 8)
 	if am == null or am.stores.is_empty():
 		return
+	Food.hand = ""
+	Food.basket = {}
+	Food.bag = {}
+	Food.fridge = {}
+	Food.trunks = {}
 	var st: Dictionary = am.stores[0]
 	var ow: OpenWorld = main.get("open_world")
 	ow.preload_at(am.door_point(st))
@@ -311,25 +317,91 @@ func _t_amid() -> void:
 	s.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
 	await _sec(2.0)
 	_check("interior built when the player is near", st["node"] != null)
-	# walk in through the entrance to the first till (scripted walk)
-	var target := am.till_point(st, 0)
-	var ok: bool = await s.player.walk_to(target, 0.0, 25.0)
+	var it: CharacterInteraction = s.player.get("interaction")
+	# 1. the basket stand inside the entrance
+	await s.player.walk_to(am.basket_point(st), null, 12.0)
+	await _sec(0.4)
+	_check("at the basket stand: «%s»" % it.label(), it.label() == "ВЗЯТЬ КОРЗИНУ")
+	it.trigger()
+	await _sec(0.2)
+	_check("basket in the hand", Food.hand == "basket")
+	# 2. shelves: rice, oil; meat from the fridge; carrot, onion from the stands; water; non
+	var xf: Transform3D = st["xf"]
+	var picks := [[am.shelf_point(st, 2), "rice"], [am.shelf_point(st, 3), "oil"],
+		[xf * Vector3(-30.0, 0.3, -AmidStores.HZ + 2.7), "meat"],
+		[xf * Vector3(-36.0 + 3 * 4.4, 0.3, 15.4), "carrot"],
+		[xf * Vector3(-36.0 + 4 * 4.4, 0.3, 15.4), "onion"],
+		[am.shelf_point(st, 9), "water"], [am.shelf_point(st, 0), "non"]]
+	var got: PackedStringArray = []
+	for pk in picks:
+		s.player.teleport(pk[0] + Vector3(0, 0.2, 0), 0.0)        # (a player walks around the shelves)
+		await _sec(0.5)
+		if it.label().begins_with("ВЗЯТЬ · " + Food.name_of(pk[1])):
+			it.trigger()
+			await _sec(0.1)
+			got.append(pk[1])
+		else:
+			print("   pick %s: label «%s», %.1f m" % [pk[1], it.label(), s.player.global_position.distance_to(pk[0])])
+	_check("walked the aisles, took %s: basket %s" % [str(got), Food.listing(Food.basket)], got.size() == picks.size() and Food.total(Food.basket) == picks.size())
+	# 3. the till
+	Wallet.money = 500
+	var price := Food.price_of(Food.basket)
+	s.player.teleport(am.till_point(st, 0) + Vector3(0, 0.2, 0), 0.0)
 	await _sec(0.5)
-	var d := Vector2(s.player.global_position.x - target.x, s.player.global_position.z - target.z).length()
-	var it: Variant = s.player.get("interaction")
-	var lbl: String = (it as CharacterInteraction).label() if it else ""
-	_check("walked in through the doors to the till (%.1f m from it): «%s»" % [d, lbl], d < 2.0 and lbl == "КАССА · ПРОДУКТЫ")
-	Wallet.money = 100
-	Food.bag = {}
-	PlayerLife.health = 40.0
-	var b1 := Food.buy("plov")
-	var b2 := Food.buy("non")
-	_check("bought plov (25) + non (5): money %s, bag %d" % [Wallet.fmt(Wallet.money), Food.count()], b1 and b2 and Wallet.money == 70 and Food.count() == 2)
-	var g := Food.eat("plov")
-	_check("ate the plov: health 40 -> %.0f (+%.0f)" % [PlayerLife.health, g], is_equal_approx(PlayerLife.health, 90.0))
-	var g2 := Food.eat()
-	_check("ate the non: health -> %.0f (max 100), bag %d" % [PlayerLife.health, Food.count()], PlayerLife.health == 100.0 and Food.count() == 0 and g2 > 0.0)
-	Wallet.money = 2
-	_check("not enough money: refused", not Food.buy("plov") and Wallet.money == 2)
+	_check("at the till: «%s»" % it.label(), it.label().begins_with("КАССА · ОПЛАТИТЬ"))
+	it.trigger()
+	await _sec(0.2)
+	_check("paid %s: bag in the hand (%s), money %s" % [Wallet.fmt(price), Food.listing(Food.bag), Wallet.fmt(Wallet.money)],
+		Food.hand == "bag" and Food.total(Food.bag) == got.size() and Wallet.money == 500 - price)
+	# 4. drink straight from the bag
+	Food.hunger = 30.0
+	Food.thirst = 20.0
+	var m1 := Food.consume("water", Food.bag)
+	_check("drank the water from the bag: thirst 20 -> %d (%s)" % [int(Food.thirst), m1], Food.thirst >= 59.0)
+	# 5. the boot of the Prado
+	var car: VehiclePrado = main.get("car")
+	car.place(am.door_point(st) + xf.basis * Vector3(10, 0, 12), 0.0)
+	await _sec(1.0)
+	var rear := car.global_transform * Vector3(0, -0.2, car.body_size.z * 0.5 + 0.75)
+	s.player.teleport(rear, 0.0)
+	await _sec(0.6)
+	_check("at the Prado's boot: «%s»" % it.label(), it.label() == "ПАКЕТ В БАГАЖНИК")
+	it.trigger()
+	await _sec(0.2)
+	var shown := car.find_children("TrunkBag*", "", true, false).size()
+	_check("the bag is in the boot (hands free, %d shown in the car)" % shown, Food.hand == "" and Food.trunk_count("Prado") == 1 and shown == 1)
 	ow.hold = Vector3.INF
+	# 6. take it out, home: unpack, cook plov, eat
+	s.player.teleport(rear, 0.0)
+	await _sec(0.4)
+	it.trigger()
+	await _sec(0.2)
+	_check("took the bag out of the boot", Food.hand == "bag" and Food.trunk_count("Prado") == 0)
+	var hh: HeroHome = main.get_node("HeroHome")
+	ow.preload_at(hh.door_point())
+	s.player.teleport(hh.spawn_point(), 0.0)
+	await _sec(0.2)
+	s.player.global_position = hh.door_point() + Vector3.UP * 0.05
+	await _sec(0.8)
+	_check("at home: «%s»" % it.label(), it.label() == "ДОМ · РАЗОБРАТЬ ПАКЕТ")
+	it.trigger()
+	await _sec(0.3)
+	_check("unpacked into the fridge: %s" % Food.listing(Food.fridge), Food.hand == "" and Food.fridge.has("rice") and Food.fridge.has("meat"))
+	_check("plov can be cooked (rice, meat, carrot, onion, oil)", Food.can_cook("plov"))
+	Food.cook("plov")
+	_check("cooked plov ×4: fridge %s" % Food.listing(Food.fridge), int(Food.fridge.get("plov", 0)) == 4 and not Food.fridge.has("rice"))
+	PlayerLife.health = 50.0
+	Food.consume("plov", Food.fridge)
+	_check("ate plov: hunger 30 -> %d, health 50 -> %d" % [int(Food.hunger), int(PlayerLife.health)], Food.hunger >= 99.0 and PlayerLife.health >= 84.0)
+	# 7. needs fall with time; empty needs drain health
+	Food.hunger = 0.0
+	Food.thirst = 50.0
+	var h0 := PlayerLife.health
+	Food.tick(10.0)
+	_check("starving: health falls (%.1f -> %.1f), no regeneration" % [h0, PlayerLife.health], PlayerLife.health < h0 and not Food.ok_to_heal())
+	Food.hunger = 100.0
+	Food.thirst = 100.0
+	PlayerLife.health = 100.0
+	if hh.is_kitchen_open():
+		hh._panel.visible = false
 	Wallet.money = 500

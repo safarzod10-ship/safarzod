@@ -81,7 +81,8 @@ static func damage(amount: float) -> void:
 
 func _process(delta: float) -> void:
 	_since_hit += delta
-	if not dead and _since_hit > 8.0 and health < 100.0:
+	Food.tick(delta)
+	if not dead and _since_hit > 8.0 and health < 100.0 and Food.ok_to_heal():
 		health = minf(100.0, health + delta)
 	if not dead:
 		_dim.color.a = clampf((40.0 - health) / 40.0, 0.0, 1.0) * 0.35 + clampf(0.6 - _since_hit, 0.0, 0.6) * 0.4
