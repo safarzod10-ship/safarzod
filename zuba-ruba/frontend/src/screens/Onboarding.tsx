@@ -20,19 +20,19 @@ function steps(config: Config): Step[] {
   const max = formatNumber(String(Math.max(...amounts)));
   return [
     {
-      image: "/img/onboarding-1.png",
+      image: "/img/onboarding-1.webp",
       title: "Задания. Кейсы. Звёзды.",
       text: `За каждое выполненное задание — кейс. В кейсе от ${min} до ${max} ⭐, рулетка крутится прямо в приложении.`,
       action: "Далее",
     },
     {
-      image: "/img/onboarding-2.png",
+      image: "/img/onboarding-2.webp",
       title: "Выполняй задания",
       text: "Подписывайся на каналы, запускай ботов и поддерживай проекты бустами. Выполнил — нажми «Проверить».",
       action: "Далее",
     },
     {
-      image: "/img/onboarding-3.png",
+      image: "/img/onboarding-3.webp",
       title: config.features.withdrawals ? "Забирай подарки" : "Следи за наградами",
       text: config.features.withdrawals
         ? `Копи звёзды и выводи их подарками Telegram: мишка, роза, кубок и другие — от ${config.withdraw.min_stars} ⭐.`
@@ -100,7 +100,7 @@ export function Onboarding() {
           <img
             key={item.image}
             className={index === step ? "onb-art onb-art-active" : "onb-art"}
-            src={dark ? item.image.replace(".png", "-dark.png") : item.image}
+            src={dark ? item.image.replace(".webp", "-dark.webp") : item.image}
             alt=""
             width={360}
             height={300}

@@ -90,6 +90,7 @@ for (const scheme of SCHEMES) {
       await mockApi(page);
       for (const screen of SCREENS) {
         await page.goto(`/${screen.hash}`);
+        await page.locator("#splash").waitFor({ state: "detached" });
         await page.locator(screen.ready).first().waitFor();
         await expect(page.locator("html")).toHaveAttribute("data-theme", scheme);
         await assertNoOverflow(page);
@@ -102,6 +103,7 @@ for (const scheme of SCHEMES) {
       await fakeTelegram(page, scheme);
       await mockApi(page, { onboarded: false });
       await page.goto("/");
+      await page.locator("#splash").waitFor({ state: "detached" });
       await expect(page.locator(".onb-title")).toContainText("Задания.");
       await assertNoOverflow(page);
       await page.screenshot({ path: `e2e/screenshots/${scheme}-${width}-onboarding-1.png` });
@@ -122,6 +124,7 @@ test("task check shows result and case link", async ({ page }) => {
   await fakeTelegram(page, "light");
   await mockApi(page);
   await page.goto("/#/tasks");
+  await page.locator("#splash").waitFor({ state: "detached" });
   const row = page.locator(".task-card").first();
   await row.getByRole("button", { name: "Проверить" }).click();
   await expect(row.locator(".task-note")).toContainText("Задание выполнено");
@@ -136,6 +139,7 @@ test("case roulette spins to the server result", async ({ page }) => {
   await fakeTelegram(page, "light");
   await mockApi(page);
   await page.goto("/#/cases");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Открыть кейс" }).click();
   await expect(page.locator(".roulette-result-amount")).toContainText("+0,3");
   await expect(page.locator(".prize-won .prize-amount")).toHaveText("0,3");
@@ -162,6 +166,7 @@ test("withdraw request flow", async ({ page }) => {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fx.withdrawals) });
   });
   await page.goto("/#/withdraw");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.getByRole("button", { name: /Мишка/ }).click();
   await page.getByRole("button", { name: "Вывести «Мишка» · 15 ⭐" }).click();
   await expect(page.locator("text=Заявка №4 принята")).toBeVisible();
@@ -174,6 +179,7 @@ test("outside telegram shows the bot link", async ({ page }) => {
   await page.route("https://telegram.org/**", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
   await page.setViewportSize({ width: 360, height: 700 });
   await page.goto("/");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await expect(page.locator("text=Откройте приложение через Telegram")).toBeVisible();
   await expect(page.getByRole("link", { name: "Перейти к @zuba_ruba_bot" })).toHaveAttribute("href", "https://t.me/zuba_ruba_bot");
 });
@@ -186,6 +192,7 @@ test("maintenance error switches to the maintenance screen", async ({ page }) =>
     route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { code: "maintenance", message: "Идут технические работы." } }) }),
   );
   await page.goto("/");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await expect(page.getByRole("heading", { name: "Технические работы" })).toBeVisible();
   await expect(page.locator("text=Идут технические работы.")).toBeVisible();
 });
@@ -195,6 +202,7 @@ test("tab bar is visible when Telegram opens the app with launch parameters in t
   await fakeTelegram(page, "light");
   await mockApi(page);
   await page.goto("/#tgWebAppData=query_id%3DAAH&tgWebAppVersion=8.0&tgWebAppPlatform=ios");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.locator("text=Ежедневная рулетка").waitFor();
   await expect(page.locator(".tabbar")).toBeVisible();
   const box = await page.locator(".tabbar-inner").boundingBox();
@@ -215,6 +223,7 @@ test("daily roulette spins once tasks are done and shows the countdown", async (
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fx.spinResult) });
   });
   await page.goto("/#/");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Крутить" }).click();
   await expect(page.locator(".daily-won")).toContainText("+0,8");
   await expect(page.locator(".wheel")).toHaveAttribute("data-result", "0.8");
@@ -242,6 +251,7 @@ test("admin can run unlimited test spins and test cases without credit", async (
   );
   await page.route("**/api/cases/test", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ amount: "2", test: true }) }));
   await page.goto("/#/");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Тестовая прокрутка" }).click();
   await expect(page.locator(".daily-test-result")).toContainText("+0,6");
   await page.getByRole("button", { name: "Тестовая прокрутка" }).click();

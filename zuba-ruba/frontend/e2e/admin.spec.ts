@@ -108,6 +108,7 @@ for (const scheme of ["light", "dark"] as Scheme[]) {
       await setup(page, scheme);
       for (const section of SECTIONS) {
         await page.goto(`/${section.hash}`);
+        await page.locator("#splash").waitFor({ state: "detached" });
         await page.locator(section.ready).first().waitFor();
         await assertNoOverflow(page);
         await page.screenshot({ path: `e2e/screenshots/admin-${scheme}-${width}-${section.name}.png`, fullPage: true });
@@ -121,6 +122,7 @@ test("admin works at 320px without page overflow", async ({ page }) => {
   await setup(page, "light");
   for (const section of SECTIONS) {
     await page.goto(`/${section.hash}`);
+    await page.locator("#splash").waitFor({ state: "detached" });
     await page.locator(section.ready).first().waitFor();
     await assertNoOverflow(page);
   }
@@ -130,6 +132,7 @@ test("sidebar on desktop, tabs on phone", async ({ page }) => {
   await setup(page, "light");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/#/admin");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await expect(page.locator(".adm-side")).toBeVisible();
   await expect(page.locator(".adm-tabs")).toBeHidden();
   await page.locator(".adm-side-link", { hasText: "Выводы" }).click();
@@ -145,6 +148,7 @@ test("users table sorts on the server and exports csv", async ({ page }) => {
   await setup(page, "light", captured);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/#/admin/users");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.locator("text=Найдено: 1284").waitFor();
   await page.getByRole("button", { name: /Доступно/ }).click();
   await expect.poll(() => captured.usersQuery ?? "").toContain("sort=available");
@@ -156,6 +160,7 @@ test("star top-up opens a Telegram invoice", async ({ page }) => {
   await setup(page, "dark");
   await page.setViewportSize({ width: 430, height: 900 });
   await page.goto("/#/admin/withdrawals");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await expect(page.getByRole("button", { name: "Отправил вручную" }).first()).toBeVisible();
   await expect(page.locator("text=не хватает 60 ⭐")).toHaveCount(0);
   await page.getByRole("button", { name: "1000", exact: true }).click();
@@ -170,6 +175,7 @@ test("settings save only changed values", async ({ page }) => {
   await setup(page, "light", captured);
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.goto("/#/admin/settings");
+  await page.locator("#splash").waitFor({ state: "detached" });
   await page.locator("text=Средний приз кейса").waitFor();
   await page.getByRole("button", { name: "Вернуть стандартное: 0.2" }).click();
   await page.getByRole("switch", { name: "Режим технического обслуживания" }).click();

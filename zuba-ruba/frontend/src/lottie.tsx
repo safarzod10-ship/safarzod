@@ -25,6 +25,10 @@ function loadData(src: string) {
   return promise;
 }
 
+export function preloadAnimation(src: string): Promise<unknown> {
+  return loadData(src);
+}
+
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 export function giftAnimationUrl(giftId: string): string {

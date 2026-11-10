@@ -56,7 +56,8 @@ export const Roulette = forwardRef<RouletteHandle, { table: PrizeRow[]; label: s
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const offset = useRef(0);
-  const frame = useRef(0);
+  const driftFrame = useRef(0);
+  const spinFrame = useRef(0);
 
   const place = useCallback((value: number) => {
     offset.current = value;
@@ -79,13 +80,19 @@ export const Roulette = forwardRef<RouletteHandle, { table: PrizeRow[]; label: s
       let next = offset.current - delta * 0.02;
       if (next < startOffset() - STEP * 8) next = startOffset();
       place(next);
-      frame.current = requestAnimationFrame(drift);
+      driftFrame.current = requestAnimationFrame(drift);
     };
-    frame.current = requestAnimationFrame(drift);
-    return () => cancelAnimationFrame(frame.current);
+    driftFrame.current = requestAnimationFrame(drift);
+    return () => cancelAnimationFrame(driftFrame.current);
   }, [moving, won, muted, place, startOffset, strip]);
 
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(driftFrame.current);
+      cancelAnimationFrame(spinFrame.current);
+    },
+    [],
+  );
 
   useImperativeHandle(
     ref,
@@ -97,13 +104,27 @@ export const Roulette = forwardRef<RouletteHandle, { table: PrizeRow[]; label: s
       },
       spin: (amount: string) =>
         new Promise<void>((resolve) => {
-          cancelAnimationFrame(frame.current);
+          cancelAnimationFrame(driftFrame.current);
+          cancelAnimationFrame(spinFrame.current);
           setWon(false);
           setMoving(true);
           setStrip(buildStrip(table, amount));
-          requestAnimationFrame(() => {
+          let finished = false;
+          let target = 0;
+          const finish = () => {
+            if (finished) return;
+            finished = true;
+            window.clearTimeout(guard);
+            cancelAnimationFrame(spinFrame.current);
+            place(target);
+            setMoving(false);
+            setWon(true);
+            resolve();
+          };
+          const guard = window.setTimeout(finish, SPIN_MS + 1500);
+          spinFrame.current = requestAnimationFrame(() => {
             const width = viewport.current?.clientWidth ?? 360;
-            const target = width / 2 - (WIN_INDEX * STEP + CARD / 2) + (Math.random() - 0.5) * CARD * 0.6;
+            target = width / 2 - (WIN_INDEX * STEP + CARD / 2) + (Math.random() - 0.5) * CARD * 0.6;
             const from = startOffset();
             const duration = reducedMotion() ? 500 : SPIN_MS;
             const started = performance.now();
@@ -123,13 +144,12 @@ export const Roulette = forwardRef<RouletteHandle, { table: PrizeRow[]; label: s
                 }
               }
               if (progress < 1) {
-                frame.current = requestAnimationFrame(tick);
+                spinFrame.current = requestAnimationFrame(tick);
               } else {
-                setWon(true);
-                resolve();
+                finish();
               }
             };
-            frame.current = requestAnimationFrame(tick);
+            spinFrame.current = requestAnimationFrame(tick);
           });
         }),
     }),

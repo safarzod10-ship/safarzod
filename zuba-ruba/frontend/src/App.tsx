@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ApiError, api, onGlobalError } from "./api";
 import { AppContext, type AppState } from "./AppContext";
 import { IconCase, IconHome, IconTasks, IconUser } from "./icons";
 import { TAB_PATHS, navigate, tabOf, useRoute, type Route, type TabId } from "./router";
 import { colorScheme, haptic, initData, onThemeChange, paintChrome } from "./telegram";
 import type { Config, Me } from "./types";
+import { hideSplash, preloadCritical, preloadInBackground, setSplashProgress } from "./preload";
 import { Button, Loader } from "./ui";
 import { Onboarding } from "./screens/Onboarding";
 import { HomeScreen } from "./screens/Home";
@@ -15,7 +16,8 @@ import { HistoryScreen } from "./screens/History";
 import { NotificationsScreen } from "./screens/Notifications";
 import { WithdrawScreen } from "./screens/Withdraw";
 import { RulesScreen } from "./screens/Rules";
-import { AdminScreen } from "./admin/Admin";
+
+const AdminScreen = lazy(() => import("./admin/Admin").then((module) => ({ default: module.AdminScreen })));
 
 const BOT_USERNAME = "zuba_ruba_bot";
 
@@ -58,13 +60,17 @@ export function App() {
       return;
     }
     setPhase({ kind: "loading" });
+    setSplashProgress(0.2);
     try {
       const [me, config] = await Promise.all([api.post<Me>("/session"), api.get<Config>("/config")]);
+      setSplashProgress(0.6);
+      await preloadCritical({ onboarding: !me.onboarded, theme: colorScheme() }, (value) => setSplashProgress(0.6 + value * 0.4));
       if (config.maintenance && !me.is_admin) {
         setPhase({ kind: "maintenance", message: "Проводятся технические работы. Загляните немного позже." });
         return;
       }
       setPhase({ kind: "ready", me, config });
+      void preloadInBackground();
     } catch (err) {
       const error = err instanceof ApiError ? err : new ApiError(0, "internal", "Что-то пошло не так.");
       if (error.code === "maintenance") setPhase({ kind: "maintenance", message: error.message });
@@ -77,6 +83,10 @@ export function App() {
   useEffect(() => {
     void boot();
   }, [boot]);
+
+  useEffect(() => {
+    if (phase.kind !== "loading") void hideSplash();
+  }, [phase.kind]);
 
   useEffect(
     () =>
@@ -184,7 +194,11 @@ function renderRoute(route: Route) {
     case "rules":
       return <RulesScreen route={route} />;
     case "admin":
-      return <AdminScreen route={route} />;
+      return (
+        <Suspense fallback={<Loader />}>
+          <AdminScreen route={route} />
+        </Suspense>
+      );
     default:
       return <HomeScreen />;
   }

@@ -8,11 +8,53 @@
     <title>ZUBA RUBA</title>
     <meta name="theme-color" content="#F2EFE7" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-    <link rel="preload" href="/fonts/unbounded-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/img/star.png" as="image" />
+    <link rel="preload" href="/fonts/unbounded-brand.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/img/star.png" as="image" fetchpriority="high" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      (function () {
+        var app = window.Telegram && window.Telegram.WebApp;
+        var dark = app && app.initData ? app.colorScheme === "dark" : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
+    <style>
+      html, body { margin: 0; background: #f2efe7; }
+      html[data-theme="dark"], html[data-theme="dark"] body { background: #121110; }
+      .splash { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: #f2efe7; transition: opacity 320ms ease, transform 320ms ease; }
+      html[data-theme="dark"] .splash { background: #121110; }
+      .splash-out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+      .splash-logo { position: relative; width: 132px; height: 132px; }
+      .splash-bg { position: absolute; inset: 0; border-radius: 36px; background: #ffb21a; animation: splash-pop 560ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+      .splash-card { position: absolute; top: 26px; width: 58px; height: 76px; border-radius: 12px; box-shadow: 0 6px 14px -8px rgba(22, 20, 15, 0.55); }
+      .splash-back { left: 50px; background: #ffe7b0; animation: splash-fan 520ms 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+      .splash-front { left: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #fffdf8; animation: splash-drop 560ms 320ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+      .splash-front img { width: 36px; height: 36px; animation: splash-star 620ms 620ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both, splash-twinkle 1.6s 1.3s ease-in-out infinite alternate; }
+      .splash-front b { font: 600 12px "Unbounded", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #16140f; letter-spacing: 0.02em; animation: splash-fade 400ms 760ms both; }
+      .splash-name { font: 600 15px "Unbounded", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; letter-spacing: 0.04em; color: #16140f; animation: splash-fade 500ms 700ms both; }
+      html[data-theme="dark"] .splash-name { color: #f3efe5; }
+      .splash-bar { width: 120px; height: 3px; border-radius: 2px; background: rgba(22, 20, 15, 0.1); overflow: hidden; animation: splash-fade 400ms 800ms both; }
+      html[data-theme="dark"] .splash-bar { background: rgba(243, 239, 229, 0.12); }
+      .splash-bar i { display: block; width: 8%; height: 100%; border-radius: 2px; background: #ffb21a; transition: width 260ms ease; }
+      @keyframes splash-pop { from { transform: scale(0.55); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      @keyframes splash-fan { from { transform: rotate(0deg) translateX(-14px); opacity: 0; } to { transform: rotate(12deg); opacity: 1; } }
+      @keyframes splash-drop { from { transform: translateY(-46px) rotate(10deg); opacity: 0; } to { transform: rotate(-7deg); opacity: 1; } }
+      @keyframes splash-star { from { transform: scale(0) rotate(-40deg); } to { transform: scale(1) rotate(0deg); } }
+      @keyframes splash-twinkle { from { transform: rotate(-8deg) scale(1); } to { transform: rotate(8deg) scale(1.08); } }
+      @keyframes splash-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .splash *, .splash { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; } }
+    </style>
   </head>
   <body>
+    <div id="splash" class="splash" aria-hidden="true">
+      <div class="splash-logo">
+        <span class="splash-bg"></span>
+        <span class="splash-card splash-back"></span>
+        <span class="splash-card splash-front"><img src="/img/star.png" alt="" /><b>ZR</b></span>
+      </div>
+      <div class="splash-name">ZUBA RUBA</div>
+      <div class="splash-bar"><i id="splash-fill"></i></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

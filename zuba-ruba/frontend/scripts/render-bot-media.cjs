@@ -10,7 +10,7 @@ const project = path.resolve(root, "..");
 const brandDir = path.join(project, "docs", "brand");
 const botAssets = path.join(project, "backend", "app", "bot", "assets");
 const lottieSource = fs.readFileSync(path.join(root, "node_modules/lottie-web/build/player/lottie_light.min.js"), "utf8");
-const font = (file) => `data:font/woff2;base64,${fs.readFileSync(path.join(pub, "fonts", file)).toString("base64")}`;
+const font = (file) => `data:font/woff2;base64,${fs.readFileSync(path.join(__dirname, "assets", "fonts", file)).toString("base64")}`;
 const starPng = `data:image/png;base64,${fs.readFileSync(path.join(pub, "img", "star.png")).toString("base64")}`;
 
 const GIFTS = { bear: "5170233102089322756", rose: "5168103777563050263", trophy: "5168043875654172773" };

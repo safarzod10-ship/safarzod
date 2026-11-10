@@ -1,11 +1,12 @@
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
 const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
 const pub = path.join(root, "public");
 const lottieSource = fs.readFileSync(path.join(root, "node_modules/lottie-web/build/player/lottie_light.min.js"), "utf8");
-const font = (file) => `data:font/woff2;base64,${fs.readFileSync(path.join(pub, "fonts", file)).toString("base64")}`;
+const font = (file) => `data:font/woff2;base64,${fs.readFileSync(path.join(__dirname, "assets", "fonts", file)).toString("base64")}`;
 
 const GIFTS = {
   bear: "5170233102089322756",
@@ -115,9 +116,9 @@ async function main() {
     targets.push([name, body, themes.light]);
     targets.push([`${name}-dark`, body, themes.dark]);
   }
-  targets.push(["star", `<div class="lottie" data-src="star" data-frame="0" style="left:0;top:0;width:256px;height:256px"></div>`, themes.light]);
+  targets.push(["star", `<div class="lottie" data-src="star" data-frame="0" style="left:0;top:0;width:160px;height:160px"></div>`, themes.light]);
   for (const [name, body, ink] of targets) {
-    const size = name === "star" ? { width: 256, height: 256 } : { width: 360, height: 300 };
+    const size = name === "star" ? { width: 160, height: 160 } : { width: 360, height: 300 };
     await page.setViewportSize(size);
     await page.setContent(`<!doctype html><html><head><style>:root{--ink:${ink}} ${base} body{width:${size.width}px;height:${size.height}px}</style></head><body>${body}</body></html>`);
     await page.addScriptTag({ content: lottieSource });
@@ -131,9 +132,16 @@ async function main() {
     }, payload);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(150);
-    const out = path.join(pub, "img", `${name}.png`);
-    await page.screenshot({ path: out, omitBackground: true, scale: name === "star" ? "css" : "device" });
-    console.log("rendered", path.relative(root, out));
+    const png = path.join(pub, "img", `${name}.png`);
+    await page.screenshot({ path: png, omitBackground: true, scale: name === "star" ? "css" : "device" });
+    if (name === "star") {
+      console.log("rendered", path.relative(root, png));
+      continue;
+    }
+    const webp = path.join(pub, "img", `${name}.webp`);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", png, "-c:v", "libwebp", "-quality", "82", "-pix_fmt", "yuva420p", webp]);
+    fs.rmSync(png);
+    console.log("rendered", path.relative(root, webp));
   }
   await browser.close();
 }

@@ -48,7 +48,8 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
   const group = useRef<SVGGElement>(null);
   const labels = useRef<(SVGGElement | null)[]>([]);
   const angle = useRef(0);
-  const frame = useRef(0);
+  const driftFrame = useRef(0);
+  const spinFrame = useRef(0);
 
   const place = (value: number) => {
     angle.current = value;
@@ -66,13 +67,19 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
     const drift = (time: number) => {
       place((angle.current + (time - last) * 0.012) % 360);
       last = time;
-      frame.current = requestAnimationFrame(drift);
+      driftFrame.current = requestAnimationFrame(drift);
     };
-    frame.current = requestAnimationFrame(drift);
-    return () => cancelAnimationFrame(frame.current);
+    driftFrame.current = requestAnimationFrame(drift);
+    return () => cancelAnimationFrame(driftFrame.current);
   }, [moving, won, muted]);
 
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(driftFrame.current);
+      cancelAnimationFrame(spinFrame.current);
+    },
+    [],
+  );
 
   useImperativeHandle(
     ref,
@@ -83,7 +90,8 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
       },
       spin: (amount: string) =>
         new Promise<void>((resolve) => {
-          cancelAnimationFrame(frame.current);
+          cancelAnimationFrame(driftFrame.current);
+          cancelAnimationFrame(spinFrame.current);
           setWon(null);
           setMoving(true);
           const matches = segments.map((value, index) => (value === amount ? index : -1)).filter((index) => index >= 0);
@@ -94,6 +102,18 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
           const base = from - (from % 360);
           const target = base + TURNS * 360 + ((landing % 360) + 360) % 360;
           const duration = reducedMotion() ? 500 : SPIN_MS;
+          let finished = false;
+          const finish = () => {
+            if (finished) return;
+            finished = true;
+            window.clearTimeout(guard);
+            cancelAnimationFrame(spinFrame.current);
+            place(target % 360);
+            setMoving(false);
+            setWon(index);
+            resolve();
+          };
+          const guard = window.setTimeout(finish, duration + 1500);
           const started = performance.now();
           let lastSlice = Math.floor(from / SLICE);
           let lastHaptic = 0;
@@ -110,15 +130,12 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
               }
             }
             if (progress < 1) {
-              frame.current = requestAnimationFrame(tick);
+              spinFrame.current = requestAnimationFrame(tick);
             } else {
-              place(target % 360);
-              setMoving(false);
-              setWon(index);
-              resolve();
+              finish();
             }
           };
-          frame.current = requestAnimationFrame(tick);
+          spinFrame.current = requestAnimationFrame(tick);
         }),
     }),
     [segments],
