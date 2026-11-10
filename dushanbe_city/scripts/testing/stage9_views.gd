@@ -56,7 +56,7 @@ func _ready() -> void:
 			var d2: CarDealer = main.get_node_or_null("CarDealer_" + br)
 			if d2:
 				var t2 := d2.global_transform
-				await _look("dealer_%s" % br, t2 * Vector3(30, 12, 0), t2 * Vector3(0, 5, 0))
+				await _look("dealer_%s" % br, t2 * Vector3(42, 11, -22), t2 * Vector3(0, 4, 0))
 				await _look("dealer_%s_in" % br, t2 * Vector3(6.5, 2.0, 12.0), t2 * Vector3(-4, 1.5, -6))
 		await _look("dealer_front", t * Vector3(38, 6, 14), t * Vector3(0, 5, 0))
 		await _look("dealer_wide", t * Vector3(46, 18, -30), t * Vector3(4, 3, 0))
