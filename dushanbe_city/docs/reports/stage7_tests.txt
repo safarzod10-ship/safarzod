@@ -7,9 +7,9 @@ PASS  6. billboards ~300 m apart on every road (408 boards, was 97 in 0.17): 0 p
 PASS  7. no billboard stands on a road (edge distance >= 3 m): 0 violations
 PASS  8. billboard in the scene with an advertising banner (res://assets/textures/ads/ad_dcnext.png)
 PASS  9. all 4 banners (DCnext, Orienbank, LakLak, Eskhata) are on the roads: 4 of 4 used
-PASS 10. billboard post has collision (a car stops at it): BillboardBody:<StaticBody3D#1193279537544>
+PASS 10. billboard post has collision (a car stops at it): BillboardBody:<StaticBody3D#1287064180348>
 PASS 11. steel guardrails along drops of country / mountain roads: 19.6 km in 88 runs
-PASS 12. guardrails stand just outside the carriageway (0.3 .. 3 m from the edge): 0 of 4982 points off
+PASS 12. guardrails stand just outside the carriageway (0.3 .. 3 m from the edge): 1 of 4982 points off
 PASS 13. guardrail collision across the barrier: WorldBuildings
 PASS 14. city streets follow curves (not ruler-straight): 20 of 20 deviate > 20 m from their chord
 PASS 15. ring road has no square corners: max turn between 4 m segments 0.9 deg (< 8)
@@ -28,11 +28,11 @@ PASS 27. player can get into the van (can_enter true, driving true, car = van tr
 PASS 28. van drives: 60 km/h after 6 s full throttle (> 35), turns 43 deg in 2 s, moved 93 m, brakes to 0.0 km/h
 PASS 29. office door is an interactable: «УСТРОИТЬСЯ В LAKLAK», selected by the player: true
 PASS 30. hired by LakLak (Wallet.laklak_hired)
-PASS 31. order assigned on getting into the van: Душанбе, дом 87, 1629 m away, pay 66 смн, beacon + map target true
-PASS 32. delivery completes when the van stops at the drop-off: money 81 смн (pay 66 смн + bonus), deliveries 1, next order true
+PASS 31. order assigned on getting into the van: Объездная дорога, дом 131, 2261 m away, pay 80 смн, beacon + map target true
+PASS 32. delivery completes when the van stops at the drop-off: money 95 смн (pay 80 смн + bonus), deliveries 1, next order true
 PASS 33. motorboats placed: 3 (sea + lakes)
-PASS 34. boat floats: 0.03 m above the water surface (|..| < 0.5), tilt 1.1 deg (< 12), in water true
+PASS 34. boat floats: 0.05 m above the water surface (|..| < 0.5), tilt 1.7 deg (< 12), in water true
 PASS 35. player boards the boat (can_enter true, driving true)
-PASS 36. boat drives: 62 km/h after 8 s (> 25), 183 m, turns 118 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
-PASS 37. getting off the boat: player in the scene again ((-602.0, -13.0, 140.0))
+PASS 36. boat drives: 62 km/h after 8 s (> 25), 183 m, turns 117 deg in 3 s, stays afloat true, slows down by itself (11 km/h)
+PASS 37. getting off the boat: player in the scene again ((-600.0, -13.0, 143.0))
 PASS 38. parked vehicles sleep far from the camera (frozen at 900 m: true, awake near: true)
