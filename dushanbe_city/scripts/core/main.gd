@@ -229,6 +229,10 @@ func _spawn_extra_vehicles() -> void:
 	realty.session = car_session
 	realty.laklak = laklak
 	add_child(realty)
+	# 0.25: police station and the park with the arch (reference photos)
+	var photo := PhotoPlaces.new()
+	photo.name = "PhotoPlaces"
+	add_child(photo)
 	# fuel for every vehicle: filling stations + delivery when the tank runs dry
 	var nav := RoadNav.new()
 	nav.name = "RoadNav"

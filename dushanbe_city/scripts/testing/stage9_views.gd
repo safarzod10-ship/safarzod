@@ -76,6 +76,31 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("photo"):
+		# 0.25: police station + Parki Dusti (arch, fountain, pavilions)
+		_hour(12.0)
+		var pp: PhotoPlaces = main.get_node("PhotoPlaces")
+		for st in pp.sites:
+			var xf: Transform3D = st["xf"]
+			ow.hold = xf.origin
+			ow.preload_at(xf.origin)
+			if st["node"] == null:
+				pp.build_site(st)
+			await _sec(3.0)
+			var id := String(st["id"])
+			if id == "police":
+				await _look("police_front", xf * Vector3(10, 4.0, 40), xf * Vector3(0, 4.0, -2))
+				await _look("police_sign", xf * Vector3(-3, 3.0, 14), xf * Vector3(0, 5.6, 0))
+				await _look("police_fence", xf * Vector3(-14, 1.8, 30), xf * Vector3(-5, 1.5, 24))
+				await _look("police_top", xf * Vector3(0, 60, 30), xf * Vector3(0, 0, 0))
+			else:
+				await _look("park_gate", xf * Vector3(6, 3.0, 66), xf * Vector3(0, 6.0, 40))
+				await _look("park_alley", xf * Vector3(0, 2.0, 44), xf * Vector3(0, 2.5, 0))
+				await _look("park_fountain", xf * Vector3(14, 4.0, 14), xf * Vector3(0, 2.5, 0))
+				await _look("park_pavilion", xf * Vector3(-20, 3.0, 10), xf * Vector3(-30, 3.0, 0))
+				await _look("park_top", xf * Vector3(0, 110, 60), xf * Vector3(0, 0, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("street"):
 		# 0.25: junction traffic lights, manholes, storm grates, bins
 		_hour(12.5)

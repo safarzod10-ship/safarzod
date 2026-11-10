@@ -40,6 +40,10 @@ LANDMARKS = [
     ("dealer_mb", "Автосалон Mercedes-Benz", -1740.0, -4220.0, 0.0, (38.0, 48.0)),
     ("dealer_bmw", "Автосалон BMW", 1340.0, -4500.0, math.pi, (38.0, 48.0)),
     ("gunshop", "Оружейный магазин", 2.0, -2240.0, math.pi, (22.0, 26.0)),
+    # 0.25: the police station (blue «ПОЛИЦИЯ» sign, emblem, wrought fence) and a city park with an arch
+    # gate, fountain, pavilions and its name sign (the user's reference photos)
+    ("police", "Полиция", -460.0, -3140.0, 0.0, (40.0, 50.0)),
+    ("city_park", "Парк Дусти", -420.0, -2880.0, 0.0, (100.0, 100.0)),
     ("hisor_fort", "Гиссарская крепость", -4500.0, -2900.0, 0.3, (150.0, 110.0)),
     ("hisor_bazaar", "Гиссарский рынок", -4050.0, -2300.0, 0.0, (100.0, 70.0)),
 ]
