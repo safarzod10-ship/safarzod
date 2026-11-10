@@ -45,6 +45,19 @@ func _ready() -> void:
 		await _snap("map_city")
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("dealer"):
+		_hour(16.0)
+		var dl: CarDealer = main.get_node("CarDealer")
+		var ow3: OpenWorld = main.get("open_world")
+		ow3.hold = dl.global_position
+		await _sec(5.0)
+		var t := dl.global_transform
+		await _look("dealer_front", t * Vector3(38, 6, 14), t * Vector3(0, 5, 0))
+		await _look("dealer_wide", t * Vector3(46, 18, -30), t * Vector3(4, 3, 0))
+		await _look("dealer_inside", t * Vector3(6.5, 2.0, 12.0), t * Vector3(-4, 1.5, -6))
+		await _look("dealer_wall", t * Vector3(5.0, 2.2, 0.0), t * Vector3(-8, 2.6, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("wash"):
 		_hour(13.0)
 		var w0: Dictionary = wd.washes[0]

@@ -8,7 +8,7 @@ extends Node3D
 ## the player's cannot be opened («ПРОДАЁТСЯ»). Job vehicles (LakLak van, bus, boats) are free.
 
 const POS := Vector3(-93.0, 0.0, 64.0)        ## showroom centre (reserved lot 2), front faces +X (the avenue)
-const SIZE := Vector3(14.0, 6.0, 20.0)
+const SIZE := Vector3(16.0, 7.0, 30.0)
 ## node name in main -> [main property, display name, price]
 const CARS := {
 	"Camry": ["camry", "Toyota Camry", 50000],
@@ -69,11 +69,11 @@ static func price_of(v: Node) -> int:
 
 
 func door_point() -> Vector3:
-	return to_global(Vector3(SIZE.x * 0.5 + 1.4, 0.2, 4.0))
+	return to_global(Vector3(SIZE.x * 0.5 + 2.4, 0.2, 0.0))
 
 
 func delivery_point(k: int) -> Vector3:
-	return to_global(Vector3(SIZE.x * 0.5 + 9.0 + float(k / 4) * 7.5, 0.3, -6.0 + float(k % 4) * 6.0))
+	return to_global(Vector3(SIZE.x * 0.5 + 6.0 + float(k / 5) * 6.5, 0.3, -6.0 + float(k % 5) * 6.0))
 
 
 func delivery_yaw() -> float:
@@ -148,102 +148,244 @@ func _box(size: Vector3, pos: Vector3, m: Material, parent: Node3D = null) -> Me
 
 
 func _build_house() -> void:
+	## 0.25 after the owner's reference: a black-and-glass showroom — big black fascia with the brand
+	## emblem and «АВТОСАЛОН ДУШАНБЕ», full-height glass walls, a black entrance portal with glass
+	## doors, granite steps, white planters, flags (Tajikistan + brand), a tall emblem pylon by the road;
+	## inside a polished marble floor, white columns, ring ceiling lights, a black feature wall with the
+	## emblem, a reception desk with a light strip, sofas, plants and the real cars on display.
+	## (Own brand: no third-party logos.) Front = +X (the avenue).
 	var sx := SIZE.x * 0.5
 	var sz := SIZE.z * 0.5
-	var white := _mat(Color(0.93, 0.93, 0.92), 0.5)
-	var dark := _mat(Color(0.1, 0.11, 0.13), 0.4, 0.3)
-	var steel := _mat(Color(0.7, 0.72, 0.75), 0.3, 0.8)
-	var glass := _mat(Color(0.12, 0.2, 0.26, 1.0), 0.05, 0.5, Color(0.05, 0.08, 0.1))
-	var floor_m := _mat(Color(0.82, 0.82, 0.8), 0.15, 0.1)
-	var lamp := _mat(Color(1, 1, 1), 0.3, 0.0, Color(1.0, 0.97, 0.9), 2.5)
-	var gold := _mat(Color(0.95, 0.72, 0.25), 0.3, 0.8, Color(0.4, 0.28, 0.05), 0.6)
-	# plaza + polished showroom floor
-	_box(Vector3(SIZE.x + 22.0, 0.3, SIZE.z + 8.0), Vector3(6.0, -0.1, 0), _mat(Color(0.6, 0.6, 0.58), 0.9))
-	_box(Vector3(SIZE.x, 0.25, SIZE.z), Vector3(0, 0.08, 0), floor_m)
-	# back + side walls (white), roof slab with a dark fascia, glass front + glass sides
-	_box(Vector3(0.4, SIZE.y, SIZE.z), Vector3(-sx + 0.2, SIZE.y * 0.5, 0), white)
-	_box(Vector3(SIZE.x, SIZE.y, 0.4), Vector3(0, SIZE.y * 0.5, -sz + 0.2), white)
-	_box(Vector3(SIZE.x * 0.4, SIZE.y, 0.4), Vector3(-sx * 0.6, SIZE.y * 0.5, sz - 0.2), white)
-	_box(Vector3(SIZE.x * 0.6, SIZE.y - 0.4, 0.1), Vector3(sx * 0.4, SIZE.y * 0.5, sz - 0.1), glass)
-	_box(Vector3(SIZE.x + 1.0, 0.6, SIZE.z + 1.0), Vector3(0, SIZE.y + 0.3, 0), dark)
-	_box(Vector3(0.12, SIZE.y - 0.6, SIZE.z - 0.6), Vector3(sx - 0.06, (SIZE.y - 0.6) * 0.5 + 0.2, 0), glass)
-	for k in 5:                                   # mullions
-		_box(Vector3(0.16, SIZE.y, 0.16), Vector3(sx, SIZE.y * 0.5, -sz + 0.2 + k * (SIZE.z - 0.4) / 4.0), steel)
-	# ceiling light strips
-	for k in 4:
-		_box(Vector3(SIZE.x - 3.0, 0.08, 0.35), Vector3(0, SIZE.y - 0.1, -7.5 + k * 5.0), lamp)
-	# show podiums (turntables) with a display car silhouette each + the reception desk
-	for k in 2:
-		var pod := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 3.2
-		cm.bottom_radius = 3.3
-		cm.height = 0.3
-		cm.radial_segments = 32
-		pod.mesh = cm
-		pod.material_override = steel
-		pod.position = Vector3(-1.0, 0.3, -5.0 + k * 9.0)
-		add_child(pod)
-	_box(Vector3(1.0, 1.1, 3.4), Vector3(-sx + 2.2, 0.75, 7.0), dark)
-	_box(Vector3(1.2, 0.06, 3.6), Vector3(-sx + 2.2, 1.33, 7.0), gold)
-	# display cars inside: the real models, static (meshes only)
-	_display_car("res://assets/models/extra/camry.glb", Vector3(-1.0, 0.45, -5.0), 0.6, PI)
-	_display_car("res://assets/models/extra/lexus_rx.glb", Vector3(-1.0, 0.45, 4.0), -0.5, 0.0)
-	# sign: dark board on the fascia, gold letters, both on the front and the side to the street
-	var lb := Label3D.new()
-	lb.text = "АВТОСАЛОН"
-	lb.font = HudStyle.font()
-	lb.font_size = 96
-	lb.pixel_size = 0.016
-	lb.modulate = Color(1.0, 0.82, 0.35)
-	lb.outline_size = 12
-	lb.position = Vector3(sx + 0.52, SIZE.y + 0.3, 0)
-	lb.rotation.y = PI * 0.5
-	add_child(lb)
-	var sub := Label3D.new()
-	sub.text = "DUSHANBE-X MOTORS"
-	sub.font = HudStyle.font()
-	sub.font_size = 40
-	sub.pixel_size = 0.01
-	sub.modulate = Color(0.9, 0.9, 0.95)
-	sub.position = Vector3(sx + 0.52, SIZE.y - 0.5, 0)
-	sub.rotation.y = PI * 0.5
-	add_child(sub)
-	# a pylon with the car icon by the road
-	_box(Vector3(0.4, 7.5, 0.4), Vector3(sx + 17.0, 3.75, -sz - 1.0), steel)
-	_box(Vector3(0.5, 2.4, 3.0), Vector3(sx + 17.0, 7.3, -sz - 1.0), dark)
-	for side: float in [1.0, -1.0]:
-		var ic := Sprite3D.new()
-		ic.texture = HudStyle.icon("car")
-		ic.pixel_size = 0.007
-		ic.position = Vector3(sx + 17.0 + 0.27 * side, 7.6, -sz - 1.0)
-		ic.rotation.y = PI * 0.5 if side > 0 else -PI * 0.5
-		add_child(ic)
-		var pl := Label3D.new()
-		pl.text = "АВТО"
-		pl.font = HudStyle.font()
-		pl.font_size = 64
-		pl.pixel_size = 0.01
-		pl.modulate = Color(1.0, 0.82, 0.35)
-		pl.position = Vector3(sx + 17.0 + 0.27 * side, 6.6, -sz - 1.0)
-		pl.rotation.y = PI * 0.5 if side > 0 else -PI * 0.5
-		add_child(pl)
-	# lot markings in front (delivery spots)
+	var H := SIZE.y
+	var black := _mat(Color(0.03, 0.03, 0.035), 0.35, 0.4)
+	var grey := _mat(Color(0.42, 0.43, 0.45), 0.6, 0.2)
+	var white := _mat(Color(0.94, 0.94, 0.93), 0.4)
+	var steel := _mat(Color(0.72, 0.74, 0.77), 0.25, 0.85)
+	var glass := _mat(Color(0.12, 0.18, 0.22, 0.28), 0.03, 0.6)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var marble := _mat(Color(0.86, 0.86, 0.85), 0.06, 0.15)
+	var granite := _mat(Color(0.55, 0.55, 0.56), 0.5, 0.1)
+	var lamp := _mat(Color(1, 1, 1), 0.3, 0.0, Color(1.0, 0.98, 0.94), 3.0)
+	var leaf := _mat(Color(0.12, 0.38, 0.12), 0.8)
+	var silver_e := _mat(Color(0.9, 0.9, 0.92), 0.2, 0.9, Color(0.6, 0.6, 0.65), 0.6)
+	# ---- plaza: granite paving out to the street, the lot, a podium + 3 steps along the front
+	_box(Vector3(SIZE.x + 20.0, 0.3, SIZE.z + 16.0), Vector3(6.0, -0.1, 0), granite)
+	_box(Vector3(SIZE.x + 1.0, 0.45, SIZE.z + 1.0), Vector3(0, 0.18, 0), granite)
 	for k in 3:
-		_box(Vector3(5.0, 0.03, 0.15), Vector3(sx + 9.0, 0.07, -9.0 + k * 6.0), _mat(Color(1, 1, 1), 0.6))
-	_box(Vector3(5.0, 0.03, 0.15), Vector3(sx + 9.0, 0.07, 9.0), _mat(Color(1, 1, 1), 0.6))
-	# collision: the walls and the glass (the plaza is walkable ground)
+		_box(Vector3(0.45, 0.15 * (3 - k), SIZE.z - 4.0), Vector3(sx + 0.7 + k * 0.45, 0.075 * (3 - k) - 0.02, 0), granite)
+	_box(Vector3(SIZE.x - 0.2, 0.06, SIZE.z - 0.2), Vector3(0, 0.43, 0), marble)
+	# ---- shell: back wall black, side walls glass with black corner piers; roof slab
+	_box(Vector3(0.4, H, SIZE.z), Vector3(-sx + 0.2, H * 0.5 + 0.4, 0), black)
+	for sgn: float in [-1.0, 1.0]:
+		_box(Vector3(SIZE.x, H, 0.12), Vector3(0, H * 0.5 + 0.4, sgn * (sz - 0.06)), glass)
+		_box(Vector3(0.6, H + 0.4, 0.6), Vector3(sx - 0.3, (H + 0.4) * 0.5 + 0.2, sgn * (sz - 0.3)), black)
+		for k in 4:
+			_box(Vector3(0.12, H, 0.16), Vector3(-sx + 2.0 + k * (SIZE.x - 4.0) / 3.0, H * 0.5 + 0.4, sgn * (sz - 0.06)), black)
+	_box(Vector3(SIZE.x + 0.8, 0.5, SIZE.z + 0.8), Vector3(0, H + 0.65, 0), black)
+	# front glass curtain with black mullions and a transom; the entrance gap in the middle
+	var door_w := 5.0
+	for sgn: float in [-1.0, 1.0]:
+		var w := sz - door_w * 0.5 - 0.6
+		_box(Vector3(0.12, H, w), Vector3(sx - 0.06, H * 0.5 + 0.4, sgn * (door_w * 0.5 + w * 0.5)), glass)
+		var n := 6
+		for k in n + 1:
+			_box(Vector3(0.18, H, 0.14), Vector3(sx, H * 0.5 + 0.4, sgn * (door_w * 0.5 + k * w / n)), black)
+	_box(Vector3(0.2, 0.14, SIZE.z), Vector3(sx, 3.3, 0), black)
+	# ---- the big black fascia (sign band) above the glass + the emblem and the name
+	_box(Vector3(1.4, 3.2, SIZE.z + 1.2), Vector3(sx + 0.2, H + 2.1, 0), black)
+	_box(Vector3(0.6, 3.2, SIZE.x + 0.8), Vector3(0, H + 2.1, sz + 0.3), black)   # wraps the corner (street side)
+	_emblem(Vector3(sx + 0.92, H + 2.1, -sz + 4.0), 1.15, PI * 0.5)
+	_sign_text("АВТОСАЛОН ДУШАНБЕ", Vector3(sx + 0.92, H + 2.35, 3.0), PI * 0.5, 120, 0.013, Color(0.96, 0.96, 0.97))
+	_sign_text("DUSHANBE MOTORS", Vector3(sx + 0.92, H + 1.35, 3.0), PI * 0.5, 54, 0.011, Color(0.7, 0.72, 0.75))
+	_box(Vector3(0.05, 2.2, 0.06), Vector3(sx + 0.9, H + 2.1, -sz + 6.6), silver_e)
+	# ---- entrance portal: a black frame stepping out, glass doors (open gap), a light strip
+	_box(Vector3(2.0, 0.6, door_w + 2.0), Vector3(sx + 0.9, 4.1, 0), black)
+	for sgn: float in [-1.0, 1.0]:
+		_box(Vector3(2.0, 3.9, 0.7), Vector3(sx + 0.9, 2.35, sgn * (door_w * 0.5 + 0.65)), black)
+	_box(Vector3(0.06, 0.06, door_w), Vector3(sx + 1.9, 3.8, 0), lamp)
+	for sgn: float in [-1.0, 1.0]:
+		_box(Vector3(0.05, 3.1, 1.2), Vector3(sx + 0.1, 1.95, sgn * (door_w * 0.5 - 0.55)), glass)
+	# ---- planters with thujas along the front, flags, the pylon by the road
+	for z in [-sz + 2.0, -door_w * 0.5 - 2.4, door_w * 0.5 + 2.4, sz - 2.0]:
+		_planter(Vector3(sx + 2.2, 0.0, z), white, leaf)
+	var fz := -sz - 3.5
+	for k in 3:
+		var fp := Vector3(sx + 3.0 + k * 2.2, 0.0, fz)
+		_box(Vector3(0.12, 9.0, 0.12), fp + Vector3(0, 4.5, 0), steel)
+		if k == 1:
+			var tf := Sprite3D.new()
+			tf.texture = load("res://assets/models/extra/tajik_flag_0.jpg") if ResourceLoader.exists("res://assets/models/extra/tajik_flag_0.jpg") else null
+			if tf.texture:
+				tf.pixel_size = 1.6 / float(tf.texture.get_width())
+				tf.position = fp + Vector3(0, 8.1, 0.85)
+				tf.double_sided = true
+				add_child(tf)
+		else:
+			_box(Vector3(0.03, 2.2, 1.5), fp + Vector3(0, 7.8, 0.82), black)
+			_emblem(fp + Vector3(0.03, 7.9, 0.82), 0.42, PI * 0.5)
+			_emblem(fp + Vector3(-0.03, 7.9, 0.82), 0.42, -PI * 0.5)
+	var py := Vector3(sx + 14.0, 0.0, -sz - 3.0)
+	_box(Vector3(0.9, 7.0, 2.4), py + Vector3(0, 3.5, 0), black)
+	_box(Vector3(1.4, 0.5, 2.9), py + Vector3(0, 0.25, 0), grey)
+	for sgn: float in [-1.0, 1.0]:
+		_emblem(py + Vector3(sgn * 0.47, 5.4, 0), 0.8, PI * 0.5 if sgn > 0 else -PI * 0.5)
+		_sign_text("АВТОСАЛОН\nДУШАНБЕ", py + Vector3(sgn * 0.47, 3.4, 0), PI * 0.5 if sgn > 0 else -PI * 0.5, 44, 0.01, Color(0.95, 0.95, 0.96))
+	for tz in [-sz - 5.5, sz + 4.0]:
+		_tree(Vector3(sx + 21.0, 0.0, tz), leaf)
+	for tz in [-sz - 6.0, sz + 6.0]:
+		_tree(Vector3(-sx + 2.0, 0.0, tz), leaf)
+	# ---- interior: white columns, ring ceiling lights, the black feature wall, reception, sofas
+	_box(Vector3(SIZE.x - 0.6, 0.1, SIZE.z - 0.6), Vector3(0, H + 0.35, 0), white)      # ceiling
+	for cz in [-sz + 7.0, 0.0, sz - 7.0]:
+		_box(Vector3(0.7, H, 0.7), Vector3(-1.5, H * 0.5 + 0.4, cz), white)
+	for rx in [-3.5, 3.0]:
+		for rz in [-9.0, -3.0, 3.0, 9.0]:
+			var ring := MeshInstance3D.new()
+			var tm := TorusMesh.new()
+			tm.inner_radius = 1.05
+			tm.outer_radius = 1.2
+			tm.rings = 32
+			tm.ring_segments = 6
+			ring.mesh = tm
+			ring.material_override = lamp
+			ring.position = Vector3(rx, H + 0.15, rz)
+			add_child(ring)
+	var ol := OmniLight3D.new()
+	ol.position = Vector3(0, H - 0.5, 0)
+	ol.omni_range = 18.0
+	ol.light_energy = 1.4
+	add_child(ol)
+	_box(Vector3(0.3, 4.2, 9.0), Vector3(-sx + 0.6, 2.6, 0), black)                        # feature wall
+	_emblem(Vector3(-sx + 0.77, 3.2, -3.3), 0.85, PI * 0.5)
+	_sign_text("DUSHANBE MOTORS", Vector3(-sx + 0.77, 3.2, 0.9), PI * 0.5, 64, 0.0085, Color(0.95, 0.95, 0.96))
+	_box(Vector3(1.0, 1.05, 4.2), Vector3(-sx + 2.8, 0.95, 0), white)                      # reception
+	_box(Vector3(1.1, 0.05, 4.3), Vector3(-sx + 2.8, 1.5, 0), black)
+	_box(Vector3(0.04, 0.05, 4.0), Vector3(-sx + 3.31, 0.75, 0), lamp)
+	for sz2 in [-sz + 3.0, sz - 3.0]:                                                       # sofas
+		_box(Vector3(1.0, 0.45, 2.6), Vector3(-sx + 2.0, 0.65, sz2), black)
+		_box(Vector3(0.3, 0.5, 2.6), Vector3(-sx + 1.55, 1.05, sz2), black)
+		_planter(Vector3(-sx + 1.3, 0.43, sz2 + (1.9 if sz2 < 0 else -1.9)), white, leaf)
+	# ---- the cars on show (real models, static): GLS on a lit podium, W123, E30, Camry, Lexus
+	var pod := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 3.4
+	cm.bottom_radius = 3.5
+	cm.height = 0.25
+	cm.radial_segments = 40
+	pod.mesh = cm
+	pod.material_override = steel
+	pod.position = Vector3(3.0, 0.55, -7.5)
+	add_child(pod)
+	_display_car("res://assets/models/cars/gls.glb", Vector3(3.0, 0.67, -7.5), 0.7, PI)
+	_display_car("res://assets/models/cars/w123.glb", Vector3(3.0, 0.48, 7.5), -0.6, PI)
+	_display_car("res://assets/models/extra/camry.glb", Vector3(3.6, 0.92, 1.8), PI * 0.35, PI)
+	_display_car("res://assets/models/cars/e30.glb", Vector3(-4.0, 0.48, -8.5), 1.2, PI)
+	_display_car("res://assets/models/extra/lexus_rx.glb", Vector3(-4.0, 0.95, 8.5), 1.9, 0.0)
+	# lot markings in front (delivery spots, two columns)
+	for c2 in 2:
+		for k in 5:
+			_box(Vector3(5.0, 0.03, 0.15), Vector3(sx + 6.0 + c2 * 6.5, 0.07, -9.0 + k * 6.0), _mat(Color(1, 1, 1), 0.6))
+	# ---- collision: walls, glass, portal (a gap at the doors: the showroom can be entered), plaza
 	var body := StaticBody3D.new()
 	add_child(body)
-	for c in [[Vector3(0.4, SIZE.y, SIZE.z), Vector3(-sx + 0.2, SIZE.y * 0.5, 0)], [Vector3(SIZE.x, SIZE.y, 0.4), Vector3(0, SIZE.y * 0.5, -sz + 0.2)],
-			[Vector3(SIZE.x, SIZE.y, 0.4), Vector3(0, SIZE.y * 0.5, sz - 0.2)], [Vector3(0.3, SIZE.y, SIZE.z), Vector3(sx, SIZE.y * 0.5, 0)],
-			[Vector3(SIZE.x + 22.0, 0.3, SIZE.z + 8.0), Vector3(6.0, -0.1, 0)], [Vector3(0.4, 7.5, 0.4), Vector3(sx + 17.0, 3.75, -sz - 1.0)]]:
+	var w2 := sz - door_w * 0.5
+	for c in [[Vector3(0.4, H, SIZE.z), Vector3(-sx + 0.2, H * 0.5 + 0.4, 0)],
+			[Vector3(SIZE.x, H, 0.3), Vector3(0, H * 0.5 + 0.4, -sz + 0.1)], [Vector3(SIZE.x, H, 0.3), Vector3(0, H * 0.5 + 0.4, sz - 0.1)],
+			[Vector3(0.3, H, w2), Vector3(sx, H * 0.5 + 0.4, -(door_w * 0.5 + w2 * 0.5))], [Vector3(0.3, H, w2), Vector3(sx, H * 0.5 + 0.4, door_w * 0.5 + w2 * 0.5)],
+			[Vector3(SIZE.x + 20.0, 0.3, SIZE.z + 16.0), Vector3(6.0, -0.1, 0)], [Vector3(SIZE.x + 1.0, 0.45, SIZE.z + 1.0), Vector3(0, 0.18, 0)],
+			[Vector3(0.9, 7.0, 2.4), py + Vector3(0, 3.5, 0)], [Vector3(1.0, 1.05, 4.2), Vector3(-sx + 2.8, 0.95, 0)]]:
 		var cs := CollisionShape3D.new()
 		var sh := BoxShape3D.new()
 		sh.size = c[0]
 		cs.shape = sh
 		cs.position = c[1]
 		body.add_child(cs)
+	for k in 3:                                    # the steps as a ramp-like stack
+		var cs2 := CollisionShape3D.new()
+		var sh2 := BoxShape3D.new()
+		sh2.size = Vector3(0.45, 0.15 * (3 - k), SIZE.z - 4.0)
+		cs2.shape = sh2
+		cs2.position = Vector3(sx + 0.7 + k * 0.45, 0.075 * (3 - k) - 0.02, 0)
+		body.add_child(cs2)
+
+
+## the showroom's own emblem: a silver ring with a car silhouette (no third-party logos)
+func _emblem(p: Vector3, r: float, yaw: float) -> void:
+	var holder := Node3D.new()
+	holder.position = p
+	holder.rotation.y = yaw
+	add_child(holder)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = r * 0.86
+	tm.outer_radius = r
+	tm.rings = 40
+	tm.ring_segments = 8
+	ring.mesh = tm
+	ring.rotation.x = PI * 0.5
+	ring.material_override = _mat(Color(0.9, 0.9, 0.92), 0.2, 0.9, Color(0.7, 0.7, 0.75), 0.8)
+	holder.add_child(ring)
+	var ic := Sprite3D.new()
+	ic.texture = HudStyle.icon("car")
+	if ic.texture:
+		ic.pixel_size = r * 1.3 / float(ic.texture.get_width())
+		ic.position = Vector3(0, 0, 0.02)
+		ic.modulate = Color(0.92, 0.92, 0.95)
+		holder.add_child(ic)
+
+
+func _sign_text(t: String, p: Vector3, yaw: float, size: int, px: float, col: Color) -> void:
+	var lb := Label3D.new()
+	lb.text = t
+	lb.font = HudStyle.font()
+	lb.font_size = size
+	lb.pixel_size = px
+	lb.modulate = col
+	lb.outline_size = 0
+	lb.double_sided = false
+	lb.position = p
+	lb.rotation.y = yaw
+	add_child(lb)
+
+
+func _planter(p: Vector3, pot: Material, leaf: Material) -> void:
+	var pm := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.42
+	cm.bottom_radius = 0.32
+	cm.height = 0.8
+	pm.mesh = cm
+	pm.material_override = pot
+	pm.position = p + Vector3(0, 0.4, 0)
+	add_child(pm)
+	_veg("thuja_cone", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.6), p + Vector3(0, 0.75, 0)))
+
+
+## vegetation through the open world's own placer (its foliage shaders, LODs); queued until it exists
+var _veg_queue := {}
+
+
+func _veg(id: String, xf: Transform3D) -> void:
+	if not _veg_queue.has(id):
+		_veg_queue[id] = []
+	(_veg_queue[id] as Array).append(xf)
+	if _veg_queue.size() == 1 and (_veg_queue[id] as Array).size() == 1:
+		_flush_veg.call_deferred()
+
+
+func _flush_veg() -> void:
+	var ow: OpenWorld = OpenWorld.instance
+	if ow == null:
+		return
+	var holder := Node3D.new()
+	holder.name = "Greenery"
+	add_child(holder)
+	ow._trees(holder, _veg_queue, 0)
+	_veg_queue = {}
+
+
+func _tree(p: Vector3, _leaf: Material) -> void:
+	_veg("chinar_middle", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.9), p))
 
 
 func _display_car(path: String, pos: Vector3, yaw: float, model_yaw: float) -> void:
