@@ -45,6 +45,18 @@ func _ready() -> void:
 		await _snap("map_city")
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("wash"):
+		_hour(13.0)
+		var w0: Dictionary = wd.washes[0]
+		var wp := Vector3(float(w0["ox"]), wd.height_at(float(w0["ox"]), float(w0["oz"])), float(w0["oz"]))
+		var wb := Basis(Vector3.UP, float(w0["yaw"]))
+		var sw: CarSession = main.get("car_session")
+		sw.player.teleport(wp + wb * Vector3(10, 0.5, 6), 0.0)
+		await _sec(4.0)
+		await _look("wash_street", wp + wb * Vector3(45, 9, 22), wp + wb * Vector3(4, 1, 0))
+		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("pack"):
 		# 0.25: the owner's car pack at the dealership: each car from front 3/4, rear 3/4, plates, lamps
 		_hour(13.0)

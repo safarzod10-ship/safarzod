@@ -173,7 +173,8 @@ def build(roads, H, H_at, F, avoid=()):
         rx, rz = math.cos(yaw), -math.sin(yaw)
         sy = yaw + math.pi / 2                                    # service / wash +X -> the street
         for lx, lst in ((-15.0, WASH_SERVICES), (15.0, WASHES)):
-            ox, oz = b[1] + rx * lx + fx * 4.0, b[2] + rz * lx + fz * 4.0
+            # right at the front of the lot (the street side), not in its middle
+            ox, oz = b[1] + rx * lx + fx * (b[5] / 2 - 7.0), b[2] + rz * lx + fz * (b[5] / 2 - 7.0)
             lst.append({"x": round(ox + fx * 14.0, 2), "z": round(oz + fz * 14.0, 2), "ox": round(ox, 2), "oz": round(oz, 2),
                         "y": round(float(H_at([ox], [oz])[0]), 2), "yaw": round(sy, 4), "road": "lot"})
     buildings[:] = [b for b in buildings if b[0] != "wash_lot"]

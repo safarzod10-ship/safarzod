@@ -574,6 +574,10 @@ def add_driveways(roads, world, H_at):
         yaw = sv["yaw"]
         dx, dz = math.cos(yaw), -math.sin(yaw)                # garage front (+X) towards the road
         starts.append((sv["ox"] + dx * 14.0, sv["oz"] + dz * 14.0, "service"))
+    for wa in world.get("washes", []):                         # 0.25: the car wash's own way in
+        yaw = wa["yaw"]
+        dx, dz = math.cos(yaw), -math.sin(yaw)
+        starts.append((wa["ox"] + dx * 7.0, wa["oz"] + dz * 7.0, "wash"))
     n = 0
     for (x, z, kind) in starts:
         plot = kind if isinstance(kind, int) else -1
