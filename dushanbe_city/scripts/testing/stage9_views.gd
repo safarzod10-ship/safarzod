@@ -76,6 +76,25 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("street"):
+		# 0.25: junction traffic lights, manholes, storm grates, bins
+		_hour(12.5)
+		var wd2 := WorldData.get_instance()
+		var picks := [0, 40, 120]
+		for i in picks:
+			if i >= wd2.fillets.size():
+				continue
+			var fl: Dictionary = wd2.fillets[i]
+			var C := Vector3(fl["c"][0], fl["c"][1], fl["c"][2])
+			var O := Vector3(fl["o"][0], C.y, fl["o"][1])
+			var dv := (C - O).normalized()
+			ow.hold = C
+			ow.preload_at(C)
+			await _sec(2.5)
+			await _look("street_junction_%d" % i, C + dv * 16.0 + Vector3(0, 4.0, 0) + Vector3(dv.z, 0, -dv.x) * 6.0, O + dv * float(fl["r"]) + Vector3(0, 2.0, 0))
+			await _look("street_top_%d" % i, C + dv * 6.0 + Vector3(0, 30.0, 0) + Vector3(0.1, 0, 0), C + dv * 5.0)
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("tune"):
 		# 0.25: tuned cars (tint 90 %, gold / black rims, spoiler) + a realty board + the taxi client
 		_hour(13.0)

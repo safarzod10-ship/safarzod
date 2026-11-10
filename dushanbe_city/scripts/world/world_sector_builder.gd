@@ -392,6 +392,22 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 					if not _on_other_road(bp, ri, 2.0):
 						var bk := int(S[k] / 70.0) % 3
 						_prop(props, ["bench_park_soviet", "container_trash_green", "rp_bench"][bk], bp, atan2(ra.x, ra.z) + (PI * 0.5 if bk == 2 else 0.0))
+				# 0.25: steel bins on the other sidewalk, manholes in the lanes, storm grates at the kerb
+				if int((S[k] + 35.0) / 70.0) != int((S[k + 1] + 35.0) / 70.0) and r["cls"] != "highway":
+					var bnp := a - ra * (hw + 2.6) + Vector3(0, 0.15, 0)
+					if not _on_other_road(bnp, ri, 2.0) and not _in_fillet(bnp):
+						_prop(props, "bin_modern_steel", bnp, atan2(-ra.x, -ra.z))
+						pboxes.append([bnp + Vector3(0, 0.45, 0), Vector3(0.4, 0.9, 0.4), 0.0])
+				if int(S[k] / 55.0) != int(S[k + 1] / 55.0):
+					var lane := 1.0 if int(S[k] / 55.0) % 2 == 0 else -1.0
+					var mh := a + ra * (hw * 0.45 * lane) + Vector3(0, 0.012, 0)
+					if not _on_other_road(mh, ri, 1.0):
+						_prop(props, "manhole_cover", mh, atan2(ra.x, ra.z))
+				if int(S[k] / 40.0) != int(S[k + 1] / 40.0):
+					for sg: float in [-1.0, 1.0]:
+						var gp := a + ra * (hw - 0.45) * sg + Vector3(0, 0.012, 0)
+						if not _on_other_road(gp, ri, 1.5) and not _in_fillet(gp):
+							_prop(props, "storm_grate", gp, atan2(ra.x, ra.z) + PI * 0.5)
 			elif not tunnel and not bridge and r["cls"] in ["road", "highway", "mountain", "lane"]:
 				# country road: concrete utility poles on one side, bus stops in villages
 				if int(S[k] / 45.0) != int(S[k + 1] / 45.0):
@@ -454,6 +470,16 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				_portal(conc, col, b, rb, hw, (a - b).normalized())
 	for fl in sector_fillets.get(sc, []):
 		_fillet(fl, asph, side, col)
+		# 0.25: a traffic light on every kerb corner of a city junction, facing the junction
+		var C := Vector3(fl["c"][0], float(fl["c"][1]) + 0.2, fl["c"][2])
+		var O := Vector3(fl["o"][0], C.y, fl["o"][1])
+		var dv := C - O
+		if dv.length() > 0.5 and float(fl["r"]) > 4.0:
+			dv = dv.normalized()
+			var tp := O + dv * (float(fl["r"]) - 1.4)
+			tp.y = C.y - 0.05
+			_prop(props, "traffic_light_pole", tp, atan2(dv.x, dv.z))
+			pboxes.append([tp + Vector3(0, 1.8, 0), Vector3(0.26, 3.6, 0.26), 0.0])
 	var zebra := _Mesh.new()
 	for cr in sector_cross.get(sc, []):
 		_crossing(cr, zebra)
