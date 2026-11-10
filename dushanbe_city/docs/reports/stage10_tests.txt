@@ -1,6 +1,3 @@
-PASS  1. property for sale: { "house": 4, "apartment": 4, "garage": 4 }
-PASS  2. at the «ПРОДАЁТСЯ» board: button «КУПИТЬ КВАРТИРА · 88 000 смн»
-PASS  3. not enough money: refused
-PASS  4. bought «Душанбе, дом 19» for 88 000 смн: money left 500 смн, board now «ВАШ»
-PASS  5. rest at home: health 100
-PASS  6. garage: last car brought (4 m from the garage), repaired 100 %
+PASS  1. tuning E30: tint 90%, gold rims, spoiler -> saved { "tint": 0.9, "rims": "d9a520", "spoiler": true }, spoiler true, rims overlay true, money 9 500 смн
+PASS  2. spoiler removed
+PASS  3. no money: refused

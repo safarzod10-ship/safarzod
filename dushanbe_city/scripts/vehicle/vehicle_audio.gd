@@ -183,7 +183,8 @@ func _engine(delta: float) -> void:
 		_t = -5.0                                 # fade the loops out under the stop one-shot
 	var fade := start_fade if running else 0.0
 	_rpm = lerpf(_rpm, car.rpm, clampf(delta * 18.0, 0.0, 1.0))
-	var fire := _rpm / 30.0
+	var voice: Dictionary = car.engine_voice
+	var fire := _rpm * float(voice.get("cyl", 4.0)) / 120.0 * float(voice.get("pitch", 1.0))
 	var target := clampf(car.engine_load, 0.0, 1.0)
 	_load = move_toward(_load, target, delta * (7.0 if target > _load else 3.5))
 	if car.gear != _last_gear:
@@ -202,7 +203,7 @@ func _engine(delta: float) -> void:
 		var w := exp(-0.5 * pow(d / SIGMA, 2.0))
 		ws.append(w)
 		tot += w
-	var level := db_to_linear(lerpf(-7.0, -1.0, _load) + 5.0 * clampf((_rpm - 800.0) / 3600.0, 0.0, 1.0))
+	var level := db_to_linear(lerpf(-7.0, -1.0, _load) + 5.0 * clampf((_rpm - 800.0) / 3600.0, 0.0, 1.0) + float(voice.get("db", 0.0)))
 	if _shift_dip > 0.0:
 		level *= 0.55
 	# fuel-cut limiter: chopping at ~16 Hz when the engine is held at the cut-off under load

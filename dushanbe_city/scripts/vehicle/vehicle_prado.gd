@@ -102,6 +102,9 @@ var last_impact := 0.0                    ## m/s of the last hit (audio)
 var last_impact_material := "concrete"    ## what was hit: metal / concrete / wood / ground / soft
 
 var model: Node3D
+## 0.25: engine voice - cylinders (firing frequency = rpm * cyl / 120), pitch trim, level trim (dB);
+## the Prado's 4-cylinder diesel recordings are re-pitched / re-weighted into each car's engine
+var engine_voice := {"cyl": 4.0, "pitch": 1.0, "db": 0.0}
 var lights: VehicleLights
 var cabin_view := false                   ## interior camera: cabin meshes forced visible (also on Low)
 var _reverse_timer := 0.0
@@ -1010,6 +1013,118 @@ func weapon_hit(amount: float) -> void:
 		return
 	health = maxf(0.0, health - amount)
 	damaged.emit(health)
+
+
+## 0.25 tuning (AutoService, saved in Wallet.tuning): {"tint": 0..1 window tint, "rims": html colour
+## or "" (stock), "spoiler": bool}
+var tuning := {}
+var _spoiler: Node3D
+var _glass_opacity := {}
+
+
+func set_tuning(t: Dictionary) -> void:
+	tuning = t.duplicate()
+	var tint := clampf(float(t.get("tint", 0.0)), 0.0, 1.0)
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null:
+			continue
+		for si in m.mesh.get_surface_count():
+			var mat := m.get_active_material(si) as ShaderMaterial
+			if mat and mat.shader and mat.shader.resource_path.ends_with("vehicle_glass.gdshader"):
+				if not _glass_opacity.has(mat):
+					_glass_opacity[mat] = [float(mat.get_shader_parameter("opacity")), mat.get_shader_parameter("albedo_color")]
+				var o: Array = _glass_opacity[mat]
+				mat.set_shader_parameter("opacity", lerpf(float(o[0]), 0.93, tint))
+				mat.set_shader_parameter("albedo_color", (o[1] as Color).lerp(Color(0.02, 0.02, 0.03), tint) if o[1] is Color else Color(1, 1, 1).lerp(Color(0.02, 0.02, 0.03), tint))
+	# rims: a multiply overlay over the wheel (black rubber stays black, the metal takes the colour)
+	var rims := String(t.get("rims", ""))
+	var ov: StandardMaterial3D = null
+	if rims != "":
+		ov = StandardMaterial3D.new()
+		ov.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		ov.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+		ov.albedo_color = Color.html(rims)
+	for w in wheels:
+		var wm: Node = w.get("mesh")
+		if wm == null:
+			continue
+		var list: Array = wm.find_children("*", "MeshInstance3D", true, false)
+		if wm is MeshInstance3D:
+			list.append(wm)
+		for x in list:
+			(x as MeshInstance3D).material_overlay = ov
+	# spoiler: a wing on the top of the boot lid (found from the model's own vertices)
+	if bool(t.get("spoiler", false)):
+		if _spoiler == null:
+			_spoiler = _build_spoiler()
+	elif _spoiler:
+		_spoiler.queue_free()
+		_spoiler = null
+
+
+func _build_spoiler() -> Node3D:
+	# model space of the car root: the car faces -Z, the rear is +Z
+	var inv := global_transform.affine_inverse()
+	var zmax := -INF
+	var xmin := INF
+	var xmax := -INF
+	var pts: Array[Vector3] = []
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null or not m.is_visible_in_tree():
+			continue
+		var name_l := String(m.name).to_lower()
+		if name_l.contains("wheel") or name_l.contains("tire") or name_l.contains("glass") or name_l.contains("lod1"):
+			continue
+		var xf := inv * m.global_transform
+		for si in m.mesh.get_surface_count():
+			var arr := m.mesh.surface_get_arrays(si)
+			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			for k in range(0, vs.size(), 7):
+				var v := xf * vs[k]
+				pts.append(v)
+				zmax = maxf(zmax, v.z)
+				xmin = minf(xmin, v.x)
+				xmax = maxf(xmax, v.x)
+	if pts.is_empty():
+		return null
+	var ytop := -INF
+	for v in pts:
+		if v.z > zmax - 0.45 and absf(v.x) < (xmax - xmin) * 0.3:
+			ytop = maxf(ytop, v.y)
+	var n := Node3D.new()
+	n.name = "Spoiler"
+	add_child(n)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.03, 0.03, 0.035)
+	mat.roughness = 0.35
+	var w := (xmax - xmin) * 0.86
+	var wing := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(w, 0.04, 0.26)
+	wing.mesh = bm
+	wing.material_override = mat
+	wing.position = Vector3((xmin + xmax) * 0.5, ytop + 0.16, zmax - 0.2)
+	wing.rotation.x = -0.12
+	n.add_child(wing)
+	for sx in [-0.32, 0.32]:
+		var leg := MeshInstance3D.new()
+		var lm := BoxMesh.new()
+		lm.size = Vector3(0.04, 0.17, 0.1)
+		leg.mesh = lm
+		leg.material_override = mat
+		leg.position = Vector3((xmin + xmax) * 0.5 + sx * w, ytop + 0.075, zmax - 0.22)
+		n.add_child(leg)
+	for sx in [-0.5, 0.5]:
+		var end := MeshInstance3D.new()
+		var em := BoxMesh.new()
+		em.size = Vector3(0.025, 0.12, 0.3)
+		end.mesh = em
+		end.material_override = mat
+		end.position = Vector3((xmin + xmax) * 0.5 + sx * w, ytop + 0.18, zmax - 0.2)
+		n.add_child(end)
+	return n
 
 
 ## repaint the body (the paint surfaces of the model), e.g. at a garage (AutoService)

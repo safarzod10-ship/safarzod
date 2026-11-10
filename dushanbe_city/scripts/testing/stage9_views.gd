@@ -76,6 +76,34 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("tune"):
+		# 0.25: tuned cars (tint 90 %, gold / black rims, spoiler) + a realty board + the taxi client
+		_hour(13.0)
+		await _sec(4.0)
+		for pair in [["e30", {"tint": 0.9, "rims": "d9a520", "spoiler": true}], ["w123", {"tint": 0.5, "rims": "1a1a1e", "spoiler": true}], ["gls", {"tint": 0.9, "rims": "1a1a1e"}]]:
+			var c: VehiclePrado = main.get(pair[0])
+			if c == null:
+				continue
+			c.set_tuning(pair[1])
+			var ow2: OpenWorld = main.get("open_world")
+			ow2.hold = c.global_position
+			await _sec(1.5)
+			var b := c.global_basis
+			var p := c.global_position
+			await _look("tune_%s_front" % pair[0], p + b * Vector3(3.2, 1.3, -5.2), p + Vector3(0, 0.5, 0))
+			await _look("tune_%s_rear" % pair[0], p + b * Vector3(-3.0, 1.6, 5.4), p + Vector3(0, 0.6, 0))
+		var re: Realty = main.get_node_or_null("Realty")
+		if re and not re.props.is_empty():
+			for P in [re.props[0], re.props[5], re.props[9]]:
+				var pp: Vector3 = P["pos"]
+				ow.hold = pp
+				ow.preload_at(pp)
+				await _sec(2.0)
+				var fw := Vector3(sin(float(P["yaw"])), 0, cos(float(P["yaw"])))
+				var sd := Vector3(fw.z, 0, -fw.x)
+				await _look("realty_%s" % P["kind"], pp + fw * 6.0 + sd * 2.5 + Vector3(0, 2.4, 0), pp + Vector3(0, 2.0, 0) - fw * 4.0)
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("pack"):
 		# 0.25: the owner's car pack at the dealership: each car from front 3/4, rear 3/4, plates, lamps
 		_hour(13.0)

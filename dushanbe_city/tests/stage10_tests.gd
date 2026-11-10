@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -395,6 +395,38 @@ func _t_realty() -> void:
 		car.global_position.distance_to(G["pos"]) < 10.0 and car.health == 100.0)
 	ow.hold = Vector3.INF
 	Wallet.homes = []
+
+
+func _t_tune() -> void:
+	# 0.25: tuning at the auto service - tint, rims, spoiler; saved per car
+	var asv: AutoService = main.get_node_or_null("AutoService")
+	var car: VehiclePrado = main.get("e30") if main.get("e30") else main.get("camry")
+	if s.driving:
+		s.exit()
+		await _frames(5)
+	s.car = car
+	s.driving = true
+	Wallet.money = 20000
+	Wallet.tuning = {}
+	var ok1 := asv.tune(1) and asv.tune(4) and asv.tune(7)
+	await _frames(3)
+	var t: Dictionary = Wallet.tuning.get(String(car.name), {})
+	var sp := car.get_node_or_null("Spoiler")
+	var rim_ov := false
+	for w in car.wheels:
+		for mi in (w["mesh"] as Node).find_children("*", "MeshInstance3D", true, false) + ([w["mesh"]] if w["mesh"] is MeshInstance3D else []):
+			if (mi as MeshInstance3D).material_overlay != null:
+				rim_ov = true
+	_check("tuning %s: tint 90%%, gold rims, spoiler -> saved %s, spoiler %s, rims overlay %s, money %s" % [car.name, str(t), sp != null, rim_ov, Wallet.fmt(Wallet.money)],
+		ok1 and float(t.get("tint", 0)) == 0.9 and String(t.get("rims", "")) == "d9a520" and bool(t.get("spoiler", false)) and sp != null and rim_ov and Wallet.money == 20000 - 2500 - 4000 - 4000)
+	asv.tune(8)
+	await _frames(3)
+	_check("spoiler removed", car.get_node_or_null("Spoiler") == null or car.get_node("Spoiler").is_queued_for_deletion())
+	Wallet.money = 10
+	_check("no money: refused", not asv.tune(3))
+	s.driving = false
+	car.set_tuning({})
+	Wallet.tuning = {}
 
 
 func _t_amid() -> void:

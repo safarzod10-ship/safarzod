@@ -118,39 +118,37 @@ func _build_sign(P: Dictionary) -> void:
 	post_m.albedo_color = Color(0.25, 0.26, 0.28)
 	post_m.metallic = 0.6
 	post_m.roughness = 0.4
-	for sx in [-0.7, 0.7]:
+	for sx in [-1.15, 1.15]:
 		var post := MeshInstance3D.new()
 		var cm := CylinderMesh.new()
 		cm.top_radius = 0.04
 		cm.bottom_radius = 0.04
-		cm.height = 2.2
+		cm.height = 2.5
 		post.mesh = cm
 		post.material_override = post_m
-		post.position = Vector3(sx, 1.1, 0)
+		post.position = Vector3(sx, 1.1, -0.06)
 		post.visibility_range_end = 220.0
 		n.add_child(post)
 	var board := MeshInstance3D.new()
 	var bm := BoxMesh.new()
-	bm.size = Vector3(1.7, 0.9, 0.05)
+	bm.size = Vector3(2.4, 1.25, 0.05)
 	board.mesh = bm
 	var bmat := StandardMaterial3D.new()
 	bmat.albedo_color = Color(0.92, 0.6, 0.08)
 	bmat.roughness = 0.5
 	board.material_override = bmat
-	board.position = Vector3(0, 1.85, 0)
+	board.position = Vector3(0, 1.95, 0)
 	board.visibility_range_end = 220.0
 	n.add_child(board)
 	P["board_mat"] = bmat
 	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
 	var lbl := Label3D.new()
 	lbl.font = font
-	lbl.font_size = 44
-	lbl.pixel_size = 0.0045
+	lbl.font_size = 48
+	lbl.pixel_size = 0.0042
 	lbl.outline_size = 0
 	lbl.modulate = Color(0.08, 0.08, 0.1)
-	lbl.position = Vector3(0, 1.85, 0.03)
-	lbl.width = 360
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.position = Vector3(0, 1.95, 0.03)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.visibility_range_end = 120.0
 	n.add_child(lbl)
@@ -169,7 +167,7 @@ func _build_sign(P: Dictionary) -> void:
 
 func _refresh(P: Dictionary) -> void:
 	var mine := owned(String(P["id"]))
-	var t := ("%s\nВАШ" % String(P["title"]).to_upper()) if mine else ("ПРОДАЁТСЯ\n%s · %s" % [String(P["title"]).to_lower(), Wallet.fmt(int(P["price"]))])
+	var t := ("%s\nВАШ" % String(P["title"]).to_upper()) if mine else ("ПРОДАЁТСЯ\n%s\n%s" % [String(P["title"]).to_upper(), Wallet.fmt(int(P["price"]))])
 	for l: Label3D in P["labels"]:
 		l.text = t
 	(P["board_mat"] as StandardMaterial3D).albedo_color = Color(0.2, 0.7, 0.35) if mine else Color(0.92, 0.6, 0.08)

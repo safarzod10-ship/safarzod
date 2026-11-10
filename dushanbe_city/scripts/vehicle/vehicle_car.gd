@@ -88,8 +88,18 @@ static var _split_cache := {}        ## preset -> {"body": Array of [Mesh, Trans
 
 
 ## call before add_child
+## engine voice per preset (see VehiclePrado.engine_voice): petrol I4 / V6 / I6 / V8 / bus diesel
+const VOICES := {
+	"camry": {"cyl": 4.0, "pitch": 1.12, "db": -2.0}, "lexus": {"cyl": 6.0, "pitch": 1.0, "db": -1.5},
+	"bus": {"cyl": 6.0, "pitch": 0.62, "db": 1.5}, "w123": {"cyl": 4.0, "pitch": 0.9, "db": -1.0},
+	"e30": {"cyl": 6.0, "pitch": 1.05, "db": 0.0}, "e30m": {"cyl": 4.0, "pitch": 1.3, "db": 1.5},
+	"r12": {"cyl": 4.0, "pitch": 1.25, "db": -3.0}, "gls": {"cyl": 8.0, "pitch": 0.82, "db": 1.0},
+}
+
+
 func configure(p: String) -> void:
 	preset = p
+	engine_voice = VOICES.get(p, engine_voice)
 	spec = PRESETS[p]
 	vehicle_mass = spec["mass"]
 	cg_height = spec["cg"]
