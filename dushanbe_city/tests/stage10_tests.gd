@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["amid", "home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
