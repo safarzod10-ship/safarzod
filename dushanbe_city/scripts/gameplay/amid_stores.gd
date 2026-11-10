@@ -561,7 +561,7 @@ func _hang(center: Vector3, width: float, height: float) -> void:
 
 ## a store sign: a coloured board sized to its text, a white icon on the left, cables to the ceiling
 func _sign(c: Vector3, text: String, icon: String, h: float, mat: String, both: bool, size: int, hang: bool) -> void:
-	var cw := float(size) * 0.01 * 0.64
+	var cw := float(size) * 0.01 * 0.74
 	var tw := float(text.length()) * cw
 	var isz := h * 0.72
 	var w := tw + isz + 0.75
