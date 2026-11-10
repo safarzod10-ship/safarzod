@@ -612,11 +612,17 @@ func _interior(st: Dictionary) -> Node3D:
 		var vit: Dictionary = Food.ITEMS[vid]
 		_bx(Vector3(3.4, 0.8, 1.8), Vector3(sx2, 0.7, 13.6), "wood")
 		_bx(Vector3(3.2, 0.12, 1.6), Vector3(sx2, 1.16, 13.6), "wood", false)
-		for a in 72:
-			var fp := Vector3(sx2 - 1.45 + (a % 18) * 0.17, 1.2 + (a / 36) * 0.07, 13.0 + ((a / 18) % 2) * 0.55 + (a / 36) * 0.25)
+		for a in 18 * 8 * 2:
+			var col_i := a % 18
+			var row_i := (a / 18) % 8
+			var lay := a / 144
+			if lay == 1 and (row_i == 0 or row_i == 7 or col_i == 0 or col_i == 17):
+				continue
+			var fp := Vector3(sx2 - 1.45 + col_i * 0.17 + lay * 0.085 + rng.randf_range(-0.02, 0.02), 1.2 + lay * 0.08, 12.95 + row_i * 0.185 + lay * 0.09)
 			_put("round", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * (1.6 if vid in ["potato", "onion"] else 1.4)), fp), (vit["color"] as Color).darkened(rng.randf_range(0.0, 0.2)))
-		_bx(Vector3(0.9, 0.3, 0.04), Vector3(sx2, 1.55, 14.52), "price", false)
-		_label(_root, "%s · %s" % [String(vit["name"]), Wallet.fmt(int(vit["price"]))], Vector3(sx2, 1.55, 14.55), 0.0, 26, Color(0.1, 0.1, 0.1))
+		_bx(Vector3(0.05, 0.4, 0.05), Vector3(sx2, 1.35, 14.5), "steel", false)
+		_bx(Vector3(1.6, 0.3, 0.04), Vector3(sx2, 1.6, 14.52), "price", false)
+		_label(_root, "%s · %s" % [String(vit["name"]), Wallet.fmt(int(vit["price"]))], Vector3(sx2, 1.6, 14.55), 0.0, 22, Color(0.1, 0.1, 0.1))
 		_add_pick(xf0 * Vector3(sx2, 0.3, 15.4), vid)
 	_bx(Vector3(6.4, 0.75, 0.08), Vector3(-25.0, 3.1, 13.6), "green", false)
 	_hang(Vector3(-25.0, 3.1, 13.6), 6.4, 0.75)
