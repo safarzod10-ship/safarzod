@@ -174,7 +174,8 @@ func _m(key: String) -> StandardMaterial3D:
 	m.albedo_color = {"white": Color(0.9, 0.91, 0.92), "blue": Color(0.05, 0.35, 0.75), "steel": Color(0.7, 0.72, 0.75),
 		"concrete": Color(0.62, 0.62, 0.6), "brush": Color(0.1, 0.45, 0.9), "brush2": Color(0.9, 0.2, 0.25),
 		"dark": Color(0.12, 0.13, 0.15), "grate": Color(0.2, 0.2, 0.22), "glass": Color(0.5, 0.7, 0.85, 0.5),
-		"water": Color(0.8, 0.9, 1.0, 0.5), "yellow": Color(0.95, 0.75, 0.05)}[key]
+		"water": Color(0.8, 0.9, 1.0, 0.5), "yellow": Color(0.95, 0.75, 0.05), "asphalt": Color(0.2, 0.2, 0.21),
+		"line": Color(0.92, 0.92, 0.9)}[key]
 	m.roughness = {"steel": 0.3, "glass": 0.05, "water": 0.1}.get(key, 0.7)
 	m.metallic = 0.7 if key == "steel" else 0.0
 	if key in ["glass", "water"]:
@@ -210,8 +211,12 @@ func _build(s: Dictionary) -> Node3D:
 	root.name = "CarWash"
 	get_tree().current_scene.add_child(root)
 	root.global_transform = Transform3D(_basis(s), s["pos"])
+	# the lot: asphalt yard under the wash and the auto service beside it (local -Z), out to the road (+X)
+	_box(root, Vector3(32.0, 0.5, 66.0), Vector3(6.0, -0.12, -15.0), "asphalt", true)
+	for q in 9:
+		_box(root, Vector3(4.6, 0.02, 0.12), Vector3(14.0, 0.14, -40.0 + q * 3.0), "line")
 	# concrete apron (drivable) and the bays' floor with drain grates
-	_box(root, Vector3(16.0, 0.3, 14.0), Vector3(-1.0, 0.0, 0.0), "concrete", true)
+	_box(root, Vector3(16.0, 0.3, 14.0), Vector3(-1.0, 0.05, 0.0), "concrete", true)
 	for k in 2:
 		_box(root, Vector3(9.0, 0.02, 0.4), Vector3(-2.0, 0.16, BAY_Z[k]), "grate")
 		_box(root, Vector3(0.12, 0.02, 4.6), Vector3(3.0, 0.16, BAY_Z[k]), "yellow")
