@@ -92,7 +92,7 @@ func _city(home: Vector3, avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vect
 	var mb: Node3D = main.get_node_or_null("CarDealer_mb")
 	if mb:
 		var t2 := mb.global_transform
-		await _orbit(t2 * Vector3(6, 0, 0), 34.0, 9.0, 0.2, 1.1, t2.basis, 3.5, "Автосалоны", "Mercedes-Benz · BMW · Toyota")
+		await _orbit(t2 * Vector3(6, 0, 0), 44.0, 17.0, 1.2, 2.0, t2.basis, 3.5, "Автосалоны", "Mercedes-Benz · BMW · Toyota")
 	# 6. tuning
 	var e30: VehiclePrado = main.get("e30")
 	if e30:
@@ -105,7 +105,7 @@ func _city(home: Vector3, avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vect
 		var xf: Transform3D = st["xf"]
 		ow.hold = am.door_point(st)
 		s.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
-		await _line(xf * Vector3(40, 26, 110), xf * Vector3(10, 9, 62), xf * Vector3(0, 6, 25), xf * Vector3(0, 5, 22), 3.5,
+		await _line(xf * Vector3(30, 30, 120), xf * Vector3(0, 13, 78), xf * Vector3(0, 6, 25), xf * Vector3(0, 5, 22), 3.5,
 			"Супермаркет AMID", "покупки · еда · готовим плов дома")
 		await _line(xf * Vector3(-3, 2.2, 22), xf * Vector3(-8, 1.9, 6), xf * Vector3(-9, 1.4, -10), xf * Vector3(-10, 1.3, -20), 3.0, "", "")
 		s.player.teleport(home, 0.0)
@@ -153,23 +153,17 @@ func _city(home: Vector3, avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vect
 func _nature_night(avp: Vector3, avd: Vector3, avr: Vector3, somoni: Vector3, prado: VehiclePrado) -> void:
 	# 14. mountains: the Anzob pass serpentine
 	_hour(14.0)
-	await _drive_road_shot(prado, "pass", Vector3(-1500, 0, -7750), 5.0, 55.0, "Горы Варзоба", "серпантины · перевал Анзоб")
-	# 15. waterfall
-	var fall := Vector3(1460, 250, -7430)
-	await _orbit(fall, 120.0, 45.0, 0.4, 0.9, Basis.IDENTITY, 3.0, "Водопады и озёра", "")
+	_show_hud(false)
+	await _drive_road_shot(prado, "pass", Vector3(-1500, 0, -7750), 6.0, 55.0, "Горы Варзоба", "серпантины · перевал Анзоб")
 	# 16. night rain on the avenue
 	_hour(21.5)
 	_weather(2)
 	await _line(avp + avr * 12.0 + Vector3(0, 6, 0) - avd * 30.0, avp + avr * 8.0 + Vector3(0, 4, 0) + avd * 10.0,
-		avp + avd * 60.0, avp + avd * 80.0, 4.0, "День и ночь", "дождь · снег · огни города")
-	# 17. snow
-	_hour(12.5)
-	_weather(3)
-	await _line(somoni + Vector3(80, 30, 60), somoni + Vector3(40, 18, 50), somoni + Vector3(0, 8, 0), somoni + Vector3(0, 8, 0), 3.0, "", "")
+		avp + avd * 60.0, avp + avd * 80.0, 4.0, "День и ночь", "дождь · снег · огни ночного города")
 	# 18. end card
 	_weather(0)
-	_hour(18.2)
-	await _line(somoni + Vector3(150, 140, -150), somoni + Vector3(220, 170, -40), somoni, somoni + Vector3(0, 0, -100), 4.5,
+	_hour(17.6)
+	await _line(somoni + Vector3(140, 75, -140), somoni + Vector3(80, 45, -80), somoni + Vector3(0, 12, 0), somoni + Vector3(0, 15, 0), 4.5,
 		"DUSHANBE CITY", "Скоро на Android · v0.25")
 
 
