@@ -95,6 +95,7 @@ func _process(delta: float) -> void:
 			if not inside:
 				Food.drop_basket()
 				say("Корзина оставлена в магазине (не оплачена)")
+	_update_doors(delta, player)
 	_update_held()
 	# HUD: eat / drink from the bag; the basket / bag contents line
 	var can_eat := Food.hand == "bag" and Food.best_in(Food.bag) != "" and not PlayerLife.dead
@@ -138,7 +139,7 @@ func _update_held() -> void:
 		break
 	var p := player.global_position + player.global_basis * Vector3(-0.32, 0.75, -0.05)
 	if sk:
-		var bi := sk.find_bone("hand.L")
+		var bi := sk.find_bone("LeftHand")
 		if bi >= 0:
 			p = (sk.global_transform * sk.get_bone_global_pose(bi)).origin + Vector3(0, -0.2 if _held_kind == "bag" else -0.12, 0)
 	var yaw: float = player.global_rotation.y
@@ -640,11 +641,6 @@ func _interior(st: Dictionary) -> Node3D:
 		var w := HX - DOOR
 		_bx(Vector3(w, 14.0, 0.4), Vector3(sx * (DOOR + w * 0.5), 7.0, HZ), "wall")
 		_bx(Vector3(0.08, 1.2, HZ * 2 - 1.0), Vector3(sx * (HX - 0.22), 0.9, 0), "wallgreen", false)
-		# glass entrance: side panes, steel frame, sliding doors parked open
-		for g in 2:
-			var gx := sx * (DOOR - 0.6 - g * 1.25)
-			_bx(Vector3(1.2, 3.3, 0.03), Vector3(gx, 1.95, HZ - 0.3 - g * 0.08), "glass", false)
-			_bx(Vector3(0.06, 3.3, 0.08), Vector3(gx + sx * 0.62, 1.95, HZ - 0.3), "frame", false)
 		# turnstile gates inside the entrance
 		for t in 3:
 			var tx := sx * (1.4 + t * 0.95)
@@ -652,6 +648,37 @@ func _interior(st: Dictionary) -> Node3D:
 			_bx(Vector3(0.02, 0.02, 0.75), Vector3(tx - sx * 0.08, 1.0, HZ - 3.2), "steel", false)
 	_bx(Vector3(DOOR * 2, 14.0 - 3.4, 0.4), Vector3(0, 3.4 + (14.0 - 3.4) * 0.5, HZ), "wall", false)
 	_bx(Vector3(DOOR * 2, 0.12, 0.3), Vector3(0, 3.4, HZ - 0.3), "frame", false)
+	# automatic sliding doors: two solid glass leaves that part when someone comes near
+	var leaves: Array = []
+	for sx: float in [-1.0, 1.0]:
+		var leaf := AnimatableBody3D.new()
+		leaf.sync_to_physics = false
+		_root.add_child(leaf)
+		leaf.position = Vector3(sx * DOOR * 0.5, 0, HZ)
+		var lcs := CollisionShape3D.new()
+		var lsh := BoxShape3D.new()
+		lsh.size = Vector3(DOOR, 3.1, 0.1)
+		lcs.shape = lsh
+		lcs.position = Vector3(0, 1.85, 0)
+		leaf.add_child(lcs)
+		for part: Array in [[Vector3(DOOR - 0.12, 3.0, 0.025), Vector3(0, 1.85, 0), "glass"],
+				[Vector3(DOOR, 0.08, 0.07), Vector3(0, 3.36, 0), "steel"], [Vector3(DOOR, 0.1, 0.07), Vector3(0, 0.35, 0), "steel"],
+				[Vector3(0.07, 3.1, 0.07), Vector3(-DOOR * 0.5 + 0.035, 1.85, 0), "steel"], [Vector3(0.07, 3.1, 0.07), Vector3(DOOR * 0.5 - 0.035, 1.85, 0), "steel"],
+				[Vector3(0.04, 0.9, 0.05), Vector3(-sx * (DOOR * 0.5 - 0.25), 1.4, 0.06), "steel"], [Vector3(0.04, 0.9, 0.05), Vector3(-sx * (DOOR * 0.5 - 0.25), 1.4, -0.06), "steel"],
+				[Vector3(DOOR - 0.2, 0.12, 0.03), Vector3(0, 1.6, 0.015), "green"]]:
+			var dm := MeshInstance3D.new()
+			var dbm := BoxMesh.new()
+			dbm.size = part[0]
+			dm.mesh = dbm
+			dm.material_override = _m(String(part[2]))
+			dm.position = part[1]
+			dm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			leaf.add_child(dm)
+		leaves.append(leaf)
+	st["doors"] = leaves
+	st["door_open"] = 0.0
+	# the door sensor over the entrance
+	_bx(Vector3(0.5, 0.12, 0.2), Vector3(0, 3.25, HZ + 0.25), "counter", false)
 	_sign(Vector3(0, 3.85, HZ - 0.32), "ДОБРО ПОЖАЛОВАТЬ!", "amid_cart", 0.7, "green", false, 56, true)
 	# black marble columns with LED edges, a potted plant at each
 	for cp: Vector2 in [Vector2(-24, 9.5), Vector2(0, 9.5), Vector2(24, 9.5), Vector2(-24, -19.6), Vector2(0, -19.6), Vector2(24, -19.6), Vector2(-39.6, 9.5), Vector2(39.6, 9.5)]:
@@ -884,6 +911,32 @@ func _interior(st: Dictionary) -> Node3D:
 	rp.ambient_color_energy = 0.6
 	_root.add_child(rp)
 	return _root
+
+
+## the sliding doors open for the hero (on foot) coming within ~4.5 m of the entrance, inside or out
+func _update_doors(delta: float, player: Node3D) -> void:
+	for st in stores:
+		if st["node"] == null or not st.has("doors"):
+			continue
+		var want := 0.0
+		if player and not (session and session.driving):
+			var lp := (st["xf"] as Transform3D).affine_inverse() * player.global_position
+			if absf(lp.x) < DOOR + 1.5 and absf(lp.z - HZ) < 4.5 and lp.y < 4.0:
+				want = 1.0
+		var o: float = move_toward(float(st["door_open"]), want, delta * 1.6)
+		st["door_open"] = o
+		var e := o * o * (3.0 - 2.0 * o)
+		var k := 0
+		for leaf in st["doors"]:
+			if is_instance_valid(leaf):
+				var sx := -1.0 if k == 0 else 1.0
+				(leaf as Node3D).position = Vector3(sx * (DOOR * 0.5 + e * (DOOR - 0.15)), 0, HZ)
+			k += 1
+
+
+## is the entrance of this store open now (0..1)
+func door_open(st: Dictionary) -> float:
+	return float(st.get("door_open", 0.0))
 
 
 func _add_pick(p: Vector3, id: String) -> void:

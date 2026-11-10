@@ -124,16 +124,29 @@ def amid():
     })
     L, D, H = 84.0, 50.0, 14.0
     fy = -D / 2
-    # main hall: stone base, dark composite panels above
-    k.box((L, D, 4.5), (0, 0, 2.25), "stone")
+    # main hall: stone base walls (hollow: the game builds the interior) with the entrance opening
+    EW, EH, T = 10.0, 3.6, 0.6
+    k.box((L, T, 4.5), (0, -fy - T / 2, 2.25), "stone")                                  # back
+    for sx in (-1, 1):
+        k.box((T, D, 4.5), (sx * (L / 2 - T / 2), 0, 2.25), "stone")                     # sides
+        w = L / 2 - EW / 2
+        k.box((w, T, 4.5), (sx * (EW / 2 + w / 2), fy + T / 2, 2.25), "stone")           # front
+    k.box((EW, T, 4.5 - EH), (0, fy + T / 2, EH + (4.5 - EH) / 2), "stone")              # lintel
     k.box((L, D, H - 4.5), (0, 0, 4.5 + (H - 4.5) / 2), "panel")
     k.box((L + 1.0, D + 1.0, 0.8), (0, 0, H + 0.4), "steel")                         # parapet cap
     # glass front: full-height curtain wall in the middle third with mullions + floors
     gw = L * 0.48
-    k.box((gw, 0.3, H - 1.0), (0, fy - 0.1, (H - 1.0) / 2 + 0.3), "glass")
+    for sx in (-1, 1):                         # left / right of the entrance: full height
+        w = gw / 2 - EW / 2
+        k.box((w, 0.3, H - 1.0), (sx * (EW / 2 + w / 2), fy - 0.1, (H - 1.0) / 2 + 0.3), "glass")
+    k.box((EW, 0.3, H - 1.0 - EH + 0.3), (0, fy - 0.1, EH + (H - 1.0 - EH + 0.3) / 2), "glass")   # over the doors
     for i in range(13):
         x = -gw / 2 + i * gw / 12
-        k.box((0.3, 0.6, H - 1.0), (x, fy - 0.3, (H - 1.0) / 2 + 0.3), "steel")
+        z0 = EH if abs(x) < EW / 2 else 0.3    # no mullion through the doorway
+        k.box((0.3, 0.6, H - 0.7 - z0), (x, fy - 0.3, z0 + (H - 0.7 - z0) / 2), "steel")
+    for sx in (-1, 1):                         # door jambs
+        k.box((0.35, 0.7, EH), (sx * (EW / 2 + 0.17), fy - 0.3, EH / 2), "steel")
+    k.box((EW + 0.7, 0.7, 0.3), (0, fy - 0.3, EH + 0.15), "steel")                     # door head
     for z in (4.6, 9.2):
         k.box((gw, 0.6, 0.3), (0, fy - 0.3, z), "steel")
     # side shop windows in the stone base
@@ -142,9 +155,13 @@ def amid():
             x = sx * (gw / 2 + 3.0 + i * 4.6)
             k.box((3.6, 0.25, 3.0), (x, fy - 0.05, 2.1), "glass")
     # entrance: sliding doors + a cantilevered canopy with a light strip
-    k.box((10.0, 0.4, 3.4), (0, fy - 0.35, 1.7), "glass")
     k.box((16.0, 7.0, 0.5), (0, fy - 3.5, 5.2), "panel")
     k.box((16.0, 0.3, 0.25), (0, fy - 7.0, 5.0), "white")
+    # the name over the entrance: a dark board on the canopy with green AMID letters and a cart
+    k.box((13.0, 0.4, 2.2), (0, fy - 6.6, 6.55), "panel")
+    k.box((13.2, 0.45, 0.12), (0, fy - 6.6, 5.48), "green")
+    k.text("АМИД", (1.2, fy - 6.85, 6.55), 1.75, "green", extrude=0.18)
+    cart_icon(k, -4.4, fy - 6.85, 6.55, 1.2, "green")
     # THE SIGN: big green AMID letters + cart, a white subtitle, on the parapet over the glass
     k.box((34.0, 0.5, 6.0), (-L * 0.18, fy - 0.5, H + 2.4), "panel")
     k.text("АМИД", (-L * 0.18 + 3.0, fy - 0.85, H + 3.2), 3.6, "green", extrude=0.25)

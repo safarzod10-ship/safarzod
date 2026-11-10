@@ -32,6 +32,12 @@ var vertical_offset := 0.0          ## visual step smoothing of the model (contr
 var sensitivity_scale := 1.0        ## settings slider
 var _shape := SphereShape3D.new()
 var _fov := 68.0
+var _near := 0.05
+var _sk: Skeleton3D
+var _head := -1
+
+## first-person view on foot (the eyes of the hero; his body and hands stay visible below)
+static var first_person := false
 
 
 func setup(p: CharacterBody3D, c: CharacterConfig, r: Node3D, s: SpringArm3D, cam: Camera3D, m: Node3D) -> void:
@@ -49,6 +55,11 @@ func setup(p: CharacterBody3D, c: CharacterConfig, r: Node3D, s: SpringArm3D, ca
 	dist = cfg.camera_distance
 	_fov = cfg.camera_fov
 	camera.fov = _fov
+	_near = camera.near
+	for ch in model.find_children("*", "Skeleton3D", true, false):
+		_sk = ch
+		_head = _sk.find_bone("Head")
+		break
 	target = anchor()
 	rig.global_position = target
 
@@ -76,8 +87,8 @@ func snap() -> void:
 
 func rotate_by(d: Vector2) -> void:
 	yaw = wrapf(yaw - d.x, -PI, PI)
-	var lo := deg_to_rad(cfg.pitch_min_deg)
-	var hi := deg_to_rad(cfg.pitch_max_deg)
+	var lo := deg_to_rad(-80.0 if first_person else cfg.pitch_min_deg)
+	var hi := deg_to_rad(70.0 if first_person else cfg.pitch_max_deg)
 	if swimming:
 		hi = minf(hi, deg_to_rad(8.0))          # do not look up from under the camera's water line
 	pitch = clampf(pitch - d.y, lo, hi)
@@ -85,6 +96,10 @@ func rotate_by(d: Vector2) -> void:
 
 func update(delta: float) -> void:
 	rotate_by(PlayerInput.consume_look() * cfg.touch_look_sensitivity * sensitivity_scale)
+	if first_person and not swimming:
+		_first_person(delta)
+		return
+	camera.near = _near
 	var a := anchor()
 	var kh := 1.0 - exp(-25.0 * delta)
 	var kv := 1.0 - exp(-(4.0 if airborne else 10.0) * delta)
@@ -110,6 +125,28 @@ func update(delta: float) -> void:
 		if cy < floor_y:
 			rig.global_position.y += floor_y - cy
 	model.visible = dist > 0.55
+
+
+## eyes: just in front of the head bone, looking where the camera yaw / pitch point
+func eye() -> Vector3:
+	var fwd := Vector3(-sin(view_yaw), 0.0, -cos(view_yaw))
+	if _sk and _head >= 0:
+		var h := (_sk.global_transform * _sk.get_bone_global_pose(_head)).origin
+		return h + Vector3(0.0, 0.09, 0.0) + fwd * 0.17
+	return player.global_position + Vector3(0.0, 1.62, 0.0) + fwd * 0.17
+
+
+func _first_person(delta: float) -> void:
+	var ks := 1.0 - exp(-40.0 * delta)
+	view_yaw = lerp_angle(view_yaw, yaw, ks)
+	view_pitch = lerpf(view_pitch, pitch, ks)
+	target = eye()
+	dist = 0.0
+	camera.near = 0.03
+	_fov = lerpf(_fov, cfg.camera_fov + 6.0, 1.0 - exp(-6.0 * delta))
+	camera.fov = _fov
+	_apply()
+	model.visible = true
 
 
 func _apply() -> void:

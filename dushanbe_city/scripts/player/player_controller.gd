@@ -241,6 +241,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed(&"ui_cancel"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_V:
+		CharacterCamera.first_person = not CharacterCamera.first_person
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		cam_ctl.rotate_by(event.relative * cfg.mouse_sensitivity)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -311,7 +313,7 @@ func _physics_process(delta: float) -> void:
 			want_face = atan2(-wdir.x, -wdir.z)
 			target = wdir * mag * (cfg.run_speed if run_now else cfg.walk_speed) * water.speed_factor()
 		var diff := wrapf(want_face - facing, -PI, PI)
-		if (absf(diff) > deg_to_rad(70.0) or _turning != 0.0) and absf(diff) > deg_to_rad(8.0) and hv.length() < (0.6 if not run_now else 1.4) and on_floor:
+		if not CharacterCamera.first_person and (absf(diff) > deg_to_rad(70.0) or _turning != 0.0) and absf(diff) > deg_to_rad(8.0) and hv.length() < (0.6 if not run_now else 1.4) and on_floor:
 			turning_now = signf(diff)                             # turn on the spot first (stepping)
 			target = Vector3.ZERO
 	_turning = turning_now
@@ -355,6 +357,9 @@ func _physics_process(delta: float) -> void:
 		rotation.y = facing
 	elif mag > 0.05 and (on_floor or hv.length() > 0.5):
 		facing = lerp_angle(facing, want_face, 1.0 - exp(-(6.0 if strafe else cfg.turn_rate) * delta))
+		rotation.y = facing
+	if CharacterCamera.first_person and not run_now and not seq_active:
+		facing = lerp_angle(facing, yaw, 1.0 - exp(-12.0 * delta))   # the body turns with the look
 		rotation.y = facing
 
 	# ---- jump (buffered, coyote time, push-off before take-off; no double jump)

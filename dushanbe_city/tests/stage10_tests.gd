@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -298,6 +298,21 @@ func _t_doors() -> void:
 		_check("%s: door (%d mesh parts) opens %.0f deg and closes; real cabin fitted %s" % [key, parts, absf(ang), cab != null], parts > 0 and absf(ang) > 50.0 and cab != null)
 
 
+func _t_fp() -> void:
+	# 0.24: first-person view on foot - the camera sits at the hero's eyes, the body follows the look
+	CharacterCamera.first_person = true
+	s.player.set_camera_angles(1.0, 0.0)
+	await _sec(1.0)
+	var cam: Camera3D = s.player.get_viewport().get_camera_3d()
+	var head_d := cam.global_position.distance_to(s.player.global_position + Vector3(0, 1.65, 0))
+	var face_d := absf(wrapf(float(s.player.get("facing")) - 1.0, -PI, PI))
+	_check("first person: camera at the eyes (%.2f m from head height), body turned with the look (%.2f rad)" % [head_d, face_d], head_d < 0.4 and face_d < 0.15)
+	CharacterCamera.first_person = false
+	await _sec(1.5)
+	var back_d := cam.global_position.distance_to(s.player.global_position)
+	_check("third person again: camera behind the hero (%.1f m)" % back_d, back_d > 2.0)
+
+
 func _t_amid() -> void:
 	# 0.23: the whole shopping chain - basket, shelves, till, bag in the hand, the car's boot, home
 	# kitchen (unpack, cook plov), eat; hunger / thirst
@@ -317,6 +332,14 @@ func _t_amid() -> void:
 	s.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
 	await _sec(2.0)
 	_check("interior built when the player is near", st["node"] != null)
+	var xf0: Transform3D = st["xf"]
+	# sliding doors: shut with nobody near, open for the hero at the entrance
+	s.player.teleport(xf0 * Vector3(18, 0.3, 40), 0.0)
+	await _sec(2.5)
+	var shut := am.door_open(st)
+	s.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
+	await _sec(1.5)
+	_check("entrance doors: shut when nobody is near (%.2f), open for the hero (%.2f)" % [shut, am.door_open(st)], shut < 0.01 and am.door_open(st) > 0.99)
 	var it: CharacterInteraction = s.player.get("interaction")
 	# 1. the basket stand inside the entrance
 	await s.player.walk_to(am.basket_point(st), null, 12.0)

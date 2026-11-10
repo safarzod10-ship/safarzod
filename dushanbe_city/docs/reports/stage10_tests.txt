@@ -1,17 +1,20 @@
-PASS  1. AMID supermarkets in the city: 11
-PASS  2. interior built when the player is near
-PASS  3. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
-PASS  4. basket in the hand
-PASS  5. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
-PASS  6. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
-PASS  7. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
-PASS  8. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
-PASS  9. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
-PASS 10. the bag is in the boot (hands free, 1 shown in the car)
-PASS 11. took the bag out of the boot
-PASS 12. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
-PASS 13. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
-PASS 14. plov can be cooked (rice, meat, carrot, onion, oil)
-PASS 15. cooked plov ×4: fridge Нон ×1, Плов ×4
-PASS 16. ate plov: hunger 30 -> 99, health 50 -> 85
-PASS 17. starving: health falls (85.0 -> 82.5), no regeneration
+PASS  1. first person: camera at the eyes (0.24 m from head height), body turned with the look (0.00 rad)
+PASS  2. third person again: camera behind the hero (3.9 m)
+PASS  3. AMID supermarkets in the city: 11
+PASS  4. interior built when the player is near
+PASS  5. entrance doors: shut when nobody is near (0.00), open for the hero (1.00)
+PASS  6. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
+PASS  7. basket in the hand
+PASS  8. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
+PASS  9. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
+PASS 10. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
+PASS 11. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
+PASS 12. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
+PASS 13. the bag is in the boot (hands free, 1 shown in the car)
+PASS 14. took the bag out of the boot
+PASS 15. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
+PASS 16. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
+PASS 17. plov can be cooked (rice, meat, carrot, onion, oil)
+PASS 18. cooked plov ×4: fridge Нон ×1, Плов ×4
+PASS 19. ate plov: hunger 30 -> 99, health 50 -> 85
+PASS 20. starving: health falls (85.0 -> 82.5), no regeneration

@@ -112,6 +112,11 @@ func _menu_rect() -> Array:               # small pause button under the minimap
 	return [Vector2(0.8 * u, _column_top() + 0.6 * u), 0.42 * u]
 
 
+func _view_rect() -> Array:               # 1st / 3rd person, under the pause button
+	var u := minf(size.x, size.y) / 10.0
+	return [Vector2(0.8 * u, _column_top() + 1.6 * u), 0.42 * u]
+
+
 func _action_rect() -> Array:            # contextual: left of the fist (only when something is usable)
 	var u := _unit()
 	return [Vector2(_right() - 2.3 * u, _bottom() - 2.5 * u), 0.52 * u]
@@ -146,6 +151,8 @@ func _input(event: InputEvent) -> void:
 				PlayerInput.run_toggle = not PlayerInput.run_toggle
 			elif _in_circle(p, _menu_rect()):
 				HudStyle.toggle_menu(get_tree())
+			elif _in_circle(p, _view_rect()):
+				CharacterCamera.first_person = not CharacterCamera.first_person
 			elif _joy_finger < 0 and _in_joy_zone(p):
 				_joy_finger = event.index
 				# dynamic origin: where the thumb lands (kept inside the screen)
@@ -209,6 +216,9 @@ func _draw() -> void:
 	HudStyle.light_button(self, run[0], run[1], "run", false, Color(0.95, 0.55, 0.1, 0.85) if PlayerInput.run_toggle else Color(0, 0, 0, 0))
 	var mn := _menu_rect()
 	HudStyle.round_button(self, mn[0], mn[1], "pause")
+	var vw := _view_rect()
+	HudStyle.round_button(self, vw[0], vw[1], "camera", false, Color(0.15, 0.55, 0.25, 0.85) if CharacterCamera.first_person else Color(0, 0, 0, 0))
+	HudStyle.label(self, "1-Е ЛИЦО" if CharacterCamera.first_person else "3-Е ЛИЦО", vw[0] + Vector2(0, vw[1] + 14.0), 13)
 	# FIST, JUMP
 	var pr := _punch_rect()
 	HudStyle.light_button(self, pr[0], pr[1], Weapons.icon_of(Weapons.current), _punch_finger >= 0, Color(0.75, 0.15, 0.12, 0.8) if _punch_finger >= 0 else Color(0, 0, 0, 0))

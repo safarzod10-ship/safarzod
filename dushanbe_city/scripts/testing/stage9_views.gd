@@ -61,6 +61,13 @@ func _ready() -> void:
 		ow.hold = am.door_point(st)
 		s3.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
 		await _sec(2.5)
+		await _look("amid_front", xf * Vector3(14, 11.0, 78), xf * Vector3(0, 6.0, 25))
+		s3.player.teleport(xf * Vector3(18, 0.3, 40), 0.0)
+		await _sec(2.0)
+		await _look("amid_doors_closed", xf * Vector3(5, 2.6, 33), xf * Vector3(0, 1.8, 24))
+		s3.player.teleport(am.door_point(st) + Vector3(0, 0.5, 0), 0.0)
+		await _sec(2.0)
+		await _look("amid_doors_open", xf * Vector3(5, 2.6, 33), xf * Vector3(0, 1.8, 24))
 		await _look("amid_door", xf * Vector3(8, 3.0, 40), xf * Vector3(0, 3, 20))
 		await _look("amid_inside", xf * Vector3(0, 2.2, 21), xf * Vector3(-8, 1.5, -10))
 		await _look("amid_aisle", xf * Vector3(-9, 1.7, 8), xf * Vector3(-9, 1.2, -18))
@@ -89,6 +96,27 @@ func _ready() -> void:
 		for i in 30:
 			await get_tree().process_frame
 		await _snap("amid_bag_hand")
+		# first person: the aisle with the basket, then the till
+		Food.hand = ""
+		Food.take_basket()
+		Food.pick("milk")
+		CharacterCamera.first_person = true
+		s3.player.teleport(xf * Vector3(-15.0, 0.3, 4.0), xf.basis.get_euler().y + PI)
+		s3.player.set_camera_angles(xf.basis.get_euler().y + PI, deg_to_rad(-12.0))
+		await _sec(1.5)
+		await _snap("amid_fp_aisle")
+		s3.player.set_camera_angles(xf.basis.get_euler().y + PI + 0.9, deg_to_rad(-30.0))
+		await _sec(1.0)
+		await _snap("amid_fp_shelf")
+		s3.player.teleport(am.till_point(st, 0), xf.basis.get_euler().y)
+		s3.player.set_camera_angles(xf.basis.get_euler().y + PI, deg_to_rad(-20.0))
+		await _sec(1.5)
+		await _snap("amid_fp_till")
+		s3.player.teleport(xf * Vector3(0, 0.3, 19.5), xf.basis.get_euler().y + PI)
+		s3.player.set_camera_angles(xf.basis.get_euler().y + PI, deg_to_rad(-3.0))
+		await _sec(2.0)
+		await _snap("amid_fp_exit")
+		CharacterCamera.first_person = false
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("v21"):
