@@ -403,7 +403,7 @@ def flatten_plots(H, X, Z, world):
     """level the ground under each building (and landmark plaza) to its base height"""
     for b in world["buildings"]:
         kind, x, z, yaw, L, D = b[0], b[1], b[2], b[3], b[4], b[5]
-        rad = math.hypot(L, D) / 2 + 6
+        rad = math.hypot(L, D) / 2 + (11 if kind in ("amid_m", "mall_m") else 6)   # big car parks: flat to the corners
         i0 = max(0, int((x - rad - T.X0) / T.STEP)); i1 = min(T.N, int((x + rad - T.X0) / T.STEP) + 2)
         j0 = max(0, int((z - rad - T.Z0) / T.STEP)); j1 = min(T.N, int((z + rad - T.Z0) / T.STEP) + 2)
         sub = H[j0:j1, i0:i1]

@@ -185,6 +185,7 @@ def main():
     H_before = H.copy()
     H = PL.flatten_plots(H, X, Z, world)
     H = np.where(rm0 > 0.05, H_before, H)
+    log("driveways levelled to their car parks: %d" % level_driveways(roads, world))
     # remove carving artefacts (switchbacks stacked above each other: the nearest-road fill / cut
     # can flip between levels from one cell to the next) - never under a road surface
     H = despike(H, rm0 > 0.3)
@@ -556,17 +557,18 @@ def add_driveways(roads, world, H_at):
             pts.append(p); owner.append(i)
     tree = cKDTree(np.array(pts))
     starts = []
-    for b in world["buildings"]:
+    for bi, b in enumerate(world["buildings"]):
         if b[0] in ("amid_m", "mall_m"):
             yaw = b[3]
             fx, fz = -math.sin(yaw), -math.cos(yaw)          # the plan's street side (local -Z)
-            starts.append((b[1] + fx * (b[5] / 2 - 2.0), b[2] + fz * (b[5] / 2 - 2.0), "mall"))
+            starts.append((b[1] + fx * (b[5] / 2 - 2.0), b[2] + fz * (b[5] / 2 - 2.0), bi))
     for sv in world.get("services", []):
         yaw = sv["yaw"]
         dx, dz = math.cos(yaw), -math.sin(yaw)                # garage front (+X) towards the road
         starts.append((sv["ox"] + dx * 14.0, sv["oz"] + dz * 14.0, "service"))
     n = 0
     for (x, z, kind) in starts:
+        plot = kind if isinstance(kind, int) else -1
         d, j = tree.query((x, z))
         if d < 3.0 or d > 140.0:
             continue
@@ -577,7 +579,27 @@ def add_driveways(roads, world, H_at):
         Hh = H_at(P[:, 0], P[:, 1])
         Hh[-1] = float(roads[owner[j]]["H"][min(j - sum(len(roads[q]["P"]) for q in range(owner[j])), len(roads[owner[j]]["H"]) - 1)])
         roads.append({"id": "drive%d" % n, "name": "", "cls": "lane", "P": P, "H": np.asarray(Hh, float),
-                      "routed": False, "bridges": [], "tunnels": [], "water": np.zeros(len(P), bool)})
+                      "routed": False, "bridges": [], "tunnels": [], "water": np.zeros(len(P), bool), "plot": plot})
+        n += 1
+    return n
+
+
+def level_driveways(roads, world):
+    """after the plots are levelled: a mall / AMID driveway starts exactly at its car park's asphalt
+    (model base - 0.3 sink + 0.45 slab = base + 0.15) and eases to the road it joins - no step, no
+    car park floating over the lane"""
+    n = 0
+    for r in roads:
+        bi = r.get("plot", -1)
+        if bi is None or bi < 0:
+            continue
+        top = float(world["buildings"][bi][8]) + 0.15
+        P = r["P"]; Hh = np.asarray(r["H"], float).copy()
+        s = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(P, axis=0).T))])
+        t = s / max(s[-1], 1e-6)
+        e = np.clip((t - 0.15) / 0.85, 0.0, 1.0)
+        e = e * e * (3.0 - 2.0 * e)
+        r["H"] = top * (1.0 - e) + Hh[-1] * e
         n += 1
     return n
 
