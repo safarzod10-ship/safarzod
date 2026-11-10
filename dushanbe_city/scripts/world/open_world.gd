@@ -102,7 +102,8 @@ func _make_materials() -> void:
 	mats["building"] = bm
 	mats["roof"] = _vc_mat(CityMaterials.get_material("roof_metal"))
 	mats["wall"] = _vc_mat(CityMaterials.get_material("wall_plaster"))
-	mats["side"] = CityMaterials.get_material("sidewalk")
+	# 0.24: beige pavers with terracotta bands (as on Dushanbe's sidewalks), not the dark grey herringbone
+	mats["side"] = PlotPatches.paving_material()
 	mats["conc"] = CityMaterials.get_material("concrete")
 	var lm := StandardMaterial3D.new()
 	lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
