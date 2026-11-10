@@ -100,18 +100,21 @@ async def home(c: Ctx = Depends(ctx)):
         "cases_ready": ready,
         "unread_notifications": unread,
         "recent_operations": [operation_view(op) for op in recent],
-        "spin": await spins.status(c.session, c.user.id, c.settings),
+        "spin": await spins.status(c.session, c.user.id, c.settings, c.is_admin),
     }
 
 
 @router.get("/spin")
 async def spin_status(c: Ctx = Depends(ctx)):
-    return await spins.status(c.session, c.user.id, c.settings)
+    return await spins.status(c.session, c.user.id, c.settings, c.is_admin)
 
 
 @router.post("/spin")
 async def spin_now(request: Request, c: Ctx = Depends(ctx)):
-    await rate_limit(request, f"spin:{c.user.id}", 10)
+    await rate_limit(request, f"spin:{c.user.id}", 60 if c.is_admin else 10)
+    current = await spins.status(c.session, c.user.id, c.settings, c.is_admin)
+    if current["test_available"]:
+        return {"amount": milli_to_str(spins.test_draw(c.settings)), "test": True, "balance": balance_view(c.user), "spin": current}
     try:
         record = await spins.spin(c.session, c.user.id, c.settings)
     except spins.SpinError as exc:
@@ -121,8 +124,9 @@ async def spin_now(request: Request, c: Ctx = Depends(ctx)):
     await c.session.refresh(c.user)
     return {
         "amount": milli_to_str(record.amount_milli),
+        "test": False,
         "balance": balance_view(c.user),
-        "spin": await spins.status(c.session, c.user.id, c.settings),
+        "spin": await spins.status(c.session, c.user.id, c.settings, c.is_admin),
     }
 
 
@@ -208,6 +212,14 @@ async def case_list(c: Ctx = Depends(ctx)):
         "ready": [cases_service.case_view(case) for case in ready],
         "opened": [cases_service.case_view(case, status) for case, status in opened],
     }
+
+
+@router.post("/cases/test")
+async def case_test(request: Request, c: Ctx = Depends(ctx)):
+    if not c.is_admin:
+        raise ApiError(403, "forbidden", "Нет доступа")
+    await rate_limit(request, f"case-test:{c.user.id}", 60)
+    return {"amount": milli_to_str(prizes.draw(c.settings)), "test": True}
 
 
 @router.post("/cases/{case_id}/open")

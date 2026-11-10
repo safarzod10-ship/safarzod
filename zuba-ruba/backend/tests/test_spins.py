@@ -72,3 +72,25 @@ async def test_spin_can_be_disabled(env):
     await set_settings(daily_spin_enabled=False)
     assert (await env.client.post("/api/spin", headers=auth(1))).status_code == 403
     assert (await env.client.get("/api/spin", headers=auth(1))).json()["enabled"] is False
+
+
+async def test_admin_can_spin_and_open_test_cases_without_credit(env, monkeypatch):
+    from conftest import ADMIN_ID
+
+    monkeypatch.setattr("app.services.prizes.draw_from", lambda settings, key: 900)
+    await register(env.client, ADMIN_ID)
+    await register(env.client, 1)
+    status = (await env.client.get("/api/spin", headers=auth(ADMIN_ID))).json()
+    assert status["available"] is False and status["test_available"] is True
+    for _ in range(3):
+        result = (await env.client.post("/api/spin", headers=auth(ADMIN_ID))).json()
+        assert result["test"] is True and result["amount"] == "0.9"
+    case = (await env.client.post("/api/cases/test", headers=auth(ADMIN_ID))).json()
+    assert case == {"amount": "0.3", "test": True}
+    async with sessionmaker()() as session:
+        assert (await session.execute(select(func.count(DailySpin.id)))).scalar_one() == 0
+        assert (await session.execute(select(func.count(Operation.id)))).scalar_one() == 0
+    assert (await balances(ADMIN_ID))["available"] == 0
+    assert (await env.client.get("/api/spin", headers=auth(1))).json()["test_available"] is False
+    assert (await env.client.post("/api/cases/test", headers=auth(1))).status_code == 403
+    assert (await env.client.post("/api/spin", headers=auth(1))).status_code == 409

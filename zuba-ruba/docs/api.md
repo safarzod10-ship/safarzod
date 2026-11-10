@@ -96,6 +96,11 @@
 { "amount": "0.7", "balance": Balance, "spin": SpinStatus }
 ```
 
+Для администратора `test_available = true`, когда настоящая прокрутка недоступна. Тогда `POST /api/spin` возвращает `"test": true`: приз выбирается по той же таблице, но ничего не начисляется и не записывается.
+
+### `POST /api/cases/test`
+Только для администратора: тестовое открытие кейса по таблице `case_prizes` без начисления. Ответ `{ "amount": "0.3", "test": true }`.
+
 ### `GET /api/operations?cursor=<string>&limit=30`
 ```json
 { "items": [Operation], "next_cursor": "string | null" }

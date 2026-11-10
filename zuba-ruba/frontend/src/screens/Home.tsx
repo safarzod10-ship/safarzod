@@ -29,23 +29,29 @@ export function HomeScreen() {
   const roulette = useRef<RouletteHandle>(null);
   const [spinning, setSpinning] = useState(false);
   const [won, setWon] = useState<string | null>(null);
+  const [testWon, setTestWon] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const data = home.data;
   const spin = data?.spin;
   const countdown = useCountdown(spin?.spun ? spin.next_at : null);
 
   const play = async () => {
-    if (!data || !spin?.available || spinning) return;
+    if (!data || !spin || !(spin.available || spin.test_available) || spinning) return;
     haptic("medium");
     setError(null);
+    setTestWon(null);
     setSpinning(true);
     try {
       const result = await api.post<SpinResult>("/spin");
       await roulette.current?.spin(result.amount);
       haptic("success");
-      setWon(result.amount);
-      home.setData({ ...data, balance: result.balance, spin: result.spin });
-      clearResourceCache("withdrawals");
+      if (result.test) {
+        setTestWon(result.amount);
+      } else {
+        setWon(result.amount);
+        home.setData({ ...data, balance: result.balance, spin: result.spin });
+        clearResourceCache("withdrawals");
+      }
     } catch (err) {
       haptic("error");
       setError(err instanceof ApiError ? err.message : "Не удалось прокрутить. Попробуй ещё раз.");
@@ -121,6 +127,20 @@ export function HomeScreen() {
                   К заданиям
                 </Button>
               </>
+            )}
+            {spin.test_available && (
+              <div className="daily-test">
+                {testWon !== null && (
+                  <p className="daily-test-result">
+                    Тест: выпало <Amount value={testWon} sign="+" size={16} />
+                  </p>
+                )}
+                {error && !spin.available && <p className="form-error">{error}</p>}
+                <Button variant="secondary" block disabled={spinning} onClick={() => void play()}>
+                  {spinning ? "Крутим…" : "Тестовая прокрутка"}
+                </Button>
+                <p className="daily-test-note">Режим администратора: без ограничений и без начисления звёзд.</p>
+              </div>
             )}
           </div>
         </section>

@@ -228,3 +228,31 @@ test("daily roulette spins once tasks are done and shows the countdown", async (
   expect(spins).toBe(1);
   await page.screenshot({ path: "e2e/screenshots/light-390-home-spin.png" });
 });
+
+test("admin can run unlimited test spins and test cases without credit", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fakeTelegram(page, "light");
+  await mockApi(page);
+  const adminSpin = { ...fx.spinDone, test_available: true };
+  await page.route("**/api/session", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...fx.me, is_admin: true }) }));
+  await page.route("**/api/home", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...fx.home, spin: adminSpin }) }));
+  const amounts = ["0.6", "1"];
+  await page.route("**/api/spin", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ amount: amounts.shift() ?? "0.5", test: true, balance: fx.home.balance, spin: adminSpin }) }),
+  );
+  await page.route("**/api/cases/test", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ amount: "2", test: true }) }));
+  await page.goto("/#/");
+  await page.getByRole("button", { name: "Тестовая прокрутка" }).click();
+  await expect(page.locator(".daily-test-result")).toContainText("+0,6");
+  await page.getByRole("button", { name: "Тестовая прокрутка" }).click();
+  await expect(page.locator(".daily-test-result")).toContainText("+1");
+  await expect(page.locator(".wheel")).toHaveAttribute("data-result", "1");
+  await expect(page.locator(".balance-pill")).toContainText("18,3");
+  await page.screenshot({ path: "e2e/screenshots/light-390-home-admin.png", fullPage: true });
+  await page.locator(".tabbar").getByRole("button", { name: "Кейсы" }).click();
+  await page.getByRole("button", { name: "Тестовый кейс" }).click();
+  await expect(page.locator(".roulette-result-amount")).toContainText("+2");
+  await expect(page.locator("text=звёзды не начисляются")).toBeVisible();
+  await page.getByRole("button", { name: "Готово" }).click();
+  await expect(page.getByRole("button", { name: "Тестовый кейс" })).toBeVisible();
+});

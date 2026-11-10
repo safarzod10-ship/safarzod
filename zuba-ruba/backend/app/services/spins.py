@@ -48,22 +48,28 @@ async def tasks_done(session: AsyncSession, user_id: int, day: Day) -> int:
     ).scalar_one()
 
 
-async def status(session: AsyncSession, user_id: int, settings: RuntimeSettings) -> dict:
+async def status(session: AsyncSession, user_id: int, settings: RuntimeSettings, is_admin: bool = False) -> dict:
     day = current_day()
     required = settings.int("daily_spin_tasks")
     done = await tasks_done(session, user_id, day)
     spin = (await session.execute(select(DailySpin).where(DailySpin.user_id == user_id, DailySpin.day == day.day))).scalar_one_or_none()
     enabled = settings.bool("daily_spin_enabled")
+    available = enabled and spin is None and done >= required
     return {
         "enabled": enabled,
         "tasks_done": min(done, required),
         "tasks_required": required,
-        "available": enabled and spin is None and done >= required,
+        "available": available,
+        "test_available": is_admin and not available,
         "spun": spin is not None,
         "amount": milli_to_str(spin.amount_milli) if spin else None,
         "next_at": day.end,
         "prizes": prizes.table_view(settings, PRIZES_KEY),
     }
+
+
+def test_draw(settings: RuntimeSettings) -> int:
+    return prizes.draw_from(settings, PRIZES_KEY)
 
 
 async def spin(session: AsyncSession, user_id: int, settings: RuntimeSettings) -> DailySpin:

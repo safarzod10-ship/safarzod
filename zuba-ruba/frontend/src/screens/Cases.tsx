@@ -19,12 +19,37 @@ function rewardNote(item: Case): string {
 type Phase = { kind: "idle" } | { kind: "requesting" } | { kind: "spinning"; result: Case } | { kind: "done"; result: Case };
 
 export function CasesScreen() {
-  const { config } = useApp();
+  const { config, me } = useApp();
   const table = config.case_prizes;
   const cases = useResource("cases", () => api.get<CasesResponse>("/cases"));
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
   const roulette = useRef<RouletteHandle>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const openTest = async () => {
+    if (testing || phase.kind === "requesting" || phase.kind === "spinning") return;
+    haptic("medium");
+    setError(null);
+    setTesting(true);
+    try {
+      const result = await api.post<{ amount: string }>("/cases/test");
+      await roulette.current?.spin(result.amount);
+      haptic("success");
+      setTestResult(result.amount);
+    } catch (err) {
+      haptic("error");
+      setError(err instanceof ApiError ? err.message : "Не удалось открыть тестовый кейс.");
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const closeTest = () => {
+    setTestResult(null);
+    roulette.current?.reset();
+  };
 
   const ready = cases.data?.ready ?? [];
   const current = ready[0] ?? null;
@@ -66,7 +91,7 @@ export function CasesScreen() {
     setPhase({ kind: "idle" });
   };
 
-  const busy = phase.kind === "requesting" || phase.kind === "spinning";
+  const busy = phase.kind === "requesting" || phase.kind === "spinning" || testing;
   const result = phase.kind === "done" ? phase.result : null;
   const chances = useMemo(() => [...table].sort((a, b) => Number(b.amount) - Number(a.amount)), [table]);
   const maxChance = Math.max(...table.map((row) => Number(row.chance)));
@@ -77,7 +102,16 @@ export function CasesScreen() {
         <Roulette ref={roulette} table={table} label="Лента призов кейса" />
 
         <div className="roulette-panel">
-          {result ? (
+          {testResult !== null ? (
+            <div className="roulette-result" role="status">
+              <span className="roulette-result-label">Тестовый кейс</span>
+              <Amount value={testResult} sign="+" size={26} className="roulette-result-amount" />
+              <span className="roulette-result-note">Режим администратора: звёзды не начисляются.</span>
+              <Button variant="primary" block onClick={closeTest}>
+                Готово
+              </Button>
+            </div>
+          ) : result ? (
             <div className="roulette-result" role="status">
               <span className="roulette-result-label">Выпало</span>
               <Amount value={result.amount ?? "0"} sign="+" size={26} className="roulette-result-amount" />
@@ -114,6 +148,14 @@ export function CasesScreen() {
             </>
           )}
         </div>
+        {me.is_admin && testResult === null && !result && (
+          <div className="roulette-admin">
+            <Button variant="secondary" block disabled={busy} onClick={() => void openTest()}>
+              {testing ? "Крутим…" : "Тестовый кейс"}
+            </Button>
+            <span>Без ограничений и без начисления звёзд</span>
+          </div>
+        )}
       </section>
 
       {!cases.data && cases.error && <ErrorState error={cases.error} onRetry={() => void cases.reload()} />}

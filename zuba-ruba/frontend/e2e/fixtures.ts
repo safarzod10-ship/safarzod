@@ -67,10 +67,10 @@ const spinPrizes = [
   { amount: "1", weight: 4, chance: "4.0" },
 ];
 
-export const spinProgress = { enabled: true, tasks_done: 3, tasks_required: 5, available: false, spun: false, amount: null, next_at: iso(-600), prizes: spinPrizes };
+export const spinProgress = { enabled: true, tasks_done: 3, tasks_required: 5, available: false, test_available: false, spun: false, amount: null, next_at: iso(-600), prizes: spinPrizes };
 export const spinReady = { ...spinProgress, tasks_done: 5, available: true };
 export const spinDone = { ...spinReady, available: false, spun: true, amount: "0.8" };
-export const spinResult = { amount: "0.8", balance: { ...balance, available: "19.1", total: "22.25" }, spin: spinDone };
+export const spinResult = { amount: "0.8", test: false, balance: { ...balance, available: "19.1", total: "22.25" }, spin: spinDone };
 
 export const home = { balance, cases_opened: 14, cases_ready: 2, unread_notifications: 2, recent_operations: operations, spin: spinProgress };
 

@@ -60,6 +60,7 @@ export interface SpinStatus {
   tasks_done: number;
   tasks_required: number;
   available: boolean;
+  test_available: boolean;
   spun: boolean;
   amount: string | null;
   next_at: string;
@@ -68,6 +69,7 @@ export interface SpinStatus {
 
 export interface SpinResult {
   amount: string;
+  test: boolean;
   balance: Balance;
   spin: SpinStatus;
 }
