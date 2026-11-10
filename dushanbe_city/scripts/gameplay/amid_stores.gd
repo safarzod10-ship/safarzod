@@ -566,8 +566,8 @@ func _interior(st: Dictionary) -> Node3D:
 			for b in 3 - a:
 				for c in 2:
 					_put(shape, Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 1.3), Vector3(x - 0.3 + b * 0.3 + a * 0.15, 0.8 + a * 0.32, 6.4 + c * 0.35)), col)
-		_bx(Vector3(0.7, 0.36, 0.04), Vector3(x, 1.25, 7.02), "price", false)
-		_label(_root, "%s\n%s" % [String(it["name"]), Wallet.fmt(int(it["price"]))], Vector3(x, 1.25, 7.05), 0.0, 28, Color(0.1, 0.1, 0.1))
+		_bx(Vector3(0.95, 0.46, 0.04), Vector3(x, 1.25, 7.02), "price", false)
+		_label(_root, "%s\n%s" % [String(it["name"]), Wallet.fmt(int(it["price"]))], Vector3(x, 1.25, 7.05), 0.0, 24, Color(0.1, 0.1, 0.1))
 		_bx(Vector3(1.6, 0.42, 0.06), Vector3(x, 3.45, 6.2), "green", false)
 		_hang(Vector3(x, 3.45, 6.2), 1.6, 0.42)
 		_label(_root, String(it["name"]).to_upper(), Vector3(x, 3.45, 6.24), 0.0, 40, Color(1, 1, 1))
@@ -646,9 +646,10 @@ func _interior(st: Dictionary) -> Node3D:
 		_bx(Vector3(0.35, 0.12, 0.35), Vector3(tx, 1.14, 16.2), "frame", false)
 		_bx(Vector3(0.04, 0.3, 0.42), Vector3(tx - 0.3, 1.35, 16.3), "screen", false)
 		_bx(Vector3(0.05, 1.6, 0.05), Vector3(tx + 0.45, 1.85, 16.8), "steel", false)
-		_bx(Vector3(0.6, 0.6, 0.6), Vector3(tx, 3.5, 15.0), "green", false)
-		_bx(Vector3(0.03, CEIL - 3.8, 0.03), Vector3(tx, 3.8 + (CEIL - 3.8) * 0.5, 15.0), "steel", false)
-		_label(_root, "КАССА %d" % (k + 1), Vector3(tx, 3.5, 15.31), 0.0, 40, Color(1, 1, 1))
+		_bx(Vector3(1.5, 0.5, 0.06), Vector3(tx, 3.4, 15.0), "green", false)
+		_hang(Vector3(tx, 3.4, 15.0), 1.5, 0.5)
+		_label(_root, "КАССА %d" % (k + 1), Vector3(tx, 3.4, 15.04), 0.0, 40, Color(1, 1, 1))
+		_label(_root, "КАССА %d" % (k + 1), Vector3(tx, 3.4, 14.96), PI, 40, Color(1, 1, 1))
 		_spot(_root, till_point(st, k),
 			func() -> String: return "КАССА · ОПЛАТИТЬ %s" % Wallet.fmt(Food.price_of(Food.basket)),
 			func() -> bool: return Food.hand == "basket" and not Food.basket.is_empty() and _on_foot(),
