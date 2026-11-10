@@ -238,7 +238,7 @@ overlay("fari.4", lambda p: p.y < -L2 + 0.9 and p.z > 0.6 and abs(p.x) > 0.7)
 overlay("taillight rr", lambda p: p.y > L2 - 0.6)
 overlay("fari.3", lambda p: p.y > L2 - 0.6 and p.x > 0.55)
 overlay("fari.2", lambda p: p.y > L2 - 0.6 and p.x < -0.55)
-overlay("body.5", lambda p: p.y > L2 - 0.6 and 0.25 < abs(p.x) < 0.55)
+overlay("body.5", lambda p: p.y > L2 - 0.6 and 0.45 < abs(p.x) < 0.72)
 
 # ---- Tajik plates over the model's plate quads ("material")
 pm = bpy.data.materials.new("tj_plate")

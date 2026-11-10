@@ -17,5 +17,5 @@ void fragment() {
 	vec2 d = abs(UV - 0.5) * 2.0;
 	float edge = 1.0 - smoothstep(0.55, 1.0, max(d.x, d.y));
 	float side = v_side > 0.0 ? side_gain.x : side_gain.y;
-	ALBEDO = emission_color * emission_energy * side * edge * 0.35;
+	ALBEDO = emission_color * emission_energy * side * edge * 1.1;
 }
