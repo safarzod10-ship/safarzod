@@ -677,6 +677,9 @@ func _interior(st: Dictionary) -> Node3D:
 		leaves.append(leaf)
 	st["doors"] = leaves
 	st["door_open"] = 0.0
+	# the threshold: paving from the store floor out under the canopy (no grass in the gap)
+	_bx(Vector3(12.0, 0.3, 3.4), Vector3(0, 0.15, HZ + 1.7), "floor")
+	_bx(Vector3(DOOR * 2.0, 0.02, 1.4), Vector3(0, 0.31, HZ + 1.2), "counter", false)
 	# the door sensor over the entrance
 	_bx(Vector3(0.5, 0.12, 0.2), Vector3(0, 3.25, HZ + 0.25), "counter", false)
 	_sign(Vector3(0, 3.85, HZ - 0.32), "ДОБРО ПОЖАЛОВАТЬ!", "amid_cart", 0.7, "green", false, 56, true)
