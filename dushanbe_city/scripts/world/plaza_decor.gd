@@ -359,7 +359,8 @@ func _amid_site(P: Dictionary) -> void:
 		var x := 9.5
 		var q := 0
 		while x < 43.0:
-			add.call(trees, "chinar_middle" if q % 2 == 0 else "elm_a", Transform3D(Basis(Vector3.UP, q * 1.3).scaled(Vector3.ONE * 0.85), at.call(sx * x, F + 5.5)))
+			if q % 2 == 0:
+				add.call(trees, "sapling" if q % 4 == 0 else "acacia", Transform3D(Basis(Vector3.UP, q * 1.3).scaled(Vector3.ONE * (1.0 if q % 4 == 0 else 0.5)), at.call(sx * x, F + 5.5)))
 			add.call(trees, "rose_bush" if q % 2 == 0 else "flowers_petunia", Transform3D(Basis(Vector3.UP, q), at.call(sx * (x + 3.0), F + 5.5, 0.05)))
 			add.call(trees, "flowers_salvia", Transform3D(Basis(Vector3.UP, q * 2.0), at.call(sx * (x + 1.5), F + 4.8, 0.05)))
 			x += 6.5
@@ -387,10 +388,10 @@ func _amid_site(P: Dictionary) -> void:
 		var x := 12.0
 		var q := 0
 		while x < 41.0:
-			add.call(trees, "chinar_middle" if q % 2 == 0 else "acacia", Transform3D(Basis(Vector3.UP, q * 1.9).scaled(Vector3.ONE * 0.8), at.call(sx * x, ym)))
+			add.call(trees, "thuja_oval" if q % 2 == 0 else "sapling", Transform3D(Basis(Vector3.UP, q * 1.9).scaled(Vector3.ONE * (0.75 if q % 2 == 0 else 1.0)), at.call(sx * x, ym)))
 			if q % 2 == 1:
-				add.call(props, "light_street_single", Transform3D(Basis(Vector3.UP, yaw + PI * 0.5), at.call(sx * (x + 2.6), ym)))
-			x += 5.6
+				add.call(props, "light_street_single", Transform3D(Basis(Vector3.UP, yaw + PI * 0.5), at.call(sx * (x + 4.0), ym)))
+			x += 8.0
 			q += 1
 	# ---- along the hall's sides: thujas on the lawn; outer lawns: trees, fence
 	for sx: float in [-1.0, 1.0]:
