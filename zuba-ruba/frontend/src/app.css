@@ -155,16 +155,88 @@
 }
 
 .daily-wheel {
-  width: calc(100% + 2 * var(--gutter));
-  margin: 28px calc(-1 * var(--gutter)) 0;
+  width: 100%;
+  margin-top: 24px;
 }
 
-.daily-wheel .roulette-viewport {
-  background: transparent;
+.wheel {
+  position: relative;
+  width: min(320px, 82vw);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  padding-top: 6px;
 }
 
-.roulette-viewport-muted {
+.wheel-muted {
   opacity: 0.5;
+}
+
+.wheel-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.wheel-seg path {
+  fill: var(--surface);
+  stroke: var(--divider);
+  stroke-width: 0.6;
+}
+
+.wheel-seg:nth-child(even) path {
+  fill: var(--bg-secondary);
+}
+
+.wheel-seg-rare path,
+.wheel-seg-rare:nth-child(even) path {
+  fill: var(--accent-soft);
+}
+
+.wheel-seg-top path,
+.wheel-seg-top:nth-child(even) path {
+  fill: var(--accent);
+}
+
+.wheel-seg-won path {
+  stroke: var(--text);
+  stroke-width: 2.2;
+}
+
+.wheel-label {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wheel-seg-top .wheel-label {
+  fill: #2b1d00;
+}
+
+.wheel-rim {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.wheel-hub {
+  fill: var(--surface);
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -12px;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 22px solid var(--text);
+  filter: drop-shadow(0 2px 2px rgba(22, 20, 15, 0.25));
 }
 
 .daily-action {

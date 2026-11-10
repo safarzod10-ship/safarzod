@@ -217,10 +217,12 @@ test("daily roulette spins once tasks are done and shows the countdown", async (
   await page.goto("/#/");
   await page.getByRole("button", { name: "Крутить" }).click();
   await expect(page.locator(".daily-won")).toContainText("+0,8");
-  await expect(page.locator(".prize-won .prize-amount")).toHaveText("0,8");
-  const pointer = await page.locator(".roulette-line").boundingBox();
-  const won = await page.locator(".prize-won").boundingBox();
-  expect(pointer && won && pointer.x >= won.x && pointer.x <= won.x + won.width).toBeTruthy();
+  await expect(page.locator(".wheel")).toHaveAttribute("data-result", "0.8");
+  await expect(page.locator(".wheel-seg-won .wheel-label")).toHaveText("0,8");
+  const wheel = await page.locator(".wheel-svg").boundingBox();
+  const label = await page.locator(".wheel-seg-won .wheel-label").boundingBox();
+  const center = wheel ? { x: wheel.x + wheel.width / 2, y: wheel.y + wheel.height / 2 } : null;
+  expect(center && label && Math.abs(label.x + label.width / 2 - center.x) < 30 && label.y + label.height / 2 < center.y - 40).toBeTruthy();
   await expect(page.locator(".balance-pill")).toContainText("19,1");
   await expect(page.locator("text=Следующая прокрутка через")).toBeVisible();
   expect(spins).toBe(1);

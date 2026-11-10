@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api";
-import { Roulette, type RouletteHandle } from "../components/Roulette";
+import type { RouletteHandle } from "../components/Roulette";
+import { Wheel } from "../components/Wheel";
 import { formatNumber } from "../format";
 import { navigate } from "../router";
 import { Amount, Star } from "../stars";
@@ -86,7 +87,7 @@ export function HomeScreen() {
           <p className="daily-sub">Одна прокрутка в день после {spin.tasks_required} заданий</p>
 
           <div className="daily-wheel">
-            <Roulette ref={roulette} table={spin.prizes} label="Лента призов ежедневной рулетки" muted={!spin.enabled} />
+            <Wheel ref={roulette} table={spin.prizes} label="Колесо ежедневной рулетки" muted={!spin.enabled} />
           </div>
 
           <div className="daily-action">
