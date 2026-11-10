@@ -75,16 +75,15 @@ func _ready() -> void:
 			await _look("pack_%s_rear" % key, p + b * Vector3(-3.0, 1.4, 5.4), p + Vector3(0, 0.5, 0))
 			if c.lights:
 				c.lights.beam = VehicleLights.Beam.LOW
-				c.lights.braking = true
+				c.lights.force = {"brake": true}
 				c.lights.turn = -1
 				await _sec(0.4)
 				await _look("pack_%s_lamps" % key, p + b * Vector3(-1.6, 1.0, 4.6), p + Vector3(0, 0.6, 0))
-				c.lights.braking = false
 				c.lights.turn = 0
-				c.lights.reversing = true
+				c.lights.force = {"reverse": true}
 				await _sec(0.4)
 				await _look("pack_%s_reverse" % key, p + b * Vector3(-1.6, 1.0, 4.6), p + Vector3(0, 0.6, 0))
-				c.lights.reversing = false
+				c.lights.force = {}
 				c.lights.beam = VehicleLights.Beam.OFF
 				c.lights.braking = false
 				c.lights.turn = 0

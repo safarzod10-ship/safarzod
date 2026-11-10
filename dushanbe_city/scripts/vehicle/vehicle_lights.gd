@@ -23,6 +23,7 @@ var reversing := false
 var _t := 0.0
 var _spot: SpotLight3D
 var _mats := {}
+var force := {}                   ## views / tests: {"brake": true, "reverse": true} without driving
 
 
 func setup(c: VehiclePrado) -> void:
@@ -64,8 +65,8 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	blink_on = fmod(_t, 0.667) < 0.36 and (hazard or turn != 0)
-	braking = car.brake > 0.05 and car.driven
-	reversing = car.gear == -1 and car.driven
+	braking = (car.brake > 0.05 and car.driven) or bool(force.get("brake", false))
+	reversing = (car.gear == -1 and car.driven) or bool(force.get("reverse", false))
 	var engine := car.driven
 	var head := 0.0
 	if beam == Beam.LOW:
