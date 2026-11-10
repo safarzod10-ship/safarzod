@@ -172,7 +172,7 @@ def main():
         dp = np.concatenate([r["P"] for r in drv])
         dt = cKDTree(dp)
         before = len(world["billboards"])
-        world["billboards"] = [b for b in world["billboards"] if dt.query((b["x"], b["z"]))[0] > 13.0]
+        world["billboards"] = [b for b in world["billboards"] if dt.query((b["x"], b["z"]))[0] > 13.0 and not in_big_plot(world, b["x"], b["z"], 8.0)]
         log("billboards removed from driveways: %d" % (before - len(world["billboards"])))
     log("driveways (shops, malls, auto services -> the nearest road): %d" % nd)
     world["fillets"] = fillets
@@ -195,6 +195,8 @@ def main():
     H = enforce_roads(H, roads, it=12)       # last: nothing may end up above a road surface
     H = enforce_nodes(H, X, Z, roads)
     H = enforce_fillets(H, X, Z, world["fillets"])
+    H = level_big_plots(H, X, Z, world, roads)
+    H = enforce_roads(H, roads, it=6)        # the aprons never rise over a road
     log("terrain above any road after enforcement: %d samples" % check_roads(H, roads))
 
     # ------------------------------------------------------------------ surfaces, splat, biome
@@ -582,6 +584,62 @@ def add_driveways(roads, world, H_at):
                       "routed": False, "bridges": [], "tunnels": [], "water": np.zeros(len(P), bool), "plot": plot})
         n += 1
     return n
+
+
+BIG_KINDS = ("amid_m", "mall_m")
+
+
+def in_big_plot(world, x, z, margin=0.0):
+    for b in world["buildings"]:
+        if b[0] not in BIG_KINDS:
+            continue
+        yaw = b[3]
+        dx, dz = x - b[1], z - b[2]
+        lx = dx * math.cos(yaw) - dz * math.sin(yaw)
+        lz = dx * math.sin(yaw) + dz * math.cos(yaw)
+        if abs(lx) < b[4] / 2 + margin and abs(lz) < b[5] / 2 + margin:
+            return True
+    return False
+
+
+def level_big_plots(H, X, Z, world, roads):
+    """0.24: an AMID / mall stands on level ground: the whole footprint (hall + car park) at the base
+    height, and the strip in front of it down to the street follows its driveway as an even slope
+    (no car park floating over the lawn, no driveway on an embankment)"""
+    drives = {}
+    for r in roads:
+        if r.get("plot", -1) is not None and r.get("plot", -1) >= 0:
+            drives[r["plot"]] = r
+    n = 0
+    for bi, b in enumerate(world["buildings"]):
+        if b[0] not in BIG_KINDS:
+            continue
+        x, z, yaw, L, D, y = b[1], b[2], b[3], b[4], b[5], float(b[8])
+        dr = drives.get(bi)
+        apron = 0.0
+        if dr is not None:
+            P = dr["P"]
+            s = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(P, axis=0).T))])
+            apron = max(0.0, s[-1] - 8.0)
+            dh = np.asarray(dr["H"], float) - 0.25
+        rad = math.hypot(L / 2 + 12, D / 2 + apron + 12)
+        i0 = max(0, int((x - rad - T.X0) / T.STEP)); i1 = min(T.N, int((x + rad - T.X0) / T.STEP) + 2)
+        j0 = max(0, int((z - rad - T.Z0) / T.STEP)); j1 = min(T.N, int((z + rad - T.Z0) / T.STEP) + 2)
+        sx = X[j0:j1, i0:i1] - x; sz = Z[j0:j1, i0:i1] - z
+        lx = sx * math.cos(yaw) - sz * math.sin(yaw)          # local X (along the front)
+        fz = -(sx * math.sin(yaw) + sz * math.cos(yaw))       # distance towards the street side (local -Z)
+        tgt = np.full(lx.shape, y)
+        if dr is not None and apron > 0.0:
+            d = np.clip(fz - (D / 2 - 2.0), 0.0, apron)       # metres along the driveway
+            tgt = np.where(fz > D / 2, np.interp(d, s, dh), y)
+        ex = np.maximum(np.abs(lx) - L / 2, 0.0)
+        ez = np.maximum(np.maximum(fz - (D / 2 + apron), 0.0), np.maximum(-fz - D / 2, 0.0))
+        w = T.ss(10.0, 0.0, np.hypot(ex, ez))
+        sub = H[j0:j1, i0:i1]
+        H[j0:j1, i0:i1] = sub * (1.0 - w) + tgt * w
+        n += 1
+    log("big plots levelled with their aprons: %d" % n)
+    return H
 
 
 def level_driveways(roads, world):

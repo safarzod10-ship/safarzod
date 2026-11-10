@@ -98,7 +98,8 @@ class Kit:
         return self.add(t, m)
 
     def plane_img(self, w, h, loc, m, rot_z=0.0):
-        bpy.ops.mesh.primitive_plane_add(size=1, location=loc, rotation=(math.pi / 2, 0, rot_z))
+        # (pi/2, pi): image upright when seen from -Y (the street side) - the flag's red stripe on top
+        bpy.ops.mesh.primitive_plane_add(size=1, location=loc, rotation=(math.pi / 2, math.pi, rot_z))
         o = bpy.context.object
         o.scale = (w, h, 1)
         bpy.ops.object.transform_apply(scale=True, rotation=True)
@@ -332,7 +333,7 @@ def flagpole():
         for i in range(nx):
             f = bm.faces.new((verts[j][i], verts[j][i + 1], verts[j + 1][i + 1], verts[j + 1][i]))
             for lp, (a, b) in zip(f.loops, ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))):
-                lp[uv].uv = (a / nx, b / nz)
+                lp[uv].uv = (a / nx, 1.0 - b / nz)      # red stripe at the top
     me = bpy.data.meshes.new("cloth")
     bm.to_mesh(me)
     o = bpy.data.objects.new("cloth", me)
@@ -447,7 +448,7 @@ def lamp_flags():
         k.add(lo, "white")
         k.cyl(0.32, 0.12, (sx * 1.4, 0, 7.48), "white", verts=12)
         # vertical banner with the flag (turned upright: stripes run down)
-        bpy.ops.mesh.primitive_plane_add(size=1, location=(sx * 0.42, 0, 4.6), rotation=(math.pi / 2, math.pi / 2, 0))
+        bpy.ops.mesh.primitive_plane_add(size=1, location=(sx * 0.42, 0, 4.6), rotation=(math.pi / 2, -math.pi / 2, 0))
         b = bpy.context.object
         b.scale = (1.8, 0.7, 1)
         bpy.ops.object.transform_apply(scale=True, rotation=True)
