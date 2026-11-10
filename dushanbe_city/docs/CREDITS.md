@@ -62,6 +62,15 @@ Icons `assets/ui/icons/gi_*.svg` (fist, pistol, AK, bat, car, fuel, wrench, map,
 https://game-icons.net by Lorc, Delapouite, Skoll and other contributors,
 licensed under Creative Commons Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/).
 Taken from the npm package `@iconify-json/game-icons`; recoloured only.
+Also `food.svg`, `water.svg`, `bag.svg`, `cook.svg` (hunger/thirst HUD, 0.23) and the AMID store
+sign icons `amid_*.svg` (0.24): cow, snowflake-1, milk-carton, basket, chocolate-bar, chips-bag,
+soda-bottle, water-bottle, bread, fruit-bowl, teapot, bowl-of-rice, oil-drum, big-egg,
+medical-pack, soda-can, shopping-cart — same licence and source, recoloured white.
+
+## AMID supermarket interior (0.23–0.24)
+Built in code by `scripts/gameplay/amid_stores.gd` (own work, CC0): shelving, goods, fridges,
+meat counter, tills, columns, plants; floor/ceiling/marble textures are generated procedurally.
+Layout and look follow a reference picture supplied by the project owner.
 
 ## Main menu / shop artwork
 `assets/ui/menu_main.png`, `assets/ui/menu_shop.png` — provided by the project owner.
