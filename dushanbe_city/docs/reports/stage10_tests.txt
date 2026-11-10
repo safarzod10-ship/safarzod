@@ -1,55 +1,55 @@
-PASS  1. AMID supermarkets in the city: 11
-PASS  2. interior built when the player is near
-PASS  3. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
-PASS  4. basket in the hand
-PASS  5. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
-PASS  6. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
-PASS  7. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
-PASS  8. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
-PASS  9. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
-PASS 10. the bag is in the boot (hands free, 1 shown in the car)
-PASS 11. took the bag out of the boot
-PASS 12. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
-PASS 13. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
-PASS 14. plov can be cooked (rice, meat, carrot, onion, oil)
-PASS 15. cooked plov ×4: fridge Нон ×1, Плов ×4
-PASS 16. ate plov: hunger 30 -> 99, health 50 -> 85
-PASS 17. starving: health falls (85.0 -> 82.5), no regeneration
-PASS 18. the hero's home on the lot by the avenue: (-175.0, 11.0, -2094.0)
-FAIL 19. the game starts at the home's door (6.5 m from it)
-FAIL 20. the Prado stands in the home's garage (660.2 m), it's the hero's own (no purchase)
-PASS 21. drives out of the garage through the gate (670 m out, condition 92 %)
-PASS 22. promo TAJDUSH: +200 000 смн
-PASS 23. account ID given automatically: 36969040 (8 digits)
-PASS 24. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
-PASS 25. the same code again: refused (Этот код уже использован)
-PASS 26. a code made for another ID: refused (Код не подходит к вашему ID)
-PASS 27. a forged amount: refused (Код не подходит к вашему ID)
-PASS 28. restart: weapons ["fist", "pistol", "ak47"], ammo 17 / 45, selected ak47, cars ["car", "camry"], money 12 345 смн
-PASS 29. dealership built near the start: (-68.0, 11.0, -2033.0)
-PASS 30. a car that is not yours: can't get in, door says «ПРОДАЁТСЯ · 50 000 смн · АВТОСАЛОН»
-PASS 31. at the showroom door: «АВТОСАЛОН»
-PASS 32. Camry costs 50 000: with 40 000 refused (Недостаточно денег: нужно 50 000 смн)
-PASS 33. bought the Camry: money 60 000 -> 10 000 смн, delivered to the lot (17 m from the showroom)
-PASS 34. now it's yours: can get in
-PASS 35. prices: Camry 50 000 смн, Lexus 100 000 смн, Prado 120 000 смн
-PASS 36. camry: door (4 mesh parts) opens 65 deg and closes; real cabin fitted true
-PASS 37. lexus: door (7 mesh parts) opens 65 deg and closes; real cabin fitted true
-PASS 38. gun shop across the avenue from the hero's home ((-69.0, 13.0, -2144.0), 117 m), on the map
-PASS 39. at the door: «МАГАЗИН ОРУЖИЯ»
-PASS 40. not enough money for the AK (3 500): refused
-PASS 41. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
-PASS 42. buy ammo: +60 AK rounds for 150
-PASS 43. select: unowned weapons can't be taken
-PASS 44. pistol: 5 shots fired (ammo 24 -> 19)
-PASS 45. bullets hit the Camry: condition 100 -> 80 %
-PASS 46. AK automatic: 9 rounds in 1 s (≈10)
-PASS 47. empty pistol: no shot, ammo stays 0
-PASS 48. condition 25 %%: the engine smokes
-PASS 49. condition 10 %%: on fire
-PASS 50. it explodes after burning: wreck true, can't get in true
-PASS 51. the blast killed the player standing 2.5 m away (dead true, health 0)
-PASS 52. respawn: alive at the hospital / start, health 100, fee 90 смн
-PASS 53. wreck restored at its parking place (condition 100 %)
-PASS 54. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 355.9 px)
-PASS 55. steer right -> the steering wheel turns clockwise for the driver (114 deg)
+PASS  1. the hero's home on the lot by the avenue: (-175.0, 11.0, -2094.0)
+PASS  2. the game starts at the home's door (0.0 m from it)
+PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
+PASS  4. drives out of the garage through the gate (19 m out, condition 100 %)
+PASS  5. promo TAJDUSH: +200 000 смн
+PASS  6. account ID given automatically: 67984454 (8 digits)
+PASS  7. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
+PASS  8. the same code again: refused (Этот код уже использован)
+PASS  9. a code made for another ID: refused (Код не подходит к вашему ID)
+PASS 10. a forged amount: refused (Код не подходит к вашему ID)
+PASS 11. restart: weapons ["fist", "pistol", "ak47"], ammo 17 / 45, selected ak47, cars ["car", "camry"], money 12 345 смн
+PASS 12. dealership built near the start: (-68.0, 11.0, -2033.0)
+PASS 13. a car that is not yours: can't get in, door says «ПРОДАЁТСЯ · 50 000 смн · АВТОСАЛОН»
+PASS 14. at the showroom door: «АВТОСАЛОН»
+PASS 15. Camry costs 50 000: with 40 000 refused (Недостаточно денег: нужно 50 000 смн)
+PASS 16. bought the Camry: money 60 000 -> 10 000 смн, delivered to the lot (17 m from the showroom)
+PASS 17. now it's yours: can get in
+PASS 18. prices: Camry 50 000 смн, Lexus 100 000 смн, Prado 120 000 смн
+PASS 19. camry: door (4 mesh parts) opens 65 deg and closes; real cabin fitted true
+PASS 20. lexus: door (7 mesh parts) opens 65 deg and closes; real cabin fitted true
+PASS 21. gun shop across the avenue from the hero's home ((-69.0, 13.0, -2144.0), 117 m), on the map
+PASS 22. at the door: «МАГАЗИН ОРУЖИЯ»
+PASS 23. not enough money for the AK (3 500): refused
+PASS 24. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
+PASS 25. buy ammo: +60 AK rounds for 150
+PASS 26. select: unowned weapons can't be taken
+PASS 27. pistol: 5 shots fired (ammo 24 -> 19)
+PASS 28. bullets hit the Camry: condition 100 -> 80 %
+PASS 29. AK automatic: 9 rounds in 1 s (≈10)
+PASS 30. empty pistol: no shot, ammo stays 0
+PASS 31. condition 25 %%: the engine smokes
+PASS 32. condition 10 %%: on fire
+PASS 33. it explodes after burning: wreck true, can't get in true
+PASS 34. the blast killed the player standing 2.5 m away (dead true, health 0)
+PASS 35. respawn: alive at the hospital / start, health 100, fee 90 смн
+PASS 36. wreck restored at its parking place (condition 100 %)
+PASS 37. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 360.0 px)
+PASS 38. steer right -> the steering wheel turns clockwise for the driver (114 deg)
+PASS 39. AMID supermarkets in the city: 11
+PASS 40. interior built when the player is near
+PASS 41. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
+PASS 42. basket in the hand
+PASS 43. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
+PASS 44. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
+PASS 45. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
+PASS 46. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
+PASS 47. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
+PASS 48. the bag is in the boot (hands free, 1 shown in the car)
+PASS 49. took the bag out of the boot
+PASS 50. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
+PASS 51. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
+PASS 52. plov can be cooked (rice, meat, carrot, onion, oil)
+PASS 53. cooked plov ×4: fridge Нон ×1, Плов ×4
+PASS 54. ate plov: hunger 30 -> 99, health 50 -> 85
+PASS 55. starving: health falls (85.0 -> 82.5), no regeneration
