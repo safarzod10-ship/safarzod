@@ -637,8 +637,8 @@ func _interior(st: Dictionary) -> Node3D:
 	_bx(Vector3(0.05, 1.5, 0.05), Vector3(7.5, 1.05, HZ - 1.95), "steel", false)
 	_bx(Vector3(1.0, 0.32, 0.04), Vector3(7.5, 1.85, HZ - 1.95), "pricewhite", false)
 	_bx(Vector3(1.0, 0.05, 0.045), Vector3(7.5, 1.71, HZ - 1.95), "basket", false)
-	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.87, HZ - 1.92), PI, 36, Color(0.85, 0.08, 0.08))
-	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.87, HZ - 1.98), 0.0, 36, Color(0.85, 0.08, 0.08))
+	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.87, HZ - 1.92), PI, 17, Color(0.85, 0.08, 0.08))
+	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.87, HZ - 1.98), 0.0, 17, Color(0.85, 0.08, 0.08))
 	_spot(_root, basket_point(st),
 		func() -> String: return "ВЗЯТЬ КОРЗИНУ" if Food.hand == "" else "ВЕРНУТЬ КОРЗИНУ",
 		func() -> bool: return _on_foot() and (Food.hand == "" or (Food.hand == "basket" and Food.basket.is_empty())),
