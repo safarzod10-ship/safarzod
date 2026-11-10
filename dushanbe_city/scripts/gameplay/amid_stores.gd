@@ -478,6 +478,14 @@ func _bx(size: Vector3, pos: Vector3, mat: String, solid := true) -> void:
 var _goods := {}                      ## shape -> [Array transforms, Array colors]
 
 
+## two steel cables from the top of a hanging sign up to the ceiling
+func _hang(center: Vector3, width: float, height: float) -> void:
+	var top := center.y + height * 0.5
+	var ln := CEIL - top
+	for sx: float in [-1.0, 1.0]:
+		_bx(Vector3(0.02, ln, 0.02), Vector3(center.x + sx * width * 0.38, top + ln * 0.5, center.z), "steel", false)
+
+
 func _put(shape: String, xf: Transform3D, col: Color) -> void:
 	if not _goods.has(shape):
 		_goods[shape] = [[], []]
@@ -536,16 +544,20 @@ func _interior(st: Dictionary) -> Node3D:
 				_bx(Vector3(0.01, 0.045, 22.0), Vector3(x + side * 0.605, by, -5.0), "pricewhite", false)
 				var z := -15.8
 				var tint := col
+				var sc := 1.0
+				var hs := 1.0
 				while z < 5.8:
 					if rng.randf() < 0.05:
 						z += 0.2
 						continue
 					if rng.randf() < 0.22:
 						tint = col.lerp([Color(1, 1, 1), Color(0.2, 0.4, 0.9), Color(0.95, 0.75, 0.1), Color(0.1, 0.6, 0.2), Color(0.85, 0.15, 0.15), Color(0.5, 0.25, 0.6)][rng.randi() % 6], rng.randf_range(0.15, 0.55))
+						sc = rng.randf_range(0.8, 1.2)
+						hs = rng.randf_range(0.8, 1.25)
 					var deps: Array = [0.12, 0.3, 0.46] if shape != "sack" else [0.25]
 					for dep in deps:
-						_put(shape, Transform3D(Basis(Vector3.UP, PI * 0.5 if shape == "box" else 0.0), Vector3(x + side * (0.62 - float(dep)), by + 0.013, z)), tint)
-					z += step
+						_put(shape, Transform3D(Basis(Vector3.UP, PI * 0.5 if shape == "box" else 0.0).scaled(Vector3(sc, hs, sc)), Vector3(x + side * (0.62 - float(dep)), by + 0.013, z)), tint)
+					z += step * sc
 				for tz in range(-15, 6, 3):
 					_bx(Vector3(0.012, 0.05, 0.11), Vector3(x + side * 0.612, by - 0.002, float(tz) + 0.4), "price", false)
 		# end cap: a promo stack, the price board, the hanging aisle sign
@@ -557,7 +569,9 @@ func _interior(st: Dictionary) -> Node3D:
 		_bx(Vector3(0.7, 0.36, 0.04), Vector3(x, 1.25, 7.02), "price", false)
 		_label(_root, "%s\n%s" % [String(it["name"]), Wallet.fmt(int(it["price"]))], Vector3(x, 1.25, 7.05), 0.0, 28, Color(0.1, 0.1, 0.1))
 		_bx(Vector3(1.6, 0.42, 0.06), Vector3(x, 3.45, 6.2), "green", false)
+		_hang(Vector3(x, 3.45, 6.2), 1.6, 0.42)
 		_label(_root, String(it["name"]).to_upper(), Vector3(x, 3.45, 6.24), 0.0, 40, Color(1, 1, 1))
+		_label(_root, String(it["name"]).to_upper(), Vector3(x, 3.45, 6.16), PI, 40, Color(1, 1, 1))
 		_add_pick(shelf_point(st, i), id)
 	# ---- fridges along the back wall: frame, lit inside, shelves with packs, glass doors
 	for k in 4:
@@ -587,7 +601,9 @@ func _interior(st: Dictionary) -> Node3D:
 		for d in 8:
 			_bx(Vector3(1.9, 2.2, 0.04), Vector3(fx - 7.0 + d * 2.0, 1.35, -HZ + 1.33), "glass", false)
 			_bx(Vector3(0.05, 2.2, 0.06), Vector3(fx - 8.0 + d * 2.0, 1.35, -HZ + 1.33), "frame", false)
-		_label(_root, "МЯСО · ХОЛОДИЛЬНИК" if fid == "meat" else String(fit["name"]).to_upper(), Vector3(fx, 2.85, -HZ + 1.4), 0.0, 48, Color(0.1, 0.5, 0.2))
+		_bx(Vector3(16.0, 0.55, 0.08), Vector3(fx, 2.95, -HZ + 1.26), "green", false)
+		_bx(Vector3(16.0, 0.08, 1.1), Vector3(fx, 2.7, -HZ + 0.75), "frame", false)
+		_label(_root, "МЯСО · ХОЛОДИЛЬНИК" if fid == "meat" else String(fit["name"]).to_upper(), Vector3(fx, 2.95, -HZ + 1.31), 0.0, 48, Color(1, 1, 1))
 		_add_pick(xf0 * Vector3(fx, 0.3, -HZ + 2.7), fid)
 	# ---- fruit and vegetable crates on stands (left of the entrance)
 	for k in 6:
@@ -602,14 +618,21 @@ func _interior(st: Dictionary) -> Node3D:
 		_bx(Vector3(0.9, 0.3, 0.04), Vector3(sx2, 1.55, 14.52), "price", false)
 		_label(_root, "%s · %s" % [String(vit["name"]), Wallet.fmt(int(vit["price"]))], Vector3(sx2, 1.55, 14.55), 0.0, 26, Color(0.1, 0.1, 0.1))
 		_add_pick(xf0 * Vector3(sx2, 0.3, 15.4), vid)
-	_label(_root, "ФРУКТЫ И ОВОЩИ", Vector3(-25.0, 3.0, 15.4), 0.0, 56, Color(0.1, 0.5, 0.2))
+	_bx(Vector3(6.4, 0.75, 0.08), Vector3(-25.0, 3.1, 13.6), "green", false)
+	_hang(Vector3(-25.0, 3.1, 13.6), 6.4, 0.75)
+	_label(_root, "ФРУКТЫ И ОВОЩИ", Vector3(-25.0, 3.1, 13.65), 0.0, 56, Color(1, 1, 1))
+	_label(_root, "ФРУКТЫ И ОВОЩИ", Vector3(-25.0, 3.1, 13.55), PI, 56, Color(1, 1, 1))
 	# ---- basket stand at the entrance
 	_bx(Vector3(0.8, 0.1, 0.6), Vector3(7.5, 0.35, HZ - 1.6), "shelfdark")
 	for k in 6:
 		var bm := basket_mesh()
 		bm.position = Vector3(7.5, 0.66 + k * 0.07, HZ - 1.6)
 		_root.add_child(bm)
-	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.6, HZ - 1.25), PI, 36, Color(0.85, 0.08, 0.08))
+	_bx(Vector3(0.05, 1.5, 0.05), Vector3(7.5, 1.05, HZ - 1.95), "steel", false)
+	_bx(Vector3(1.0, 0.32, 0.04), Vector3(7.5, 1.85, HZ - 1.95), "pricewhite", false)
+	_bx(Vector3(1.0, 0.05, 0.045), Vector3(7.5, 1.71, HZ - 1.95), "basket", false)
+	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.87, HZ - 1.92), PI, 36, Color(0.85, 0.08, 0.08))
+	_label(_root, "КОРЗИНЫ", Vector3(7.5, 1.87, HZ - 1.98), 0.0, 36, Color(0.85, 0.08, 0.08))
 	_spot(_root, basket_point(st),
 		func() -> String: return "ВЗЯТЬ КОРЗИНУ" if Food.hand == "" else "ВЕРНУТЬ КОРЗИНУ",
 		func() -> bool: return _on_foot() and (Food.hand == "" or (Food.hand == "basket" and Food.basket.is_empty())),
@@ -624,6 +647,7 @@ func _interior(st: Dictionary) -> Node3D:
 		_bx(Vector3(0.04, 0.3, 0.42), Vector3(tx - 0.3, 1.35, 16.3), "screen", false)
 		_bx(Vector3(0.05, 1.6, 0.05), Vector3(tx + 0.45, 1.85, 16.8), "steel", false)
 		_bx(Vector3(0.6, 0.6, 0.6), Vector3(tx, 3.5, 15.0), "green", false)
+		_bx(Vector3(0.03, CEIL - 3.8, 0.03), Vector3(tx, 3.8 + (CEIL - 3.8) * 0.5, 15.0), "steel", false)
 		_label(_root, "КАССА %d" % (k + 1), Vector3(tx, 3.5, 15.31), 0.0, 40, Color(1, 1, 1))
 		_spot(_root, till_point(st, k),
 			func() -> String: return "КАССА · ОПЛАТИТЬ %s" % Wallet.fmt(Food.price_of(Food.basket)),
