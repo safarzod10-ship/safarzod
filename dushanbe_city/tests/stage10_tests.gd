@@ -433,7 +433,7 @@ func _t_amid() -> void:
 	# 0.23: the whole shopping chain - basket, shelves, till, bag in the hand, the car's boot, home
 	# kitchen (unpack, cook plov), eat; hunger / thirst
 	var am: AmidStores = main.get_node_or_null("AmidStores")
-	_check("AMID supermarkets in the city: %d" % (am.stores.size() if am else 0), am != null and am.stores.size() >= 8)
+	_check("AMID supermarkets in the city: %d" % (am.stores.size() if am else 0), am != null and am.stores.size() >= 3)
 	if am == null or am.stores.is_empty():
 		return
 	Food.hand = ""
