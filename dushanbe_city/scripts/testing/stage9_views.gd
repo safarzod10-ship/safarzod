@@ -135,6 +135,12 @@ func _ready() -> void:
 				await _look("amid_%d_top" % n, bc + bb * Vector3(0, 140, -60), bc + bb * Vector3(0, 0, -50))
 				await _look("amid_%d_side" % n, bc + bb * Vector3(-90, 20, -70), bc + bb * Vector3(0, 4, -40))
 				n += 1
+		for b in wd.buildings:
+			if b[0] == "mall_m":
+				var mc := Vector3(b[1], b[8], b[2])
+				var mb := Basis(Vector3.UP, float(b[3]))
+				await _look("mall_front", mc + mb * Vector3(-20, 18, -95), mc + Vector3(0, 6, 0))
+				break
 		var svc: AutoService = main.get_node("AutoService")
 		var m := 0
 		for sp in svc.spots:
