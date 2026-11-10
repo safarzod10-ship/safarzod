@@ -216,6 +216,13 @@ func _spawn_extra_vehicles() -> void:
 		van.place(xf.origin, xf.basis.get_euler().y)
 		laklak.van = van
 		car_session.add_vehicle(van)
+	# 0.25: taxi shifts in any own car
+	var taxi := TaxiJob.new()
+	taxi.name = "TaxiJob"
+	taxi.session = car_session
+	taxi.laklak = laklak
+	taxi.wd = laklak.wd
+	add_child(taxi)
 	# fuel for every vehicle: filling stations + delivery when the tank runs dry
 	var nav := RoadNav.new()
 	nav.name = "RoadNav"

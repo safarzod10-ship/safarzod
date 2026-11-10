@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -311,6 +311,43 @@ func _t_fp() -> void:
 	await _sec(1.5)
 	var back_d := cam.global_position.distance_to(s.player.global_position)
 	_check("third person again: camera behind the hero (%.1f m)" % back_d, back_d > 2.0)
+
+
+func _t_taxi() -> void:
+	# 0.25: taxi shift in an own car - client at a kerb, ride to the address, fare 20 + 15/km
+	var taxi: TaxiJob = main.get_node_or_null("TaxiJob")
+	_check("taxi job present", taxi != null)
+	if taxi == null:
+		return
+	var car: VehiclePrado = main.get("car")
+	if s.driving:
+		s.exit()
+		await _frames(5)
+	s.player.teleport(car.driver_door_point(0.7), 0.0)
+	await _frames(20)
+	s._select(car)
+	s.enter()
+	await _sec(0.5)
+	taxi.toggle()
+	await _frames(5)
+	_check("shift on: client waiting at %s (%.0f m away), figure at the kerb" % [str(taxi.pickup.round()), car.global_position.distance_to(taxi.pickup)],
+		taxi.on and taxi.stage == "pickup" and taxi.pickup != Vector3.INF and taxi._client != null)
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(taxi.pickup)
+	car.place(taxi.pickup + Vector3(0, 0.6, 0), 0.0)
+	await _sec(2.0)
+	_check("stopped by the client: boarded, going to «%s» (%.1f km, fare %s)" % [taxi.addr, taxi.km, Wallet.fmt(taxi.fare())],
+		taxi.stage == "ride" and taxi.dest != Vector3.INF and taxi.fare() == 20 + int(round(taxi.km * 15.0)))
+	var m0 := Wallet.money
+	var fare := taxi.fare()
+	ow.preload_at(taxi.dest)
+	car.place(taxi.dest + Vector3(0, 0.6, 0), 0.0)
+	await _sec(2.0)
+	_check("arrived: paid %s (fare %s), next client offered" % [Wallet.fmt(Wallet.money - m0), Wallet.fmt(fare)],
+		Wallet.money - m0 >= fare and taxi.rides == 1 and taxi.stage == "pickup")
+	s.exit()
+	await _sec(1.0)
+	_check("got out: shift over, no client left", not taxi.on and taxi._client == null)
 
 
 func _t_amid() -> void:
