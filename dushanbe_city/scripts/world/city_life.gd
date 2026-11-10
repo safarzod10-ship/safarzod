@@ -15,9 +15,9 @@ const CAR_MODELS := [["res://assets/models/cars/w123.glb", Vector3(1.8, 1.4, 4.8
 const PED_MODEL := "res://assets/characters/player/player.glb"
 const MOCAP := "res://assets/characters/animations/player_mocap.res"
 const CAR_NEAR := 110.0
-const CAR_FAR := 380.0
+const CAR_FAR := 300.0
 const PED_NEAR := 25.0
-const PED_FAR := 150.0
+const PED_FAR := 120.0
 
 var wd: WorldData
 var session: CarSession
@@ -60,8 +60,8 @@ func _ready() -> void:
 
 func _apply_quality() -> void:
 	var q := int(Settings.quality)
-	max_cars = [3, 6, 8, 10][clampi(q, 0, 3)]
-	max_peds = [2, 4, 6, 8][clampi(q, 0, 3)]
+	max_cars = [2, 4, 7, 9][clampi(q, 0, 3)]
+	max_peds = [3, 5, 8, 10][clampi(q, 0, 3)]
 
 
 func _focus() -> Vector3:
