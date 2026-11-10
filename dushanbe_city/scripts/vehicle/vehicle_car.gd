@@ -79,7 +79,7 @@ const PRESETS := {
 		"cd": 0.95, "brake": 32000.0, "door": Vector3(-1.08, 0.65, -0.35), "seat": Vector3(-0.42, 0.82, 0.15),
 		"lamp": Vector3(0, 0.88, -2.55),
 		"boxes": [[Vector3(1.94, 0.85, 5.15), Vector3(0, 0.3 + 0.42, 0)], [Vector3(1.78, 0.62, 3.3), Vector3(0, 1.15 + 0.31, 0.25)]],
-		"name": "Mercedes-Benz GLS 580", "color": Color(0.012, 0.012, 0.014), "interior": false},
+		"name": "Mercedes-Benz GLS 580", "color": Color(0.012, 0.012, 0.014), "interior": false, "mesh_lamps": true},
 }
 
 var preset := "camry"
@@ -235,6 +235,7 @@ func _pack_lamps_and_plates() -> void:
 		if m:
 			var keep_col: Variant = m.get_shader_parameter("emission_color")
 			m.shader = glow
+			m.set_shader_parameter("use_uv_edge", not bool(spec.get("mesh_lamps", false)))
 			if keep_col != null:
 				m.set_shader_parameter("emission_color", keep_col)
 	for mi in model.find_children("*", "MeshInstance3D", true, false):

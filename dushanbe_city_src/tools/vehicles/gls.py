@@ -221,8 +221,8 @@ def overlay(name, test):
     if not bm.faces:
         bm.free()
         return
-    for v in bm.verts:
-        v.co += v.normal * 0.004
+    for v in bm.verts:                         # out of the lens, along the car's length (front -Y, rear +Y)
+        v.co.y += 0.015 if v.co.y > 0 else -0.015
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
