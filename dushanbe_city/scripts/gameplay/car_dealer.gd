@@ -293,7 +293,7 @@ func _build_house() -> void:
 	add_child(ol)
 	_box(Vector3(0.3, 4.2, 9.0), Vector3(-sx + 0.6, 2.6, 0), black)                        # feature wall
 	_emblem(Vector3(-sx + 0.77, 3.2, -3.3), 0.85, PI * 0.5)
-	_sign_text("DUSHANBE MOTORS", Vector3(-sx + 0.77, 3.2, 0.9), PI * 0.5, 64, 0.0085, Color(0.95, 0.95, 0.96))
+	_sign_text("DUSHANBE MOTORS" if brand == "" else String(TITLES[brand][0]), Vector3(-sx + 0.77, 3.2, 0.9), PI * 0.5, 64, 0.0085, Color(0.95, 0.95, 0.96))
 	_box(Vector3(1.0, 1.05, 4.2), Vector3(-sx + 2.8, 0.95, 0), white)                      # reception
 	_box(Vector3(1.1, 0.05, 4.3), Vector3(-sx + 2.8, 1.5, 0), black)
 	_box(Vector3(0.04, 0.05, 4.0), Vector3(-sx + 3.31, 0.75, 0), lamp)
