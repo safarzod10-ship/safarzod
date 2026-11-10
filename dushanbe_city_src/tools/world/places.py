@@ -142,7 +142,7 @@ def build(roads, H, H_at, F, avoid=()):
         return placed
     # big models (AMID with its car park, malls, towers) own their footprint: the ordinary buildings of
     # the inner block rows that overlap them go (the AMID can be entered, nothing may stand inside)
-    BIG = {"amid_m": (92.0, 82.0), "mall_m": (100.0, 56.0), "luxa_m": (28.0, 28.0), "luxb_m": (32.0, 32.0)}
+    BIG = {"amid_m": (118.0, 117.0), "mall_m": (100.0, 56.0), "luxa_m": (28.0, 28.0), "luxb_m": (32.0, 32.0)}
     big = [(i, b) for i, b in enumerate(buildings) if b[0] in BIG]
     drop = set()
     for i, b in big:
@@ -246,7 +246,7 @@ def perimeter_block(add, free, a, b, c, d, tall):
                     L = 46.0
                 if kind == "sky":
                     L = 24.0
-                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0), "amid_m": (92.0, 80.0)}
+                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0), "amid_m": (116.0, 115.0)}
                 if kind in LUXD:
                     L = LUXD[kind][0]
                     if length - s - 10 < L:

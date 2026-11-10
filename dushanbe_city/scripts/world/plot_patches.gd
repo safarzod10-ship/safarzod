@@ -88,7 +88,8 @@ func _patch(b: Array, drives: Array) -> void:
 	var apron := maxf(0.0, drive_len - 6.0)
 	# the plaza ends at the street's kerb (the driveway ends on the street's centre line)
 	var kerb := D * 0.5 - 2.0 + drive_len - street_hw - 0.4 if drive_len > 0.0 else D * 0.5 + 8.0
-	var f0 := D * 0.5 - PARK
+	var amid := String(b[0]) == "amid_m"
+	var f0 := (-D * 0.5 - SIDE - BLEND) if amid else D * 0.5 - PARK
 	var f1 := D * 0.5 + apron + BLEND
 	var lx0 := -L * 0.5 - SIDE - BLEND
 	var nx := int(ceil((L + 2.0 * (SIDE + BLEND)) / STEP)) + 1
@@ -102,11 +103,13 @@ func _patch(b: Array, drives: Array) -> void:
 			var p := Vector2(cx, cz) + rt * lx + f * fz
 			var coarse := wd.height_at(p.x, p.y)
 			var want := base + 0.1
+			if amid and absf(lx) < 43.0 and fz > -31.0 and fz < 20.0:
+				want = base                                    # under the hall: the store's own floor
 			if fz > D * 0.5 and not prof_s.is_empty():
 				want = _interp(prof_s, prof_h, fz - (D * 0.5 - 2.0)) - 0.12
 			# weight 1 on the plot + apron (and SIDE m beyond its sides), fading to 0 over BLEND m
 			var ex := maxf(absf(lx) - (L * 0.5 + SIDE), 0.0)
-			var ez := maxf(fz - (D * 0.5 + apron), 0.0)
+			var ez := maxf(maxf(fz - (D * 0.5 + apron), 0.0), maxf(-fz - D * 0.5 - SIDE, 0.0) if amid else 0.0)
 			var w := 1.0 - smoothstep(0.0, BLEND, sqrt(ex * ex + ez * ez))
 			var h := lerpf(coarse, want, w)
 			V[j * nx + i] = Vector3(p.x, maxf(h, coarse + 0.03), p.y)
@@ -123,7 +126,7 @@ func _patch(b: Array, drives: Array) -> void:
 			for tri in [[a, a + nx, a + 1], [a + 1, a + nx, a + nx + 1]]:
 				var lxc := lx0 + (i + 0.5) * STEP
 				var fzc := f0 + (j + 0.5) * STEP
-				var paved := absf(lxc) < L * 0.5 + 1.0 and fzc > D * 0.5 - 1.0 and fzc < kerb
+				var paved := absf(lxc) < L * 0.5 + 1.0 and fzc > D * 0.5 - (0.0 if amid else 1.0) and fzc < kerb
 				var stx := st_p if paved else st_g
 				for q in tri:
 					var v: Vector3 = V[q]
@@ -152,7 +155,8 @@ func _patch(b: Array, drives: Array) -> void:
 	body.add_child(cs)
 	mi.add_child(body)
 	plots.append({"b": b, "c": Vector2(cx, cz), "rt": rt, "f": f, "L": L, "D": D, "base": base, "f0": f0,
-			"lx0": lx0, "nx": nx, "nz": nz, "V": V, "kerb": kerb, "drive_len": drive_len, "yaw": yaw})
+			"lx0": lx0, "nx": nx, "nz": nz, "V": V, "kerb": kerb, "drive_len": drive_len, "yaw": yaw,
+			"street_y": prof_h[-1] if not prof_h.is_empty() else base, "street_hw": street_hw})
 	count += 1
 
 

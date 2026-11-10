@@ -107,82 +107,198 @@ def cart_icon(k, cx, y, cz, s, m):
 
 
 # ------------------------------------------------------------------ AMID supermarket
+# 0.24 site plan (after the owner's six reference views): the hall in the middle of its plot, the main
+# entrance (glass vestibule, AMID sign) at the front, a pedestrian axis with the FOUNTAIN from the street
+# sidewalk to the doors, the car park in two halves on either side of it, access lanes round the sides
+# and the back of the hall (the plot is ringed by roads), flower / tree strips along every sidewalk,
+# a technical yard at the back (loading docks, outside stair, plant, containers, transformer).
+# Plot 116 x 115 m; Blender -Y = street. Printed: the hall centre's offset from the model's AABB centre.
+SITE = {"front": -63.0, "back": 52.0, "half": 58.0}
+
+
 def amid():
     reset()
     k = K({
-        "panel": mat("amid_panel", (0.14, 0.15, 0.17), 0.3, 0.45),
-        "stone": mat("amid_stone", (0.86, 0.82, 0.74), 0.0, 0.55),
-        "glass": mat("amid_glass", (0.16, 0.28, 0.36), 0.7, 0.06, emit=(0.95, 0.85, 0.6), strength=0.35),
+        "panel": mat("amid_panel", (0.06, 0.065, 0.075), 0.35, 0.4),
+        "grey": mat("amid_grey", (0.55, 0.56, 0.58), 0.2, 0.6),
+        "stone": mat("amid_stone", (0.82, 0.76, 0.66), 0.0, 0.6),
+        "glass": mat("amid_glass", (0.2, 0.28, 0.32), 0.6, 0.08, emit=(1.0, 0.86, 0.62), strength=1.1),
+        "darkglass": mat("amid_darkglass", (0.08, 0.12, 0.16), 0.7, 0.05, emit=(0.3, 0.4, 0.5), strength=0.15),
         "green": mat("amid_green", (0.1, 0.95, 0.25), 0.0, 0.35, emit=(0.08, 1.0, 0.25), strength=2.5),
         "white": mat("amid_white", (0.97, 0.97, 0.97), 0.0, 0.4, emit=(1, 1, 1), strength=0.8),
-        "steel": mat("amid_steel", (0.72, 0.74, 0.77), 0.85, 0.3),
+        "steel": mat("amid_steel", (0.62, 0.64, 0.67), 0.85, 0.3),
         "asph": mat("amid_asphalt", (0.17, 0.17, 0.18), 0.0, 0.9),
         "line": mat("amid_line", (0.92, 0.92, 0.9), 0.0, 0.6),
         "screen": mat("amid_screen", (1, 1, 1), 0.0, 0.3, img=FLAG),
         "unit": mat("amid_unit", (0.6, 0.62, 0.64), 0.4, 0.5),
-        "hedge": mat("amid_hedge", (0.15, 0.36, 0.12), 0.0, 0.9),
+        "pave": mat("amid_pave", (0.78, 0.72, 0.62), 0.0, 0.8),
+        "pave_red": mat("amid_pave_red", (0.62, 0.34, 0.26), 0.0, 0.8),
+        "lawn": mat("amid_lawn", (0.2, 0.42, 0.14), 0.0, 0.95),
+        "kerb": mat("amid_kerb", (0.72, 0.72, 0.7), 0.0, 0.8),
+        "dock": mat("amid_dock", (0.18, 0.18, 0.2), 0.3, 0.6),
+        "yellow": mat("amid_yellow", (0.95, 0.75, 0.05), 0.0, 0.5),
+        "rubber": mat("amid_rubber", (0.03, 0.03, 0.03), 0.0, 0.9),
     })
     L, D, H = 84.0, 50.0, 14.0
-    fy = -D / 2
-    # main hall: stone base walls (hollow: the game builds the interior) with the entrance opening
-    EW, EH, T = 10.0, 3.6, 0.6
-    k.box((L, T, 4.5), (0, -fy - T / 2, 2.25), "stone")                                  # back
+    fy, by = -D / 2, D / 2
+    F, B, HW = SITE["front"], SITE["back"], SITE["half"]
+    T0 = 0.45                                     # top of the site slab (the game sinks models 0.3 m)
+
+    def slab(x0, x1, y0, y1, m, t=0.03, z=T0):
+        k.box((x1 - x0, y1 - y0, t), ((x0 + x1) / 2, (y0 + y1) / 2, z + t / 2), m)
+
+    def kerb_rect(x0, x1, y0, y1, h=0.15):
+        for (a, b2, c, d) in ((x0, x1, y0, y0), (x0, x1, y1, y1), (x0, x0, y0, y1), (x1, x1, y0, y1)):
+            if a == b2:
+                k.box((0.18, d - c, h), (a, (c + d) / 2, T0 + h / 2), "kerb")
+            else:
+                k.box((b2 - a, 0.18, h), ((a + b2) / 2, c, T0 + h / 2), "kerb")
+
+    # ================= ground: one asphalt slab under the whole plot, finishes on top
+    k.box((2 * HW, B - F, T0), (0, (F + B) / 2, T0 / 2), "asph")
+    # street sidewalk (front), flower strip, plaza axis, fountain circle, building-front sidewalk
+    slab(-HW, HW, F, F + 4.0, "pave")
     for sx in (-1, 1):
-        k.box((T, D, 4.5), (sx * (L / 2 - T / 2), 0, 2.25), "stone")                     # sides
+        slab(sx * 7.0, sx * 44.0, F + 4.0, F + 7.0, "lawn", t=0.12) if sx > 0 else slab(-44.0, -7.0, F + 4.0, F + 7.0, "lawn", t=0.12)
+        kerb_rect(min(sx * 7.0, sx * 44.0), max(sx * 7.0, sx * 44.0), F + 4.0, F + 7.0)
+    slab(-6.0, 6.0, F + 4.0, fy - 4.0, "pave")
+    for i in range(int((fy - 4.0 - F - 4.0) / 3.0)):
+        slab(-6.0, 6.0, F + 5.0 + i * 3.0, F + 5.4 + i * 3.0, "pave_red", t=0.035)
+    fcy = (F + 7.0 + fy - 12.0) / 2                       # the fountain circle on the axis
+    k.cyl(10.0, 0.04, (0, fcy, T0 + 0.02), "pave", verts=40)
+    k.cyl(10.4, 0.035, (0, fcy, T0 + 0.015), "pave_red", verts=40)
+    slab(-HW + 5.0, HW - 5.0, fy - 4.0, fy, "pave")                     # along the building front
+    slab(-44.0, 44.0, fy - 11.0, fy - 4.0, "asph", t=0.01)               # the fire / drop-off lane
+    # ================= the car park: two halves, two rows of bays each, a tree island between
+    for sx in (-1, 1):
+        x0, x1 = (8.0, 44.0) if sx > 0 else (-44.0, -8.0)
+        yA, yB = F + 7.0, fy - 11.0                       # car park depth (front lawn .. drop-off lane)
+        # island (kerbed lawn) along the middle of each half
+        ym = (yA + yB) / 2
+        slab(x0 + 2.0, x1 - 2.0, ym - 1.0, ym + 1.0, "lawn", t=0.14)
+        kerb_rect(x0 + 2.0, x1 - 2.0, ym - 1.0, ym + 1.0)
+        # bays: rows facing the aisles (white lines every 2.6 m), arrows
+        for row_y, dirn in ((yA + 0.2, 1), (ym - 1.2, -1), (ym + 1.2, 1), (yB - 0.2, -1)):
+            x = x0 + 1.0
+            while x <= x1 - 1.0:
+                k.box((0.12, 5.0, 0.01), (x, row_y + dirn * 2.5, T0 + 0.005), "line")
+                x += 2.6
+        # axis kerb
+        k.box((0.2, yB - yA, 0.15), (sx * 7.6, (yA + yB) / 2, T0 + 0.075), "kerb")
+    # zebra across the drop-off lane at the axis
+    for i in range(6):
+        k.box((0.5, 6.4, 0.012), (-2.75 + i * 1.1, fy - 7.5, T0 + 0.006), "line")
+    # ================= side lanes round the hall, side lawns, outer sidewalks; back lane
+    for sx in (-1, 1):
+        lx0 = sx * 46.0
+        # lawn strip along the hall wall
+        a, b2 = sorted((sx * 42.5, sx * 45.5))
+        slab(a, b2, fy, by, "lawn", t=0.12)
+        kerb_rect(a, b2, fy, by)
+        # lane centre line (dashed) and edge lines
+        cx = sx * 49.5
+        y = F + 2.0
+        while y < B - 6.0:
+            k.box((0.14, 3.0, 0.01), (cx, y + 1.5, T0 + 0.005), "line")
+            y += 6.0
+        # outer sidewalk + lawn with the plot fence line
+        a, b2 = sorted((sx * 53.0, sx * 55.0))
+        slab(a, b2, F + 4.0, B - 4.0, "pave")
+        a, b2 = sorted((sx * 55.0, sx * HW))
+        slab(a, b2, F + 4.0, B, "lawn", t=0.12)
+        kerb_rect(a, b2, F + 4.0, B)
+        # lawn between the car park and the side lane (gaps at the two aisles)
+        a, b2 = sorted((sx * 44.0, sx * 46.0))
+        slab(a, b2, F + 7.0, F + 12.0, "lawn", t=0.12)
+        slab(a, b2, fy - 13.5, fy - 11.5, "lawn", t=0.12)
+    y = -46.0
+    while y < 46.0:
+        k.box((3.0, 0.14, 0.01), (y + 1.5, by + 19.5, T0 + 0.005), "line")
+        y += 6.0
+    slab(-HW, HW, B - 4.0, B, "pave")
+    # ================= the hall
+    EW, EH, Tw = 10.0, 3.6, 0.6
+    k.box((L, Tw, 4.5), (0, by - Tw / 2, 2.25 + T0 - 0.45), "grey")                                  # back (yard side)
+    for sx in (-1, 1):
+        k.box((Tw, D, 4.5), (sx * (L / 2 - Tw / 2), 0, 2.25), "stone")
         w = L / 2 - EW / 2
-        k.box((w, T, 4.5), (sx * (EW / 2 + w / 2), fy + T / 2, 2.25), "stone")           # front
-    k.box((EW, T, 4.5 - EH), (0, fy + T / 2, EH + (4.5 - EH) / 2), "stone")              # lintel
+        k.box((w, Tw, 4.5), (sx * (EW / 2 + w / 2), fy + Tw / 2, 2.25), "stone")
+    k.box((EW, Tw, 4.5 - EH), (0, fy + Tw / 2, EH + (4.5 - EH) / 2), "stone")
+    # upper volumes: black composite panels; a raised grey block over the right / back half
     k.box((L, D, H - 4.5), (0, 0, 4.5 + (H - 4.5) / 2), "panel")
-    k.box((L + 1.0, D + 1.0, 0.8), (0, 0, H + 0.4), "steel")                         # parapet cap
-    # glass front: full-height curtain wall in the middle third with mullions + floors
-    gw = L * 0.48
-    for sx in (-1, 1):                         # left / right of the entrance: full height
-        w = gw / 2 - EW / 2
-        k.box((w, 0.3, H - 1.0), (sx * (EW / 2 + w / 2), fy - 0.1, (H - 1.0) / 2 + 0.3), "glass")
-    k.box((EW, 0.3, H - 1.0 - EH + 0.3), (0, fy - 0.1, EH + (H - 1.0 - EH + 0.3) / 2), "glass")   # over the doors
-    for i in range(13):
-        x = -gw / 2 + i * gw / 12
-        z0 = EH if abs(x) < EW / 2 else 0.3    # no mullion through the doorway
-        k.box((0.3, 0.6, H - 0.7 - z0), (x, fy - 0.3, z0 + (H - 0.7 - z0) / 2), "steel")
-    for sx in (-1, 1):                         # door jambs
-        k.box((0.35, 0.7, EH), (sx * (EW / 2 + 0.17), fy - 0.3, EH / 2), "steel")
-    k.box((EW + 0.7, 0.7, 0.3), (0, fy - 0.3, EH + 0.15), "steel")                     # door head
-    for z in (4.6, 9.2):
-        k.box((gw, 0.6, 0.3), (0, fy - 0.3, z), "steel")
-    # side shop windows in the stone base
+    k.box((L * 0.42, D * 0.7, 3.0), (L * 0.27, D * 0.12, H + 1.5), "grey")
+    k.box((L + 1.0, D + 1.0, 0.8), (0, 0, H + 0.4), "steel")
+    # panel joints on the black cladding (front + sides)
+    for i in range(1, 14):
+        x = -L / 2 + i * L / 14
+        k.box((0.06, 0.12, H - 4.6), (x, fy - 0.03, 4.5 + (H - 4.5) / 2), "steel")
+    for zz in (7.6, 10.8):
+        k.box((L, 0.12, 0.05), (0, fy - 0.03, zz), "steel")
+    # left end of the front: beige stone pavilion with a tall slit window
+    k.box((12.0, 2.0, H + 1.0), (-L / 2 + 6.0, fy - 0.6, (H + 1.0) / 2), "stone")
+    for i in range(3):
+        k.box((1.4, 0.3, H - 3.0), (-L / 2 + 2.5 + i * 3.4, fy - 1.65, (H - 3.0) / 2 + 1.0), "glass")
+    # the glass curtain wall in the middle (2 storeys), mullions + transoms
+    gw = L * 0.5
     for sx in (-1, 1):
-        for i in range(4):
+        w = gw / 2 - EW / 2
+        k.box((w, 0.3, H - 2.0), (sx * (EW / 2 + w / 2), fy - 0.1, (H - 2.0) / 2 + 0.3), "glass")
+    k.box((EW, 0.3, H - 2.0 - EH), (0, fy - 0.1, EH + (H - 2.0 - EH) / 2 + 0.3), "glass")
+    for i in range(17):
+        x = -gw / 2 + i * gw / 16
+        z0 = EH if abs(x) < EW / 2 else 0.3
+        k.box((0.22, 0.5, H - 1.7 - z0), (x, fy - 0.3, z0 + (H - 1.7 - z0) / 2), "steel")
+    for zz in (EH + 0.1, 7.0, 10.2):
+        k.box((gw, 0.5, 0.2), (0, fy - 0.3, zz), "steel")
+    # ground-floor shop windows along the rest of the front and both sides
+    for sx in (-1, 1):
+        for i in range(3):
             x = sx * (gw / 2 + 3.0 + i * 4.6)
-            k.box((3.6, 0.25, 3.0), (x, fy - 0.05, 2.1), "glass")
-    # entrance: sliding doors + a cantilevered canopy with a light strip
-    k.box((16.0, 7.0, 0.5), (0, fy - 3.5, 5.2), "panel")
-    k.box((16.0, 0.3, 0.25), (0, fy - 7.0, 5.0), "white")
-    # the name over the entrance: a dark board on the canopy with green AMID letters and a cart
-    k.box((13.0, 0.4, 2.2), (0, fy - 6.6, 6.55), "panel")
-    k.box((13.2, 0.45, 0.12), (0, fy - 6.6, 5.48), "green")
-    k.text("АМИД", (1.2, fy - 6.85, 6.55), 1.75, "green", extrude=0.18)
-    cart_icon(k, -4.4, fy - 6.85, 6.55, 1.2, "green")
-    # THE SIGN: big green AMID letters + cart, a white subtitle, on the parapet over the glass
-    k.box((34.0, 0.5, 6.0), (-L * 0.18, fy - 0.5, H + 2.4), "panel")
-    k.text("АМИД", (-L * 0.18 + 3.0, fy - 0.85, H + 3.2), 3.6, "green", extrude=0.25)
-    k.text("СУПЕРМАРКЕТ", (-L * 0.18 + 3.0, fy - 0.85, H + 0.4), 1.2, "white", extrude=0.1)
-    cart_icon(k, -L * 0.18 - 12.0, fy - 0.85, H + 2.6, 1.6, "green")
-    # side sign (visible along the avenue)
-    k.box((0.5, 16.0, 4.0), (L / 2 + 0.3, 0, H - 2.5), "panel")
+            if abs(x) < L / 2 - 12.0 or sx > 0:
+                k.box((3.8, 0.25, 3.0), (x, fy - 0.05, 2.1), "glass")
+        for i in range(8):
+            yy = fy + 4.0 + i * 5.6
+            k.box((0.25, 4.2, 3.0), (sx * (L / 2 + 0.05), yy, 2.1), "glass")
+        # tall glass corner at the front of each side
+        k.box((0.3, 6.0, H - 2.0), (sx * (L / 2 + 0.1), fy + 3.0, (H - 2.0) / 2 + 0.3), "glass")
+    # ---- the entrance vestibule (glass box) + canopy with the AMID sign
+    k.box((13.0, 4.5, 0.4), (0, fy - 2.6, 4.7), "panel")
+    for sx in (-1, 1):
+        k.box((0.25, 4.3, 4.5), (sx * 6.4, fy - 2.6, 2.25), "steel")
+        k.box((0.06, 4.0, 4.0), (sx * 6.25, fy - 2.6, 2.3), "glass")
+        k.box((1.2, 0.08, 4.0), (sx * 5.7, fy - 4.75, 2.3), "glass")
+    k.box((13.4, 0.5, 1.5), (0, fy - 4.9, 5.4), "panel")
+    k.text("АМИД", (1.0, fy - 5.2, 5.4), 1.05, "green", extrude=0.12)
+    cart_icon(k, -3.4, fy - 5.2, 5.4, 0.62, "green")
+    k.box((13.4, 0.55, 0.1), (0, fy - 4.9, 4.62), "white")
+    # ---- THE SIGN: big AMID letters + cart, SUPERMARKET, on a raised board over the left half
+    k.box((34.0, 0.6, 6.5), (-L * 0.16, fy - 0.5, H + 2.6), "panel")
+    k.text("АМИД", (-L * 0.16 + 3.5, fy - 0.85, H + 3.4), 3.8, "white", extrude=0.25)
+    k.text("СУПЕРМАРКЕТ", (-L * 0.16 + 3.5, fy - 0.85, H + 0.6), 1.3, "white", extrude=0.1)
+    cart_icon(k, -L * 0.16 - 12.0, fy - 0.85, H + 2.8, 1.7, "green")
+    # side sign + flag screen on the side facing the side lane (+X)
+    k.box((0.5, 18.0, 5.0), (L / 2 + 0.3, -6.0, H - 3.0), "panel")
     bpy.ops.object.text_add(location=(0, 0, 0))
     t = bpy.context.object
     t.data.font = bpy.data.fonts.load(FONT_PATH, check_existing=True)
     t.data.body = "АМИД"
     t.data.align_x = 'CENTER'
     t.data.align_y = 'CENTER'
-    t.data.size = 2.6
+    t.data.size = 2.8
     t.data.extrude = 0.2
     bpy.ops.object.convert(target='MESH')
     t = bpy.context.object
     t.data.transform(Matrix.Rotation(math.pi / 2, 4, 'X'))
     t.data.transform(Matrix.Rotation(math.pi / 2, 4, 'Z'))
-    t.data.transform(Matrix.Translation((L / 2 + 0.75, 0, H - 2.5)))
-    k.add(t, "green")
+    t.data.transform(Matrix.Translation((L / 2 + 0.75, -4.0, H - 3.0)))
+    k.add(t, "white")
+    for sx, yy in ((-1, 2.0), (1, 9.0)):
+        k.box((0.4, 8.4, 5.4), (sx * (L / 2 + 0.25), yy, 8.6), "panel")
+        bpy.ops.mesh.primitive_plane_add(size=1, location=(sx * (L / 2 + 0.5), yy, 8.6), rotation=(math.pi / 2, math.pi, sx * math.pi / 2))
+        p = bpy.context.object
+        p.scale = (8.0, 5.0, 1)
+        bpy.ops.object.transform_apply(scale=True, rotation=True)
+        k.add(p, "screen")
     # LED screens with the flag on both sides of the glass
     for sx in (-1, 1):
         k.box((9.4, 0.4, 5.6), (sx * (gw / 2 + 8.0), fy - 0.3, 8.6), "panel")
@@ -191,32 +307,56 @@ def amid():
         p.scale = (9.0, 5.2, 1)
         bpy.ops.object.transform_apply(scale=True, rotation=True)
         k.add(p, "screen")
-    # roof: AC units, vents, a skylight band
+    # ---- roof: plant, vents, a skylight band, parapet
     for i in range(6):
         for j in range(2):
-            k.box((3.0, 2.0, 1.6), (-L / 2 + 10 + i * 12.0, 8 + j * 8.0, H + 1.6), "unit")
-            k.cyl(0.6, 0.2, (-L / 2 + 10 + i * 12.0, 8 + j * 8.0, H + 2.5), "panel", verts=12)
-    k.box((L * 0.6, 4.0, 0.6), (0, -6.0, H + 1.1), "glass")
-    # parking in front: asphalt, white bays, lamp posts, hedges, trolley shelter
-    PD = 28.0
-    k.box((L + 8, PD, 0.45), (0, fy - PD / 2 - 1.0, 0.225), "asph")    # (the game sinks models 0.3 m)
-    for row in (0, 1):
-        y0 = fy - 6.0 - row * 13.0
-        for i in range(28):
-            x = -L / 2 + 4 + i * 2.8
-            if abs(x) < 9.0:
-                continue
-            k.box((0.12, 5.0, 0.02), (x, y0 - 2.5, 0.46), "line")
-        k.box((L - 6, 0.12, 0.02), (0, y0 - 5.0, 0.46), "line")
-    for i in range(5):
-        x = -L / 2 + 8 + i * (L - 16) / 4
-        k.cyl(0.15, 8.0, (x, fy - 15.5, 4.0), "steel", verts=8)
-        k.box((1.6, 0.5, 0.3), (x, fy - 15.5, 8.0), "white")
-        k.box((3.0, 1.0, 0.8), (x, fy - 15.5, 0.4), "hedge")
-    k.box((6.0, 2.4, 0.15), (L / 2 - 8, fy - 3.5, 2.6), "steel")
-    for dx in (-2.8, 2.8):
-        k.cyl(0.08, 2.6, (L / 2 - 8 + dx, fy - 3.5, 1.3), "steel", verts=8)
+            k.box((3.0, 2.0, 1.6), (-L / 2 + 10 + i * 12.0, -8 + j * 8.0, H + 1.6), "unit")
+            k.cyl(0.6, 0.2, (-L / 2 + 10 + i * 12.0, -8 + j * 8.0, H + 2.5), "panel", verts=12)
+    k.box((L * 0.5, 4.0, 0.6), (-L * 0.2, 8.0, H + 1.1), "darkglass")
+    # ================= the back: technical yard
+    # grey back facade with vertical seams, 4 loading docks with shelters, bumpers and levellers
+    for i in range(1, 12):
+        k.box((0.08, 0.15, H - 1.0), (-L / 2 + i * L / 12, by + 0.05, (H - 1.0) / 2 + 0.5), "steel")
+    for i in range(4):
+        x = -24.0 + i * 8.0
+        k.box((3.4, 0.2, 3.6), (x, by + 0.1, 2.25), "dock")                     # the roller door
+        for zz in range(6):
+            k.box((3.3, 0.22, 0.04), (x, by + 0.12, 0.7 + zz * 0.55), "steel")
+        k.box((4.2, 0.9, 0.4), (x, by + 0.45, 4.2), "rubber")                   # dock shelter head
+        for sx in (-1, 1):
+            k.box((0.4, 0.9, 3.8), (x + sx * 1.9, by + 0.45, 2.3), "rubber")
+            k.box((0.35, 0.3, 0.45), (x + sx * 1.1, by + 0.5, 1.0), "rubber")   # bumpers
+        k.box((3.2, 2.0, 0.1), (x, by + 1.0, 1.0), "yellow")                    # dock leveller lip
+    k.box((36.0, 3.0, 1.0), (-12.0, by + 1.5, 0.5 + T0 - 0.45), "grey")        # the dock platform
+    # outside steel stair to the roof (switchback), right side of the back
+    sx0 = 30.0
+    for f in range(4):
+        z0 = f * 3.5
+        for s in range(10):
+            k.box((1.2, 0.3, 0.05), (sx0 + (s * 0.3 if f % 2 == 0 else 3.0 - s * 0.3), by + 1.2, z0 + s * 0.35 + 0.35), "steel")
+        k.box((1.4, 1.4, 0.08), (sx0 + (3.4 if f % 2 == 0 else -0.4), by + 1.2, z0 + 3.5), "steel")
+        k.box((3.6, 0.05, 0.05), (sx0 + 1.5, by + 1.9, z0 + 2.3), "steel")
+    for px in (sx0 - 0.4, sx0 + 3.4):
+        k.box((0.12, 0.12, H), (px, by + 1.9, H / 2), "steel")
+    # plant in the yard: chillers, transformer box, containers, pallets
+    for i in range(3):
+        k.box((3.0, 2.2, 2.0), (-38.0 + i * 3.6, by + 9.0, T0 + 1.0), "unit")
+        k.cyl(0.8, 0.3, (-38.0 + i * 3.6, by + 9.0, T0 + 2.15), "panel", verts=16)
+    k.box((4.0, 3.0, 2.6), (22.0, by + 10.0, T0 + 1.3), "grey")
+    k.box((4.2, 0.1, 0.4), (22.0, by + 8.45, T0 + 2.0), "yellow")
+    for i in range(3):
+        k.box((2.0, 1.4, 1.4), (6.0 + i * 2.4, by + 12.0, T0 + 0.7), "dock")
+    for i in range(4):
+        k.box((1.2, 1.0, 0.15), (-2.0 + i * 1.4, by + 12.5, T0 + 0.08), "stone")
+    # yard markings
+    for i in range(4):
+        x = -24.0 + i * 8.0
+        k.box((0.15, 12.0, 0.01), (x - 2.0, by + 9.0, T0 + 0.005), "yellow")
+        k.box((0.15, 12.0, 0.01), (x + 2.0, by + 9.0, T0 + 0.005), "yellow")
     k.export(os.path.join(OUT, "amid.glb"))
+    c = (F + B) / 2
+    print("AMID site: %.1f x %.1f m; hall centre is %.2f m from the AABB centre along Blender Y (Godot HALL_Z = %.2f)"
+          % (2 * HW, B - F, -c, c))
 
 
 # ------------------------------------------------------------------ TAS Group tower

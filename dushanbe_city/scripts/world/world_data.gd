@@ -196,7 +196,7 @@ func in_plaza(x: float, z: float) -> bool:
 		var yaw := float(a[2])
 		var lx := dx * cos(yaw) - dz * sin(yaw)
 		var fz := -(dx * sin(yaw) + dz * cos(yaw))
-		if absf(lx) < float(a[3]) * 0.5 + 6.0 and fz > -float(a[4]) * 0.5 - 2.0 and fz < float(a[4]) * 0.5 + 26.0:
+		if absf(lx) < float(a[3]) * 0.5 + 6.0 and fz > -float(a[4]) * 0.5 - 4.0 and fz < float(a[4]) * 0.5 + 22.0:
 			return true
 	return false
 

@@ -16,7 +16,10 @@ func build(patches: PlotPatches, world: OpenWorld) -> void:
 	pp = patches
 	ow = world
 	for P: Dictionary in pp.plots:
-		_plaza(P)
+		if String(P["b"][0]) == "amid_m":
+			_amid_site(P)
+		else:
+			_plaza(P)
 
 
 func _m(key: String) -> Material:
@@ -53,6 +56,9 @@ func _m(key: String) -> Material:
 			m.uv1_world_triplanar = true
 			m.uv1_scale = Vector3(0.6, 0.6, 0.6)
 			m.roughness = 0.9
+		"zebra":
+			m.albedo_color = Color(0.95, 0.95, 0.93)
+			m.roughness = 0.6
 		"hedge":
 			m.albedo_color = Color(0.16, 0.36, 0.13)
 			m.roughness = 0.95
@@ -274,5 +280,145 @@ func _plaza(P: Dictionary) -> void:
 			var ix := -42.0 + 8.0 + q * (84.0 - 16.0) / 4.0
 			for dx in [-1.8, 1.8]:
 				add.call(trees, "thuja_oval", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.8), at.call(ix + dx, front - 13.5)))
+	ow._place_props(root, props)
+	ow._trees(root, trees, 0)
+
+
+## 0.24 AMID site (see dushanbe_city_src/tools/landmarks/amid_tas.py, SITE): the model brings the
+## hardscape (paving, lawns, kerbs, lanes, bays, yard); here the living / furniture layer goes on it.
+## Model coordinates (Blender x, y; -y = street) -> plot-local: lx = -x, fz = -y - 5.5.
+func _amid_site(P: Dictionary) -> void:
+	var c: Vector2 = P["c"]
+	var rt: Vector2 = P["rt"]
+	var f: Vector2 = P["f"]
+	var yaw: float = P["yaw"]
+	var root := Node3D.new()
+	root.name = "AmidSite%d" % get_child_count()
+	add_child(root)
+	var at := func(bx: float, by: float, up := 0.0) -> Vector3:
+		var lx := -bx
+		var fz := -by - 5.5
+		var p := c + rt * lx + f * fz
+		var y := pp.surface(p.x, p.y)
+		if is_nan(y):
+			y = ow.wd.height_at(p.x, p.y)
+		return Vector3(p.x, y + 0.05 + up, p.y)
+	var face_street := Basis(Vector3.UP, yaw + PI)
+	var props := {}
+	var trees := {}
+	var add := func(dict: Dictionary, id: String, xf: Transform3D) -> void:
+		if not dict.has(id):
+			dict[id] = []
+		(dict[id] as Array).append(xf)
+	var F := -63.0
+	var B := 52.0
+	var fy := -25.0
+	# ---- the fountain on the axis (basin, tiers, jets, spray), benches and vases round it
+	var fcy := (F + 7.0 + fy - 12.0) * 0.5
+	var fc: Vector3 = at.call(0.0, fcy)
+	var R := 4.2
+	var fnode := Node3D.new()
+	fnode.name = "Fountain"
+	root.add_child(fnode)
+	fnode.position = fc
+	_cyl(fnode, R + 2.2, 0.16, Vector3(0, 0.08, 0), "flowers_mix")
+	_cyl(fnode, R + 2.35, 0.2, Vector3(0, 0.07, 0), "kerb")
+	_cyl(fnode, R + 0.6, 0.2, Vector3(0, 0.12, 0), "stone")
+	_cyl(fnode, R, 0.6, Vector3(0, 0.3, 0), "stone", -1.0, true)
+	_cyl(fnode, R - 0.25, 0.04, Vector3(0, 0.55, 0), "water")
+	_cyl(fnode, 0.4, 1.4, Vector3(0, 1.2, 0), "stone", 0.28)
+	_cyl(fnode, 1.6, 0.18, Vector3(0, 1.48, 0), "stone", 1.25)
+	_cyl(fnode, 1.4, 0.03, Vector3(0, 1.58, 0), "water")
+	_cyl(fnode, 0.2, 0.8, Vector3(0, 2.0, 0), "stone", 0.14)
+	_cyl(fnode, 0.75, 0.14, Vector3(0, 2.4, 0), "stone", 0.55)
+	_cyl(fnode, 0.05, 1.8, Vector3(0, 3.35, 0), "spray", 0.12)
+	for q in 10:
+		var a := q * TAU / 10.0
+		_cyl(fnode, 0.05, 1.1, Vector3(cos(a), 0, sin(a)) * (R - 0.6) + Vector3(0, 1.1, 0), "spray", 0.02)
+	var sp := CPUParticles3D.new()
+	sp.amount = 56
+	sp.lifetime = 1.2
+	sp.position = Vector3(0, 4.1, 0)
+	sp.direction = Vector3.UP
+	sp.spread = 30.0
+	sp.initial_velocity_min = 1.6
+	sp.initial_velocity_max = 2.6
+	sp.gravity = Vector3(0, -9.8, 0)
+	var qm := QuadMesh.new()
+	qm.size = Vector2(0.12, 0.12)
+	qm.material = _m("spray")
+	sp.mesh = qm
+	sp.visibility_range_end = 90.0
+	fnode.add_child(sp)
+	for q in 4:
+		var a := q * TAU / 4.0 + PI * 0.25
+		add.call(props, "bench_park_soviet", Transform3D(Basis(Vector3.UP, -a - PI * 0.5), fc + Vector3(cos(a), 0, sin(a)) * (R + 3.4)))
+		add.call(props, "planter_vase_soviet", Transform3D(Basis.IDENTITY, fc + Vector3(cos(a + PI * 0.25), 0, sin(a + PI * 0.25)) * (R + 3.0)))
+	# ---- along the street: flower strip with trees, lamps, bins, storm drains, bus shelter
+	for sx: float in [-1.0, 1.0]:
+		var x := 9.5
+		var q := 0
+		while x < 43.0:
+			add.call(trees, "chinar_middle" if q % 2 == 0 else "elm_a", Transform3D(Basis(Vector3.UP, q * 1.3).scaled(Vector3.ONE * 0.85), at.call(sx * x, F + 5.5)))
+			add.call(trees, "rose_bush" if q % 2 == 0 else "flowers_petunia", Transform3D(Basis(Vector3.UP, q), at.call(sx * (x + 3.0), F + 5.5, 0.05)))
+			add.call(trees, "flowers_salvia", Transform3D(Basis(Vector3.UP, q * 2.0), at.call(sx * (x + 1.5), F + 4.8, 0.05)))
+			x += 6.5
+			q += 1
+		_box(root, Vector3(35.0, 0.06, 2.6), Transform3D(Basis(Vector3.UP, yaw), at.call(sx * 25.5, F + 5.5, 0.08)), "flowers_mix")
+		for xx in [12.0, 30.0]:
+			add.call(props, "light_street_single", Transform3D(face_street, at.call(sx * xx, F + 1.0)))
+			add.call(props, "bin_modern_steel", Transform3D(face_street, at.call(sx * (xx + 1.0), F + 1.4)))
+		add.call(props, "storm_grate", Transform3D(face_street, at.call(sx * 20.0, F + 0.4)))
+		add.call(props, "light_avenue_double", Transform3D(face_street, at.call(sx * 7.0, F + 3.5)))
+	add.call(props, "bus_stop_shelter", Transform3D(face_street, at.call(-34.0, F + 2.0)))
+	add.call(props, "manhole_cover", Transform3D(face_street, at.call(18.0, F + 2.5)))
+	# ---- the axis: bollards along its edges, lamps
+	var y := F + 8.0
+	while y < fy - 12.0:
+		if absf(y - fcy) > 9.0:
+			for sx: float in [-1.0, 1.0]:
+				add.call(props, "bollard_concrete", Transform3D(Basis.IDENTITY, at.call(sx * 6.6, y)))
+		y += 3.0
+	for sx: float in [-1.0, 1.0]:
+		add.call(props, "light_park_4m", Transform3D(Basis.IDENTITY, at.call(sx * 5.2, fy - 6.0)))
+	# ---- car park islands: trees + lamps
+	var ym := ((F + 7.0) + (fy - 11.0)) * 0.5
+	for sx: float in [-1.0, 1.0]:
+		var x := 12.0
+		var q := 0
+		while x < 41.0:
+			add.call(trees, "chinar_middle" if q % 2 == 0 else "acacia", Transform3D(Basis(Vector3.UP, q * 1.9).scaled(Vector3.ONE * 0.8), at.call(sx * x, ym)))
+			if q % 2 == 1:
+				add.call(props, "light_street_single", Transform3D(Basis(Vector3.UP, yaw + PI * 0.5), at.call(sx * (x + 2.6), ym)))
+			x += 5.6
+			q += 1
+	# ---- along the hall's sides: thujas on the lawn; outer lawns: trees, fence
+	for sx: float in [-1.0, 1.0]:
+		var yy := fy + 2.0
+		while yy < 24.0:
+			add.call(trees, "thuja_cone", Transform3D(Basis.IDENTITY, at.call(sx * 44.0, yy)))
+			yy += 5.0
+		yy = F + 8.0
+		var q := 0
+		while yy < B - 2.0:
+			add.call(trees, "elm_b" if q % 2 == 0 else "poplar_a", Transform3D(Basis(Vector3.UP, q * 1.1).scaled(Vector3.ONE * 0.9), at.call(sx * 56.5, yy)))
+			add.call(props, "fence_decorative_15", Transform3D(Basis(Vector3.UP, yaw + PI * 0.5), at.call(sx * 57.6, yy + 3.0)))
+			yy += 7.5
+			q += 1
+	# ---- the back: hedge along the back sidewalk, a few trees
+	var xx := -54.0
+	while xx < 54.0:
+		add.call(trees, "hedge_privet", Transform3D(Basis(Vector3.UP, yaw), at.call(xx, B - 1.0)))
+		xx += 2.2
+	# ---- zebra crossings on the street at both car park exits (side lanes x = +-49.5)
+	var kerb: float = P["kerb"]
+	var shw: float = P["street_hw"]
+	var sy: float = P["street_y"]
+	for sx: float in [-1.0, 1.0]:
+		for i in 7:
+			var lx := sx * -60.0 + (i - 3) * 1.1
+			var fzc := kerb + 0.4 + shw
+			var p := c + rt * lx + f * fzc
+			_box(root, Vector3(0.55, 0.03, shw * 2.0 - 0.6), Transform3D(Basis(Vector3.UP, yaw), Vector3(p.x, sy + 0.03, p.y)), "zebra")
 	ow._place_props(root, props)
 	ow._trees(root, trees, 0)

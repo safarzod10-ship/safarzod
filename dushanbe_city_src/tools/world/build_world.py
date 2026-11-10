@@ -563,7 +563,13 @@ def add_driveways(roads, world, H_at):
         if b[0] in ("amid_m", "mall_m"):
             yaw = b[3]
             fx, fz = -math.sin(yaw), -math.cos(yaw)          # the plan's street side (local -Z)
-            starts.append((b[1] + fx * (b[5] / 2 - 2.0), b[2] + fz * (b[5] / 2 - 2.0), bi))
+            if b[0] == "amid_m":
+                # 0.24 site: the side lanes round the hall (local x = +-49.5) come out to the street
+                rx, rz = math.cos(yaw), -math.sin(yaw)
+                for lx in (-49.5, 49.5):
+                    starts.append((b[1] + fx * (b[5] / 2 - 2.0) + rx * lx, b[2] + fz * (b[5] / 2 - 2.0) + rz * lx, bi))
+            else:
+                starts.append((b[1] + fx * (b[5] / 2 - 2.0), b[2] + fz * (b[5] / 2 - 2.0), bi))
     for sv in world.get("services", []):
         yaw = sv["yaw"]
         dx, dz = math.cos(yaw), -math.sin(yaw)                # garage front (+X) towards the road
@@ -630,7 +636,10 @@ def level_big_plots(H, X, Z, world, roads):
         fz = -(sx * math.sin(yaw) + sz * math.cos(yaw))       # distance towards the street side (local -Z)
         # hall: the base; car park (front ~29 m): just under its asphalt top (base + 0.15) so its edge
         # is a kerb, not a step; apron: the driveway's grade
-        tgt = np.where(fz > D / 2 - 29.0, y + 0.08, y)
+        if b[0] == "amid_m":       # 0.24 site: the hall (local fz -31..20) at the base, the rest under the slab top
+            tgt = np.where((np.abs(lx) < 43.0) & (fz > -31.0) & (fz < 20.0), y, y + 0.08)
+        else:
+            tgt = np.where(fz > D / 2 - 29.0, y + 0.08, y)
         if dr is not None and apron > 0.0:
             d = np.clip(fz - (D / 2 - 2.0), 0.0, apron)       # metres along the driveway
             tgt = np.where(fz > D / 2, np.interp(d, s, dh), tgt)
