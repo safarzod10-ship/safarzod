@@ -1,18 +1,8 @@
-PASS  1. AMID supermarkets in the city: 3
-PASS  2. interior built when the player is near
-PASS  3. entrance doors: shut when nobody is near (0.00), open for the hero (1.00)
-PASS  4. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
-PASS  5. basket in the hand
-PASS  6. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
-PASS  7. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
-PASS  8. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
-PASS  9. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
-PASS 10. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
-PASS 11. the bag is in the boot (hands free, 1 shown in the car)
-PASS 12. took the bag out of the boot
-PASS 13. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
-PASS 14. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
-PASS 15. plov can be cooked (rice, meat, carrot, onion, oil)
-PASS 16. cooked plov ×4: fridge Нон ×1, Плов ×4
-PASS 17. ate plov: hunger 30 -> 99, health 50 -> 85
-PASS 18. starving: health falls (85.0 -> 82.5), no regeneration
+PASS  1. city life present
+PASS  2. pedestrians spawned: 4, different clothes: 3
+PASS  3. punched: falls down (hp 88)
+PASS  4. gets up and runs away
+PASS  5. shot 4 times: dead (dead); 1 others panic
+PASS  6. ran over by the car: down
+PASS  7. traffic cars: 6
+PASS  8. steal: button «УГНАТЬ», driving Stolen1 (gls)

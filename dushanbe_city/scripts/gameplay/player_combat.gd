@@ -103,8 +103,13 @@ func _shoot(w: String, d: Dictionary) -> void:
 	WeaponFX.muzzle_flash(get_tree(), muzzle, mdir, w == "ak47")
 	WeaponFX.tracer(get_tree(), muzzle + mdir * 0.3, target)
 	WeaponFX.sound(get_tree(), w, muzzle, 2.0 if w == "ak47" else 0.0, 300.0)
+	if CityLife.instance:
+		CityLife.instance.panic(muzzle, 45.0)
 	if not hit.is_empty():
 		var col: Object = hit.collider
+		if CityLife.instance and CityLife.instance.hit_body(col, float(d["damage"]), mdir, false):
+			WeaponFX.impact(get_tree(), target, hit.normal, false)
+			return
 		var v := _vehicle_of(col)
 		WeaponFX.impact(get_tree(), target, hit.normal, v != null)
 		if v:
@@ -140,6 +145,9 @@ func _melee(w: String, d: Dictionary) -> void:
 		var res := player.get_world_3d().direct_space_state.intersect_shape(qp, 8)
 		var hit_any := false
 		for r in res:
+			if CityLife.instance and CityLife.instance.hit_body(r.collider, float(d["damage"]) * (2.0 if w == "bat" else 1.0), fwd, true):
+				hit_any = true
+				continue
 			var v := _vehicle_of(r.collider)
 			if v:
 				v.weapon_hit(float(d["damage"]) * 0.08)

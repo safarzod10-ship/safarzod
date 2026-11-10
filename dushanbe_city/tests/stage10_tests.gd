@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -427,6 +427,78 @@ func _t_tune() -> void:
 	s.driving = false
 	car.set_tuning({})
 	Wallet.tuning = {}
+
+
+func _t_npc() -> void:
+	# GTA pass: varied pedestrians you can hit (fall / die / panic), cars knock them down, steal a car
+	var life: CityLife = main.get_node_or_null("CityLife")
+	_check("city life present", life != null)
+	if life == null:
+		return
+	if s.driving:
+		s.exit()
+		await _frames(5)
+	var home: Vector3 = (s.player as Node3D).global_position
+	life.enabled = true
+	life.max_cars = 6
+	life.max_peds = 8
+	await _sec(8.0)
+	var skins := {}
+	for p in life.peds:
+		var mi: MeshInstance3D = (p["node"] as Node).find_children("*", "MeshInstance3D", true, false)[0]
+		var mo := mi.material_override as StandardMaterial3D
+		skins[mo.albedo_texture.resource_path if mo and mo.albedo_texture else "hero"] = true
+	_check("pedestrians spawned: %d, different clothes: %d" % [life.peds.size(), skins.size()], life.peds.size() >= 3 and skins.size() >= 2 and not skins.has("hero"))
+	var p0: Dictionary = life.peds[0]
+	life.hit_body(p0["body"], 12.0, Vector3.FORWARD, true)
+	_check("punched: falls down (hp %.0f)" % float(p0["hp"]), p0["state"] == "down")
+	await _sec(3.2)
+	_check("gets up and runs away", p0["state"] == "flee")
+	var p1: Dictionary = life.peds[1]
+	for k in 4:
+		life.hit_body(p1["body"], 34.0, Vector3.LEFT, false)
+	var fleeing := life.peds.filter(func(q: Dictionary) -> bool: return q["state"] == "flee").size()
+	_check("shot 4 times: dead (%s); %d others panic" % [p1["state"], fleeing], p1["state"] == "dead" and fleeing >= 1)
+	# the player's car hits a pedestrian
+	var car: VehiclePrado = main.get("car")
+	var p2: Dictionary = life.peds[2] if life.peds.size() > 2 else p0
+	p2["state"] = "walk"
+	s.player.teleport(car.driver_door_point(0.7), 0.0)
+	await _frames(10)
+	s._select(car)
+	s.enter()
+	await _frames(5)
+	var pn: Node3D = p2["node"]
+	car.place(pn.global_position + pn.global_basis.z * 6.0 + Vector3(0, 0.6, 0), atan2(pn.global_basis.z.x, pn.global_basis.z.z))
+	car.linear_velocity = -car.global_basis.z * 12.0
+	await _sec(1.0)
+	_check("ran over by the car: %s" % p2["state"], p2["state"] in ["down", "dead"])
+	car.linear_velocity = Vector3.ZERO
+	car.angular_velocity = Vector3.ZERO
+	await _sec(0.5)
+	s.exit()
+	await _sec(1.5)
+	# steal a traffic car
+	var tc: Dictionary = life.cars[0] if not life.cars.is_empty() else {}
+	_check("traffic cars: %d" % life.cars.size(), not tc.is_empty())
+	if tc.is_empty():
+		return
+	var spot: Node3D = tc["spot"]
+	print("DBG before steal driving=", s.driving, " car=", s.car.name if s.car else "-")
+	s.player.teleport(spot.global_position + Vector3(0, 0.5, 0), 0.0)
+	await _frames(20)
+	print("DBG after tp driving=", s.driving, " valid=", is_instance_valid(spot), " dist=", (s.player as Node3D).global_position.distance_to(spot.global_position))
+	var it: Variant = s.player.get("interaction")
+	var lbl: String = (it as CharacterInteraction).label() if it else ""
+	life.steal(spot)
+	await _sec(6.0)
+	_check("steal: button «%s», driving %s (%s)" % [lbl, s.car.name if s.car else "-", (s.car as VehicleCar).preset if s.car is VehicleCar else "-"],
+		s.driving and String(s.car.name).begins_with("Stolen"))
+	if s.driving:
+		s.exit()
+		await _sec(1.5)
+	s.player.teleport(home, 0.0)
+	life.enabled = false
 
 
 func _t_amid() -> void:

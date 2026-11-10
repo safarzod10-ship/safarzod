@@ -8,10 +8,12 @@ extends Node3D
 ##  Pedestrians: the city's character model walking (mocap walk) along the sidewalks, turning back at
 ##  the end of a street. Counts follow the graphics quality (Settings.quality).
 
-const CAR_MODELS := [["res://assets/models/cars/w123.glb", Vector3(1.8, 1.4, 4.8)],
-	["res://assets/models/cars/e30.glb", Vector3(1.7, 1.35, 4.4)],
-	["res://assets/models/cars/r12.glb", Vector3(1.65, 1.4, 4.4)],
-	["res://assets/models/cars/gls.glb", Vector3(2.0, 1.8, 5.2)]]
+const CAR_MODELS := [["res://assets/models/cars/w123.glb", Vector3(1.8, 1.4, 4.8), "w123"],
+	["res://assets/models/cars/e30.glb", Vector3(1.7, 1.35, 4.4), "e30"],
+	["res://assets/models/cars/r12.glb", Vector3(1.65, 1.4, 4.4), "r12"],
+	["res://assets/models/cars/gls.glb", Vector3(2.0, 1.8, 5.2), "gls"]]
+const NPC_SKINS := 8
+const MAX_STOLEN := 2
 const PED_MODEL := "res://assets/characters/player/player.glb"
 const MOCAP := "res://assets/characters/animations/player_mocap.res"
 const CAR_NEAR := 110.0
@@ -30,10 +32,21 @@ var _roads: Array = []      ## {p: PackedVector3Array, s: PackedFloat32Array, hw
 var _rng := RandomNumberGenerator.new()
 var _scenes := {}
 var _t := 0.0
+static var instance: CityLife
+signal crime(level: int, at: Vector3)     ## the player's crimes (stolen car 2, assault 1, murder 3) -> police
+var stolen: Array = []      ## VehicleCar taken from the traffic (oldest freed beyond MAX_STOLEN)
+var _skins: Array = []      ## NPC clothing albedo variants (assets/characters/npc)
+var _bodies := {}           ## collider instance id -> ped dict
+var _steal_n := 0
 
 
 func _ready() -> void:
+	instance = self
 	_rng.randomize()
+	for k in NPC_SKINS:
+		var tp := "res://assets/characters/npc/npc_%d.jpg" % k
+		if ResourceLoader.exists(tp):
+			_skins.append(load(tp))
 	wd = WorldData.get_instance()
 	if wd == null or not wd.ok:
 		return
@@ -115,9 +128,14 @@ func _manage(f: Vector3) -> void:
 			(c["node"] as Node).queue_free()
 			cars.erase(c)
 	for p in peds.duplicate():
-		if (p["node"] as Node3D).global_position.distance_to(f) > PED_FAR + 20.0:
+		var gone: bool = p["state"] == "dead" and float(p["t"]) > 25.0
+		if gone or (p["node"] as Node3D).global_position.distance_to(f) > PED_FAR + 20.0:
+			_bodies.erase((p["body"] as Node).get_instance_id())
 			(p["node"] as Node).queue_free()
 			peds.erase(p)
+	for v in stolen.duplicate():
+		if not is_instance_valid(v):
+			stolen.erase(v)
 	var tries := 0
 	while cars.size() < max_cars and tries < 6:
 		tries += 1
@@ -185,7 +203,11 @@ func _spawn_car(f: Vector3) -> void:
 	body.add_child(cs)
 	n.add_child(body)
 	var vmax := _rng.randf_range(30.0, 55.0) / 3.6 if R["cls"] == "street" else _rng.randf_range(40.0, 60.0) / 3.6
-	cars.append({"node": n, "road": pk[0], "s": pk[1], "dir": dir, "v": vmax * 0.7, "vmax": vmax, "lane": lane})
+	var st := _StealSpot.new()
+	st.life = self
+	st.position = Vector3(-1.1, 0, -0.35)            # driver's door (left, car frame faces -Z)
+	n.add_child(st)
+	cars.append({"node": n, "road": pk[0], "s": pk[1], "dir": dir, "v": vmax * 0.7, "vmax": vmax, "lane": lane, "preset": m[2], "spot": st})
 	_place_car(cars[-1])
 
 
@@ -208,6 +230,10 @@ func _drive(delta: float, _f: Vector3) -> void:
 		var n: Node3D = c["node"]
 		var fwd := -n.global_basis.z
 		var want: float = c["vmax"]
+		if session and not session.driving and session.player:
+			var pr := (session.player as Node3D).global_position - n.global_position
+			if pr.length() < 3.6:
+				want = 0.0
 		for o in obstacles:
 			var rel := o - n.global_position
 			var ahead := rel.dot(fwd)
@@ -227,13 +253,18 @@ func _drive(delta: float, _f: Vector3) -> void:
 		_place_car(c)
 
 
-func _spawn_ped(f: Vector3) -> void:
+func _spawn_ped(f: Vector3) -> Variant:
 	var pk := _pick(f, PED_NEAR, PED_FAR - 30.0)
 	if pk.is_empty():
-		return
+		return null
+	return _make_ped(pk[0], pk[1])
+
+
+func _make_ped(road: int, s0: float) -> Variant:
+	var pk := [road, s0]
 	var ps := _scene(PED_MODEL)
 	if ps == null:
-		return
+		return null
 	var R: Dictionary = _roads[pk[0]]
 	var dir := 1 if _rng.randf() < 0.5 else -1
 	var side := (float(R["hw"]) + 1.6 + _rng.randf_range(-0.4, 0.6)) * (1.0 if _rng.randf() < 0.5 else -1.0)
@@ -241,9 +272,28 @@ func _spawn_ped(f: Vector3) -> void:
 	n.name = "Pedestrian"
 	add_child(n)
 	n.scale = Vector3.ONE * _rng.randf_range(0.93, 1.04)
+	var skin: Texture2D = _skins[_rng.randi() % _skins.size()] if not _skins.is_empty() else null
 	for mi in n.find_children("*", "MeshInstance3D", true, false):
-		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		(mi as MeshInstance3D).visibility_range_end = PED_FAR
+		var m3 := mi as MeshInstance3D
+		m3.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		m3.visibility_range_end = PED_FAR
+		if skin and m3.mesh:
+			var base := m3.get_active_material(0) as StandardMaterial3D
+			if base:
+				var mm := base.duplicate() as StandardMaterial3D
+				mm.albedo_texture = skin
+				m3.material_override = mm
+	var body := StaticBody3D.new()
+	body.collision_layer = 1 << 3                   # layer 4: rays / shape queries hit it, nothing collides
+	body.collision_mask = 0
+	var cs := CollisionShape3D.new()
+	var cap := CapsuleShape3D.new()
+	cap.radius = 0.32
+	cap.height = 1.75
+	cs.shape = cap
+	cs.position.y = 0.9
+	body.add_child(cs)
+	n.add_child(body)
 	var ap: AnimationPlayer = n.find_child("AnimationPlayer", true, false)
 	var v := _rng.randf_range(1.1, 1.45)
 	if ap and ResourceLoader.exists(MOCAP):
@@ -253,8 +303,12 @@ func _spawn_ped(f: Vector3) -> void:
 			ap.play(&"m/walk")
 			ap.speed_scale = v / 0.983
 			ap.seek(_rng.randf() * 1.0, true)
-	peds.append({"node": n, "road": pk[0], "s": pk[1], "dir": dir, "v": v, "side": side})
-	_place_ped(peds[-1])
+	var pd := {"node": n, "road": pk[0], "s": pk[1], "dir": dir, "v": v, "v0": v, "side": side, "ap": ap,
+			"state": "walk", "t": 0.0, "hp": 100.0, "body": body}
+	_bodies[body.get_instance_id()] = pd
+	peds.append(pd)
+	_place_ped(pd)
+	return pd
 
 
 func _place_ped(p: Dictionary) -> void:
@@ -265,11 +319,22 @@ func _place_ped(p: Dictionary) -> void:
 	pos.y += 0.17
 	var d: Vector3 = at[1]
 	n.global_position = pos
-	n.rotation.y = atan2(d.x, d.z)              # the character model faces +Z
+	n.rotation = Vector3(0, atan2(d.x, d.z), 0)    # the character model faces +Z (scale kept)
 
 
 func _walk(delta: float) -> void:
+	var car: VehiclePrado = session.car if session and session.driving else null
 	for p in peds:
+		p["t"] = float(p["t"]) + delta
+		var st: String = p["state"]
+		if st == "down" or st == "dead":
+			if st == "down" and float(p["t"]) > 2.6:
+				_get_up(p)
+			continue
+		if st == "flee" and float(p["t"]) > 9.0:
+			p["state"] = "walk"
+			p["v"] = p["v0"]
+			_anim(p, "walk")
 		var R: Dictionary = _roads[p["road"]]
 		var L: float = (R["s"] as PackedFloat32Array)[-1]
 		p["s"] = float(p["s"]) + float(p["v"]) * delta * float(p["dir"])
@@ -277,3 +342,185 @@ func _walk(delta: float) -> void:
 			p["dir"] = -int(p["dir"])
 			p["s"] = clampf(float(p["s"]), 3.0, L - 3.0)
 		_place_ped(p)
+		# the player's car hits a pedestrian
+		if car and car.speed_kmh > 12.0:
+			var rel: Vector3 = car.global_transform.affine_inverse() * (p["node"] as Node3D).global_position
+			if absf(rel.x) < 1.25 and absf(rel.z) < 2.7 and rel.y > -1.5 and rel.y < 2.0:
+				hit(p, car.speed_kmh * 2.2, car.linear_velocity.normalized() + Vector3.UP * 0.3, true)
+				car.weapon_hit(0.6)
+
+
+## a weapon / punch / car hit on a ped collider: true if it was a pedestrian
+func hit_body(col: Object, dmg: float, dir: Vector3, knock := true) -> bool:
+	if col == null:
+		return false
+	var p: Variant = _bodies.get(col.get_instance_id())
+	if p == null:
+		return false
+	hit(p, dmg, dir, knock)
+	return true
+
+
+func hit(p: Dictionary, dmg: float, dir: Vector3, knock: bool) -> void:
+	if p["state"] == "dead":
+		return
+	p["hp"] = float(p["hp"]) - dmg
+	var n: Node3D = p["node"]
+	panic(n.global_position, 28.0)
+	if float(p["hp"]) <= 0.0:
+		crime.emit(3, n.global_position)
+		_fall(p, dir, true)
+	elif knock:
+		crime.emit(1, n.global_position)
+		_fall(p, dir, false)
+	else:
+		_flee(p, n.global_position - dir)
+
+
+## everybody near p runs away from it (gunshot, fight, crash)
+func panic(at: Vector3, radius: float) -> void:
+	for q in peds:
+		if q["state"] in ["walk", "flee"] and (q["node"] as Node3D).global_position.distance_to(at) < radius:
+			_flee(q, at)
+	for c in cars:
+		if (c["node"] as Node3D).global_position.distance_to(at) < radius:
+			c["vmax"] = maxf(float(c["vmax"]), 70.0 / 3.6)      # drivers floor it
+
+
+func _flee(p: Dictionary, from: Vector3) -> void:
+	var n: Node3D = p["node"]
+	var R: Dictionary = _roads[p["road"]]
+	var at := _at(R, p["s"], 1, 0.0)
+	var along: Vector3 = at[1]
+	p["dir"] = 1 if along.dot(n.global_position - from) >= 0.0 else -1
+	p["state"] = "flee"
+	p["t"] = 0.0
+	p["v"] = _rng.randf_range(3.6, 4.6)
+	_anim(p, "run")
+
+
+func _fall(p: Dictionary, dir: Vector3, dead: bool) -> void:
+	var n: Node3D = p["node"]
+	p["state"] = "dead" if dead else "down"
+	p["t"] = 0.0
+	var ap: AnimationPlayer = p.get("ap")
+	if ap:
+		ap.pause()
+	var hd := Vector3(dir.x, 0, dir.z)
+	if hd.length() < 0.01:
+		hd = -n.global_basis.z
+	hd = hd.normalized()
+	var axis := Vector3.UP.cross(hd).normalized()
+	var start := n.global_transform
+	var sc := n.scale
+	var b0 := start.basis.orthonormalized()
+	var end_basis := Basis(axis, PI * 0.5) * Basis(Vector3.UP, n.rotation.y)
+	var end_pos := start.origin + hd * 1.4 + Vector3(0, 0.12, 0)
+	var tw := create_tween()
+	tw.tween_method(func(k: float) -> void:
+		if is_instance_valid(n):
+			n.global_transform = Transform3D(b0.slerp(end_basis, k).scaled_local(sc), start.origin.lerp(end_pos, k) + Vector3.UP * sin(k * PI) * 0.35),
+		0.0, 1.0, 0.45).set_ease(Tween.EASE_IN)
+	(p["body"] as CollisionObject3D).collision_layer = 0 if dead else 1 << 3
+
+
+func _get_up(p: Dictionary) -> void:
+	var n: Node3D = p["node"]
+	# back onto the sidewalk line at the nearest point, then run away
+	_place_ped(p)
+	var ap: AnimationPlayer = p.get("ap")
+	if ap:
+		ap.play()
+	_flee(p, n.global_position + Vector3(_rng.randf_range(-1, 1), 0, _rng.randf_range(-1, 1)))
+
+
+func _anim(p: Dictionary, kind: String) -> void:
+	var ap: AnimationPlayer = p.get("ap")
+	if ap == null:
+		return
+	var nm := StringName("m/" + kind)
+	if not ap.has_animation(nm):
+		nm = &"m/walk"
+	ap.play(nm, 0.2)
+	ap.speed_scale = float(p["v"]) / (0.983 if kind == "walk" else 3.077)
+
+
+# ------------------------------------------------------------------------------------------ stealing
+## GTA-style: pull the driver out of a traffic car and drive away in a real car of that model
+func steal(spot: Node) -> void:
+	var c: Dictionary = {}
+	for x in cars:
+		if x["spot"] == spot:
+			c = x
+	if c.is_empty() or session == null or session.driving or session.busy:
+		return
+	var n: Node3D = c["node"]
+	var xf := n.global_transform
+	cars.erase(c)
+	n.queue_free()
+	_steal_n += 1
+	var v := VehicleCar.new()
+	v.configure(String(c["preset"]))
+	v.name = "Stolen%d" % _steal_n
+	v.collision_layer = 1
+	v.collision_mask = 1
+	get_parent().add_child(v)
+	await get_tree().physics_frame
+	v.place(xf.origin + Vector3(0, 0.4, 0), xf.basis.get_euler().y)
+	session.add_vehicle(v)
+	stolen.append(v)
+	while stolen.size() > MAX_STOLEN:
+		var old: VehiclePrado = stolen.pop_front()
+		if is_instance_valid(old) and not (session.driving and session.car == old):
+			session.vehicles.erase(old)
+			old.queue_free()
+	# the driver jumps out and runs
+	var pk := _nearest_road_s(xf.origin)
+	if not pk.is_empty():
+		var pd: Variant = _make_ped(pk[0], pk[1])
+		if pd:
+			(pd["node"] as Node3D).global_position = xf * Vector3(-1.6, 0.0, 0.0)
+			_flee(pd, session.player.global_position)
+	panic(xf.origin, 20.0)
+	crime.emit(2, xf.origin)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	# the player at the driver's door (he was there: the car rolled a little while stopping)
+	if not session.can_enter(v):
+		session.player.teleport(v.driver_door_point(0.7), v.global_rotation.y)
+		for i in 6:
+			await get_tree().physics_frame
+	session.enter_vehicle(v)
+
+
+func _nearest_road_s(p: Vector3) -> Array:
+	var best := INF
+	var out: Array = []
+	for ri in _roads.size():
+		var P: PackedVector3Array = _roads[ri]["p"]
+		for k in range(0, P.size(), 2):
+			var d := Vector2(P[k].x - p.x, P[k].z - p.z).length()
+			if d < best:
+				best = d
+				out = [ri, float((_roads[ri]["s"] as PackedFloat32Array)[k])]
+	return out
+
+
+class _StealSpot:
+	extends Node3D
+	var life: CityLife
+
+	func _ready() -> void:
+		add_to_group(&"interactable")
+
+	func interaction_label(_player: Node) -> String:
+		return "УГНАТЬ"
+
+	func interaction_point(_player: Node) -> Vector3:
+		return global_position
+
+	func can_interact(_player: Node) -> bool:
+		return life != null and life.session != null and not life.session.driving
+
+	func interact(_player: Node) -> void:
+		life.steal(self)
