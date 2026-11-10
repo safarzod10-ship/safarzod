@@ -65,7 +65,7 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
     if (moving || won !== null || muted || reducedMotion()) return;
     let last = performance.now();
     const drift = (time: number) => {
-      place((angle.current + (time - last) * 0.012) % 360);
+      place((angle.current - (time - last) * 0.012) % 360);
       last = time;
       driftFrame.current = requestAnimationFrame(drift);
     };
@@ -99,8 +99,8 @@ export const Wheel = forwardRef<RouletteHandle, { table: PrizeRow[]; label: stri
           const jitter = (Math.random() - 0.5) * SLICE * 0.6;
           const from = angle.current;
           const landing = 360 - (index * SLICE + SLICE / 2) + jitter;
-          const base = from - (from % 360);
-          const target = base + TURNS * 360 + ((landing % 360) + 360) % 360;
+          const back = (((from - landing) % 360) + 360) % 360;
+          const target = from - TURNS * 360 - back;
           const duration = reducedMotion() ? 500 : SPIN_MS;
           let finished = false;
           const finish = () => {

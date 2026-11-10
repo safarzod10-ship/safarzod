@@ -1,6 +1,6 @@
 import { giftAnimationUrl, preloadAnimation } from "./lottie";
 
-const MIN_SPLASH_MS = 1300;
+const MIN_SPLASH_MS = 2800;
 const CRITICAL_TIMEOUT_MS = 4000;
 
 export const GIFT_IDS = [

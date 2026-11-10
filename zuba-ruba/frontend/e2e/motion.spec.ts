@@ -49,6 +49,24 @@ async function setup(page: Page) {
   });
 }
 
+const wheelAngle = (page: Page) =>
+  page.locator(".wheel-svg > g").evaluate((node) => Number(/rotate\((-?[\d.]+)\)/.exec(node.getAttribute("transform") ?? "")?.[1] ?? "0"));
+
+test("home wheel spins counter-clockwise and lands under the pointer", async ({ page }) => {
+  await setup(page);
+  await page.goto("/#/");
+  await page.locator("#splash").waitFor({ state: "detached", timeout: 8000 });
+  const before = await wheelAngle(page);
+  await page.getByRole("button", { name: "Тестовая прокрутка" }).click();
+  await page.waitForTimeout(400);
+  const during = await wheelAngle(page);
+  expect(during).toBeLessThan(before - 30);
+  await expect(page.locator(".daily-test-result")).toContainText("+0,6", { timeout: 9000 });
+  const wheel = await page.locator(".wheel-svg").boundingBox();
+  const label = await page.locator(".wheel-seg-won .wheel-label").boundingBox();
+  expect(wheel && label && Math.abs(label.x + label.width / 2 - (wheel.x + wheel.width / 2)) < 30 && label.y < wheel.y + wheel.height / 2 - 40).toBeTruthy();
+});
+
 test("home test spins work repeatedly with real animation", async ({ page }) => {
   await setup(page);
   await page.goto("/#/");
@@ -79,9 +97,11 @@ test("splash shows the animated logo, then disappears and gifts preload in the b
   });
   await page.goto("/#/");
   await expect(page.locator("#splash .splash-logo")).toBeVisible();
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(2000);
   await page.screenshot({ path: "e2e/screenshots/splash-light-390.png" });
+  await expect(page.locator("#splash")).toBeAttached();
   await page.locator("#splash").waitFor({ state: "detached", timeout: 8000 });
+  expect(await page.evaluate(() => performance.now())).toBeGreaterThan(2800);
   await expect(page.locator("text=Ежедневная рулетка")).toBeVisible();
   await expect.poll(() => gifts.length, { timeout: 15000 }).toBe(11);
 });
