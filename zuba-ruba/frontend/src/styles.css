@@ -29,8 +29,8 @@
   --text: #16140f;
   --text-secondary: #6c665b;
   --text-tertiary: #a29b8d;
-  --divider: rgba(22, 20, 15, 0.09);
-  --border: rgba(22, 20, 15, 0.1);
+  --divider: rgba(22, 20, 15, 0.07);
+  --border: rgba(22, 20, 15, 0.06);
   --primary: #16140f;
   --primary-text: #f6f2e8;
   --primary-pressed: #36322a;
@@ -75,8 +75,8 @@
   --text: #f3efe5;
   --text-secondary: #9f988b;
   --text-tertiary: #6a6458;
-  --divider: rgba(243, 239, 229, 0.08);
-  --border: rgba(243, 239, 229, 0.09);
+  --divider: rgba(243, 239, 229, 0.06);
+  --border: rgba(243, 239, 229, 0.06);
   --primary: #f3efe5;
   --primary-text: #16140f;
   --primary-pressed: #d6d0c3;

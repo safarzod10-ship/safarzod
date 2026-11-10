@@ -116,6 +116,7 @@ async def admin_ctx(c: Ctx = Depends(ctx)) -> Ctx:
 
 OPERATION_TITLES = {
     "case_reward": "Награда за кейс",
+    "daily_spin": "Ежедневная рулетка",
     "boost_reward": "Награда за буст",
     "referral_reward": "Реферальная награда",
     "reversal": "Отмена награды",

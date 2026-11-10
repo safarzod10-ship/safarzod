@@ -1,10 +1,11 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -302,3 +303,16 @@ class StarTopup(Base):
     telegram_payment_charge_id: Mapped[str | None] = mapped_column(String(256), unique=True)
     created_at: Mapped[datetime] = _now()
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DailySpin(Base):
+    __tablename__ = "daily_spins"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
+    day: Mapped[date] = mapped_column(Date)
+    amount_milli: Mapped[int] = mapped_column(BigInteger)
+    operation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = _now()
+
+    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_daily_spin_user_day"),)

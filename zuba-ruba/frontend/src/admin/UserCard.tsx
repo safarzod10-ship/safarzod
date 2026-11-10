@@ -16,6 +16,7 @@ const KIND_LABEL: Record<OperationKind, string> = {
   case_reward: "Кейс",
   boost_reward: "Буст",
   referral_reward: "Реферал",
+  daily_spin: "Рулетка",
   reversal: "Отмена",
   adjustment: "Корректировка",
   withdrawal: "Вывод",

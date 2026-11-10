@@ -1,131 +1,135 @@
-import { api } from "../api";
-import { plural } from "../format";
-import { IconBell, IconChevron } from "../icons";
-import { OperationList } from "../components/OperationList";
+import { useEffect, useRef, useState } from "react";
+import { ApiError, api } from "../api";
+import { Roulette, type RouletteHandle } from "../components/Roulette";
+import { formatNumber } from "../format";
 import { navigate } from "../router";
 import { Amount, Star } from "../stars";
 import { haptic } from "../telegram";
-import type { Home } from "../types";
-import { EmptyState, ErrorState, Loader, useResource } from "../ui";
+import type { Home, SpinResult, SpinStatus } from "../types";
+import { Button, ErrorState, Loader, clearResourceCache, useResource } from "../ui";
+
+function useCountdown(target: string | null): string {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!target) return;
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [target]);
+  if (!target) return "";
+  const left = Math.max(0, new Date(target).getTime() - now);
+  const hours = Math.floor(left / 3_600_000);
+  const minutes = Math.ceil((left % 3_600_000) / 60_000);
+  if (hours === 0) return `${minutes} мин`;
+  return `${hours} ч ${minutes === 60 ? 59 : minutes} мин`;
+}
 
 export function HomeScreen() {
   const home = useResource("home", () => api.get<Home>("/home"));
+  const roulette = useRef<RouletteHandle>(null);
+  const [spinning, setSpinning] = useState(false);
+  const [won, setWon] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const data = home.data;
+  const spin = data?.spin;
+  const countdown = useCountdown(spin?.spun ? spin.next_at : null);
+
+  const play = async () => {
+    if (!data || !spin?.available || spinning) return;
+    haptic("medium");
+    setError(null);
+    setSpinning(true);
+    try {
+      const result = await api.post<SpinResult>("/spin");
+      await roulette.current?.spin(result.amount);
+      haptic("success");
+      setWon(result.amount);
+      home.setData({ ...data, balance: result.balance, spin: result.spin });
+      clearResourceCache("withdrawals");
+    } catch (err) {
+      haptic("error");
+      setError(err instanceof ApiError ? err.message : "Не удалось прокрутить. Попробуй ещё раз.");
+      void home.reload();
+    } finally {
+      setSpinning(false);
+    }
+  };
 
   return (
     <div className="screen home">
       <header className="topbar">
         <span className="brand">ZUBA RUBA</span>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label={data?.unread_notifications ? `Уведомления: ${data.unread_notifications} новых` : "Уведомления"}
-          onClick={() => {
-            haptic("light");
-            navigate("/notifications");
-          }}
-        >
-          <IconBell />
-          {data && data.unread_notifications > 0 && <span className="dot" />}
-        </button>
+        {data && (
+          <button
+            type="button"
+            className="balance-pill"
+            aria-label="Баланс, перейти к выводу"
+            onClick={() => {
+              haptic("light");
+              navigate("/withdraw");
+            }}
+          >
+            <Amount value={data.balance.available} size={16} />
+          </button>
+        )}
       </header>
 
       {!data && home.error && <ErrorState error={home.error} onRetry={() => void home.reload()} />}
       {!data && !home.error && <Loader />}
 
-      {data && (
-        <>
-          <section className="ticket" aria-label="Баланс">
-            <div className="ticket-top">
-              <span className="ticket-label">Общий баланс</span>
-              <Amount value={data.balance.total} size={34} className="ticket-total" />
-              <dl className="ticket-split">
-                <div>
-                  <dt>Доступно</dt>
-                  <dd>
-                    <Amount value={data.balance.available} size={14} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>В ожидании</dt>
-                  <dd>
-                    <Amount value={data.balance.pending} size={14} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>На выводе</dt>
-                  <dd>
-                    <Amount value={data.balance.withdrawing} size={14} />
-                  </dd>
-                </div>
-              </dl>
-            </div>
-            <div className="ticket-cut" aria-hidden="true" />
-            <div className="ticket-bottom">
-              <button
-                type="button"
-                className="btn btn-accent btn-md btn-block"
-                onClick={() => {
-                  haptic("medium");
-                  navigate("/withdraw");
-                }}
-              >
-                Вывести
-              </button>
-            </div>
-          </section>
+      {data && spin && (
+        <section className="daily" aria-label="Ежедневная рулетка">
+          <p className="daily-kicker">Ежедневная рулетка</p>
+          <h1 className="daily-title">
+            {prizeRange(spin)}
+            <Star size={22} className="star-inline" />
+          </h1>
+          <p className="daily-sub">Одна прокрутка в день после {spin.tasks_required} заданий</p>
 
-          <button
-            type="button"
-            className={data.cases_ready > 0 ? "cases-strip cases-strip-ready" : "cases-strip"}
-            onClick={() => {
-              haptic("light");
-              navigate("/cases");
-            }}
-          >
-            <span className="cases-strip-stars" aria-hidden="true">
-              <Star size={30} />
-              {data.cases_ready > 0 && <Star size={22} className="cases-strip-star-2" />}
-            </span>
-            <span className="cases-strip-text">
-              {data.cases_ready > 0 ? (
-                <>
-                  <strong>
-                    {data.cases_ready} {plural(data.cases_ready, "кейс ждёт", "кейса ждут", "кейсов ждут")} открытия
-                  </strong>
-                  <span>Открыто за всё время: {data.cases_opened}</span>
-                </>
-              ) : (
-                <>
-                  <strong>
-                    Открыто {data.cases_opened} {plural(data.cases_opened, "кейс", "кейса", "кейсов")}
-                  </strong>
-                  <span>Новый кейс — за каждое выполненное задание</span>
-                </>
-              )}
-            </span>
-            <IconChevron size={20} />
-          </button>
+          <div className="daily-wheel">
+            <Roulette ref={roulette} table={spin.prizes} label="Лента призов ежедневной рулетки" muted={!spin.enabled} />
+          </div>
 
-          <section className="section">
-            <div className="section-head">
-              <h2 className="section-title">Последние операции</h2>
-              {data.recent_operations.length > 0 && (
-                <button type="button" className="link-btn" onClick={() => navigate("/history?from=home")}>
-                  Вся история
-                </button>
-              )}
-            </div>
-            {data.recent_operations.length > 0 ? (
-              <div className="card-list">
-                <OperationList items={data.recent_operations} />
-              </div>
+          <div className="daily-action">
+            {!spin.enabled ? (
+              <p className="daily-note">Рулетка временно выключена.</p>
+            ) : won !== null || spin.spun ? (
+              <>
+                <p className="daily-won">
+                  {won !== null ? "Выпало" : "Сегодня выпало"} <Amount value={won ?? spin.amount ?? "0"} sign="+" size={20} />
+                </p>
+                <p className="daily-note">Следующая прокрутка через {countdown}</p>
+              </>
+            ) : spin.available ? (
+              <>
+                {error && <p className="form-error">{error}</p>}
+                <Button variant="accent" block disabled={spinning} onClick={() => void play()}>
+                  {spinning ? "Крутим…" : "Крутить"}
+                </Button>
+              </>
             ) : (
-              <EmptyState title="Операций пока нет" text="Выполни задание и открой кейс — первая награда появится здесь." />
+              <>
+                <div className="daily-progress" role="progressbar" aria-valuemin={0} aria-valuemax={spin.tasks_required} aria-valuenow={spin.tasks_done}>
+                  {Array.from({ length: spin.tasks_required }, (_, index) => (
+                    <span key={index} className={index < spin.tasks_done ? "daily-dot daily-dot-done" : "daily-dot"} />
+                  ))}
+                </div>
+                <p className="daily-note">
+                  Задания сегодня: {spin.tasks_done} из {spin.tasks_required}
+                </p>
+                <Button variant="primary" block onClick={() => navigate("/tasks")}>
+                  К заданиям
+                </Button>
+              </>
             )}
-          </section>
-        </>
+          </div>
+        </section>
       )}
     </div>
   );
+}
+
+function prizeRange(spin: SpinStatus): string {
+  const amounts = spin.prizes.map((row) => Number(row.amount));
+  if (amounts.length === 0) return "";
+  return `От ${formatNumber(String(Math.min(...amounts)))} до ${formatNumber(String(Math.max(...amounts)))}`;
 }

@@ -1,49 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api";
 import { useApp } from "../AppContext";
 import { formatDateTime, formatNumber, plural } from "../format";
 import { navigate } from "../router";
 import { Amount, Star } from "../stars";
 import { haptic } from "../telegram";
-import type { Case, CasesResponse, PrizeRow } from "../types";
+import { Roulette, tierOf, type RouletteHandle } from "../components/Roulette";
+import type { Case, CasesResponse } from "../types";
 import { Badge, Button, EmptyState, ErrorState, Loader, Screen, Section, clearResourceCache, useResource } from "../ui";
-
-const CARD = 92;
-const GAP = 10;
-const STEP = CARD + GAP;
-const STRIP = 80;
-const START_INDEX = 3;
-const WIN_INDEX = 72;
-const SPIN_MS = 5200;
-
-type Tier = "common" | "rare" | "top";
-
-function tierOf(amount: string, table: PrizeRow[]): Tier {
-  const sorted = table.map((row) => Number(row.amount)).sort((a, b) => a - b);
-  const value = Number(amount);
-  if (value >= sorted[sorted.length - 1]) return "top";
-  if (sorted.length > 2 && value >= sorted[sorted.length - 2]) return "rare";
-  return "common";
-}
-
-function pick(table: PrizeRow[]): string {
-  const total = table.reduce((sum, row) => sum + row.weight, 0);
-  let roll = Math.random() * total;
-  for (const row of table) {
-    roll -= row.weight;
-    if (roll <= 0) return row.amount;
-  }
-  return table[table.length - 1].amount;
-}
-
-function buildStrip(table: PrizeRow[], winner: string | null): string[] {
-  const items = Array.from({ length: STRIP }, () => pick(table));
-  if (winner !== null) items[WIN_INDEX] = winner;
-  return items;
-}
-
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 5);
-const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 function rewardNote(item: Case): string {
   if (item.reward_status === "pending") return "Награда в ожидании: станет доступной после проверки условий задания.";
@@ -60,79 +24,10 @@ export function CasesScreen() {
   const cases = useResource("cases", () => api.get<CasesResponse>("/cases"));
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
-  const [strip, setStrip] = useState<string[]>(() => buildStrip(table, null));
-  const viewport = useRef<HTMLDivElement>(null);
-  const track = useRef<HTMLDivElement>(null);
-  const offset = useRef(0);
-  const frame = useRef(0);
+  const roulette = useRef<RouletteHandle>(null);
 
   const ready = cases.data?.ready ?? [];
   const current = ready[0] ?? null;
-
-  const place = useCallback((value: number) => {
-    offset.current = value;
-    if (track.current) track.current.style.transform = `translate3d(${value}px,0,0)`;
-  }, []);
-
-  const startOffset = useCallback(() => {
-    const width = viewport.current?.clientWidth ?? 360;
-    return width / 2 - (START_INDEX * STEP + CARD / 2);
-  }, []);
-
-  useEffect(() => {
-    if (phase.kind !== "idle") return;
-    place(startOffset());
-    if (reducedMotion()) return;
-    let last = performance.now();
-    const drift = (time: number) => {
-      const delta = time - last;
-      last = time;
-      let next = offset.current - delta * 0.02;
-      if (next < startOffset() - STEP * 8) next = startOffset();
-      place(next);
-      frame.current = requestAnimationFrame(drift);
-    };
-    frame.current = requestAnimationFrame(drift);
-    return () => cancelAnimationFrame(frame.current);
-  }, [phase.kind, place, startOffset, strip]);
-
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
-
-  const spin = useCallback(
-    (result: Case) => {
-      cancelAnimationFrame(frame.current);
-      const width = viewport.current?.clientWidth ?? 360;
-      const jitter = (Math.random() - 0.5) * (CARD * 0.6);
-      const target = width / 2 - (WIN_INDEX * STEP + CARD / 2) + jitter;
-      const from = startOffset();
-      const duration = reducedMotion() ? 500 : SPIN_MS;
-      const started = performance.now();
-      let lastIndex = -1;
-      let lastHaptic = 0;
-      place(from);
-      const tick = (time: number) => {
-        const progress = Math.min((time - started) / duration, 1);
-        const value = from + (target - from) * easeOut(progress);
-        place(value);
-        const index = Math.floor((width / 2 - value) / STEP);
-        if (index !== lastIndex) {
-          lastIndex = index;
-          if (progress < 0.98 && time - lastHaptic > 70) {
-            lastHaptic = time;
-            haptic("select");
-          }
-        }
-        if (progress < 1) {
-          frame.current = requestAnimationFrame(tick);
-        } else {
-          haptic(result.reward_status === "cancelled" ? "warning" : "success");
-          setPhase({ kind: "done", result });
-        }
-      };
-      frame.current = requestAnimationFrame(tick);
-    },
-    [place, startOffset],
-  );
 
   const open = async () => {
     if (!current || phase.kind === "requesting" || phase.kind === "spinning") return;
@@ -148,9 +43,10 @@ export function CasesScreen() {
         void cases.reload();
         return;
       }
-      setStrip(buildStrip(table, opened.amount));
       setPhase({ kind: "spinning", result: opened });
-      requestAnimationFrame(() => spin(opened));
+      await roulette.current?.spin(opened.amount);
+      haptic(opened.reward_status === "cancelled" ? "warning" : "success");
+      setPhase({ kind: "done", result: opened });
     } catch (err) {
       haptic("error");
       setPhase({ kind: "idle" });
@@ -166,7 +62,7 @@ export function CasesScreen() {
         opened: [result, ...cases.data.opened.filter((c) => c.id !== result.id)],
       });
     }
-    setStrip(buildStrip(table, null));
+    roulette.current?.reset();
     setPhase({ kind: "idle" });
   };
 
@@ -178,21 +74,7 @@ export function CasesScreen() {
   return (
     <Screen title="Кейсы" aside={ready.length > 0 ? <span className="count-chip">{ready.length}</span> : undefined}>
       <section className="roulette" aria-label="Рулетка кейса">
-        <div className="roulette-viewport" ref={viewport}>
-          <div className="roulette-track" ref={track}>
-            {strip.map((amount, index) => (
-              <PrizeCard
-                key={index}
-                amount={amount}
-                tier={tierOf(amount, table)}
-                won={result !== null && index === WIN_INDEX}
-              />
-            ))}
-          </div>
-          <span className="roulette-pointer roulette-pointer-top" aria-hidden="true" />
-          <span className="roulette-pointer roulette-pointer-bottom" aria-hidden="true" />
-          <span className="roulette-line" aria-hidden="true" />
-        </div>
+        <Roulette ref={roulette} table={table} label="Лента призов кейса" />
 
         <div className="roulette-panel">
           {result ? (
@@ -298,11 +180,3 @@ export function CasesScreen() {
   );
 }
 
-function PrizeCard({ amount, tier, won }: { amount: string; tier: Tier; won: boolean }) {
-  return (
-    <div className={`prize prize-${tier}${won ? " prize-won" : ""}`}>
-      <Star size={48} className="prize-star" />
-      <span className="prize-amount">{formatNumber(amount)}</span>
-    </div>
-  );
-}

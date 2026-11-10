@@ -177,3 +177,9 @@ export const IconShield = ({ size }: { size?: number }) => (
     <path d="M12 3 5 6v5.5c0 4.3 2.9 8 7 9.5 4.1-1.5 7-5.2 7-9.5V6z" />
   </Svg>
 );
+
+export const IconStarLine = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </Svg>
+);

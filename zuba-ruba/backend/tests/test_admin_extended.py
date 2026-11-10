@@ -96,7 +96,8 @@ async def test_csv_export_signed_link(env):
     assert body.count("\n") == 2 and "adjustment" in body
     token = path.split("token=")[1]
     assert (await env.client.get(f"/api/admin/export/operations.csv?token={token}")).status_code == 403
-    assert (await env.client.get(f"/api/admin/export/users.csv?token={token[:-2]}xx")).status_code == 403
+    tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+    assert (await env.client.get(f"/api/admin/export/users.csv?token={tampered}")).status_code == 403
     secret = analytics.export_secret(BOT_TOKEN)
     expired = analytics.make_export_token(secret, ADMIN_ID, "users", None, now=time.time() - 600)
     assert (await env.client.get(f"/api/admin/export/users.csv?token={expired}")).status_code == 403

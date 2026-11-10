@@ -142,6 +142,11 @@ export function ProfileScreen() {
       )}
 
       <div className="group group-spaced menu">
+        <NavRow
+          label="Уведомления"
+          value={home.data && home.data.unread_notifications > 0 ? <span className="count-chip count-chip-sm">{home.data.unread_notifications}</span> : undefined}
+          onClick={() => navigate("/notifications?from=profile")}
+        />
         <NavRow label="История операций" onClick={() => navigate("/history")} />
         {me.is_admin && <NavRow label="Панель управления →" accent onClick={() => navigate("/admin")} />}
         <NavRow label="Правила и вопросы" onClick={() => navigate("/rules")} />

@@ -8,20 +8,24 @@ _random = secrets.SystemRandom()
 
 
 def draw(settings: RuntimeSettings) -> int:
-    table = settings.prizes()
+    return draw_from(settings, "case_prizes")
+
+
+def draw_from(settings: RuntimeSettings, key: str) -> int:
+    table = settings.prizes(key)
     amounts = [amount for amount, _ in table]
     weights = [weight for _, weight in table]
     return _random.choices(amounts, weights=weights, k=1)[0]
 
 
-def expected_milli(settings: RuntimeSettings) -> int:
-    table = settings.prizes()
+def expected_milli(settings: RuntimeSettings, key: str = "case_prizes") -> int:
+    table = settings.prizes(key)
     total = sum(weight for _, weight in table)
     return round(sum(amount * weight for amount, weight in table) / total)
 
 
-def table_view(settings: RuntimeSettings) -> list[dict]:
-    table = settings.prizes()
+def table_view(settings: RuntimeSettings, key: str = "case_prizes") -> list[dict]:
+    table = settings.prizes(key)
     total = sum(weight for _, weight in table)
     return [
         {

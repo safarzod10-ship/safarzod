@@ -26,7 +26,7 @@ async def compute(session: AsyncSession, settings: RuntimeSettings) -> dict:
     def ops(kinds, status):
         return select(func.sum(Operation.amount_milli)).where(Operation.kind.in_(kinds), Operation.status == status)
 
-    rewards_completed = await _sum(session, ops(("case_reward", "boost_reward", "reversal", "adjustment"), "completed"))
+    rewards_completed = await _sum(session, ops(("case_reward", "boost_reward", "daily_spin", "reversal", "adjustment"), "completed"))
     referral_completed = await _sum(session, ops(("referral_reward",), "completed"))
     rewards_pending = await _sum(session, ops(("case_reward", "boost_reward", "referral_reward"), "pending"))
     unopened = await _sum(session, select(func.sum(Case.amount_milli)).where(Case.state == "ready"))

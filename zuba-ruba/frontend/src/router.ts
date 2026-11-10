@@ -40,7 +40,7 @@ export function parentOf(route: Route): string {
   }
   if (first === "history" || first === "rules") return route.query.get("from") === "home" ? "/" : "/profile";
   if (first === "withdraw") return route.query.get("from") === "profile" ? "/profile" : "/";
-  if (first === "notifications") return "/";
+  if (first === "notifications") return route.query.get("from") === "profile" ? "/profile" : "/";
   return "/";
 }
 

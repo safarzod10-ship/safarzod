@@ -67,7 +67,7 @@
 ```json
 {
   "id": "uuid",
-  "kind": "case_reward | boost_reward | referral_reward | reversal | adjustment | withdrawal",
+  "kind": "case_reward | boost_reward | referral_reward | daily_spin | reversal | adjustment | withdrawal",
   "title": "Награда за кейс",
   "amount": "0.3",
   "direction": "in | out",
@@ -78,6 +78,23 @@
 }
 ```
 `title` уже локализован сервером. Для отменённой награды `status = cancelled`, `title = "Отмена награды"`.
+
+### `GET /api/spin`
+Ежедневная рулетка. Одна прокрутка в сутки (по Москве) после `tasks_required` заданий, засчитанных за эти сутки (отменённые не учитываются).
+```json
+{
+  "enabled": true, "tasks_done": 3, "tasks_required": 5, "available": false, "spun": false,
+  "amount": null, "next_at": "2026-11-10T21:00:00Z",
+  "prizes": [{ "amount": "0.5", "weight": 40, "chance": "40.0" }]
+}
+```
+То же значение приходит в поле `spin` ответа `GET /api/home`.
+
+### `POST /api/spin`
+Приз выбирает сервер по таблице `daily_spin_prizes` и сразу зачисляет на доступный баланс (операция `daily_spin`). Повторная прокрутка в те же сутки — 409.
+```json
+{ "amount": "0.7", "balance": Balance, "spin": SpinStatus }
+```
 
 ### `GET /api/operations?cursor=<string>&limit=30`
 ```json

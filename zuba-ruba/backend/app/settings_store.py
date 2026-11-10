@@ -27,6 +27,9 @@ DEFINITIONS: list[SettingDef] = [
     SettingDef("tasks_channel_enabled", "Задания: подписки на каналы", "Награды", "bool", "true"),
     SettingDef("tasks_bot_enabled", "Задания: запуск ботов", "Награды", "bool", "true"),
     SettingDef("tasks_other_enabled", "Задания: прочие типы Flyer", "Награды", "bool", "false"),
+    SettingDef("daily_spin_enabled", "Ежедневная рулетка на главной", "Ежедневная рулетка", "bool", "true"),
+    SettingDef("daily_spin_tasks", "Заданий за день, чтобы открыть прокрутку", "Ежедневная рулетка", "int", "5", Decimal("1"), Decimal("100")),
+    SettingDef("daily_spin_prizes", "Призы ежедневной рулетки: сумма ⭐ : вес", "Ежедневная рулетка", "prizes", "0.5:40,0.6:25,0.7:15,0.8:10,0.9:6,1:4"),
     SettingDef("hold_hours_channel", "Удержание подписки, ч", "Ожидание", "int", "30", Decimal("0"), Decimal("720")),
     SettingDef("hold_hours_bot", "Удержание для ботов, ч", "Ожидание", "int", "0", Decimal("0"), Decimal("720")),
     SettingDef("recheck_hours", "Интервал повторной проверки, ч", "Ожидание", "int", "6", Decimal("1"), Decimal("72")),
@@ -161,11 +164,11 @@ class RuntimeSettings:
     def kopecks(self, key: str) -> int:
         return rub_to_kopecks(self._values[key])
 
-    def prizes(self) -> list[tuple[int, int]]:
+    def prizes(self, key: str = "case_prizes") -> list[tuple[int, int]]:
         try:
-            return parse_prizes(self._values["case_prizes"])
+            return parse_prizes(self._values[key])
         except ValueError:
-            return parse_prizes(BY_KEY["case_prizes"].default)
+            return parse_prizes(BY_KEY[key].default)
 
     def int_list(self, key: str) -> list[int]:
         return [int(part) for part in self._values[key].split(",") if part.strip().isdigit()]

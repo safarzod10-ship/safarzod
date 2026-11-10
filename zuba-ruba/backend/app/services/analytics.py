@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Case, Completion, FlyerError, Operation, ReferralReward, TaskCheck, User, Withdrawal
 from app.money import milli_to_str
 
-REWARD_KINDS = ("case_reward", "boost_reward", "referral_reward")
+REWARD_KINDS = ("case_reward", "boost_reward", "referral_reward", "daily_spin")
 AUDIENCES = {
     "all": "Все пользователи бота",
     "active7": "Активные за 7 дней",

@@ -24,6 +24,7 @@ export interface Config {
   referral_threshold: number;
   boost: { first_check_hours: number; interval_hours: number; recurring: boolean };
   stars_are_internal: boolean;
+  daily_spin: { enabled: boolean; tasks_required: number; prizes: PrizeRow[] };
 }
 
 export interface PrizeRow {
@@ -39,7 +40,7 @@ export interface Balance {
   withdrawing: string;
 }
 
-export type OperationKind = "case_reward" | "boost_reward" | "referral_reward" | "reversal" | "adjustment" | "withdrawal";
+export type OperationKind = "case_reward" | "boost_reward" | "referral_reward" | "daily_spin" | "reversal" | "adjustment" | "withdrawal";
 export type OperationStatus = "pending" | "completed" | "cancelled" | "failed";
 
 export interface Operation {
@@ -54,7 +55,25 @@ export interface Operation {
   updated_at: string;
 }
 
+export interface SpinStatus {
+  enabled: boolean;
+  tasks_done: number;
+  tasks_required: number;
+  available: boolean;
+  spun: boolean;
+  amount: string | null;
+  next_at: string;
+  prizes: PrizeRow[];
+}
+
+export interface SpinResult {
+  amount: string;
+  balance: Balance;
+  spin: SpinStatus;
+}
+
 export interface Home {
+  spin: SpinStatus;
   balance: Balance;
   cases_opened: number;
   cases_ready: number;

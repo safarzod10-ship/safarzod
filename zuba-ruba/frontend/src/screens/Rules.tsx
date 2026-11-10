@@ -63,6 +63,24 @@ function buildBlocks(config: Config): Block[] {
         { label: "Задание не засчиталось", value: "Убедись, что действие выполнено с этого аккаунта, подожди минуту и нажми «Проверить» ещё раз." },
       ],
     },
+    ...(config.daily_spin.enabled
+      ? [
+          {
+            id: "daily",
+            title: "Ежедневная рулетка",
+            head: ["Награда", "Шанс"] as [string, string],
+            rows: [
+              {
+                label: "Условие",
+                value: `Одна прокрутка в сутки после ${config.daily_spin.tasks_required} заданий, выполненных за этот день. Сутки считаются по Москве.`,
+              },
+              ...[...config.daily_spin.prizes]
+                .sort((a, b) => Number(b.amount) - Number(a.amount))
+                .map((row) => ({ label: stars(row.amount), value: `${formatNumber(row.chance)}%` })),
+            ],
+          },
+        ]
+      : []),
     {
       id: "cases",
       title: "Шансы кейса",

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clock import utcnow
 from app.models import Operation, User
 
-KINDS = {"case_reward", "boost_reward", "referral_reward", "reversal", "adjustment", "withdrawal"}
+KINDS = {"case_reward", "boost_reward", "referral_reward", "daily_spin", "reversal", "adjustment", "withdrawal"}
 
 
 class LedgerError(Exception):

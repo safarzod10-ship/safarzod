@@ -10,7 +10,7 @@ from app.config import Config, get_config
 from app.models import Notification, Operation, User, Withdrawal
 from app.money import milli_to_str
 from app.services import cases as cases_service
-from app.services import prizes, referrals, tasks, withdrawals
+from app.services import prizes, referrals, spins, tasks, withdrawals
 from app.services import users as users_service
 
 router = APIRouter(prefix="/api")
@@ -71,6 +71,11 @@ async def app_config(c: Ctx = Depends(ctx), config: Config = Depends(get_config)
             "recurring": s.bool("boost_recurring_enabled"),
         },
         "stars_are_internal": not s.bool("withdrawals_enabled"),
+        "daily_spin": {
+            "enabled": s.bool("daily_spin_enabled"),
+            "tasks_required": s.int("daily_spin_tasks"),
+            "prizes": prizes.table_view(s, "daily_spin_prizes"),
+        },
     }
 
 
@@ -95,6 +100,29 @@ async def home(c: Ctx = Depends(ctx)):
         "cases_ready": ready,
         "unread_notifications": unread,
         "recent_operations": [operation_view(op) for op in recent],
+        "spin": await spins.status(c.session, c.user.id, c.settings),
+    }
+
+
+@router.get("/spin")
+async def spin_status(c: Ctx = Depends(ctx)):
+    return await spins.status(c.session, c.user.id, c.settings)
+
+
+@router.post("/spin")
+async def spin_now(request: Request, c: Ctx = Depends(ctx)):
+    await rate_limit(request, f"spin:{c.user.id}", 10)
+    try:
+        record = await spins.spin(c.session, c.user.id, c.settings)
+    except spins.SpinError as exc:
+        await c.session.rollback()
+        raise ApiError(403 if exc.code == "feature_disabled" else 409, exc.code, str(exc)) from None
+    await c.session.commit()
+    await c.session.refresh(c.user)
+    return {
+        "amount": milli_to_str(record.amount_milli),
+        "balance": balance_view(c.user),
+        "spin": await spins.status(c.session, c.user.id, c.settings),
     }
 
 

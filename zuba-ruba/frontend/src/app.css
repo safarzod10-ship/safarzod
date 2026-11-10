@@ -108,6 +108,108 @@
 
 /* Home */
 
+.balance-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.balance-pill:active {
+  transform: scale(0.97);
+}
+
+.daily {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: calc(100dvh - var(--tabbar-height) - 150px - var(--tg-safe-top) - var(--safe-bottom));
+  justify-content: center;
+  padding: 8px 0 12px;
+  text-align: center;
+}
+
+.daily-kicker {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.daily-title {
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.daily-sub {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.daily-wheel {
+  width: calc(100% + 2 * var(--gutter));
+  margin: 28px calc(-1 * var(--gutter)) 0;
+}
+
+.daily-wheel .roulette-viewport {
+  background: transparent;
+}
+
+.roulette-viewport-muted {
+  opacity: 0.5;
+}
+
+.daily-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+  margin-top: 24px;
+}
+
+.daily-progress {
+  display: flex;
+  gap: 8px;
+}
+
+.daily-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  box-shadow: inset 0 0 0 1px var(--divider);
+}
+
+.daily-dot-done {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.daily-note {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.daily-won {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  animation: rise 320ms ease-out;
+}
+
+
 .ticket {
   position: relative;
   margin-top: 4px;
@@ -523,6 +625,13 @@
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 700;
+}
+
+.count-chip-sm {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  font-size: 12px;
 }
 
 .roulette {

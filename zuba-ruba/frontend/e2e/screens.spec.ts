@@ -70,7 +70,7 @@ async function assertNoOverflow(page: Page): Promise<void> {
 }
 
 const SCREENS = [
-  { name: "home", hash: "#/", ready: "text=Общий баланс" },
+  { name: "home", hash: "#/", ready: "text=Задания сегодня: 3 из 5" },
   { name: "tasks", hash: "#/tasks", ready: "text=Новости технологий и науки каждый день" },
   { name: "cases", hash: "#/cases", ready: "text=Что может выпасть" },
   { name: "profile", hash: "#/profile", ready: "text=Приглашай друзей" },
@@ -112,7 +112,7 @@ for (const scheme of SCHEMES) {
       await expect(page.locator(".onb-title")).toHaveText("Забирай подарки");
       await page.screenshot({ path: `e2e/screenshots/${scheme}-${width}-onboarding-3.png` });
       await page.getByRole("button", { name: "Начать" }).click();
-      await expect(page.locator("text=Общий баланс")).toBeVisible();
+      await expect(page.locator("text=Ежедневная рулетка")).toBeVisible();
     });
   }
 }
@@ -195,11 +195,34 @@ test("tab bar is visible when Telegram opens the app with launch parameters in t
   await fakeTelegram(page, "light");
   await mockApi(page);
   await page.goto("/#tgWebAppData=query_id%3DAAH&tgWebAppVersion=8.0&tgWebAppPlatform=ios");
-  await page.locator("text=Общий баланс").waitFor();
+  await page.locator("text=Ежедневная рулетка").waitFor();
   await expect(page.locator(".tabbar")).toBeVisible();
   const box = await page.locator(".tabbar-inner").boundingBox();
   expect(box && box.y + box.height <= 780).toBeTruthy();
   expect(new URL(page.url()).hash).toBe("#/");
-  await page.getByRole("button", { name: "Задания" }).click();
+  await page.locator(".tabbar").getByRole("button", { name: "Задания" }).click();
   await expect(page.locator(".tab-active")).toContainText("Задания");
+});
+
+test("daily roulette spins once tasks are done and shows the countdown", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await fakeTelegram(page, "light");
+  await mockApi(page);
+  await page.route("**/api/home", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...fx.home, spin: fx.spinReady }) }));
+  let spins = 0;
+  await page.route("**/api/spin", (route) => {
+    spins += 1;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fx.spinResult) });
+  });
+  await page.goto("/#/");
+  await page.getByRole("button", { name: "Крутить" }).click();
+  await expect(page.locator(".daily-won")).toContainText("+0,8");
+  await expect(page.locator(".prize-won .prize-amount")).toHaveText("0,8");
+  const pointer = await page.locator(".roulette-line").boundingBox();
+  const won = await page.locator(".prize-won").boundingBox();
+  expect(pointer && won && pointer.x >= won.x && pointer.x <= won.x + won.width).toBeTruthy();
+  await expect(page.locator(".balance-pill")).toContainText("19,1");
+  await expect(page.locator("text=Следующая прокрутка через")).toBeVisible();
+  expect(spins).toBe(1);
+  await page.screenshot({ path: "e2e/screenshots/light-390-home-spin.png" });
 });
