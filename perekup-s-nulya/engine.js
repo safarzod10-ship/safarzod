@@ -27,6 +27,9 @@ const SPK = {
   C: { name: 'Голос в трубке', col: '#e5484d' },
   R: { name: 'Рустам', col: '#a16207' },
   A: { name: 'Администратор ТЦ', col: '#e5484d' },
+  K: { name: 'Покупатель', col: '#ea580c' },
+  P: { name: 'Клиент', col: '#2563eb' },
+  D: { name: 'Даня', col: '#ca8a04' },
 };
 function talkAmt(who, t) {
   for (const s of SUBS) {
@@ -212,6 +215,9 @@ const TIMUR = { skin: '#f3c49c', shirt: '#22b07d', pants: '#2c3e66', hair: 'cap'
 const SELLER = { skin: '#d9a77f', shirt: '#4b5563', pants: '#1f2937', hair: 'hood', hood: '#3d4451', glasses: 'sun', stubble: true };
 const MASTER = { skin: '#e8b88e', shirt: '#eef2f7', pants: '#374151', hair: 'bald', apron: '#8b5e3c', glasses: 'round', mustache: '#6b625b', pocket: false };
 const RUSTAM = { skin: '#d6a27a', shirt: '#5b3a29', pants: '#1f2937', hair: 'short', hairCol: '#1b1410', stubble: true, chain: true, collar: '#3f271b' };
+const SCAMMER = { skin: '#e8b48c', shirt: '#f97316', pants: '#1f2937', hair: 'short', hairCol: '#d4a017' };
+const CLIENT = { skin: '#e6b089', shirt: '#2563eb', pants: '#374151', hair: 'short', hairCol: '#6b7280', mustache: '#4b5563', glasses: 'round' };
+const DANYA = { skin: '#f6cfa8', shirt: '#facc15', pants: '#1e3a8a', hair: 'short', hairCol: '#c2410c', strings: true };
 const BUYER = { skin: '#f0c7a6', shirt: '#8b5cf6', pants: '#1e293b', hair: 'long', hairCol: '#4a2c1a' };
 
 function arm(x, y, ab, sd, col) {
@@ -601,6 +607,143 @@ function frame(t) {
   hud(t);
   subs(t);
   wipe(t);
+}
+
+
+/* ---------- shared props (episode 2+) ---------- */
+function lockPhone(x, y, w, h, rot = 0) {
+  phone(x, y, w, h, { s1: '#0f172a', s2: '#1e293b', rot });
+  at(x, y - h * .06, w / 110, rot, () => {
+    rr(-24, -10, 48, 40, 8, '#fff');
+    ctx.beginPath(); ctx.arc(0, -10, 15, Math.PI, 0); ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.stroke();
+    txt('Apple ID', 0, 58, 16, '#cbd5e1', { w: 600 });
+  });
+}
+function star(x, y, r, col = '#fff') {
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * Math.PI * 2, rr2 = i % 2 ? r * .32 : r;
+    ctx.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2);
+  }
+  ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+}
+const paper = (x, y) => at(x, y - 44, 1, -.12, () => {
+  rr(-36, -48, 72, 96, 6, '#fff', OL, 4);
+  line([-22, -26, 22, -26], '#94a3b8', 4); line([-22, -8, 22, -8], '#94a3b8', 4); line([-22, 10, 14, 10], '#94a3b8', 4);
+  check(-8, 28, .55, 1);
+});
+const earPhone = (x, y) => phone(x - 4, y - 40, 40, 74, { rot: -.25, lw: 4 });
+function mallCard(x, y, k, t) {
+  at(x, y, k, 0, () => {
+    rr(-440, -240, 880, 480, 30, '#e8eef6', OL, 8);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(-440, -240, 880, 480, 30); ctx.clip();
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-440, 80, 880, 200);
+    for (let i = -4; i <= 4; i++) line([i * 110, 80, i * 220, 240], 'rgba(0,0,0,.08)', 4);
+    // shops in background
+    for (let i = 0; i < 4; i++) {
+      rr(-420 + i * 215, -200, 195, 240, 8, ['#fde68a', '#bfdbfe', '#fecaca', '#bbf7d0'][i], OL, 4);
+      rr(-400 + i * 215, -130, 155, 150, 6, 'rgba(255,255,255,.7)');
+    }
+    // kiosk
+    rr(-200, 0, 400, 170, 24, '#f8fafc', OL, 7);
+    rr(-170, 30, 340, 70, 12, '#bae6fd', OL, 5);
+    rr(-220, -40, 440, 50, 14, '#1f2937', OL, 6);
+    txt('СДАЁТСЯ', 0, -14, 34, '#ff5a5f', { w: 900 });
+    ctx.restore();
+  });
+}
+
+const ringProp = t => (x, y) => {
+  phone(x, y - 28, 46, 82, { s1: '#22c55e', s2: '#16a34a', lw: 4 });
+  for (let i = 0; i < 2; i++) {
+    const r = 50 + ((t * 80 + i * 30) % 60);
+    ctx.beginPath(); ctx.arc(x, y - 28, r, -.6, .6); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y - 28, r, Math.PI - .6, Math.PI + .6); ctx.stroke();
+  }
+};
+function callCard(t, a, b, top, name, y = 560) {
+  const ck = pop(t, a, .3) * (1 - P(t, b - .3, b));
+  if (ck <= 0) return;
+  at(540, y, ck, 0, () => {
+    rr(-300, -140, 600, 280, 40, 'rgba(20,24,38,.95)', '#fff', 5);
+    txt(top, 0, -86, 30, '#9ca3af', { w: 600 });
+    txt(name, 0, -30, 46, '#fff', { w: 800 });
+    circ(-120, 70, 42, '#e5484d', OL, 5); circ(120, 70, 42, '#22c55e', OL, 5);
+    line([-140, 70, -100, 70], '#fff', 10);
+    phone(120, 70, 22, 38, { s1: '#fff', s2: '#fff', lw: 3, body: '#fff' });
+  });
+}
+// big "PROBLEM #n" plate: pops in the middle, then parks at the top of the scene
+function problemBanner(t, a, n, title) {
+  if (t < a) return;
+  const mv = eio(P(t, a + 2.4, a + 2.9));
+  const y = lerp(620, 392, mv), s = pop(t, a, .4) * lerp(1, .55, mv);
+  const [dx, dy] = shk(t, a + .3, .3, 14);
+  at(540 + dx, y + dy, s, -.03, () => {
+    const w = Math.max(tw(title, 64, 900), 420) + 120;
+    rr(-w / 2, -120, w, 240, 34, '#e5484d', OL, 9);
+    txt('ПРОБЛЕМА №' + n, 0, -52, 52, '#ffe4e6', { w: 900 });
+    txt(title, 0, 36, 64, '#fff', { w: 900 });
+  });
+}
+function rulePill(t, a, b, s, y = 1180, col = '#16a34a') {
+  const k = pop(t, a, .35) * (1 - P(t, b - .25, b));
+  if (k <= 0) return;
+  at(540, y, k, -.03, () => {
+    const w = tw(s, 50, 900) + 90;
+    rr(-w / 2, -50, w, 100, 50, col, OL, 7);
+    txt(s, 0, 3, 50, '#fff', { w: 900 });
+  });
+}
+function countTable(t, a, title, rows, totalT, totalText, totalCol) {
+  const tk = P(t, a, a + .5);
+  if (tk <= 0) return;
+  ctx.save(); ctx.globalAlpha = tk * .6; ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H); ctx.restore();
+  at(540, 780, lerp(.9, 1, eout(tk)), 0, () => {
+    rr(-430, -400, 860, 780, 34, '#fffdf5', OL, 9);
+    txt(title, 0, -320, 60, OL, { w: 900 });
+    line([-370, -260, 370, -260], '#e2e8f0', 6);
+    rows.forEach(([rt, l, v, c], i) => {
+      const k = P(t, rt, rt + .3); if (k <= 0) return;
+      const y = -200 + i * 84;
+      txt(l, -370, y, 42, '#334155', { w: 600, al: 'left', a: k });
+      txt(v, 370, y, 50, c, { w: 900, al: 'right', a: k });
+    });
+    if (t > totalT - .3) line([-370, 222, 370, 222], OL, 7);
+    const fk = P(t, totalT, totalT + .3);
+    if (fk > 0) {
+      txt('ИТОГ', -370, 296, 56, OL, { w: 900, al: 'left', a: fk });
+      const [ex2, ey2] = shk(t, totalT + .3, .3, 12);
+      at(180 + ex2, 296 + ey2, lerp(2, 1, eout(fk)), -.04, () => txt(totalText, 0, 0, 80, totalCol, { w: 900 }), fk);
+    }
+  });
+}
+function voteCard(t, a, opts, nextT, nextText) {
+  const vk = P(t, a, a + .4);
+  if (vk <= 0) return;
+  ctx.save(); ctx.globalAlpha = vk * .72; ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H); ctx.restore();
+  at(540, 400, pop(t, a + .1), -.03, () => txt('РЕШАТЬ ВАМ!', 0, 0, 96, '#ffd23f', { w: 900, st: 16 }));
+  opts.forEach((o, i) => {
+    const x = i ? 790 : 290, col = i ? '#3b82f6' : '#22c55e';
+    const k = pop(t, a + .6 + i * .5, .4), pul = 1 + .03 * Math.sin(t * 6 + x);
+    at(x, 760, k * pul, 0, () => {
+      rr(-225, -250, 450, 500, 36, '#fff', col, 12);
+      circ(0, -150, 70, col, OL, 7);
+      txt(String(i + 1), 0, -146, 96, '#fff', { w: 900 });
+      txt(o[0], 0, -10, 58, OL, { w: 900 });
+      txt(o[1], 0, 58, 58, OL, { w: 900 });
+      txt(o[2], 0, 160, 32, '#64748b', { w: 700 });
+    });
+  });
+  at(540, 1140, pop(t, a + 2.2), 0, () => {
+    rr(-430, -60, 860, 120, 60, '#ffd23f', OL, 8);
+    ctx.save(); ctx.translate(-350, 0);
+    rr(-36, -28, 72, 50, 14, '#fff', OL, 5);
+    ctx.beginPath(); ctx.moveTo(-12, 22); ctx.lineTo(-22, 40); ctx.lineTo(6, 22); ctx.fillStyle = '#fff'; ctx.fill();
+    txt('…', 0, -8, 30, OL, { w: 900 }); ctx.restore();
+    txt('ПИШИ 1 ИЛИ 2 В КОММЕНТЫ', 40, 3, 46, OL, { w: 900 });
+  });
+  if (t > nextT) at(540, 1280, pop(t, nextT), 0, () => txt(nextText, 0, 0, 44, '#fff', { w: 800, st: 10 }));
 }
 
 /* ---------- player ---------- */

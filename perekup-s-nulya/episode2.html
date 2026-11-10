@@ -100,28 +100,6 @@ const MONEY = [
 ];
 
 /* ---------- episode props ---------- */
-function lockPhone(x, y, w, h, rot = 0) {
-  phone(x, y, w, h, { s1: '#0f172a', s2: '#1e293b', rot });
-  at(x, y - h * .06, w / 110, rot, () => {
-    rr(-24, -10, 48, 40, 8, '#fff');
-    ctx.beginPath(); ctx.arc(0, -10, 15, Math.PI, 0); ctx.strokeStyle = '#fff'; ctx.lineWidth = 8; ctx.stroke();
-    txt('Apple ID', 0, 58, 16, '#cbd5e1', { w: 600 });
-  });
-}
-function star(x, y, r, col = '#fff') {
-  ctx.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const a = i / 8 * Math.PI * 2, rr2 = i % 2 ? r * .32 : r;
-    ctx.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2);
-  }
-  ctx.closePath(); ctx.fillStyle = col; ctx.fill();
-}
-const paper = (x, y) => at(x, y - 44, 1, -.12, () => {
-  rr(-36, -48, 72, 96, 6, '#fff', OL, 4);
-  line([-22, -26, 22, -26], '#94a3b8', 4); line([-22, -8, 22, -8], '#94a3b8', 4); line([-22, 10, 14, 10], '#94a3b8', 4);
-  check(-8, 28, .55, 1);
-});
-const earPhone = (x, y) => phone(x - 4, y - 40, 40, 74, { rot: -.25, lw: 4 });
 function bgGarage(t) {
   const g = ctx.createLinearGradient(0, 0, 0, 1250);
   g.addColorStop(0, '#1e1b4b'); g.addColorStop(.6, '#5b3a7a'); g.addColorStop(1, '#d9785a');
@@ -162,26 +140,6 @@ function garageTable(t, n) {
     rr(-30, -10, 60, 16, 5, '#1c2130', OL, 3); ctx.restore();
   }
 }
-function mallCard(x, y, k, t) {
-  at(x, y, k, 0, () => {
-    rr(-440, -240, 880, 480, 30, '#e8eef6', OL, 8);
-    ctx.save(); ctx.beginPath(); ctx.roundRect(-440, -240, 880, 480, 30); ctx.clip();
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-440, 80, 880, 200);
-    for (let i = -4; i <= 4; i++) line([i * 110, 80, i * 220, 240], 'rgba(0,0,0,.08)', 4);
-    // shops in background
-    for (let i = 0; i < 4; i++) {
-      rr(-420 + i * 215, -200, 195, 240, 8, ['#fde68a', '#bfdbfe', '#fecaca', '#bbf7d0'][i], OL, 4);
-      rr(-400 + i * 215, -130, 155, 150, 6, 'rgba(255,255,255,.7)');
-    }
-    // kiosk
-    rr(-200, 0, 400, 170, 24, '#f8fafc', OL, 7);
-    rr(-170, 30, 340, 70, 12, '#bae6fd', OL, 5);
-    rr(-220, -40, 440, 50, 14, '#1f2937', OL, 6);
-    txt('СДАЁТСЯ', 0, -14, 34, '#ff5a5f', { w: 900 });
-    ctx.restore();
-  });
-}
-
 /* ================= SCENES ================= */
 
 // 1. Recap + hook 0–12

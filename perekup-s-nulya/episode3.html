@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Перекуп с нуля — Серия 3</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="194" step="0.01" value="0">
+    <span id="time">0:00 / 3:14</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const DUR = 194, START_MONEY = 40000, HUD_FROM = 12, HUD_PULSE = [182.5, 185.5], COVER_T = 9.6;
+const CUTS = [12, 35, 60, 92, 107, 122, 142, 160, 177];
+
+// [start, end, speaker, text]  — *слова* выделяются жёлтым
+const SUBS = [
+  [0.3, 4.2, 'T', 'Вы выбрали: *пока рано*. 86% против 14.'],
+  [4.2, 7.6, 'T', 'И вы были правы.'],
+  [7.6, 11.8, 'T', 'Но я не думал, что у новичка будет *столько проблем*.'],
+
+  [12.3, 15.5, 'T', 'Звоню в торговый центр.'],
+  [15.5, 18.5, 'T', 'Спасибо, но от точки я пока откажусь.'],
+  [18.5, 22.0, 'A', 'Как знаете. Место долго ждать не будет.'],
+  [22.0, 26.5, 'T', 'Зато на эти деньги я беру *сразу четыре телефона*.'],
+  [26.5, 30.5, 'T', 'Два одиннадцатых, 12 mini и XS. Всё по чек-листу.'],
+  [30.5, 34.8, 'T', 'Отдаю *39 000*. На счету остаётся *тысяча*.'],
+
+  [35.3, 38.3, 'T', 'Проблема номер один.'],
+  [38.3, 42.8, 'T', 'Прошла неделя. Просмотров — 300. Продаж — *ноль*.'],
+  [42.8, 47.0, 'T', 'А у конкурента такой же — на *тысячу дешевле*.'],
+  [47.0, 51.5, 'T', 'Деньги не пропали. Они *застряли в телефонах*.'],
+  [51.5, 55.5, 'T', 'А на рекламу и ремонт — *всего тысяча*.'],
+  [55.5, 59.8, 'T', 'Вывод: *никогда не вкладывай всё*. Держи запас.'],
+
+  [60.3, 63.3, 'T', 'Проблема номер два: *мошенники*.'],
+  [63.3, 69.5, 'K', 'Беру 12 mini! Оплачу через доставку, вот ссылка — введи карту, чтобы получить деньги.'],
+  [69.5, 74.0, 'T', 'Стоп. Чтобы *получить* деньги, карту на чужих ссылках *не вводят*.'],
+  [74.0, 77.5, 'T', 'Следующий покупатель пришёл лично.'],
+  [77.5, 81.5, 'K', 'Всё, перевёл 15 тысяч! Вот скрин.'],
+  [81.5, 85.0, 'T', 'Открываю свой банк — *денег нет*.'],
+  [85.0, 88.0, 'K', 'Банк тупит, наверное… Ладно, я пошёл.'],
+  [88.0, 91.8, 'T', 'Правило: деньги проверяй *в своём банке*, а не на скрине.'],
+
+  [92.3, 95.3, 'T', 'Наконец продаю одиннадцатый за *14 000*.'],
+  [95.3, 98.3, 'T', 'А через пять дней — звонок.'],
+  [98.3, 103.0, 'P', 'Микрофон не работает! Меня не слышат. Верните деньги!'],
+  [103.0, 107.0, 'T', 'При мне всё работало. Но *доказать я не могу*.'],
+  [107.0, 111.0, 'M', 'Микрофон — *2 500*. У б/у такое бывает через неделю.'],
+  [111.0, 115.0, 'T', 'Чиню за свой счёт. *Репутация дороже*.'],
+  [115.0, 121.8, 'T', 'Теперь снимаю *видео проверки* при покупателе и даю *гарантию 7 дней*.'],
+
+  [122.3, 125.3, 'T', 'Проблема номер четыре.'],
+  [125.3, 130.0, 'T', 'Сайт ограничил бесплатные объявления. Теперь *каждое — платно*.'],
+  [130.0, 135.0, 'T', 'А ещё я узнал: если перепродаёшь *постоянно* — это уже бизнес.'],
+  [135.0, 141.8, 'T', 'Самозанятость для перепродажи *не подходит*. Нужно *ИП* и налоги.'],
+
+  [142.3, 146.5, 'T', 'За месяц продал все четыре: *52 500*.'],
+  [146.5, 150.5, 'T', 'Купил — 39, микрофон — 2 500, реклама — полторы, дорога — 500.'],
+  [150.5, 154.0, 'T', 'Итог за месяц: *плюс 9 000*.'],
+  [154.0, 159.8, 'T', 'А с точкой за 35 000 я был бы *в минусе*. Спасибо, что отговорили!'],
+
+  [160.3, 163.3, 'T', 'Правила этой серии:'],
+  [163.3, 167.0, 'T', 'Не вкладывай всё — держи *запас*.'],
+  [167.0, 170.5, 'T', 'Деньги проверяй *в банке*, а не на скрине.'],
+  [170.5, 174.0, 'T', 'Снимай *видео проверки* и давай гарантию.'],
+  [174.0, 176.8, 'T', 'Постоянная перепродажа — это *бизнес*.'],
+
+  [177.3, 182.5, 'D', 'Тимур, давай вместе! У меня *50 000*. Будем партнёрами — пополам.'],
+  [182.5, 186.0, 'T', 'Денег станет в два раза больше… но и делить всё на двоих.'],
+  [186.0, 191.8, 'T', 'Решать вам! *1* — берём партнёра, *2* — работаю один.'],
+];
+
+const MONEY = [
+  { t: 31.5, d: -39000 },
+  { t: 93.5, d: 14000 },
+  { t: 108.5, d: -2500 },
+  { t: 127.5, d: -1500 },
+  { t: 144.0, d: 38500 },
+  { t: 150.2, d: -500 },
+];
+
+/* ---------- episode props ---------- */
+function eye(x, y, s) {
+  at(x, y, s, 0, () => {
+    ctx.beginPath(); ctx.moveTo(-30, 0); ctx.quadraticCurveTo(0, -26, 30, 0); ctx.quadraticCurveTo(0, 26, -30, 0);
+    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke();
+    circ(0, 0, 10, OL);
+  });
+}
+function camera(x, y, s, crossed) {
+  at(x, y, s, 0, () => {
+    rr(-60, -40, 90, 80, 14, '#334155', OL, 6);
+    ctx.beginPath(); ctx.moveTo(30, -10); ctx.lineTo(62, -30); ctx.lineTo(62, 30); ctx.lineTo(30, 10); ctx.closePath();
+    ctx.fillStyle = '#334155'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+    circ(-15, 0, 18, '#93c5fd', OL, 4);
+    if (crossed) cross(0, 0, 60, '#ef4444', 14);
+  });
+}
+function shield(x, y, s) {
+  at(x, y, s, 0, () => {
+    ctx.beginPath(); ctx.moveTo(0, -60); ctx.lineTo(50, -40); ctx.quadraticCurveTo(50, 30, 0, 64); ctx.quadraticCurveTo(-50, 30, -50, -40); ctx.closePath();
+    ctx.fillStyle = '#22c55e'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+    check(0, 0, 1.1, 1, '#fff');
+  });
+}
+function heart(x, y, s, col = '#ef4444') {
+  at(x, y, s, 0, () => {
+    ctx.beginPath(); ctx.moveTo(0, 40);
+    ctx.bezierCurveTo(-70, -10, -40, -70, 0, -30); ctx.bezierCurveTo(40, -70, 70, -10, 0, 40);
+    ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+  });
+}
+function briefcase(x, y, s) {
+  at(x, y, s, 0, () => {
+    rr(-30, -70, 60, 30, 10, null, OL, 8);
+    rr(-90, -46, 180, 120, 16, '#92400e', OL, 7);
+    line([-90, 0, 90, 0], OL, 5); rr(-14, -10, 28, 22, 4, '#facc15', OL, 4);
+  });
+}
+function wallet(x, y, s, t) {
+  at(x, y, s, 0, () => {
+    rr(-150, -90, 300, 180, 24, '#7c4a2d', OL, 7);
+    rr(40, -40, 130, 80, 18, '#5b3720', OL, 6); circ(80, 0, 10, '#facc15');
+    txt('1 000 ₽', -40, 4, 48, '#fde68a', { w: 900 });
+    const mx = Math.sin(t * 3) * 60, my = -150 + Math.sin(t * 5) * 20, fl = Math.abs(Math.sin(t * 18));
+    ctx.beginPath(); ctx.ellipse(mx - 14, my, 16, 10 * fl + 3, -.4, 0, Math.PI * 2); ctx.ellipse(mx + 14, my, 16, 10 * fl + 3, .4, 0, Math.PI * 2);
+    ctx.fillStyle = '#cbd5e1'; ctx.fill(); circ(mx, my, 6, '#64748b');
+  });
+}
+function bankScreen(x, y, s, ok, title, sub) {
+  at(x, y, s, 0, () => {
+    rr(-150, -260, 300, 520, 48, '#111827', OL, 7);
+    rr(-136, -246, 272, 492, 38, ok ? '#dcfce7' : '#fff1f2');
+    txt(ok ? 'Перевод' : 'Мой банк', 0, -190, 30, '#475569', { w: 700 });
+    circ(0, -80, 56, ok ? '#22c55e' : '#e5484d', OL, 5);
+    if (ok) check(0, -78, 1.4, 1, '#fff'); else cross(0, -80, 24, '#fff', 12);
+    txt(title, 0, 20, 34, OL, { w: 900 });
+    txt(sub, 0, 80, 42, ok ? '#15803d' : '#b91c1c', { w: 900 });
+  });
+}
+function personCard(t, x, y, w, h, cfg, label, col, k) {
+  if (k <= 0) return;
+  const [dx, dy] = shk(t, 98.4, .5, 10);
+  at(x + dx, y + dy, k, .02, () => {
+    rr(-w / 2, -h / 2, w, h, 30, '#dbeafe', col, 9);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 24); ctx.clip();
+    person(Object.assign({}, cfg, { x: 0, y: 290, s: 1 }), t);
+    ctx.restore();
+    const lw = tw(label, 34, 800) + 40;
+    rr(-lw / 2, h / 2 - 28, lw, 56, 28, col, OL, 5);
+    txt(label, 0, h / 2, 34, '#fff', { w: 800 });
+  });
+}
+const reveal = (t, s, x, y, size, col, a, b, al = 'left', w = 800) => {
+  const k = P(t, a, b); if (k <= 0) return;
+  const wd = tw(s, size, w);
+  ctx.save(); ctx.beginPath();
+  const x0 = al === 'center' ? x - wd / 2 : x;
+  ctx.rect(x0 - 10, y - size, (wd + 20) * k, size * 2); ctx.clip();
+  txt(s, x, y, size, col, { w, al }); ctx.restore();
+};
+
+/* ================= SCENES ================= */
+
+// 1. Vote result + hook 0–12
+function e1(t) {
+  bgDark(t);
+  const vk = pop(t, .3, .4) * (1 - P(t, 7.3, 7.6));
+  if (vk > 0) at(540, 600, vk, -.02, () => {
+    rr(-440, -250, 880, 500, 30, '#fffdf5', OL, 8);
+    txt('ИТОГИ ГОЛОСОВАНИЯ', 0, -190, 44, OL, { w: 900 });
+    const k2 = eout(P(t, .9, 2.2)), k1 = eout(P(t, 1.1, 2.2));
+    txt('2 — ПОКА РАНО', -390, -112, 38, '#1d4ed8', { w: 800, al: 'left' });
+    rr(-390, -80, 780, 66, 33, '#e2e8f0');
+    if (k2 > 0) rr(-390, -80, Math.max(66, 780 * .86 * k2), 66, 33, '#3b82f6', OL, 5);
+    txt(Math.round(86 * k2) + '%', 330, -47, 40, OL, { w: 900 });
+    txt('1 — БЕРЁМ ТОЧКУ', -390, 40, 38, '#15803d', { w: 800, al: 'left' });
+    rr(-390, 72, 780, 66, 33, '#e2e8f0');
+    if (k1 > 0) rr(-390, 72, Math.max(66, 780 * .14 * k1), 66, 33, '#22c55e', OL, 5);
+    txt(Math.round(14 * k1) + '%', 330, 105, 40, OL, { w: 900 });
+    txt('голоса + комментарии', 0, 200, 32, '#64748b', { w: 600 });
+  });
+  if (within(t, 2.4, 7.4)) stamp('ВЫБОР: ПОКА РАНО', 540, 290, 50, '#2563eb', P(t, 2.4, 2.7) * (1 - P(t, 7.1, 7.4)), -.05);
+  const tk = pop(t, 7.6, .45);
+  if (tk > 0) {
+    const [dx, dy] = shk(t, 7.85, .35, 16);
+    at(540 + dx, 500 + dy, tk, -.04, () => {
+      txt('ПЕРЕКУП', 0, -110, 150, '#ffffff', { w: 900, st: 22 });
+      txt('С НУЛЯ', 0, 30, 170, '#ffd23f', { w: 900, st: 22 });
+      rr(-170, 130, 340, 90, 45, '#e5484d', OL, 8);
+      txt('СЕРИЯ 3', 0, 176, 58, '#fff', { w: 900 });
+    });
+    at(540, 790, pop(t, 8.6), .03, () => txt('ПРОБЛЕМЫ НОВИЧКА', 0, 0, 66, '#ff4d4f', { w: 900, st: 12 }));
+  }
+  const ty = lerp(1760, 1395, back(P(t, .6, 1.1)));
+  let expr = 'h', aL = POSE.up, aR = POSE.up, sweat = false;
+  if (t >= 4.2) { expr = 'smirk'; aL = POSE.idle; aR = POSE.point; }
+  if (t >= 7.6) { expr = 'worry'; aR = POSE.shrug; aL = POSE.shrug; sweat = true; }
+  person(Object.assign({}, TIMUR, { x: 540, y: ty, s: 1.38, expr, aL, aR, sweat, talk: talkAmt('T', t) }), t);
+}
+
+// 2. Refuse the mall, buy four phones 12–35
+const BATCH = ['iPhone 11', 'iPhone 11', '12 mini', 'iPhone XS'];
+function e2(t) {
+  bgRoom(false, t);
+  let ex = 'n', aR = POSE.idle, propR = null;
+  if (within(t, 12.3, 22)) { aR = POSE.ear; propR = earPhone; }
+  if (within(t, 15.5, 18.5)) ex = 'smirk';
+  if (within(t, 18.5, 22)) ex = 'worry';
+  if (within(t, 22, 32.5)) ex = 'h';
+  if (t >= 32.5) { ex = 'worry'; }
+  if (within(t, 30.8, 32.5)) aR = POSE.give;
+  person(Object.assign({}, TIMUR, { x: 300, y: 1340, s: 1.5, expr: ex, aR, propR, sweat: t > 32.5, talk: talkAmt('T', t), lx: .6, ly: t > 22 ? -.6 : 0 }), t);
+  callCard(t, 12.4, 15.5, 'Вызов…', 'Торговый центр');
+  const mk = pop(t, 15.6, .4) * (1 - P(t, 21.7, 22));
+  if (mk > 0) {
+    mallCard(540, 560, mk * .85, t);
+    if (t > 16.4) stamp('ПОКА НЕТ', 540, 560, 76, '#2563eb', P(t, 16.4, 16.7) * mk, -.1);
+  }
+  const pk = P(t, 22.1, 22.4);
+  if (pk > 0) {
+    ctx.save(); ctx.globalAlpha = pk; rr(50, 360, 980, 470, 30, 'rgba(255,255,255,.95)', OL, 7); ctx.restore();
+    BATCH.forEach((name, i) => {
+      const x = 170 + i * 245, k = pop(t, 22.4 + i * .5);
+      at(x, 545, k, 0, () => {
+        phone(0, 0, 100, 180, { s1: ['#a855f7', '#22c55e', '#3b82f6', '#f59e0b'][i], s2: '#1e293b' });
+        txt(name, 0, 120, 32, OL, { w: 800 });
+      });
+      const ck = pop(t, 27.0 + i * .6);
+      if (ck > 0) at(x, 740, ck, 0, () => { circ(0, 0, 32, '#dcfce7', OL, 5); check(0, 2, .85, P(t, 27.1 + i * .6, 27.6 + i * .6)); });
+    });
+  }
+  for (let i = 0; i < 6; i++) {
+    const k = P(t, 31.0 + i * .14, 31.8 + i * .14);
+    if (k > 0 && k < 1) note(lerp(400, 1180, k), 1050 - Math.sin(k * Math.PI) * 300, k * 7, 1);
+  }
+  if (t > 32.5) at(760, 1000, pop(t, 32.5), .06, () => {
+    rr(-230, -55, 460, 110, 55, '#e5484d', OL, 7);
+    txt('ОСТАЛОСЬ 1 000 ₽', 0, 3, 44, '#fff', { w: 900 });
+  });
+}
+
+// 3. Problem 1: money stuck 35–60
+function e3(t) {
+  bgRoom(true, t);
+  const sk = pop(t, 38.4) * (1 - P(t, 42.6, 42.9));
+  if (sk > 0) at(540, 660, sk, 0, () => {
+    rr(-400, -200, 800, 400, 30, '#fff', OL, 8);
+    rr(-370, -170, 200, 340, 18, '#e2e8f0');
+    phone(-270, 0, 110, 200, { s1: '#a855f7', s2: '#1e293b' });
+    eye(-110, -100, 1); txt('300', 40, -98, 56, OL, { w: 900, al: 'left' });
+    txt('звонков: 0', -140, 0, 44, '#475569', { w: 700, al: 'left' });
+    txt('продаж: 0', -140, 90, 52, '#e5484d', { w: 900, al: 'left' });
+    rr(220, -190, 160, 60, 30, '#1f2937'); txt('7 ДНЕЙ', 300, -159, 30, '#ffd23f', { w: 900 });
+  });
+  const ck = pop(t, 42.9) * (1 - P(t, 46.8, 47.1));
+  if (ck > 0) at(540, 660, ck, 0, () => {
+    const card = (x, who, price, col) => {
+      rr(x - 190, -220, 380, 440, 26, '#fff', col, 9);
+      phone(x, -70, 100, 180, { s1: '#a855f7', s2: '#1e293b' });
+      txt(who, x, 70, 34, '#475569', { w: 700 });
+      txt(price, x, 140, 52, col, { w: 900 });
+    };
+    card(-210, 'у меня', '14 500 ₽', OL);
+    card(210, 'у конкурента', '13 500 ₽', '#e5484d');
+    at(0, -250, pop(t, 44), 0, () => { rr(-110, -40, 220, 80, 40, '#e5484d', OL, 6); txt('−1 000', 0, 3, 44, '#fff', { w: 900 }); });
+  });
+  const ik = pop(t, 47.1) * (1 - P(t, 51.3, 51.6));
+  if (ik > 0) at(540, 640, ik, 0, () => {
+    for (let i = 0; i < 4; i++) phone(-300 + i * 200, 0, 110, 200, { s1: ['#a855f7', '#22c55e', '#3b82f6', '#f59e0b'][i], s2: '#1e293b' });
+    rr(-420, -150, 840, 300, 30, 'rgba(147,197,253,.55)', '#bfdbfe', 8);
+    for (let i = 0; i < 7; i++) star(-380 + hash(i) * 760, -130 + hash(i + 4) * 260, 14 + 6 * Math.sin(t * 3 + i), '#fff');
+    rr(-300, 170, 600, 80, 40, '#1e3a8a', OL, 6);
+    txt('ВНУТРИ 39 000 ₽', 0, 212, 40, '#fff', { w: 900 });
+  });
+  const wk = pop(t, 51.6) * (1 - P(t, 55.3, 55.6));
+  if (wk > 0) at(540, 660, wk, 0, () => wallet(0, 0, 1.3, t));
+  rulePill(t, 55.6, 60, 'ДЕРЖИ ЗАПАС 20–30%', 780, '#16a34a');
+  if (t > 55.6) stamp('НЕ ВКЛАДЫВАЙ ВСЁ', 540, 620, 54, '#e5484d', P(t, 55.6, 55.9) * (1 - P(t, 59.7, 60)), -.05);
+  problemBanner(t, 35.3, 1, 'ДЕНЬГИ ЗАСТРЯЛИ');
+  let ex = 'worry';
+  if (within(t, 47, 51.5)) ex = 'sad';
+  if (t > 55.5) ex = 'n';
+  person(Object.assign({}, TIMUR, { x: 540, y: 1400, s: 1.2, expr: ex, sweat: within(t, 51.5, 55.5), aR: t > 55.5 ? POSE.finger : POSE.idle, talk: talkAmt('T', t), ly: -.5 }), t);
+}
+
+// 4. Problem 2: scammers 60–92
+function e4(t) {
+  bgStreet(t);
+  // scammer in person
+  const wi = P(t, 74, 75.6), wo = P(t, 86.2, 87.6);
+  if (t > 74 && wo < 1) {
+    const x = lerp(1300, 780, eout(wi)) + wo * wo * 700;
+    let ex = 'smirk', aR = POSE.hold, aL = POSE.idle;
+    if (within(t, 77.5, 81.5)) { aR = POSE.up; ex = 'h'; }
+    if (within(t, 81.5, 86.2)) { ex = 'worry'; }
+    if (t >= 86.2) { ex = 'worry'; aR = POSE.idle; }
+    person(Object.assign({}, SCAMMER, { x, y: 1380, s: 1.4, expr: ex, aL, aR, walk: (wi > 0 && wi < 1) || wo > 0 ? 1 : 0, wspd: wo > 0 ? 20 : 10, propR: aR === POSE.hold ? holdPhone({}) : null, talk: talkAmt('K', t), lx: -.7, ph: 3 }), t);
+    if (wo > 0 && wo < 1) for (let i = 0; i < 4; i++) line([x - 150 - i * 25, 1000 + i * 70, x - 300 - i * 25, 1000 + i * 70], 'rgba(255,255,255,.6)', 8);
+  }
+  let ex = 'n', aR = POSE.hold, propR = holdPhone({});
+  if (within(t, 63.3, 69.5)) ex = 'n';
+  if (within(t, 69.5, 74)) ex = 'angry';
+  if (within(t, 74, 81.5)) { ex = 'n'; aR = POSE.idle; propR = null; }
+  if (within(t, 81.5, 86)) { ex = 'angry'; aR = POSE.hold; propR = holdPhone({ s1: '#fecaca', s2: '#fca5a5' }); }
+  if (t >= 86) { ex = 'smirk'; aR = POSE.idle; propR = null; }
+  person(Object.assign({}, TIMUR, { x: 260, y: 1380, s: 1.3, expr: ex, aR, propR, talk: talkAmt('T', t), lx: t > 74 ? .8 : .6, ly: t < 74 ? -.5 : 0 }), t);
+
+  // chat with link scam
+  const ck = pop(t, 63.4, .35) * (1 - P(t, 73.7, 74));
+  if (ck > 0) at(650, 750, ck, 0, () => {
+    rr(-270, -300, 540, 600, 48, '#111827', OL, 7);
+    rr(-254, -284, 508, 568, 38, '#e5ddd5');
+    rr(-254, -284, 508, 90, [38, 38, 0, 0], '#1f2937');
+    circ(-200, -239, 26, '#ea580c', '#fff', 3);
+    txt('Покупатель', -160, -239, 32, '#fff', { w: 800, al: 'left' });
+    const msgs = [[63.6, 'Беру 12 mini!'], [64.8, 'Оплачу через доставку']];
+    msgs.forEach(([mt, s], i) => {
+      const k = pop(t, mt, .3); if (k <= 0) return;
+      at(-234, -150 + i * 84, k, 0, () => { const w = tw(s, 32, 600) + 40; rr(0, -30, w, 62, 20, '#fff'); txt(s, 20, 1, 32, '#111', { w: 600, al: 'left' }); });
+    });
+    const lk = pop(t, 66.0, .3);
+    if (lk > 0) at(-234, 18, lk, 0, () => {
+      rr(0, -34, 470, 70, 20, '#fff');
+      txt('oplata-dostavka.site/get', 20, 1, 30, '#2563eb', { w: 700, al: 'left' });
+      line([20, 20, 430, 20], '#2563eb', 3);
+    });
+    const fk = pop(t, 67.4, .35);
+    if (fk > 0) at(0, 170, fk, 0, () => {
+      rr(-230, -100, 460, 200, 24, '#fff', '#94a3b8', 4);
+      txt('Получить 15 000 ₽', 0, -60, 34, OL, { w: 800 });
+      rr(-200, -30, 400, 54, 12, '#f1f5f9', '#94a3b8', 3); txt('Номер карты', -180, -3, 28, '#94a3b8', { w: 600, al: 'left' });
+      rr(-200, 36, 180, 50, 12, '#f1f5f9', '#94a3b8', 3); txt('CVC', -180, 61, 28, '#94a3b8', { w: 600, al: 'left' });
+      if (t > 69.6) cross(0, 0, 90 * eout(P(t, 69.6, 69.9)), '#ef4444', 18);
+    });
+  });
+  if (within(t, 70, 74)) stamp('НЕ ВВОДИ КАРТУ', 650, 760, 52, '#e5484d', P(t, 70, 70.3) * (1 - P(t, 73.7, 74)), -.05);
+  // screenshot vs bank
+  const sk = pop(t, 77.8) * (1 - P(t, 85.8, 86.1));
+  if (sk > 0) at(790, 660, sk * .78, .06, () => bankScreen(0, 0, 1, true, 'Выполнен', '15 000 ₽'));
+  const bk = pop(t, 81.8) * (1 - P(t, 87.8, 88.1));
+  if (bk > 0) {
+    at(290, 660, bk * .78, -.06, () => bankScreen(0, 0, 1, false, 'Поступлений', 'нет'));
+    if (t > 82.6) at(790, 500, pop(t, 82.6), .1, () => { rr(-110, -40, 220, 80, 20, '#e5484d', OL, 6); txt('ФЕЙК', 0, 3, 46, '#fff', { w: 900 }); });
+  }
+  if (t > 88) stamp('ПРОВЕРЯЙ В СВОЁМ БАНКЕ', 540, 620, 48, '#16a34a', P(t, 88, 88.3), -.05);
+  problemBanner(t, 60.3, 2, 'МОШЕННИКИ');
+}
+
+// 5a. Sale + return call 92–107
+function e5(t) {
+  bgRoom(false, t);
+  let ex = 'h', aR = POSE.idle, propR = null;
+  if (within(t, 95.3, 98.3)) { ex = 's'; aR = POSE.hold; propR = ringProp(t); }
+  if (within(t, 98.3, 107)) { ex = t < 103 ? 's' : 'worry'; aR = POSE.ear; propR = earPhone; }
+  person(Object.assign({}, TIMUR, { x: 260, y: 1360, s: 1.4, expr: ex, aR, propR, sweat: t > 103, talk: talkAmt('T', t), lx: .7 }), t);
+  const sk = pop(t, 92.4) * (1 - P(t, 95.0, 95.3));
+  if (sk > 0) at(620, 640, sk, 0, () => {
+    rr(-200, -260, 400, 520, 26, '#fff', OL, 8);
+    phone(0, -80, 130, 230, { s1: '#a855f7', s2: '#1e293b' });
+    txt('iPhone 11', 0, 100, 40, OL, { w: 800 });
+    txt('14 000 ₽', 0, 170, 56, '#16a34a', { w: 900 });
+    if (t > 93.3) at(0, -60, lerp(2, 1, eout(P(t, 93.3, 93.6))), -.15, () => { rr(-150, -44, 300, 88, 18, '#fff', '#16a34a', 9); txt('ПРОДАНО', 0, 3, 46, '#16a34a', { w: 900 }); });
+  });
+  if (within(t, 95.3, 98.3)) at(620, 640, pop(t, 95.4), 0, () => {
+    rr(-260, -70, 520, 140, 30, 'rgba(20,24,38,.95)', '#fff', 5);
+    txt('5 ДНЕЙ СПУСТЯ…', 0, 3, 46, '#fff', { w: 900 });
+  });
+  personCard(t, 640, 640, 520, 560, Object.assign({}, CLIENT, { expr: 'angry', aL: POSE.shrug, aR: POSE.shrug, talk: talkAmt('P', t) }), 'Клиент', '#2563eb', pop(t, 98.4, .35) * (1 - P(t, 102.8, 103.1)));
+  const dk = pop(t, 103.1) * (1 - P(t, 106.8, 107.1));
+  if (dk > 0) at(640, 640, dk, 0, () => {
+    rr(-280, -200, 560, 400, 30, '#fff', '#e5484d', 9);
+    camera(0, -60, 1.5, true);
+    txt('ДОКАЗАТЕЛЬСТВ:', 0, 90, 40, OL, { w: 900 });
+    txt('НОЛЬ', 0, 150, 56, '#e5484d', { w: 900 });
+  });
+  if (t > 95.3) problemBanner(t, 95.3, 3, 'ВОЗВРАТ');
+}
+
+// 5b. Workshop: mic repair + new rule 107–122
+function e5b(t) {
+  bgShop();
+  person(Object.assign({}, MASTER, { x: 790, y: 1400, s: 1.45, expr: t < 111 ? 'n' : 'h', aR: within(t, 107, 111) ? POSE.finger : POSE.idle, talk: talkAmt('M', t), lx: -.7, ph: 1 }), t);
+  counter();
+  phone(640, 1132, 60, 26, { lw: 4, s1: '#a855f7', s2: '#1e293b' });
+  let ex = 'sad', aR = POSE.idle;
+  if (t > 115) { ex = 'h'; aR = POSE.point; }
+  person(Object.assign({}, TIMUR, { x: 300, y: 1380, s: 1.5, expr: ex, aR, talk: talkAmt('T', t), lx: .7 }), t);
+  const pk = pop(t, 107.3) * (1 - P(t, 110.8, 111.1));
+  if (pk > 0) at(560, 480, pk, -.05, () => {
+    rr(-260, -70, 520, 140, 24, '#ffd23f', OL, 8); circ(-215, 0, 14, '#fff', OL, 5);
+    txt('Замена микрофона', 20, -26, 36, OL, { w: 700 });
+    txt('2 500 ₽', 20, 26, 54, '#b91c1c', { w: 900 });
+  });
+  const hk = pop(t, 111.2) * (1 - P(t, 114.8, 115.1));
+  if (hk > 0) at(540, 520, hk, 0, () => {
+    rr(-330, -110, 660, 220, 30, '#fff', OL, 8);
+    heart(-220, 0, 1.2);
+    txt('РЕПУТАЦИЯ', 60, -36, 52, OL, { w: 900 });
+    txt('дороже 2 500 ₽', 60, 34, 42, '#16a34a', { w: 800 });
+  });
+  const rk = P(t, 115.2, 115.5);
+  if (rk > 0) {
+    at(290, 560, pop(t, 115.4), -.03, () => {
+      rr(-220, -190, 440, 380, 30, '#fff', '#16a34a', 9);
+      camera(0, -70, 1.3, false);
+      txt('ВИДЕО', 0, 60, 52, OL, { w: 900 }); txt('проверки', 0, 120, 38, '#475569', { w: 700 });
+    });
+    at(790, 560, pop(t, 116.2), .03, () => {
+      rr(-220, -190, 440, 380, 30, '#fff', '#16a34a', 9);
+      shield(0, -70, 1.1);
+      txt('ГАРАНТИЯ', 0, 60, 52, OL, { w: 900 }); txt('7 дней', 0, 120, 38, '#475569', { w: 700 });
+    });
+  }
+}
+
+// 6. Problem 4: it is a business 122–142
+function e6(t) {
+  bgRoom(true, t);
+  const nk = pop(t, 125.4) * (1 - P(t, 129.8, 130.1));
+  if (nk > 0) at(540, 660, nk, 0, () => {
+    rr(-420, -170, 840, 340, 30, '#fff', OL, 8);
+    circ(-330, -80, 40, '#ffd23f', OL, 5);
+    ctx.beginPath(); ctx.moveTo(-350, -70); ctx.quadraticCurveTo(-350, -110, -330, -110); ctx.quadraticCurveTo(-310, -110, -310, -70); ctx.closePath(); ctx.fillStyle = OL; ctx.fill();
+    txt('Уведомление', -260, -80, 34, '#64748b', { w: 700, al: 'left' });
+    txt('Лимит бесплатных', -370, 0, 44, OL, { w: 900, al: 'left' });
+    txt('объявлений исчерпан', -370, 56, 44, OL, { w: 900, al: 'left' });
+    txt('Размещение — платно', -370, 120, 38, '#e5484d', { w: 800, al: 'left' });
+  });
+  const bk = pop(t, 130.2) * (1 - P(t, 134.8, 135.1));
+  if (bk > 0) at(540, 640, bk, 0, () => {
+    briefcase(0, -60, 1.6);
+    txt('ПОСТОЯННО = БИЗНЕС', 0, 130, 60, '#fff', { w: 900, st: 12 });
+  });
+  const lk = P(t, 135.2, 135.5);
+  if (lk > 0) {
+    at(290, 640, pop(t, 135.3), -.03, () => {
+      rr(-220, -190, 440, 380, 30, '#fff', '#e5484d', 9);
+      txt('САМО-', 0, -100, 48, OL, { w: 900 }); txt('ЗАНЯТОСТЬ', 0, -46, 48, OL, { w: 900 });
+      circ(0, 50, 44, '#fee2e2', OL, 5); cross(0, 50, 18, '#ef4444', 10);
+      txt('для перепродажи нельзя', 0, 140, 28, '#b91c1c', { w: 700 });
+    });
+    at(790, 640, pop(t, 137.6), .03, () => {
+      rr(-220, -190, 440, 380, 30, '#fff', '#16a34a', 9);
+      txt('ИП', 0, -72, 96, OL, { w: 900 });
+      circ(0, 50, 44, '#dcfce7', OL, 5); check(0, 52, 1, P(t, 137.8, 138.3));
+      txt('+ налоги', 0, 140, 34, '#15803d', { w: 800 });
+    });
+  }
+  problemBanner(t, 122.3, 4, 'ЭТО УЖЕ БИЗНЕС');
+  let ex = t < 130 ? 'worry' : t < 135 ? 's' : 'n';
+  person(Object.assign({}, TIMUR, { x: 540, y: 1400, s: 1.2, expr: ex, aR: within(t, 125.3, 130) ? POSE.hold : POSE.idle, propR: within(t, 125.3, 130) ? holdPhone({}) : null, talk: talkAmt('T', t), ly: -.5 }), t);
+}
+
+// 7. Month result 142–160
+function e7(t) {
+  bgRoom(false, t);
+  person(Object.assign({}, TIMUR, { x: 540, y: 1400, s: 1.2, expr: t > 150.5 ? 'h' : 'n', aL: t > 154 ? POSE.up : POSE.idle, aR: t > 154 ? POSE.up : POSE.idle, talk: talkAmt('T', t) }), t);
+  const fa = 1 - P(t, 145.8, 146.2);
+  if (fa > 0) BATCH.forEach((name, i) => {
+    const x = 170 + i * 245, k = pop(t, 142.4 + i * .3);
+    at(x, 640, k, 0, () => {
+      rr(-110, -170, 220, 340, 20, '#fff', OL, 6);
+      phone(0, -40, 90, 160, { s1: ['#a855f7', '#22c55e', '#3b82f6', '#f59e0b'][i], s2: '#1e293b' });
+      txt(name, 0, 90, 28, OL, { w: 800 });
+      const sk = P(t, 143.2 + i * .3, 143.5 + i * .3);
+      if (sk > 0) at(0, 136, lerp(2, 1, eout(sk)), -.12, () => { rr(-90, -26, 180, 52, 12, '#fff', '#16a34a', 6); txt('ПРОДАНО', 0, 2, 28, '#16a34a', { w: 900 }); }, sk);
+    }, fa);
+  });
+  if (t < 154.2) countTable(t, 146.3, 'ИТОГ МЕСЯЦА', [
+    [146.6, 'Продал 4 телефона', '+52 500', '#16a34a'],
+    [147.4, 'Купил 4 телефона', '−39 000', '#e5484d'],
+    [148.4, 'Микрофон', '−2 500', '#e5484d'],
+    [149.3, 'Реклама', '−1 500', '#e5484d'],
+    [150.0, 'Дорога', '−500', '#e5484d'],
+  ], 150.8, '+9 000 ₽', '#16a34a');
+  const ck = P(t, 154.2, 154.6);
+  if (ck > 0) {
+    at(290, 640, pop(t, 154.3), -.03, () => {
+      rr(-220, -200, 440, 400, 30, '#fff', '#e5484d', 9);
+      txt('С ТОЧКОЙ', 0, -130, 48, OL, { w: 900 });
+      txt('аренда', 0, -50, 34, '#64748b', { w: 700 });
+      txt('−35 000', 0, 10, 58, '#e5484d', { w: 900 });
+      txt('МИНУС', 0, 110, 56, '#e5484d', { w: 900 });
+    });
+    at(790, 640, pop(t, 154.9), .03, () => {
+      rr(-220, -200, 440, 400, 30, '#fff', '#16a34a', 9);
+      txt('ДОМА', 0, -130, 48, OL, { w: 900 });
+      txt('за месяц', 0, -50, 34, '#64748b', { w: 700 });
+      txt('+9 000', 0, 10, 58, '#16a34a', { w: 900 });
+      txt('ПЛЮС', 0, 110, 56, '#16a34a', { w: 900 });
+    });
+    if (t > 157.2) at(540, 385, pop(t, 157.2), 0, () => { heart(-170, 0, .8); txt('СПАСИБО!', 40, 4, 64, '#fff', { w: 900, st: 12 }); });
+  }
+}
+
+// 8. Rules 160–177
+function e8(t) {
+  bgBoard();
+  reveal(t, 'ПРАВИЛА СЕРИИ 3', 675, 450, 52, '#1e3a8a', 160.4, 161.4, 'center', 900);
+  if (t > 161.4) line([430, 492, lerp(430, 920, P(t, 161.4, 161.8)), 492], '#3b82f6', 7);
+  const items = [
+    [163.3, 'Не вкладывай всё —', 'держи ЗАПАС'],
+    [167.0, 'Деньги проверяй', 'В БАНКЕ, не на скрине'],
+    [170.5, 'Снимай ВИДЕО', 'проверки + ГАРАНТИЯ'],
+    [174.0, 'Перепродаёшь часто', '= это БИЗНЕС'],
+  ];
+  items.forEach(([it, s1, s2], i) => {
+    if (t < it) return;
+    const y = 580 + i * 160;
+    at(415, y + 20, pop(t, it, .3), 0, () => rr(-30, -30, 60, 60, 10, '#fff', OL, 6));
+    check(415, y + 20, 1, P(t, it + .5, it + .9));
+    reveal(t, s1, 470, y, 38, '#0f172a', it + .1, it + .8, 'left', 700);
+    reveal(t, s2, 470, y + 54, 40, '#16a34a', it + .5, it + 1.2, 'left', 900);
+  });
+  person(Object.assign({}, TIMUR, { x: 175, y: 1400, s: 1.2, expr: 'n', aR: POSE.point, talk: talkAmt('T', t), lx: .8, ly: -.3 }), t);
+}
+
+// 9. Partner offer + vote 177–194
+function e9(t) {
+  bgRoom(false, t);
+  const wi = P(t, 177, 178.6);
+  let dex = 'h', daL = POSE.idle, daR = POSE.idle;
+  if (within(t, 178.6, 182.5)) { daL = POSE.shrug; daR = POSE.shrug; }
+  person(Object.assign({}, DANYA, { x: lerp(1300, 790, eout(wi)), y: 1360, s: 1.45, expr: dex, aL: daL, aR: daR, walk: wi < 1 ? 1 : 0, talk: talkAmt('D', t), lx: -.7, ph: 4 }), t);
+  let ex = within(t, 182.5, 186) ? 'worry' : 'h';
+  if (t >= 186) ex = 'smirk';
+  person(Object.assign({}, TIMUR, { x: 290, y: 1360, s: 1.45, expr: ex, aR: t >= 186 ? POSE.point : POSE.idle, talk: talkAmt('T', t), lx: .7 }), t);
+  if (within(t, 179.4, 182.5)) {
+    at(790, 560, pop(t, 179.4), .05, () => { rr(-190, -60, 380, 120, 30, '#ffd23f', OL, 8); txt('50 000 ₽', 0, 3, 60, '#b45309', { w: 900 }); });
+    if (t > 180.8) at(540, 420, pop(t, 180.8), -.04, () => { rr(-150, -50, 300, 100, 50, '#16a34a', OL, 7); txt('50 / 50', 0, 3, 54, '#fff', { w: 900 }); });
+  }
+  if (within(t, 182.5, 186.2)) {
+    at(290, 560, pop(t, 182.6), -.03, () => { rr(-220, -110, 440, 220, 30, '#fff', '#16a34a', 9); txt('ДЕНЕГ', 0, -36, 46, OL, { w: 900 }); txt('× 2', 0, 36, 70, '#16a34a', { w: 900 }); });
+    at(790, 560, pop(t, 184.0), .03, () => { rr(-220, -110, 440, 220, 30, '#fff', '#e5484d', 9); txt('ПРИБЫЛЬ', 0, -36, 46, OL, { w: 900 }); txt('÷ 2', 0, 36, 70, '#e5484d', { w: 900 }); });
+  }
+  voteCard(t, 186.0, [['БЕРЁМ', 'ПАРТНЁРА', 'Даня + 50 000 ₽'], ['РАБОТАЮ', 'ОДИН', 'вся прибыль моя']], 192.0, 'Серия 4 — по вашему выбору');
+}
+
+const SCENES = [[0, 12, e1], [12, 35, e2], [35, 60, e3], [60, 92, e4], [92, 107, e5], [107, 122, e5b], [122, 142, e6], [142, 160, e7], [160, 177, e8], [177, 194.1, e9]];
+startPlayer();
+</script>
+</body>
+</html>
