@@ -76,6 +76,48 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("gta"):
+		_hour(15.0)
+		var life2: CityLife = main.get_node("CityLife")
+		life2.enabled = true
+		life2.max_cars = 8
+		life2.max_peds = 14
+		var s5: CarSession = main.get("car_session")
+		cam.make_current()
+		cam.global_position = (s5.player as Node3D).global_position + Vector3(0, 3, 0)
+		for q5 in 12:
+			await _sec(1.0)
+			print("GTA t=", q5, " peds=", life2.peds.size(), " cars=", life2.cars.size())
+		# a group of pedestrians: the 3 closest to each other
+		var pd2: Array = life2.peds
+		for k in mini(3, pd2.size()):
+			var pn2: Node3D = pd2[k]["node"]
+			life2.enabled = false
+			await _look("gta_ped_%d" % k, pn2.global_position + pn2.global_basis.z * 3.2 + pn2.global_basis.x * 1.2 + Vector3(0, 1.6, 0), pn2.global_position + Vector3(0, 1.0, 0))
+			life2.enabled = true
+		if pd2.size() > 3:
+			var vict: Dictionary = pd2[3]
+			var vn: Node3D = vict["node"]
+			s5.player.teleport(vn.global_position - vn.global_basis.z * 1.2 + Vector3(0, 0.4, 0), vn.rotation.y + PI)
+			await _sec(0.3)
+			life2.hit_body(vict["body"], 12.0, vn.global_basis.z, true)
+			await _sec(0.8)
+			life2.enabled = false
+			await _look("gta_knocked", vn.global_position + Vector3(3.0, 2.2, 2.5), vn.global_position + Vector3(0, 0.3, 0))
+			life2.enabled = true
+		if not life2.cars.is_empty():
+			var tc2: Dictionary = life2.cars[0]
+			s5.player.teleport((tc2["spot"] as Node3D).global_position + Vector3(0, 0.4, 0), 0.0)
+			await _sec(1.0)
+			life2.steal(tc2["spot"])
+			await _sec(7.0)
+			if s5.driving:
+				VehicleInput.scripted = {"throttle": 0.6}
+				await _sec(2.5)
+				VehicleInput.scripted = null
+				await _snap("gta_stolen_drive")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("life"):
 		# 0.25: traffic + pedestrians on a city avenue (near the start)
 		_hour(16.0)

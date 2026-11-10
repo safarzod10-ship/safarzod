@@ -66,7 +66,10 @@ func _ready() -> void:
 			S.append(acc)
 		if acc < 120.0:
 			continue
-		_roads.append({"p": P, "s": S, "hw": float(r["w"]) * 0.5, "cls": cls})
+		var bb := AABB(P[0], Vector3.ZERO)
+		for q2 in P:
+			bb = bb.expand(q2)
+		_roads.append({"p": P, "s": S, "hw": float(r["w"]) * 0.5, "cls": cls, "bb": bb})
 	_apply_quality()
 	Settings.quality_changed.connect(func(_q: int) -> void: _apply_quality())
 
@@ -147,9 +150,17 @@ func _manage(f: Vector3) -> void:
 
 
 func _pick(f: Vector3, rmin: float, rmax: float) -> Array:
-	## a random road point at rmin..rmax from f: [road index, s]
+	## a random road point at rmin..rmax from f: [road index, s] (only roads passing near f)
+	var near: Array[int] = []
+	for i in _roads.size():
+		var bb: AABB = _roads[i]["bb"]
+		var g := bb.grow(rmax)
+		if f.x > g.position.x and f.x < g.end.x and f.z > g.position.z and f.z < g.end.z:
+			near.append(i)
+	if near.is_empty():
+		return []
 	for attempt in 24:
-		var ri := _rng.randi() % _roads.size()
+		var ri: int = near[_rng.randi() % near.size()]
 		var R: Dictionary = _roads[ri]
 		var P: PackedVector3Array = R["p"]
 		var k := _rng.randi() % P.size()
