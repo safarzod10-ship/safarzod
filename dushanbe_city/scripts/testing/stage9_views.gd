@@ -61,7 +61,7 @@ func _ready() -> void:
 		# 0.25: the owner's car pack at the dealership: each car from front 3/4, rear 3/4, plates, lamps
 		_hour(13.0)
 		await _sec(4.0)
-		for key in ["w123", "e30", "e30m", "r12"]:
+		for key in ["gls", "w123", "e30", "e30m", "r12"]:
 			var c: VehicleCar = main.get(key)
 			if c == null:
 				continue

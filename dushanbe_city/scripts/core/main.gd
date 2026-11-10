@@ -189,6 +189,7 @@ var w123: VehicleCar                ## 0.25: the owner's car pack (dealership)
 var e30: VehicleCar
 var e30m: VehicleCar
 var r12: VehicleCar
+var gls: VehicleCar
 var bus: VehicleCar
 var bus_job: BusJob
 var fuel: FuelService
@@ -243,9 +244,9 @@ func _spawn_extra_vehicles() -> void:
 		else:
 			lexus = c
 	# 0.25: the owner's car pack, for sale on the dealership's lot (slots 3..6)
-	var pack_names := {"w123": "W123", "e30": "E30", "e30m": "E30M", "r12": "R12"}
+	var pack_names := {"w123": "W123", "e30": "E30", "e30m": "E30M", "r12": "R12", "gls": "GLS"}
 	var slot := 3
-	for key in ["w123", "e30", "e30m", "r12"]:
+	for key in ["w123", "e30", "e30m", "r12", "gls"]:
 		var pc := VehicleCar.new()
 		pc.configure(key)
 		pc.name = pack_names[key]

@@ -18,8 +18,9 @@ const CARS := {
 	"E30": ["e30", "BMW E30", 60000],
 	"E30M": ["e30m", "BMW E30 заниженная", 75000],
 	"R12": ["r12", "Renault 12", 20000],
+	"GLS": ["gls", "Mercedes-Benz GLS 580", 250000],
 }
-const ORDER := ["R12", "W123", "Camry", "E30", "E30M", "Lexus", "Prado"]
+const ORDER := ["R12", "W123", "Camry", "E30", "E30M", "Lexus", "Prado", "GLS"]
 
 static var instance: CarDealer
 static var strict := false        ## tests: apply the ownership rule although the save is off
@@ -113,7 +114,7 @@ func buy(node_name: String) -> String:
 	# delivered to the lot in front of the showroom
 	var car: Node = main.get(key) if main else null
 	if car is VehiclePrado and not (car as VehiclePrado).wrecked:
-		var k := ["Camry", "Lexus", "Prado", "W123", "E30", "E30M", "R12"].find(node_name)
+		var k := ["Camry", "Lexus", "Prado", "W123", "E30", "E30M", "R12", "GLS"].find(node_name)
 		var ow: Variant = main.get("open_world")
 		var p := delivery_point(k)
 		(car as VehiclePrado).place(p, delivery_yaw())

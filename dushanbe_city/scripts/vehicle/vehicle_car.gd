@@ -70,6 +70,16 @@ const PRESETS := {
 		"door": Vector3(-0.95, 0.55, -0.1), "seat": Vector3(-0.36, 0.5, 0.2), "lamp": Vector3(0, 0.62, -2.15),
 		"boxes": [[Vector3(1.62, 0.6, 4.28), Vector3(0, 0.18 + 0.3, 0)], [Vector3(1.4, 0.5, 2.1), Vector3(0, 0.78 + 0.25, 0.1)]],
 		"name": "Renault 12", "interior": false},
+	# 0.25: Mercedes-Benz GLS 580 (owner's model, dushanbe_city_src/tools/vehicles/gls.py): black,
+	# smoked lamps, 4.0 V8 biturbo, 9G-Tronic, 4MATIC
+	"gls": {"file": "../cars/gls.glb", "yaw": PI, "wheels": "names", "paint": ["primary"], "pack": true,
+		"mass": 2600.0, "cg": 0.72, "front": 0.52, "kw": 360.0, "nm": 700.0, "vmax": 250.0, "split": 0.45,
+		"gears": [5.35, 3.24, 2.25, 1.64, 1.21, 1.0, 0.86, 0.72, 0.6], "fd": 2.82, "mu": 0.96, "f": [1.3, 1.25],
+		"arb": [21000.0, 10000.0], "tank": 90.0, "l100": 12.5, "r": 0.387, "size": Vector3(1.96, 1.82, 5.21),
+		"cd": 0.95, "brake": 32000.0, "door": Vector3(-1.08, 0.65, -0.35), "seat": Vector3(-0.42, 0.82, 0.15),
+		"lamp": Vector3(0, 0.88, -2.55),
+		"boxes": [[Vector3(1.94, 0.85, 5.15), Vector3(0, 0.3 + 0.42, 0)], [Vector3(1.78, 0.62, 3.3), Vector3(0, 1.15 + 0.31, 0.25)]],
+		"name": "Mercedes-Benz GLS 580", "color": Color(0.012, 0.012, 0.014), "interior": false},
 }
 
 var preset := "camry"
@@ -244,7 +254,7 @@ func _pack_lamps_and_plates() -> void:
 		lb.double_sided = false
 		lb.shaded = true
 		var n := 1.0 if front else -1.0           # the quad faces mesh-local +Z (front) / -Z (rear)
-		lb.position = bb.get_center() + Vector3(0.045 * n, 0.0, 0.004 * n)
+		lb.position = bb.get_center() + Vector3(0.045 * n, 0.012, 0.004 * n)
 		lb.rotation.y = 0.0 if front else PI
 		mi.add_child(lb)
 		plate_labels.append(lb)
