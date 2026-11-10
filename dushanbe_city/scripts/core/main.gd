@@ -143,10 +143,12 @@ func _spawn_car(touch: CanvasLayer) -> void:
 		var shop := GunShop.new()
 		shop.name = "GunShop"
 		add_child(shop)
-		var dealer := CarDealer.new()
-		dealer.name = "CarDealer"
-		dealer.main = self
-		add_child(dealer)
+		for br in ["", "mb", "bmw"]:              # general + the Mercedes and BMW showrooms
+			var dealer := CarDealer.new()
+			dealer.name = "CarDealer" if br == "" else "CarDealer_" + br
+			dealer.brand = br
+			dealer.main = self
+			add_child(dealer)
 	var trunks := CarTrunks.new()
 	trunks.name = "CarTrunks"
 	trunks.main = self
@@ -254,10 +256,11 @@ func _spawn_extra_vehicles() -> void:
 		pc.collision_mask = 1
 		add_child(pc)
 		await get_tree().physics_frame
-		var dlr: CarDealer = get_node_or_null("CarDealer")
+		var dlr: CarDealer = CarDealer.for_car(get_tree(), String(pc.name)) if get_node_or_null("CarDealer") else null
 		if dlr and dlr.in_city:
-			open_world.preload_at(dlr.delivery_point(slot))
-			pc.place(dlr.delivery_point(slot), dlr.delivery_yaw())
+			var ls := dlr.lot_slot(String(pc.name))
+			open_world.preload_at(dlr.delivery_point(ls))
+			pc.place(dlr.delivery_point(ls), dlr.delivery_yaw())
 		else:
 			pc.place(Vector3(-52.0, 0.0, -102.0 - slot * 7.0), 0.0)
 		car_session.add_vehicle(pc)

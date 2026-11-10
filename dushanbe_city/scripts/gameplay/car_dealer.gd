@@ -21,6 +21,11 @@ const CARS := {
 	"GLS": ["gls", "Mercedes-Benz GLS 580", 250000],
 }
 const ORDER := ["R12", "W123", "Camry", "E30", "E30M", "Lexus", "Prado", "GLS"]
+## 0.25 brand showrooms: Mercedes cars at the Mercedes salon, BMW at the BMW salon, the rest at the
+## general one (landmarks "dealer", "dealer_mb", "dealer_bmw")
+const BRAND_OF := {"W123": "mb", "GLS": "mb", "E30": "bmw", "E30M": "bmw"}
+const TITLES := {"": ["АВТОСАЛОН ДУШАНБЕ", "DUSHANBE MOTORS"], "mb": ["MERCEDES-BENZ", "АВТОСАЛОН ДУШАНБЕ"], "bmw": ["BMW", "АВТОСАЛОН ДУШАНБЕ"]}
+var brand := ""                     ## set before add_child
 
 static var instance: CarDealer
 static var strict := false        ## tests: apply the ownership rule although the save is off
@@ -35,11 +40,12 @@ var _msg: Label
 
 
 func _ready() -> void:
-	instance = self
+	if brand == "":
+		instance = self
 	add_to_group(&"interactable")
 	add_to_group(&"car_dealer")
 	var wd := WorldData.get_instance()
-	var lm: Dictionary = wd.landmark("dealer") if wd and wd.ok else {}
+	var lm: Dictionary = wd.landmark("dealer" if brand == "" else "dealer_" + brand) if wd and wd.ok else {}
 	if lm.is_empty():
 		var y := CityWorld.instance.terrain_height(POS.x, POS.z) if CityWorld.instance else 2.4
 		global_position = Vector3(POS.x, y, POS.z)
@@ -82,7 +88,7 @@ func delivery_yaw() -> float:
 
 # ------------------------------------------------------------------------------------------ interactable
 func interaction_label(_player: Node) -> String:
-	return "АВТОСАЛОН"
+	return "АВТОСАЛОН " + String(TITLES[brand][0]) if brand != "" else "АВТОСАЛОН"
 
 
 func interaction_point(_player: Node) -> Vector3:
@@ -98,6 +104,29 @@ func interact(_player: Node) -> void:
 
 
 # ------------------------------------------------------------------------------------------ buying
+func my_cars() -> Array:
+	return ORDER.filter(func(n: String) -> bool: return String(BRAND_OF.get(n, "")) == brand)
+
+
+## slot on this showroom's lot (general: the original 0..2 for Camry / Lexus / Prado, then the rest)
+func lot_slot(node_name: String) -> int:
+	if brand == "":
+		var fixed := ["Camry", "Lexus", "Prado"].find(node_name)
+		if fixed >= 0:
+			return fixed
+		return 3 + my_cars().filter(func(n: String) -> bool: return not n in ["Camry", "Lexus", "Prado"]).find(node_name)
+	return my_cars().find(node_name)
+
+
+## the showroom that sells this car (node name)
+static func for_car(tree: SceneTree, node_name: String) -> CarDealer:
+	var want := String(BRAND_OF.get(node_name, ""))
+	for d in tree.get_nodes_in_group(&"car_dealer"):
+		if (d as CarDealer).brand == want:
+			return d
+	return instance
+
+
 func buy(node_name: String) -> String:
 	## "" on success, else the reason
 	if not CARS.has(node_name):
@@ -114,7 +143,7 @@ func buy(node_name: String) -> String:
 	# delivered to the lot in front of the showroom
 	var car: Node = main.get(key) if main else null
 	if car is VehiclePrado and not (car as VehiclePrado).wrecked:
-		var k := ["Camry", "Lexus", "Prado", "W123", "E30", "E30M", "R12", "GLS"].find(node_name)
+		var k := lot_slot(node_name)
 		var ow: Variant = main.get("open_world")
 		var p := delivery_point(k)
 		(car as VehiclePrado).place(p, delivery_yaw())
@@ -195,8 +224,8 @@ func _build_house() -> void:
 	_box(Vector3(1.4, 3.2, SIZE.z + 1.2), Vector3(sx + 0.2, H + 2.1, 0), black)
 	_box(Vector3(0.6, 3.2, SIZE.x + 0.8), Vector3(0, H + 2.1, sz + 0.3), black)   # wraps the corner (street side)
 	_emblem(Vector3(sx + 0.92, H + 2.1, -sz + 4.0), 1.15, PI * 0.5)
-	_sign_text("АВТОСАЛОН ДУШАНБЕ", Vector3(sx + 0.92, H + 2.35, 3.0), PI * 0.5, 120, 0.013, Color(0.96, 0.96, 0.97))
-	_sign_text("DUSHANBE MOTORS", Vector3(sx + 0.92, H + 1.35, 3.0), PI * 0.5, 54, 0.011, Color(0.7, 0.72, 0.75))
+	_sign_text(String(TITLES[brand][0]), Vector3(sx + 0.92, H + 2.35, 3.0), PI * 0.5, 120, 0.013, Color(0.96, 0.96, 0.97))
+	_sign_text(String(TITLES[brand][1]), Vector3(sx + 0.92, H + 1.35, 3.0), PI * 0.5, 54, 0.011, Color(0.7, 0.72, 0.75))
 	_box(Vector3(0.05, 2.2, 0.06), Vector3(sx + 0.9, H + 2.1, -sz + 6.6), silver_e)
 	# ---- entrance portal: a black frame stepping out, glass doors (open gap), a light strip
 	_box(Vector3(2.0, 0.6, door_w + 2.0), Vector3(sx + 0.9, 4.1, 0), black)
@@ -210,20 +239,27 @@ func _build_house() -> void:
 		_planter(Vector3(sx + 2.2, 0.0, z), white, leaf)
 	var fz := -sz - 3.5
 	for k in 3:
-		var fp := Vector3(sx + 3.0 + k * 2.2, 0.0, fz)
-		_box(Vector3(0.12, 9.0, 0.12), fp + Vector3(0, 4.5, 0), steel)
+		var fp := Vector3(sx + 3.0 + k * 3.2, 0.0, fz)
+		_box(Vector3(0.14, 11.5, 0.14), fp + Vector3(0, 5.75, 0), steel)
 		if k == 1:
-			var tf := Sprite3D.new()
-			tf.texture = load("res://assets/models/extra/tajik_flag_0.jpg") if ResourceLoader.exists("res://assets/models/extra/tajik_flag_0.jpg") else null
-			if tf.texture:
-				tf.pixel_size = 1.6 / float(tf.texture.get_width())
-				tf.position = fp + Vector3(0, 8.1, 0.85)
-				tf.double_sided = true
-				add_child(tf)
+			# the national flag, 2.8 x 1.4 m, upright (red on top: the texture is stored upside down),
+			# one face per side so it reads correctly from both, the hoist at the pole
+			var tex: Texture2D = load("res://assets/models/extra/tajik_flag_0.jpg") if ResourceLoader.exists("res://assets/models/extra/tajik_flag_0.jpg") else null
+			if tex:
+				for face in 2:
+					var tf := Sprite3D.new()
+					tf.texture = tex
+					tf.pixel_size = 2.8 / float(tex.get_width())
+					tf.flip_v = true
+					tf.flip_h = face == 1
+					tf.double_sided = false
+					tf.rotation.y = PI * 0.5 if face == 0 else -PI * 0.5
+					tf.position = fp + Vector3(0.01 if face == 0 else -0.01, 10.4, 1.47)
+					add_child(tf)
 		else:
-			_box(Vector3(0.03, 2.2, 1.5), fp + Vector3(0, 7.8, 0.82), black)
-			_emblem(fp + Vector3(0.03, 7.9, 0.82), 0.42, PI * 0.5)
-			_emblem(fp + Vector3(-0.03, 7.9, 0.82), 0.42, -PI * 0.5)
+			_box(Vector3(0.03, 2.8, 1.6), fp + Vector3(0, 9.9, 0.88), black)
+			_emblem(fp + Vector3(0.03, 10.0, 0.88), 0.5, PI * 0.5)
+			_emblem(fp + Vector3(-0.03, 10.0, 0.88), 0.5, -PI * 0.5)
 	var py := Vector3(sx + 14.0, 0.0, -sz - 3.0)
 	_box(Vector3(0.9, 7.0, 2.4), py + Vector3(0, 3.5, 0), black)
 	_box(Vector3(1.4, 0.5, 2.9), py + Vector3(0, 0.25, 0), grey)
@@ -276,11 +312,19 @@ func _build_house() -> void:
 	pod.material_override = steel
 	pod.position = Vector3(3.0, 0.55, -7.5)
 	add_child(pod)
-	_display_car("res://assets/models/cars/gls.glb", Vector3(3.0, 0.67, -7.5), 0.7, PI)
-	_display_car("res://assets/models/cars/w123.glb", Vector3(3.0, 0.48, 7.5), -0.6, PI)
-	_display_car("res://assets/models/extra/camry.glb", Vector3(3.6, 0.92, 1.8), PI * 0.35, PI)
-	_display_car("res://assets/models/cars/e30.glb", Vector3(-4.0, 0.48, -8.5), 1.2, PI)
-	_display_car("res://assets/models/extra/lexus_rx.glb", Vector3(-4.0, 0.95, 8.5), 1.9, 0.0)
+	match brand:
+		"mb":
+			_display_car("res://assets/models/cars/gls.glb", Vector3(3.0, 0.67, -7.5), 0.7, PI)
+			_display_car("res://assets/models/cars/w123.glb", Vector3(3.0, 0.48, 7.5), -0.6, PI)
+			_display_car("res://assets/models/cars/gls.glb", Vector3(-4.0, 0.48, 8.5), 1.9, PI)
+		"bmw":
+			_display_car("res://assets/models/cars/e30.glb", Vector3(3.0, 0.67, -7.5), 0.7, PI)
+			_display_car("res://assets/models/cars/e30_low.glb", Vector3(3.0, 0.48, 7.5), -0.6, PI)
+			_display_car("res://assets/models/cars/e30.glb", Vector3(-4.0, 0.48, 8.5), 1.9, PI)
+		_:
+			_display_car("res://assets/models/extra/camry.glb", Vector3(3.6, 0.92, 1.8), PI * 0.35, PI)
+			_display_car("res://assets/models/extra/lexus_rx.glb", Vector3(-4.0, 0.95, 8.5), 1.9, 0.0)
+			_display_car("res://assets/models/cars/r12.glb", Vector3(3.0, 0.48, -7.5), 0.7, PI)
 	# lot markings in front (delivery spots, two columns)
 	for c2 in 2:
 		for k in 5:
@@ -443,7 +487,7 @@ func _build_ui() -> void:
 	v.add_theme_constant_override("separation", 12)
 	_panel.add_child(v)
 	var t := Label.new()
-	t.text = "АВТОСАЛОН"
+	t.text = "АВТОСАЛОН" + (" " + String(TITLES[brand][0]) if brand != "" else "")
 	t.add_theme_font_override("font", HudStyle.font())
 	t.add_theme_font_size_override("font_size", 32)
 	t.add_theme_color_override("font_color", Color(1.0, 0.82, 0.35))
@@ -454,7 +498,7 @@ func _build_ui() -> void:
 	_money.add_theme_color_override("font_color", HudStyle.MONEY)
 	_money.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(_money)
-	for nm in ORDER:
+	for nm in my_cars():
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 16)
 		v.add_child(h)
