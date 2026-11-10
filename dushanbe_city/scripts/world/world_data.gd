@@ -33,6 +33,7 @@ var signs: Array = []
 var kmposts: Array = []
 var fuel: Array = []
 var services: Array = []          ## auto services (garages), 3x the filling stations
+var washes: Array = []            ## 0.24: car washes (beside an auto service, where an AMID would be < 2 km from another)
 var waterfalls: Array = []
 var billboards: Array = []
 var guardrails: Array = []
@@ -72,6 +73,7 @@ func _load() -> void:
 	kmposts = meta.get("kmposts", [])
 	fuel = meta.get("fuel", [])
 	services = meta.get("services", [])
+	washes = meta.get("washes", [])
 	waterfalls = meta.get("waterfalls", [])
 	billboards = meta.get("billboards", [])
 	guardrails = meta.get("guardrails", [])

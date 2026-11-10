@@ -16,6 +16,7 @@ uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;
 uniform float alpha_cut = 0.0;       // > 0: alpha-tested decals (grille, badges)
 uniform vec2 side_gain = vec2(1.0);  // emission on the car's left (x < 0) / right side: turn signals
+instance uniform float dirt = 0.0;   // 0.25: road dust / mud (more low on the body, blotchy); the car wash clears it
 
 void vertex() {
 	vec3 cpos;
@@ -39,6 +40,15 @@ void fragment() {
 	rough = mix(rough, 0.55, v_damage * paint);
 	alb = mix(alb, vec3(0.56, 0.57, 0.58), sc);
 	met = mix(met, 0.7, sc);
+	// dirt: dust over everything that is not a lamp, heavier near the sills and wheels
+	if (dirt > 0.001 && emission_energy < 0.01) {
+		float low = clamp(1.0 - (v_carpos.y + 0.35) * 0.85, 0.2, 1.0);
+		float blot = 0.65 + 0.35 * sin(v_carpos.x * 7.1 + v_carpos.z * 3.3) * sin(v_carpos.z * 5.7 - v_carpos.y * 9.0);
+		float m = clamp(dirt * low * blot * 1.15, 0.0, 0.85);
+		alb = mix(alb, vec3(0.43, 0.38, 0.31), m);
+		rough = mix(rough, 0.95, m);
+		met = mix(met, 0.0, m);
+	}
 	ALBEDO = alb;
 	ROUGHNESS = rough;
 	METALLIC = met;

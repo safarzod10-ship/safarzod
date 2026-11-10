@@ -14,6 +14,11 @@ import network as NW
 
 RNG = np.random.default_rng(2026)
 
+AMID_SPACING = 2000.0          # 0.24: one AMID per 2 km; the other slots become car wash + auto service lots
+WASHES = []
+AMID_AT = []
+WASH_SERVICES = []
+
 # landmarks: id, name, x, z, yaw, footprint (L, D) -> plot is flattened and kept free of buildings
 LANDMARKS = [
     ("somoni", "Памятник Исмоили Сомони и площадь Дусти", -175.0, -2475.0, 0.0, (150.0, 120.0)),
@@ -142,7 +147,7 @@ def build(roads, H, H_at, F, avoid=()):
         return placed
     # big models (AMID with its car park, malls, towers) own their footprint: the ordinary buildings of
     # the inner block rows that overlap them go (the AMID can be entered, nothing may stand inside)
-    BIG = {"amid_m": (118.0, 117.0), "mall_m": (100.0, 56.0), "luxa_m": (28.0, 28.0), "luxb_m": (32.0, 32.0)}
+    BIG = {"wash_lot": (60.0, 44.0), "amid_m": (118.0, 117.0), "mall_m": (100.0, 56.0), "luxa_m": (28.0, 28.0), "luxb_m": (32.0, 32.0)}
     big = [(i, b) for i, b in enumerate(buildings) if b[0] in BIG]
     drop = set()
     for i, b in big:
@@ -160,6 +165,18 @@ def build(roads, H, H_at, F, avoid=()):
     if drop:
         print("buildings removed under big models: %d" % len(drop))
         buildings[:] = [b for k, b in enumerate(buildings) if k not in drop]
+    # the car wash + auto service lots leave the building list (the game builds them)
+    for b in [b for b in buildings if b[0] == "wash_lot"]:
+        yaw = b[3]
+        fx, fz = -math.sin(yaw), -math.cos(yaw)                 # towards the street
+        rx, rz = math.cos(yaw), -math.sin(yaw)
+        sy = yaw + math.pi / 2                                    # service / wash +X -> the street
+        for lx, lst in ((-15.0, WASH_SERVICES), (15.0, WASHES)):
+            ox, oz = b[1] + rx * lx + fx * 4.0, b[2] + rz * lx + fz * 4.0
+            lst.append({"x": round(ox + fx * 14.0, 2), "z": round(oz + fz * 14.0, 2), "ox": round(ox, 2), "oz": round(oz, 2),
+                        "y": round(float(H_at([ox], [oz])[0]), 2), "yaw": round(sy, 4), "road": "lot"})
+    buildings[:] = [b for b in buildings if b[0] != "wash_lot"]
+    print("car wash + auto service lots (AMIDs 2 km apart): %d" % len(WASHES))
     ns = place_models("school_m", 65.0, 55.0, 6)
     nh = place_models("hospital_m", 31.0, 18.5, 4)
     print("model schools %d, hospitals %d" % (ns, nh))
@@ -202,7 +219,8 @@ def build(roads, H, H_at, F, avoid=()):
     kms = make_kmposts(roads, H_at)
     places = [{"id": p[0], "name": p[1], "kind": p[2], "x": p[3], "z": p[4], "r": p[5]} for p in NW.PLACES]
     print("buildings: city %d, villages/roadside %d" % (n_city, len(buildings) - n_city))
-    return {"buildings": buildings, "landmarks": landmarks, "fuel": fuel, "services": services, "signs": signs, "kmposts": kms, "places": places}
+    services = services + WASH_SERVICES
+    return {"buildings": buildings, "landmarks": landmarks, "fuel": fuel, "services": services, "washes": WASHES, "signs": signs, "kmposts": kms, "places": places}
 
 
 # -------------------------------------------------------------------- block layouts
@@ -235,6 +253,9 @@ def perimeter_block(add, free, a, b, c, d, tall):
                                           else ["luxc_m", "luxc_m", "luxa_m", "panel9", "brick5", "office"]))
                     if kind == "amid_m" and RNG.random() < 0.15:
                         kind = "mall_m"          # an AMID now and then, not on every block
+                    if kind == "amid_m" and any(math.hypot(o[0] - (sx + ux * (s + 58)), o[1] - (sz + uz * (s + 58))) < AMID_SPACING
+                                                for o in AMID_AT):
+                        kind = "wash_lot"        # 0.24: AMIDs 2 km apart; here a car wash + auto service
                 elif ring == 3:
                     kind = str(RNG.choice(["luxc_m", "panel9", "panel5", "brick5"]))
                 elif ring == 2:
@@ -246,7 +267,8 @@ def perimeter_block(add, free, a, b, c, d, tall):
                     L = 46.0
                 if kind == "sky":
                     L = 24.0
-                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0), "amid_m": (116.0, 115.0)}
+                LUXD = {"luxa_m": (26.0, 26.0), "luxb_m": (30.0, 30.0), "luxc_m": (42.0, 16.0), "mall_m": (96.0, 52.0), "amid_m": (116.0, 115.0),
+                        "wash_lot": (60.0, 44.0)}
                 if kind in LUXD:
                     L = LUXD[kind][0]
                     if length - s - 10 < L:
@@ -258,10 +280,12 @@ def perimeter_block(add, free, a, b, c, d, tall):
                 D = {"tower": 18.0, "school": 15.0, "panel5": 12.0, "brick5": 12.0, "sky": 24.0}.get(kind, LUXD.get(kind, (0, 14.0))[1])
                 x = sx + ux * (s + L / 2) + nx * D / 2
                 z = sz + uz * (s + L / 2) + nz * D / 2
-                floors = {"amid_m": 3, "luxa_m": 22, "luxb_m": 18, "luxc_m": 12, "mall_m": 4, "panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
+                floors = {"wash_lot": 1, "amid_m": 3, "luxa_m": 22, "luxb_m": 18, "luxc_m": 12, "mall_m": 4, "panel9": 9, "panel5": 5, "brick5": 5, "school": 3, "office": int(RNG.integers(5, 10)),
                           "admin": int(RNG.integers(4, 7)), "hotel": int(RNG.integers(7, 13)), "tower": int(RNG.integers(14, 23)), "sky": 30}[kind]
                 if free(x, z, L, D, yaw, 3.0):
                     add(kind, x, z, yaw, L, D, floors)
+                    if kind == "amid_m":
+                        AMID_AT.append((x, z))
                 s += L + float(RNG.choice([4, 6, 8]))
 
 

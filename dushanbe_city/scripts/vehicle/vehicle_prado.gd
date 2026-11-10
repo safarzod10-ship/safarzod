@@ -89,6 +89,8 @@ var rpm := 800.0
 var engine_load := 0.0
 var engine_brake_force := 0.0             ## N at the wheels while coasting (tests)
 var speed_kmh := 0.0                      ## |v| of the physical body in km/h (speedometer)
+var dirt := 0.0                           ## 0.25: 0 clean .. 1 filthy (driving; off-road x4); CarWash cleans
+var _dirt_shown := -1.0
 var forward_speed := 0.0                  ## m/s along the car (signed)
 var health := 100.0
 var wrecked := false                      ## burnt out after an explosion (VehicleFire)
@@ -315,6 +317,7 @@ func _wheel_z(front: bool) -> float:
 func _physics_process(delta: float) -> void:
 	_read_input(delta)
 	_burn_fuel(delta)
+	_get_dirty(delta)
 	_hit_cooldown = maxf(0.0, _hit_cooldown - delta)
 	# parked far from the camera: frozen (static) so it neither falls through unloaded ground nor
 	# keeps open-world sectors loaded around it; wakes up when the camera comes within 300 m
@@ -328,6 +331,28 @@ func _physics_process(delta: float) -> void:
 
 
 var _far_t := 0.0
+
+
+## dirt builds up with the distance driven: ~45 km on asphalt to filthy, 4x faster on earth / grass /
+## sand, faster still in the wet
+func _get_dirty(delta: float) -> void:
+	if driven and dirt < 1.0:
+		var off := false
+		for w in wheels:
+			var sf: int = w.get("surface", CityWorld.Surface.PAVED)
+			if sf != CityWorld.Surface.ASPHALT and sf != CityWorld.Surface.PAVED:
+				off = true
+		dirt = minf(1.0, dirt + linear_velocity.length() * delta / 45000.0 * (4.0 if off else 1.0) * (1.0 + wetness))
+	if absf(dirt - _dirt_shown) > 0.01:
+		set_dirt(dirt)
+
+
+func set_dirt(v: float) -> void:
+	dirt = clampf(v, 0.0, 1.0)
+	_dirt_shown = dirt
+	if model:
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).set_instance_shader_parameter(&"dirt", dirt)
 
 
 ## fuel use while the engine runs (driven): per metre (more under load) + idling

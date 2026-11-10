@@ -182,6 +182,8 @@ func _draw_map() -> void:
 				for sp in (sv as AutoService).spots:
 					var q: Vector3 = sp["pos"]
 					_badge(w2s(q.x, q.z), "wrench", Color(0.15, 0.35, 0.75), 13.0)
+			for w in wd.washes:
+				_badge(w2s(float(w["ox"]), float(w["oz"])), "water", Color(0.05, 0.55, 0.85), 13.0)
 		if mpp < 7.0:
 			for bd in wd.buildings:
 				if bd[0] == "hospital_m":
@@ -259,7 +261,7 @@ func _overlay() -> void:
 
 
 func _legend(p: Vector2, u: float) -> void:
-	var rows := [["house", "Жилые районы"], ["office", "Бизнес и офисы"], ["cart", "Рынки и магазины"], ["fuel", "АЗС"], ["wrench", "Автосервис"],
+	var rows := [["house", "Жилые районы"], ["office", "Бизнес и офисы"], ["cart", "Рынки и магазины"], ["fuel", "АЗС"], ["wrench", "Автосервис"], ["water", "Автомойка"],
 		["cross", "Больница"], ["school", "Школа"], ["tree", "Парки и зоны отдыха"], ["monument", "Достопримечательности"],
 		["box", "Работа: LakLak"], ["shop", "Оружейный магазин"], ["bus", "Автобус №1"], ["anchor", "Набережная, лодки"]]
 	var rh := u * 0.42

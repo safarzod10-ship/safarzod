@@ -76,6 +76,52 @@ static func parts(key: String) -> Array:
 
 ## mesh parts of a glTF scene whose MeshInstance name passes `keep`; transforms relative to the
 ## scene root (scaled by `scale`), optionally re-centred (footprint centre at x = z = 0, bottom y = 0)
+## 0.24: flat Blender colours of the own-work city models -> real textures (world triplanar, so every
+## copy and every face lines up): travertine stone, plaster, paving, lawn, yard asphalt, panels
+const SWAP := {
+	"stone": ["travertine", Color(0.9, 0.84, 0.74), 0.22], "stone_dark": ["travertine", Color(0.72, 0.64, 0.54), 0.22],
+	"white": ["plaster", Color(0.84, 0.82, 0.78), 0.3], "amid_stone": ["travertine", Color(0.88, 0.8, 0.68), 0.22],
+	"amid_pave": ["sidewalk", Color(0.95, 0.88, 0.78), 0.35], "amid_pave_red": ["sidewalk", Color(0.85, 0.5, 0.4), 0.35],
+	"amid_lawn": ["grass", Color(0.85, 0.95, 0.8), 0.25], "amid_asphalt": ["asphalt_yard", Color(0.8, 0.8, 0.8), 0.2],
+	"amid_grey": ["concrete_panel", Color(0.75, 0.76, 0.78), 0.15],
+}
+static var _swap_mats := {}
+
+
+static func _swap_materials(mesh: Mesh) -> Mesh:
+	var hit := false
+	for i in mesh.get_surface_count():
+		var m := mesh.surface_get_material(i)
+		if m and SWAP.has(m.resource_name):
+			hit = true
+	if not hit:
+		return mesh
+	var mesh2: Mesh = mesh.duplicate()
+	for i in mesh2.get_surface_count():
+		var m := mesh2.surface_get_material(i)
+		if m == null or not SWAP.has(m.resource_name):
+			continue
+		var key := m.resource_name
+		if not _swap_mats.has(key):
+			var spec: Array = SWAP[key]
+			var dir := "res://assets/textures/%s/" % spec[0]
+			var sm := StandardMaterial3D.new()
+			sm.resource_name = key
+			if ResourceLoader.exists(dir + "albedo.jpg"):
+				sm.albedo_texture = load(dir + "albedo.jpg")
+			if ResourceLoader.exists(dir + "normal.png"):
+				sm.normal_enabled = true
+				sm.normal_texture = load(dir + "normal.png")
+			sm.albedo_color = spec[1]
+			sm.uv1_triplanar = true
+			sm.uv1_world_triplanar = true
+			sm.uv1_scale = Vector3.ONE * float(spec[2])
+			sm.roughness = 0.85
+			_swap_mats[key] = sm
+		mesh2.surface_set_material(i, _swap_mats[key])
+	return mesh2
+
+
 static func _extract(file: String, keep: Callable, recentre: bool, scale := 1.0) -> Array:
 	var path := DIR + file
 	if not ResourceLoader.exists(path):
@@ -95,7 +141,7 @@ static func _extract(file: String, keep: Callable, recentre: bool, scale := 1.0)
 			xf = (c as Node3D).transform * xf
 			c = c.get_parent()
 		xf = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * scale), Vector3.ZERO) * xf
-		out.append([mi.mesh, xf])
+		out.append([_swap_materials(mi.mesh), xf])
 		var b := xf * mi.mesh.get_aabb()
 		if first:
 			box = b
