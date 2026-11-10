@@ -166,6 +166,14 @@ def main():
     world["billboards"] = FU.billboards(roads, world["buildings"], avoid_lm, lambda xs, zs: H_at(xs, zs, H), water_ok)
     world["guardrails"] = FU.guardrails(roads, lambda xs, zs: H_at(xs, zs, H))
     nd = add_driveways(roads, world, lambda xs, zs: H_at(xs, zs, H))
+    # boards that now stand on a driveway go (a 15.5 m board: 8 m + the lane's 3 m + margin)
+    drv = [r for r in roads if str(r["id"]).startswith("drive")]
+    if drv:
+        dp = np.concatenate([r["P"] for r in drv])
+        dt = cKDTree(dp)
+        before = len(world["billboards"])
+        world["billboards"] = [b for b in world["billboards"] if dt.query((b["x"], b["z"]))[0] > 13.0]
+        log("billboards removed from driveways: %d" % (before - len(world["billboards"])))
     log("driveways (shops, malls, auto services -> the nearest road): %d" % nd)
     world["fillets"] = fillets
     world["crossings"] = crossings
