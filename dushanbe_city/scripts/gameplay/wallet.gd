@@ -14,6 +14,8 @@ static var cars := ["car"]            ## cars the player owns (main properties: 
                                       ## Prado in his garage from the start, the others bought at the dealership
 static var fuel := {}                 ## vehicle node name -> litres in the tank
 static var plates := {}               ## vehicle node name -> Tajik plate number (Plates)
+static var homes := []                ## 0.25: ids of the houses / apartments / garages the player bought (Realty)
+static var tuning := {}               ## 0.25: vehicle node name -> {"tint": float, "rims": html colour, "spoiler": bool}
 static var _loaded := false
 static var no_save := false          ## tests: never touch the real save file
 
@@ -44,6 +46,10 @@ static func load_state() -> void:
 			fuel = d["fuel"]
 		if d.get("plates") is Dictionary:
 			plates = d["plates"]
+		if d.get("homes") is Array:
+			homes = d["homes"]
+		if d.get("tuning") is Dictionary:
+			tuning = d["tuning"]
 		if d.get("food") is Dictionary:
 			Food.from_dict(d["food"])
 
@@ -53,7 +59,7 @@ static func save_state() -> void:
 		return
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "plates": plates, "food": Food.to_dict()}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "plates": plates, "homes": homes, "tuning": tuning, "food": Food.to_dict()}))
 
 
 static func earn(amount: int) -> void:

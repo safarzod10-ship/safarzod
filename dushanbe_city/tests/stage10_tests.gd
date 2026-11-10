@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -348,6 +348,53 @@ func _t_taxi() -> void:
 	s.exit()
 	await _sec(1.0)
 	_check("got out: shift over, no client left", not taxi.on and taxi._client == null)
+
+
+func _t_realty() -> void:
+	# 0.25: houses / apartments / garages for sale - board at the building, buy, own, use
+	var re: Realty = main.get_node_or_null("Realty")
+	var kinds := {}
+	for P in (re.props if re else []):
+		kinds[P["kind"]] = int(kinds.get(P["kind"], 0)) + 1
+	_check("property for sale: %s" % str(kinds), re != null and kinds.get("house", 0) >= 2 and kinds.get("apartment", 0) >= 2 and kinds.get("garage", 0) >= 2)
+	if re == null or re.props.is_empty():
+		return
+	if s.driving:
+		s.exit()
+		await _frames(5)
+	Wallet.homes = []
+	var P: Dictionary = re.props.filter(func(q: Dictionary) -> bool: return q["kind"] == "apartment")[0]
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(P["pos"])
+	ow.hold = P["pos"]
+	var spot: RealtySpot = (P["node"] as Node3D).find_children("*", "RealtySpot", false, false)[0]
+	s.player.teleport(spot.interaction_point(null) + Vector3(0, 0.6, 0), 0.0)
+	await _sec(1.5)
+	var it: Variant = s.player.get("interaction")
+	var lbl: String = (it as CharacterInteraction).label() if it else ""
+	_check("at the «ПРОДАЁТСЯ» board: button «%s»" % lbl, lbl.begins_with("КУПИТЬ КВАРТИРА"))
+	Wallet.money = 1000
+	var e1 := re.use(P)
+	_check("not enough money: refused", e1 != "" and not Wallet.homes.has(P["id"]))
+	Wallet.money = int(P["price"]) + 500
+	var e2 := re.use(P)
+	_check("bought «%s» for %s: money left %s, board now «ВАШ»" % [P["addr"], Wallet.fmt(int(P["price"])), Wallet.fmt(Wallet.money)],
+		e2 == "" and Wallet.homes.has(P["id"]) and Wallet.money == 500 and String((P["labels"][0] as Label3D).text).contains("ВАШ"))
+	PlayerLife.health = 40.0
+	re.use(P)
+	_check("rest at home: health %.0f" % PlayerLife.health, PlayerLife.health == 100.0)
+	var G: Dictionary = re.props.filter(func(q: Dictionary) -> bool: return q["kind"] == "garage")[0]
+	Wallet.homes.append(G["id"])
+	var car: VehiclePrado = main.get("car")
+	s.car = car
+	car.health = 35.0
+	ow.preload_at(G["pos"])
+	re.use(G)
+	await _sec(1.5)
+	_check("garage: last car brought (%.0f m from the garage), repaired %.0f %%" % [car.global_position.distance_to(G["pos"]), car.health],
+		car.global_position.distance_to(G["pos"]) < 10.0 and car.health == 100.0)
+	ow.hold = Vector3.INF
+	Wallet.homes = []
 
 
 func _t_amid() -> void:

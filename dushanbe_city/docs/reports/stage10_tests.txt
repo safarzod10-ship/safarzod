@@ -1,5 +1,6 @@
-PASS  1. taxi job present
-PASS  2. shift on: client waiting at (-589.0, 20.0, -2734.0) (781 m away), figure at the kerb
-PASS  3. stopped by the client: boarded, going to «проспект Борбад, дом 138» (1.0 km, fare 34 смн)
-PASS  4. arrived: paid 41 смн (fare 34 смн), next client offered
-PASS  5. got out: shift over, no client left
+PASS  1. property for sale: { "house": 4, "apartment": 4, "garage": 4 }
+PASS  2. at the «ПРОДАЁТСЯ» board: button «КУПИТЬ КВАРТИРА · 88 000 смн»
+PASS  3. not enough money: refused
+PASS  4. bought «Душанбе, дом 19» for 88 000 смн: money left 500 смн, board now «ВАШ»
+PASS  5. rest at home: health 100
+PASS  6. garage: last car brought (4 m from the garage), repaired 100 %

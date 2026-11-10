@@ -223,6 +223,12 @@ func _spawn_extra_vehicles() -> void:
 	taxi.laklak = laklak
 	taxi.wd = laklak.wd
 	add_child(taxi)
+	# 0.25: houses / apartments / garages for sale
+	var realty := Realty.new()
+	realty.name = "Realty"
+	realty.session = car_session
+	realty.laklak = laklak
+	add_child(realty)
 	# fuel for every vehicle: filling stations + delivery when the tank runs dry
 	var nav := RoadNav.new()
 	nav.name = "RoadNav"
