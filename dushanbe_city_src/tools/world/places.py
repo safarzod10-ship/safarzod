@@ -17,6 +17,7 @@ RNG = np.random.default_rng(2026)
 AMID_SPACING = 2000.0          # 0.24: one AMID per 2 km; the other slots become car wash + auto service lots
 WASHES = []
 AMID_AT = []
+WASH_AT = []
 WASH_SERVICES = []
 
 # landmarks: id, name, x, z, yaw, footprint (L, D) -> plot is flattened and kept free of buildings
@@ -253,9 +254,17 @@ def perimeter_block(add, free, a, b, c, d, tall):
                                           else ["luxc_m", "luxc_m", "luxa_m", "panel9", "brick5", "office"]))
                     if kind == "amid_m" and RNG.random() < 0.15:
                         kind = "mall_m"          # an AMID now and then, not on every block
-                    if kind == "amid_m" and any(math.hypot(o[0] - (sx + ux * (s + 58)), o[1] - (sz + uz * (s + 58))) < AMID_SPACING
-                                                for o in AMID_AT):
-                        kind = "wash_lot"        # 0.24: AMIDs 2 km apart; here a car wash + auto service
+                    px_, pz_ = sx + ux * (s + 58), sz + uz * (s + 58)
+                    near_amid = any(math.hypot(o[0] - px_, o[1] - pz_) < AMID_SPACING for o in AMID_AT)
+                    if not near_amid and RNG.random() < 0.35:
+                        kind = "amid_m"          # 0.24: one AMID every ~2 km along the avenues
+                    if kind == "amid_m" and near_amid:
+                        # AMIDs 2 km apart: here a car wash + auto service (those 1.5 km apart), else homes
+                        if any(math.hypot(o[0] - px_, o[1] - pz_) < 1500.0 for o in WASH_AT):
+                            kind = "luxc_m"
+                        else:
+                            kind = "wash_lot"
+                            WASH_AT.append((px_, pz_))
                 elif ring == 3:
                     kind = str(RNG.choice(["luxc_m", "panel9", "panel5", "brick5"]))
                 elif ring == 2:

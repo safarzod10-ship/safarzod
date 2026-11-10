@@ -141,6 +141,15 @@ func _ready() -> void:
 				var mb := Basis(Vector3.UP, float(b[3]))
 				await _look("mall_front", mc + mb * Vector3(-20, 18, -95), mc + Vector3(0, 6, 0))
 				break
+		if not wd.washes.is_empty():
+			var w0: Dictionary = wd.washes[0]
+			var wp := Vector3(float(w0["ox"]), wd.height_at(float(w0["ox"]), float(w0["oz"])), float(w0["oz"]))
+			var wb := Basis(Vector3.UP, float(w0["yaw"]))
+			var sw: CarSession = main.get("car_session")
+			sw.player.teleport(wp + wb * Vector3(14, 0.5, 0), 0.0)
+			await _sec(3.0)
+			await _look("carwash", wp + wb * Vector3(22, 7, 14), wp + Vector3(0, 2, 0))
+			await _look("carwash_top", wp + Vector3(0, 70, 25), wp)
 		var svc: AutoService = main.get_node("AutoService")
 		var m := 0
 		for sp in svc.spots:
