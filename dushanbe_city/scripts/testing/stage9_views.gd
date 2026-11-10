@@ -61,7 +61,8 @@ func _ready() -> void:
 		# 0.25: the owner's car pack at the dealership: each car from front 3/4, rear 3/4, plates, lamps
 		_hour(13.0)
 		await _sec(4.0)
-		for key in ["gls", "w123", "e30", "e30m", "r12"]:
+		var only := ["gls"] if OS.get_cmdline_user_args().has("glsonly") else ["gls", "w123", "e30", "e30m", "r12"]
+		for key in only:
 			var c: VehicleCar = main.get(key)
 			if c == null:
 				continue
@@ -78,6 +79,12 @@ func _ready() -> void:
 				c.lights.turn = -1
 				await _sec(0.4)
 				await _look("pack_%s_lamps" % key, p + b * Vector3(-1.6, 1.0, 4.6), p + Vector3(0, 0.6, 0))
+				c.lights.braking = false
+				c.lights.turn = 0
+				c.lights.reversing = true
+				await _sec(0.4)
+				await _look("pack_%s_reverse" % key, p + b * Vector3(-1.6, 1.0, 4.6), p + Vector3(0, 0.6, 0))
+				c.lights.reversing = false
 				c.lights.beam = VehicleLights.Beam.OFF
 				c.lights.braking = false
 				c.lights.turn = 0

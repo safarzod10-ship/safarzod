@@ -158,7 +158,7 @@ for o in bpy.data.objects:
     tris = sum(len(p.vertices) - 2 for p in o.data.polygons)
     if tris > 12000:
         md = o.modifiers.new("dec", 'DECIMATE')
-        md.ratio = max(0.12, 6000.0 / tris) if "Interior" in o.name else max(0.22, 15000.0 / tris)
+        md.ratio = max(0.12, 6000.0 / tris) if "Interior" in o.name else (max(0.55, 24000.0 / tris) if "Polar_White" in o.name else max(0.3, 15000.0 / tris))
         bpy.context.view_layer.objects.active = o
         bpy.ops.object.modifier_apply(modifier=md.name)
 
@@ -184,7 +184,24 @@ def setcol(mname, col, metal=None, rough=None, alpha=None):
 
 
 setcol("Polar_White", (0.012, 0.012, 0.014), 0.6, 0.22)
+# the light-grey parts are chrome / satin trim (window line, roof rails, grille, bumper inserts), not white
+setcol("Color_M01", (0.55, 0.56, 0.58), 1.0, 0.18)
+setcol("Color_M02", (0.5, 0.51, 0.53), 1.0, 0.2)
+setcol("Color_M03", (0.38, 0.39, 0.4), 1.0, 0.25)
+setcol("Color_M04", (0.3, 0.3, 0.32), 1.0, 0.25)
+setcol("Color_A07", (0.45, 0.01, 0.01), 0.0, 0.3)
+setcol("Color_A08", (0.32, 0.0, 0.0), 0.0, 0.3)
 setcol("Lights_Glass", (0.03, 0.03, 0.035), 0.4, 0.05, alpha=0.75)
+lgo = [o for o in bpy.data.objects if o.type == 'MESH' and "Lights_Glass" in o.name][0]
+red = bpy.data.materials.new("lens_tail")          # opaque red lens (always red, like the real lamps)
+red.use_nodes = True
+rb = red.node_tree.nodes["Principled BSDF"]
+rb.inputs["Base Color"].default_value = (0.55, 0.02, 0.02, 1.0)
+rb.inputs["Roughness"].default_value = 0.08
+lgo.data.materials.append(red)
+for f in lgo.data.polygons:
+    if f.center.y > 0:
+        f.material_index = len(lgo.data.materials) - 1
 for nm in ("Polar_White", "Lights_Glass"):
     m = bpy.data.materials.get(nm)
     if m:
@@ -248,6 +265,10 @@ if po:
         print("plate", side, round(cx, 3), round(cy, 3), round(cz, 3))
     bpy.data.objects.remove(po[0])
 
+for o in bpy.data.objects:
+    if o.type == 'MESH':
+        for p in o.data.polygons:
+            p.use_smooth = True
 tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
 pts = [v.co for o in bpy.data.objects if o.type == 'MESH' for v in o.data.vertices]
 print("SIZE", round(max(p.x for p in pts) - min(p.x for p in pts), 3), round(max(p.z for p in pts), 3),
