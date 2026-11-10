@@ -76,6 +76,63 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("life"):
+		# 0.25: traffic + pedestrians on a city avenue (near the start)
+		_hour(16.0)
+		var life: CityLife = main.get_node("CityLife")
+		life.enabled = true
+		life.max_cars = 12
+		life.max_peds = 10
+		var s4: CarSession = main.get("car_session")
+		var hp: Vector3 = (s4.player as Node3D).global_position
+		await _sec(1.0)
+		# watch from above the nearest avenue
+		var best := Vector3.ZERO
+		var bdir := Vector3.FORWARD
+		var bd := INF
+		for R in life._roads:
+			if R["cls"] != "avenue":
+				continue
+			var PP: PackedVector3Array = R["p"]
+			for qi in range(1, PP.size()):
+				var dd := PP[qi].distance_to(hp)
+				if dd < bd:
+					bd = dd
+					best = PP[qi]
+					bdir = (PP[qi] - PP[qi - 1]).normalized()
+		ow.hold = best
+		ow.preload_at(best)
+		var cam0 := get_viewport().get_camera_3d()
+		if cam0:
+			cam0.global_position = best + Vector3(18, 9, 18)
+		await _sec(8.0)
+		await _look("life_avenue", best - bdir * 30.0 + Vector3(0, 9, 0), best + bdir * 20.0)
+		await _sec(3.0)
+		await _look("life_avenue2", best + bdir * 40.0 + Vector3(0, 6, 0), best - bdir * 10.0)
+		await _look("life_top", best + Vector3(0, 70, 1), best)
+		for kind in ["ped", "car"]:
+			var arr: Array = life.peds if kind == "ped" else life.cars
+			var near: Node3D = null
+			var nd := INF
+			for e in arr:
+				var en: Node3D = e["node"]
+				var dd2 := en.global_position.distance_to(best)
+				if dd2 < nd:
+					nd = dd2
+					near = en
+			if near:
+				life.enabled = false
+				var fwd5 := near.global_basis.z if kind == "ped" else -near.global_basis.z
+				var side5 := fwd5.cross(Vector3.UP)
+				await _look("life_%s" % kind, near.global_position + fwd5 * 5.0 + side5 * 2.5 + Vector3(0, 1.8, 0), near.global_position + Vector3(0, 0.9, 0))
+				life.enabled = true
+		print("LIFE cars=%d peds=%d" % [life.cars.size(), life.peds.size()])
+		for p5 in life.peds:
+			var pn5: Node3D = p5["node"]
+			var sk5: Skeleton3D = pn5.find_children("*", "Skeleton3D", true, false)[0]
+			print("PED ", pn5.global_position.round(), " vis=", pn5.is_visible_in_tree(), " hips=", (sk5.global_transform * sk5.get_bone_global_pose(sk5.find_bone("Hips")).origin).round())
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("photo"):
 		# 0.25: police station + Parki Dusti (arch, fountain, pavilions)
 		_hour(12.0)

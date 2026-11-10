@@ -210,12 +210,12 @@ func _spawn_client(p: Vector3, look_from: Vector3) -> void:
 	if to.length() > 0.1:
 		_client.rotation.y = atan2(to.x, to.z)
 	var ap: AnimationPlayer = _client.find_child("AnimationPlayer", true, false)
-	var lib := "res://assets/characters/animations/player_anims.res"
+	var lib := "res://assets/characters/animations/player_mocap.res"
 	if ap and ResourceLoader.exists(lib):
-		if not ap.has_animation_library(&"p"):
-			ap.add_animation_library(&"p", load(lib))
-		if ap.has_animation(&"p/idle"):
-			ap.play(&"p/idle")
+		if not ap.has_animation_library(&"m"):
+			ap.add_animation_library(&"m", load(lib))
+		if ap.has_animation(&"m/idle"):
+			ap.play(&"m/idle")
 	var tag := Label3D.new()
 	tag.text = "ТАКСИ!"
 	tag.font_size = 64

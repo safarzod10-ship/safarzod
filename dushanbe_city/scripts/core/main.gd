@@ -233,6 +233,12 @@ func _spawn_extra_vehicles() -> void:
 	var photo := PhotoPlaces.new()
 	photo.name = "PhotoPlaces"
 	add_child(photo)
+	# 0.25: traffic and pedestrians near the camera (off in tests unless asked)
+	var life := CityLife.new()
+	life.name = "CityLife"
+	life.session = car_session
+	life.enabled = not Wallet.no_save or OS.get_cmdline_user_args().has("life")
+	add_child(life)
 	# fuel for every vehicle: filling stations + delivery when the tank runs dry
 	var nav := RoadNav.new()
 	nav.name = "RoadNav"
