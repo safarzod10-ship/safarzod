@@ -19,6 +19,8 @@ var spots: Array = []             ## [{pos: Vector3, yaw: float, node: Node3D}]
 var _ui: CanvasLayer
 var _btn: Button
 var _paint_btn: Button
+var _plate_btn: Button                 ## 0.25: Tajik number plates (cars with a plate overlay)
+var _vip_btn: Button
 var _paint_panel: PanelContainer
 var _msg: Label
 var _msg_t := 0.0
@@ -116,6 +118,18 @@ func _process(delta: float) -> void:
 	_paint_btn.visible = at_pad and not _paint_panel.visible
 	if not at_pad:
 		_paint_panel.visible = false
+	var plates_ok := at_pad and car != null and car.has_method("set_plate") and not (car.get("plate_labels") as Array).is_empty()
+	_plate_btn.visible = plates_ok and not _paint_panel.visible
+	_vip_btn.visible = _plate_btn.visible
+	if _plate_btn.visible:
+		var vs3 := get_viewport().get_visible_rect().size
+		_plate_btn.text = "НОВЫЙ НОМЕР · %s" % Wallet.fmt(Plates.PRICE)
+		_vip_btn.text = "КРАСИВЫЙ НОМЕР · %s" % Wallet.fmt(Plates.PRICE_VIP)
+		_plate_btn.reset_size()
+		_vip_btn.reset_size()
+		var y0 := vs3.y * 0.6 + (96.0 if show else 0.0) + 86.0
+		_plate_btn.position = Vector2(vs3.x * 0.5 - _plate_btn.size.x - 8.0, y0)
+		_vip_btn.position = Vector2(vs3.x * 0.5 + 8.0, y0)
 	_btn.visible = show
 	if _paint_btn.visible:
 		var vs2 := get_viewport().get_visible_rect().size
@@ -188,6 +202,29 @@ func _build_ui() -> void:
 	_paint_btn.visible = false
 	_paint_btn.pressed.connect(_open_paint)
 	_ui.add_child(_paint_btn)
+	for vip in [false, true]:
+		var pb := Button.new()
+		pb.focus_mode = Control.FOCUS_NONE
+		pb.add_theme_font_override("font", HudStyle.font())
+		pb.add_theme_font_size_override("font_size", 24)
+		pb.custom_minimum_size = Vector2(0, 70)
+		var sb3 := sb.duplicate() as StyleBoxFlat
+		sb3.bg_color = Color(0.1, 0.4, 0.2) if not vip else Color(0.55, 0.42, 0.05)
+		for st in ["normal", "hover", "pressed"]:
+			pb.add_theme_stylebox_override(st, sb3)
+		pb.add_to_group(TouchBlock.GROUP)
+		pb.visible = false
+		pb.pressed.connect(func() -> void:
+			var c := session.car if session and session.driving else null
+			if c == null:
+				return
+			var err := Plates.buy(c, vip)
+			_say("Новый номер: %s" % Plates.number_for(String(c.name)) if err == "" else err))
+		_ui.add_child(pb)
+		if vip:
+			_vip_btn = pb
+		else:
+			_plate_btn = pb
 	_paint_panel = PanelContainer.new()
 	var ps := StyleBoxFlat.new()
 	ps.bg_color = Color(0.05, 0.06, 0.08, 0.94)

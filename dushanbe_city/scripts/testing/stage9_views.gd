@@ -45,6 +45,32 @@ func _ready() -> void:
 		await _snap("map_city")
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("pack"):
+		# 0.25: the owner's car pack at the dealership: each car from front 3/4, rear 3/4, plates, lamps
+		_hour(13.0)
+		await _sec(4.0)
+		for key in ["w123", "e30", "e30m", "r12"]:
+			var c: VehicleCar = main.get(key)
+			if c == null:
+				continue
+			var ow2: OpenWorld = main.get("open_world")
+			ow2.hold = c.global_position
+			await _sec(1.5)
+			var b := c.global_basis
+			var p := c.global_position
+			await _look("pack_%s_front" % key, p + b * Vector3(3.2, 1.3, -5.2), p + Vector3(0, 0.5, 0))
+			await _look("pack_%s_rear" % key, p + b * Vector3(-3.0, 1.4, 5.4), p + Vector3(0, 0.5, 0))
+			if c.lights:
+				c.lights.beam = VehicleLights.Beam.LOW
+				c.lights.braking = true
+				c.lights.turn = -1
+				await _sec(0.4)
+				await _look("pack_%s_lamps" % key, p + b * Vector3(-1.6, 1.0, 4.6), p + Vector3(0, 0.6, 0))
+				c.lights.beam = VehicleLights.Beam.OFF
+				c.lights.braking = false
+				c.lights.turn = 0
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("falls"):
 		_hour(17.2)
 		for k in 4:

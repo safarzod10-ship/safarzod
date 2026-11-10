@@ -14,7 +14,12 @@ const CARS := {
 	"Camry": ["camry", "Toyota Camry", 50000],
 	"Lexus": ["lexus", "Lexus RX 350", 100000],
 	"Prado": ["car", "Toyota Land Cruiser Prado", 120000],
+	"W123": ["w123", "Mercedes-Benz W123", 45000],
+	"E30": ["e30", "BMW E30", 60000],
+	"E30M": ["e30m", "BMW E30 заниженная", 75000],
+	"R12": ["r12", "Renault 12", 20000],
 }
+const ORDER := ["R12", "W123", "Camry", "E30", "E30M", "Lexus", "Prado"]
 
 static var instance: CarDealer
 static var strict := false        ## tests: apply the ownership rule although the save is off
@@ -67,7 +72,7 @@ func door_point() -> Vector3:
 
 
 func delivery_point(k: int) -> Vector3:
-	return to_global(Vector3(SIZE.x * 0.5 + 9.0, 0.3, -6.0 + k * 6.0))
+	return to_global(Vector3(SIZE.x * 0.5 + 9.0 + float(k / 4) * 7.5, 0.3, -6.0 + float(k % 4) * 6.0))
 
 
 func delivery_yaw() -> float:
@@ -108,7 +113,7 @@ func buy(node_name: String) -> String:
 	# delivered to the lot in front of the showroom
 	var car: Node = main.get(key) if main else null
 	if car is VehiclePrado and not (car as VehiclePrado).wrecked:
-		var k := ["Camry", "Lexus", "Prado"].find(node_name)
+		var k := ["Camry", "Lexus", "Prado", "W123", "E30", "E30M", "R12"].find(node_name)
 		var ow: Variant = main.get("open_world")
 		var p := delivery_point(k)
 		(car as VehiclePrado).place(p, delivery_yaw())
@@ -306,19 +311,19 @@ func _build_ui() -> void:
 	_money.add_theme_color_override("font_color", HudStyle.MONEY)
 	_money.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(_money)
-	for nm in ["Camry", "Lexus", "Prado"]:
+	for nm in ORDER:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 16)
 		v.add_child(h)
 		var ic := TextureRect.new()
 		ic.texture = HudStyle.icon("car")
-		ic.custom_minimum_size = Vector2(64, 64)
+		ic.custom_minimum_size = Vector2(44, 44)
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(ic)
 		var lab := Label.new()
 		lab.custom_minimum_size = Vector2(330, 0)
-		lab.add_theme_font_size_override("font_size", 22)
+		lab.add_theme_font_size_override("font_size", 19)
 		h.add_child(lab)
 		var b := _btn("", Color(0.15, 0.5, 0.25))
 		b.pressed.connect(func() -> void: _buy(nm))

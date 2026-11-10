@@ -39,6 +39,37 @@ const PRESETS := {
 		"door": Vector3(-1.35, 0.5, -4.6), "seat": Vector3(-0.75, 1.35, -4.85), "lamp": Vector3(0, 1.0, -6.05),
 		"boxes": [[Vector3(2.5, 2.3, 12.0), Vector3(0, 0.4 + 1.15, 0)], [Vector3(2.4, 0.7, 11.6), Vector3(0, 2.7 + 0.35, 0)]],
 		"cam": 1.9, "name": "Автобус"},
+	# 0.25: the owner's car pack (car_pack_1.glb, split by dushanbe_city_src/tools/vehicles/car_pack.py):
+	# the wheels are separate ("tire_N"), the lamps are painted on the texture with additive lens quads
+	# over them, the European plates are covered by Tajik ones (number = Label3D, changeable)
+	"w123": {"file": "../cars/w123.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
+		"mass": 1400.0, "cg": 0.55, "front": 0.53, "kw": 100.0, "nm": 185.0, "vmax": 180.0, "split": 0.0,
+		"gears": [3.98, 2.39, 1.46, 1.0, 0.83], "fd": 3.69, "mu": 0.9, "f": [1.3, 1.25], "arb": [14000.0, 6000.0],
+		"tank": 65.0, "l100": 10.5, "r": 0.308, "size": Vector3(1.79, 1.44, 4.73), "cd": 0.85, "brake": 17000.0,
+		"door": Vector3(-1.0, 0.55, -0.2), "seat": Vector3(-0.38, 0.5, 0.25), "lamp": Vector3(0, 0.66, -2.35),
+		"boxes": [[Vector3(1.78, 0.6, 4.72), Vector3(0, 0.18 + 0.3, 0)], [Vector3(1.5, 0.5, 2.3), Vector3(0, 0.78 + 0.25, 0.2)]],
+		"name": "Mercedes-Benz W123", "interior": false},
+	"e30": {"file": "../cars/e30.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
+		"mass": 1210.0, "cg": 0.5, "front": 0.52, "kw": 125.0, "nm": 226.0, "vmax": 215.0, "split": 0.0,
+		"gears": [3.83, 2.2, 1.4, 1.0, 0.81], "fd": 3.73, "mu": 0.95, "f": [1.5, 1.45], "arb": [16000.0, 9000.0],
+		"tank": 55.0, "l100": 9.0, "r": 0.308, "size": Vector3(1.66, 1.36, 4.3), "cd": 0.7, "brake": 16000.0,
+		"door": Vector3(-0.95, 0.55, -0.1), "seat": Vector3(-0.36, 0.48, 0.2), "lamp": Vector3(0, 0.6, -2.12),
+		"boxes": [[Vector3(1.64, 0.58, 4.28), Vector3(0, 0.17 + 0.29, 0)], [Vector3(1.4, 0.48, 2.0), Vector3(0, 0.75 + 0.24, 0.15)]],
+		"name": "BMW E30", "interior": false},
+	"e30m": {"file": "../cars/e30_low.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
+		"mass": 1180.0, "cg": 0.45, "front": 0.5, "kw": 162.0, "nm": 240.0, "vmax": 235.0, "split": 0.0,
+		"gears": [3.72, 2.4, 1.77, 1.26, 1.0], "fd": 3.25, "mu": 0.98, "f": [1.8, 1.75], "arb": [22000.0, 9000.0],
+		"tank": 55.0, "l100": 10.0, "r": 0.308, "size": Vector3(1.66, 1.3, 4.3), "cd": 0.68, "brake": 18000.0,
+		"door": Vector3(-0.95, 0.5, -0.1), "seat": Vector3(-0.36, 0.43, 0.2), "lamp": Vector3(0, 0.56, -2.12),
+		"boxes": [[Vector3(1.64, 0.56, 4.28), Vector3(0, 0.12 + 0.28, 0)], [Vector3(1.4, 0.46, 2.0), Vector3(0, 0.7 + 0.23, 0.15)]],
+		"name": "BMW E30 (занижена)", "interior": false, "ground_drop": 0.06},
+	"r12": {"file": "../cars/r12.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
+		"mass": 900.0, "cg": 0.52, "front": 0.6, "kw": 40.0, "nm": 92.0, "vmax": 145.0, "split": 1.0,
+		"gears": [3.6, 2.26, 1.48, 1.03], "fd": 4.12, "mu": 0.88, "f": [1.3, 1.25], "arb": [9000.0, 4000.0],
+		"tank": 50.0, "l100": 8.0, "r": 0.308, "size": Vector3(1.64, 1.42, 4.3), "cd": 0.75, "brake": 12000.0,
+		"door": Vector3(-0.95, 0.55, -0.1), "seat": Vector3(-0.36, 0.5, 0.2), "lamp": Vector3(0, 0.62, -2.15),
+		"boxes": [[Vector3(1.62, 0.6, 4.28), Vector3(0, 0.18 + 0.3, 0)], [Vector3(1.4, 0.5, 2.1), Vector3(0, 0.78 + 0.25, 0.1)]],
+		"name": "Renault 12", "interior": false},
 }
 
 var preset := "camry"
@@ -86,7 +117,7 @@ func _build_model() -> void:
 	holder.name = "Body"
 	holder.transform = Transform3D(Basis(Vector3.UP, float(spec["yaw"])), Vector3(0.0, _ground_y, 0.0))
 	model.add_child(holder)
-	var src: Node3D = (load("res://assets/models/extra/" + String(spec["file"])) as PackedScene).instantiate()
+	var src: Node3D = (load(("res://assets/models/extra/" + String(spec["file"])).simplify_path()) as PackedScene).instantiate()
 	holder.add_child(src)
 	# wheel parts (MeshInstances) per quadrant
 	var wheel_parts: Array = []
@@ -177,6 +208,53 @@ func _build_model() -> void:
 
 	if bool(spec.get("interior", false)):
 		_build_interior()
+	if bool(spec.get("pack", false)):
+		_pack_lamps_and_plates()
+
+
+## owner's car pack: lamp lens quads -> additive glow shader (dark when off, VehicleLights drives the
+## same parameters); Tajik plate numbers as Label3D on the plate quads
+const LAMP_KEYS := ["headlight rf", "taillight rr", "body.5", "fari.4", "fari.3", "fari.2"]
+var plate_labels: Array = []
+
+
+func _pack_lamps_and_plates() -> void:
+	var glow: Shader = load("res://assets/shaders/lamp_overlay.gdshader")
+	for k in LAMP_KEYS:
+		var m: ShaderMaterial = _mat_cache.get(k)
+		if m:
+			var keep_col: Variant = m.get_shader_parameter("emission_color")
+			m.shader = glow
+			if keep_col != null:
+				m.set_shader_parameter("emission_color", keep_col)
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var nm := String(mi.name)
+		if mi.mesh == null or not (nm.begins_with("plate_front") or nm.begins_with("plate_rear")):
+			continue
+		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var front := nm.begins_with("plate_front")
+		var bb: AABB = mi.mesh.get_aabb()
+		var lb := Label3D.new()
+		lb.name = "PlateNumber"
+		lb.font = HudStyle.font()
+		lb.font_size = 64
+		lb.pixel_size = 0.00105
+		lb.modulate = Color(0.06, 0.06, 0.07)
+		lb.outline_size = 0
+		lb.double_sided = false
+		lb.shaded = true
+		var n := 1.0 if front else -1.0           # the quad faces mesh-local +Z (front) / -Z (rear)
+		lb.position = bb.get_center() + Vector3(0.045 * n, 0.0, 0.004 * n)
+		lb.rotation.y = 0.0 if front else PI
+		mi.add_child(lb)
+		plate_labels.append(lb)
+	set_plate(Plates.number_for(String(name)))
+
+
+func set_plate(t: String) -> void:
+	for lb in plate_labels:
+		if is_instance_valid(lb):
+			(lb as Label3D).text = t
 
 
 func _style_material(sm: ShaderMaterial, key: String, src: BaseMaterial3D) -> void:

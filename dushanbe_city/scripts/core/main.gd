@@ -185,6 +185,10 @@ var boats: Array[VehicleBoat] = []
 var laklak: LakLakJob
 var camry: VehicleCar
 var lexus: VehicleCar
+var w123: VehicleCar                ## 0.25: the owner's car pack (dealership)
+var e30: VehicleCar
+var e30m: VehicleCar
+var r12: VehicleCar
 var bus: VehicleCar
 var bus_job: BusJob
 var fuel: FuelService
@@ -238,6 +242,26 @@ func _spawn_extra_vehicles() -> void:
 			camry = c
 		else:
 			lexus = c
+	# 0.25: the owner's car pack, for sale on the dealership's lot (slots 3..6)
+	var pack_names := {"w123": "W123", "e30": "E30", "e30m": "E30M", "r12": "R12"}
+	var slot := 3
+	for key in ["w123", "e30", "e30m", "r12"]:
+		var pc := VehicleCar.new()
+		pc.configure(key)
+		pc.name = pack_names[key]
+		pc.collision_layer = 1
+		pc.collision_mask = 1
+		add_child(pc)
+		await get_tree().physics_frame
+		var dlr: CarDealer = get_node_or_null("CarDealer")
+		if dlr and dlr.in_city:
+			open_world.preload_at(dlr.delivery_point(slot))
+			pc.place(dlr.delivery_point(slot), dlr.delivery_yaw())
+		else:
+			pc.place(Vector3(-52.0, 0.0, -102.0 - slot * 7.0), 0.0)
+		car_session.add_vehicle(pc)
+		set(key, pc)
+		slot += 1
 	# city bus route №1: the job, the stops, the bus at the terminus
 	bus_job = BusJob.new()
 	bus_job.name = "BusJob"

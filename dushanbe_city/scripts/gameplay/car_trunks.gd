@@ -4,7 +4,7 @@ extends Node
 ## «ПАКЕТ В БАГАЖНИК» (a carrier bag in the hand goes in) or «ВЗЯТЬ ПАКЕТ ИЗ БАГАЖНИКА». The bags in
 ## a boot are shown in it (Food.trunks, saved by the car's name).
 
-const CARS := ["car", "camry", "lexus"]     ## main properties
+const CARS := ["car", "camry", "lexus", "w123", "e30", "e30m", "r12"]     ## main properties
 
 var main: Node
 var session: CarSession
