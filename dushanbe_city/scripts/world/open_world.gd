@@ -50,6 +50,10 @@ func _ready() -> void:
 	add_child(lights)
 	_sign_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
 	_build_far()
+	var patches := PlotPatches.new()
+	patches.name = "PlotPatches"
+	add_child(patches)
+	patches.build(wd, mats["terrain"])
 	PlayerWater.ensure_index()
 	_build_lakes()
 	_build_edges()

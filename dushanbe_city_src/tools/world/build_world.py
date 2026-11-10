@@ -628,10 +628,12 @@ def level_big_plots(H, X, Z, world, roads):
         sx = X[j0:j1, i0:i1] - x; sz = Z[j0:j1, i0:i1] - z
         lx = sx * math.cos(yaw) - sz * math.sin(yaw)          # local X (along the front)
         fz = -(sx * math.sin(yaw) + sz * math.cos(yaw))       # distance towards the street side (local -Z)
-        tgt = np.full(lx.shape, y)
+        # hall: the base; car park (front ~29 m): just under its asphalt top (base + 0.15) so its edge
+        # is a kerb, not a step; apron: the driveway's grade
+        tgt = np.where(fz > D / 2 - 29.0, y + 0.08, y)
         if dr is not None and apron > 0.0:
             d = np.clip(fz - (D / 2 - 2.0), 0.0, apron)       # metres along the driveway
-            tgt = np.where(fz > D / 2, np.interp(d, s, dh), y)
+            tgt = np.where(fz > D / 2, np.interp(d, s, dh), tgt)
         ex = np.maximum(np.abs(lx) - L / 2, 0.0)
         ez = np.maximum(np.maximum(fz - (D / 2 + apron), 0.0), np.maximum(-fz - D / 2, 0.0))
         w = T.ss(10.0, 0.0, np.hypot(ex, ez))
@@ -651,9 +653,14 @@ def level_driveways(roads, world):
         bi = r.get("plot", -1)
         if bi is None or bi < 0:
             continue
-        top = float(world["buildings"][bi][8]) + 0.15
         P = r["P"]; Hh = np.asarray(r["H"], float).copy()
         s = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(P, axis=0).T))])
+        # the plot sits at most a 3 % grade above / below the street it joins: a short driveway can
+        # not climb 1.5 m (the street corridor keeps the ground at street level around its end)
+        b = world["buildings"][bi]
+        lo, hi = Hh[-1] - 0.15 - 0.03 * s[-1], Hh[-1] - 0.15 + 0.03 * s[-1]
+        b[8] = round(float(min(max(float(b[8]), lo), hi)), 2)
+        top = float(b[8]) + 0.15
         t = s / max(s[-1], 1e-6)
         e = np.clip((t - 0.15) / 0.85, 0.0, 1.0)
         e = e * e * (3.0 - 2.0 * e)
