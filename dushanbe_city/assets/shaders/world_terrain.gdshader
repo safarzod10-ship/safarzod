@@ -7,6 +7,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 
 global uniform float city_macro_detail;
 global uniform float city_wetness;
+global uniform float city_snow;           // 0.25: snow cover from the weather (0 .. 1)
 #include "res://assets/shaders/grass_palette.gdshaderinc"
 
 uniform sampler2D splat_tex : filter_linear, repeat_disable;
@@ -73,6 +74,10 @@ void fragment() {
 	alb *= mix(0.74 + 0.5 * m * (0.6 + 0.4 * patch), 1.0, gr);
 	float rough = 0.93 - 0.35 * sn;
 	SPECULAR = 0.3 + 0.2 * sn - 0.08 * gr;   // grass: soft, almost no highlight
+	// fresh snow lying on the flatter ground (not on steep rock), patchy at first
+	float cover = city_snow * smoothstep(0.55, 0.85, NORMAL.y) * smoothstep(0.2, 0.6, city_snow + (m - 0.5) * 0.6);
+	alb = mix(alb, snow, cover);
+	rough = mix(rough, 0.7, cover);
 	float wet = city_wetness * (1.0 - sn) * (0.4 + 0.6 * (rk + ea));
 	alb *= mix(1.0, 0.65, wet);
 	rough = mix(rough, 0.25, wet);

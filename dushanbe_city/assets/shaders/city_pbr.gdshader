@@ -4,6 +4,7 @@ shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
 global uniform float city_wetness;
+global uniform float city_snow;
 global uniform float city_macro_detail;   // 0 on Low: skip the two macro-noise fetches
 #include "res://assets/shaders/grass_palette.gdshaderinc"
 
@@ -50,6 +51,10 @@ void fragment() {
 	float wet = city_wetness * wet_receptive * smoothstep(0.35, 0.75, m + 0.2);
 	alb *= mix(1.0, 0.55, wet);
 	rough = mix(rough, 0.08, wet);
+	// 0.25 snow: settles on upward faces (sidewalks, roofs, lawns), patchy via the macro noise
+	float sc = city_snow * smoothstep(0.6, 0.9, wnrm.y) * smoothstep(0.25, 0.65, city_snow + (m - 0.5) * 0.5);
+	alb = mix(alb, vec3(0.9, 0.92, 0.95), sc);
+	rough = mix(rough, 0.75, sc);
 	ALBEDO = alb;
 	ROUGHNESS = rough;
 	METALLIC = metallic_value < 0.0 ? orm.b : metallic_value;
