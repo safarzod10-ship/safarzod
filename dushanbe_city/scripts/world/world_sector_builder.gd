@@ -299,7 +299,8 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 		var dirt_road: bool = r["surf"] == "dirt"
 		var lanes := 0.0 if dirt_road else float(r["lanes"])
 		var city := _in_city(P[k0])
-		var walks: bool = city and r["cls"] in ["avenue", "highway", "street"] and not dirt_road
+		# 0.24: every paved city road has sidewalks with curbs (no gravel / earth verges in town)
+		var walks: bool = city and r["cls"] != "lane" and not dirt_road
 		var m := dirt if dirt_road else asph
 		for k in range(k0, k1):
 			var a := P[k]
@@ -409,7 +410,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				var d := Vector3(0, -1.2, 0)
 				conc.quad_flat(ar, ar + d + ra * 0.6, br + d + rb * 0.6, br)
 				conc.quad_flat(bl, bl + d - rb * 0.6, al + d - ra * 0.6, al)
-			elif not walks and not tunnel:
+			elif not walks and not tunnel and not (city and r["cls"] == "lane"):
 				# gravel shoulders (1.5 m, sloping 0.35 m down) - part of the drivable surface - then a
 				# skirt down into the ground (the 8 m terrain may lie lower on steep stretches)
 				var sw := 1.5
@@ -986,14 +987,14 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 	# like Rudaki avenue; streets: elms / acacias / mulberries), never on another road or a plot
 	for seg in sector_segs.get(sc, []):
 		var r: Dictionary = wd.roads[seg[0]]
-		if not r["cls"] in ["avenue", "highway", "street"]:
+		if r["cls"] == "lane" or r["surf"] == "dirt":
 			continue
 		var F: Dictionary = road_frames[seg[0]]
 		var P: PackedVector3Array = F["p"]
 		var R: PackedVector2Array = F["r"]
 		if not _in_city(P[seg[1]]):
 			continue
-		var step := 2 if r["cls"] != "street" else 3
+		var step := 2                     # 0.24: denser rows (~8 m), bigger crowns
 		for k in range(seg[1], seg[2], step):
 			if bridge_mask[seg[0]][k] != 0 or _in_fillet(P[k]):
 				continue
@@ -1004,15 +1005,15 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				var idx := int(k / step)
 				var id := ""
 				var scl := 1.0
-				if r["cls"] == "street":
-					id = ["elm_a", "acacia", "mulberry", "elm_b"][(idx + (1 if sgn > 0 else 0)) % 4]
-					scl = rng.randf_range(0.8, 1.0)
-				elif idx % 2 == 0:
+				if r["cls"] != "avenue" and r["cls"] != "highway":
+					id = ["chinar_middle", "elm_a", "mulberry", "elm_b"][(idx + (1 if sgn > 0 else 0)) % 4]
+					scl = rng.randf_range(1.05, 1.3)
+				elif idx % 3 == 0:
 					id = "thuja_cone"
-					scl = rng.randf_range(1.5, 1.9)
+					scl = rng.randf_range(1.6, 2.0)
 				else:
-					id = ["chinar_middle", "elm_a"][idx / 2 % 2]
-					scl = rng.randf_range(0.85, 1.05)
+					id = ["chinar_middle", "elm_a"][idx % 2]
+					scl = rng.randf_range(1.1, 1.35)
 				if not out.has(id):
 					out[id] = []
 				out[id].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * scl), Vector3(q.x, wd.height_at(q.x, q.z) - 0.1, q.z)))
