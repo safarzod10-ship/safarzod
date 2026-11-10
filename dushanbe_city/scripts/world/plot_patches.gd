@@ -79,7 +79,8 @@ func _patch(b: Array, drives: Array) -> void:
 	for j in nz - 1:
 		for i in nx - 1:
 			var a := j * nx + i
-			I.append_array([a, a + 1, a + nx, a + 1, a + nx + 1, a + nx])
+			# the grid axes (right, front) are mirrored against the terrain's (x, z): this winding faces up
+			I.append_array([a, a + nx, a + 1, a + 1, a + nx, a + nx + 1])
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for v in V:
@@ -88,7 +89,6 @@ func _patch(b: Array, drives: Array) -> void:
 		st.add_index(q)
 	st.generate_normals()
 	var mesh := st.commit()
-	# winding: make the faces point up
 	var mi := MeshInstance3D.new()
 	mi.name = "PlotPatch%d" % count
 	mi.mesh = mesh
