@@ -603,6 +603,14 @@ func _pond(c: Vector3) -> void:
 	bed.height = 0.06
 	bed.radial_segments = 48
 	_add(bed, Transform3D(Basis.IDENTITY.scaled(Vector3(rx, 1, rz)), c + Vector3(0, 0.04, 0)), M["pool"])
+	# the bridge: from the shore facing the rotunda path to the island, an arched wooden deck over the rim
+	var to_rot := Vector2(24.0 - c.x, -26.0 - c.z).normalized()
+	var dir := Vector3(to_rot.x, 0, to_rot.y)
+	var te := 1.0 / sqrt(pow(dir.x / rx, 2.0) + pow(dir.z / rz, 2.0))     # the rim along dir
+	var b0 := c + dir * (te + 1.6)                                          # on the lawn, past the rim
+	var b1 := c + dir * 4.2                                                 # on the island
+	var side := Vector3(dir.z, 0, -dir.x)
+	# stone rim: segments, open where the bridge passes over (no rim through the deck)
 	var segs := 56
 	for k in segs:
 		var a0 := k * TAU / segs
@@ -612,22 +620,50 @@ func _pond(c: Vector3) -> void:
 		var mid := (p0 + p1) * 0.5
 		var yaw := atan2(p1.x - p0.x, p1.z - p0.z)
 		box(Vector3(0.7, 0.5, p0.distance_to(p1) + 0.1), mid, M["stone"], false, yaw)
+		var rel := mid - c
+		if absf(rel.dot(side)) < 1.6 and rel.dot(dir) > 0.0:
+			continue                                   # the bridge's opening: walkable
 		_col(Vector3(0.7, 1.0, p0.distance_to(p1) + 0.1), mid + Vector3(0, 0.25, 0), yaw)
 	# island + gazebo
 	cyl(4.6, 4.8, 0.5, c + Vector3(0, 0.25, 0), M["stone"], 24, true)
 	_gazebo(c + Vector3(0, 0.5, 0))
-	# bridge from the shore to the island (to -Z side of the path)
-	var b0 := c + Vector3(-rx * 0.62, 0, rz * 0.62)
-	var b1 := c + Vector3(-3.0, 0, 3.0)
-	var yawb := atan2(b1.x - b0.x, b1.z - b0.z)
-	var lb := b0.distance_to(b1)
-	box(Vector3(2.4, 0.2, lb), (b0 + b1) * 0.5 + Vector3(0, 0.6, 0), M["wood"], true, yawb)
-	for sx: float in [-1.15, 1.15]:
-		var off := Vector3(cos(yawb), 0, -sin(yawb)) * sx
-		bar(b0 + off + Vector3(0, 1.6, 0), b1 + off + Vector3(0, 1.6, 0), 0.08, M["white"])
-		for k2 in 6:
-			var q := b0.lerp(b1, k2 / 5.0) + off
-			bar(q + Vector3(0, 0.6, 0), q + Vector3(0, 1.6, 0), 0.08, M["white"])
+	var L := b0.distance_to(b1)
+	var yawb := atan2(dir.x, dir.z)
+	var np := int(L / 0.45)
+	var deck: PackedVector3Array = []
+	for k2 in np:
+		var t0 := float(k2) / np
+		var t1 := float(k2 + 1) / np
+		var tm := (t0 + t1) * 0.5
+		var h0 := lerpf(0.12, 0.5, t0) + sin(t0 * PI) * 0.75
+		var h1 := lerpf(0.12, 0.5, t1) + sin(t1 * PI) * 0.75
+		var q0 := b0.lerp(b1, t0) + Vector3(0, h0, 0)
+		var q1 := b0.lerp(b1, t1) + Vector3(0, h1, 0)
+		var pm := BoxMesh.new()
+		pm.size = Vector3(2.2, 0.1, q0.distance_to(q1) * 0.9)
+		var b := Basis(Vector3.UP, yawb) * Basis(Vector3.RIGHT, -atan2(h1 - h0, q0.distance_to(q1) * 0.999))
+		_add(pm, Transform3D(b, (q0 + q1) * 0.5), M["wood"])
+		for sx: float in [-1.0, 1.0]:
+			var post := (q0 + q1) * 0.5 + side * 1.02 * sx
+			if k2 % 3 == 0:
+				bar(post, post + Vector3(0, 0.95, 0), 0.08, M["white"])
+			bar(q0 + side * 1.02 * sx + Vector3(0, 0.95, 0), q1 + side * 1.02 * sx + Vector3(0, 0.95, 0), 0.07, M["white"])
+		# the walkable deck (collision): a slanted thin box per plank
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = Vector3(2.2, 0.12, q0.distance_to(q1) + 0.05)
+		cs.shape = bs
+		cs.transform = Transform3D(b, (q0 + q1) * 0.5)
+		body.add_child(cs)
+	# two beams under the deck (the arch) + the path from the rotunda to the bridge
+	for sx2: float in [-0.8, 0.8]:
+		for k3 in 8:
+			var t2 := float(k3) / 8.0
+			var t3 := float(k3 + 1) / 8.0
+			var r0 := b0.lerp(b1, t2) + side * sx2 + Vector3(0, lerpf(0.12, 0.5, t2) + sin(t2 * PI) * 0.75 - 0.15, 0)
+			var r1 := b0.lerp(b1, t3) + side * sx2 + Vector3(0, lerpf(0.12, 0.5, t3) + sin(t3 * PI) * 0.75 - 0.15, 0)
+			bar(r0, r1, 0.16, M["wood"])
+	_path(Vector2(24.0 + to_rot.x * -7.0, -26.0 + to_rot.y * -7.0), Vector2(b0.x - dir.x * 0.3, b0.z - dir.z * 0.3), 2.6)
 	jets.call(n, c + Vector3(rx * 0.5, 0.2, -rz * 0.3), 0.1, 6.0, 40, Vector3.ZERO)
 	_out(Vector2(c.x, c.z), 22.0)
 

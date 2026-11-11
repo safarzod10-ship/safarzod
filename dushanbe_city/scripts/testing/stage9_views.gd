@@ -513,6 +513,8 @@ func _ready() -> void:
 				await _look("park_alley", xf * Vector3(0, 2.0, 54), xf * Vector3(0, 3.0, 0))
 				await _look("park_fountain", xf * Vector3(16, 4.0, 22), xf * Vector3(0, 3.0, 0))
 				await _look("park_pond", xf * Vector3(14, 7.0, -40), xf * Vector3(46, 2.0, -46))
+				await _look("park_bridge", xf * Vector3(30, 3.0, -48), xf * Vector3(38, 1.0, -38))
+				await _look("park_bridge_top", xf * Vector3(10, 30, -20), xf * Vector3(42, 0, -42))
 				await _look("park_carousel", xf * Vector3(-16, 3.5, -8), xf * Vector3(-30, 3.0, -14))
 				await _look("park_wheel", xf * Vector3(-10, 4.0, -10), xf * Vector3(-42, 12.0, -44))
 				await _look("park_play", xf * Vector3(-30, 4.0, 45), xf * Vector3(-46, 1.0, 34))
