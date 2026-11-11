@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Перекуп с нуля — Зачем поддержка</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="36" step="0.01" value="0">
+    <span id="time">0:00 / 0:36</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const STYLE = '25d';
+const DUR = 36, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 2.5;
+const CUTS = [];
+const MONEY = [];
+const SUBS = [
+  [0.3, 4.2, 'T', 'В прошлой серии я попросил вас о поддержке. Обещал рассказать — *зачем*.'],
+  [4.2, 9.0, 'T', 'Каждая серия — это сценарий, анимация, озвучка и монтаж. На одну серию уходит *несколько дней*.'],
+  [9.0, 14.0, 'T', 'Голоса всех персонажей сейчас озвучивает *один человек*. Хочется, чтобы у мамы, отца и Дани были *свои голоса*.'],
+  [14.0, 19.0, 'T', 'А ещё есть *лимиты*: программы и сервисы, на которых делается анимация, ограничены по времени и стоят денег.'],
+  [19.0, 22.0, 'T', 'Поэтому серии иногда выходят *реже*, чем хотелось бы.'],
+  [22.0, 26.0, 'T', 'Ваша поддержка — это *новые голоса*, лучше картинка и серии *чаще*.'],
+  [26.0, 31.0, 'T', 'Ссылка в профиле. Даже если просто *подпишешься* и напишешь комментарий — это тоже очень помогает.'],
+  [31.0, 34.8, 'T', 'Спасибо, что вы со мной. *Шестая серия* — уже скоро.'],
+];
+const MAMA = { skin: '#efc29e', shirt: '#b4687f', pants: '#3f3f52', hair: 'long', hairCol: '#5a3a2a', pocket: false };
+const FATHER = { skin: '#d4a07a', shirt: '#5b5f6b', pants: '#2b2f3a', hair: 'short', hairCol: '#55524f', stubble: true, collar: '#454852', pocket: false };
+
+function card(x, y, w, h, k, fn, rot = 0, border = OL) {
+  if (k <= 0) return;
+  at(x, y, k, rot, () => {
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+    rr(-w / 2, -h / 2, w, h, 28, '#fffdf7'); ctx.restore();
+    rr(-w / 2, -h / 2, w, h, 28, null, border, 6);
+    fn();
+  });
+}
+function heart(x, y, s, col = '#ef4444') {
+  at(x, y, s, 0, () => {
+    ctx.beginPath(); ctx.moveTo(0, 40);
+    ctx.bezierCurveTo(-70, -10, -40, -70, 0, -30); ctx.bezierCurveTo(40, -70, 70, -10, 0, 40);
+    ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+  });
+}
+function mic(x, y, s) {
+  at(x, y, s, 0, () => {
+    rr(-26, -70, 52, 90, 26, '#475569', OL, 5);
+    for (let i = 0; i < 4; i++) line([-18, -50 + i * 16, 18, -50 + i * 16], 'rgba(255,255,255,.35)', 3);
+    ctx.beginPath(); ctx.arc(0, 0, 40, .1, Math.PI - .1); ctx.strokeStyle = OL; ctx.lineWidth = 7; ctx.stroke();
+    line([0, 40, 0, 66], OL, 7); line([-26, 66, 26, 66], OL, 7);
+  });
+}
+function icon(kind, x, y, s) {
+  at(x, y, s, 0, () => {
+    if (kind === 'script') { rr(-40, -52, 80, 104, 10, '#fff', OL, 5); for (let i = 0; i < 4; i++) line([-24, -30 + i * 18, 24 - (i === 3 ? 18 : 0), -30 + i * 18], '#94a3b8', 5); }
+    if (kind === 'anim') { rr(-52, -40, 104, 80, 14, '#3b82f6', OL, 5); ctx.beginPath(); ctx.moveTo(-14, -22); ctx.lineTo(24, 0); ctx.lineTo(-14, 22); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill(); }
+    if (kind === 'voice') mic(0, 4, .7);
+    if (kind === 'edit') { circ(-22, 26, 16, null, OL, 7); circ(22, 26, 16, null, OL, 7); line([-12, 14, 30, -44], OL, 8); line([12, 14, -30, -44], OL, 8); }
+  });
+}
+
+function scene(t) {
+  bgRoom(false, t);
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = .18; ctx.fillStyle = '#d9b48a'; ctx.fillRect(0, 0, W, H); ctx.restore();
+  // Timur
+  let ex = 'h', aR = POSE.idle, aL = POSE.idle;
+  if (within(t, 14, 22)) ex = 'worry';
+  if (within(t, 22, 31)) { ex = 'h'; aR = POSE.point; }
+  if (t >= 31) { ex = 'h'; aL = POSE.up; aR = POSE.up; }
+  if (within(t, 9, 14)) { aR = [.35, -1.95]; ex = 'smirk'; }
+  person(Object.assign({}, TIMUR, { x: 540, y: lerp(1800, 1620, back(P(t, 0, .5))), s: 1.62, expr: ex, aL, aR, propR: within(t, 9, 14) ? (x, y) => mic(x, y - 40, .55) : null, talk: talkAmt('T', t) }), t);
+
+  // 1. title
+  card(540, 600, 760, 360, pop(t, .3, .4) * (1 - P(t, 3.9, 4.2)), () => {
+    heart(0, -70, 1.5, '#e5484d');
+    txt('ЗАЧЕМ ПОДДЕРЖКА?', 0, 90, 62, OL, { w: 900 });
+  });
+  // 2. steps
+  if (within(t, 4.2, 9.1)) {
+    const st = [['script', 'сценарий'], ['anim', 'анимация'], ['voice', 'озвучка'], ['edit', 'монтаж']];
+    st.forEach(([k, l], i) => {
+      const kk = pop(t, 4.4 + i * .5) * (1 - P(t, 8.8, 9.1));
+      card(165 + i * 250, 560, 220, 240, kk, () => { icon(k, 0, -30, 1); txt(l, 0, 80, 32, OL, { w: 800 }); }, (i - 1.5) * .03);
+      if (i < 3 && t > 4.6 + i * .5) txt('→', 290 + i * 250, 560, 50, '#fff', { w: 900, st: 8, a: 1 - P(t, 8.8, 9.1) });
+    });
+    if (t > 6.6) at(540, 800, pop(t, 6.6) * (1 - P(t, 8.8, 9.1)), -.02, () => {
+      rr(-300, -50, 600, 100, 50, '#ffd23f', OL, 6); clock(-230, 0, 34, t * 3); txt('несколько дней', 30, 3, 46, OL, { w: 900 });
+    });
+  }
+  // 3. one voice -> many characters
+  if (within(t, 9.0, 14.1)) {
+    const k = 1 - P(t, 13.8, 14.1);
+    card(540, 450, 520, 130, pop(t, 9.1) * k, () => { mic(-190, 6, .55); txt('1 голос', 40, 3, 56, OL, { w: 900 }); });
+    const ppl = [[200, MAMA, 'Мама', '#a2577a', 10.6], [540, FATHER, 'Отец', '#6b7280', 11.2], [880, DANYA, 'Даня', '#ca8a04', 11.8]];
+    ppl.forEach(([x, cfg, nm, col, a]) => personCard(t, x, 760, 290, 340, Object.assign({}, cfg, { expr: 'h' }), nm, col, pop(t, a) * k));
+    if (t > 12.4) at(540, 960, pop(t, 12.4) * k, 0, () => { rr(-260, -44, 520, 88, 44, '#16a34a', OL, 5); txt('нужны свои голоса', 0, 3, 40, '#fff', { w: 900 }); });
+  }
+  // 4. limits
+  if (within(t, 14.0, 19.1)) card(540, 640, 820, 420, pop(t, 14.1) * (1 - P(t, 18.8, 19.1)), () => {
+    txt('ЛИМИТЫ', 0, -140, 64, OL, { w: 900 });
+    const f = eout(P(t, 14.6, 16.8));
+    rr(-340, -60, 680, 70, 35, '#e2e8f0', OL, 5);
+    rr(-340, -60, Math.max(70, 680 * f), 70, 35, f > .85 ? '#e5484d' : '#f59e0b', OL, 5);
+    txt(Math.round(f * 100) + '%', 0, -24, 40, '#fff', { w: 900, st: 8 });
+    clock(-220, 110, 60, t * 4); txt('время', -220, 200, 32, '#64748b', { w: 800 });
+    coin(220, 110, 60); txt('деньги', 220, 200, 32, '#64748b', { w: 800 });
+  });
+  // 5. rarer episodes
+  if (within(t, 19.0, 22.1)) card(540, 640, 700, 420, pop(t, 19.1) * (1 - P(t, 21.8, 22.1)), () => {
+    rr(-300, -190, 600, 80, [20, 20, 0, 0], '#e5484d');
+    txt('КАЛЕНДАРЬ СЕРИЙ', 0, -150, 40, '#fff', { w: 900 });
+    for (let i = 0; i < 14; i++) {
+      const x = -255 + (i % 7) * 85, y = -60 + Math.floor(i / 7) * 110;
+      rr(x - 34, y - 40, 68, 80, 12, '#f1f5f9', '#cbd5e1', 3);
+      if (i === 2 || i === 11) { txt('▶', x, y + 2, 40, '#16a34a', { w: 900 }); }
+      else if (P(t, 19.6 + i * .08, 19.8 + i * .08) > 0) cross(x, y, 18 * eout(P(t, 19.6 + i * .08, 19.9 + i * .08)), '#cbd5e1', 6);
+    }
+  });
+  // 6. what support gives
+  if (within(t, 22.0, 26.1)) {
+    const items = [['voice', 'новые голоса'], ['anim', 'картинка лучше'], ['script', 'серии чаще']];
+    items.forEach(([k, l], i) => {
+      const kk = pop(t, 22.2 + i * .6) * (1 - P(t, 25.8, 26.1));
+      card(540, 470 + i * 190, 720, 160, kk, () => { icon(k, -270, 0, .9); txt(l, 50, 3, 52, OL, { w: 900 }); check(290, 2, 1.1, P(t, 22.5 + i * .6, 22.9 + i * .6)); }, (i - 1) * .015, '#16a34a');
+    });
+  }
+  // 7. link + subscribe
+  if (within(t, 26.0, 31.1)) {
+    const k = 1 - P(t, 30.8, 31.1);
+    card(540, 600, 760, 440, pop(t, 26.1) * k, () => {
+      ball(0, -110, 80, '#ffd23f');
+      ctx.save(); ctx.beginPath(); ctx.arc(0, -110, 76, 0, Math.PI * 2); ctx.clip();
+      person(Object.assign({}, TIMUR, { x: 0, y: 170, s: .62, expr: 'smirk' }), 1); ctx.restore();
+      txt('Перекуп с нуля', 0, 10, 38, OL, { w: 900 });
+      rr(-200, 50, 400, 70, 16, '#fe2c55'); txt('Подписаться', 0, 86, 36, '#fff', { w: 900 });
+      rr(-200, 140, 400, 60, 16, '#f1f5f9', '#cbd5e1', 3); heart(-150, 168, .35, '#e5484d'); txt('ссылка на поддержку', 30, 170, 28, '#2563eb', { w: 800 });
+    });
+    if (t > 27.6) at(820 + Math.sin(t * 8) * 10, 780, pop(t, 27.6) * k, -.6, () => { ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(10, -40); ctx.lineTo(10, -16); ctx.lineTo(70, -16); ctx.lineTo(70, 16); ctx.lineTo(10, 16); ctx.lineTo(10, 40); ctx.closePath(); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke(); });
+    if (t > 28.6) at(540, 900, pop(t, 28.6) * k, 0, () => {
+      rr(-300, -44, 600, 88, 44, '#fff', OL, 5);
+      rr(-250, -22, 60, 40, 12, '#e2e8f0', OL, 4); txt('…', -220, -6, 26, OL, { w: 900 });
+      txt('подписка + коммент = ❤', 50, 3, 36, OL, { w: 900 });
+    });
+  }
+  // 8. thanks
+  if (t >= 31.0) {
+    for (let i = 0; i < 14; i++) {
+      const k = P(t, 31 + hash(i) * .6, 33.5 + hash(i) * .6); if (k <= 0 || k >= 1) continue;
+      heart(100 + hash(i + 3) * 880, 1200 - k * 900, .35 + hash(i + 5) * .25, ['#e5484d', '#ffd23f', '#22c55e'][i % 3]);
+    }
+    at(540, 560, pop(t, 31.1, .5), -.03, () => txt('СПАСИБО!', 0, 0, 130, '#fff', { w: 900, st: 20 }));
+    if (t > 32.4) at(540, 760, pop(t, 32.4), 0, () => { rr(-260, -50, 520, 100, 50, '#ffd23f', OL, 7); txt('СЕРИЯ 6 СКОРО', 0, 3, 48, OL, { w: 900 }); });
+  }
+  vignette('rgba(20,10,0,1)', .4);
+}
+const SCENES = [[0, 36.1, scene]];
+startPlayer();
+</script>
+</body>
+</html>
