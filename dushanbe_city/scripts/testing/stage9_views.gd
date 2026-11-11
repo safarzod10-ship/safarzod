@@ -159,6 +159,9 @@ func _ready() -> void:
 			await _sec(2.0)
 			var fw9 := rgt.cross(Vector3.UP)
 			await _look("stop_%d" % si, sp - rgt * 9.0 + fw9 * 7.0 + Vector3(0, 2.2, 0), sp + Vector3(0, 1.4, 0))
+			var xb: Transform3D = Transform3D(Basis(Vector3.UP, atan2(rgt.x, rgt.z)), sp)
+			await _look("stop_%d_ad" % si, xb * Vector3(-3.1, 1.4, 3.2), xb * Vector3(-3.1, 1.2, 0.3))
+			await _look("stop_%d_panel" % si, xb * Vector3(-1.2, 1.3, -2.6), xb * Vector3(-2.3, 1.2, 0.0))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("missions"):
@@ -884,6 +887,9 @@ func _ready() -> void:
 			await _sec(2.0)
 			var fw9 := rgt.cross(Vector3.UP)
 			await _look("stop_%d" % si, sp - rgt * 9.0 + fw9 * 7.0 + Vector3(0, 2.2, 0), sp + Vector3(0, 1.4, 0))
+			var xb: Transform3D = Transform3D(Basis(Vector3.UP, atan2(rgt.x, rgt.z)), sp)
+			await _look("stop_%d_ad" % si, xb * Vector3(-3.1, 1.4, 3.2), xb * Vector3(-3.1, 1.2, 0.3))
+			await _look("stop_%d_panel" % si, xb * Vector3(-1.2, 1.3, -2.6), xb * Vector3(-2.3, 1.2, 0.0))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("missions"):

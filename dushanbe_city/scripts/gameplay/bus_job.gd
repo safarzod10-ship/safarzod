@@ -249,8 +249,8 @@ func _stop_dressing(root: Node3D, s: Dictionary, i: int) -> void:
 	rtb.position = Vector3(3.4, 2.24, 1.2)
 	root.add_child(rtb)
 	# lit advertising lightbox at the end of the shelter
-	var ads := ["ad_laklak", "ad_dcnext", "ad_eskhata", "ad_orienbank"]
-	var tex_path := "res://assets/textures/ads/%s.png" % ads[i % ads.size()]
+	# «Тут может быть ваша реклама — обратитесь в поддержку @DushanbeX_Support»
+	var tex_path := "res://assets/textures/ads/ad_your_ad_here.png"
 	var frame := MeshInstance3D.new()
 	var fm := BoxMesh.new()
 	fm.size = Vector3(0.18, 2.1, 1.3)
@@ -267,7 +267,7 @@ func _stop_dressing(root: Node3D, s: Dictionary, i: int) -> void:
 		for face2: float in [1.0, -1.0]:
 			var q := MeshInstance3D.new()
 			var qm := QuadMesh.new()
-			qm.size = Vector2(1.15, 1.9)
+			qm.size = Vector2(1.15, 1.9)              # poster 640 x 1056 (same aspect)
 			q.mesh = qm
 			q.material_override = am
 			q.position = Vector3(-3.1 + face2 * 0.095, 1.15, 0.3)

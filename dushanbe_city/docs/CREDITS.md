@@ -100,3 +100,6 @@ project owner.
 - Police station, «Парк Дусти» arch / fountain / pavilions, realty boards, taxi, tuning parts
   (spoiler, rim tint, window tint): procedural, made for this game (no external assets).
 - Engine voices of all cars: the existing CC0 Prado recordings re-pitched per engine (cylinders).
+
+- `assets/textures/ads/dushanbex_support.jpg` and the bus-shelter ad panel (in `plates_atlas.png`) — the «Душанбе-X · Хадамоти дастгирӣ» picture supplied by the project owner; `ad_your_ad_here.png` — own design (Montserrat, OFL).
+- `assets/fonts/Montserrat-*.ttf` — Montserrat by the Montserrat Project Authors, SIL Open Font License 1.1 (`assets/fonts/Montserrat-OFL.txt`).
