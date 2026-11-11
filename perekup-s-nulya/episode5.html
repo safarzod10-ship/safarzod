@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Перекуп с нуля — Серия 5</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="151" step="0.01" value="0">
+    <span id="time">0:00 / 2:31</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const STYLE = '25d';
+const DUR = 151, START_MONEY = 58000, HUD_FROM = 0.3, HUD_PULSE = null, COVER_T = 47;
+const CUTS = [6.5, 15, 36, 56, 82, 96, 118];
+const DAYS_TOTAL = 1095, VOTE_AT = 141;
+const DAYS = [{ t: 15.3, d: 73 }, { t: 36.0, d: 75 }, { t: 56.3, d: 76 }, { t: 82.3, d: 80 }, { t: 102.5, d: 100 }];
+
+const SUBS = [
+  [0.3, 6.3, 'T', 'В прошлой серии Даня стал моим конкурентом, я научился побеждать сервисом и закрыл месяц *в плюс*. На счету — *58 000*.'],
+  [6.6, 9.6, 'T', 'Сегодня я хочу рассказать *немного о себе*.'],
+  [9.6, 14.8, 'T', 'Я никогда не видел отца. Мама про него не рассказывала. *Ни разу*.'],
+
+  [15.3, 18.0, 'T', 'День 73. Прихожу домой.'],
+  [18.0, 21.0, 'O', 'Тимур… садись. Нам надо поговорить.'],
+  [21.0, 26.0, 'O', 'Твой отец *жив*. Он приходил на днях. Спрашивал про тебя.'],
+  [26.0, 29.5, 'T', 'Почему ты молчала *все эти годы*?'],
+  [29.5, 35.5, 'O', 'Он много пил. Мы ругались каждый день. Я ушла, чтобы ты *этого не видел*.'],
+
+  [36.0, 41.5, 'T', 'День 75. Кафе у вокзала. Напротив меня — человек *с моими глазами*.'],
+  [41.5, 45.0, 'F', 'Ты вырос… *Прости меня*, сын.'],
+  [45.0, 51.0, 'F', 'Я пришёл не просто так. Я должен *полтора миллиона*. Мне больше не к кому идти.'],
+  [51.0, 55.8, 'T', 'Полтора миллиона. А у меня — *58 000* и три телефона.'],
+
+  [56.3, 59.0, 'T', 'День 76. *Стук в дверь*.'],
+  [59.0, 63.0, 'X', 'Ты сын? Долг отца — теперь *твоя проблема*.'],
+  [63.0, 68.0, 'T', 'Они забрали телефоны, ноутбук, деньги. *Всё*, что я собирал два месяца.'],
+  [68.0, 70.5, 'T', 'Я хотел идти в полицию.'],
+  [70.5, 74.0, 'F', 'Не надо. У них связи. *Будет только хуже*.'],
+  [74.0, 81.8, 'T', 'И я не пошёл. Сейчас я понимаю — это была *ошибка*. Долги отца — не долги сына. А забирать чужое — *преступление*.'],
+
+  [82.3, 87.5, 'T', 'День 80. На счету *ноль*. Своя сеть магазинов… сейчас это звучит смешно.'],
+  [87.5, 90.5, 'T', 'Три ночи я не спал. И решил.'],
+  [90.5, 95.8, 'T', 'Беру *в кредит* компьютер для стримов. *90 000*.'],
+
+  [96.3, 102.5, 'T', 'Первый стрим — *4 зрителя*. Пятый — 6. Пятнадцатый — *2*.'],
+  [102.5, 110.0, 'T', 'День 100. Двадцать дней эфиров. Заработал — *ноль*. А платёж по кредиту — *5 000* каждый месяц.'],
+  [110.0, 113.5, 'O', 'Сынок… ты не спишь уже *который день*.'],
+  [113.5, 117.5, 'T', 'Я хотел быстро всё вернуть. А сделал *только хуже*.'],
+
+  [118.0, 123.0, 'T', 'Не всегда то, что хочешь, *получается*. Даже если очень стараешься.'],
+  [123.0, 126.5, 'T', 'Но это ещё *не конец* моей истории.'],
+  [126.5, 135.0, 'T', 'И у меня к вам просьба. Если вам нравится этот сериал и вы хотите, чтобы история Тимура продолжалась — *поддержите нас*. Ссылка в профиле.'],
+  [135.0, 141.0, 'T', 'Каждый донат — это *новые серии*. А зачем именно сейчас нужна ваша поддержка — расскажу *в следующем видео*.'],
+  [141.0, 148.0, 'T', 'Решать вам. *1* — продать компьютер и начать перекуп заново. *2* — не сдаваться и стримить дальше.'],
+];
+const MONEY = [{ t: 64.5, d: -58000 }];
+
+const MAMA = { skin: '#efc29e', shirt: '#b4687f', pants: '#3f3f52', hair: 'long', hairCol: '#5a3a2a', iris: '#5b3b22', pocket: false };
+const FATHER = { skin: '#d4a07a', shirt: '#5b5f6b', pants: '#2b2f3a', hair: 'short', hairCol: '#55524f', stubble: true, collar: '#454852', tired: true, zip: true, pocket: false };
+const COLL = { skin: '#d8a27a', shirt: '#1c1e24', pants: '#121317', hair: 'bald', hairCol: '#3a3a3a', glasses: 'sun', zip: true, collar: '#0b0c0f', shoe: '#0b0c0f', pocket: false };
+
+/* ---------- mood helpers ---------- */
+function grade(col, a) {
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a; ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore();
+}
+function rain(t, x0, y0, w, h, n = 60, a = .5) {
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+  ctx.strokeStyle = `rgba(200,220,255,${a})`; ctx.lineWidth = 2;
+  for (let i = 0; i < n; i++) {
+    const x = x0 + ((hash(i) * w + t * 60) % w), y = y0 + ((hash(i + 50) * h + t * (700 + hash(i + 9) * 300)) % h);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 26); ctx.stroke();
+  }
+  ctx.restore();
+}
+function lampGlow(x, y, r, col = '255,200,120', a = .45) {
+  const g = ctx.createRadialGradient(x, y, 10, x, y, r);
+  g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+function creditPill(t) {
+  if (t < 93) return;
+  at(540, 428, pop(t, 93) * (1 - P(t, VOTE_AT, VOTE_AT + .3)), 0, () => {
+    rr(-190, -32, 380, 64, 32, '#e5484d', OL, 5);
+    txt('КРЕДИТ −90 000 ₽', 0, 3, 32, '#fff', { w: 900 });
+  });
+}
+function card(x, y, w, h, k, fn, rot = 0, border = OL) {
+  if (k <= 0) return;
+  at(x, y, k, rot, () => {
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+    rr(-w / 2, -h / 2, w, h, 28, '#fffdf7'); ctx.restore();
+    rr(-w / 2, -h / 2, w, h, 28, null, border, 6);
+    fn();
+  });
+}
+function bottle(x, y, s) {
+  at(x, y, s, .25, () => {
+    rr(-26, -60, 52, 120, 16, '#2f6b4f', OL, 5); rr(-10, -100, 20, 46, 6, '#2f6b4f', OL, 5);
+    rr(-20, -20, 40, 40, 6, '#e9dcc0'); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-18, -54, 8, 90);
+  });
+}
+
+/* ---------- backgrounds ---------- */
+function bgNightRoom(t) {
+  bgRoom(true, t);
+  rain(t, 618, 438, 324, 384, 50, .45);
+  grade('#7c8ab8', .35);
+}
+function bgKitchen(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, 1300); g.addColorStop(0, '#7a6556'); g.addColorStop(1, '#a88a72');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 1300);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 3;
+  for (let y = 760; y < 1180; y += 60) for (let x = 0; x < W; x += 60) ctx.strokeRect(x, y, 60, 60);
+  // window with rain
+  rr(620, 380, 340, 360, 12, '#e9e2d6', OL, 7);
+  const sky = ctx.createLinearGradient(0, 390, 0, 730); sky.addColorStop(0, '#1b2140'); sky.addColorStop(1, '#3a4570');
+  rr(636, 396, 308, 328, 6, sky);
+  for (let i = 0; i < 7; i++) rr(650 + i * 42, 600 - hash(i) * 120, 30, 140 + hash(i) * 120, 2, '#141831');
+  for (let i = 0; i < 14; i++) if (hash(i + 30) > .4) rr(656 + (i % 7) * 42, 620 - hash(i) * 100 + Math.floor(i / 7) * 40, 10, 12, 1, '#ffd27a');
+  rain(t, 636, 396, 308, 328, 40, .5);
+  line([790, 390, 790, 730], '#e9e2d6', 10);
+  // fridge
+  rr(60, 520, 230, 790, 24, '#d9dee6', OL, 7); line([60, 800, 290, 800], OL, 5); rr(250, 600, 14, 110, 7, '#9aa4b2'); rr(250, 840, 14, 140, 7, '#9aa4b2');
+  // lamp
+  line([540, 0, 540, 260], '#222', 4);
+  ctx.beginPath(); ctx.moveTo(470, 300); ctx.lineTo(610, 300); ctx.lineTo(570, 250); ctx.lineTo(510, 250); ctx.closePath(); ctx.fillStyle = '#3a3a3a'; ctx.fill();
+  lampGlow(540, 330, 520);
+  // floor + table
+  ctx.fillStyle = '#5b4535'; ctx.fillRect(0, 1300, W, H - 1300);
+  rr(380, 1180, 520, 30, 8, '#8a6346', OL, 6); rr(420, 1210, 22, 200, 4, '#6b4c35', OL, 4); rr(840, 1210, 22, 200, 4, '#6b4c35', OL, 4);
+  rr(560, 1140, 46, 42, 10, '#f2efe9', OL, 4); rr(700, 1140, 46, 42, 10, '#e9b8a4', OL, 4);
+  ctx.save(); ctx.globalAlpha = .5; for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.moveTo(583 + i * 140, 1130); ctx.quadraticCurveTo(570 + i * 140 + Math.sin(t * 2 + i) * 12, 1090, 590 + i * 140, 1060); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); } ctx.restore();
+}
+function bgCafe(t) {
+  ctx.fillStyle = '#1f3b3d'; ctx.fillRect(0, 0, W, H);
+  // big window with passing train lights
+  rr(40, 330, 1000, 600, 10, '#0e1b26', '#3a5153', 12);
+  ctx.save(); ctx.beginPath(); ctx.rect(46, 336, 988, 588); ctx.clip();
+  for (let i = 0; i < 8; i++) circ(80 + hash(i) * 900, 420 + hash(i + 3) * 400, 60 + hash(i + 6) * 50, `rgba(255,${180 + hash(i) * 60 | 0},120,.18)`);
+  const tx = ((t * 520) % 2600) - 800;
+  rr(tx, 640, 1400, 200, 20, '#3d4a5a'); for (let i = 0; i < 12; i++) rr(tx + 40 + i * 110, 670, 80, 60, 8, '#ffe2a0');
+  rain(t, 46, 336, 988, 588, 70, .35);
+  ctx.restore();
+  line([540, 330, 540, 930], '#3a5153', 10);
+  // neon
+  ctx.save(); ctx.shadowColor = '#ff5a7a'; ctx.shadowBlur = 30; txt('КАФЕ', 900, 290, 60, '#ff8fa3', { w: 900 }); ctx.restore();
+  ctx.fillStyle = '#2a2420'; ctx.fillRect(0, 1300, W, H - 1300);
+  lampGlow(540, 1000, 560, '255,190,120', .3);
+}
+function cafeTable() {
+  rr(330, 1170, 420, 32, 10, '#7a5a40', OL, 6); rr(520, 1202, 40, 200, 6, '#4a3626', OL, 4);
+  rr(400, 1132, 44, 40, 10, '#f2efe9', OL, 4); rr(640, 1132, 44, 40, 10, '#f2efe9', OL, 4);
+}
+function bgHall(t, open) {
+  const g = ctx.createLinearGradient(0, 0, 0, 1300); g.addColorStop(0, '#4b5563'); g.addColorStop(1, '#6b7280');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 1300);
+  ctx.fillStyle = '#3b3f48'; ctx.fillRect(0, 1300, W, H - 1300);
+  // coat hooks
+  rr(80, 520, 220, 18, 6, '#5b4636', OL, 4); for (let i = 0; i < 3; i++) circ(120 + i * 70, 548, 10, '#c0c4cc', OL, 3);
+  rr(110, 560, 70, 220, 26, '#8b5e3c', OL, 5);
+  // door frame + door
+  rr(560, 420, 420, 890, 10, '#2b2f38', OL, 8);
+  rr(580, 440, 380, 870, 6, '#11131a');
+  ctx.save(); ctx.translate(580, 440);
+  const k = open; // 0 closed .. 1 open
+  ctx.transform(1 - .78 * k, -.08 * k, 0, 1, 0, 0);
+  rr(0, 0, 380, 870, 6, '#7a4f33', OL, 6); rr(40, 60, 300, 330, 8, null, 'rgba(0,0,0,.25)', 6); rr(40, 470, 300, 330, 8, null, 'rgba(0,0,0,.25)', 6);
+  circ(330, 450, 14, '#d4b46a', OL, 4);
+  ctx.restore();
+  lampGlow(540, 260, 600, '200,220,255', .25);
+}
+function bgStream(t) {
+  bgRoom(true, t);
+  grade('#6b6fa8', .35);
+  // RGB light strip
+  const hue = (t * 40) % 360;
+  ctx.save(); ctx.shadowColor = `hsl(${hue},90%,60%)`; ctx.shadowBlur = 50; rr(520, 1100, 520, 10, 5, `hsl(${hue},90%,60%)`); ctx.restore();
+  lampGlow(780, 900, 520, '120,140,255', .35);
+  // desk + PC
+  rr(500, 1110, 560, 34, 8, '#2a2a35', OL, 6);
+  rr(560, 850, 360, 230, 14, '#0d0f16', OL, 7);
+  const sg = ctx.createLinearGradient(0, 866, 0, 1064); sg.addColorStop(0, '#2b1f5c'); sg.addColorStop(1, '#4b2c84');
+  rr(574, 864, 332, 200, 8, sg);
+  rr(590, 880, 120, 40, 10, '#e5484d'); txt('LIVE', 650, 902, 26, '#fff', { w: 900 });
+  rr(720, 1080, 40, 30, 4, '#0d0f16', OL, 4);
+  rr(950, 900, 70, 210, 10, '#11131d', OL, 6);
+  ctx.save(); ctx.shadowColor = `hsl(${(hue + 120) % 360},90%,60%)`; ctx.shadowBlur = 24; circ(985, 960, 16, `hsl(${(hue + 120) % 360},90%,60%)`); circ(985, 1010, 16, `hsl(${(hue + 200) % 360},90%,60%)`); ctx.restore();
+}
+
+/* ================= SCENES ================= */
+
+// 1. Recap 0–6.5
+function e1(t) {
+  bgDark(t);
+  const items = [[.5, 'Даня — конкурент', '#ca8a04'], [2.0, 'Сервис > цена', '#16a34a'], [3.6, '+9 000 · на счету 58 000', '#2563eb']];
+  items.forEach(([a, s, c], i) => {
+    const k = pop(t, a, .4);
+    card(540, 560 + i * 170, 760, 130, k, () => { circ(-310, 0, 30, c, OL, 5); txt(s, 30, 3, 46, OL, { w: 900 }); }, (i - 1) * .02);
+  });
+  person(Object.assign({}, TIMUR, { x: 540, y: lerp(1760, 1420, back(P(t, .4, .9))), s: 1.25, expr: 'smirk', talk: talkAmt('T', t) }), t);
+  vignette('rgba(0,0,0,1)', .5);
+}
+// 1b. About me 6.5–15
+function e1b(t) {
+  bgNightRoom(t);
+  const pk = pop(t, 10.0, .5);
+  card(540, 640, 520, 400, pk, () => {
+    rr(-230, -180, 460, 300, 10, '#d8c7a8');
+    ctx.save(); ctx.beginPath(); ctx.rect(-230, -180, 230, 300); ctx.clip();
+    person(Object.assign({}, MAMA, { x: -115, y: 150, s: .62, expr: 'h' }), 1);
+    ctx.restore();
+    ctx.beginPath(); ctx.moveTo(0, -180); for (let i = 0; i <= 12; i++) ctx.lineTo(i % 2 ? 14 : -4, -180 + i * 25); ctx.lineTo(230, 120); ctx.lineTo(230, -180); ctx.closePath();
+    ctx.fillStyle = '#fffdf7'; ctx.fill();
+    txt('?', 120, -30, 140, '#c7b9a0', { w: 900 });
+    txt('мама и я · 2008', 0, 160, 30, '#7a6a55', { w: 700 });
+  }, -.04);
+  person(Object.assign({}, TIMUR, { x: 300, y: 1530, s: 1.65, expr: t > 12 ? 'sad' : 'n', turn: .5, lx: .6, talk: talkAmt('T', t) }), t);
+  vignette('rgba(0,0,20,1)', .55);
+}
+// 2. Kitchen 15–36
+function e2(t) {
+  bgKitchen(t);
+  const wk = P(t, 15.3, 17.2);
+  let mex = 'worry', maL = POSE.idle, maR = POSE.idle, tear = false;
+  if (within(t, 18, 21)) maR = [.5, -1.2];
+  if (t >= 29.5) { mex = 'sad'; tear = true; }
+  person(Object.assign({}, MAMA, { x: 790, y: 1530, s: 1.71, expr: mex, aL: maL, aR: maR, tear, turn: -.5, lx: -.7, talk: talkAmt('O', t), ph: 2 }), t);
+  let ex = 'h';
+  if (t > 18) ex = 'n';
+  if (within(t, 21, 26)) ex = 's';
+  if (within(t, 26, 29.5)) ex = 'angry';
+  if (t >= 29.5) ex = 'sad';
+  person(Object.assign({}, TIMUR, { x: lerp(-180, 300, eout(wk)), y: 1530, s: 1.71, expr: ex, walk: wk < 1 ? 1 : 0, turn: .5, lx: .7, talk: talkAmt('T', t) }), t);
+  if (within(t, 21.5, 26)) personCard(t, 540, 620, 420, 460, Object.assign({}, FATHER, { expr: 'n', tired: false, stubble: false, hairCol: '#2a2420' }), 'Отец', '#6b7280', pop(t, 21.6) * (1 - P(t, 25.7, 26)));
+  if (within(t, 30, 35.6)) card(540, 600, 620, 360, pop(t, 30.2) * (1 - P(t, 35.3, 35.6)), () => {
+    bottle(-170, 10, 1.1);
+    ctx.save(); ctx.translate(90, 0);
+    heart(0, -20, 1.6, '#e5484d');
+    line([-10, -80, 12, -40, -14, -10, 8, 30], '#fffdf7', 9);
+    ctx.restore();
+    txt('пил · ругались · ушла', 0, 140, 34, '#7a6a55', { w: 800 });
+  }, .03);
+  grade('#c9b3a0', .25);
+  vignette('rgba(10,5,0,1)', .5);
+}
+function heart(x, y, s, col = '#ef4444') {
+  at(x, y, s, 0, () => {
+    ctx.beginPath(); ctx.moveTo(0, 40);
+    ctx.bezierCurveTo(-70, -10, -40, -70, 0, -30); ctx.bezierCurveTo(40, -70, 70, -10, 0, 40);
+    ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.stroke();
+  });
+}
+// 3. Cafe 36–56
+function e3(t) {
+  bgCafe(t);
+  person(Object.assign({}, FATHER, { x: 790, y: 1550, s: 1.73, expr: within(t, 45, 51) ? 'worry' : 'sad', aR: within(t, 45, 51) ? [.5, -1.3] : POSE.idle, turn: -.55, lx: -.7, talk: talkAmt('F', t), ph: 1 }), t);
+  person(Object.assign({}, TIMUR, { x: 290, y: 1550, s: 1.73, expr: t < 41.5 ? 'n' : t < 45 ? 'worry' : 's', turn: .55, lx: .7, talk: talkAmt('T', t) }), t);
+  cafeTable();
+  if (within(t, 38.5, 41.5)) {
+    // "same eyes" close-up comparison
+    card(540, 560, 760, 240, pop(t, 38.6) * (1 - P(t, 41.2, 41.5)), () => {
+      for (const [x, iris] of [[-190, '#4a2f1d'], [190, '#4a2f1d']]) {
+        for (const sd of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + sd * 60, 0, 44, 30, 0, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke(); circ(x + sd * 60, 2, 20, iris); circ(x + sd * 60, 2, 10, '#000'); circ(x + sd * 60 - 6, -6, 5, '#fff'); }
+      }
+      txt('=', 0, 4, 90, '#e5484d', { w: 900 });
+    });
+  }
+  if (within(t, 45.2, 51)) card(540, 560, 760, 220, pop(t, 46.0) * (1 - P(t, 50.7, 51)), () => {
+    txt('ДОЛГ', 0, -55, 44, '#64748b', { w: 900 });
+    txt('1 500 000 ₽', 0, 30, 104, '#e5484d', { w: 900 });
+  });
+  if (within(t, 51.1, 55.9)) card(540, 580, 800, 300, pop(t, 51.2) * (1 - P(t, 55.6, 55.9)), () => {
+    txt('у меня', -330, -80, 34, '#64748b', { w: 700, al: 'left' });
+    const k = eout(P(t, 51.6, 52.4));
+    rr(-330, -50, Math.max(10, 660 * 58 / 1500 * k), 50, 12, '#16a34a', OL, 4); txt('58 000', -330 + 660 * 58 / 1500 + 20, -24, 38, '#16a34a', { w: 900, al: 'left' });
+    txt('долг', -330, 40, 34, '#64748b', { w: 700, al: 'left' });
+    rr(-330, 70, Math.max(10, 660 * k), 50, 12, '#e5484d', OL, 4);
+  });
+  vignette('rgba(0,0,0,1)', .55);
+}
+// 4. Collectors 56–82
+function e4(t) {
+  const open = eout(P(t, 58.6, 59.4)) * (1 - eio(P(t, 66.5, 67.3)));
+  const [sx, sy] = within(t, 56.3, 58.6) ? [Math.sin(t * 60) * 5, 0] : shk(t, 59.2, .4, 14);
+  cam(1, 540, 960, sx, sy, () => {
+    bgHall(t, open);
+    // collectors
+    const inK = P(t, 59.0, 60.2), outK = P(t, 65.2, 67.0);
+    if (t > 59 && outK < 1) {
+      const carry = within(t, 63, 67);
+      for (const [i, dx, sc] of [[0, 0, 1.85], [1, 190, 1.72]]) {
+        const x = lerp(820 + dx, 600 + dx * .8, eout(inK)) + outK * outK * 800;
+        person(Object.assign({}, COLL, { x, y: 1570 - i * 30, s: sc, expr: 'angry', turn: -.5, lx: -.6, aR: carry ? [.5, -1.5] : i ? POSE.idle : POSE.finger, aL: carry ? [.5, -1.5] : POSE.idle, walk: (inK > 0 && inK < 1) || (outK > 0 && outK < 1) ? 1 : 0, talk: i ? 0 : talkAmt('X', t), ph: 5 + i, propR: carry ? (x2, y2) => rr(x2 - 60, y2 - 70, 120, 90, 8, '#c08a52', OL, 5) : null }), t);
+      }
+    }
+    let ex = 'n', aR = POSE.idle, propR = null;
+    if (within(t, 56.3, 59)) ex = 's';
+    if (within(t, 59, 63)) ex = 's';
+    if (within(t, 63, 68)) ex = 'sad';
+    if (within(t, 68, 74)) { ex = 'worry'; aR = POSE.ear; propR = earPhone; }
+    if (t >= 74) ex = 'sad';
+    person(Object.assign({}, TIMUR, { x: within(t, 59, 66) ? 230 : 290, y: 1570, s: 1.73, expr: ex, aR, propR, tear: within(t, 63, 70), turn: .5, lx: .7, talk: talkAmt('T', t) }), t);
+  });
+  if (within(t, 56.3, 58.8)) at(820, 600, pop(t, 56.4), .1, () => txt('ТУК-ТУК', 0, 0, 90, '#fff', { w: 900, st: 16 }));
+  // belongings flying away
+  if (within(t, 63.4, 66.5)) {
+    const items = [[63.6, 'phone'], [64.0, 'phone'], [64.4, 'laptop'], [64.8, 'cash'], [65.2, 'phone']];
+    items.forEach(([a, kind], i) => {
+      const k = P(t, a, a + .9); if (k <= 0 || k >= 1) return;
+      const x = lerp(330, 900, eio(k)), y = 1000 - Math.sin(k * Math.PI) * 220;
+      at(x, y, 1, k * 3, () => {
+        if (kind === 'phone') phone(0, 0, 70, 125, { s1: '#3b82f6', s2: '#1e293b' });
+        if (kind === 'laptop') { rr(-90, -60, 180, 110, 10, '#cbd5e1', OL, 5); rr(-110, 50, 220, 16, 6, '#94a3b8', OL, 4); }
+        if (kind === 'cash') { note(0, 0, 0, 1); note(10, 14, .2, 1); }
+      });
+    });
+  }
+  personCard(t, 640, 640, 480, 520, Object.assign({}, FATHER, { expr: 'worry', aR: POSE.ear, propR: earPhone, talk: talkAmt('F', t) }), 'Отец', '#6b7280', pop(t, 70.5, .35) * (1 - P(t, 73.8, 74.1)));
+  if (t > 74.2) {
+    card(540, 560, 860, 300, pop(t, 74.3) * (1 - P(t, 81.6, 81.9)), () => {
+      txt('Долги отца ≠ долги сына', 0, -70, 50, OL, { w: 900 });
+      txt('Забирать чужое —', 0, 10, 46, '#e5484d', { w: 900 });
+      txt('ПРЕСТУПЛЕНИЕ. Звони 112', 0, 80, 46, '#e5484d', { w: 900 });
+    }, -.02, '#e5484d');
+  }
+  grade('#8f9ab8', .3);
+  vignette('rgba(0,0,10,1)', .55);
+}
+// 5. Zero 82–96
+function e5(t) {
+  bgRoom(true, t);
+  rain(t, 618, 438, 324, 384, 50, .45);
+  grade('#7c8ab8', .4);
+  ctx.fillStyle = 'rgba(20,20,35,.6)'; ctx.fillRect(700, 960, 240, 150);
+  if (within(t, 87.5, 90.6)) at(540, 600, pop(t, 87.6) * (1 - P(t, 90.3, 90.6)), 0, () => {
+    for (let i = 0; i < 3; i++) { const k = P(t, 87.8 + i * .7, 88.2 + i * .7); if (k > 0) { circ(-200 + i * 200, 0, 70, '#f8f4d0', null); circ(-200 + i * 200 + 30, -20, 64, '#1b2140'); txt('ночь ' + (i + 1), -200 + i * 200, 120, 34, '#fff', { w: 800, a: k }); } }
+  });
+  if (t > 90.6) card(540, 640, 760, 420, pop(t, 90.8) * (1 - P(t, 95.6, 95.9)), () => {
+    rr(-160, -170, 320, 200, 14, '#0d0f16', OL, 6); const g = ctx.createLinearGradient(0, -160, 0, 20); g.addColorStop(0, '#2b1f5c'); g.addColorStop(1, '#4b2c84'); rr(-146, -156, 292, 172, 8, g);
+    rr(-30, 30, 60, 30, 4, '#0d0f16');
+    txt('В КРЕДИТ', 0, 110, 46, OL, { w: 900 });
+    txt('90 000 ₽', 0, 170, 64, '#e5484d', { w: 900 });
+  });
+  person(Object.assign({}, TIMUR, { x: 540, y: 1550, s: 1.59, expr: t < 90.5 ? 'sad' : 'worry', turn: 0, talk: talkAmt('T', t), ly: .4 }), t);
+  creditPill(t);
+  vignette('rgba(0,0,10,1)', .6);
+}
+// 6. Streams 96–118
+function e6(t) {
+  bgStream(t);
+  const mi = P(t, 109.6, 111);
+  if (t > 109.6) person(Object.assign({}, MAMA, { x: lerp(-200, 170, eout(mi)), y: 1570, s: 1.59, expr: 'sad', walk: mi < 1 ? 1 : 0, turn: .5, lx: .7, talk: talkAmt('O', t), ph: 2 }), t);
+  const head = (x, y) => { };
+  person(Object.assign({}, TIMUR, { x: t > 109.6 ? 470 : 400, y: 1570, s: 1.65, expr: t < 102.5 ? 'n' : t < 113.5 ? 'worry' : 'sad', tired: t > 102.5, tear: t > 114, turn: t > 110 ? -.4 : .5, lx: t > 110 ? -.6 : .7, talk: talkAmt('T', t) }), t);
+  const streams = [[96.4, '#1', 4], [98.4, '#5', 6], [100.4, '#15', 2]];
+  streams.forEach(([a, n, v], i) => {
+    const k = pop(t, a, .35) * (1 - P(t, 102.2, 102.5));
+    card(200 + i * 340, 600, 300, 220, k, () => {
+      rr(-120, -80, 90, 40, 10, '#e5484d'); txt('LIVE', -75, -59, 24, '#fff', { w: 900 });
+      txt('стрим ' + n, 40, -58, 30, '#64748b', { w: 800 });
+      eyeIcon(-60, 30); txt(String(v), 40, 32, 70, i === 2 ? '#e5484d' : OL, { w: 900 });
+    }, (i - 1) * .03);
+  });
+  if (within(t, 102.6, 110)) card(540, 620, 820, 360, pop(t, 102.7) * (1 - P(t, 109.7, 110)), () => {
+    txt('20 дней эфиров', 0, -120, 44, '#64748b', { w: 800 });
+    txt('заработано: 0 ₽', 0, -30, 66, OL, { w: 900 });
+    txt('кредит: −5 000 ₽ / мес', 0, 80, 54, '#e5484d', { w: 900 });
+  });
+  creditPill(t);
+  vignette('rgba(0,0,10,1)', .55);
+}
+function eyeIcon(x, y) {
+  ctx.beginPath(); ctx.moveTo(x - 34, y); ctx.quadraticCurveTo(x, y - 30, x + 34, y); ctx.quadraticCurveTo(x, y + 30, x - 34, y);
+  ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.stroke(); circ(x, y, 11, OL);
+}
+// 7. Ending 118–151
+function e7(t) {
+  const dawn = P(t, 118, 140);
+  bgRoom(true, t);
+  grade(`rgb(${130 + dawn * 100 | 0},${140 + dawn * 70 | 0},${190 - dawn * 20 | 0})`, .4);
+  lampGlow(780, 600, 500, '255,190,140', .15 + dawn * .25);
+  person(Object.assign({}, TIMUR, { x: 540, y: 1550, s: 1.59, expr: t < 123 ? 'sad' : t < 126.5 ? 'n' : 'h', tired: t < 126.5, turn: 0, talk: talkAmt('T', t), aR: t > 141 ? POSE.point : POSE.idle }), t);
+  if (within(t, 118.1, 126.5)) at(540, 720, pop(t, 118.3, .5) * (1 - P(t, 126.2, 126.5)), 0, () => {
+    txt('НЕ ВСЕГДА', 0, -110, 96, '#fff', { w: 900, st: 16 });
+    txt('ТО, ЧТО ХОЧЕШЬ,', 0, 0, 80, '#fff', { w: 900, st: 14 });
+    txt('ПОЛУЧАЕТСЯ', 0, 100, 96, '#ffd23f', { w: 900, st: 16 });
+  });
+  if (within(t, 126.6, 141)) card(540, 700, 820, 420, pop(t, 126.8) * (1 - P(t, 140.7, 141)), () => {
+    heart(0, -110, 1.4, '#e5484d');
+    txt('Поддержать сериал', 0, 30, 56, OL, { w: 900 });
+    txt('ссылка в профиле', 0, 100, 40, '#64748b', { w: 700 });
+    if (t > 135) { rr(-300, 140, 600, 70, 35, '#ffd23f', OL, 5); txt('донаты = новые серии', 0, 176, 36, OL, { w: 900 }); }
+  }, -.02, '#e5484d');
+  creditPill(t);
+  voteCard(t, 141.0, [['ПРОДАТЬ ПК', 'ПЕРЕКУП', 'начать заново'], ['СТРИМИТЬ', 'ДАЛЬШЕ', 'не сдаваться']], 147.5, 'Серия 6 — по вашему выбору');
+  vignette('rgba(0,0,10,1)', .45);
+}
+
+const SCENES = [[0, 6.5, e1], [6.5, 15, e1b], [15, 36, e2], [36, 56, e3], [56, 82, e4], [82, 96, e5], [96, 118, e6], [118, 151.1, e7]];
+startPlayer();
+</script>
+</body>
+</html>
