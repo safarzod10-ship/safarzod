@@ -233,6 +233,10 @@ func _spawn_extra_vehicles() -> void:
 	var photo := PhotoPlaces.new()
 	photo.name = "PhotoPlaces"
 	add_child(photo)
+	# GTA pass: working traffic lights (2-phase cycle per junction), traffic stops at red
+	var signals := TrafficSignals.new()
+	signals.name = "TrafficSignals"
+	add_child(signals)
 	# 0.25: traffic and pedestrians near the camera (off in tests unless asked)
 	var life := CityLife.new()
 	life.name = "CityLife"

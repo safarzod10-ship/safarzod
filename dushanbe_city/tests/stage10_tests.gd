@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -549,6 +549,26 @@ func _t_police() -> void:
 		tt += 0.5
 	_check("escaped after %.0f s: stars %d" % [tt, Police.stars], Police.stars == 0)
 	Wallet.money = 500
+
+
+func _t_signals() -> void:
+	var ts: TrafficSignals = main.get_node_or_null("TrafficSignals")
+	_check("traffic signals at %d junctions" % (ts.junctions.size() if ts else 0), ts != null and ts.junctions.size() > 50)
+	if ts == null:
+		return
+	var j: Dictionary = ts.junctions[0]
+	var seen := {}
+	for k in 26:
+		seen[ts.state(j, 0) + "/" + ts.state(j, 1)] = true
+		await _sec(1.0)
+	_check("one junction cycles: %s" % str(seen.keys()), seen.has("green/red") and seen.has("red/green") and not seen.has("green/green"))
+	# a car before the junction on the red axis must stop
+	var ax: Vector3 = j["axis"]
+	var t0 := Time.get_ticks_msec()
+	while ts.state(j, 0) != "red" and Time.get_ticks_msec() - t0 < 30000:
+		await _frames(10)
+	var p: Vector3 = j["c"] - ax * 25.0
+	_check("red for axis A: a car 25 m before must stop (%.0f m)" % ts.stop_distance(p, ax), ts.stop_distance(p, ax) < 30.0)
 
 
 func _t_amid() -> void:

@@ -241,6 +241,10 @@ func _drive(delta: float, _f: Vector3) -> void:
 		var n: Node3D = c["node"]
 		var fwd := -n.global_basis.z
 		var want: float = c["vmax"]
+		if TrafficSignals.instance:
+			var sd := TrafficSignals.instance.stop_distance(n.global_position, fwd)
+			if sd < INF:
+				want = minf(want, maxf(0.0, (sd - 15.0) * 0.7))
 		if session and not session.driving and session.player:
 			var pr := (session.player as Node3D).global_position - n.global_position
 			if pr.length() < 3.6:
