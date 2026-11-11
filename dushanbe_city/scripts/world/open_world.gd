@@ -104,6 +104,17 @@ func _make_materials() -> void:
 	mats["wall"] = _vc_mat(CityMaterials.get_material("wall_plaster"))
 	# 0.24: beige pavers with terracotta bands (as on Dushanbe's sidewalks), not the dark grey herringbone
 	mats["side"] = PlotPatches.paving_material()
+	# 0.26: sidewalk verges: lawn (the terrain shader shows soil on such steep short slopes)
+	var vg := StandardMaterial3D.new()
+	var gtex := "res://assets/textures/ground_grass/albedo.jpg"
+	if ResourceLoader.exists(gtex):
+		vg.albedo_texture = load(gtex)
+	vg.albedo_color = Color(0.78, 0.92, 0.62)
+	vg.uv1_triplanar = true
+	vg.uv1_world_triplanar = true
+	vg.uv1_scale = Vector3(0.25, 0.25, 0.25)
+	vg.roughness = 0.95
+	mats["verge"] = vg
 	mats["conc"] = CityMaterials.get_material("concrete")
 	var lm := StandardMaterial3D.new()
 	lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -473,8 +484,8 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 	t.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(t)
 	var rd: Dictionary = res["roads"]
-	for k in ["asphalt", "dirt", "side", "conc", "lamps"]:
-		var arr: Array = rd[k]
+	for k in ["asphalt", "dirt", "side", "verge", "conc", "lamps"]:
+		var arr: Array = rd.get(k, [])
 		if arr.is_empty():
 			continue
 		var m := ArrayMesh.new()
@@ -482,7 +493,7 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 		var mi := MeshInstance3D.new()
 		mi.name = "Road_" + k
 		mi.mesh = m
-		mi.material_override = mats["road"] if k in ["asphalt", "dirt"] else (mats["side"] if k == "side" else (mats["lamp"] if k == "lamps" else mats["conc"]))
+		mi.material_override = mats["road"] if k in ["asphalt", "dirt"] else (mats["side"] if k == "side" else (mats["verge"] if k == "verge" else (mats["lamp"] if k == "lamps" else mats["conc"])))
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if k == "conc" else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(mi)
 	var za: Array = rd.get("zebra", [])

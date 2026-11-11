@@ -284,6 +284,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 	var asph := _Mesh.new()
 	var dirt := _Mesh.new()
 	var side := _Mesh.new()          # sidewalks / curbs (paved)
+	var verge := _Mesh.new()         # 0.26: the slope from the sidewalk down to the ground (grass, terrain shader)
 	var conc := _Mesh.new()          # bridges, tunnel shells, portals
 	var lamps := _Mesh.new()         # tunnel light strips (emissive)
 	var col := PackedVector3Array()
@@ -350,14 +351,14 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 						side.quad_flat(a0u, a1, b1, b0u)
 						col.append_array([a0u, a1, b1, a0u, b1, b0u])
 						if ramp:
-							side.quad_flat(a1, af, bf, b1)
+							verge.quad_flat(a1, af, bf, b1)
 							col.append_array([a1, af, bf, a1, bf, b1])
 					else:
 						side.quad_flat(b0, b0u, a0u, a0)
 						side.quad_flat(b0u, b1, a1, a0u)
 						col.append_array([b0u, b1, a1, b0u, a1, a0u])
 						if ramp:
-							side.quad_flat(b1, bf, af, a1)
+							verge.quad_flat(b1, bf, af, a1)
 							col.append_array([b1, bf, af, b1, af, a1])
 				if int(S[k] / 32.0) != int(S[k + 1] / 32.0):
 					for sgn2: float in [-1.0, 1.0]:
@@ -490,7 +491,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 	var zebra := _Mesh.new()
 	for cr in sector_cross.get(sc, []):
 		_crossing(cr, zebra)
-	return {"asphalt": asph.arrays(), "dirt": dirt.arrays(), "side": side.arrays(), "conc": conc.arrays(),
+	return {"asphalt": asph.arrays(), "dirt": dirt.arrays(), "side": side.arrays(), "verge": verge.arrays(), "conc": conc.arrays(),
 			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes, "zebra": zebra.arrays(), "veg": bedveg}
 
 
