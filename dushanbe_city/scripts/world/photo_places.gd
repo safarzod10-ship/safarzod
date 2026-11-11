@@ -277,7 +277,7 @@ func _shop_street(B: _Builder, n: Node3D) -> void:
 	var Lh := 85.0
 	B.box(Vector3(44, 0.24, 170), Vector3(0, -0.04, 0), paving, false)
 	var walls := [Color(0.93, 0.86, 0.72), Color(0.86, 0.78, 0.66), Color(0.95, 0.9, 0.82), Color(0.82, 0.74, 0.62), Color(0.9, 0.8, 0.7)]
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	var k := 0
 	for side: float in [-1.0, 1.0]:
 		for i in 15:
@@ -724,7 +724,7 @@ class _Builder:
 	func text(t: String, pos: Vector3, size: int, col: Color, px: float, bg: Material = null, flip := false) -> void:
 		var l := Label3D.new()
 		l.text = t
-		l.font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+		l.font = load("res://assets/fonts/game_font.tres")
 		l.font_size = size
 		l.pixel_size = px
 		l.modulate = col

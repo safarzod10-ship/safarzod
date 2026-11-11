@@ -15,7 +15,7 @@ static var _font: Font
 
 static func font() -> Font:
 	if _font == null:
-		_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
+		_font = load("res://assets/fonts/game_font.tres") if ResourceLoader.exists("res://assets/fonts/game_font.tres") else ThemeDB.fallback_font
 	return _font
 
 

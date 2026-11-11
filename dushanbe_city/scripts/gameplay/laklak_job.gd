@@ -194,7 +194,7 @@ func _build_ui() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 16
 	add_child(_ui)
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	# money + job line: top-left under the round minimap (clear of the car's top buttons and the
 	# map / menu buttons on the right); positions follow the screen size (_layout)
 	_money = Label.new()

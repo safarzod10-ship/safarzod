@@ -10,7 +10,7 @@ extends Control
 ## gesture bars) with an extra margin from the screen edges.
 
 const DEAD_ZONE := 0.12
-const FONT_PATH := "res://assets/fonts/DejaVuSans-Bold.ttf"
+const FONT_PATH := "res://assets/fonts/game_font.tres"
 
 var _font: Font
 var _u := 80.0                           # layout unit (px), from the short screen side

@@ -40,7 +40,7 @@ func _ready() -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_overlay.draw.connect(_draw_overlay)
 	add_child(_overlay)
-	_font = ThemeDB.fallback_font
+	_font = load("res://assets/fonts/game_font.tres")
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 

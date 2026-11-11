@@ -20,7 +20,7 @@ var _temp := 0.0
 
 func setup(c: VehiclePrado) -> void:
 	car = c
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	# hood + black panel behind the dials
 	var panel := MeshInstance3D.new()
 	var pm := BoxMesh.new()

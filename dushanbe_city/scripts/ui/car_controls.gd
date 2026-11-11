@@ -17,7 +17,7 @@ signal lights_pressed
 signal turn_pressed(dir: int)
 signal hazard_pressed
 
-const FONT_PATH := "res://assets/fonts/DejaVuSans-Bold.ttf"
+const FONT_PATH := "res://assets/fonts/game_font.tres"
 var car: VehiclePrado
 var orbit_on := false
 var camera_label := "3-Е ЛИЦО"

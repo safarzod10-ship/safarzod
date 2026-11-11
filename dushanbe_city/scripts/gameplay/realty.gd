@@ -141,7 +141,7 @@ func _build_sign(P: Dictionary) -> void:
 	board.visibility_range_end = 220.0
 	n.add_child(board)
 	P["board_mat"] = bmat
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	var lbl := Label3D.new()
 	lbl.font = font
 	lbl.font_size = 48

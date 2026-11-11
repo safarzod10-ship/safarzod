@@ -28,7 +28,7 @@ const DOOR := "door_lf_dummy"              ## driver's door part of the model (L
 func _ready() -> void:
 	add_to_group(&"car_session")
 	VehicleInput.ensure_actions()
-	_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
+	_font = load("res://assets/fonts/game_font.tres") if ResourceLoader.exists("res://assets/fonts/game_font.tres") else ThemeDB.fallback_font
 	cam = VehicleCamera.new()
 	cam.name = "VehicleCamera"
 	cam.car = car

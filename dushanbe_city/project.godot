@@ -101,3 +101,7 @@ texture={
 "mipmaps/generate": true,
 "detect_3d/compress_to": 0
 }
+
+[gui]
+
+theme/custom_font="res://assets/fonts/game_font.tres"

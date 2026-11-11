@@ -105,7 +105,7 @@ func _make_marker(id: String) -> Node3D:
 	n.add_child(_make_beacon(Color(col.r, col.g, col.b, 0.22), 0.8))
 	var l := Label3D.new()
 	l.text = "M"
-	l.font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	l.font = load("res://assets/fonts/game_font.tres")
 	l.font_size = 160
 	l.pixel_size = 0.01
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -252,7 +252,7 @@ func _build_ui() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 18
 	add_child(_ui)
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	_hud = Label.new()
 	_hud.add_theme_font_override("font", font)
 	_hud.add_theme_font_size_override("font_size", 24)

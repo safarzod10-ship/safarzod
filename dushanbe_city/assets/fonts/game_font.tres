@@ -1,0 +1,8 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Montserrat-Bold.ttf" id="1_p1y8d"]
+[ext_resource type="FontFile" path="res://assets/fonts/DejaVuSans-Bold.ttf" id="2_xvq83"]
+
+[resource]
+fallbacks = Array[Font]([ExtResource("2_xvq83")])
+base_font = ExtResource("1_p1y8d")

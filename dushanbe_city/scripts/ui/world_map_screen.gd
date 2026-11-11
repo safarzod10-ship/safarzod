@@ -27,7 +27,7 @@ var _pinch_d := 0.0
 func _ready() -> void:
 	layer = 40
 	wd = WorldData.get_instance()
-	_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
+	_font = load("res://assets/fonts/game_font.tres") if ResourceLoader.exists("res://assets/fonts/game_font.tres") else ThemeDB.fallback_font
 	if ResourceLoader.exists("res://assets/ui/world_map.png"):
 		_world_tex = load("res://assets/ui/world_map.png")
 	_pen_tex = load("res://assets/ui/minimap.png")

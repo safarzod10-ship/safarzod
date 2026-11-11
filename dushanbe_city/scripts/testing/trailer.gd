@@ -315,7 +315,7 @@ func _build_titles() -> void:
 	_layer.layer = 100
 	add_child(_layer)
 	var vs := get_viewport().get_visible_rect().size
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	var unit := minf(vs.x, vs.y)
 	_title = Label.new()
 	_title.add_theme_font_override("font", font)

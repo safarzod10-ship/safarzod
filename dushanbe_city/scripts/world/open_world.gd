@@ -48,7 +48,7 @@ func _ready() -> void:
 	lights = LightPool.new()
 	lights.name = "WorldLights"
 	add_child(lights)
-	_sign_font = load("res://assets/fonts/DejaVuSans-Bold.ttf") if ResourceLoader.exists("res://assets/fonts/DejaVuSans-Bold.ttf") else ThemeDB.fallback_font
+	_sign_font = load("res://assets/fonts/game_font.tres") if ResourceLoader.exists("res://assets/fonts/game_font.tres") else ThemeDB.fallback_font
 	_build_far()
 	var patches := PlotPatches.new()
 	patches.name = "PlotPatches"

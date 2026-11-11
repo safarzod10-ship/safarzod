@@ -193,7 +193,7 @@ func build_stops(props_mesh: Mesh) -> void:
 ## the stop's sign (pole, blue plate «ОСТАНОВКА», route №, stop name), a lit advertising lightbox
 ## (the owner's banners), a bin, two small flower beds; built once per stop
 func _stop_dressing(root: Node3D, s: Dictionary, i: int) -> void:
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	var grey := StandardMaterial3D.new()
 	grey.albedo_color = Color(0.3, 0.32, 0.35)
 	grey.metallic = 0.6
@@ -399,7 +399,7 @@ func _build_ui() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 16
 	add_child(_ui)
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	_hud = Label.new()
 	_hud.add_theme_font_override("font", font)
 	_hud.add_theme_font_size_override("font_size", 17)

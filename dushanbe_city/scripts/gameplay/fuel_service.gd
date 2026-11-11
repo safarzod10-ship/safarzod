@@ -35,7 +35,7 @@ var _was_fill_vis := false
 
 func _ready() -> void:
 	Wallet.load_state()
-	_font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	_font = load("res://assets/fonts/game_font.tres")
 	_ui = CanvasLayer.new()
 	_ui.layer = 18
 	add_child(_ui)

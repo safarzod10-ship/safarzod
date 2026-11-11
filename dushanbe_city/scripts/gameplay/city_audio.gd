@@ -120,7 +120,7 @@ func _build_ui() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 17
 	add_child(_ui)
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	_btn = Button.new()
 	_btn.text = "РАДИО"
 	_btn.focus_mode = Control.FOCUS_NONE

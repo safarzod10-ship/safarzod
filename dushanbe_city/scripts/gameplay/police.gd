@@ -149,7 +149,7 @@ func _spawn_cop(tp: Vector3) -> void:
 	# livery: blue stripe along both sides, «ПОЛИЦИЯ», light bar on the roof
 	var blue := StandardMaterial3D.new()
 	blue.albedo_color = Color(0.05, 0.2, 0.62)
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	for sx in [-1.0, 1.0]:
 		var st := MeshInstance3D.new()
 		var bm := BoxMesh.new()
@@ -308,7 +308,7 @@ func _build_ui() -> void:
 	_ui = CanvasLayer.new()
 	_ui.layer = 19
 	add_child(_ui)
-	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var font: Font = load("res://assets/fonts/game_font.tres")
 	_stars_lbl = Label.new()
 	_stars_lbl.add_theme_font_override("font", font)
 	_stars_lbl.add_theme_font_size_override("font_size", 40)
