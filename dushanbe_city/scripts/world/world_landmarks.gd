@@ -193,6 +193,7 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 			_box(root, null, "grass", Vector3(0, 0.08, 0), Vector3(L, 0.15, D), false)
 			_box(root, null, "plaza", Vector3(0, 0.12, 0), Vector3(12, 0.2, D), false)
 			_box(root, null, "plaza", Vector3(0, 0.12, 0), Vector3(L, 0.2, 10), false)
+			_box(root, null, "plaza", Vector3(0, 0.07, -D * 0.5 - 5.0), Vector3(16, 0.2, 10.5), false)   # gate -> sidewalk
 			_cyl(root, body, "marble", Vector3(0, 0.1, 40), 14.0, 0.7)
 			_cyl(root, null, "water", Vector3(0, 0.6, 40), 13.2, 0.3, -1.0, 32, false)
 			# Rudaki monument: tall arch with mosaic panel + golden statue before it

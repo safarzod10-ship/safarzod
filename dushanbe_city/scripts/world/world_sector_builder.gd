@@ -1174,10 +1174,15 @@ func _in_own_plot(x: float, z: float) -> bool:
 				if pt.distance_to(Vector2(x, z)) < 30.0:
 					return true
 	for l in wd.landmarks:
+		var p := Vector2(x - float(l["x"]), z - float(l["z"])).rotated(-float(l["yaw"]))
+		var hl := float(l["L"]) * 0.5
+		var hd := float(l["D"]) * 0.5
+		# the main entrances sit on the landmark's axes: nothing planted in front of them
+		if (absf(p.x) < 14.0 and absf(p.y) < hd + 26.0) or (absf(p.y) < 14.0 and absf(p.x) < hl + 26.0):
+			return true
 		if not String(l["id"]) in ["hero_home", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "city_park", "shop_street"]:
 			continue
-		var p := Vector2(x - float(l["x"]), z - float(l["z"])).rotated(-float(l["yaw"]))
-		if absf(p.x) < float(l["L"]) * 0.5 + 3.0 and absf(p.y) < float(l["D"]) * 0.5 + 3.0:
+		if absf(p.x) < hl + 3.0 and absf(p.y) < hd + 3.0:
 			return true
 	return false
 

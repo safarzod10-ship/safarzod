@@ -891,6 +891,24 @@ func _fuel_station(node: Node3D, d: Dictionary, lod: int) -> void:
 		cs.shape = bs
 		cs.position = spec[0]
 		body.add_child(cs)
+	# the forecourt: a concrete slab under the pumps and the shop, out to the road edge (the model has
+	# no ground of its own - it stood on the grass); a thick slab hides terrain bumps, collision included
+	var slab := MeshInstance3D.new()
+	var sbm := BoxMesh.new()
+	sbm.size = Vector3(33.0, 0.7, 25.0)
+	slab.mesh = sbm
+	slab.material_override = mats["conc"]
+	slab.position = Vector3(3.0, -0.27, 0.0)
+	slab.visibility_range_end = 900.0
+	root.add_child(slab)
+	var scs := CollisionShape3D.new()
+	var sbs := BoxShape3D.new()
+	sbs.size = sbm.size
+	scs.shape = sbs
+	scs.position = slab.position
+	body.add_child(scs)
+	if wd:
+		wd.add_no_grass(xf * Vector3(3.0, 0, 0), xf.basis.x, 17.5, 13.5)
 	# price board, both faces: AI-92 14 smn / l
 	for side: float in [1.0, -1.0]:
 		var lb := Label3D.new()
