@@ -389,6 +389,18 @@ func _walk(delta: float) -> void:
 
 
 ## a weapon / punch / car hit on a ped collider: true if it was a pedestrian
+## anyone (alive) within r of p who would see / hear it? (a gunshot in public -> the police are called)
+func witnesses(p: Vector3, r: float) -> int:
+	var n := 0
+	for q in peds:
+		if is_instance_valid(q["node"]) and q["state"] != "dead" and (q["node"] as Node3D).global_position.distance_to(p) < r:
+			n += 1
+	for c in cars:
+		if is_instance_valid(c["node"]) and not c.get("parked", false) and (c["node"] as Node3D).global_position.distance_to(p) < r:
+			n += 1
+	return n
+
+
 func hit_body(col: Object, dmg: float, dir: Vector3, knock := true) -> bool:
 	if col == null:
 		return false
@@ -412,6 +424,7 @@ func hit(p: Dictionary, dmg: float, dir: Vector3, knock: bool) -> void:
 		crime.emit(1, n.global_position)
 		_fall(p, dir, false)
 	else:
+		crime.emit(2, n.global_position)        # wounded by a shot: armed assault (2 stars, like GTA)
 		_flee(p, n.global_position - dir)
 
 

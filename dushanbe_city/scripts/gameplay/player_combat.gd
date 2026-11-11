@@ -71,6 +71,9 @@ func _physics_process(delta: float) -> void:
 
 
 # ------------------------------------------------------------------------------------------ guns
+var _shot_report := 0
+
+
 func _shoot(w: String, d: Dictionary) -> void:
 	if Weapons.ammo_of(w) <= 0:
 		_cool = 0.35
@@ -105,8 +108,16 @@ func _shoot(w: String, d: Dictionary) -> void:
 	WeaponFX.sound(get_tree(), w, muzzle, 2.0 if w == "ak47" else 0.0, 300.0)
 	if CityLife.instance:
 		CityLife.instance.panic(muzzle, 45.0)
+		# firing a gun in public: 1 star when people / drivers are around (like GTA)
+		_shot_report -= 1
+		if _shot_report <= 0 and CityLife.instance.witnesses(muzzle, 45.0) > 0:
+			_shot_report = 6
+			CityLife.instance.crime.emit(1, muzzle)
 	if not hit.is_empty():
 		var col: Object = hit.collider
+		var pol: Node = get_tree().root.find_child("Police", true, false)
+		if pol and pol.has_method("is_cop") and pol.call("is_cop", col) and CityLife.instance:
+			CityLife.instance.crime.emit(3, target)               # shooting at the police
 		if CityLife.instance and CityLife.instance.hit_body(col, float(d["damage"]), mdir, false):
 			WeaponFX.impact(get_tree(), target, hit.normal, false)
 			return

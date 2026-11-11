@@ -51,6 +51,14 @@ func _on_crime(level: int, _at: Vector3) -> void:
 	set_stars(n)
 
 
+## is this collider a police car? (shooting / ramming the police)
+func is_cop(col: Object) -> bool:
+	for c in cops:
+		if c["body"] == col or (col is Node and is_instance_valid(c["node"]) and (c["node"] as Node).is_ancestor_of(col as Node)):
+			return true
+	return false
+
+
 func set_stars(n: int) -> void:
 	n = clampi(n, 0, 5)
 	if n == stars:

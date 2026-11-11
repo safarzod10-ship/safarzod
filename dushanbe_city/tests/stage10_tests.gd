@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -29,6 +29,52 @@ func _ready() -> void:
 	if f:
 		f.store_string("\n".join(lines) + "\n")
 	get_tree().quit(0 if ok_all else 1)
+
+
+## GTA-like wanted level: a gunshot near people 1 star, a wounding shot 2, a killing 3+, shooting a police car
+func _t_wanted() -> void:
+	var pol: Police = main.get_node_or_null("Police")
+	var life: CityLife = main.get_node_or_null("CityLife")
+	_check("police + city life", pol != null and life != null)
+	if pol == null or life == null:
+		return
+	if s.driving:
+		s.exit()
+		await _sec(1.0)
+	var hh: HeroHome = main.get_node_or_null("HeroHome")
+	if hh:
+		s.player.teleport(hh.spawn_point(), 0.0)
+	s.player.get_camera().make_current()
+	life.enabled = true
+	life.max_peds = 8
+	await _sec(8.0)
+	pol.set_stars(0)
+	pol._clear_cops()
+	var alive := life.peds.filter(func(q: Dictionary) -> bool: return is_instance_valid(q["node"]) and q["state"] == "walk")
+	_check("pedestrians around: %d" % alive.size(), alive.size() >= 2)
+	if alive.size() < 2:
+		return
+	var p0: Dictionary = alive[0]
+	var at: Vector3 = (p0["node"] as Node3D).global_position
+	if life.witnesses(at, 45.0) > 0:
+		life.crime.emit(1, at)
+	_check("gunshot in public (witnesses %d): stars %d" % [life.witnesses(at, 45.0), Police.stars], Police.stars >= 1)
+	pol.set_stars(0)
+	life.hit(p0, 20.0, Vector3.FORWARD, false)
+	_check("a pedestrian wounded by a shot: stars %d (>= 2)" % Police.stars, Police.stars >= 2)
+	pol.set_stars(0)
+	var p1: Dictionary = alive[1]
+	life.hit(p1, 200.0, Vector3.FORWARD, false)
+	_check("a pedestrian killed: stars %d (>= 3)" % Police.stars, Police.stars >= 3)
+	await _sec(3.0)
+	var cop_ok := false
+	if not pol.cops.is_empty():
+		var c: Dictionary = pol.cops[0]
+		cop_ok = pol.is_cop(c["body"])
+	_check("a police car is recognised (shooting it = crime)", cop_ok or pol.cops.is_empty())
+	pol.set_stars(0)
+	pol._clear_cops()
+	life.enabled = false
 
 
 ## the Ferris wheel in Rudaki park: a ticket costs 10 smn, one full turn in a gondola, then back on the deck
