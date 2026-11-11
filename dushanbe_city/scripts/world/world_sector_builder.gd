@@ -1217,6 +1217,8 @@ class _Mesh:
 
 	func quad_flat(a: Vector3, b: Vector3, cc: Vector3, d: Vector3) -> void:
 		var nrm := (cc - a).cross(b - d).normalized()
+		if nrm.y < -0.5:
+			nrm = -nrm                      # walkable surfaces are lit from above (dark sidewalks otherwise)
 		var s := v.size()
 		v.append_array([a, b, cc, d])
 		n.append_array([nrm, nrm, nrm, nrm])
