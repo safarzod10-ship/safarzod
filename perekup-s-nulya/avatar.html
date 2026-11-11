@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Аватарка</title>
+<style>@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+html,body{margin:0;background:#111}canvas{display:block;width:540px}#ui{display:none}</style></head>
+<body><div id="wrap"><canvas id="c" width="1080" height="1920"></canvas><div id="ui"><button id="play"></button><input id="seek" type="range"><span id="time"></span></div></div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+// Avatar for TikTok: square 1080×1080 drawn in the top of the canvas; t = variant (0, 1, 2)
+const DUR = 3, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 0;
+const CUTS = [], SUBS = [], MONEY = [];
+const THEMES = [
+  { a: '#ffe066', b: '#ffb703', ring: '#16131f' },
+  { a: '#2b3a7a', b: '#0f1530', ring: '#ffd23f' },
+  { a: '#4ade80', b: '#15803d', ring: '#ffffff' },
+];
+function avatar(t) {
+  const th = THEMES[Math.min(2, Math.floor(t))];
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(540, 430, 60, 540, 540, 620);
+  g.addColorStop(0, th.a); g.addColorStop(1, th.b);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1080, 1080);
+  // sunburst
+  ctx.save(); ctx.globalAlpha = .12;
+  for (let i = 0; i < 16; i++) {
+    const a0 = i / 16 * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(540, 470); ctx.arc(540, 470, 900, a0, a0 + Math.PI / 16); ctx.closePath();
+    ctx.fillStyle = '#fff'; ctx.fill();
+  }
+  ctx.restore();
+  // floating coins / notes behind
+  coin(205, 300, 62); coin(880, 250, 50); coin(860, 640, 40);
+  note(200, 640, -.4, 1.1);
+  // Timur
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1080, 1080); ctx.clip();
+  person(Object.assign({}, TIMUR, { x: 540, y: 1330, s: 2.65, expr: 'smirk', aR: POSE.hold, propR: (x, y) => {
+    phone(x, y - 28, 46, 82, { lw: 4, s1: '#22c55e', s2: '#15803d' });
+    txt('₽', x, y - 26, 34, '#fff', { w: 900 });
+  }, lx: .15, ly: .05, bob: 0 }), 0.5);
+  ctx.restore();
+  // ring for the round crop
+  ctx.beginPath(); ctx.arc(540, 540, 516, 0, Math.PI * 2); ctx.strokeStyle = th.ring; ctx.lineWidth = 22; ctx.stroke();
+}
+const SCENES = [[0, 3.1, avatar]];
+startPlayer();
+</script></body></html>
