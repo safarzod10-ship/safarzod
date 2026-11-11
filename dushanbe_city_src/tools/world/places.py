@@ -73,6 +73,43 @@ def build(roads, H, H_at, F, avoid=()):
     for (lid, nm, x, z, yaw, LD) in LANDMARKS:
         wx, wz = NW.warp_pt(x, z)
         LMW.append((lid, nm, wx, wz, NW.warp_yaw(x, z, yaw), LD))
+    # 0.27: shops / dealers / offices stand at their street (front edge 4 m off the carriageway: the
+    # sidewalk), not in the middle of a lawn
+    SNAP_LM = ("dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "laklak", "tas", "opera", "museum", "library",
+               "mehrgon", "navruz", "palace")
+
+    def lm_clear(x, z, yaw, L, D):
+        cs, sn = math.cos(yaw), math.sin(yaw)
+        for u in np.linspace(-L / 2, L / 2, 9):
+            for v in np.linspace(-D / 2, D / 2, 9):
+                d, i = rtree.query((x + u * cs + v * sn, z - u * sn + v * cs))
+                if d < road_hw[i] + 1.5:
+                    return False
+        return True
+    for k, (lid, nm, x, z, yaw, (L, D)) in enumerate(LMW):
+        if lid not in SNAP_LM:
+            continue
+        d, i = rtree.query((x, z))
+        q = road_pts[i]
+        to = np.array([q[0] - x, q[1] - z]) / max(d, 1e-6)
+        ax = [np.array([math.cos(yaw), -math.sin(yaw)]), np.array([math.sin(yaw), math.cos(yaw)])]
+        dots = [float(to @ ax[0]), float(to @ ax[1])]
+        a = 0 if abs(dots[0]) > abs(dots[1]) else 1
+        dirv = ax[a] * (1.0 if dots[a] > 0 else -1.0)
+        half = (L if a == 0 else D) / 2
+        along = d * abs(dots[a])
+        gap = along - half - road_hw[i]
+        want = gap - 4.0
+        moved = False
+        s_ = want
+        while s_ > 1.0:
+            nx, nz = x + dirv[0] * s_, z + dirv[1] * s_
+            if lm_clear(nx, nz, yaw, L, D):
+                LMW[k] = (lid, nm, nx, nz, yaw, (L, D))
+                print("landmark %s moved %.0f m to its street" % (lid, s_))
+                moved = True
+                break
+            s_ -= 1.0
     lm_rects = [(x - L / 2 - 5, z - D / 2 - 5, x + L / 2 + 5, z + D / 2 + 5) for (_, _, x, z, _, (L, D)) in LMW]
 
     def free(x, z, L, D, yaw, clear=4.0):
@@ -205,6 +242,9 @@ def build(roads, H, H_at, F, avoid=()):
         elif r["cls"] in ("mountain", "road") and r["id"] not in ("lake_down",):
             roadside(add, free, r, every=420.0)
 
+    # ---------------------------------------------------------------- 0.27: buildings to their streets
+    snap_to_streets(buildings, rtree, road_pts, road_hw, free, H_at)
+
     # ---------------------------------------------------------------- landmarks, fuel, signs, km posts
     landmarks = []
     for (lid, nm, x, z, yaw, (L, D)) in LMW:
@@ -235,6 +275,87 @@ def build(roads, H, H_at, F, avoid=()):
 
 
 # -------------------------------------------------------------------- block layouts
+def _obb(b, m=0.0):
+    x, z, yaw, L, D = b[1], b[2], b[3], b[4] / 2 + m, b[5] / 2 + m
+    return np.array([x, z]), [np.array([math.cos(yaw), -math.sin(yaw)]), np.array([math.sin(yaw), math.cos(yaw)])], (L, D)
+
+
+def _obb_hit(a, b):
+    ca, aa, ea = a
+    cb, ab, eb = b
+    t = cb - ca
+    for ax in aa + ab:
+        ra = sum(abs(float(ax @ aa[k])) * ea[k] for k in range(2))
+        rb = sum(abs(float(ax @ ab[k])) * eb[k] for k in range(2))
+        if abs(float(t @ ax)) > ra + rb:
+            return False
+    return True
+
+
+def snap_to_streets(buildings, rtree, road_pts, road_hw, free, H_at):
+    """every city building whose street side is more than ~6 m behind the sidewalk steps towards its
+    street (along its own axis facing the road) until its facade is ~1.5 m behind the sidewalk, or it
+    touches another building / would cover a road; nearest first, so the rows pack up to the street"""
+    CELL = 64.0
+    grid = {}
+
+    def key(x, z):
+        return (int(x // CELL), int(z // CELL))
+    for i, b in enumerate(buildings):
+        grid.setdefault(key(b[1], b[2]), []).append(i)
+
+    def hits(i, cand):
+        o = _obb(cand, 2.0)
+        kx, kz = key(cand[1], cand[2])
+        for dx in (-2, -1, 0, 1, 2):
+            for dz in (-2, -1, 0, 1, 2):
+                for j in grid.get((kx + dx, kz + dz), ()):
+                    if j != i and _obb_hit(o, _obb(buildings[j])):
+                        return True
+        return False
+    order = []
+    for i, b in enumerate(buildings):
+        if not (abs(b[1]) < 2200 and -4950 < b[2] < -850):
+            continue
+        d, k = rtree.query((b[1], b[2]))
+        order.append((d, i))
+    order.sort()
+    moved = 0
+    total = 0.0
+    for d, i in order:
+        b = buildings[i]
+        d, k = rtree.query((b[1], b[2]))
+        q = road_pts[k]
+        to = np.array([q[0] - b[1], q[1] - b[2]]) / max(d, 1e-6)
+        yaw = b[3]
+        ax = [np.array([math.cos(yaw), -math.sin(yaw)]), np.array([math.sin(yaw), math.cos(yaw)])]
+        dots = [float(to @ ax[0]), float(to @ ax[1])]
+        a = 0 if abs(dots[0]) > abs(dots[1]) else 1
+        if abs(dots[a]) < 0.6:
+            continue                          # the road runs past a corner: no clear street side
+        dirv = ax[a] * (1.0 if dots[a] > 0 else -1.0)
+        half = (b[4] if a == 0 else b[5]) / 2
+        gap = d * abs(dots[a]) - half - road_hw[k]
+        want = gap - 5.0                      # 3.5 m sidewalk + 1.5 m
+        if want < 3.0:
+            continue
+        s_ = min(want, 120.0)
+        while s_ >= 2.0:
+            nx, nz = b[1] + dirv[0] * s_, b[2] + dirv[1] * s_
+            cand = [b[0], nx, nz, yaw, b[4], b[5]]
+            if free(nx, nz, b[4], b[5], yaw, 4.5) and not hits(i, cand):
+                grid[key(b[1], b[2])].remove(i)
+                b[1] = round(float(nx), 2)
+                b[2] = round(float(nz), 2)
+                b[8] = round(float(H_at([nx], [nz])[0]), 2)
+                grid.setdefault(key(nx, nz), []).append(i)
+                moved += 1
+                total += s_
+                break
+            s_ -= 2.0
+    print("buildings moved to their streets: %d (avg %.1f m)" % (moved, total / max(moved, 1)))
+
+
 def perimeter_block(add, free, a, b, c, d, tall):
     """city centre (c > d): buildings along all four block edges facing the streets (6-20 storeys,
     shops on the ground floors), a second ring of lower blocks and a school in the courtyard"""

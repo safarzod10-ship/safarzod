@@ -1,5 +1,13 @@
-PASS  1. the hero's home on the lot by the avenue: (-177.0, 12.0, -2096.0)
-PASS  2. the game starts at the home's door (0.0 m from it)
-PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
-PASS  4. drives out of the garage through the gate (18 m out, condition 100 %)
-PASS  5. promo TAJDUSH: +200 000 смн
+PASS  1. city life present
+PASS  2. pedestrians spawned: 8, different clothes: 6
+PASS  3. punched: falls down (hp 88)
+PASS  4. gets up and runs away
+PASS  5. shot 4 times: dead (dead); 4 others panic
+PASS  6. ran over by the car: dead
+PASS  7. traffic cars: 10
+PASS  8. steal: button «», driving Stolen1 (gls)
+PASS  9. police present
+PASS 10. stolen car -> 2 stars, police cars: 1
+PASS 11. police drive to the player: 292 m -> 38 m
+PASS 12. busted: stars 0, fine paid (money 1 400 смн)
+PASS 13. escaped after 13 s: stars 0

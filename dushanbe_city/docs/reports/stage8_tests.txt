@@ -10,7 +10,7 @@ PASS  9. filling stations along the roads: 52
 PASS 10. nearest station from any road point: at most 1.5 km
 PASS 11. at the pumps: «ЗАПРАВИТЬ» offered (station found true, button true)
 PASS 12. filled at 14 smn/l: +60.0 l to 80 / 80 l, paid 840 смн (60 x 14)
-PASS 13. low fuel: nearest station marked on the minimap ((-45.0, 5.0, -1048.0))
+PASS 13. low fuel: nearest station marked on the minimap ((-103.0, 4.0, -1638.0))
 PASS 14. no money: no fuel is given (fuel 10.00 l, money 0 смн)
 PASS 15. Toyota Camry: 4 wheels (4) with spinning meshes (8), radius 0.339 m, on the ground 4
 PASS 16. Lexus RX 350: 4 wheels (4) with spinning meshes (20), radius 0.403 m, on the ground 4
@@ -19,7 +19,7 @@ PASS 18. bus: 829 source parts merged into 26 meshes (draw calls)
 PASS 19. Camry drives on the shared physics: 0-100 km/h in 12.4 s (6..14), 141 km/h after 25 s
 PASS 20. bus: 0-60 km/h in 11.5 s (8..20), limited to 85 km/h (<= 92)
 PASS 21. bus route №1: a 5.9 km loop over 4 city roads, 12 stops
-PASS 22. stops in the kerb lane (0.5 .. 4 m inside the edge): 0 off; names ["Театр оперы и балета", "Оружейный магазин", "Парк Рудаки", "остановка 4", "Национальный музей"]
+PASS 22. stops in the kerb lane (0.5 .. 4 m inside the edge): 0 off; names ["Театр оперы и балета", "Оружейный магазин", "Парк Рудаки", "Национальная библиотека", "Национальный музей"]
 PASS 23. a shelter + sign at every stop (12)
 PASS 24. terminus sign is an interactable «СТАТЬ ВОДИТЕЛЕМ АВТОБУСА», selected: true
 PASS 25. hired as a bus driver

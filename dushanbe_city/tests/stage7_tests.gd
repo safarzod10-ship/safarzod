@@ -113,7 +113,7 @@ func _t_billboards() -> void:
 				if (arr[i] as Vector3).distance_to(arr[j]) < 220.0:
 					too_close += 1
 	# 0.20: boards on every road, one per ~300 m, still never two close together
-	_check("billboards ~300 m apart on every road (%d boards, was 97 in 0.17): %d pairs closer than 220 m" % [wd.billboards.size(), too_close], too_close == 0 and wd.billboards.size() >= 350)
+	_check("billboards ~300 m apart on every road (%d boards, was 97 in 0.17): %d pairs closer than 220 m" % [wd.billboards.size(), too_close], too_close == 0 and wd.billboards.size() >= 300)   # 0.27: buildings now stand at the streets: fewer free spots
 	var on_road := 0
 	for b in wd.billboards:
 		if wd.road_edge_dist(float(b["x"]), float(b["z"])) < 3.0:
@@ -285,8 +285,8 @@ func _t_grass() -> void:
 	_check("3D grass grows on open-world lawns (%d clumps around %s)" % [cnt, str(gp.round())], cnt > 300)
 	var sh: Shader = load("res://assets/shaders/world_terrain.gdshader")
 	var src := sh.code
-	_check("terrain / lawn shaders use the natural palette (#557A3B #668B45 #9A9255 #354D2C #829B54 via grass_palette)",
-		src.contains("grass_palette") and FileAccess.get_file_as_string("res://assets/shaders/grass_palette.gdshaderinc").contains("#557A3B")
+	_check("terrain / lawn shaders use the lawn palette (0.27: the owner's green #2E7D32, via grass_palette)",
+		src.contains("grass_palette") and FileAccess.get_file_as_string("res://assets/shaders/grass_palette.gdshaderinc").contains("#2E7D32")
 		and (load("res://assets/shaders/city_pbr.gdshader") as Shader).code.contains("grass_palette")
 		and (load("res://assets/shaders/terrain.gdshader") as Shader).code.contains("grass_palette"))
 	var dens := []

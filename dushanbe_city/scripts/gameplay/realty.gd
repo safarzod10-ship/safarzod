@@ -80,7 +80,7 @@ func _pick() -> void:
 		var id := "%s_%d" % [k, i]
 		var to_kerb := Vector3(kerb.x - pos.x, 0, kerb.z - pos.z)
 		props.append({"id": id, "kind": k, "title": String(KINDS[k]["title"]), "price": price, "pos": pos,
-				"yaw": atan2(to_kerb.x, to_kerb.z), "addr": laklak._address(pos, "house")})
+				"yaw": atan2(to_kerb.x, to_kerb.z), "addr": laklak._address(pos, "house"), "kerb": kerb})
 
 
 ## a point 1.6 m outside the building's wall on the side towards its street
@@ -202,7 +202,16 @@ func use(P: Dictionary) -> String:
 		var p: Vector3 = P["pos"]
 		var yaw := float(P["yaw"])
 		var side := Vector3(cos(yaw), 0, -sin(yaw))
-		car.place(p + Vector3(sin(yaw), 0, cos(yaw)) * 3.5 + side * 2.5 + Vector3(0, 0.6, 0), yaw + PI * 0.5)
+		# parked at the kerb in front of the garage, along the street (the buildings stand right at
+		# the sidewalk now: there is no room for a car between the wall and the street)
+		var fwd := Vector3(sin(yaw), 0, cos(yaw))
+		var kp: Vector3 = P.get("kerb", p + fwd * 4.0)
+		if Vector2(kp.x - p.x, kp.z - p.z).length() > 14.0:
+			kp = p + fwd * 4.0 + side * 2.5             # the street is far: on the yard in front of the garage
+		var wd2 := WorldData.get_instance()
+		if wd2 and wd2.ok:
+			kp.y = wd2.height_at(kp.x, kp.z)
+		car.place(kp + Vector3(0, 0.8, 0), yaw + PI * 0.5)
 		car.repair()
 		car.set_dirt(0.0)
 		car.refuel(999.0)

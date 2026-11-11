@@ -895,7 +895,8 @@ func damage_at(p_world: Vector3, n_world: Vector3, dv: float) -> void:
 func place(pos: Vector3, yaw: float) -> void:
 	## put the car on the ground at pos (raycast), wheels at static ride height
 	var space := get_world_3d().direct_space_state
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(pos + Vector3.UP * 30.0, pos + Vector3.DOWN * 60.0, collision_mask, [get_rid()]))
+	# from just above the point (not 30 m up: next to a building that hit its roof)
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(pos + Vector3.UP * 3.0, pos + Vector3.DOWN * 60.0, collision_mask, [get_rid()]))
 	var y := (hit.position as Vector3).y if not hit.is_empty() else pos.y
 	global_transform = Transform3D(Basis(Vector3.UP, yaw), Vector3(pos.x, y - _ground_y, pos.z))
 	linear_velocity = Vector3.ZERO
