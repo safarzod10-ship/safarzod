@@ -253,6 +253,11 @@ func _spawn_extra_vehicles() -> void:
 	police.session = car_session
 	police.nav = nav
 	add_child(police)
+	# city ambience + car radio (own synthesized sounds)
+	var caud := CityAudio.new()
+	caud.name = "CityAudio"
+	caud.session = car_session
+	add_child(caud)
 	fuel = FuelService.new()
 	fuel.name = "FuelService"
 	fuel.session = car_session

@@ -171,7 +171,7 @@ func _bridge(B: _Builder, n: Node3D, st: Dictionary) -> void:
 		for e in [a, b]:
 			B.box(Vector3(1.6, 1.4, 1.6), (e as Vector3) + side * hw * sd + Vector3(0, 0.5, 0), B.mat(Color(0.7, 0.7, 0.68), 0.7))
 	# braces across the crown
-	for u3 in [0.35, 0.5, 0.65]:
+	for u3: float in [0.35, 0.5, 0.65]:
 		var mid2 := a.lerp(b, u3) + Vector3.UP * (4.0 * rise * u3 * (1.0 - u3))
 		var br := MeshInstance3D.new()
 		var bm2 := BoxMesh.new()
