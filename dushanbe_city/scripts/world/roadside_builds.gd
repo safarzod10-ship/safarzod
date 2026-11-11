@@ -110,8 +110,8 @@ func bed(x: float, z0: float, z1: float, w := 1.4) -> void:
 	for i in n:
 		for j in 3:
 			plant(["flowers_salvia", "flowers_petunia", "flowers_marigold"][(i / 5 + j) % 3], Vector3(x - w * 0.33 + j * w * 0.33, 0.32, z0 + 0.8 + i * 0.32), 1.25)
-	plant("thuja_cone", Vector3(x, 0.32, z0 + 0.5), 0.8)
-	plant("thuja_cone", Vector3(x, 0.32, z1 - 0.5), 0.8)
+	plant("thuja_cone", Vector3(x, 0.32, z0 + 0.5), 0.38)
+	plant("thuja_cone", Vector3(x, 0.32, z1 - 0.5), 0.38)
 
 
 var _mcache := {}
@@ -287,7 +287,7 @@ func auto_service() -> void:
 		box(Vector3(0.3, 0.25, z1 - z0 - 0.8), Vector3(-1.5, 3.9, zc), B)
 		# number on a blue square over the bay
 		box(Vector3(0.1, 0.8, 0.8), Vector3(xf + 0.22, 4.55, zc), B)
-		text(str(k2 + 1), Vector3(xf + 0.29, 4.55, zc), 96, Color(1, 1, 1), 0.007)
+		text(str(3 - k2), Vector3(xf + 0.29, 4.55, zc), 96, Color(1, 1, 1), 0.007)
 		# a car body on the lift / on the floor (simple saloon shape)
 		var cy := 1.95 if k2 == 0 else 0.3
 		var col: Material = [W, D, mat(Color(0.55, 0.57, 0.6), 0.3, 0.6)][k2]

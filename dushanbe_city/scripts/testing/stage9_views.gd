@@ -717,7 +717,7 @@ func _ready() -> void:
 			var fb := Basis(Vector3.UP, fyaw)
 			var fo := Vector3(float(fs.get("ox", fs["x"])), float(fs["y"]), float(fs.get("oz", fs["z"])))
 			await _look("city_fuel", fo + fb * Vector3(34, 6, 16), fo + fb * Vector3(4, 2.5, 0))
-			await _look("city_fuel_close", fo + fb * Vector3(18, 2.2, -4), fo + fb * Vector3(4, 2.0, 2))
+			await _look("city_fuel_close", fo + fb * Vector3(14, 2.2, 7.5), fo + fb * Vector3(2, 2.5, -2))
 		var svc: AutoService = main.get_node("AutoService")
 		var best := {}
 		for sp in svc.spots:
@@ -732,7 +732,7 @@ func _ready() -> void:
 			var syaw := float(best["yaw"])
 			var sb := Basis(Vector3.UP, syaw)
 			await _look("city_service", gp + sb * Vector3(30, 6, -10), gp + sb * Vector3(0, 3, -1))
-			await _look("city_service_close", gp + sb * Vector3(14, 2.0, 6), gp + sb * Vector3(0, 2.5, -4))
+			await _look("city_service_close", gp + sb * Vector3(11, 2.0, -2), gp + sb * Vector3(0, 2.5, -4))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("somoni"):
