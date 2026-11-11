@@ -629,6 +629,12 @@ func _trees(node: Node3D, trees: Dictionary, lod: int) -> void:
 		if meshes.is_empty():
 			continue
 		if lod == 0:
+			var small := String(id).begins_with("flowers") or String(id).begins_with("rose") or String(id).begins_with("hedge") or String(id).begins_with("shrub") or String(id).begins_with("grass")
+			if small:
+				# flowers / shrubs: 16 m cells (the range is measured to a cell's centre: big cells made
+				# beds vanish right in front of the player), fading out at 90 m
+				_cells(node, meshes["lod0"], xs, 0.0, 90.0, 16.0)
+				continue
 			if meshes.has("lod0"):
 				_cells(node, meshes["lod0"], xs, 0.0, 60.0)
 			if meshes.has("lod1"):
@@ -652,11 +658,11 @@ func _trees(node: Node3D, trees: Dictionary, lod: int) -> void:
 		node.add_child(mmi)
 
 
-func _cells(node: Node3D, mesh: Mesh, xs: Array, r0: float, r1: float) -> void:
+func _cells(node: Node3D, mesh: Mesh, xs: Array, r0: float, r1: float, cell := 64.0) -> void:
 	var cells := {}
 	for t in xs:
 		var o: Vector3 = (t as Transform3D).origin
-		var k := Vector2i(floori(o.x / 64.0), floori(o.z / 64.0))
+		var k := Vector2i(floori(o.x / cell), floori(o.z / cell))
 		if not cells.has(k):
 			cells[k] = []
 		cells[k].append(t)
@@ -674,6 +680,9 @@ func _cells(node: Node3D, mesh: Mesh, xs: Array, r0: float, r1: float) -> void:
 		mmi.multimesh = mm
 		mmi.visibility_range_begin = r0
 		mmi.visibility_range_end = r1
+		if cell < 64.0:
+			mmi.visibility_range_end_margin = 12.0
+			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(mmi)
 

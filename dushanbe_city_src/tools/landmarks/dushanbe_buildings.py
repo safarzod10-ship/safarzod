@@ -293,17 +293,8 @@ def median_bed():
     k.M["leaf"] = mat("hedge", (0.16, 0.36, 0.12), 0.0, 0.9)
     k.box((2.8, 10.0, 0.25), (0, 0, 0.125), "curb")
     k.box((2.3, 9.7, 0.08), (0, 0, 0.27), "soil")
-    for sx in (-1, 1):                                   # low clipped hedges along both curbs
-        k.box((0.4, 9.6, 0.45), (sx * 0.9, 0, 0.5), "leaf")
-    import random
-    rnd = random.Random(7)
-    for i in range(40):
-        y = -4.6 + i * 0.235
-        for j in range(3):
-            x = -0.45 + j * 0.45 + rnd.uniform(-0.06, 0.06)
-            col = ["red", "red", "pink", "yel"][(i // 4 + j) % 4]
-            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.13, location=(x, y + rnd.uniform(-0.05, 0.05), 0.42))
-            k.add(bpy.context.object, col)
+    # 0.26: hedges and flowers are real vegetation instances placed by the game (WorldSectorBuilder:
+    # hedge_privet + petunia / salvia / marigold rows); the model is the kerb and the soil only
     k.export(os.path.join(OUT, "median_bed.glb"))
 
 

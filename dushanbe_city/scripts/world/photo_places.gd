@@ -201,6 +201,7 @@ func _park(B: _Builder, n: Node3D) -> void:
 	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var wood := B.mat(Color(0.45, 0.28, 0.14), 0.7)
 	var roof := B.mat(Color(0.1, 0.42, 0.35), 0.5, 0.2)
+	var soil := B.mat(Color(0.2, 0.14, 0.09), 0.95)
 	# lawn + paths: the main alley from the gate (+Z) to the fountain, the ring round it, cross paths
 	B.box(Vector3(8, 0.24, 50), Vector3(0, -0.04, 25), paving, false)
 	B.box(Vector3(8, 0.24, 50), Vector3(0, -0.04, -25), paving, false)
@@ -272,9 +273,14 @@ func _park(B: _Builder, n: Node3D) -> void:
 			for sx: float in [-1.0, 1.0]:
 				props["bench_park_soviet"].append(g * Transform3D(Basis(Vector3.UP, -sx * PI * 0.5), Vector3(sx * 5.2, 0.1, z)))
 				props["light_park_4m"].append(g * Transform3D(Basis.IDENTITY, Vector3(sx * 4.6, 0.1, z - 3.5)))
-				for fk in 3:
-					var fl: String = ["flowers_petunia", "flowers_salvia", "flowers_marigold"][(k + fk) % 3]
-					trees[fl].append(g * Transform3D(Basis.IDENTITY, Vector3(sx * (7.0 + fk * 0.8), 0.1, z - 1.0 + fk * 0.9)))
+				# a real bed: 1.6 x 5 m, stone kerb, dark soil, flowers 0.3 m apart in colour bands
+				B.box(Vector3(1.9, 0.22, 5.3), Vector3(sx * 7.6, 0.06, z - 1.0), stone, false)
+				B.box(Vector3(1.6, 0.06, 5.0), Vector3(sx * 7.6, 0.2, z - 1.0), soil, false)
+				for fi in 5:
+					for fj in 16:
+						var fl: String = ["flowers_petunia", "flowers_salvia", "flowers_marigold"][(fj / 4 + k + (1 if fi == 2 else 0)) % 3]
+						var fp := Vector3(sx * (6.95 + fi * 0.32), 0.22, z - 3.3 + fj * 0.31)
+						trees[fl].append(g * Transform3D(Basis(Vector3.UP, float(fi * 7 + fj) * 1.3).scaled(Vector3.ONE * 1.3), fp))
 			if k % 2 == 0:
 				props["bin_modern_steel"].append(g * Transform3D(Basis.IDENTITY, Vector3(5.0, 0.1, z - 1.8)))
 		for k in 12:
@@ -323,7 +329,19 @@ func _jets(parent: Node3D, p: Vector3, spread: float, speed: float, amount: int,
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	m.albedo_color = Color(0.85, 0.93, 1.0, 0.55)
+	m.albedo_color = Color(0.85, 0.93, 1.0, 0.6)
+	# round soft droplets (a radial gradient), not square quads
+	var gt := GradientTexture2D.new()
+	gt.width = 32
+	gt.height = 32
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.0, 0.5)
+	var gr := Gradient.new()
+	gr.set_color(0, Color(1, 1, 1, 1))
+	gr.set_color(1, Color(1, 1, 1, 0))
+	gt.gradient = gr
+	m.albedo_texture = gt
 	qm.material = m
 	cp.mesh = qm
 	cp.visibility_range_end = 160.0

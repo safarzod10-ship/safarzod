@@ -76,6 +76,22 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("flowers"):
+		_hour(12.0)
+		var pp9: PhotoPlaces = main.get_node("PhotoPlaces")
+		for st9 in pp9.sites:
+			if st9["id"] != "city_park":
+				continue
+			var x9: Transform3D = st9["xf"]
+			ow.hold = x9.origin
+			ow.preload_at(x9.origin)
+			pp9.build_site(st9)
+			await _sec(3.0)
+			await _look("flowers_close", x9 * Vector3(4.5, 1.2, 36.0), x9 * Vector3(7.5, 0.2, 39.5))
+			await _look("flowers_bed", x9 * Vector3(2.0, 2.2, 30.0), x9 * Vector3(7.5, 0.3, 40.0))
+			await _look("roses", x9 * Vector3(0, 1.5, 15.5), x9 * Vector3(0, 0.3, 10.5))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("police"):
 		_hour(18.3)
 		var pol: Police = main.get_node("Police")
@@ -593,6 +609,22 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("flowers"):
+		_hour(12.0)
+		var pp9: PhotoPlaces = main.get_node("PhotoPlaces")
+		for st9 in pp9.sites:
+			if st9["id"] != "city_park":
+				continue
+			var x9: Transform3D = st9["xf"]
+			ow.hold = x9.origin
+			ow.preload_at(x9.origin)
+			pp9.build_site(st9)
+			await _sec(3.0)
+			await _look("flowers_close", x9 * Vector3(4.5, 1.2, 36.0), x9 * Vector3(7.5, 0.2, 39.5))
+			await _look("flowers_bed", x9 * Vector3(2.0, 2.2, 30.0), x9 * Vector3(7.5, 0.3, 40.0))
+			await _look("roses", x9 * Vector3(0, 1.5, 15.5), x9 * Vector3(0, 0.3, 10.5))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("police"):

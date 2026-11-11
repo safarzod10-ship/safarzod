@@ -147,6 +147,11 @@ func build(sc: Vector2i, lod: int) -> Dictionary:
 	out["water"] = _water(x0, z0)
 	out["buildings"] = _buildings(sc, lod)
 	out["trees"] = _trees(sc, x0, z0, lod)
+	var rv: Dictionary = (out["roads"] as Dictionary).get("veg", {})
+	for id in rv:
+		if not (out["trees"] as Dictionary).has(id):
+			out["trees"][id] = []
+		(out["trees"][id] as Array).append_array(rv[id])
 	out["items"] = sector_items.get(sc, [])
 	out["guard"] = _guardrails(sc)
 	return out
@@ -284,6 +289,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 	var col := PackedVector3Array()
 	var lights: Array = []
 	var props := {}                  ## prop id -> Array of Transform3D
+	var bedveg := {}                 ## 0.26: vegetation of the avenue median beds (real flowers, hedges)
 	var pboxes: Array = []           ## collision boxes of the props
 	for seg in sector_segs.get(sc, []):
 		var ri: int = seg[0]
@@ -377,6 +383,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 					if not _on_other_road(mc, ri, 6.0) and not _in_fillet(mc):
 						var dy := atan2((b - a).x, (b - a).z)
 						_prop(props, "median_bed", mc, dy)
+						_median_plants(bedveg, mc, dy, int(S[k] / 10.0))
 						pboxes.append([mc + Vector3(0, 0.2, 0), Vector3(2.8, 0.4, 10.0), dy])
 						var slot := int(S[k] / 10.0) % 4
 						if slot == 0:
@@ -484,7 +491,7 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 	for cr in sector_cross.get(sc, []):
 		_crossing(cr, zebra)
 	return {"asphalt": asph.arrays(), "dirt": dirt.arrays(), "side": side.arrays(), "conc": conc.arrays(),
-			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes, "zebra": zebra.arrays()}
+			"lamps": lamps.arrays(), "col": col, "lights": lights, "props": props, "pboxes": pboxes, "zebra": zebra.arrays(), "veg": bedveg}
 
 
 ## the foot of a road embankment that starts at the edge point e and goes outwards (dir, unit,
@@ -587,6 +594,39 @@ func _road_y(p: Vector3, near_y: float) -> float:
 
 
 ## inside the kite (C, T1, O, T2) of a rounded junction corner?
+## a 10 m median bed (kerb 2.8 m wide): clipped privet hedges along both kerbs, three rows of
+## flowers between them in colour blocks (petunia / salvia / marigold), dense like a city bed
+func _median_plants(veg: Dictionary, c: Vector3, yaw: float, seed: int) -> void:
+	var b := Basis(Vector3.UP, yaw)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed * 7919 + 13
+	var y := c.y + 0.31
+	for sx in [-0.88, 0.88]:
+		for k in 9:
+			var p := c + b * Vector3(sx, 0, -4.4 + k * 1.1)
+			_veg_add(veg, "hedge_privet", Transform3D(Basis(Vector3.UP, yaw + rng.randf_range(-0.2, 0.2)).scaled(Vector3(0.55, 0.5, 0.75)), Vector3(p.x, y, p.z)))
+	var kinds := ["flowers_petunia", "flowers_salvia", "flowers_marigold"]
+	for i in 22:
+		var block := (i / 4 + seed) % 3
+		for j in 3:
+			var p := c + b * Vector3(-0.42 + j * 0.42 + rng.randf_range(-0.05, 0.05), 0, -4.5 + i * 0.43 + rng.randf_range(-0.05, 0.05))
+			var sc := rng.randf_range(1.15, 1.45)
+			_veg_add(veg, kinds[(block + (1 if j == 1 else 0)) % 3], Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc), Vector3(p.x, y, p.z)))
+
+
+static func _veg_add(veg: Dictionary, id: String, xf: Transform3D) -> void:
+	if not veg.has(id):
+		veg[id] = []
+	(veg[id] as Array).append(xf)
+
+
+func _near_corner(p: Vector3, r: float) -> bool:
+	for fl in _fillet_hash.get(Vector2i(floori(p.x / 64.0), floori(p.z / 64.0)), []):
+		if Vector2(float(fl["c"][0]) - p.x, float(fl["c"][2]) - p.z).length() < r:
+			return true
+	return false
+
+
 func _in_fillet(p: Vector3) -> bool:
 	for fl in _fillet_hash.get(Vector2i(floori(p.x / 64.0), floori(p.z / 64.0)), []):
 		if absf(float(fl["c"][1]) - p.y) > 3.0:
@@ -1028,6 +1068,8 @@ func _trees(sc: Vector2i, x0: float, z0: float, lod: int) -> Dictionary:
 				var q := P[k] + Vector3(R[k].x, 0, R[k].y) * (float(r["w"]) * 0.5 + 4.6) * sgn
 				if wd.road_edge_dist(q.x, q.z) < 3.2 or _near_building(q.x, q.z, sc) or _near_board(boards, q.x, q.z, 56.0) or _in_own_plot(q.x, q.z):
 					continue
+				if _near_corner(q, 16.0):
+					continue                  # junction corners stay open: sight lines, the traffic lights
 				var idx := int(k / step)
 				var id := ""
 				var scl := 1.0
