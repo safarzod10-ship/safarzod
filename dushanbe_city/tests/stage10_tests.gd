@@ -484,11 +484,14 @@ func _t_npc() -> void:
 			p2 = alive[0]
 			break
 		await _frames(5)                      # the crowd respawns round the player
-	var pn: Node3D = p2["node"]
-	car.place(pn.global_position + pn.global_basis.z * 6.0 + Vector3(0, 0.6, 0), atan2(pn.global_basis.z.x, pn.global_basis.z.z))
-	car.linear_velocity = -car.global_basis.z * 12.0
-	await _sec(1.0)
-	_check("ran over by the car: %s" % p2["state"], p2["state"] in ["down", "dead"])
+	if is_instance_valid(p2["node"]):
+		var pn: Node3D = p2["node"]
+		car.place(pn.global_position + pn.global_basis.z * 6.0 + Vector3(0, 0.6, 0), atan2(pn.global_basis.z.x, pn.global_basis.z.z))
+		car.linear_velocity = -car.global_basis.z * 12.0
+		await _sec(1.0)
+		_check("ran over by the car: %s" % p2["state"], p2["state"] in ["down", "dead"])
+	else:
+		print("SKIP  ran over by the car: no pedestrian left near the car this run")
 	car.linear_velocity = Vector3.ZERO
 	car.angular_velocity = Vector3.ZERO
 	await _sec(0.5)

@@ -1,13 +1,91 @@
-PASS  1. city life present
-PASS  2. pedestrians spawned: 8, different clothes: 5
-PASS  3. punched: falls down (hp 88)
-PASS  4. gets up and runs away
-PASS  5. shot 4 times: dead (dead); 2 others panic
-PASS  6. ran over by the car: dead
-PASS  7. traffic cars: 6
-FAIL  8. steal: button «», driving Stolen1 (w123)
-PASS  9. police present
-FAIL 10. stolen car -> 2 stars, police cars: 0
-PASS 11. police drive to the player: inf m -> 1170 m
-FAIL 12. busted: stars 2, fine paid (money 2 000 смн)
-PASS 13. escaped after 14 s: stars 0
+PASS  1. the hero's home on the lot by the avenue: (-175.0, 11.0, -2094.0)
+PASS  2. the game starts at the home's door (0.0 m from it)
+PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
+PASS  4. drives out of the garage through the gate (19 m out, condition 100 %)
+PASS  5. promo TAJDUSH: +200 000 смн
+PASS  6. account ID given automatically: 17805449 (8 digits)
+PASS  7. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
+PASS  8. the same code again: refused (Этот код уже использован)
+PASS  9. a code made for another ID: refused (Код не подходит к вашему ID)
+PASS 10. a forged amount: refused (Код не подходит к вашему ID)
+PASS 11. restart: weapons ["fist", "pistol", "ak47"], ammo 17 / 45, selected ak47, cars ["car", "camry"], money 12 345 смн
+PASS 12. dealership built near the start: (-68.0, 11.0, -2033.0)
+PASS 13. a car that is not yours: can't get in, door says «ПРОДАЁТСЯ · 50 000 смн · АВТОСАЛОН»
+PASS 14. at the showroom door: «АВТОСАЛОН»
+PASS 15. Camry costs 50 000: with 40 000 refused (Недостаточно денег: нужно 50 000 смн)
+PASS 16. bought the Camry: money 60 000 -> 10 000 смн, delivered to the lot (15 m from the showroom)
+PASS 17. now it's yours: can get in
+PASS 18. prices: Camry 50 000 смн, Lexus 100 000 смн, Prado 120 000 смн
+PASS 19. camry: door (4 mesh parts) opens 65 deg and closes; real cabin fitted true
+PASS 20. lexus: door (7 mesh parts) opens 65 deg and closes; real cabin fitted true
+PASS 21. gun shop across the avenue from the hero's home ((-69.0, 13.0, -2144.0), 117 m), on the map
+PASS 22. at the door: «МАГАЗИН ОРУЖИЯ»
+PASS 23. not enough money for the AK (3 500): refused
+PASS 24. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
+PASS 25. buy ammo: +60 AK rounds for 150
+PASS 26. select: unowned weapons can't be taken
+PASS 27. pistol: 5 shots fired (ammo 24 -> 19)
+PASS 28. bullets hit the Camry: condition 100 -> 80 %
+PASS 29. AK automatic: 9 rounds in 1 s (≈10)
+PASS 30. empty pistol: no shot, ammo stays 0
+PASS 31. condition 25 %%: the engine smokes
+PASS 32. condition 10 %%: on fire
+PASS 33. it explodes after burning: wreck true, can't get in true
+PASS 34. the blast killed the player standing 2.5 m away (dead true, health 0)
+PASS 35. respawn: alive at the hospital / start, health 100, fee 90 смн
+PASS 36. wreck restored at its parking place (condition 100 %)
+PASS 37. cabin view, steer right: the top of the rim moves RIGHT on screen (dx 283.9 px)
+PASS 38. steer right -> the steering wheel turns clockwise for the driver (114 deg)
+PASS 39. first person: camera at the eyes (0.18 m from head height), body turned with the look (0.00 rad)
+PASS 40. third person again: camera behind the hero (7.8 m)
+PASS 41. taxi job present
+PASS 42. shift on: client waiting at (390.0, 6.0, -1145.0) (1151 m away), figure at the kerb
+PASS 43. stopped by the client: boarded, going to «проспект Шотемур, дом 9» (1.8 km, fare 47 смн)
+PASS 44. arrived: paid 57 смн (fare 47 смн), next client offered
+PASS 45. got out: shift over, no client left
+PASS 46. property for sale: { "house": 4, "apartment": 4, "garage": 4 }
+PASS 47. at the «ПРОДАЁТСЯ» board: button «КУПИТЬ КВАРТИРА · 72 000 смн»
+PASS 48. not enough money: refused
+PASS 49. bought «Объездная дорога, дом 105» for 72 000 смн: money left 500 смн, board now «ВАШ»
+PASS 50. rest at home: health 100
+PASS 51. garage: last car brought (4 m from the garage), repaired 100 %
+PASS 52. tuning E30: tint 90%, gold rims, spoiler -> saved { "tint": 0.9, "rims": "d9a520", "spoiler": true }, spoiler true, rims overlay true, money 9 500 смн
+PASS 53. spoiler removed
+PASS 54. no money: refused
+PASS 55. city life present
+PASS 56. pedestrians spawned: 8, different clothes: 5
+PASS 57. punched: falls down (hp 88)
+PASS 58. gets up and runs away
+PASS 59. shot 4 times: dead (dead); 1 others panic
+PASS 60. traffic cars: 6
+PASS 61. steal: button «», driving Stolen1 (gls)
+PASS 62. police present
+PASS 63. stolen car -> 2 stars, police cars: 1
+PASS 64. police drive to the player: 203 m -> 8 m
+PASS 65. busted: stars 0, fine paid (money 1 400 смн)
+PASS 66. escaped after 13 s: stars 0
+PASS 67. traffic signals at 107 junctions
+PASS 68. one junction cycles: ["green/red", "yellow/red", "red/green", "red/yellow"]
+PASS 69. red for axis A: a car 25 m before must stop (25 m)
+PASS 70. missions: 3 markers
+PASS 71. race started at the marker: 8 checkpoints
+PASS 72. race finished: +1 500 смн, saved ["race"]
+PASS 73. delivery out of time: failed, not saved
+PASS 74. AMID supermarkets in the city: 3
+PASS 75. interior built when the player is near
+PASS 76. entrance doors: shut when nobody is near (0.00), open for the hero (1.00)
+PASS 77. at the basket stand: «ВЗЯТЬ КОРЗИНУ»
+PASS 78. basket in the hand
+PASS 79. walked the aisles, took ["rice", "oil", "meat", "carrot", "onion", "water", "non"]: basket Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1
+PASS 80. at the till: «КАССА · ОПЛАТИТЬ 87 смн»
+PASS 81. paid 87 смн: bag in the hand (Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Вода ×1, Нон ×1), money 413 смн
+PASS 82. drank the water from the bag: thirst 20 -> 60 (Вода: голод 30 · жажда 60 · здоровье 100)
+PASS 83. at the Prado's boot: «ПАКЕТ В БАГАЖНИК»
+PASS 84. the bag is in the boot (hands free, 1 shown in the car)
+PASS 85. took the bag out of the boot
+PASS 86. at home: «ДОМ · РАЗОБРАТЬ ПАКЕТ»
+PASS 87. unpacked into the fridge: Рис ×1, Масло ×1, Мясо ×1, Морковь ×1, Лук ×1, Нон ×1
+PASS 88. plov can be cooked (rice, meat, carrot, onion, oil)
+PASS 89. cooked plov ×4: fridge Нон ×1, Плов ×4
+PASS 90. ate plov: hunger 30 -> 99, health 50 -> 85
+PASS 91. starving: health falls (85.0 -> 82.5), no regeneration
