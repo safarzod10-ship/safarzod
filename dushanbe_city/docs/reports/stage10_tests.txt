@@ -1,4 +1,13 @@
-PASS  1. missions: 3 markers
-PASS  2. race started at the marker: 8 checkpoints
-PASS  3. race finished: +1 500 смн, saved ["race"]
-PASS  4. delivery out of time: failed, not saved
+PASS  1. city life present
+PASS  2. pedestrians spawned: 8, different clothes: 6
+PASS  3. punched: falls down (hp 88)
+PASS  4. gets up and runs away
+PASS  5. shot 4 times: dead (dead); 3 others panic
+PASS  6. ran over by the car: dead
+PASS  7. traffic cars: 10
+PASS  8. steal: button «», driving Stolen1 (w123)
+PASS  9. police present
+PASS 10. stolen car -> 2 stars, police cars: 1
+PASS 11. police drive to the player: 265 m -> 81 m
+PASS 12. busted: stars 0, fine paid (money 1 400 смн)
+PASS 13. escaped after 13 s: stars 0

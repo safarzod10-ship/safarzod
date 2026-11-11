@@ -220,7 +220,8 @@ def build(roads, H, H_at, F, avoid=()):
     # 0.20: on every road (city streets and lanes too): a filling station every ~1.6 km, an auto service
     # every ~600 m between them
     fuel = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=1600.0, sep=550.0, start=700.0)
-    services = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=600.0, sep=230.0, prefix="service",
+    # 0.27: three times fewer auto services (the owner: too many) - every ~1.8 km
+    services = fuel_stations(roads, buildings, landmarks, H_at, free_fuel, every=1800.0, sep=690.0, prefix="service",
                              start=300.0, avoid=fuel, avoid_r=120.0)
     if KILL:
         print("buildings cleared for stations / services: %d" % len(KILL))

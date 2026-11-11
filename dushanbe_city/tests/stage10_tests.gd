@@ -523,7 +523,13 @@ func _t_police() -> void:
 	var t0 := Time.get_ticks_msec()
 	while nav and not nav.ready_graph and Time.get_ticks_msec() - t0 < 30000:
 		await _frames(10)
-	Police.stars = 0
+	# start clean: earlier sections (npc: a stolen car, a pedestrian killed) leave a wanted level
+	pol.set_stars(0)
+	pol._clear_cops()
+	var hh2: HeroHome = main.get_node_or_null("HeroHome")
+	if hh2:
+		s.player.teleport(hh2.spawn_point(), 0.0)
+	await _sec(1.0)
 	life.crime.emit(2, (s.player as Node3D).global_position)
 	await _sec(1.5)
 	_check("stolen car -> %d stars, police cars: %d" % [Police.stars, pol.cops.size()], Police.stars == 2 and pol.cops.size() >= 1)
