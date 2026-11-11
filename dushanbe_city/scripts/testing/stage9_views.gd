@@ -144,6 +144,14 @@ func _ready() -> void:
 			s6.cam.set_mode(VehicleCamera.Mode.CABIN)
 			await _sec(1.5)
 			await _snap("cabin_%s" % key)
+			var gg: Node3D = c6.model.get_node_or_null("Gauges")
+			if gg and OS.get_cmdline_user_args().has("gauges"):
+				c6.speed_kmh = 0.0
+				VehicleInput.scripted = {"throttle": 0.8}
+				await _sec(2.5)
+				VehicleInput.scripted = {"brake": 0.0}
+				await _look("gauges_%s" % key, c6.driver_eye(), gg.global_position)
+				VehicleInput.scripted = null
 			s6.cam.set_mode(VehicleCamera.Mode.CHASE)
 		get_tree().quit()
 		return

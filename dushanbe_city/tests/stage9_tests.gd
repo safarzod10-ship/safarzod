@@ -261,6 +261,8 @@ func _t_world() -> void:
 		var res: Dictionary = ow.builder.build(sc, 0)
 		checked += 1
 		for id in res["trees"]:
+			if String(id).begins_with("flowers") or String(id).begins_with("hedge"):
+				continue                       # 0.26: low median beds (0.3-0.5 m) never hide a board
 			for xf: Transform3D in res["trees"][id]:
 				if Vector2(xf.origin.x - float(b2["x"]), xf.origin.z - float(b2["z"])).length() < 45.0:
 					near += 1

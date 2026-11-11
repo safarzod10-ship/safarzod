@@ -232,6 +232,8 @@ func _build_model() -> void:
 
 	if bool(spec.get("interior", false)):
 		_build_interior()
+	if preset != "bus":
+		_late_gauges.call_deferred()
 	if bool(spec.get("pack", false)):
 		_pack_lamps_and_plates()
 
@@ -246,7 +248,11 @@ func _inner_skin(holder: Node3D) -> void:
 			continue
 		var out := ArrayMesh.new()
 		for si in m.mesh.get_surface_count():
-			var a: Array = m.mesh.surface_get_arrays(si)
+			var a0: Array = m.mesh.surface_get_arrays(si)
+			var a: Array = []
+			a.resize(Mesh.ARRAY_MAX)
+			for ch in [Mesh.ARRAY_VERTEX, Mesh.ARRAY_NORMAL, Mesh.ARRAY_TEX_UV, Mesh.ARRAY_INDEX]:
+				a[ch] = a0[ch]
 			var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
 			var I: PackedInt32Array = a[Mesh.ARRAY_INDEX] if a[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 			if I.is_empty():
@@ -702,6 +708,14 @@ static func _compact(a: Array, idx: PackedInt32Array) -> Array:
 ## Lexus: white dashboard with a second, right-hand steering wheel - removed): soft-touch dark
 ## dashboard, instrument cluster with lit dials, centre screen, console, leather seats and a
 ## steering wheel that turns with the steering (named "steeringwheel": VehiclePrado rotates it)
+func _late_gauges() -> void:
+	if model.get_node_or_null("Gauges"):
+		return
+	_steering_wheel = model.find_child("steeringwheel", true, false)
+	if _steering_wheel:
+		_add_gauges()
+
+
 func _build_interior() -> void:
 	var body := model.get_node_or_null("Body")
 	for nm in spec.get("hide", []):

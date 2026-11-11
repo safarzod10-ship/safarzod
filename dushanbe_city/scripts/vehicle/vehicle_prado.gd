@@ -852,6 +852,21 @@ func set_cabin_view(on: bool) -> void:
 
 
 ## world eye point of the driver (cabin camera); falls back to the seat + 0.7 m
+## the working instrument cluster: beyond the steering wheel (towards the windscreen), a little higher,
+## turned to the driver's eyes
+func _add_gauges() -> void:
+	var g := DashGauges.new()
+	g.name = "Gauges"
+	model.add_child(g)
+	var sw := model.global_transform.affine_inverse() * _steering_wheel.global_position
+	var p := sw + Vector3(0, 0.1, -0.11)
+	var seat: Node3D = model.get_node_or_null("ped_frontseat")
+	var eye := (model.global_transform.affine_inverse() * seat.global_position + Vector3(0, 0.72, 0)) if seat else sw + Vector3(0, 0.35, 0.6)
+	g.transform = Transform3D(Basis.looking_at(p - eye, Vector3.UP).rotated(Vector3.UP, 0.0), p)
+	g.transform.basis = Basis.looking_at(eye - p, Vector3.UP) * Basis(Vector3.UP, PI)
+	g.setup(self)
+
+
 func driver_eye() -> Vector3:
 	if _driver:
 		return _driver.eye_position()
@@ -1033,7 +1048,8 @@ func set_tuning(t: Dictionary) -> void:
 			var mat := m.get_active_material(si) as ShaderMaterial
 			if mat and mat.shader and mat.shader.resource_path.ends_with("vehicle_glass.gdshader"):
 				if not _glass_opacity.has(mat):
-					_glass_opacity[mat] = [float(mat.get_shader_parameter("opacity")), mat.get_shader_parameter("albedo_color")]
+					var op: Variant = mat.get_shader_parameter("opacity")
+					_glass_opacity[mat] = [float(op) if op != null else 0.55, mat.get_shader_parameter("albedo_color")]
 				var o: Array = _glass_opacity[mat]
 				mat.set_shader_parameter("opacity", lerpf(float(o[0]), 0.93, tint))
 				mat.set_shader_parameter("albedo_color", (o[1] as Color).lerp(Color(0.02, 0.02, 0.03), tint) if o[1] is Color else Color(1, 1, 1).lerp(Color(0.02, 0.02, 0.03), tint))
