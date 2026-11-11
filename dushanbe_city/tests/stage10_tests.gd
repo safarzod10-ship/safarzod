@@ -438,6 +438,13 @@ func _t_npc() -> void:
 	if s.driving:
 		s.exit()
 		await _frames(5)
+	# start from the hero's home street with the player's own camera (earlier sections leave other
+	# cameras / places behind)
+	var hh: HeroHome = main.get_node_or_null("HeroHome")
+	if hh:
+		s.player.teleport(hh.spawn_point(), 0.0)
+	s.player.get_camera().make_current()
+	await _sec(1.0)
 	var home: Vector3 = (s.player as Node3D).global_position
 	life.enabled = true
 	life.max_cars = 6
@@ -461,7 +468,8 @@ func _t_npc() -> void:
 	_check("shot 4 times: dead (%s); %d others panic" % [p1["state"], fleeing], p1["state"] == "dead" and fleeing >= 1)
 	# the player's car hits a pedestrian
 	var car: VehiclePrado = main.get("car")
-	var p2: Dictionary = life.peds[2] if life.peds.size() > 2 else p0
+	var alive := life.peds.filter(func(q: Dictionary) -> bool: return is_instance_valid(q["node"]) and q["state"] in ["walk", "flee"])
+	var p2: Dictionary = alive[0] if not alive.is_empty() else p0
 	p2["state"] = "walk"
 	s.player.teleport(car.driver_door_point(0.7), 0.0)
 	await _frames(10)

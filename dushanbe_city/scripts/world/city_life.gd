@@ -26,6 +26,7 @@ var session: CarSession
 var enabled := true
 var max_cars := 8
 var max_peds := 6
+var max_parked := 6
 var cars: Array = []        ## {node, body, road, s, dir, v, vmax, lane, len}
 var peds: Array = []        ## {node, road, s, dir, v, ap}
 var _roads: Array = []      ## {p: PackedVector3Array, s: PackedFloat32Array, hw, cls}
@@ -78,6 +79,7 @@ func _apply_quality() -> void:
 	var q := int(Settings.quality)
 	max_cars = [2, 4, 7, 9][clampi(q, 0, 3)]
 	max_peds = [3, 5, 8, 10][clampi(q, 0, 3)]
+	max_parked = [2, 4, 6, 8][clampi(q, 0, 3)]
 
 
 func _focus() -> Vector3:
@@ -126,8 +128,8 @@ func _manage(f: Vector3) -> void:
 	for c in cars.duplicate():
 		var R: Dictionary = _roads[c["road"]]
 		var L: float = (R["s"] as PackedFloat32Array)[-1]
-		var done: bool = (c["dir"] > 0 and c["s"] > L - 2.0) or (c["dir"] < 0 and c["s"] < 2.0)
-		if done or (c["node"] as Node3D).global_position.distance_to(f) > CAR_FAR:
+		var done: bool = not c.get("parked", false) and ((c["dir"] > 0 and c["s"] > L - 2.0) or (c["dir"] < 0 and c["s"] < 2.0))
+		if done or (c["node"] as Node3D).global_position.distance_to(f) > (260.0 if c.get("parked", false) else CAR_FAR):
 			(c["node"] as Node).queue_free()
 			cars.erase(c)
 	for p in peds.duplicate():
@@ -140,9 +142,20 @@ func _manage(f: Vector3) -> void:
 		if not is_instance_valid(v):
 			stolen.erase(v)
 	var tries := 0
-	while cars.size() < max_cars and tries < 6:
+	var moving := cars.filter(func(c: Dictionary) -> bool: return not c.get("parked", false)).size()
+	while moving < max_cars and tries < 6:
 		tries += 1
+		var n0 := cars.size()
 		_spawn_car(f)
+		moving += cars.size() - n0
+	# 0.26: parked cars along the side streets (stealable like the traffic)
+	var parked := cars.size() - moving
+	tries = 0
+	while parked < max_parked and tries < 6:
+		tries += 1
+		var n1 := cars.size()
+		_spawn_car(f, true)
+		parked += cars.size() - n1
 	tries = 0
 	while peds.size() < max_peds and tries < 6:
 		tries += 1
@@ -179,17 +192,25 @@ func _scene(path: String) -> PackedScene:
 	return _scenes[path]
 
 
-func _spawn_car(f: Vector3) -> void:
-	var pk := _pick(f, CAR_NEAR, CAR_FAR - 60.0)
+func _spawn_car(f: Vector3, parked := false) -> void:
+	var pk := _pick(f, 40.0 if parked else CAR_NEAR, 200.0 if parked else CAR_FAR - 60.0)
 	if pk.is_empty():
 		return
 	var R: Dictionary = _roads[pk[0]]
+	if parked and R["cls"] != "street":
+		return                                       # parking along the side streets only
 	var dir := 1 if _rng.randf() < 0.5 else -1
 	var lane := float(R["hw"]) * (0.55 if R["cls"] == "avenue" else 0.5)
+	if parked:
+		lane = float(R["hw"]) - 1.15                 # at the kerb
 	var at := _at(R, pk[1], dir, lane)
+	if parked and TrafficSignals.instance:
+		for j in TrafficSignals.instance.junctions:
+			if Vector2(j["c"].x - at[0].x, j["c"].z - at[0].z).length() < 28.0:
+				return                               # never on a junction / crossing
 	# keep a gap to the other traffic cars
 	for c in cars:
-		if (c["node"] as Node3D).global_position.distance_to(at[0]) < 18.0:
+		if (c["node"] as Node3D).global_position.distance_to(at[0]) < (7.0 if parked else 18.0):
 			return
 	var m: Array = CAR_MODELS[_rng.randi() % CAR_MODELS.size()]
 	var ps := _scene(m[0])
@@ -218,7 +239,7 @@ func _spawn_car(f: Vector3) -> void:
 	st.life = self
 	st.position = Vector3(-1.1, 0, -0.35)            # driver's door (left, car frame faces -Z)
 	n.add_child(st)
-	cars.append({"node": n, "road": pk[0], "s": pk[1], "dir": dir, "v": vmax * 0.7, "vmax": vmax, "lane": lane, "preset": m[2], "spot": st})
+	cars.append({"node": n, "road": pk[0], "s": pk[1], "dir": dir, "v": 0.0 if parked else vmax * 0.7, "vmax": vmax, "lane": lane, "preset": m[2], "spot": st, "parked": parked})
 	_place_car(cars[-1])
 
 
@@ -238,6 +259,8 @@ func _drive(delta: float, _f: Vector3) -> void:
 		if session.player and not session.driving:
 			obstacles.append((session.player as Node3D).global_position)
 	for c in cars:
+		if c.get("parked", false):
+			continue
 		var n: Node3D = c["node"]
 		var fwd := -n.global_basis.z
 		var want: float = c["vmax"]
@@ -255,7 +278,7 @@ func _drive(delta: float, _f: Vector3) -> void:
 			if ahead > 0.0 and ahead < 22.0 and absf(rel.dot(n.global_basis.x)) < 2.4:
 				want = minf(want, maxf(0.0, (ahead - 7.0) * 0.8))
 		for o2 in cars:
-			if o2 == c:
+			if o2 == c or o2.get("parked", false):
 				continue
 			var rel2 := (o2["node"] as Node3D).global_position - n.global_position
 			var ah2 := rel2.dot(fwd)
@@ -489,8 +512,8 @@ func steal(spot: Node) -> void:
 		if is_instance_valid(old) and not (session.driving and session.car == old):
 			session.vehicles.erase(old)
 			old.queue_free()
-	# the driver jumps out and runs
-	var pk := _nearest_road_s(xf.origin)
+	# the driver jumps out and runs (a parked car is empty: only the alarm)
+	var pk := _nearest_road_s(xf.origin) if not c.get("parked", false) else []
 	if not pk.is_empty():
 		var pd: Variant = _make_ped(pk[0], pk[1])
 		if pd:

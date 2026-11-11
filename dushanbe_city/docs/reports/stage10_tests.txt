@@ -1,3 +1,11 @@
 PASS  1. tuning E30: tint 90%, gold rims, spoiler -> saved { "tint": 0.9, "rims": "d9a520", "spoiler": true }, spoiler true, rims overlay true, money 9 500 смн
 PASS  2. spoiler removed
 PASS  3. no money: refused
+PASS  4. city life present
+PASS  5. pedestrians spawned: 8, different clothes: 5
+PASS  6. punched: falls down (hp 88)
+PASS  7. gets up and runs away
+PASS  8. shot 4 times: dead (dead); 3 others panic
+PASS  9. ran over by the car: dead
+PASS 10. traffic cars: 10
+PASS 11. steal: button «», driving Stolen1 (w123)
