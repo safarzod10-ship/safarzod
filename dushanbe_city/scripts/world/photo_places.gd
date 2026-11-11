@@ -19,7 +19,7 @@ func _ready() -> void:
 	wd = WorldData.get_instance()
 	if wd == null or not wd.ok:
 		return
-	for id in ["police", "city_park"]:
+	for id in ["police", "city_park", "shop_street"]:
 		var lm: Dictionary = wd.landmark(id)
 		if lm.is_empty():
 			continue
@@ -30,6 +30,8 @@ func _ready() -> void:
 		var best := 0
 		var bd := -INF
 		for k in 4:
+			if id == "shop_street" and k % 2 == 1:
+				continue                  # the long street axis stays along local Z (an end faces the road)
 			var fz := Vector3(sin(yaw + k * PI * 0.5), 0, cos(yaw + k * PI * 0.5))
 			var d := fz.dot(Vector3(to.x, 0, to.z).normalized())
 			if d > bd:
@@ -86,8 +88,163 @@ func build_site(s: Dictionary) -> void:
 	var B := _Builder.new(n, body)
 	if s["id"] == "police":
 		_police(B, n)
+	elif s["id"] == "shop_street":
+		_shop_street(B, n)
 	else:
 		_park(B, n)
+
+
+# ------------------------------------------------------------------------------------------ shop street
+## own shop names (no real brands): bakery, tea house, pharmacy, flowers, gold, national dress, shoes,
+## phones, books, sweets, plov, atlas silk, souvenirs, cafe, fruit, optics
+const SHOPS := [["НОНВОЙХОНА", "нон · самбуса", Color(0.85, 0.55, 0.2)], ["ЧОЙХОНАИ РОҲАТ", "чой · ош", Color(0.1, 0.45, 0.35)],
+	["ДОРУХОНА", "аптека 24/7", Color(0.1, 0.6, 0.3)], ["ГУЛФУРӮШӢ", "цветы", Color(0.85, 0.3, 0.5)],
+	["ТИЛЛО", "золото · ювелирные", Color(0.7, 0.55, 0.15)], ["ЛИБОСИ МИЛЛӢ", "атлас · адрас", Color(0.55, 0.15, 0.45)],
+	["ПОЙАФЗОЛ", "обувь", Color(0.35, 0.25, 0.2)], ["МОБАЙЛ СИТИ", "телефоны", Color(0.15, 0.35, 0.8)],
+	["КИТОБ", "книги", Color(0.45, 0.3, 0.15)], ["ШИРИНӢ", "сладости", Color(0.9, 0.35, 0.35)],
+	["ОШХОНА", "плов · лагман", Color(0.75, 0.3, 0.1)], ["АТЛАС", "ткани", Color(0.2, 0.3, 0.7)],
+	["СУВЕНИР", "подарки", Color(0.6, 0.45, 0.2)], ["КАФЕ ПОМИР", "кофе · десерты", Color(0.3, 0.2, 0.15)],
+	["МЕВА", "фрукты", Color(0.4, 0.65, 0.15)], ["ОПТИКА", "очки", Color(0.25, 0.4, 0.55)]]
+
+
+func _shop_street(B: _Builder, n: Node3D) -> void:
+	## a pedestrian street 14 m wide along local Z (front end +Z at the road), two rows of two-storey
+	## shops (10 m units): plaster facades in warm colours, a full-width lit shop window, a name board,
+	## a striped awning, upper windows with balconies; down the middle planters with plane trees,
+	## benches, ornate lamps; strings of lights across; a gate arch «СОМОН» at both ends
+	var paving := PlotPatches.paving_material()
+	var stone := B.mat(Color(0.88, 0.84, 0.76), 0.6)
+	var dark := B.mat(Color(0.15, 0.14, 0.13), 0.6)
+	var glass := B.mat(Color(0.2, 0.28, 0.32, 0.35), 0.05, 0.4)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var lit := B.mat(Color(1.0, 0.92, 0.75), 0.8, 0.0, Color(1.0, 0.85, 0.6), 0.9)
+	var shelf := B.mat(Color(0.35, 0.25, 0.18), 0.7)
+	var Lh := 85.0
+	B.box(Vector3(44, 0.24, 170), Vector3(0, -0.04, 0), paving, false)
+	var walls := [Color(0.93, 0.86, 0.72), Color(0.86, 0.78, 0.66), Color(0.95, 0.9, 0.82), Color(0.82, 0.74, 0.62), Color(0.9, 0.8, 0.7)]
+	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var k := 0
+	for side: float in [-1.0, 1.0]:
+		for i in 15:
+			var z := -Lh + 8.0 + i * 10.6
+			var sh: Array = SHOPS[k % SHOPS.size()]
+			k += 1
+			var fx := side * 7.0                           # the shop front line
+			var bx := side * 13.0                          # building centre (12 m deep)
+			var wall := B.mat(walls[(i + (2 if side > 0 else 0)) % walls.size()], 0.85)
+			var h := 8.0 if i % 3 != 1 else 9.5
+			# upper floors on top of an open ground floor: the shop is a real room behind the glass
+			B.box(Vector3(12.0, h - 3.4, 10.0), Vector3(bx, (h + 3.4) * 0.5, z), wall)
+			B.box(Vector3(9.0, 3.4, 10.0), Vector3(bx + side * 1.5, 1.7, z), wall)          # back rooms
+			for pz in [-4.8, 4.8]:
+				B.box(Vector3(3.0, 3.4, 0.4), Vector3(fx + side * 1.5, 1.7, z + pz), wall)    # piers
+			B.box(Vector3(2.9, 0.1, 9.2), Vector3(fx + side * 1.5, 0.05, z), B.mat(Color(0.75, 0.72, 0.68), 0.3), false)  # floor
+			B.box(Vector3(0.05, 3.2, 9.2), Vector3(fx + side * 2.97, 1.7, z), lit, false)  # bright back wall
+			B.box(Vector3(2.9, 0.06, 9.2), Vector3(fx + side * 1.5, 3.37, z), lit, false)  # ceiling light
+			B.box(Vector3(0.05, 3.2, 8.6), Vector3(fx + side * 0.05, 1.65, z - 0.3), glass, false)
+			for fz in [-4.55, -0.3, 3.95, 4.55]:
+				B.box(Vector3(0.12, 3.3, 0.12), Vector3(fx + side * 0.05, 1.65, z + fz), dark, false)  # mullions
+			B.box(Vector3(0.14, 0.12, 9.4), Vector3(fx + side * 0.05, 3.25, z), dark, false)
+			for q in 3:
+				B.box(Vector3(0.45, 0.06, 7.6), Vector3(fx + side * 2.6, 0.8 + q * 0.75, z), shelf, false)
+				for g in 6:
+					var gm := B.mat(Color.from_hsv(fmod(float(i * 7 + q * 3 + g) * 0.13, 1.0), 0.55, 0.85), 0.6)
+					B.box(Vector3(0.3, 0.32, 0.5), Vector3(fx + side * 2.6, 0.99 + q * 0.75, z - 3.2 + g * 1.25), gm, false)
+			B.box(Vector3(0.8, 0.95, 2.0), Vector3(fx + side * 1.3, 0.48, z - 1.5), shelf, false)   # counter
+			B.box(Vector3(0.06, 2.4, 0.04), Vector3(fx + side * 0.06, 1.2, z + 3.95), dark, false)   # door handle bar
+			# name board with the shop's colour, two faces of text on the street side
+			var bc: Color = sh[2]
+			B.box(Vector3(0.2, 0.9, 9.0), Vector3(fx - side * 0.1, 3.9, z), B.mat(bc, 0.5), false)
+			var nm := Label3D.new()
+			nm.text = String(sh[0])
+			nm.font = font
+			nm.font_size = 96
+			nm.pixel_size = 0.0055
+			nm.outline_size = 0
+			nm.modulate = Color(1, 0.97, 0.9)
+			nm.position = Vector3(fx - side * 0.22, 3.98, z)
+			nm.rotation.y = -side * PI * 0.5
+			nm.visibility_range_end = 160.0
+			n.add_child(nm)
+			var sub := nm.duplicate() as Label3D
+			sub.text = String(sh[1])
+			sub.font_size = 44
+			sub.position.y = 3.62
+			sub.modulate = Color(1, 0.9, 0.6)
+			n.add_child(sub)
+			# striped awning
+			var aw := MeshInstance3D.new()
+			var am := PrismMesh.new()
+			am.size = Vector3(1.8, 0.5, 8.8)
+			am.left_to_right = 0.0 if side > 0 else 1.0
+			aw.mesh = am
+			var amat := StandardMaterial3D.new()
+			amat.albedo_color = bc.lightened(0.15)
+			aw.material_override = amat
+			aw.position = Vector3(fx - side * 0.9, 3.15, z)
+			n.add_child(aw)
+			# upper floor: windows with frames, a small balcony now and then
+			for wj in 3:
+				var wz := z - 3.0 + wj * 3.0
+				B.box(Vector3(0.08, 1.6, 1.3), Vector3(fx - side * 0.02, 6.0, wz), B.mat(Color(0.25, 0.35, 0.45), 0.1, 0.3), false)
+				B.box(Vector3(0.12, 0.12, 1.5), Vector3(fx - side * 0.06, 5.15, wz), stone, false)
+				if (i + wj) % 4 == 0:
+					B.box(Vector3(0.8, 0.12, 1.8), Vector3(fx - side * 0.4, 5.1, wz), stone, false)
+					B.box(Vector3(0.05, 0.9, 1.8), Vector3(fx - side * 0.8, 5.6, wz), dark, false)
+	# strings of lights across the street every 12 m (warm bulbs)
+	var bulb := B.mat(Color(1, 0.85, 0.5), 0.5, 0.0, Color(1, 0.8, 0.45), 2.5)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	var sm := SphereMesh.new()
+	sm.radius = 0.07
+	sm.height = 0.14
+	sm.radial_segments = 8
+	sm.rings = 4
+	sm.material = bulb
+	mm.mesh = sm
+	var xs: Array = []
+	for zi in 14:
+		var z2 := -Lh + 6.0 + zi * 12.0
+		for t in 22:
+			var u := float(t) / 21.0
+			xs.append(Transform3D(Basis.IDENTITY, Vector3(lerpf(-6.8, 6.8, u), 6.2 - sin(u * PI) * 0.9, z2)))
+	mm.instance_count = xs.size()
+	for q in xs.size():
+		mm.set_instance_transform(q, xs[q])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.visibility_range_end = 220.0
+	n.add_child(mmi)
+	# gate arches at both ends with the street's name
+	for end: float in [1.0, -1.0]:
+		var gz := end * (Lh - 1.0)
+		for sx in [-6.4, 6.4]:
+			B.box(Vector3(1.0, 7.5, 1.0), Vector3(sx, 3.75, gz), stone)
+		B.box(Vector3(14.0, 1.4, 1.0), Vector3(0, 7.2, gz), stone, false)
+		B.box(Vector3(9.0, 0.9, 0.06), Vector3(0, 7.2, gz + end * 0.52), B.mat(Color(0.1, 0.32, 0.55), 0.4), false)
+		B.text("СОМОН", Vector3(0, 7.22, gz + end * 0.56), 120, Color(1.0, 0.85, 0.35), 0.0075, null, end < 0)
+	if OpenWorld.instance:
+		var g := n.global_transform
+		var props := {"bench_park_soviet": [], "lamp_ornate": [], "bin_modern_steel": []}
+		var trees := {"chinar_middle": [], "flowers_petunia": [], "flowers_salvia": []}
+		for zi in 12:
+			var z3 := -Lh + 12.0 + zi * 14.0
+			B.box(Vector3(2.2, 0.5, 2.2), Vector3(0, 0.25, z3), stone)
+			B.box(Vector3(1.9, 0.06, 1.9), Vector3(0, 0.51, z3), B.mat(Color(0.2, 0.14, 0.09), 0.95), false)
+			trees["chinar_middle"].append(g * Transform3D(Basis(Vector3.UP, zi * 1.7).scaled(Vector3.ONE * 0.75), Vector3(0, 0.5, z3)))
+			for f in 8:
+				var a := f * TAU / 8.0
+				trees["flowers_petunia" if f % 2 == 0 else "flowers_salvia"].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 1.2), Vector3(sin(a) * 0.75, 0.5, z3 + cos(a) * 0.75)))
+			for sx: float in [-1.0, 1.0]:
+				props["bench_park_soviet"].append(g * Transform3D(Basis(Vector3.UP, sx * PI * 0.5), Vector3(sx * 2.4, 0.1, z3)))
+			props["lamp_ornate"].append(g * Transform3D(Basis.IDENTITY, Vector3(0, 0.1, z3 + 7.0)))
+			props["bin_modern_steel"].append(g * Transform3D(Basis.IDENTITY, Vector3(1.6, 0.1, z3 + 2.0)))
+		var holder := Node3D.new()
+		holder.name = "ShopProps"
+		add_child(holder)
+		n.tree_exiting.connect(holder.queue_free)
+		OpenWorld.instance._place_props(holder, props)
+		OpenWorld.instance._trees(holder, trees, 0)
 
 
 # ------------------------------------------------------------------------------------------ police

@@ -1137,7 +1137,7 @@ func _in_own_plot(x: float, z: float) -> bool:
 				if pt.distance_to(Vector2(x, z)) < 30.0:
 					return true
 	for l in wd.landmarks:
-		if not String(l["id"]) in ["hero_home", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "city_park"]:
+		if not String(l["id"]) in ["hero_home", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "city_park", "shop_street"]:
 			continue
 		var p := Vector2(x - float(l["x"]), z - float(l["z"])).rotated(-float(l["yaw"]))
 		if absf(p.x) < float(l["L"]) * 0.5 + 3.0 and absf(p.y) < float(l["D"]) * 0.5 + 3.0:

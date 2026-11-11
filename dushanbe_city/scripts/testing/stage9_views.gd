@@ -289,6 +289,16 @@ func _ready() -> void:
 				pp.build_site(st)
 			await _sec(3.0)
 			var id := String(st["id"])
+			if id == "shop_street":
+				await _look("shop_entry", xf * Vector3(5, 3.0, 100), xf * Vector3(0, 3.5, 60))
+				await _look("shop_street", xf * Vector3(-3, 1.8, 70), xf * Vector3(0, 2.5, 0))
+				await _look("shop_window", xf * Vector3(2.5, 1.7, 30), xf * Vector3(-7, 2.5, 26))
+				await _look("shop_top", xf * Vector3(0, 70, 100), xf * Vector3(0, 0, 0))
+				_hour(21.0)
+				await _sec(0.5)
+				await _look("shop_night", xf * Vector3(-3, 1.8, 70), xf * Vector3(0, 2.5, 0))
+				_hour(12.0)
+				continue
 			if id == "police":
 				await _look("police_front", xf * Vector3(10, 4.0, 40), xf * Vector3(0, 4.0, -2))
 				await _look("police_sign", xf * Vector3(-3, 3.0, 14), xf * Vector3(0, 5.6, 0))

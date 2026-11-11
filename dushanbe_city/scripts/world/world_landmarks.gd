@@ -383,7 +383,7 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 				cs.shape = bx
 				cs.position = c[1]
 				body.add_child(cs)
-		"hero_home", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "city_park":
+		"hero_home", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "city_park", "shop_street":
 			pass                     # HeroHome / CarDealer / GunShop build their own buildings there
 		_:
 			_box(root, body, "marble", Vector3(0, 6, 0), Vector3(L * 0.7, 12, D * 0.7))

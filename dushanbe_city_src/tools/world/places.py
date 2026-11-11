@@ -44,6 +44,8 @@ LANDMARKS = [
     # gate, fountain, pavilions and its name sign (the user's reference photos)
     ("police", "Полиция", -460.0, -3140.0, 0.0, (40.0, 50.0)),
     ("city_park", "Парк Дусти", -420.0, -2880.0, 0.0, (100.0, 100.0)),
+    # 0.26: pedestrian shopping street «Сомон» (shop windows with own names, awnings, lights)
+    ("shop_street", "Торговая улица «Сомон»", 960.0, -2900.0, 0.0, (44.0, 170.0)),
     ("hisor_fort", "Гиссарская крепость", -4500.0, -2900.0, 0.3, (150.0, 110.0)),
     ("hisor_bazaar", "Гиссарский рынок", -4050.0, -2300.0, 0.0, (100.0, 70.0)),
 ]
