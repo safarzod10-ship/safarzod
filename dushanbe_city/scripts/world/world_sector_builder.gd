@@ -1305,7 +1305,7 @@ func _in_own_plot(x: float, z: float) -> bool:
 			return true
 		if not String(l["id"]) in ["hero_home", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "police", "city_park", "shop_street"]:
 			continue
-		var mg := 14.0 if String(l["id"]) == "city_park" else 3.0      # the park's plaza runs on to the street
+		var mg := 14.0 if String(l["id"]) == "city_park" else (22.0 if String(l["id"]) == "hero_home" else 3.0)      # the park's plaza runs on to the street
 		if absf(p.x) < hl + mg and absf(p.y) < hd + mg:
 			return true
 	return false

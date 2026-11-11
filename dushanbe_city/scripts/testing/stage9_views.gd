@@ -141,14 +141,16 @@ func _ready() -> void:
 		var hh9: HeroHome = main.get_node("HeroHome")
 		await _sec(3.0)
 		var t9 := hh9.global_transform
-		await _look("home_top", t9 * Vector3(-30, 70, -230), t9 * Vector3(10, 0, -230))
-		await _look("home_garden", t9 * Vector3(-12, 3.2, -246), t9 * Vector3(14, 1.0, -282))
-		await _look("home_orchard", t9 * Vector3(-12, 3.0, -160), t9 * Vector3(14, 1.5, -190))
+		await _look("home_top", t9 * Vector3(-55, 60, -231), t9 * Vector3(10, 0, -231))
+		await _look("home_garden", t9 * Vector3(-30, 14, -231), t9 * Vector3(8, 1.0, -226))
+		await _look("home_orchard", t9 * Vector3(-4, 3.0, -200), t9 * Vector3(22, 1.5, -184))
 		if OS.get_cmdline_user_args().has("dbg"):
-			await _look("home_dbg", t9 * Vector3(10, 25, -140), t9 * Vector3(10, 0, -170))
 			print("HOME xf ", t9, " lot y ", hh9.floor_y())
-		await _look("home_tapchan", t9 * Vector3(22, 2.5, -200), t9 * Vector3(28, 1.0, -206))
-		await _look("home_front", t9 * Vector3(-28, 3.0, -228), t9 * Vector3(10, 3, -225))
+		await _look("home_tapchan", t9 * Vector3(4, 3.5, -266), t9 * Vector3(24, 1.0, -280))
+		await _look("home_front", t9 * Vector3(-30, 2.2, -212), t9 * Vector3(8, 3, -228))
+		_hour(21.0)
+		await _sec(1.5)
+		await _look("home_night", t9 * Vector3(-45, 26, -231), t9 * Vector3(10, 0, -231))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("night"):
