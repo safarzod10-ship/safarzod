@@ -94,6 +94,8 @@ func build_site(s: Dictionary) -> void:
 	body.name = "Body"
 	n.add_child(body)
 	var B := _Builder.new(n, body)
+	if s.has("D") and s["id"] != "river_bridge":
+		_apron(n, body, s)
 	if s["id"] == "police":
 		_police(B, n)
 	elif s["id"] == "shop_street":
@@ -102,6 +104,76 @@ func build_site(s: Dictionary) -> void:
 		_bridge(B, n, s)
 	else:
 		_park(B, n)
+
+
+# ------------------------------------------------------------------------------------------ apron
+## a paved ramp from the plot's front edge (local +Z) to the outer edge of the street's sidewalk, so the
+## plaza meets the sidewalk at one level (no grass strip, no step); collision included
+func _apron(n: Node3D, body: StaticBody3D, s: Dictionary) -> void:
+	var xf: Transform3D = s["xf"]
+	var half_d := float(s["D"]) * 0.5
+	var w := minf(float(s["L"]), 30.0)
+	var front := xf * Vector3(0, 0.08, half_d)
+	var fwd := xf.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	# the street in front: march out from the plot until the road's sidewalk
+	var best := INF
+	var rp := Vector3.ZERO
+	var rhw := 6.0
+	for r in wd.roads:
+		if String(r["cls"]) in ["dirt", "lane"] or String(r.get("id", "")).begins_with("drive"):
+			continue
+		for q in r["pts"]:
+			var qv := Vector3(float(q[0]), float(q[1]), float(q[2]))
+			var rel := qv - front
+			rel.y = 0.0
+			var along := rel.dot(fwd)
+			if along < 0.0 or along > 60.0 or absf(rel.dot(fwd.cross(Vector3.UP))) > 30.0:
+				continue
+			if along < best:
+				best = along
+				rp = qv
+				rhw = float(r["w"]) * 0.5
+	if best == INF:
+		return
+	var dist := best - rhw - 3.5                     # to the outer edge of the sidewalk
+	if dist < 0.3:
+		return
+	var y_end := rp.y + 0.07 + 0.15                   # road lift + sidewalk kerb
+	var side := fwd.cross(Vector3.UP)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var faces := PackedVector3Array()
+	var steps := maxi(2, int(dist / 2.0))
+	var inv := n.global_transform.affine_inverse()
+	for k in steps:
+		var t0 := float(k) / steps
+		var t1 := float(k + 1) / steps
+		var p0 := front + fwd * (dist * t0 - 0.3)
+		var p1 := front + fwd * (dist * t1 + (0.6 if k == steps - 1 else 0.0))
+		p0.y = lerpf(front.y, y_end, t0) + 0.02
+		p1.y = lerpf(front.y, y_end, t1) + 0.02
+		var a := inv * (p0 - side * w * 0.5)
+		var b := inv * (p0 + side * w * 0.5)
+		var c := inv * (p1 + side * w * 0.5)
+		var d := inv * (p1 - side * w * 0.5)
+		for tri in [[a, c, b], [a, d, c]]:
+			for v in tri:
+				st.add_vertex(v)
+				faces.append(v)
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.name = "Apron"
+	mi.mesh = st.commit()
+	mi.material_override = PlotPatches.paving_material()
+	mi.visibility_range_end = 600.0
+	n.add_child(mi)
+	var cs := CollisionShape3D.new()
+	var sh := ConcavePolygonShape3D.new()
+	sh.set_faces(faces)
+	cs.shape = sh
+	body.add_child(cs)
 
 
 # ------------------------------------------------------------------------------------------ bridge
@@ -274,6 +346,9 @@ func _shop_street(B: _Builder, n: Node3D) -> void:
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var lit := B.mat(Color(1.0, 0.92, 0.75), 0.8, 0.0, Color(1.0, 0.85, 0.6), 0.9)
 	var shelf := B.mat(Color(0.35, 0.25, 0.18), 0.7)
+	var roofing := B.mat(Color(0.32, 0.3, 0.29), 0.9)
+	var metal := B.mat(Color(0.75, 0.77, 0.8), 0.4, 0.6)
+	var win := B.mat(Color(0.25, 0.35, 0.45), 0.1, 0.3)
 	var Lh := 85.0
 	B.box(Vector3(44, 0.24, 170), Vector3(0, -0.04, 0), paving, false)
 	var walls := [Color(0.93, 0.86, 0.72), Color(0.86, 0.78, 0.66), Color(0.95, 0.9, 0.82), Color(0.82, 0.74, 0.62), Color(0.9, 0.8, 0.7)]
@@ -290,6 +365,52 @@ func _shop_street(B: _Builder, n: Node3D) -> void:
 			var h := 8.0 if i % 3 != 1 else 9.5
 			# upper floors on top of an open ground floor: the shop is a real room behind the glass
 			B.box(Vector3(12.0, h - 3.4, 10.0), Vector3(bx, (h + 3.4) * 0.5, z), wall)
+			# roof: dark roofing, parapet, AC units, a water tank / dish now and then (outside detail)
+			B.box(Vector3(12.0, 0.08, 10.0), Vector3(bx, h + 0.04, z), roofing, false)
+			for e: Array in [[Vector3(12.2, 0.6, 0.25), Vector3(0, 0, 5.0)], [Vector3(12.2, 0.6, 0.25), Vector3(0, 0, -5.0)],
+					[Vector3(0.25, 0.6, 10.2), Vector3(6.0, 0, 0)], [Vector3(0.25, 0.6, 10.2), Vector3(-6.0, 0, 0)]]:
+				B.box(e[0], Vector3(bx, h + 0.3, z) + (e[1] as Vector3), stone, false)
+			for ac in 2:
+				B.box(Vector3(0.9, 0.6, 0.7), Vector3(bx + side * (1.5 + ac * 2.5), h + 0.35, z - 2.0 + ac * 3.0), metal, false)
+				B.box(Vector3(0.6, 0.05, 0.6), Vector3(bx + side * (1.5 + ac * 2.5), h + 0.66, z - 2.0 + ac * 3.0), dark, false)
+			if i % 3 == 0:
+				B.cyl(0.7, 1.4, Vector3(bx + side * 3.5, h + 0.9, z + 2.5), metal, false)
+			elif i % 3 == 2:
+				var dish := MeshInstance3D.new()
+				var dm := SphereMesh.new()
+				dm.radius = 0.45
+				dm.height = 0.3
+				dish.mesh = dm
+				dish.material_override = stone
+				dish.position = Vector3(bx - side * 2.0, h + 0.75, z)
+				dish.rotation.z = side * 0.6
+				n.add_child(dish)
+			# the end buildings show their side to the street ends: windows, a cornice band and a vertical sign
+			if i == 0 or i == 14:
+				var ez := z + (5.02 if i == 14 else -5.02)
+				var ef := 1.0 if i == 14 else -1.0
+				for wy in [5.0, 7.0]:
+					if wy > h - 0.5:
+						continue
+					for wx in 3:
+						B.box(Vector3(1.4, 1.3, 0.06), Vector3(bx + side * (-3.5 + wx * 3.5), wy, ez), win, false)
+						B.box(Vector3(1.6, 0.1, 0.25), Vector3(bx + side * (-3.5 + wx * 3.5), wy - 0.72, ez + ef * 0.1), stone, false)
+				B.box(Vector3(12.1, 0.3, 0.12), Vector3(bx, 3.6, ez + ef * 0.03), stone, false)
+				var vs := B.box(Vector3(0.9, 3.6, 0.25), Vector3(bx + side * 5.0, 5.4, ez + ef * 0.2), B.mat(sh[2], 0.5), false)
+				vs.name = "VSign"
+				var vl := Label3D.new()
+				vl.text = "\n".join(String(sh[0]).split(" ")[0].substr(0, 7).split(""))
+				vl.font = font
+				vl.font_size = 64
+				vl.pixel_size = 0.0055
+				vl.outline_size = 0
+				vl.modulate = Color(1, 0.97, 0.9)
+				vl.position = Vector3(bx + side * 5.0, 5.4, ez + ef * 0.34)
+				vl.rotation.y = 0.0 if ef > 0 else PI
+				n.add_child(vl)
+				# and the ground floor: a lit corner display window
+				B.box(Vector3(9.0, 2.6, 0.06), Vector3(bx + side * 0.5, 1.6, ez), lit, false)
+				B.box(Vector3(9.2, 0.15, 0.2), Vector3(bx + side * 0.5, 2.95, ez + ef * 0.08), dark, false)
 			B.box(Vector3(9.0, 3.4, 10.0), Vector3(bx + side * 1.5, 1.7, z), wall)          # back rooms
 			for pz in [-4.8, 4.8]:
 				B.box(Vector3(3.0, 3.4, 0.4), Vector3(fx + side * 1.5, 1.7, z + pz), wall)    # piers
@@ -392,7 +513,8 @@ func _shop_street(B: _Builder, n: Node3D) -> void:
 				trees["flowers_petunia" if f % 2 == 0 else "flowers_salvia"].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 1.2), Vector3(sin(a) * 0.75, 0.5, z3 + cos(a) * 0.75)))
 			for sx: float in [-1.0, 1.0]:
 				props["bench_park_soviet"].append(g * Transform3D(Basis(Vector3.UP, sx * PI * 0.5), Vector3(sx * 2.4, 0.1, z3)))
-			props["lamp_ornate"].append(g * Transform3D(Basis.IDENTITY, Vector3(0, 0.1, z3 + 7.0)))
+			if z3 + 7.0 < Lh - 8.0:
+				props["lamp_ornate"].append(g * Transform3D(Basis.IDENTITY, Vector3(0, 0.1, z3 + 7.0)))
 			props["bin_modern_steel"].append(g * Transform3D(Basis.IDENTITY, Vector3(1.6, 0.1, z3 + 2.0)))
 		var holder := Node3D.new()
 		holder.name = "ShopProps"

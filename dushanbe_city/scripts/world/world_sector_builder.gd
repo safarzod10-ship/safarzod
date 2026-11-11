@@ -622,6 +622,21 @@ static func _veg_add(veg: Dictionary, id: String, xf: Transform3D) -> void:
 	(veg[id] as Array).append(xf)
 
 
+## a closed box on a roof (centre of its base, axes X / Z of the building, size x / y / z)
+func _roof_box(m: _Mesh, c: Vector3, X: Vector3, Z: Vector3, sz: Vector3) -> void:
+	var hx := X * sz.x * 0.5
+	var hz := Z * sz.z * 0.5
+	var up := Vector3(0, sz.y, 0)
+	var q := [c - hx - hz, c + hx - hz, c + hx + hz, c - hx + hz]
+	for k in 4:
+		var a: Vector3 = q[k]
+		var b: Vector3 = q[(k + 1) % 4]
+		m.quad_flat(a, b, b + up, a + up)
+		m.quad_flat(a + up, b + up, b, a)
+	m.quad_flat(q[0] + up, q[1] + up, q[2] + up, q[3] + up)
+	m.quad_flat(q[3] + up, q[2] + up, q[1] + up, q[0] + up)
+
+
 func _near_corner(p: Vector3, r: float) -> bool:
 	for fl in _fillet_hash.get(Vector2i(floori(p.x / 64.0), floori(p.z / 64.0)), []):
 		if Vector2(float(fl["c"][0]) - p.x, float(fl["c"][2]) - p.z).length() < r:
@@ -959,6 +974,26 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 			roof.tint = Color(0.55, 0.54, 0.52)
 			var up := Vector3(0, top, 0)
 			roof.quad_flat(Vector3(p0.x, top, p0.z), Vector3(p1.x, top, p1.z), Vector3(p2.x, top, p2.z), Vector3(p3.x, top, p3.z))
+			# both windings: a flat roof must be seen from above whatever the corner order (it showed the
+			# ground through the hollow building)
+			roof.quad_flat(Vector3(p3.x, top, p3.z), Vector3(p2.x, top, p2.z), Vector3(p1.x, top, p1.z), Vector3(p0.x, top, p0.z))
+			# roof furniture: a lift / stair house, water tanks, AC units (cheap boxes in the roof mesh)
+			if H > 9.0:
+				roof.tint = Color(0.62, 0.6, 0.57)
+				var rh := Vector3(0, top, 0)
+				var bxs: Array = [[Vector3(0.0, 0.0, 0.0), Vector3(3.2, 2.6, 4.0)],
+						[Vector3(L * 0.28, 0.0, D * 0.2), Vector3(1.4, 1.2, 1.4)],
+						[Vector3(-L * 0.3, 0.0, -D * 0.18), Vector3(1.0, 0.7, 0.8)],
+						[Vector3(-L * 0.12, 0.0, D * 0.22), Vector3(1.0, 0.7, 0.8)]]
+				for bi2 in bxs.size():
+					if bi2 > 1 and L < 14.0:
+						break
+					var off: Vector3 = bxs[bi2][0]
+					var sz: Vector3 = bxs[bi2][1]
+					var cc2 := c + X * off.x + Zv * off.z
+					cc2.y = top
+					_roof_box(roof, cc2, X, Zv, sz)
+				roof.tint = Color(0.55, 0.54, 0.52)
 			# parapet 0.6 m
 			var par := Color(tint.r * 0.9, tint.g * 0.9, tint.b * 0.9, (style + 0.0) / 8.0)
 			var cu2 := Color(bay, fh, 1.0, 4.0)

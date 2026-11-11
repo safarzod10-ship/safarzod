@@ -377,6 +377,7 @@ func _ready() -> void:
 				continue
 			if id == "shop_street":
 				await _look("shop_entry", xf * Vector3(5, 3.0, 100), xf * Vector3(0, 3.5, 60))
+				await _look("shop_entry_low", xf * Vector3(12, 1.7, 104), xf * Vector3(0, 1.5, 80))
 				await _look("shop_street", xf * Vector3(-3, 1.8, 70), xf * Vector3(0, 2.5, 0))
 				await _look("shop_window", xf * Vector3(2.5, 1.7, 30), xf * Vector3(-7, 2.5, 26))
 				await _look("shop_top", xf * Vector3(0, 70, 100), xf * Vector3(0, 0, 0))
