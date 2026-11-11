@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -29,6 +29,35 @@ func _ready() -> void:
 	if f:
 		f.store_string("\n".join(lines) + "\n")
 	get_tree().quit(0 if ok_all else 1)
+
+
+## the Ferris wheel in Rudaki park: a ticket costs 10 smn, one full turn in a gondola, then back on the deck
+func _t_ferris() -> void:
+	var fr: FerrisRide = main.get_node_or_null("FerrisRide")
+	_check("Ferris wheel in Rudaki park", fr != null)
+	if fr == null:
+		return
+	var pl: Node3D = s.player
+	Wallet.money = 5
+	fr.interact(pl)
+	_check("no ride without 10 smn (money 5)", not fr.riding and Wallet.money == 5)
+	Wallet.money = 100
+	pl.call("teleport", fr.interaction_point(pl), 0.0)
+	await _frames(10)
+	fr.interact(pl)
+	_check("ticket: -10 smn, riding in a gondola (money %d)" % Wallet.money, fr.riding and Wallet.money == 90 and not pl.visible)
+	var low := INF
+	var high := -INF
+	while fr.riding:
+		fr.ride_t += 0.5                     # fast forward the 75 s lap
+		await get_tree().process_frame
+		if fr.riding:
+			var y: float = fr._gondolas[fr._ride_g].global_position.y - fr.global_position.y
+			low = minf(low, y)
+			high = maxf(high, y)
+	_check("one full turn: gondola %.0f m .. %.0f m" % [low, high], low < 5.0 and high > 32.0)
+	_check("ride over: the hero is back on the deck (%.1f m)" % pl.global_position.distance_to(fr.to_global(Vector3(0, 0.9, 4.2))),
+			pl.visible and pl.global_position.distance_to(fr.to_global(Vector3(0, 0.9, 4.2))) < 2.5)
 
 
 func _check(msg: String, ok: bool) -> void:

@@ -166,6 +166,7 @@ func _build() -> void:
 	open_world = OpenWorld.new()
 	open_world.name = "OpenWorld"
 	add_child(open_world)
+	FerrisRide.place_in(self)
 	var grass := GrassField.new()
 	grass.name = "Grass"
 	grass.city = world.city

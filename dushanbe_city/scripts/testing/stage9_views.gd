@@ -107,6 +107,35 @@ func _ready() -> void:
 			shots += 1
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("ferris"):
+		_hour(17.5)
+		var fr: FerrisRide = main.get_node("FerrisRide")
+		var sn0: CarSession = main.get("car_session")
+		sn0.player.teleport(fr.interaction_point(null), 0.0)
+		ow.hold = fr.global_position
+		ow.preload_at(fr.global_position)
+		await _sec(3.0)
+		await _look("ferris_wide", fr.to_global(Vector3(-40, 24, 62)), fr.to_global(Vector3(0, 14, 0)))
+		await _look("ferris_deck", fr.to_global(Vector3(9, 1.7, 14)), fr.to_global(Vector3(0, 4, 0)))
+		await _look("ferris_gondola", fr.to_global(Vector3(4, 5, 6)), fr.to_global(Vector3(0, 2.2, 0)))
+		var m0 := Wallet.money
+		fr.interact(sn0.player)
+		print("FERRIS paid %d riding %s" % [m0 - Wallet.money, fr.riding])
+		for frac: float in [0.25, 0.5]:
+			while fr.ride_t < 75.0 * frac:
+				await get_tree().process_frame
+				fr.ride_t += 1.0                      # captures: fast forward
+			await _sec(2.0)
+			get_viewport().get_texture().get_image().save_png("%s/s9_ferris_ride_%d.png" % [out, int(frac * 100)])
+			print("S8 shot ferris_ride_%d" % int(frac * 100))
+		fr._yaw = PI * 0.5
+		await _sec(1.0)
+		get_viewport().get_texture().get_image().save_png("%s/s9_ferris_ride_side.png" % out)
+		fr.ride_t = 75.0
+		await _sec(1.0)
+		print("FERRIS done riding %s player visible %s" % [fr.riding, sn0.player.visible])
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("home"):
 		_hour(16.5)
 		var hh9: HeroHome = main.get_node("HeroHome")

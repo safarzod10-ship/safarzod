@@ -205,9 +205,9 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 			_cyl(root, body, "stone", Vector3(0, 0.1, -54), 2.0, 2.0)
 			_cyl(root, null, "gold", Vector3(0, 2.1, -54), 0.8, 2.6, 0.5, 12, false)
 			_dome(root, "gold", Vector3(0, 4.7, -54), 0.42, 1.4)
-			# after the owner's photos: gate «БОҒИ КАЛОНИ ДУШАНБЕ», Ferris wheel, «I ♥ ДУШАНБЕ», rotundas
+			# after the owner's photos: gate «БОҒИ КАЛОНИ ДУШАНБЕ», «I ♥ ДУШАНБЕ», rotundas (the Ferris wheel
+			# is the ride FerrisRide: it turns and can be ridden)
 			for spec in [["park_gate", Vector3(0, 0.1, -D * 0.5 + 2.0), PI, Vector3(13.0, 10.0, 2.8)],
-					["ferris_wheel", Vector3(-L * 0.3, 0.1, D * 0.25), PI * 0.5, Vector3(12.0, 34.0, 8.0)],
 					["love_sign", Vector3(L * 0.22, 0.1, -D * 0.3), PI, Vector3(15.0, 3.0, 1.4)],
 					["rotunda", Vector3(L * 0.3, 0.1, D * 0.25), 0.0, Vector3(13.0, 8.0, 13.0)],
 					["rotunda", Vector3(-L * 0.28, 0.1, -D * 0.25), 0.0, Vector3(13.0, 8.0, 13.0)]]:

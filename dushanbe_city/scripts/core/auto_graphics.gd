@@ -14,12 +14,13 @@ extends Node
 
 signal finished(result: Dictionary)
 
-const VIEWS := [   # x, y, z, yaw, pitch — representative load (dense trees / buildings / park / coast)
-	[-50.0, 1.7, -60.0, 15.0, 3.0],
-	[-262.0, 1.7, -205.0, 200.0, 4.0],
-	[-80.0, 1.7, -30.0, -60.0, 0.0],
-	[-28.0, 2.6, 360.0, -110.6, -3.0],     # promenade: terrain, coast trees, sea, far mountains
+const VIEWS := [   # offsets from the hero (dx, height, dz, yaw, pitch): the street, the yard, a high view over the city
+	[0.0, 1.7, 0.0, 90.0, 0.0],
+	[-25.0, 1.7, 10.0, 200.0, 2.0],
+	[0.0, 30.0, 0.0, 45.0, -12.0],
+	[30.0, 2.0, -30.0, -110.0, 0.0],
 ]
+var _origin := Vector3.ZERO
 const WARMUP_S := 0.8
 const MEASURE_S := 1.2
 const BUDGET_30 := 1000.0 / 30.0 * 0.9      ## 30 ms
@@ -79,6 +80,7 @@ func run() -> void:
 	var pl := get_tree().get_nodes_in_group(&"player")
 	for p in pl:
 		p.set_physics_process(false)
+		_origin = (p as Node3D).global_position
 
 	var q := safe_start(info)
 	var tested := {}
@@ -133,7 +135,7 @@ func _measure(q: int, step: int) -> Dictionary:
 	var gpu: Array[float] = []
 	for vi in VIEWS.size():
 		var v: Array = VIEWS[vi]
-		_cam.global_position = Vector3(v[0], v[1], v[2])
+		_cam.global_position = _origin + Vector3(v[0], v[1], v[2])
 		_cam.rotation = Vector3(deg_to_rad(v[4]), deg_to_rad(v[3]), 0.0)
 		_label.text = "Подбор настроек графики…\nтест %d · %s · вид %d/%d" % [step, Settings.NAMES[q], vi + 1, VIEWS.size()]
 		var t := 0.0
