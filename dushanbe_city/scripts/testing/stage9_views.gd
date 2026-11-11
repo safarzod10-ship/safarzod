@@ -177,6 +177,9 @@ func _ready() -> void:
 		if OS.get_cmdline_user_args().has("dbg"):
 			print("HOME xf ", t9, " lot y ", hh9.floor_y())
 		await _look("home_tapchan", t9 * Vector3(4, 3.5, -266), t9 * Vector3(24, 1.0, -280))
+		await _look("home_waterfall", t9 * Vector3(19, 2.2, -277), t9 * Vector3(30, 1.4, -280))
+		await _look("home_edge_low", t9 * Vector3(-30, 1.6, -262), t9 * Vector3(-16, 0.2, -235))
+		await _look("home_edge_top", t9 * Vector3(-36, 22, -231), t9 * Vector3(-18, 0, -231))
 		await _look("home_front", t9 * Vector3(-30, 2.2, -212), t9 * Vector3(8, 3, -228))
 		_hour(21.0)
 		await _sec(1.5)

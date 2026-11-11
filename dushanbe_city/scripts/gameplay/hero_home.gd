@@ -336,8 +336,8 @@ func _build() -> void:
 		lawn.uv1_scale = Vector3(0.25, 0.25, 0.25)
 	_box(Vector3(LOT.size.x - 0.6, 0.16, LOT.size.y - 0.6), Vector3(c.x, y0 - 0.06, c.y), lawn, true)
 	# the paved strip in front of the fence, out to the street's sidewalk (no grass gap)
-	var front := _front_depth()
-	_pave(Rect2(lx0 - front, lz0, front, LOT.size.y), paving, y0 - 0.02)
+	var front := _front_strip(paving, y0)
+	_paved.append(Rect2(lx0 - front, lz0, front, LOT.size.y))
 	# no wild grass blades through the paving / the yard (the yard gets its own lawn blades)
 	var wdg := WorldData.get_instance()
 	if wdg and wdg.ok:
@@ -651,30 +651,68 @@ func _build() -> void:
 	_pave(Rect2(sw.x - 3.0, sw.z - 2.5, 6.0, 5.0), paving, y0 + 0.02)
 	var pc := Vector3(24.0, y0, -280.0)
 	_circle_water(pc, 7.5, 4.8, water, stone)
-	# waterfall: a rock heap at the back with a falling sheet and spray
+	# waterfall: a rock cliff (2.6 m) at the pond's east end; water runs over the lip in a curved falling
+	# ribbon (animated streaks), foams at the bottom and spreads rings over the pond
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 41
-	for k14 in 14:
-		var rp := pc + Vector3(rng.randf_range(4.0, 7.5), 0, rng.randf_range(-4.0, 4.0))
-		var rr := rng.randf_range(0.7, 1.4)
+	var rock_m := _mat(Color(0.46, 0.43, 0.39), 0.95)
+	var rock2 := _mat(Color(0.36, 0.34, 0.31), 0.95)
+	var lip := pc + Vector3(6.4, 0, 0)
+	for k14 in 26:
+		var a := rng.randf_range(-1.4, 1.4)
+		var tier := k14 % 3
+		var rp := lip + Vector3(0.6 + tier * 0.9 + rng.randf_range(-0.3, 0.3), 0, sin(a) * (3.0 - tier * 0.4))
+		if absf(rp.z - pc.z) < 0.95 and tier == 0:
+			rp.z += signf(rp.z - pc.z + 0.01) * 1.0           # keep the channel open
+		var rr := rng.randf_range(0.6, 1.1)
 		var rock := MeshInstance3D.new()
 		var sm := SphereMesh.new()
 		sm.radius = rr
-		sm.height = rr * 1.5
-		sm.radial_segments = 8
+		sm.height = rr * 1.4
+		sm.radial_segments = 9
 		sm.rings = 5
 		rock.mesh = sm
-		rock.material_override = stone
-		rock.position = rp + Vector3(0, rr * 0.6 + (1.2 if absf(rp.z - pc.z) < 1.6 and rp.x > pc.x + 5.2 else 0.0), 0)
+		rock.material_override = rock_m if k14 % 2 == 0 else rock2
+		rock.position = rp + Vector3(0, 0.35 + tier * 0.9 + rr * 0.3, 0)
+		rock.rotation = Vector3(rng.randf() * 0.5, rng.randf() * TAU, rng.randf() * 0.5)
 		add_child(rock)
-	var sheet := MeshInstance3D.new()
-	var shm := BoxMesh.new()
-	shm.size = Vector3(0.1, 2.4, 1.6)
-	sheet.mesh = shm
-	sheet.material_override = _mat(Color(0.75, 0.9, 1.0, 0.7), 0.05, 0.0, Color(0.3, 0.55, 0.8), 0.8)
-	sheet.position = pc + Vector3(5.2, 1.4, 0)
-	add_child(sheet)
-	_jets(pc + Vector3(5.0, 0.4, 0), 0.4, 1.5, 40, Vector3(-1, 0.5, 0))
+	_box(Vector3(2.6, 2.6, 2.2), lip + Vector3(1.6, 1.3, 0), rock2, true)                   # the cliff core
+	# the channel on top (flowing water running to the lip)
+	var flow := ShaderMaterial.new()
+	flow.shader = load("res://assets/shaders/water_flow.gdshader")
+	flow.set_shader_parameter("src", to_global(lip + Vector3(-0.6, 0, 0)))
+	var ch := MeshInstance3D.new()
+	var chm := BoxMesh.new()
+	chm.size = Vector3(2.4, 0.06, 1.5)
+	ch.mesh = chm
+	ch.material_override = flow
+	ch.position = lip + Vector3(1.4, 2.64, 0)
+	add_child(ch)
+	# the falling ribbon: a curved strip from the lip down to the pond
+	var fall := ShaderMaterial.new()
+	fall.shader = load("res://assets/shaders/waterfall.gdshader")
+	var st2 := SurfaceTool.new()
+	st2.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rows := 10
+	for r2 in rows:
+		var t0 := float(r2) / rows
+		var t1 := float(r2 + 1) / rows
+		var q0 := lip + Vector3(0.2 - t0 * t0 * 0.9, 2.65 - t0 * 2.45, 0)
+		var q1 := lip + Vector3(0.2 - t1 * t1 * 0.9, 2.65 - t1 * 2.45, 0)
+		for v in [[q0, -0.7, t0], [q0, 0.7, t0], [q1, 0.7, t1], [q0, -0.7, t0], [q1, 0.7, t1], [q1, -0.7, t1]]:
+			st2.set_uv(Vector2((float(v[1]) + 0.7) / 1.4, float(v[2])))
+			st2.set_normal(Vector3(-1, 0.3, 0).normalized())
+			st2.add_vertex((v[0] as Vector3) + Vector3(0, 0, float(v[1])))
+	var fmi := MeshInstance3D.new()
+	fmi.mesh = st2.commit()
+	fmi.material_override = fall
+	fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(fmi)
+	# foam + spray at the bottom, mist drifting up
+	_jets(lip + Vector3(-0.8, 0.25, 0), 1.2, 1.8, 70, Vector3(-0.6, 0.2, 0))
+	_jets(lip + Vector3(-0.7, 0.2, 0), 1.0, 0.9, 50, Vector3.ZERO)
+	_flow_mat = flow
+	_flow_src = lip + Vector3(-0.9, 0, 0)
 	# the bridge: a wooden arch over the narrow part with white rails
 	var b0 := pc + Vector3(-1.0, 0, -5.5)
 	var b1 := pc + Vector3(-1.0, 0, 5.5)
@@ -715,27 +753,85 @@ func _build() -> void:
 	_garden.call_deferred(y0)
 
 
+var _flow_mat: ShaderMaterial
+var _flow_src := Vector3.ZERO
 var _paved: Array = []           ## Rect2 / [Vector2 centre, radius]: no grass blades there
 var _plants: Array = []          ## [id, pos, scale]
 var _flower_rows: Array = []     ## [from, to, rows]
 var _night_lights: Array[OmniLight3D] = []
 
 
-## the distance from the front fence to the outer edge of the street's sidewalk (paved strip)
-func _front_depth() -> float:
+## the paved strip from the front fence out to the street's sidewalk: for every 1.5 m along the fence it
+## runs exactly to the sidewalk's outer edge and ends at the sidewalk's own height (no gap, no step, no
+## paving on the asphalt); collision from the same faces. Returns the deepest reach (m).
+func _front_strip(m: Material, y0: float) -> float:
 	var wd := WorldData.get_instance()
 	if wd == null or not wd.ok:
+		_pave(Rect2(LOT.position.x - 4.0, LOT.position.y, 4.0, LOT.size.y), m, y0 - 0.02)
 		return 4.0
-	var best := 30.0
-	for z in [LOT.position.y + 8.0, LOT.get_center().y, LOT.end.y - 8.0]:
+	var x0 := LOT.position.x
+	var inv := global_transform.affine_inverse()
+	var reach: Array[float] = []
+	var ends: Array[float] = []
+	var zs: Array[float] = []
+	var z := LOT.position.y - 1.5
+	while z <= LOT.end.y + 1.6:
+		zs.append(z)
 		var t := 0.0
-		while t < 30.0:
-			var p := to_global(Vector3(LOT.position.x - t, 0, z))
-			if wd.road_edge_dist(p.x, p.z) < 3.4:
+		var found := false
+		while t < 40.0:
+			var p := to_global(Vector3(x0 - t, 0, z))
+			if wd.road_edge_dist(p.x, p.z) < 3.5:
+				found = true
 				break
-			t += 0.5
-		best = minf(best, t + 0.6)
-	return best
+			t += 0.25
+		reach.append(t if found else 0.0)
+		var pe := to_global(Vector3(x0 - t, 0, z))
+		var ry := wd.road_y_near(pe.x, pe.z)
+		ends.append((inv * Vector3(pe.x, (ry + 0.15 + 0.07 + 0.01) if not is_nan(ry) else global_position.y + y0, pe.z)).y)
+		z += 1.5
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var faces := PackedVector3Array()
+	var deepest := 0.0
+	for k in zs.size() - 1:
+		var r0 := reach[k]
+		var r1 := reach[k + 1]
+		if r0 <= 0.0 or r1 <= 0.0:
+			continue
+		deepest = maxf(deepest, maxf(r0, r1))
+		var n := maxi(2, int(maxf(r0, r1) / 1.5))
+		for j2 in n:
+			var f0 := float(j2) / n
+			var f1 := float(j2 + 1) / n
+			# height: the yard level at the fence -> the sidewalk's level at its edge (even slope)
+			var a := Vector3(x0 - r0 * f0 + 0.4 * (1.0 - f0), lerpf(y0 + 0.03, ends[k], f0), zs[k])
+			var b := Vector3(x0 - r1 * f0 + 0.4 * (1.0 - f0), lerpf(y0 + 0.03, ends[k + 1], f0), zs[k + 1])
+			var c2 := Vector3(x0 - r1 * f1 - (0.35 if j2 == n - 1 else 0.0), lerpf(y0 + 0.03, ends[k + 1], f1), zs[k + 1])
+			var d := Vector3(x0 - r0 * f1 - (0.35 if j2 == n - 1 else 0.0), lerpf(y0 + 0.03, ends[k], f1), zs[k])
+			for v in [a, b, c2, a, c2, d]:
+				st.set_normal(Vector3.UP)
+				st.set_uv(Vector2(v.x, v.z) * 0.5)
+				st.add_vertex(v)
+				faces.append(v)
+	if faces.is_empty():
+		return 0.0
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.name = "FrontPaving"
+	mi.mesh = st.commit()
+	var m2 := (m as StandardMaterial3D).duplicate() as StandardMaterial3D if m is StandardMaterial3D else m
+	if m2 is StandardMaterial3D:
+		(m2 as StandardMaterial3D).cull_mode = BaseMaterial3D.CULL_DISABLED
+	mi.material_override = m2
+	add_child(mi)
+	var cs := CollisionShape3D.new()
+	var sh := ConcavePolygonShape3D.new()
+	sh.backface_collision = true
+	sh.set_faces(faces)
+	cs.shape = sh
+	_body.add_child(cs)
+	return deepest
 
 
 func _pave(r: Rect2, m: Material, y: float) -> void:
@@ -786,7 +882,10 @@ func _circle_water(cc: Vector3, rx: float, rz: float, water: Material, stone: Ma
 	cm.height = 0.05
 	cm.radial_segments = 40
 	w.mesh = cm
-	w.material_override = water
+	var pf := ShaderMaterial.new()
+	pf.shader = load("res://assets/shaders/water_flow.gdshader")
+	pf.set_shader_parameter("src", to_global(cc + Vector3(rx * 0.75, 0, 0)))
+	w.material_override = pf
 	w.scale = Vector3(rx, 1, rz)
 	w.position = cc + Vector3(0, 0.16, 0)
 	add_child(w)
