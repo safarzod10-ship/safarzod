@@ -70,12 +70,33 @@ static func _m(key: String) -> Material:
 	return m
 
 
+static func _facade(key: String) -> Material:
+	var k := "facade_" + key
+	if _mats.has(k):
+		return _mats[k]
+	var sm := ShaderMaterial.new()
+	sm.shader = load("res://assets/shaders/landmark_facade.gdshader")
+	var b := (_m(key) as StandardMaterial3D).albedo_color
+	sm.set_shader_parameter("base", Vector3(b.r, b.g, b.b))
+	var t := b.darkened(0.14)
+	sm.set_shader_parameter("trim", Vector3(t.r, t.g, t.b))
+	_mats[k] = sm
+	return sm
+
+
 static func _box(root: Node3D, body: StaticBody3D, mat: String, pos: Vector3, size: Vector3, collide := true, yaw := 0.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var b := BoxMesh.new()
 	b.size = size
 	mi.mesh = b
 	mi.material_override = _m(mat)
+	# ground slabs (lawn / plaza) sit almost flush with the terrain: no 20 cm ledge at their edges
+	if mat in ["plaza", "grass"] and size.y <= 0.45 and pos.y + size.y * 0.5 > 0.06 and pos.y < 0.4:
+		pos.y -= pos.y + size.y * 0.5 - (0.06 if mat == "plaza" else 0.03)
+	# tall walls of plain stone: a facade with windows, pilasters and cornices (no blank boxes)
+	if size.y >= 6.0 and mat in ["marble", "stone", "pink", "white", "clay"] and minf(size.x, size.z) >= 6.0:
+		mi.material_override = _facade(mat)
+		mi.set_instance_shader_parameter(&"box_h", size.y)
 	mi.position = pos
 	mi.rotation.y = yaw
 	root.add_child(mi)

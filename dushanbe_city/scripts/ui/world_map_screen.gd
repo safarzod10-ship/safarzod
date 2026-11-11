@@ -154,6 +154,14 @@ func w2s(x: float, z: float) -> Vector2:
 
 
 func _draw_map() -> void:
+	_taken.clear()
+	_drawn_text.clear()
+	for poi in pois():
+		var pq: Vector3 = poi[1]
+		var pz := w2s(pq.x, pq.z) + Vector2(0, -24)
+		var pw := _font.get_string_size(String(poi[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+		_taken.append(Rect2(pz - Vector2(pw * 0.5, 11), Vector2(pw, 19)))
+		_drawn_text[String(poi[0])] = [pz]
 	# peninsula (old map: +-1024 m around the city centre, 1 px = 1 m)
 	var a := w2s(-1024, -1024)
 	var b := w2s(1024, 1024)
@@ -223,7 +231,7 @@ func _draw_map() -> void:
 		var ps := w2s(pp0.x, pp0.z)
 		_canvas.draw_circle(ps, 12, Color(0.05, 0.05, 0.05, 0.85))
 		_canvas.draw_circle(ps, 9, poi[2])
-		_label(ps + Vector2(0, -24), String(poi[0]), 17, Color(1, 1, 1))
+		_label(ps + Vector2(0, -24), String(poi[0]), 17, Color(1, 1, 1), true)
 	# the navigator's route along the roads (blue, with a dark outline)
 	var rt := RoadNav.route
 	if rt.size() >= 2:
@@ -327,7 +335,10 @@ func _place(sp: Vector2, icon_id: String, text: String, fs: int) -> void:
 	if t:
 		_canvas.draw_texture_rect(t, Rect2(sp - Vector2(s, s) * 0.5 + Vector2(2, 2), Vector2(s, s)), false, Color(0, 0, 0, 0.75))
 		_canvas.draw_texture_rect(t, Rect2(sp - Vector2(s, s) * 0.5, Vector2(s, s)), false)
-	HudStyle.label_left(_canvas, text, sp + Vector2(s * 0.6, fs * 0.35), fs, Color(1, 1, 1), maxi(4, fs / 4))
+	var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var r := _free_rect(Rect2(sp + Vector2(s * 0.6, -fs * 0.6), Vector2(w, fs * 1.15)), text)
+	if r.size != Vector2.ZERO:
+		HudStyle.label_left(_canvas, text, r.position + Vector2(0, fs * 0.95), fs, Color(1, 1, 1), maxi(4, fs / 4))
 
 
 ## photo cards (in-game pictures of the sights, assets/ui/cards) pinned beside their places
@@ -360,10 +371,43 @@ func _cards() -> void:
 		_canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-func _label(p: Vector2, t: String, fs: int, col: Color) -> void:
+var _taken: Array[Rect2] = []              ## screen rects of the labels drawn this frame (no overlaps)
+var _drawn_text := {}                      ## text -> positions already labelled (no duplicates nearby)
+
+
+## free spot for a text box near p (tries a few offsets); Rect2() when none is free
+func _free_rect(r: Rect2, t: String) -> Rect2:
+	for q in _drawn_text.get(t, []):
+		if (q as Vector2).distance_to(r.get_center()) < 220.0:
+			return Rect2()
+	for off in [Vector2.ZERO, Vector2(0, r.size.y + 2), Vector2(0, -r.size.y - 2), Vector2(0, 2 * r.size.y + 4)]:
+		var rr := Rect2(r.position + off, r.size)
+		var ok := true
+		for o in _taken:
+			if o.intersects(rr):
+				ok = false
+				break
+		if ok:
+			_taken.append(rr)
+			if not _drawn_text.has(t):
+				_drawn_text[t] = []
+			(_drawn_text[t] as Array).append(rr.get_center())
+			return rr
+	return Rect2()
+
+
+func _label(p: Vector2, t: String, fs: int, col: Color, force := false) -> void:
 	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-	_canvas.draw_string_outline(_font, p - Vector2(w.x * 0.5, -fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color(0, 0, 0, 0.75))
-	_canvas.draw_string(_font, p - Vector2(w.x * 0.5, -fs * 0.35), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	var r := Rect2(p - Vector2(w.x * 0.5, fs * 0.65), Vector2(w.x, fs * 1.1))
+	if force:
+		_taken.append(r)
+	else:
+		r = _free_rect(r, t)
+		if r.size == Vector2.ZERO:
+			return
+	var at := Vector2(r.position.x, r.position.y + fs)
+	_canvas.draw_string_outline(_font, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color(0, 0, 0, 0.75))
+	_canvas.draw_string(_font, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 
 

@@ -31,6 +31,34 @@ func _ready() -> void:
 	cam.fov = 55.0
 	add_child(cam)
 	cam.make_current()
+	if OS.get_cmdline_user_args().has("tour"):
+		# every landmark of the world: an aerial view from the street side + one at eye level
+		_hour(15.5)
+		var snt: CarSession = main.get("car_session")
+		var only := ""
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("ids="):
+				only = a.substr(4)
+		for l in wd.landmarks:
+			var id := String(l["id"])
+			if only != "" and not id in only.split(","):
+				continue
+			var c := Vector3(float(l["x"]), float(l["y"]), float(l["z"]))
+			var r := maxf(float(l["L"]), float(l["D"]))
+			var to := _nearest_road_pt(c) - c
+			to.y = 0.0
+			var fdir := to.normalized() if to.length() > 1.0 else Vector3(0, 0, 1)
+			snt.player.teleport(c + fdir * (r * 0.5 + 12.0) + Vector3(0, 1, 0), 0.0)
+			ow.hold = c
+			ow.preload_at(c)
+			await _sec(2.0)
+			var side := fdir.cross(Vector3.UP)
+			await _look("tour_%s_air" % id, c + fdir * (r * 0.9 + 40.0) + side * r * 0.5 + Vector3(0, r * 0.45 + 30.0, 0), c, -1.0, NAN, true)
+			var eye := c + fdir * (r * 0.75 + 18.0) + side * 6.0
+			eye.y = wd.height_at(eye.x, eye.z) + 1.8
+			await _look("tour_%s_street" % id, eye, c + Vector3(0, minf(r * 0.12, 10.0), 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("map"):
 		_ui(true)
 		var wm: WorldMapScreen = main.get_node("WorldMap")
@@ -1487,3 +1515,17 @@ func _road(id: String) -> Dictionary:
 		if r["id"] == id:
 			return r
 	return {}
+
+
+func _nearest_road_pt(p: Vector3) -> Vector3:
+	var best := INF
+	var out := p
+	for r in wd.roads:
+		if String(r["cls"]) in ["dirt", "lane"] or String(r.get("id", "")).begins_with("drive"):
+			continue
+		for q in r["pts"]:
+			var d := Vector2(float(q[0]) - p.x, float(q[2]) - p.z).length()
+			if d < best:
+				best = d
+				out = Vector3(float(q[0]), float(q[1]), float(q[2]))
+	return out
