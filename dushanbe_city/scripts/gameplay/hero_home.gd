@@ -50,9 +50,26 @@ func _ready() -> void:
 	ui.add_child(_toast)
 
 
+var _glass: StandardMaterial3D
+var _lamps: StandardMaterial3D
+var _night_t := 0.0
+
+
 func _process(delta: float) -> void:
 	_toast_t -= delta
 	_toast.visible = _toast_t > 0.0
+	# evening: warm light in the windows, the garden lamps glow brighter
+	_night_t -= delta
+	if _night_t <= 0.0 and _glass:
+		_night_t = 1.0
+		var h := 12.0
+		for t in get_tree().get_nodes_in_group(&"time_of_day"):
+			h = float(t.get("hour"))
+			break
+		var night := clampf(minf(h - 18.5, 30.0 - h) if h > 12.0 else 6.5 - h, 0.0, 1.0)
+		_glass.emission = Color(0.25, 0.22, 0.15).lerp(Color(1.0, 0.62, 0.3), night)
+		_glass.emission_energy_multiplier = lerpf(0.35, 1.1, night)
+		_lamps.emission_energy_multiplier = lerpf(2.0, 5.0, night)
 
 
 ## where the hero appears: on the path in front of the door, facing the drive / avenue
@@ -295,6 +312,8 @@ func _build() -> void:
 	var water := _mat(Color(0.15, 0.55, 0.75), 0.05, 0.0, Color(0.05, 0.2, 0.3), 0.4)
 	var steel := _mat(Color(0.65, 0.66, 0.68), 0.35, 0.8)
 	var lamp := _mat(Color(1, 1, 0.95), 0.3, 0.0, Color(1.0, 0.95, 0.8), 2.0)
+	_glass = glass
+	_lamps = lamp
 	var lx0 := LOT.position.x
 	var lz0 := LOT.position.y
 	var lx1 := LOT.end.x
@@ -367,9 +386,26 @@ func _build() -> void:
 	_box(Vector3(0.12, 2.4, 1.4), Vector3(HOUSE.position.x - 0.06, y0 + 1.2, HOUSE.position.y + 6.0), wood)
 	_box(Vector3(1.6, 0.12, 2.6), Vector3(HOUSE.position.x - 0.8, y0 + 2.9, HOUSE.position.y + 6.0), dark)   # door canopy
 	_box(Vector3(0.12, 0.3, 0.3), Vector3(HOUSE.position.x - 0.2, y0 + 2.6, HOUSE.position.y + 7.0), lamp)
+	# window frames (mullions + transoms) so the glass reads as windows, not panels
+	for wdef: Array in [[HOUSE.position.x - 0.12, y0 + 1.6, hc.y - 4.5, 6.0, 2.4], [HOUSE.position.x - 1.72, y0 + 5.2, hc.y - 5.0, 4.0, 2.2],
+			[HOUSE.position.x - 1.72, y0 + 5.2, hc.y + 3.5, 4.0, 2.2]]:
+		var fx: float = wdef[0]
+		var fy: float = wdef[1]
+		var fz: float = wdef[2]
+		var fw: float = wdef[3]
+		var fh: float = wdef[4]
+		var nm := int(round(fw / 1.3))
+		for k in nm + 1:
+			_box(Vector3(0.06, fh + 0.1, 0.08), Vector3(fx, fy, fz - fw * 0.5 + k * fw / nm), dark)
+		for yy: float in [-fh * 0.5, fh * 0.5, fh * 0.2]:
+			_box(Vector3(0.06, 0.08, fw + 0.1), Vector3(fx, fy + yy, fz), dark)
 	# balcony on the upper floor with glass railing
 	_box(Vector3(2.0, 0.2, 7.0), Vector3(HOUSE.position.x - 2.6, y0 + 3.45, hc.y - 1.0), dark, true)
-	_box(Vector3(0.06, 1.0, 7.0), Vector3(HOUSE.position.x - 3.55, y0 + 4.05, hc.y - 1.0), glass)
+	var rail_glass := _mat(Color(0.55, 0.7, 0.75), 0.05, 0.3)
+	rail_glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	rail_glass.albedo_color.a = 0.35
+	_box(Vector3(0.06, 1.0, 7.0), Vector3(HOUSE.position.x - 3.55, y0 + 4.05, hc.y - 1.0), rail_glass)
+	_box(Vector3(0.08, 0.06, 7.0), Vector3(HOUSE.position.x - 3.55, y0 + 4.58, hc.y - 1.0), dark)
 	# side windows
 	for z: float in [HOUSE.position.y + 0.02, HOUSE.end.y - 0.02]:
 		_box(Vector3(5.0, 1.6, 0.1), Vector3(hc.x, y0 + 1.8, z), glass)
