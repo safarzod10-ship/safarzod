@@ -76,6 +76,37 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("survey"):
+		# eye-level views at the kerb of random city streets, both directions + a low aerial
+		_hour(13.0)
+		var rng9 := RandomNumberGenerator.new()
+		rng9.seed = 77
+		var rds: Array = []
+		for r9 in wd.roads:
+			if String(r9["cls"]) in ["avenue", "street"] and not String(r9.get("id", "")).begins_with("drive"):
+				rds.append(r9)
+		var shots := 0
+		for k9 in 40:
+			if shots >= 10:
+				break
+			var r9: Dictionary = rds[rng9.randi() % rds.size()]
+			var pts9: Array = r9["pts"]
+			var i9 := rng9.randi_range(2, pts9.size() - 3)
+			var p9 := Vector3(pts9[i9][0], pts9[i9][1], pts9[i9][2])
+			if absf(p9.x) > 2000.0 or p9.z > -1000.0 or p9.z < -4800.0:
+				continue
+			var q9 := Vector3(pts9[i9 + 2][0], pts9[i9 + 2][1], pts9[i9 + 2][2])
+			var d9 := (q9 - p9).normalized()
+			var s9 := d9.cross(Vector3.UP)
+			var hw9 := float(r9["w"]) * 0.5
+			ow.hold = p9
+			ow.preload_at(p9)
+			await _sec(2.0)
+			await _look("survey_%d_side" % shots, p9 + s9 * (hw9 + 1.6) + Vector3(0, 1.7, 0), p9 + s9 * (hw9 + 8.0) + d9 * 25.0 + Vector3(0, 1.0, 0))
+			await _look("survey_%d_air" % shots, p9 - d9 * 25.0 + s9 * 20.0 + Vector3(0, 22, 0), p9)
+			shots += 1
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("home"):
 		_hour(16.5)
 		var hh9: HeroHome = main.get_node("HeroHome")
@@ -661,6 +692,37 @@ func _ready() -> void:
 		await _look("flag", fc + Vector3(150, 40, -220), fc + Vector3(0, 110, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("survey"):
+		# eye-level views at the kerb of random city streets, both directions + a low aerial
+		_hour(13.0)
+		var rng9 := RandomNumberGenerator.new()
+		rng9.seed = 77
+		var rds: Array = []
+		for r9 in wd.roads:
+			if String(r9["cls"]) in ["avenue", "street"] and not String(r9.get("id", "")).begins_with("drive"):
+				rds.append(r9)
+		var shots := 0
+		for k9 in 40:
+			if shots >= 10:
+				break
+			var r9: Dictionary = rds[rng9.randi() % rds.size()]
+			var pts9: Array = r9["pts"]
+			var i9 := rng9.randi_range(2, pts9.size() - 3)
+			var p9 := Vector3(pts9[i9][0], pts9[i9][1], pts9[i9][2])
+			if absf(p9.x) > 2000.0 or p9.z > -1000.0 or p9.z < -4800.0:
+				continue
+			var q9 := Vector3(pts9[i9 + 2][0], pts9[i9 + 2][1], pts9[i9 + 2][2])
+			var d9 := (q9 - p9).normalized()
+			var s9 := d9.cross(Vector3.UP)
+			var hw9 := float(r9["w"]) * 0.5
+			ow.hold = p9
+			ow.preload_at(p9)
+			await _sec(2.0)
+			await _look("survey_%d_side" % shots, p9 + s9 * (hw9 + 1.6) + Vector3(0, 1.7, 0), p9 + s9 * (hw9 + 8.0) + d9 * 25.0 + Vector3(0, 1.0, 0))
+			await _look("survey_%d_air" % shots, p9 - d9 * 25.0 + s9 * 20.0 + Vector3(0, 22, 0), p9)
+			shots += 1
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("home"):
 		var hh: HeroHome = main.get_node("HeroHome")
 		var c := hh.to_global(Vector3(10, 0, -231))
@@ -737,6 +799,37 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("survey"):
+		# eye-level views at the kerb of random city streets, both directions + a low aerial
+		_hour(13.0)
+		var rng9 := RandomNumberGenerator.new()
+		rng9.seed = 77
+		var rds: Array = []
+		for r9 in wd.roads:
+			if String(r9["cls"]) in ["avenue", "street"] and not String(r9.get("id", "")).begins_with("drive"):
+				rds.append(r9)
+		var shots := 0
+		for k9 in 40:
+			if shots >= 10:
+				break
+			var r9: Dictionary = rds[rng9.randi() % rds.size()]
+			var pts9: Array = r9["pts"]
+			var i9 := rng9.randi_range(2, pts9.size() - 3)
+			var p9 := Vector3(pts9[i9][0], pts9[i9][1], pts9[i9][2])
+			if absf(p9.x) > 2000.0 or p9.z > -1000.0 or p9.z < -4800.0:
+				continue
+			var q9 := Vector3(pts9[i9 + 2][0], pts9[i9 + 2][1], pts9[i9 + 2][2])
+			var d9 := (q9 - p9).normalized()
+			var s9 := d9.cross(Vector3.UP)
+			var hw9 := float(r9["w"]) * 0.5
+			ow.hold = p9
+			ow.preload_at(p9)
+			await _sec(2.0)
+			await _look("survey_%d_side" % shots, p9 + s9 * (hw9 + 1.6) + Vector3(0, 1.7, 0), p9 + s9 * (hw9 + 8.0) + d9 * 25.0 + Vector3(0, 1.0, 0))
+			await _look("survey_%d_air" % shots, p9 - d9 * 25.0 + s9 * 20.0 + Vector3(0, 22, 0), p9)
+			shots += 1
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("home"):
