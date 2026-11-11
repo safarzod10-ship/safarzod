@@ -120,7 +120,7 @@ var _mcache := {}
 func _m(k: String) -> StandardMaterial3D:
 	if not _mcache.has(k):
 		_mcache[k] = {"kerb": mat(Color(0.8, 0.78, 0.74), 0.8), "soil": mat(Color(0.18, 0.13, 0.08), 0.95),
-				"white": mat(Color(0.95, 0.95, 0.95), 0.45), "red": mat(Color(0.82, 0.08, 0.1), 0.4),
+				"white": mat(Color(0.95, 0.95, 0.95), 0.45), "red": mat(Color(0.82, 0.08, 0.1), 0.4), "gpn": mat(Color(0.0, 0.36, 0.72), 0.4),
 				"dark": mat(Color(0.12, 0.12, 0.14), 0.5, 0.3), "glass": mat(Color(0.22, 0.3, 0.35), 0.05, 0.3, Color(1.0, 0.86, 0.6), 0.7),
 				"light": mat(Color(1, 1, 0.95), 0.3, 0.0, Color(1.0, 0.97, 0.9), 2.5), "steel": mat(Color(0.62, 0.64, 0.66), 0.35, 0.8),
 				"blue": mat(Color(0.1, 0.25, 0.6), 0.4), "navy": mat(Color(0.06, 0.12, 0.3), 0.45), "grey": mat(Color(0.82, 0.83, 0.84), 0.6),
@@ -151,7 +151,7 @@ func lamp_post(p: Vector3) -> void:
 ## local: +X to the road (edge ~ +17.5), the pumps round (7.5, 0, 0.3), the plot x -12.5 .. 17.5, z -9.5 .. 12.5
 func fuel_station() -> void:
 	var W := _m("white")
-	var R := _m("red")
+	var R := _m("gpn")                       # Gazpromneft blue
 	var D := _m("dark")
 	# canopy: 4 white columns, the roof slab, white lit underside, red fascia all round
 	var cc := Vector3(7.5, 0, 0.3)
@@ -172,7 +172,7 @@ func fuel_station() -> void:
 	for fp in [[cc + Vector3(5.75, 5.6, 0.2), PI * 0.5], [cc + Vector3(0, 5.6, 7.95), 0.0], [cc + Vector3(0, 5.6, -7.55), PI]]:
 		var p: Vector3 = fp[0]
 		var yaw: float = fp[1]
-		text("● АЗС", p, 96, Color(1, 1, 1), 0.0085, yaw)
+		text("ГАЗПРОМНЕФТЬ", p, 84, Color(1, 1, 1), 0.0085, yaw)
 	# two pump islands (along X) with two dispensers each
 	for iz: float in [-2.5, 3.1]:
 		var ic := cc + Vector3(0, 0, iz)
@@ -227,11 +227,11 @@ func fuel_station() -> void:
 		cm.bottom_radius = 0.3
 		cm.height = 0.5
 		_add(cm, Transform3D(Basis.IDENTITY, f + Vector3(0.05 * side, 6.7, 0)), W)
-		text("АЗС", f + Vector3(0, 5.5, 0), 120, Color(1, 1, 1), 0.008, yaw2)
+		text("ГАЗПРОМ\nНЕФТЬ", f + Vector3(0, 5.35, 0), 60, Color(1, 1, 1), 0.0075, yaw2)
 		box(Vector3(0.04, 2.4, 1.9), f + Vector3(0, 3.55, 0), D)
 		text("АИ-92   14.00\nАИ-95   14.00\nДТ        14.00", f + Vector3(0.03 * side, 3.55, 0), 56, Color(1.0, 0.92, 0.55), 0.0075, yaw2)
 		box(Vector3(0.04, 1.0, 2.1), f + Vector3(0, 1.35, 0), W)
-		text("Добро\nпожаловать!", f + Vector3(0.03 * side, 1.35, 0), 44, Color(0.82, 0.08, 0.1), 0.006, yaw2)
+		text("Добро\nпожаловать!", f + Vector3(0.03 * side, 1.35, 0), 44, Color(0.0, 0.36, 0.72), 0.006, yaw2)
 	# painted arrows on the forecourt (in / out), lamp posts, flower beds + thujas along the street
 	for az: float in [-6.5, 8.5]:
 		var a := Vector3(12.5, 0.07, az)
