@@ -352,11 +352,19 @@ func _focus_points() -> Array[Vector3]:
 		if n is RigidBody3D and (n as RigidBody3D).freeze:
 			continue                     # parked far away (frozen): no sectors kept loaded for it
 		pts.append((n as Node3D).global_position)
+		# fast driving: the sectors ahead get loaded (and collision built) before the car reaches them
+		var v := (n as RigidBody3D).linear_velocity if n is RigidBody3D else Vector3.ZERO
+		if v.length() > 12.0:
+			pts.append((n as Node3D).global_position + Vector3(v.x, 0, v.z) * 7.0)
 	return pts
 
 
 func _sc(p: Vector3) -> Vector2i:
 	return Vector2i(floori((p.x - wd.origin.x) / SECTOR), floori((p.z - wd.origin.y) / SECTOR))
+
+
+func _sc_centre(s: Vector2i) -> Vector2:
+	return Vector2(wd.origin.x + (s.x + 0.5) * SECTOR, wd.origin.y + (s.y + 0.5) * SECTOR)
 
 
 func _valid(s: Vector2i) -> bool:
@@ -390,7 +398,12 @@ func _process(_delta: float) -> void:
 						want[s] = 0
 	# start jobs
 	var started := 0
-	for s in want:
+	# nearest first (the near ring before the outer one, then by distance to the camera)
+	var order := want.keys()
+	var cp := Vector2(pts[0].x, pts[0].z)
+	order.sort_custom(func(sa: Vector2i, sb: Vector2i) -> bool:
+		return _sc_centre(sa).distance_squared_to(cp) - (1e7 if want[sa] == 0 else 0.0) < _sc_centre(sb).distance_squared_to(cp) - (1e7 if want[sb] == 0 else 0.0))
+	for s in order:
 		var cur: Dictionary = sectors.get(s, {})
 		var need_lod: int = want[s]
 		if (cur.is_empty() or cur["lod"] != need_lod) and not _jobs.has(s) and not _results.has(s) and started < 2:
@@ -664,7 +677,12 @@ func _trees(node: Node3D, trees: Dictionary, lod: int) -> void:
 			if small:
 				# flowers / shrubs: 16 m cells (the range is measured to a cell's centre: big cells made
 				# beds vanish right in front of the player), fading out at 90 m
-				_cells(node, meshes["lod0"], xs, 0.0, 90.0, 16.0)
+				# beyond: the lighter lod1 mesh to 170 m, so beds don't pop up right in front of a fast car
+				if meshes.has("lod1") and meshes["lod1"] != meshes["lod0"]:
+					_cells(node, meshes["lod0"], xs, 0.0, 80.0, 16.0)
+					_cells(node, meshes["lod1"], xs, 80.0, 170.0, 32.0)
+				else:
+					_cells(node, meshes["lod0"], xs, 0.0, 140.0, 16.0)
 				continue
 			if meshes.has("lod0"):
 				_cells(node, meshes["lod0"], xs, 0.0, 60.0)

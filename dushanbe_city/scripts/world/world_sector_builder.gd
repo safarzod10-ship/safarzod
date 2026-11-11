@@ -380,9 +380,16 @@ func _roads(sc: Vector2i, lod: int) -> Dictionary:
 				# avenues: a planted median (curb, hedges, flowers) with ornate lamps and national flags,
 				# like Rudaki / Ismoili Somoni avenues; gaps at junctions and crossings
 				if r["cls"] == "avenue" and int(S[k] / 10.0) != int(S[k + 1] / 10.0):
-					var mc := a + Vector3(0, 0.02, 0)
+					# the bed of the 10 m section [10 n, 10 n + 10] centred exactly at 10 n + 5 on the axis, so
+					# the beds tile end to end at the road's own height (they overlapped / stacked on bends)
+					var sm := floorf(S[k + 1] / 10.0) * 10.0 - 5.0
+					var kk := k
+					while kk > 0 and S[kk] > sm:
+						kk -= 1
+					var tt := clampf((sm - S[kk]) / maxf(S[kk + 1] - S[kk], 0.001), 0.0, 1.0)
+					var mc := P[kk].lerp(P[kk + 1], tt) + Vector3(0, 0.02, 0)
 					if not _on_other_road(mc, ri, 6.0) and not _in_fillet(mc):
-						var dy := atan2((b - a).x, (b - a).z)
+						var dy := atan2((P[kk + 1] - P[kk]).x, (P[kk + 1] - P[kk]).z)
 						_prop(props, "median_bed", mc, dy)
 						_median_plants(bedveg, mc, dy, int(S[k] / 10.0))
 						pboxes.append([mc + Vector3(0, 0.2, 0), Vector3(2.8, 0.4, 10.0), dy])

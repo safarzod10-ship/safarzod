@@ -536,16 +536,6 @@ func _build() -> void:
 	for pz: float in [hc.y - 5.5, hc.y + 5.5]:
 		_box(Vector3(0.9, 0.9, 0.9), Vector3(fx - 3.5, y0 + 0.9, pz), cream)                  # planters with thujas
 		_plants.append(["thuja_cone", Vector3(fx - 3.5, y0 + 1.35, pz), 0.6])
-	var lb2 := Label3D.new()
-	lb2.text = "ДОМ"
-	lb2.font = HudStyle.font()
-	lb2.font_size = 64
-	lb2.pixel_size = 0.008
-	lb2.modulate = Color(1, 0.85, 0.4)
-	lb2.outline_size = 8
-	lb2.position = Vector3(fx - 2.18, y0 + 4.6, hc.y)
-	lb2.rotation.y = -PI * 0.5
-	add_child(lb2)
 	# ----- the garage (cream, black hip roof, raised door with dark slats, light inside): the Prado inside
 	var gx0 := GARAGE.position.x
 	var gx1 := GARAGE.end.x
