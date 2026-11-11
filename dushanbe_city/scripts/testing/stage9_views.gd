@@ -76,6 +76,18 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("missions"):
+		_hour(19.0)
+		var mis9: Missions = main.get_node("Missions")
+		await _sec(1.0)
+		for id9 in mis9.markers:
+			var mp: Vector3 = mis9.markers[id9]["pos"]
+			ow.hold = mp
+			ow.preload_at(mp)
+			await _sec(2.0)
+			await _look("mission_%s" % id9, mp + Vector3(7, 3.0, 7), mp + Vector3(0, 2.5, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("parked"):
 		_hour(14.0)
 		var life8: CityLife = main.get_node("CityLife")
@@ -664,6 +676,18 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("missions"):
+		_hour(19.0)
+		var mis9: Missions = main.get_node("Missions")
+		await _sec(1.0)
+		for id9 in mis9.markers:
+			var mp: Vector3 = mis9.markers[id9]["pos"]
+			ow.hold = mp
+			ow.preload_at(mp)
+			await _sec(2.0)
+			await _look("mission_%s" % id9, mp + Vector3(7, 3.0, 7), mp + Vector3(0, 2.5, 0))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("parked"):

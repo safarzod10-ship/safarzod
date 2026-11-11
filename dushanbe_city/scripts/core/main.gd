@@ -258,6 +258,12 @@ func _spawn_extra_vehicles() -> void:
 	caud.name = "CityAudio"
 	caud.session = car_session
 	add_child(caud)
+	# GTA-style missions (markers «M» in the centre)
+	var mis := Missions.new()
+	mis.name = "Missions"
+	mis.session = car_session
+	mis.laklak = laklak
+	add_child(mis)
 	fuel = FuelService.new()
 	fuel.name = "FuelService"
 	fuel.session = car_session

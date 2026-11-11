@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -577,6 +577,48 @@ func _t_signals() -> void:
 		await _frames(10)
 	var p: Vector3 = j["c"] - ax * 25.0
 	_check("red for axis A: a car 25 m before must stop (%.0f m)" % ts.stop_distance(p, ax), ts.stop_distance(p, ax) < 30.0)
+
+
+func _t_missions() -> void:
+	var mis: Missions = main.get_node_or_null("Missions")
+	_check("missions: %d markers" % (mis.markers.size() if mis else 0), mis != null and mis.markers.size() == 3)
+	if mis == null or mis.markers.is_empty():
+		return
+	Wallet.missions = []
+	if s.driving:
+		s.exit()
+		await _frames(5)
+	# walk into the race marker -> the race starts; drive through the checkpoints (placed at each)
+	var m0: Vector3 = mis.markers["race"]["pos"]
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(m0)
+	s.player.teleport(m0 + Vector3(0, 0.5, 0), 0.0)
+	await _sec(1.0)
+	_check("race started at the marker: %d checkpoints" % mis.cps.size(), mis.active == "race" and mis.cps.size() >= 5)
+	var car: VehiclePrado = main.get("car")
+	s.player.teleport(car.driver_door_point(0.7), 0.0)
+	await _frames(10)
+	s._select(car)
+	s.enter()
+	await _frames(5)
+	var m1 := Wallet.money
+	for q in mis.cps.size():
+		var cp: Vector3 = mis.cps[mis.cp_i]
+		ow.preload_at(cp)
+		car.place(cp + Vector3(0, 0.8, 0), 0.0)
+		await _sec(0.6)
+	_check("race finished: +%s, saved %s" % [Wallet.fmt(Wallet.money - m1), str(Wallet.missions)], mis.active == "" and Wallet.money - m1 == 1500 and Wallet.missions.has("race"))
+	# a delivery that times out fails
+	s.exit()
+	await _sec(1.0)
+	var m2: Vector3 = mis.markers["delivery"]["pos"]
+	ow.preload_at(m2)
+	s.player.teleport(m2 + Vector3(0, 0.5, 0), 0.0)
+	await _sec(1.0)
+	mis.t_left = 0.5
+	await _sec(1.0)
+	_check("delivery out of time: failed, not saved", mis.active == "" and not Wallet.missions.has("delivery"))
+	Wallet.missions = []
 
 
 func _t_amid() -> void:
