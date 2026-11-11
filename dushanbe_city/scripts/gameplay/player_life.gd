@@ -117,6 +117,30 @@ func _die() -> void:
 	tw4.tween_property(_black, "color:a", 0.0, 1.0)
 
 
+## a point on the ground 4 m outside the building's wall, on the side that faces the nearest road
+## (never on the roof: the footprint is the rotated L x D box, the height is the ground there)
+static func _outside(wd: WorldData, b: Array) -> Vector3:
+	var c := Vector2(float(b[1]), float(b[2]))
+	var yaw := float(b[3])
+	var hl := maxf(float(b[4]), float(b[5])) * 0.5     # the model's own axes may differ: clear the longer side
+	var hd := hl
+	var rt := Vector2(cos(yaw), -sin(yaw))
+	var fw := Vector2(-sin(yaw), -cos(yaw))
+	var best := Vector2.INF
+	var bd := INF
+	for cand: Vector2 in [c + fw * (hd + 4.0), c - fw * (hd + 4.0), c + rt * (hl + 4.0), c - rt * (hl + 4.0)]:
+		var e := wd.road_edge_dist(cand.x, cand.y)
+		if e < 0.5:
+			continue                       # not on the carriageway
+		if e < bd:
+			bd = e
+			best = cand
+	if best == Vector2.INF:
+		best = c + fw * (hd + 4.0)
+	var y := wd.height_at(best.x, best.y)
+	return Vector3(best.x, y + 0.3, best.y)
+
+
 func _respawn() -> void:
 	var p: Vector3 = HeroHome.instance.spawn_point() if HeroHome.instance else Vector3(-58, 2.4, -90)
 	var player: Node3D = session.player if session else null
@@ -130,7 +154,7 @@ func _respawn() -> void:
 					var d := q.distance_to(player.global_position)
 					if d < best:
 						best = d
-						p = q + Vector3(0, 0, maxf(float(b[5]), 10.0) * 0.5 + 5.0)
+						p = _outside(wd, b)
 		if best < INF:
 			var ow: Variant = get_parent().get("open_world")
 			if ow:

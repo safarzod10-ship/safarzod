@@ -39,6 +39,11 @@ func _ready() -> void:
 				best = k
 		var b := Basis(Vector3.UP, yaw + best * PI * 0.5)
 		sites.append({"id": id, "xf": Transform3D(b, c), "node": null, "L": float(lm["L"]), "D": float(lm["D"]) if best % 2 == 0 else float(lm["L"])})
+		if id == "city_park":
+			var fr := FerrisRide.new()
+			fr.name = "FerrisRideDusti"
+			add_child(fr)
+			fr.global_transform = Transform3D(b, c) * Transform3D(Basis.IDENTITY, Vector3(-42.0, 0.05, -44.0))
 	# the two-arch bridge over the Varzob (avenue ew2400) with the embankment
 	for r in wd.roads:
 		if String(r.get("id", "")) == "ew2400" and not (r.get("bridges", []) as Array).is_empty():
@@ -114,7 +119,7 @@ func _apron(n: Node3D, body: StaticBody3D, s: Dictionary) -> void:
 	var half_d := float(s["D"]) * 0.5
 	var w := minf(float(s["L"]), 30.0)
 	if String(s["id"]) == "city_park":
-		w = 16.0                                     # as wide as the arch gate, not the whole park front
+		w = 110.0                                    # the park's marble plaza runs on to the sidewalk
 	var front := xf * Vector3(0, 0.08, half_d)
 	var fwd := xf.basis.z
 	fwd.y = 0.0
@@ -629,120 +634,34 @@ func _police(B: _Builder, n: Node3D) -> void:
 
 # ------------------------------------------------------------------------------------------ park
 func _park(B: _Builder, n: Node3D) -> void:
-	var paving := PlotPatches.paving_material()
-	var stone := B.mat(Color(0.86, 0.82, 0.74), 0.6)
-	var dark := B.mat(Color(0.3, 0.27, 0.24), 0.6)
-	var gold := B.mat(Color(0.88, 0.68, 0.18), 0.3, 0.9, Color(0.45, 0.32, 0.05), 0.35)
-	var blue_t := B.mat(Color(0.08, 0.38, 0.6), 0.3)
-	var water := B.mat(Color(0.12, 0.4, 0.55, 0.75), 0.02, 0.2)
-	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var wood := B.mat(Color(0.45, 0.28, 0.14), 0.7)
-	var roof := B.mat(Color(0.1, 0.42, 0.35), 0.5, 0.2)
-	var soil := B.mat(Color(0.2, 0.14, 0.09), 0.95)
-	# lawn + paths: the main alley from the gate (+Z) to the fountain, the ring round it, cross paths
-	B.box(Vector3(8, 0.24, 50), Vector3(0, -0.04, 25), paving, false)
-	B.box(Vector3(8, 0.24, 50), Vector3(0, -0.04, -25), paving, false)
-	B.box(Vector3(100, 0.24, 6), Vector3(0, -0.04, 0), paving, false)
-	B.cyl(18.0, 0.25, Vector3(0, -0.035, 0), paving, false)
-	# fountain: two-tier round basin, water, central column with bowls and water jets
-	B.cyl(8.8, 0.3, Vector3(0, 0.15, 0), stone)
-	B.cyl(8.6, 0.06, Vector3(0, 0.52, 0), water, false)
-	for k in 32:
-		var a := k * TAU / 32.0
-		B.box(Vector3(1.8, 0.75, 0.55), Vector3(sin(a) * 8.9, 0.37, cos(a) * 8.9), stone, true, a)
-	B.cyl(2.0, 1.6, Vector3(0, 1.2, 0), stone)
-	B.cyl(3.2, 0.3, Vector3(0, 2.1, 0), stone, false)
-	B.cyl(3.0, 0.06, Vector3(0, 2.26, 0), water, false)
-	B.cyl(0.6, 2.2, Vector3(0, 3.2, 0), stone, false)
-	B.cyl(1.3, 0.25, Vector3(0, 4.3, 0), gold, false)
-	_jets(n, Vector3(0, 4.4, 0), 1.0, 5.5, 160)
-	for k in 8:
-		var a := k * TAU / 8.0
-		_jets(n, Vector3(sin(a) * 7.0, 0.65, cos(a) * 7.0), 0.15, 3.2, 14, -Vector3(sin(a), 0, cos(a)))
-	# the arch gate at the front edge (+Z): two pillars, the arch beam with the name, gold ornament
-	var gz := 47.0
-	for sx in [-6.0, 6.0]:
-		B.box(Vector3(2.4, 9.0, 2.4), Vector3(sx, 4.5, gz), stone)
-		B.box(Vector3(2.9, 0.6, 2.9), Vector3(sx, 0.3, gz), dark)
-		B.box(Vector3(2.8, 0.5, 2.8), Vector3(sx, 9.25, gz), dark, false)
-		B.box(Vector3(1.6, 0.9, 1.6), Vector3(sx, 9.9, gz), gold, false)
-	B.box(Vector3(14.4, 2.2, 2.0), Vector3(0, 8.3, gz), stone, false)
-	B.box(Vector3(14.6, 0.35, 2.2), Vector3(0, 9.55, gz), dark, false)
-	# the arch: a half ring of stone voussoirs between the pillars (radius 4.8 m, springing at 4.6 m)
-	for k in 13:
-		var a := PI * (k + 0.5) / 13.0
-		var vb := B.box(Vector3(1.25, 0.75, 1.6), Vector3(cos(a) * 4.85, 4.6 + sin(a) * 2.9, gz), stone, false)
-		vb.rotation.z = atan2(2.9 * cos(a), -4.85 * sin(a)) + PI * 0.5
-	B.box(Vector3(1.0, 0.9, 1.7), Vector3(0, 7.55, gz), gold, false)          # keystone
-	for side: float in [1.0, -1.0]:
-		B.box(Vector3(10.5, 1.0, 0.06), Vector3(0, 8.4, gz + side * 1.03), blue_t, false)
-		B.text("ПАРК ДУСТИ", Vector3(0, 8.4, gz + side * 1.07), 110, Color(1.0, 0.85, 0.35), 0.0085, null, side < 0)
-	# the park sign on a stone base beside the gate
-	B.box(Vector3(5.0, 0.8, 1.2), Vector3(11.5, 0.4, gz - 1.0), stone)
-	B.box(Vector3(4.6, 1.6, 0.3), Vector3(11.5, 1.6, gz - 1.0), dark, false)
-	B.text("ПАРК ДУСТИ\nPARKI DŪSTĪ", Vector3(11.5, 1.6, gz - 0.83), 56, Color(1.0, 0.85, 0.4), 0.007)
-	# two pavilions (octagonal gazebos) on the cross path
-	for sx in [-30.0, 30.0]:
-		var c := Vector3(sx, 0, 0)
-		B.cyl(4.2, 0.35, c + Vector3(0, 0.17, 0), stone)
-		for k in 8:
-			var a := k * TAU / 8.0
-			B.cyl(0.16, 3.2, c + Vector3(sin(a) * 3.6, 1.95, cos(a) * 3.6), wood)
-		B.cyl(4.3, 0.3, c + Vector3(0, 3.6, 0), wood, false)
-		var cone := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.2
-		cm.bottom_radius = 4.8
-		cm.height = 2.4
-		cm.radial_segments = 8
-		cone.mesh = cm
-		cone.material_override = roof
-		cone.position = c + Vector3(0, 4.95, 0)
-		n.add_child(cone)
-		B.box(Vector3(0.5, 0.5, 0.5), c + Vector3(0, 6.3, 0), gold, false)
-	# flower beds along the main alley, benches, lamps, bins, chinar trees round the edge
+	var P := ParkDusti.new(n, B.body, _jets)
+	P.build()
 	if OpenWorld.instance:
-		var props := {"bench_park_soviet": [], "light_park_4m": [], "bin_modern_steel": [], "urn_concrete_round": []}
-		var trees := {"chinar_mature": [], "chinar_middle": [], "flowers_petunia": [], "flowers_salvia": [], "flowers_marigold": [], "thuja_cone": [], "rose_bush": []}
 		var g := n.global_transform
-		for k in 4:
-			var z := 41.0 - k * 7.0
-			for sx: float in [-1.0, 1.0]:
-				props["bench_park_soviet"].append(g * Transform3D(Basis(Vector3.UP, -sx * PI * 0.5), Vector3(sx * 5.2, 0.1, z)))
-				props["light_park_4m"].append(g * Transform3D(Basis.IDENTITY, Vector3(sx * 4.6, 0.1, z - 3.5)))
-				# a real bed: 1.6 x 5 m, stone kerb, dark soil, flowers 0.3 m apart in colour bands
-				B.box(Vector3(1.9, 0.22, 5.3), Vector3(sx * 7.6, 0.06, z - 1.0), stone, false)
-				B.box(Vector3(1.6, 0.06, 5.0), Vector3(sx * 7.6, 0.2, z - 1.0), soil, false)
-				for fi in 5:
-					for fj in 16:
-						var fl: String = ["flowers_petunia", "flowers_salvia", "flowers_marigold"][(fj / 4 + k + (1 if fi == 2 else 0)) % 3]
-						var fp := Vector3(sx * (6.95 + fi * 0.32), 0.22, z - 3.3 + fj * 0.31)
-						trees[fl].append(g * Transform3D(Basis(Vector3.UP, float(fi * 7 + fj) * 1.3).scaled(Vector3.ONE * 1.3), fp))
-			if k % 2 == 0:
-				props["bin_modern_steel"].append(g * Transform3D(Basis.IDENTITY, Vector3(5.0, 0.1, z - 1.8)))
-		for k in 12:
-			var a := k * TAU / 12.0
-			trees["rose_bush"].append(g * Transform3D(Basis.IDENTITY, Vector3(sin(a) * 10.5, 0.1, cos(a) * 10.5)))
-			if k % 3 == 1:
-				props["bench_park_soviet"].append(g * Transform3D(Basis(Vector3.UP, a + PI), Vector3(sin(a) * 15.5, 0.1, cos(a) * 15.5)))
-			if k % 2 == 0:
-				props["light_park_4m"].append(g * Transform3D(Basis.IDENTITY, Vector3(sin(a + 0.26) * 17.0, 0.1, cos(a + 0.26) * 17.0)))
-		for sx in [-9.5, 9.5]:
-			props["urn_concrete_round"].append(g * Transform3D(Basis.IDENTITY, Vector3(sx, 0.1, gz - 2.5)))
-		var rng := RandomNumberGenerator.new()
-		rng.seed = 77
-		for k in 64:
-			var p := Vector3(rng.randf_range(-47, 47), 0.1, rng.randf_range(-47, 44))
-			if absf(p.x) < 7.0 or absf(p.z) < 6.0 or p.length() < 21.0 or (absf(absf(p.x) - 30.0) < 7.0 and absf(p.z) < 7.0):
-				continue
-			var id: String = "chinar_mature" if k % 3 == 0 else ("chinar_middle" if k % 3 == 1 else "thuja_cone")
-			trees[id].append(g * Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.8, 1.05)), p))
+		var props := {}
+		for id in P.props:
+			props[id] = (P.props[id] as Array).map(func(x: Transform3D) -> Transform3D: return g * x)
+		var trees := {}
+		for id2 in P.trees:
+			trees[id2] = (P.trees[id2] as Array).map(func(x: Transform3D) -> Transform3D: return g * x)
 		var holder := Node3D.new()
 		holder.name = "ParkProps"
 		add_child(holder)
 		n.tree_exiting.connect(holder.queue_free)
-		OpenWorld.instance._place_props(holder, props)
-		OpenWorld.instance._trees(holder, trees, 0)
+		_fill_park.call_deferred(holder, props, trees)
+
+
+func _fill_park(holder: Node3D, props: Dictionary, trees: Dictionary) -> void:
+	for w in 600:
+		if OpenWorld.instance and not OpenWorld.instance._veg.is_empty():
+			break
+		await get_tree().process_frame
+	if not is_instance_valid(holder):
+		return
+	holder.top_level = true
+	holder.global_transform = Transform3D.IDENTITY
+	OpenWorld.instance._place_props(holder, props)
+	OpenWorld.instance._trees(holder, trees, 0)
 
 
 ## water jets: cheap CPU particles (mobile), arcs from p in direction dir (or straight up)

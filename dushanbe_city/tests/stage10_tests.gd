@@ -144,6 +144,9 @@ func _t_explode() -> void:
 	_check("the blast killed the player standing 2.5 m away (dead %s, health %.0f)" % [PlayerLife.dead, PlayerLife.health], PlayerLife.dead)
 	await _sec(5.0)
 	_check("respawn: alive at the hospital / start, health %.0f, fee %s" % [PlayerLife.health, Wallet.fmt(m0 - Wallet.money)], not PlayerLife.dead and PlayerLife.health == 100.0)
+	var pp: Vector3 = (s.player as Node3D).global_position
+	var gy := WorldData.get_instance().height_at(pp.x, pp.z)
+	_check("respawn on the ground, not on a roof: %.1f m above it" % (pp.y - gy), pp.y - gy < 2.0)
 	vf.restore()
 	await _sec(1.0)
 	_check("wreck restored at its parking place (condition %.0f %%)" % camry.health, not camry.wrecked and camry.health == 100.0)

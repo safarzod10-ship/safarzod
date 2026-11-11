@@ -460,12 +460,16 @@ func _ready() -> void:
 				await _look("police_fence", xf * Vector3(-14, 1.8, 30), xf * Vector3(-5, 1.5, 24))
 				await _look("police_top", xf * Vector3(0, 60, 30), xf * Vector3(0, 0, 0))
 			else:
-				await _look("park_gate", xf * Vector3(6, 3.0, 66), xf * Vector3(0, 6.0, 40))
-				await _look("park_street", xf * Vector3(16, 1.7, 68), xf * Vector3(0, 1.5, 44))
-				await _look("park_alley", xf * Vector3(0, 2.0, 44), xf * Vector3(0, 2.5, 0))
-				await _look("park_fountain", xf * Vector3(14, 4.0, 14), xf * Vector3(0, 2.5, 0))
-				await _look("park_pavilion", xf * Vector3(-20, 3.0, 10), xf * Vector3(-30, 3.0, 0))
-				await _look("park_top", xf * Vector3(0, 110, 60), xf * Vector3(0, 0, 0))
+				await _look("park_gate", xf * Vector3(0, 2.0, 84), xf * Vector3(0, 7.5, 60))
+				await _look("park_street", xf * Vector3(-18, 1.7, 80), xf * Vector3(4, 4.0, 60))
+				await _look("park_aerial", xf * Vector3(-70, 45, 115), xf * Vector3(0, 0, 10))
+				await _look("park_alley", xf * Vector3(0, 2.0, 54), xf * Vector3(0, 3.0, 0))
+				await _look("park_fountain", xf * Vector3(16, 4.0, 22), xf * Vector3(0, 3.0, 0))
+				await _look("park_pond", xf * Vector3(14, 7.0, -40), xf * Vector3(46, 2.0, -46))
+				await _look("park_carousel", xf * Vector3(-16, 3.5, -8), xf * Vector3(-30, 3.0, -14))
+				await _look("park_wheel", xf * Vector3(-10, 4.0, -10), xf * Vector3(-42, 12.0, -44))
+				await _look("park_play", xf * Vector3(-30, 4.0, 45), xf * Vector3(-46, 1.0, 34))
+				await _look("park_top", xf * Vector3(0, 160, 40), xf * Vector3(0, 0, -5))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("street"):

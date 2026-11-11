@@ -1,5 +1,7 @@
-PASS  1. police present
-PASS  2. stolen car -> 2 stars, police cars: 2
-FAIL  3. police drive to the player: 204 m -> 197 m
-PASS  4. busted: stars 0, fine paid (money 1 400 смн)
-PASS  5. escaped after 13 s: stars 0
+PASS  1. condition 25 %%: the engine smokes
+PASS  2. condition 10 %%: on fire
+PASS  3. it explodes after burning: wreck true, can't get in true
+PASS  4. the blast killed the player standing 2.5 m away (dead true, health 0)
+PASS  5. respawn: alive at the hospital / start, health 100, fee 50 смн
+PASS  6. respawn on the ground, not on a roof: 0.0 m above it
+PASS  7. wreck restored at its parking place (condition 100 %)
