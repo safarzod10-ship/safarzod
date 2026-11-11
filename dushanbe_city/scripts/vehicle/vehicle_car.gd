@@ -46,30 +46,30 @@ const PRESETS := {
 		"mass": 1400.0, "cg": 0.55, "front": 0.53, "kw": 100.0, "nm": 185.0, "vmax": 180.0, "split": 0.0,
 		"gears": [3.98, 2.39, 1.46, 1.0, 0.83], "fd": 3.69, "mu": 0.9, "f": [1.3, 1.25], "arb": [14000.0, 6000.0],
 		"tank": 65.0, "l100": 10.5, "r": 0.308, "size": Vector3(1.79, 1.44, 4.73), "cd": 0.85, "brake": 17000.0,
-		"door": Vector3(-1.0, 0.55, -0.2), "seat": Vector3(-0.38, 0.5, 0.25), "lamp": Vector3(0, 0.66, -2.35),
+		"door": Vector3(-1.0, 0.55, -0.2), "seat": Vector3(-0.38, 0.36, 0.3), "lamp": Vector3(0, 0.66, -2.35),
 		"boxes": [[Vector3(1.78, 0.6, 4.72), Vector3(0, 0.18 + 0.3, 0)], [Vector3(1.5, 0.5, 2.3), Vector3(0, 0.78 + 0.25, 0.2)]],
-		"name": "Mercedes-Benz W123", "interior": false},
+		"name": "Mercedes-Benz W123", "inner": true, "interior": true, "cabin": Vector3(0.92, 1.08, 0.82), "cabin_clip": [0.95, 1.25]},
 	"e30": {"file": "../cars/e30.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
 		"mass": 1210.0, "cg": 0.5, "front": 0.52, "kw": 125.0, "nm": 226.0, "vmax": 215.0, "split": 0.0,
 		"gears": [3.83, 2.2, 1.4, 1.0, 0.81], "fd": 3.73, "mu": 0.95, "f": [1.5, 1.45], "arb": [16000.0, 9000.0],
 		"tank": 55.0, "l100": 9.0, "r": 0.308, "size": Vector3(1.66, 1.36, 4.3), "cd": 0.7, "brake": 16000.0,
 		"door": Vector3(-0.95, 0.55, -0.1), "seat": Vector3(-0.36, 0.48, 0.2), "lamp": Vector3(0, 0.6, -2.12),
 		"boxes": [[Vector3(1.64, 0.58, 4.28), Vector3(0, 0.17 + 0.29, 0)], [Vector3(1.4, 0.48, 2.0), Vector3(0, 0.75 + 0.24, 0.15)]],
-		"name": "BMW E30", "interior": false},
+		"name": "BMW E30", "interior": true, "cabin": Vector3(0.86, 0.8, 0.74), "cabin_clip": [0.68, 1.1]},
 	"e30m": {"file": "../cars/e30_low.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
 		"mass": 1180.0, "cg": 0.45, "front": 0.5, "kw": 162.0, "nm": 240.0, "vmax": 235.0, "split": 0.0,
 		"gears": [3.72, 2.4, 1.77, 1.26, 1.0], "fd": 3.25, "mu": 0.98, "f": [1.8, 1.75], "arb": [22000.0, 9000.0],
 		"tank": 55.0, "l100": 10.0, "r": 0.308, "size": Vector3(1.66, 1.3, 4.3), "cd": 0.68, "brake": 18000.0,
 		"door": Vector3(-0.95, 0.5, -0.1), "seat": Vector3(-0.36, 0.43, 0.2), "lamp": Vector3(0, 0.56, -2.12),
 		"boxes": [[Vector3(1.64, 0.56, 4.28), Vector3(0, 0.12 + 0.28, 0)], [Vector3(1.4, 0.46, 2.0), Vector3(0, 0.7 + 0.23, 0.15)]],
-		"name": "BMW E30 (занижена)", "interior": false, "ground_drop": 0.06},
+		"name": "BMW E30 (занижена)", "interior": true, "cabin": Vector3(0.86, 0.78, 0.74), "cabin_clip": [0.64, 1.1], "ground_drop": 0.06},
 	"r12": {"file": "../cars/r12.glb", "yaw": PI, "wheels": "names", "paint": [], "pack": true,
 		"mass": 900.0, "cg": 0.52, "front": 0.6, "kw": 40.0, "nm": 92.0, "vmax": 145.0, "split": 1.0,
 		"gears": [3.6, 2.26, 1.48, 1.03], "fd": 4.12, "mu": 0.88, "f": [1.3, 1.25], "arb": [9000.0, 4000.0],
 		"tank": 50.0, "l100": 8.0, "r": 0.308, "size": Vector3(1.64, 1.42, 4.3), "cd": 0.75, "brake": 12000.0,
-		"door": Vector3(-0.95, 0.55, -0.1), "seat": Vector3(-0.36, 0.5, 0.2), "lamp": Vector3(0, 0.62, -2.15),
+		"door": Vector3(-0.95, 0.55, -0.1), "seat": Vector3(-0.36, 0.36, 0.25), "lamp": Vector3(0, 0.62, -2.15),
 		"boxes": [[Vector3(1.62, 0.6, 4.28), Vector3(0, 0.18 + 0.3, 0)], [Vector3(1.4, 0.5, 2.1), Vector3(0, 0.78 + 0.25, 0.1)]],
-		"name": "Renault 12", "interior": false},
+		"name": "Renault 12", "inner": true, "interior": true, "cabin": Vector3(0.88, 1.06, 0.78), "cabin_clip": [0.92, 1.1]},
 	# 0.25: Mercedes-Benz GLS 580 (owner's model, dushanbe_city_src/tools/vehicles/gls.py): black,
 	# smoked lamps, 4.0 V8 biturbo, 9G-Tronic, 4MATIC
 	"gls": {"file": "../cars/gls.glb", "yaw": PI, "wheels": "names", "paint": ["primary"], "pack": true,
@@ -208,6 +208,10 @@ func _build_model() -> void:
 	# remove parts of the source's own crude cabin (spec "cut": boxes, triangles fully inside)
 	for bx in spec.get("cut", []):
 		_cut_box(holder, bx as AABB)
+	if bool(spec.get("pack", false)) and not spec.has("glass_ok"):
+		_split_white_glass(holder)
+	if bool(spec.get("inner", false)):
+		_inner_skin(holder)
 	var door_done := false
 	if spec.has("door_cut"):
 		door_done = _split_door(holder)
@@ -230,6 +234,61 @@ func _build_model() -> void:
 		_build_interior()
 	if bool(spec.get("pack", false)):
 		_pack_lamps_and_plates()
+
+
+## single-sided shells (no cabin lining): an inner skin = the body's triangles with reversed winding and
+## normals, so roof, pillars and door panels are seen from the driver's seat
+func _inner_skin(holder: Node3D) -> void:
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var nm := String(m.name).to_lower()
+		if m.mesh == null or nm.contains("tire") or nm.contains("lamp") or nm.contains("plate") or nm.contains("glass"):
+			continue
+		var out := ArrayMesh.new()
+		for si in m.mesh.get_surface_count():
+			var a: Array = m.mesh.surface_get_arrays(si)
+			var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var I: PackedInt32Array = a[Mesh.ARRAY_INDEX] if a[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			if I.is_empty():
+				I.resize(V.size())
+				for q in V.size():
+					I[q] = q
+			for t in range(0, I.size(), 3):
+				var tmp := I[t + 1]
+				I[t + 1] = I[t + 2]
+				I[t + 2] = tmp
+			a[Mesh.ARRAY_INDEX] = I
+			if a[Mesh.ARRAY_NORMAL] != null:
+				var N: PackedVector3Array = (a[Mesh.ARRAY_NORMAL] as PackedVector3Array).duplicate()
+				for q in N.size():
+					N[q] = -N[q]
+				a[Mesh.ARRAY_NORMAL] = N
+			a[Mesh.ARRAY_TANGENT] = null
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+			out.surface_set_material(out.get_surface_count() - 1, m.mesh.surface_get_material(si))
+		var inner := MeshInstance3D.new()
+		inner.name = m.name + "_inner"
+		inner.mesh = out
+		inner.transform = m.transform
+		inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		m.get_parent().add_child(inner)
+
+
+## owner's car pack: some models carry their windows as an own object ("... glass ...") with an
+## opaque material -> the tinted, transparent vehicle glass shader (_apply_materials: "glass*")
+func _split_white_glass(holder: Node3D) -> void:
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null or not String(m.name).to_lower().contains("glass"):
+			continue
+		var mesh := m.mesh.duplicate() as ArrayMesh
+		for si in mesh.get_surface_count():
+			var gm := StandardMaterial3D.new()
+			gm.resource_name = "glass_auto"
+			gm.albedo_color = Color(0.55, 0.62, 0.68)
+			gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mesh.surface_set_material(si, gm)
+		m.mesh = mesh
 
 
 ## owner's car pack: lamp lens quads -> additive glow shader (dark when off, VehicleLights drives the

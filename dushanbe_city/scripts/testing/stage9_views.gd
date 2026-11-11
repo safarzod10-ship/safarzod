@@ -76,6 +76,36 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("cabins"):
+		_hour(13.0)
+		var s6: CarSession = main.get("car_session")
+		var keys := ["car", "camry", "w123", "e30", "e30m", "r12", "gls"]
+		for a6 in OS.get_cmdline_user_args():
+			if a6.begins_with("only="):
+				keys = a6.substr(5).split(",")
+		for key in keys:
+			var c6: VehiclePrado = main.get(key)
+			if c6 == null:
+				continue
+			if s6.driving:
+				s6.exit()
+				await _sec(0.5)
+			ow.hold = c6.global_position
+			s6.player.teleport(c6.driver_door_point(0.7), 0.0)
+			await _sec(1.0)
+			s6._select(c6)
+			s6.enter()
+			await _sec(0.5)
+			if OS.get_cmdline_user_args().has("side"):
+				var b6 := c6.global_basis
+				await _look("side_%s" % key, c6.global_position + b6.x * -4.5 + Vector3(0, 1.0, 0), c6.global_position + Vector3(0, 0.8, 0))
+			s6.cam.make_current()
+			s6.cam.set_mode(VehicleCamera.Mode.CABIN)
+			await _sec(1.5)
+			await _snap("cabin_%s" % key)
+			s6.cam.set_mode(VehicleCamera.Mode.CHASE)
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("gta"):
 		_hour(15.0)
 		var life2: CityLife = main.get_node("CityLife")
