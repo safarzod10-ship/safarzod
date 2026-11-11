@@ -915,20 +915,15 @@ func _fuel(node: Node3D, p: Vector3, yaw: float) -> void:
 func _fuel_station(node: Node3D, d: Dictionary, lod: int) -> void:
 	var o := Vector3(float(d.get("ox", d["x"])), float(d["y"]), float(d.get("oz", d["z"])))
 	var xf := Transform3D(Basis(Vector3.UP, float(d["yaw"])), o)
-	var root := WorldModels.place(node, "gas_station", xf, 1200.0, lod == 0)
+	var root := Node3D.new()
+	node.add_child(root)
+	root.global_transform = xf
 	root.name = "FuelStation"
 	root.add_to_group(&"fuel_station")
 	root.set_meta("pump", xf * Vector3(7.5, 0.0, 0.3))
 	var body := StaticBody3D.new()
 	body.name = "FuelStationBody"
 	root.add_child(body)
-	for spec in [[Vector3(-6.0, 2.8, 0.4), Vector3(12.2, 5.6, 17.4)], [Vector3(17.7, 3.3, -5.9), Vector3(1.0, 6.7, 1.0)]]:
-		var cs := CollisionShape3D.new()
-		var bs := BoxShape3D.new()
-		bs.size = spec[1]
-		cs.shape = bs
-		cs.position = spec[0]
-		body.add_child(cs)
 	# the forecourt: a concrete slab under the pumps and the shop, out to the road edge (the model has
 	# no ground of its own - it stood on the grass); a thick slab hides terrain bumps, collision included
 	var slab := MeshInstance3D.new()
@@ -947,19 +942,19 @@ func _fuel_station(node: Node3D, d: Dictionary, lod: int) -> void:
 	body.add_child(scs)
 	if wd:
 		wd.add_no_grass(xf * Vector3(3.0, 0, 0), xf.basis.x, 17.5, 13.5)
-	# price board, both faces: AI-92 14 smn / l
-	for side: float in [1.0, -1.0]:
-		var lb := Label3D.new()
-		lb.text = "АЗС\nАИ-92  14 смн/л"
-		lb.font = _sign_font
-		lb.font_size = 72
-		lb.pixel_size = 0.012
-		lb.modulate = Color(1.0, 0.95, 0.4)
-		lb.outline_size = 10
-		lb.outline_modulate = Color(0.05, 0.2, 0.1)
-		lb.position = Vector3(18.4 if side > 0 else 17.0, 5.6, 0.2)
-		lb.rotation.y = PI * 0.5 if side > 0 else -PI * 0.5
-		root.add_child(lb)
+	if lod == 0:
+		var rb := RoadsideBuilds.new(root, body)
+		rb.fuel_station()
+		rb.commit()
+		if not _veg.is_empty():
+			var tr := {}
+			for id in rb.plants:
+				tr[id] = (rb.plants[id] as Array).map(func(t: Transform3D) -> Transform3D: return xf * t)
+			var holder := Node3D.new()
+			root.add_child(holder)
+			holder.top_level = true
+			holder.global_transform = Transform3D.IDENTITY
+			_trees(holder, tr, 0)
 
 
 func _street_lamp(node: Node3D, p: Vector3) -> void:
