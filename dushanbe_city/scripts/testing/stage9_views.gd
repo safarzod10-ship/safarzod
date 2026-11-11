@@ -76,6 +76,29 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("parked"):
+		_hour(14.0)
+		var life8: CityLife = main.get_node("CityLife")
+		life8.enabled = true
+		life8.max_parked = 12
+		life8.max_cars = 4
+		var s8: CarSession = main.get("car_session")
+		cam.make_current()
+		cam.global_position = (s8.player as Node3D).global_position + Vector3(0, 3, 0)
+		await _sec(8.0)
+		var n8 := 0
+		for c8 in life8.cars:
+			if not c8.get("parked", false):
+				continue
+			var cn8: Node3D = c8["node"]
+			life8.enabled = false
+			await _look("parked_%d" % n8, cn8.global_position + cn8.global_basis * Vector3(4.0, 2.2, -9.0), cn8.global_position + cn8.global_basis * Vector3(0, 0.6, 3.0))
+			life8.enabled = true
+			n8 += 1
+			if n8 >= 3:
+				break
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("flowers"):
 		_hour(12.0)
 		var pp9: PhotoPlaces = main.get_node("PhotoPlaces")
@@ -617,6 +640,29 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("parked"):
+		_hour(14.0)
+		var life8: CityLife = main.get_node("CityLife")
+		life8.enabled = true
+		life8.max_parked = 12
+		life8.max_cars = 4
+		var s8: CarSession = main.get("car_session")
+		cam.make_current()
+		cam.global_position = (s8.player as Node3D).global_position + Vector3(0, 3, 0)
+		await _sec(8.0)
+		var n8 := 0
+		for c8 in life8.cars:
+			if not c8.get("parked", false):
+				continue
+			var cn8: Node3D = c8["node"]
+			life8.enabled = false
+			await _look("parked_%d" % n8, cn8.global_position + cn8.global_basis * Vector3(4.0, 2.2, -9.0), cn8.global_position + cn8.global_basis * Vector3(0, 0.6, 3.0))
+			life8.enabled = true
+			n8 += 1
+			if n8 >= 3:
+				break
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("flowers"):
