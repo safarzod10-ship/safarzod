@@ -476,6 +476,9 @@ func _t_npc() -> void:
 	s._select(car)
 	s.enter()
 	await _frames(5)
+	if not is_instance_valid(p2["node"]):
+		alive = life.peds.filter(func(q: Dictionary) -> bool: return is_instance_valid(q["node"]) and q["state"] in ["walk", "flee"])
+		p2 = alive[0] if not alive.is_empty() else p2
 	var pn: Node3D = p2["node"]
 	car.place(pn.global_position + pn.global_basis.z * 6.0 + Vector3(0, 0.6, 0), atan2(pn.global_basis.z.x, pn.global_basis.z.z))
 	car.linear_velocity = -car.global_basis.z * 12.0

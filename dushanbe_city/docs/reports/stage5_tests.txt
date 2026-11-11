@@ -9,7 +9,7 @@ PASS  8. reverse: hold brake at standstill -> R, 25.2 km/h backwards (limit 25),
 PASS  9. steering: turning circle 5.7 m kerb radius (CG path 4.3 m at 6 km/h; real Prado 5.8 m); at 99 km/h full input = 11.8 deg wheel angle (speed-sensitive, 34 deg when parking)
 PASS 10. asphalt: braking 0.87 g dry, 0.63 g wet road (rain: less grip)
 PASS 11. dirt road: 0.63 g = 72 % of asphalt
-PASS 12. sand: 0.49 g = 56 % of asphalt; on the real beach at (385.0, 0.0, -718.0) the tyres detect surface 1 (SAND = 1)
+PASS 12. sand: 0.49 g = 56 % of asphalt; on the real beach at (364.0, 0.0, -403.0) the tyres detect surface 1 (SAND = 1)
 PASS 13. suspension: 10 cm bumps -> wheel travel -0.066..0.098 m, body upright (up.y 1.00), bump knocks 2 (only on bumps)
 PASS 14. handbrake: rear wheels lock and slide (slide 1.00), yaw rate 1.33 rad/s
 PASS 15. drift (Realistic): slip angle up to 68 deg, > 15 deg held 1.90 s; tyres squeal 0.90, marks 177
@@ -18,8 +18,8 @@ PASS 17. tyre smoke ∝ slip: 0.00 while gripping, 1.00 while sliding
 PASS 18. skid marks: 83 segments, on the road surface (max height 0.000 m above it)
 PASS 19. dust: dirt 0.58, sand 0.66, asphalt 0.00
 PASS 20. tyre / road sounds by surface (real recordings): asphalt roar 0.46, gravel 0.54 on dirt, sand 0.61; squeal on drift (see drift test)
-PASS 21. water: splashes in the shallows at (914.0, 0.0, -531.0) (level 0.29), splash sounds
-PASS 22. collision sounds by force / material: ["hit_metal_1", "crash_medium", "crash_heavy", "crash_heavy", "crash_glass"]
+PASS 21. water: splashes in the shallows at (-1232.0, 0.0, -654.0) (level 1.00), splash sounds
+PASS 22. collision sounds by force / material: ["hit_metal_2", "crash_medium", "crash_heavy", "crash_heavy", "crash_glass"]
 PASS 23. all 23 car sound files load (real recordings, licences in LICENSES.txt); missing: []
 PASS 24. door opens: driver's door swings to 65 deg (65 max), sounds ["door_handle", "door_open", "engine_start"]
 PASS 25. enter: walk to the door, open, sit, door closes (now 0.0 deg), control switches (driving true, walker hidden true)
@@ -36,4 +36,4 @@ PASS 35. destroyed car (0 %): catches fire true (put out again true)
 PASS 36. ВОССТАНОВИТЬ: health 100 %, dents 0, same car (id kept true, 13 vehicle in scene)
 PASS 37. multitouch: gas + right + handbrake held together true; releasing one keeps the others true; lamp button works true
 PASS 38. HUD: speedometer (km/h = body speed), tachometer, gear, condition %, telltales shown while driving true, hidden on foot true
-PASS 39. cost (desktop proxy, no phone available): physics frame 4.53 ms while drifting with smoke; Low: 65 k triangles, 66 surfaces (draw calls) for the car; audio 18 players, 9 audible; 1 dynamic light
+PASS 39. cost (desktop proxy, no phone available): physics frame 2.73 ms while drifting with smoke; Low: 65 k triangles, 66 surfaces (draw calls) for the car; audio 18 players, 9 audible; 1 dynamic light

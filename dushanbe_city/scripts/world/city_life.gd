@@ -454,7 +454,7 @@ func _fall(p: Dictionary, dir: Vector3, dead: bool) -> void:
 	var b0 := start.basis.orthonormalized()
 	var end_basis := Basis(axis, PI * 0.5) * Basis(Vector3.UP, n.rotation.y)
 	var end_pos := start.origin + hd * 1.4 + Vector3(0, 0.12, 0)
-	var tw := create_tween()
+	var tw := n.create_tween()                 # dies with the pedestrian (no freed lambda captures)
 	tw.tween_method(func(k: float) -> void:
 		if is_instance_valid(n):
 			n.global_transform = Transform3D(b0.slerp(end_basis, k).scaled_local(sc), start.origin.lerp(end_pos, k) + Vector3.UP * sin(k * PI) * 0.35),
