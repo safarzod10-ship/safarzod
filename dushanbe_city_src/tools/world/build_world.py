@@ -183,7 +183,7 @@ def main():
     # flatten building plots (never the cells under / next to a road)
     rm0, _ = rasterize_roads(roads, X, Z)
     H_before = H.copy()
-    H = PL.flatten_plots(H, X, Z, world)
+    H = PL.flatten_plots(H, X, Z, world, roads)
     H = np.where(rm0 > 0.05, H_before, H)
     log("driveways levelled to their car parks: %d" % level_driveways(roads, world))
     # remove carving artefacts (switchbacks stacked above each other: the nearest-road fill / cut
@@ -609,6 +609,12 @@ def in_big_plot(world, x, z, margin=0.0):
         lz = dx * math.sin(yaw) + dz * math.cos(yaw)
         if abs(lx) < b[4] / 2 + margin and abs(lz) < b[5] / 2 + margin:
             return True
+    # the city landmarks with a plaza out to the street (the park, the police, the dealers ...)
+    for l in world.get("landmarks", []):
+        if l["id"] in ("city_park", "police", "shop_street", "dealer", "dealer_mb", "dealer_bmw", "gunshop", "hero_home"):
+            dx, dz = x - l["x"], z - l["z"]
+            if abs(dx) < l["L"] / 2 + margin + 20 and abs(dz) < l["D"] / 2 + margin + 20:
+                return True
     return False
 
 

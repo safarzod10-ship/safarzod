@@ -138,6 +138,7 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 	var cnt := 0
 	var r2 := radius * radius
 	var cell_ok := {}                     ## open world: grass_ok per 2 m cell (one check for ~25 clumps)
+	var own_ok := {}
 	var gx0 := floori((center.x - radius) / step)
 	var gx1 := ceili((center.x + radius) / step)
 	var gz0 := floori((center.z - radius) / step)
@@ -163,9 +164,20 @@ func _build_buffer(center: Vector3, radius: float, dens: float) -> void:
 					continue
 				gy = 0.15 + CityWorld.city_relief(x, z)
 			elif wd != null:
-				var ck := Vector2i(floori(x * 0.5), floori(z * 0.5))
+				# the surface map is coarse (8 m cells): test a point jittered by up to +-3 m, so the edge of
+				# the blades is a ragged natural line, not a staircase of squares
+				var ox := float((hsh >> 7) & 255) / 255.0 * 6.0 - 3.0
+				var oz := float((h2 >> 5) & 255) / 255.0 * 6.0 - 3.0
+				var tx := x + ox
+				var tz := z + oz
+				var ck := Vector2i(floori(tx * 0.5), floori(tz * 0.5))
 				if not cell_ok.has(ck):
-					cell_ok[ck] = wd.grass_ok(x, z)
+					cell_ok[ck] = wd.grass_ok(tx, tz)
+				var ck2 := Vector2i(floori(x * 2.0), floori(z * 2.0))       # the blade's own 0.5 m cell
+				if cell_ok[ck] and not own_ok.has(ck2):
+					own_ok[ck2] = wd.grass_ok(x, z)
+				if cell_ok[ck] and not own_ok[ck2]:
+					continue
 				if not cell_ok[ck]:
 					continue
 				gy = wd.height_at(x, z) - 0.02            # open world: on the terrain itself

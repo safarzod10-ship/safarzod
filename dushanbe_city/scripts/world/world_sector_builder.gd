@@ -539,8 +539,9 @@ func _fillet(fl: Dictionary, asph: _Mesh, side: _Mesh, col: PackedVector3Array) 
 		var p1: Vector3 = arc[k + 1]
 		var q0 := O + (p0 - O) * ((R - 3.5) / R)
 		var q1 := O + (p1 - O) * ((R - 3.5) / R)
-		_tri_up(side, p0 + up, q0 + up, q1 + up, Vector2.ZERO, Vector2.ZERO)
-		_tri_up(side, p0 + up, q1 + up, p1 + up, Vector2.ZERO, Vector2.ZERO)
+		# metre UVs like the straight sidewalks (constant UVs read one dark texel: the corners were black)
+		side.quad_flat(p0 + up, p1 + up, q1 + up, q0 + up)
+		side.quad_flat(q0 + up, q1 + up, p1 + up, p0 + up)
 		col.append_array([p0 + up, q0 + up, q1 + up, p0 + up, q1 + up, p1 + up])
 		side.quad_flat(p0, p1, p1 + up, p0 + up)
 		col.append_array([p0, p1, p1 + up, p0, p1 + up, p0 + up])
@@ -851,6 +852,8 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 	var occ_v := PackedVector3Array()
 	var occ_i := PackedInt32Array()
 	var models := {}                       ## model kind -> Array of Transform3D
+	var paths := _Mesh.new()               ## paved paths from the buildings to the sidewalks
+	var path_rects: Array = []             ## [centre, dir, half length, half width] (no grass blades there)
 	for bi in sector_buildings.get(sc, []):
 		var b: Array = wd.buildings[bi]
 		var kind: String = b[0]
@@ -862,6 +865,8 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 		var floors := int(b[6])
 		var seed := int(b[7])
 		var y := float(b[8])
+		if lod == 0 and not kind in ["amid_m", "mall_m", "sky"]:
+			_door_path(paths, path_rects, bi, sc)
 		if kind == "sky" or kind.begins_with("villa") or kind.ends_with("_m"):
 			# imported models (WorldModels): transform + collision box (+ occluder for the tower)
 			var sc2 := 1.0 if kind != "sky" else 0.85 + float(seed % 7) * 0.05
@@ -1014,7 +1019,125 @@ func _buildings(sc: Vector2i, lod: int) -> Dictionary:
 					occ_v.append(Vector3(c.x, yy, c.z) + corner)
 			for f in [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7]]:
 				occ_i.append_array([o0 + f[0], o0 + f[1], o0 + f[2], o0 + f[0], o0 + f[2], o0 + f[3]])
-	return {"facade": fac.arrays(true), "roof": roof.arrays(), "walls": walls.arrays(), "boxes": boxes, "occ_v": occ_v, "occ_i": occ_i, "models": models}
+	return {"facade": fac.arrays(true), "roof": roof.arrays(), "walls": walls.arrays(), "boxes": boxes, "occ_v": occ_v, "occ_i": occ_i, "models": models,
+			"paths": paths.arrays() if not paths.v.is_empty() else [], "path_rects": path_rects}
+
+
+## a paved path (2.4 m) from the building's side nearest to a street, straight out to the sidewalk,
+## following the ground; none when another building stands in the way or the street is far
+func _door_path(m: _Mesh, rects: Array, bi: int, sc: Vector2i) -> void:
+	var b: Array = wd.buildings[bi]
+	var x := float(b[1])
+	var z := float(b[2])
+	var yaw := float(b[3])
+	var c := Vector3(x, float(b[8]), z)
+	if not _in_city(c):
+		return
+	var X := Vector3(cos(yaw), 0, -sin(yaw))
+	var Zv := Vector3(sin(yaw), 0, cos(yaw))
+	var hl := float(b[4]) * 0.5
+	var hd := float(b[5]) * 0.5
+	var dirs := [-Zv, X, Zv, -X]
+	var halves := [hd, hl, hd, hl]
+	var nearest := -1
+	var nd := INF
+	var gaps: Array[float] = []
+	for k in 4:
+		var q: Vector3 = c + (dirs[k] as Vector3) * (float(halves[k]) + 2.0)
+		var e := wd.road_edge_dist(q.x, q.z)
+		gaps.append(e)
+		if e < nd:
+			nd = e
+			nearest = k
+	# every side with a lawn strip between its facade and a sidewalk gets paved (up to 14 m deep, the
+	# whole facade wide); a deep front yard on the street side gets a path to the door
+	for k in 4:
+		var g: float = gaps[k]
+		if g < 3.8 or g > 38.0:
+			continue
+		var deep := g > 16.0
+		if deep and k != nearest:
+			continue
+		_pave_side(m, rects, c, dirs[k], float(halves[k]), (hl * 2.0 if k % 2 == 0 else hd * 2.0), deep, bi, sc)
+
+
+func _pave_side(m: _Mesh, rects: Array, c: Vector3, dir: Vector3, hext: float, fw: float, deep: bool, bi: int, sc: Vector2i) -> void:
+	var t0 := hext + 0.1
+	var across := Vector3(dir.z, 0, -dir.x)
+	var tc := _reach(c, dir, t0, bi, sc)
+	if tc < 0.0:
+		return
+	var half := 1.2 if deep or tc - t0 > 14.0 else fw * 0.5 + 1.0
+	var cols := maxi(1, int(ceil(half * 2.0 / 3.0)))
+	var reach: Array[float] = []
+	for k in cols + 1:
+		var sx := -half + half * 2.0 * k / cols
+		var r := _reach(c + across * sx, dir, t0, bi, sc) if half > 1.5 else tc
+		if r < 0.0 or r - t0 > 16.0:
+			r = tc if half <= 1.5 else -1.0
+		reach.append(r)
+	for k2 in cols:
+		var r0 := reach[k2]
+		var r1 := reach[k2 + 1]
+		if r0 < 0.0 or r1 < 0.0:
+			continue
+		var s0 := -half + half * 2.0 * k2 / cols
+		var s1 := -half + half * 2.0 * (k2 + 1) / cols
+		var rows := maxi(1, int(ceil((maxf(r0, r1) - t0) / 2.5)))
+		for j2 in rows:
+			var f0 := float(j2) / rows
+			var f1 := float(j2 + 1) / rows
+			var a := _gp(c + across * s0 + dir * lerpf(t0, r0 + 0.3, f0))
+			var b2 := _gp(c + across * s1 + dir * lerpf(t0, r1 + 0.3, f0))
+			var cc := _gp(c + across * s1 + dir * lerpf(t0, r1 + 0.3, f1))
+			var d := _gp(c + across * s0 + dir * lerpf(t0, r0 + 0.3, f1))
+			m.quad_flat(a, b2, cc, d)
+			m.quad_flat(d, cc, b2, a)
+	var mid := c + dir * (t0 + tc) * 0.5
+	rects.append([mid, dir, (tc - t0) * 0.5 + 0.8, half + 0.4])
+
+
+## a point of a paved forecourt: 5 cm over the ground, and near the street over the grass slope that
+## runs down from the raised sidewalk (1:4), so the paving meets the sidewalk at its level
+func _gp(p: Vector3) -> Vector3:
+	var y := wd.height_at(p.x, p.z) + 0.05
+	var ry := wd.road_y_near(p.x, p.z)
+	if not is_nan(ry):
+		var e := wd.road_edge_dist(p.x, p.z)
+		y = maxf(y, ry + 0.22 - maxf(e - 3.5, 0.0) * 0.25)
+	return Vector3(p.x, y, p.z)
+
+
+## how far from the building's centre (along dir, starting at t0) the sidewalk begins; -1 when another
+## building is in the way or no street within 40 m
+func _reach(c: Vector3, dir: Vector3, t0: float, bi: int, sc: Vector2i) -> float:
+	var t := t0
+	while t < t0 + 40.0:
+		var p := c + dir * t
+		if wd.road_edge_dist(p.x, p.z) < 3.4:
+			return t
+		if t > t0 + 1.0 and _hits_other(p.x, p.z, bi, sc):
+			return -1.0
+		t += 0.5
+	return -1.0
+
+
+## inside another building's footprint (+0.8 m)?
+func _hits_other(x: float, z: float, bi: int, sc: Vector2i) -> bool:
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			for bj in sector_buildings.get(sc + Vector2i(di, dj), []):
+				if bj == bi:
+					continue
+				var o: Array = wd.buildings[bj]
+				var yaw := float(o[3])
+				var dx := x - float(o[1])
+				var dz := z - float(o[2])
+				var lx := dx * cos(yaw) - dz * sin(yaw)
+				var lz := dx * sin(yaw) + dz * cos(yaw)
+				if absf(lx) < float(o[4]) * 0.5 + 0.8 and absf(lz) < float(o[5]) * 0.5 + 0.8:
+					return true
+	return false
 
 
 # ------------------------------------------------------------------------------------------ trees

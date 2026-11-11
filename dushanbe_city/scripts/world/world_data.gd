@@ -41,6 +41,9 @@ var fillets: Array = []
 var crossings: Array = []
 var no_grass: Array = []          ## paved areas added at runtime: [cx, cz, fx, fz, half along, half across]
 var no_grass_ver := 0
+var _ng_hash := {}                  ## Vector2i (32 m) -> rects
+var _ng_lock := Mutex.new()
+var _ng_keys := {}
 var _road_hash := {}                 ## Vector2i (16 m) -> PackedFloat32Array [x, z, y, half width, ...]
 
 
@@ -164,6 +167,22 @@ func road_edge_dist(x: float, z: float) -> float:
 	return best
 
 
+## road surface height of the nearest road sample (NAN when none within ~32 m)
+func road_y_near(x: float, z: float) -> float:
+	var c := Vector2i(floori(x / 16.0), floori(z / 16.0))
+	var best := INF
+	var y := NAN
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			var a: PackedFloat32Array = _road_hash.get(c + Vector2i(di, dj), PackedFloat32Array())
+			for k in range(0, a.size(), 4):
+				var d := Vector2(a[k] - x, a[k + 1] - z).length() - a[k + 3]
+				if d < best:
+					best = d
+					y = a[k + 2]
+	return y
+
+
 ## may 3D grass blades grow here? (open world: grass surface, off the roads + sidewalks, off the
 ## landmark plazas, below the alpine zone)
 func grass_ok(x: float, z: float) -> bool:
@@ -179,19 +198,38 @@ func grass_ok(x: float, z: float) -> bool:
 	# inside the AMID supermarkets (they can be entered), on the car parks and the front plazas
 	if in_plaza(x, z):
 		return false
-	for a: Array in no_grass:
+	_ng_lock.lock()
+	var lst: Array = _ng_hash.get(Vector2i(floori(x / 32.0), floori(z / 32.0)), [])
+	for a: Array in lst:
 		var dx := x - float(a[0])
 		var dz := z - float(a[1])
 		if absf(dx * float(a[2]) + dz * float(a[3])) < float(a[4]) and absf(dx * float(a[3]) - dz * float(a[2])) < float(a[5]):
+			_ng_lock.unlock()
 			return false
+	_ng_lock.unlock()
 	return true
 
 
 ## mark a paved rectangle (centre, forward direction, half sizes): no 3D grass blades there
 func add_no_grass(c: Vector3, fwd: Vector3, half_along: float, half_across: float) -> void:
 	var f := Vector2(fwd.x, fwd.z).normalized()
-	no_grass.append([c.x, c.z, f.x, f.y, half_along, half_across])
+	var a := [c.x, c.z, f.x, f.y, half_along, half_across]
+	var r := maxf(half_along, half_across)
+	var key := Vector2i(roundi(c.x * 4.0), roundi(c.z * 4.0))
+	_ng_lock.lock()
+	if _ng_keys.has(key):
+		_ng_lock.unlock()
+		return                          # the same sector loaded again
+	_ng_keys[key] = true
+	no_grass.append(a)
+	for j in range(floori((c.z - r) / 32.0), floori((c.z + r) / 32.0) + 1):
+		for i in range(floori((c.x - r) / 32.0), floori((c.x + r) / 32.0) + 1):
+			var k := Vector2i(i, j)
+			if not _ng_hash.has(k):
+				_ng_hash[k] = []
+			(_ng_hash[k] as Array).append(a)
 	no_grass_ver += 1
+	_ng_lock.unlock()
 
 
 var _bigs: Array = []

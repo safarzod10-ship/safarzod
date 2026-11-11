@@ -442,8 +442,16 @@ def roadside(add, free, r, every):
 
 
 # -------------------------------------------------------------------- terrain under buildings
-def flatten_plots(H, X, Z, world):
-    """level the ground under each building (and landmark plaza) to its base height"""
+def flatten_plots(H, X, Z, world, roads=None):
+    """level the ground under each building (and landmark plaza) to its base height; a city landmark
+    next to a street takes the street's level (+ the sidewalk kerb): plaza, sidewalk and road at one level"""
+    from scipy.spatial import cKDTree as _KD
+    rp = rh = None
+    if roads:
+        rr = [r for r in roads if r.get("cls") not in ("dirt", "lane") and not str(r["id"]).startswith("drive") and "H" in r]
+        if rr:
+            rp = _KD(np.concatenate([r["P"] for r in rr]))
+            rh = np.concatenate([np.asarray(r["H"], dtype=float) for r in rr])
     for b in world["buildings"]:
         kind, x, z, yaw, L, D = b[0], b[1], b[2], b[3], b[4], b[5]
         rad = math.hypot(L, D) / 2 + (11 if kind in ("amid_m", "mall_m") else 6)   # big car parks: flat to the corners
@@ -460,7 +468,12 @@ def flatten_plots(H, X, Z, world):
         i0 = max(0, int((x - L / 2 - 30 - T.X0) / T.STEP)); i1 = min(T.N, int((x + L / 2 + 30 - T.X0) / T.STEP) + 2)
         j0 = max(0, int((z - D / 2 - 30 - T.Z0) / T.STEP)); j1 = min(T.N, int((z + D / 2 + 30 - T.Z0) / T.STEP) + 2)
         sub = H[j0:j1, i0:i1]
-        y = float(np.median(sub)); lm["y"] = round(y, 2)
+        y = float(np.median(sub))
+        if rp is not None and abs(x) < 2200 and -4950 < z < -850:
+            d, k = rp.query((x, z))
+            if d < max(L, D) / 2 + 30:
+                y = float(rh[k]) + 0.22
+        lm["y"] = round(y, 2)
         ex = np.maximum(np.abs(X[j0:j1, i0:i1] - x) - L / 2, 0); ez = np.maximum(np.abs(Z[j0:j1, i0:i1] - z) - D / 2, 0)
         w = T.ss(30, 0, np.hypot(ex, ez))
         H[j0:j1, i0:i1] = sub * (1 - w) + y * w

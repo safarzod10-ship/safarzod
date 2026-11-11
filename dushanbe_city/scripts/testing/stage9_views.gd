@@ -460,6 +460,18 @@ func _ready() -> void:
 				await _look("police_fence", xf * Vector3(-14, 1.8, 30), xf * Vector3(-5, 1.5, 24))
 				await _look("police_top", xf * Vector3(0, 60, 30), xf * Vector3(0, 0, 0))
 			else:
+				if OS.get_cmdline_user_args().has("treedbg"):
+					await _sec(2.0)
+					var inv := xf.affine_inverse()
+					for mmi in get_tree().root.find_children("*", "MultiMeshInstance3D", true, false):
+						var mm := (mmi as MultiMeshInstance3D).multimesh
+						if mm == null or mm.mesh == null:
+							continue
+						for i in mm.instance_count:
+							var wp: Vector3 = (mmi as Node3D).global_transform * mm.get_instance_transform(i).origin
+							var lp := inv * wp
+							if absf(lp.x) < 100 and lp.z > 58 and lp.z < 100 and mm.mesh.get_aabb().size.y > 4.0:
+								print("TREE ", mmi.get_path(), " ", lp.snapped(Vector3.ONE * 0.1), " h ", mm.mesh.get_aabb().size.y)
 				await _look("park_gate", xf * Vector3(0, 2.0, 84), xf * Vector3(0, 7.5, 60))
 				await _look("park_street", xf * Vector3(-18, 1.7, 80), xf * Vector3(4, 4.0, 60))
 				await _look("park_aerial", xf * Vector3(-70, 45, 115), xf * Vector3(0, 0, 10))

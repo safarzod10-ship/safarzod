@@ -518,6 +518,26 @@ func _instance(s: Vector2i, res: Dictionary) -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(mi)
 	var bd: Dictionary = res["buildings"]
+	var pa: Array = bd.get("paths", [])
+	if not pa.is_empty():
+		var pm := ArrayMesh.new()
+		pm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, pa)
+		var pmi := MeshInstance3D.new()
+		pmi.name = "DoorPaths"
+		if OS.get_cmdline_user_args().has("pathdbg"):
+			var dm := StandardMaterial3D.new()
+			dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			dm.albedo_color = Color(1, 0, 0)
+			dm.no_depth_test = true
+			pmi.material_override = dm
+			print("DOORPATHS ", node.name, " verts ", (pa[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), " rects ", (bd.get("path_rects", []) as Array).size())
+		pmi.mesh = pm
+		pmi.material_override = mats["side"] if pmi.material_override == null else pmi.material_override
+		pmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		pmi.visibility_range_end = 450.0
+		node.add_child(pmi)
+	for r in bd.get("path_rects", []):
+		wd.add_no_grass(r[0], r[1], r[2], r[3])
 	if not (bd["facade"] as Array).is_empty():
 		var m := ArrayMesh.new()
 		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, bd["facade"], [], {},
