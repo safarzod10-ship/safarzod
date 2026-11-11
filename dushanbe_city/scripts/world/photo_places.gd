@@ -209,9 +209,12 @@ func _bridge(B: _Builder, n: Node3D, st: Dictionary) -> void:
 			var dir := (q1 - q).normalized()
 			var nrm := dir.cross(Vector3.UP) * sd2
 			var edge := q + nrm * (rw + 1.0)
-			if Vector2(edge.x - c.x, edge.z - c.z).length() < 14.0:
+			# keep the road and its sidewalks free: nothing within (half width + 8 m) of the road's axis
+			var rel2 := Vector3(edge.x - c.x, 0, edge.z - c.z)
+			var walk_rel := rel2 + nrm * 7.0
+			if absf(rel2.dot(side)) < hw + 8.0 or absf(walk_rel.dot(side)) < hw + 8.0:
 				prevp = Vector3.INF
-				continue                                  # the bridge abutment
+				continue
 			edge.y = wd.height_at(edge.x, edge.z) + 0.05
 			var walk := edge + nrm * 2.5
 			walk.y = wd.height_at(walk.x, walk.z) + 0.05

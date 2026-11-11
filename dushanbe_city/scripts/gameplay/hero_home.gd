@@ -434,6 +434,6 @@ func _garden(y0: float, wood: Material, stone: Material) -> void:
 	_box(Vector3(3.0, 0.04, 2.4), pc + Vector3(0, 0.52, 0), _mat(Color(0.6, 0.08, 0.1), 0.9))   # carpet
 	_box(Vector3(1.0, 0.3, 0.7), pc + Vector3(0, 0.69, 0), wood)                          # low table (дастархан)
 	for k2 in 4:
-		var cc := [Vector3(-1.2, 0.62, -0.9), Vector3(1.2, 0.62, -0.9), Vector3(-1.2, 0.62, 0.9), Vector3(1.2, 0.62, 0.9)][k2]
+		var cc: Vector3 = [Vector3(-1.2, 0.62, -0.9), Vector3(1.2, 0.62, -0.9), Vector3(-1.2, 0.62, 0.9), Vector3(1.2, 0.62, 0.9)][k2]
 		_box(Vector3(0.6, 0.18, 0.4), pc + cc, _mat([Color(0.9, 0.7, 0.1), Color(0.1, 0.4, 0.6), Color(0.7, 0.15, 0.3), Color(0.2, 0.5, 0.25)][k2], 0.9))
 	_box(Vector3(0.3, 0.25, 0.3), pc + Vector3(0, 0.96, 0), _mat(Color(0.85, 0.85, 0.9), 0.3, 0.6))   # teapot

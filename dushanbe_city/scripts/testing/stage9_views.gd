@@ -347,7 +347,13 @@ func _ready() -> void:
 		# 0.25: police station + Parki Dusti (arch, fountain, pavilions)
 		_hour(12.0)
 		var pp: PhotoPlaces = main.get_node("PhotoPlaces")
+		var only_id := ""
+		for a10 in OS.get_cmdline_user_args():
+			if a10.begins_with("only="):
+				only_id = a10.substr(5)
 		for st in pp.sites:
+			if only_id != "" and String(st["id"]) != only_id:
+				continue
 			var xf: Transform3D = st["xf"]
 			ow.hold = xf.origin
 			ow.preload_at(xf.origin)
