@@ -289,6 +289,20 @@ func _ready() -> void:
 				pp.build_site(st)
 			await _sec(3.0)
 			var id := String(st["id"])
+			if id == "river_bridge":
+				var a9: Vector3 = st["a"]
+				var b9: Vector3 = st["b"]
+				var al9 := (b9 - a9).normalized()
+				var sd9 := al9.cross(Vector3.UP)
+				var c9 := (a9 + b9) * 0.5
+				await _look("bridge_side", c9 + sd9 * 70.0 + Vector3(0, 6, 0) - al9 * 20.0, c9 + Vector3(0, 6, 0))
+				await _look("bridge_drive", a9 - al9 * 40.0 + sd9 * 3.0 + Vector3(0, 2.0, 0), c9 + Vector3(0, 6, 0))
+				await _look("embankment", c9 + sd9 * 30.0 + al9 * 30.0 + Vector3(0, 2.5, 0), c9 + sd9 * 60.0 + Vector3(0, 1.5, 0))
+				_hour(21.0)
+				await _sec(0.5)
+				await _look("bridge_night", c9 + sd9 * 70.0 + Vector3(0, 6, 0) - al9 * 20.0, c9 + Vector3(0, 6, 0))
+				_hour(12.0)
+				continue
 			if id == "shop_street":
 				await _look("shop_entry", xf * Vector3(5, 3.0, 100), xf * Vector3(0, 3.5, 60))
 				await _look("shop_street", xf * Vector3(-3, 1.8, 70), xf * Vector3(0, 2.5, 0))

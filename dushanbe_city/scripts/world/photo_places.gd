@@ -39,6 +39,14 @@ func _ready() -> void:
 				best = k
 		var b := Basis(Vector3.UP, yaw + best * PI * 0.5)
 		sites.append({"id": id, "xf": Transform3D(b, c), "node": null, "L": float(lm["L"]), "D": float(lm["D"]) if best % 2 == 0 else float(lm["L"])})
+	# the two-arch bridge over the Varzob (avenue ew2400) with the embankment
+	for r in wd.roads:
+		if String(r.get("id", "")) == "ew2400" and not (r.get("bridges", []) as Array).is_empty():
+			var bb: Array = r["bridges"][0]
+			var pa := Vector3(r["pts"][bb[0]][0], r["pts"][bb[0]][1], r["pts"][bb[0]][2])
+			var pb := Vector3(r["pts"][bb[1]][0], r["pts"][bb[1]][1], r["pts"][bb[1]][2])
+			sites.append({"id": "river_bridge", "xf": Transform3D(Basis.IDENTITY, (pa + pb) * 0.5), "node": null,
+					"a": pa, "b": pb, "w": float(r["w"])})
 
 
 func _nearest_road(p: Vector3) -> Vector3:
@@ -90,8 +98,152 @@ func build_site(s: Dictionary) -> void:
 		_police(B, n)
 	elif s["id"] == "shop_street":
 		_shop_street(B, n)
+	elif s["id"] == "river_bridge":
+		_bridge(B, n, s)
 	else:
 		_park(B, n)
+
+
+# ------------------------------------------------------------------------------------------ bridge
+## two white steel arches over the bridge (one each side of the deck), hangers down to the deck edges,
+## braces across the top, LED strips (lit at night); the river embankment both sides 160 m up and
+## down: paving, a wrought railing on the water side, lamps, benches, plane trees
+func _bridge(B: _Builder, n: Node3D, st: Dictionary) -> void:
+	var c: Vector3 = (st["xf"] as Transform3D).origin
+	var a: Vector3 = st["a"] - c
+	var b: Vector3 = st["b"] - c
+	var along := (b - a)
+	along.y = 0.0
+	var span := along.length()
+	along = along.normalized()
+	var side := along.cross(Vector3.UP)
+	var hw := float(st["w"]) * 0.5 + 0.9
+	var white := B.mat(Color(0.93, 0.94, 0.95), 0.35, 0.4)
+	var led := B.mat(Color(0.6, 0.85, 1.0), 0.4, 0.0, Color(0.4, 0.75, 1.0), 2.0)
+	var cable := B.mat(Color(0.75, 0.76, 0.78), 0.3, 0.8)
+	var rise := 16.0
+	var segs := 28
+	for sd: float in [-1.0, 1.0]:
+		var prev := Vector3.INF
+		for i in segs + 1:
+			var u := float(i) / segs
+			var p := a.lerp(b, u) + side * hw * sd + Vector3.UP * (4.0 * rise * u * (1.0 - u) + 0.2)
+			if prev != Vector3.INF:
+				var mid := (p + prev) * 0.5
+				var dv := p - prev
+				var seg := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = Vector3(0.7, 0.9, dv.length() + 0.08)
+				seg.mesh = bm
+				seg.material_override = white
+				seg.transform = Transform3D(Basis.looking_at(dv.normalized(), Vector3.UP), mid)
+				seg.visibility_range_end = 900.0
+				n.add_child(seg)
+				var strip := MeshInstance3D.new()
+				var sm := BoxMesh.new()
+				sm.size = Vector3(0.12, 0.12, dv.length())
+				strip.mesh = sm
+				strip.material_override = led
+				strip.transform = Transform3D(Basis.looking_at(dv.normalized(), Vector3.UP), mid + side * sd * 0.38)
+				n.add_child(strip)
+			prev = p
+		# hangers every 3 m
+		for k in range(1, int(span / 3.0)):
+			var u2 := float(k) * 3.0 / span
+			if u2 >= 0.97:
+				break
+			var top := a.lerp(b, u2) + side * hw * sd + Vector3.UP * (4.0 * rise * u2 * (1.0 - u2))
+			var bot := a.lerp(b, u2) + side * hw * sd + Vector3.UP * 0.3
+			var hl := top.y - bot.y
+			if hl < 0.6:
+				continue
+			var h := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 0.05
+			cm.bottom_radius = 0.05
+			cm.height = hl
+			cm.radial_segments = 6
+			h.mesh = cm
+			h.material_override = cable
+			h.position = (top + bot) * 0.5
+			n.add_child(h)
+		# arch feet: concrete plinths at both ends
+		for e in [a, b]:
+			B.box(Vector3(1.6, 1.4, 1.6), (e as Vector3) + side * hw * sd + Vector3(0, 0.5, 0), B.mat(Color(0.7, 0.7, 0.68), 0.7))
+	# braces across the crown
+	for u3 in [0.35, 0.5, 0.65]:
+		var mid2 := a.lerp(b, u3) + Vector3.UP * (4.0 * rise * u3 * (1.0 - u3))
+		var br := MeshInstance3D.new()
+		var bm2 := BoxMesh.new()
+		bm2.size = Vector3(hw * 2.0, 0.4, 0.4)
+		br.mesh = bm2
+		br.material_override = white
+		br.transform = Transform3D(Basis.looking_at(along, Vector3.UP), mid2)
+		n.add_child(br)
+	# the embankment along the river
+	var rv: Dictionary = {}
+	for r in wd.rivers:
+		if String(r.get("id", "")) == "varzob":
+			rv = r
+	if rv.is_empty():
+		return
+	var pts: Array = rv["pts"]
+	var rw := float(rv["w"]) * 0.5
+	var bi := 0
+	var bd := INF
+	for i in pts.size():
+		var d := Vector2(float(pts[i][0]) - c.x, float(pts[i][2]) - c.z).length()
+		if d < bd:
+			bd = d
+			bi = i
+	var iron := B.mat(Color(0.05, 0.05, 0.06), 0.4, 0.7)
+	var gold := B.mat(Color(0.8, 0.62, 0.2), 0.3, 0.9)
+	var paving := PlotPatches.paving_material()
+	var props := {"light_park_4m": [], "bench_park_soviet": [], "bin_modern_steel": []}
+	var trees := {"chinar_middle": []}
+	for sd2: float in [-1.0, 1.0]:
+		var prevp := Vector3.INF
+		for i in range(maxi(1, bi - 40), mini(pts.size() - 1, bi + 40)):
+			var q := Vector3(float(pts[i][0]), 0, float(pts[i][2]))
+			var q1 := Vector3(float(pts[i + 1][0]), 0, float(pts[i + 1][2]))
+			var dir := (q1 - q).normalized()
+			var nrm := dir.cross(Vector3.UP) * sd2
+			var edge := q + nrm * (rw + 1.0)
+			if Vector2(edge.x - c.x, edge.z - c.z).length() < 14.0:
+				prevp = Vector3.INF
+				continue                                  # the bridge abutment
+			edge.y = wd.height_at(edge.x, edge.z) + 0.05
+			var walk := edge + nrm * 2.5
+			walk.y = wd.height_at(walk.x, walk.z) + 0.05
+			if prevp != Vector3.INF and prevp.distance_to(edge) < 12.0:
+				var lp := prevp - c
+				var le := edge - c
+				B.fence(lp, le, iron, gold)
+				var mid3 := (lp + le) * 0.5 + nrm * 2.5
+				var pv := MeshInstance3D.new()
+				var pm := BoxMesh.new()
+				pm.size = Vector3(5.0, 0.2, lp.distance_to(le) + 0.3)
+				pm.material = paving
+				pv.mesh = pm
+				pv.transform = Transform3D(Basis.looking_at((le - lp).normalized(), Vector3.UP), mid3 + Vector3(0, -0.02, 0))
+				pv.visibility_range_end = 500.0
+				n.add_child(pv)
+			prevp = edge
+			if i % 3 == 0:
+				props["light_park_4m"].append(Transform3D(Basis.IDENTITY, walk + nrm * 2.2))
+			if i % 5 == 1:
+				props["bench_park_soviet"].append(Transform3D(Basis(Vector3.UP, atan2(-nrm.x, -nrm.z)), walk + nrm * 1.6))
+			if i % 7 == 3:
+				props["bin_modern_steel"].append(Transform3D(Basis.IDENTITY, walk + nrm * 1.8 + dir * 1.2))
+			if i % 2 == 0:
+				trees["chinar_middle"].append(Transform3D(Basis(Vector3.UP, float(i)).scaled(Vector3.ONE * 0.8), walk + nrm * 4.5))
+	if OpenWorld.instance:
+		var holder := Node3D.new()
+		holder.name = "BridgeProps"
+		add_child(holder)
+		n.tree_exiting.connect(holder.queue_free)
+		OpenWorld.instance._place_props(holder, props)
+		OpenWorld.instance._trees(holder, trees, 0)
 
 
 # ------------------------------------------------------------------------------------------ shop street
