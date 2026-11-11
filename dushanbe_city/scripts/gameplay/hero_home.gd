@@ -286,7 +286,12 @@ func _build() -> void:
 	var dark := _mat(Color(0.12, 0.12, 0.13), 0.5, 0.3)
 	var glass := _mat(Color(0.15, 0.24, 0.3), 0.05, 0.4, Color(0.25, 0.22, 0.15), 0.35)
 	var paving := _mat(Color(0.62, 0.6, 0.56), 0.9)
-	var lawn := _mat(Color(0.28, 0.5, 0.2), 1.0)
+	var lawn := _mat(Color(0.7, 0.85, 0.55), 1.0)
+	if ResourceLoader.exists("res://assets/textures/ground_grass/albedo.jpg"):
+		lawn.albedo_texture = load("res://assets/textures/ground_grass/albedo.jpg")
+		lawn.uv1_triplanar = true
+		lawn.uv1_world_triplanar = true
+		lawn.uv1_scale = Vector3(0.25, 0.25, 0.25)
 	var water := _mat(Color(0.15, 0.55, 0.75), 0.05, 0.0, Color(0.05, 0.2, 0.3), 0.4)
 	var steel := _mat(Color(0.65, 0.66, 0.68), 0.35, 0.8)
 	var lamp := _mat(Color(1, 1, 0.95), 0.3, 0.0, Color(1.0, 0.95, 0.8), 2.0)
@@ -369,3 +374,66 @@ func _build() -> void:
 		var px := lx0 + 2.5 + k * (HOUSE.position.x - lx0 - 3.0) / 3.0
 		_box(Vector3(0.12, 1.0, 0.12), Vector3(px, y0 + 0.5, HOUSE.position.y + 7.6), dark)
 		_box(Vector3(0.25, 0.2, 0.25), Vector3(px, y0 + 1.05, HOUSE.position.y + 7.6), lamp)
+	_garden.call_deferred(y0, wood, stone)
+
+
+## the garden (0.26): an orchard of mulberries and apricot saplings in the back, roses and thujas along
+## the fence, flower beds by the path, a grape pergola and a tapchan (сури) with a carpet and cushions
+func _garden(y0: float, wood: Material, stone: Material) -> void:
+	for w in 600:
+		if OpenWorld.instance and not OpenWorld.instance._veg.is_empty():
+			break
+		await get_tree().process_frame
+	if OpenWorld.instance == null:
+		return
+	var g := global_transform
+	var trees := {"mulberry": [], "sapling": [], "rose_bush": [], "thuja_cone": [], "flowers_petunia": [], "flowers_salvia": [], "flowers_marigold": [], "shrub_lilac": []}
+	var lx0 := LOT.position.x
+	var lz0 := LOT.position.y
+	var lx1 := LOT.end.x
+	var lz1 := LOT.end.y
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2026
+	# orchard in the back (north part beyond the house) and the south lawn
+	for zz in range(int(HOUSE.end.y + 10.0), int(lz1 - 5.0), 9):
+		for xx in range(int(lx0 + 6.0), int(lx1 - 4.0), 8):
+			var id := "mulberry" if (xx / 8 + zz / 9) % 3 != 0 else "sapling"
+			trees[id].append(g * Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.75, 1.0)), Vector3(xx + rng.randf_range(-1, 1), y0, zz + rng.randf_range(-1, 1))))
+	# thujas along the side fences, roses along the front fence
+	for zz2 in range(int(lz0 + 3.0), int(lz1 - 2.0), 5):
+		for xx2 in [lx1 - 1.2]:
+			trees["thuja_cone"].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.85), Vector3(xx2, y0, zz2)))
+	for xx3 in range(int(lx0 + 2.0), int(lx1 - 2.0), 3):
+		trees["rose_bush"].append(g * Transform3D(Basis(Vector3.UP, float(xx3)), Vector3(xx3, y0, lz1 - 1.2)))
+		trees["rose_bush"].append(g * Transform3D(Basis(Vector3.UP, float(xx3) * 1.7), Vector3(xx3, y0, lz0 + 1.2)))
+	# flower beds both sides of the path to the door
+	for side in [-1.5, 1.5]:
+		for k in 14:
+			var fx := lx0 + 1.5 + k * (HOUSE.position.x - lx0 - 3.0) / 13.0
+			var kind: String = ["flowers_petunia", "flowers_salvia", "flowers_marigold"][(k / 3) % 3]
+			trees[kind].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 1.3), Vector3(fx, y0 + 0.02, HOUSE.position.y + 6.0 + side)))
+	# lilacs at the house corners
+	for cpt in [Vector3(HOUSE.position.x - 1.5, y0, HOUSE.position.y - 1.5), Vector3(HOUSE.position.x - 1.5, y0, HOUSE.end.y + 1.5)]:
+		trees["shrub_lilac"].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.8), cpt))
+	var holder := Node3D.new()
+	holder.name = "Garden"
+	holder.top_level = true
+	add_child(holder)
+	holder.global_transform = Transform3D.IDENTITY
+	OpenWorld.instance._trees(holder, trees, 0)
+	# grape pergola over a tapchan (сури): a raised wooden platform, a red carpet, cushions, a low table
+	var pc := Vector3(HOUSE.end.x + 6.0, y0, HOUSE.end.y + 6.0)
+	var green := _mat(Color(0.2, 0.42, 0.15), 0.9)
+	for cx in [-2.2, 2.2]:
+		for cz in [-2.2, 2.2]:
+			_box(Vector3(0.18, 2.6, 0.18), pc + Vector3(cx, 1.3, cz), wood, true)
+	for k in 7:
+		_box(Vector3(4.8, 0.08, 0.12), pc + Vector3(0, 2.62, -2.1 + k * 0.7), wood)
+	_box(Vector3(5.0, 0.25, 5.0), pc + Vector3(0, 2.8, 0), green)                       # vine canopy
+	_box(Vector3(3.2, 0.5, 2.6), pc + Vector3(0, 0.25, 0), wood, true)                   # the tapchan
+	_box(Vector3(3.0, 0.04, 2.4), pc + Vector3(0, 0.52, 0), _mat(Color(0.6, 0.08, 0.1), 0.9))   # carpet
+	_box(Vector3(1.0, 0.3, 0.7), pc + Vector3(0, 0.69, 0), wood)                          # low table (дастархан)
+	for k2 in 4:
+		var cc := [Vector3(-1.2, 0.62, -0.9), Vector3(1.2, 0.62, -0.9), Vector3(-1.2, 0.62, 0.9), Vector3(1.2, 0.62, 0.9)][k2]
+		_box(Vector3(0.6, 0.18, 0.4), pc + cc, _mat([Color(0.9, 0.7, 0.1), Color(0.1, 0.4, 0.6), Color(0.7, 0.15, 0.3), Color(0.2, 0.5, 0.25)][k2], 0.9))
+	_box(Vector3(0.3, 0.25, 0.3), pc + Vector3(0, 0.96, 0), _mat(Color(0.85, 0.85, 0.9), 0.3, 0.6))   # teapot

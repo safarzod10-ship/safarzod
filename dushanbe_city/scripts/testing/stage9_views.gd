@@ -76,6 +76,44 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("home"):
+		_hour(16.5)
+		var hh9: HeroHome = main.get_node("HeroHome")
+		await _sec(3.0)
+		var t9 := hh9.global_transform
+		await _look("home_top", t9 * Vector3(-30, 70, -230), t9 * Vector3(10, 0, -230))
+		await _look("home_garden", t9 * Vector3(-10, 3.0, -200), t9 * Vector3(30, 1.5, -190))
+		await _look("home_tapchan", t9 * Vector3(22, 2.5, -200), t9 * Vector3(28, 1.0, -206))
+		await _look("home_front", t9 * Vector3(-28, 3.0, -228), t9 * Vector3(10, 3, -225))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("night"):
+		var sn: CarSession = main.get("car_session")
+		var hp9: Vector3 = (sn.player as Node3D).global_position
+		var life9: CityLife = main.get_node("CityLife")
+		life9.enabled = true
+		cam.make_current()
+		cam.global_position = hp9 + Vector3(0, 3, 0)
+		_hour(22.0)
+		await _sec(6.0)
+		var best9 := Vector3.ZERO
+		var dir9 := Vector3.FORWARD
+		var bd9 := INF
+		for R9 in life9._roads:
+			if R9["cls"] != "avenue":
+				continue
+			var P9: PackedVector3Array = R9["p"]
+			for qi in range(1, P9.size()):
+				var dd9 := P9[qi].distance_to(hp9)
+				if dd9 < bd9:
+					bd9 = dd9
+					best9 = P9[qi]
+					dir9 = (P9[qi] - P9[qi - 1]).normalized()
+		await _look("night_avenue", best9 - dir9 * 30.0 + dir9.cross(Vector3.UP) * 6.0 + Vector3(0, 3, 0), best9 + dir9 * 40.0 + Vector3(0, 2, 0))
+		await _look("night_aerial", best9 + Vector3(-120, 90, 120), best9)
+		await _look("night_street", hp9 + Vector3(10, 2, 10), hp9 + Vector3(-20, 3, -20))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("stops"):
 		_hour(15.0)
 		var bj: BusJob = main.get("bus_job")
@@ -692,6 +730,44 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("home"):
+		_hour(16.5)
+		var hh9: HeroHome = main.get_node("HeroHome")
+		await _sec(3.0)
+		var t9 := hh9.global_transform
+		await _look("home_top", t9 * Vector3(-30, 70, -230), t9 * Vector3(10, 0, -230))
+		await _look("home_garden", t9 * Vector3(-10, 3.0, -200), t9 * Vector3(30, 1.5, -190))
+		await _look("home_tapchan", t9 * Vector3(22, 2.5, -200), t9 * Vector3(28, 1.0, -206))
+		await _look("home_front", t9 * Vector3(-28, 3.0, -228), t9 * Vector3(10, 3, -225))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("night"):
+		var sn: CarSession = main.get("car_session")
+		var hp9: Vector3 = (sn.player as Node3D).global_position
+		var life9: CityLife = main.get_node("CityLife")
+		life9.enabled = true
+		cam.make_current()
+		cam.global_position = hp9 + Vector3(0, 3, 0)
+		_hour(22.0)
+		await _sec(6.0)
+		var best9 := Vector3.ZERO
+		var dir9 := Vector3.FORWARD
+		var bd9 := INF
+		for R9 in life9._roads:
+			if R9["cls"] != "avenue":
+				continue
+			var P9: PackedVector3Array = R9["p"]
+			for qi in range(1, P9.size()):
+				var dd9 := P9[qi].distance_to(hp9)
+				if dd9 < bd9:
+					bd9 = dd9
+					best9 = P9[qi]
+					dir9 = (P9[qi] - P9[qi - 1]).normalized()
+		await _look("night_avenue", best9 - dir9 * 30.0 + dir9.cross(Vector3.UP) * 6.0 + Vector3(0, 3, 0), best9 + dir9 * 40.0 + Vector3(0, 2, 0))
+		await _look("night_aerial", best9 + Vector3(-120, 90, 120), best9)
+		await _look("night_street", hp9 + Vector3(10, 2, 10), hp9 + Vector3(-20, 3, -20))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("stops"):

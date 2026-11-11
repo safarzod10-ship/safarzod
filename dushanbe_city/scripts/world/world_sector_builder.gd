@@ -605,7 +605,8 @@ func _median_plants(veg: Dictionary, c: Vector3, yaw: float, seed: int) -> void:
 	for sx in [-0.88, 0.88]:
 		for k in 9:
 			var p := c + b * Vector3(sx, 0, -4.4 + k * 1.1)
-			_veg_add(veg, "hedge_privet", Transform3D(Basis(Vector3.UP, yaw + rng.randf_range(-0.2, 0.2)).scaled(Vector3(0.55, 0.5, 0.75)), Vector3(p.x, y, p.z)))
+			# rounded low shrubs (the clipped privet read as boxes on the medians)
+			_veg_add(veg, "rose_bush", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.7, 0.85)), Vector3(p.x, y, p.z)))
 	var kinds := ["flowers_petunia", "flowers_salvia", "flowers_marigold"]
 	for i in 22:
 		var block := (i / 4 + seed) % 3
