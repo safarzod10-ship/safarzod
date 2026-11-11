@@ -530,11 +530,22 @@ function hud(t) {
     txt('БАЛАНС', 30, -24, 22, 'rgba(255,255,255,.6)', { w: 600 });
     txt(fmt(v) + ' ₽', 30, 14, 50, v < 30000 ? '#ffffff' : '#ffffff', { w: 900 });
   }, a);
+  const hasDays = typeof DAYS !== 'undefined' && DAYS.length;
+  if (hasDays && t >= DAYS[0].t) {
+    let cur = DAYS[0];
+    for (const d of DAYS) if (t >= d.t) cur = d;
+    const k = P(t, cur.t, cur.t + .45), sc = 1 + .3 * Math.sin(k * Math.PI);
+    at(540, 350, sc, 0, () => {
+      rr(-190, -34, 380, 68, 34, '#ffd23f', OL, 5);
+      rr(-170, -18, 34, 34, 6, '#fff', OL, 4); line([-170, -8, -136, -8], '#e5484d', 6);
+      txt('ДЕНЬ ' + cur.d + ' / ' + DAYS_TOTAL, 20, 3, 34, OL, { w: 900 });
+    }, P(t, DAYS[0].t, DAYS[0].t + .3) * (typeof VOTE_AT === 'undefined' ? 1 : 1 - P(t, VOTE_AT, VOTE_AT + .3)));
+  }
   for (const e of MONEY) {
     const k = P(t, e.t, e.t + 1.8);
     if (k > 0 && k < 1) {
       const s = (e.d > 0 ? '+' : '−') + fmt(Math.abs(e.d)) + ' ₽';
-      txt(s, 540, 370 + k * 50, 64, e.d > 0 ? '#4ade80' : '#ff5a5f', { w: 900, st: 12, a: 1 - k * k });
+      txt(s, 540, (hasDays ? 440 : 370) + k * 50, 64, e.d > 0 ? '#4ade80' : '#ff5a5f', { w: 900, st: 12, a: 1 - k * k });
     }
   }
 }
@@ -746,6 +757,19 @@ function voteCard(t, a, opts, nextT, nextText) {
   if (t > nextT) at(540, 1280, pop(t, nextT), 0, () => txt(nextText, 0, 0, 44, '#fff', { w: 800, st: 10 }));
 }
 
+function personCard(t, x, y, w, h, cfg, label, col, k, shakeAt = null) {
+  if (k <= 0) return;
+  const [dx, dy] = shakeAt == null ? [0, 0] : shk(t, shakeAt, .5, 10);
+  at(x + dx, y + dy, k, .02, () => {
+    rr(-w / 2, -h / 2, w, h, 30, '#dbeafe', col, 9);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 24); ctx.clip();
+    person(Object.assign({}, cfg, { x: 0, y: 290, s: 1 }), t);
+    ctx.restore();
+    const lw = tw(label, 34, 800) + 40;
+    rr(-lw / 2, h / 2 - 28, lw, 56, 28, col, OL, 5);
+    txt(label, 0, h / 2, 34, '#fff', { w: 800 });
+  });
+}
 /* ---------- player ---------- */
 function startPlayer() {
 const params = new URLSearchParams(location.search);
