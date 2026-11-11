@@ -76,6 +76,31 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("police"):
+		_hour(18.3)
+		var pol: Police = main.get_node("Police")
+		var s7: CarSession = main.get("car_session")
+		var life3: CityLife = main.get_node("CityLife")
+		life3.enabled = true
+		cam.make_current()
+		cam.global_position = (s7.player as Node3D).global_position + Vector3(0, 3, 0)
+		await _sec(6.0)
+		pol.set_stars(3)
+		for q7 in 14:
+			await _sec(1.0)
+		var tp7: Vector3 = (s7.player as Node3D).global_position
+		var best7: Node3D = null
+		for c7 in pol.cops:
+			var cn: Node3D = c7["node"]
+			if best7 == null or cn.global_position.distance_to(tp7) < best7.global_position.distance_to(tp7):
+				best7 = cn
+		if best7:
+			pol.enabled = false
+			await _look("police_car", best7.global_position + best7.global_basis * Vector3(3.5, 1.6, -6.0), best7.global_position + Vector3(0, 0.9, 0))
+			await _look("police_arrive", tp7 + Vector3(-6, 2.5, 6), best7.global_position + Vector3(0, 1.0, 0))
+		print("POLICE cops=", pol.cops.size())
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("cabins"):
 		_hour(13.0)
 		var s6: CarSession = main.get("car_session")
@@ -568,6 +593,31 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("police"):
+		_hour(18.3)
+		var pol: Police = main.get_node("Police")
+		var s7: CarSession = main.get("car_session")
+		var life3: CityLife = main.get_node("CityLife")
+		life3.enabled = true
+		cam.make_current()
+		cam.global_position = (s7.player as Node3D).global_position + Vector3(0, 3, 0)
+		await _sec(6.0)
+		pol.set_stars(3)
+		for q7 in 14:
+			await _sec(1.0)
+		var tp7: Vector3 = (s7.player as Node3D).global_position
+		var best7: Node3D = null
+		for c7 in pol.cops:
+			var cn: Node3D = c7["node"]
+			if best7 == null or cn.global_position.distance_to(tp7) < best7.global_position.distance_to(tp7):
+				best7 = cn
+		if best7:
+			pol.enabled = false
+			await _look("police_car", best7.global_position + best7.global_basis * Vector3(3.5, 1.6, -6.0), best7.global_position + Vector3(0, 0.9, 0))
+			await _look("police_arrive", tp7 + Vector3(-6, 2.5, 6), best7.global_position + Vector3(0, 1.0, 0))
+		print("POLICE cops=", pol.cops.size())
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("cabins"):

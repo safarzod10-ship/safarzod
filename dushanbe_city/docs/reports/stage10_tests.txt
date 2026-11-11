@@ -1,8 +1,5 @@
-PASS  1. city life present
-PASS  2. pedestrians spawned: 4, different clothes: 3
-PASS  3. punched: falls down (hp 88)
-PASS  4. gets up and runs away
-PASS  5. shot 4 times: dead (dead); 1 others panic
-PASS  6. ran over by the car: down
-PASS  7. traffic cars: 6
-PASS  8. steal: button «УГНАТЬ», driving Stolen1 (gls)
+PASS  1. police present
+PASS  2. stolen car -> 2 stars, police cars: 2
+PASS  3. police drive to the player: 205 m -> 53 m
+PASS  4. busted: stars 0, fine paid (money 1 400 смн)
+PASS  5. escaped after 13 s: stars 0

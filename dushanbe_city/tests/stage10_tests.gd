@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "amid"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "amid"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -499,6 +499,56 @@ func _t_npc() -> void:
 		await _sec(1.5)
 	s.player.teleport(home, 0.0)
 	life.enabled = false
+
+
+func _t_police() -> void:
+	# GTA pass: wanted stars, police cars come along the roads, busted (fine) / escaped
+	var pol: Police = main.get_node_or_null("Police")
+	var life: CityLife = main.get_node_or_null("CityLife")
+	_check("police present", pol != null and life != null)
+	if pol == null:
+		return
+	if s.driving:
+		s.exit()
+		await _frames(5)
+	var nav: RoadNav = main.get_node_or_null("RoadNav")
+	var t0 := Time.get_ticks_msec()
+	while nav and not nav.ready_graph and Time.get_ticks_msec() - t0 < 30000:
+		await _frames(10)
+	Police.stars = 0
+	life.crime.emit(2, (s.player as Node3D).global_position)
+	await _sec(1.5)
+	_check("stolen car -> %d stars, police cars: %d" % [Police.stars, pol.cops.size()], Police.stars == 2 and pol.cops.size() >= 1)
+	var p0: Vector3 = (s.player as Node3D).global_position
+	var d0 := INF
+	for c in pol.cops:
+		d0 = minf(d0, (c["node"] as Node3D).global_position.distance_to(p0))
+	await _sec(10.0)
+	var d1 := INF
+	for c in pol.cops:
+		d1 = minf(d1, (c["node"] as Node3D).global_position.distance_to(p0))
+	_check("police drive to the player: %.0f m -> %.0f m" % [d0, d1], d1 < d0 - 40.0 or d1 < 12.0)
+	# busted: move a cop next to the standing player
+	Wallet.money = 2000
+	var cop: Node3D = pol.cops[0]["node"]
+	cop.global_position = p0 + Vector3(4, 0, 0)
+	await _sec(3.5)
+	_check("busted: stars %d, fine paid (money %s)" % [Police.stars, Wallet.fmt(Wallet.money)], Police.stars == 0 and Wallet.money == 2000 - 600 and pol.cops.is_empty())
+	# escape: 1 star, the police far away for long enough
+	pol.set_stars(1)
+	await _sec(1.2)
+	for c in pol.cops:
+		(c["node"] as Node3D).global_position = p0 + Vector3(0, 0, 500)
+	pol.enabled = true
+	var tt := 0.0
+	while Police.stars > 0 and tt < 25.0:
+		for c in pol.cops:
+			(c["node"] as Node3D).global_position = p0 + Vector3(0, 0, 500)
+			c["v"] = 0.0
+		await _sec(0.5)
+		tt += 0.5
+	_check("escaped after %.0f s: stars %d" % [tt, Police.stars], Police.stars == 0)
+	Wallet.money = 500
 
 
 func _t_amid() -> void:

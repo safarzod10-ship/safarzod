@@ -243,6 +243,12 @@ func _spawn_extra_vehicles() -> void:
 	var nav := RoadNav.new()
 	nav.name = "RoadNav"
 	add_child(nav)
+	# GTA pass: wanted stars and police chases
+	var police := Police.new()
+	police.name = "Police"
+	police.session = car_session
+	police.nav = nav
+	add_child(police)
 	fuel = FuelService.new()
 	fuel.name = "FuelService"
 	fuel.session = car_session
