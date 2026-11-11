@@ -97,6 +97,8 @@ func _ready() -> void:
 	add_child(_loading)
 	get_viewport().size_changed.connect(_layout)
 	show_screen("main")
+	if OS.get_cmdline_user_args().has("autoplay"):        # captures / tests: press «Бози кардан»
+		_on_main.call_deferred("play")
 
 
 # ------------------------------------------------------------------------------------------ layout
@@ -212,9 +214,41 @@ func _on_main(k: String) -> void:
 			_loading.visible = true
 			for b in _main_btns.values():
 				(b as Button).disabled = true
-			await get_tree().process_frame
-			await get_tree().process_frame
-			get_tree().change_scene_to_file(GAME_SCENE)
+			# the heavy resources load in the background while the menu shows the progress
+			var paths := [GAME_SCENE, "res://scenes/player/player.tscn", "res://scenes/ui/touch_controls.tscn",
+					"res://assets/characters/animations/player_mocap.res"]
+			for p: String in paths:
+				if ResourceLoader.exists(p):
+					ResourceLoader.load_threaded_request(p, "", true)
+			while true:
+				var sum := 0.0
+				var done := true
+				for p: String in paths:
+					if not ResourceLoader.exists(p):
+						sum += 1.0
+						continue
+					var prog := []
+					var st := ResourceLoader.load_threaded_get_status(p, prog)
+					if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+						done = false
+						sum += float(prog[0]) if not prog.is_empty() else 0.0
+					else:
+						sum += 1.0
+				_loading.text = "Загрузка… %d%%" % int(sum / paths.size() * 100.0 * 0.15)
+				if done:
+					break
+				await get_tree().process_frame
+			print("MENU loaded %d ms" % Time.get_ticks_msec())
+			var keep := []
+			for p: String in paths.slice(1):
+				if ResourceLoader.exists(p):
+					keep.append(ResourceLoader.load_threaded_get(p))
+			Engine.set_meta(&"preloaded", keep)                   # held until the game scene has used them
+			var scene := ResourceLoader.load_threaded_get(GAME_SCENE) as PackedScene
+			if scene:
+				get_tree().change_scene_to_packed(scene)
+			else:
+				get_tree().change_scene_to_file(GAME_SCENE)
 		"shop":
 			show_screen("shop")
 		"about":

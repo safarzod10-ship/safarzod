@@ -52,6 +52,16 @@ static func safe_start(info: Dictionary) -> int:
 	return Settings.Quality.HIGH if OS.has_feature("mobile") else Settings.Quality.ULTRA
 
 
+## first launch without the camera tour: the preset from what the device reports; the in-game
+## adaptive resolution / quality (Settings) then tunes it to the real frame time while playing
+static func quick_pick() -> void:
+	var info := device_info()
+	var q := safe_start(info)
+	Settings.store_benchmark({"quality": q, "quality_name": Settings.NAMES[q], "recommended_fps_cap": 30,
+			"quick": true, "device": info, "date": Time.get_datetime_string_from_system()})
+	print("AUTO_GRAPHICS quick ", Settings.NAMES[q])
+
+
 func run() -> void:
 	var info := device_info()
 	_make_ui()

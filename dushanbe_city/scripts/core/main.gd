@@ -11,28 +11,149 @@ var _top_hud: TopHud
 var player: Node3D
 
 
+var _load_ui: CanvasLayer
+var _load_bar: ProgressBar
+var _load_lbl: Label
+
+
 func _ready() -> void:
 	PlayerInput.load_settings()
-	# loading screen first, build the city on the next frames
-	var ui := CanvasLayer.new()
-	ui.layer = 50
-	var bg := ColorRect.new()
-	bg.color = Color(0.07, 0.08, 0.1)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(bg)
-	var lbl := Label.new()
-	lbl.text = "DUSHANBE\nЗагрузка города…"
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	lbl.add_theme_font_size_override("font_size", 42)
-	ui.add_child(lbl)
-	add_child(ui)
+	# loading screen first (it stays until the world round the hero is really ready), build on the next frames
+	_make_loading()
 	if not Engine.is_editor_hint() and DisplayServer.get_name() != "headless":
 		await get_tree().process_frame
 		await get_tree().process_frame
+	if OS.get_cmdline_user_args().has("loadshots"):
+		await RenderingServer.frame_post_draw
+		_shot("screen")
+	if Settings.needs_benchmark():
+		AutoGraphics.quick_pick()             # no camera tour through the city: the device's preset at once
 	_build()
-	ui.queue_free()
+	await _wait_ready()
+	if _load_ui:
+		_load_ui.queue_free()
+		_load_ui = null
+	if Engine.has_meta(&"preloaded"):
+		Engine.remove_meta(&"preloaded")
+	print("GAME_READY %d ms" % Time.get_ticks_msec())
+	if OS.get_cmdline_user_args().has("loadshots"):     # captures: the first frames of the game
+		for k in 3:
+			await get_tree().process_frame
+		_shot("first_frame")
+		await get_tree().create_timer(3.0).timeout
+		_shot("after_3s")
+		get_tree().quit()
+
+
+func _shot(n: String) -> void:
+	var out := "user://"
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("out="):
+			out = a.substr(4)
+	get_viewport().get_texture().get_image().save_png(out.path_join("load_%s.png" % n))
+
+
+func _make_loading() -> void:
+	_load_ui = CanvasLayer.new()
+	_load_ui.layer = 90
+	var bg := ColorRect.new()
+	bg.color = Color(0.05, 0.06, 0.08)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_load_ui.add_child(bg)
+	if ResourceLoader.exists("res://assets/ui/menu_main_blur.jpg"):
+		var pic := TextureRect.new()
+		pic.texture = load("res://assets/ui/menu_main_blur.jpg")
+		pic.set_anchors_preset(Control.PRESET_FULL_RECT)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		pic.modulate = Color(0.55, 0.55, 0.6)
+		_load_ui.add_child(pic)
+	var box := VBoxContainer.new()
+	box.anchor_left = 0.5
+	box.anchor_right = 0.5
+	box.anchor_top = 0.5
+	box.anchor_bottom = 0.5
+	box.offset_left = -310
+	box.offset_right = 310
+	box.offset_top = -80
+	box.add_theme_constant_override("separation", 18)
+	_load_ui.add_child(box)
+	var font: Font = load("res://assets/fonts/game_font.tres")
+	var title := Label.new()
+	title.text = "DUSHANBE CITY"
+	title.add_theme_font_override("font", font)
+	title.add_theme_font_size_override("font_size", 56)
+	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	title.add_theme_color_override("font_outline_color", Color.BLACK)
+	title.add_theme_constant_override("outline_size", 10)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	_load_bar = ProgressBar.new()
+	_load_bar.custom_minimum_size = Vector2(620, 26)
+	_load_bar.show_percentage = false
+	var bgs := StyleBoxFlat.new()
+	bgs.bg_color = Color(0, 0, 0, 0.55)
+	bgs.set_corner_radius_all(13)
+	var fgs := StyleBoxFlat.new()
+	fgs.bg_color = Color(0.95, 0.72, 0.15)
+	fgs.set_corner_radius_all(13)
+	_load_bar.add_theme_stylebox_override("background", bgs)
+	_load_bar.add_theme_stylebox_override("fill", fgs)
+	box.add_child(_load_bar)
+	_load_lbl = Label.new()
+	_load_lbl.add_theme_font_override("font", font)
+	_load_lbl.add_theme_font_size_override("font_size", 26)
+	_load_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+	_load_lbl.add_theme_constant_override("outline_size", 6)
+	_load_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_load_lbl)
+	add_child(_load_ui)
+	_set_load(0.15, "Загрузка города…")
+
+
+func _set_load(f: float, t: String) -> void:
+	if _load_bar:
+		if _load_lbl.text != t:
+			print("LOAD %d ms %.0f%% %s" % [Time.get_ticks_msec(), f * 100.0, t])
+		_load_bar.value = maxf(_load_bar.value, f * 100.0)
+		_load_lbl.text = t
+
+
+## the loading screen stays until the ground, the trees round the hero and the car are in place, then a
+## few frames more behind it (shaders compiled, animations started) - the game opens ready to play
+func _wait_ready() -> void:
+	var t0 := Time.get_ticks_msec()
+	var timeout := 120000 if DisplayServer.get_name() != "headless" else 20000
+	while Time.get_ticks_msec() - t0 < timeout:
+		await get_tree().process_frame
+		if not is_inside_tree():
+			return
+		var steps := 0
+		var msg := "Загрузка города…"
+		var pp := player.global_position if player and is_instance_valid(player) else Vector3.INF
+		if open_world == null or pp == Vector3.INF or open_world.is_ready_at(pp):
+			steps += 1
+		else:
+			msg = "Земля и дороги…"
+		if OpenWorld.instance == null or not OpenWorld.instance._veg.is_empty():
+			steps += 1
+		elif steps == 1:
+			msg = "Деревья и растения…"
+		if car != null or not ResourceLoader.exists(PLAYER_SCENE):
+			steps += 1
+		elif steps == 2:
+			msg = "Машина в гараже…"
+		_set_load(0.15 + 0.6 * steps / 3.0, msg)
+		if steps == 3:
+			break
+	# rendered frames behind the screen: the materials / shaders in view get compiled, animations start
+	var n := 40 if DisplayServer.get_name() != "headless" else 2
+	var tw := Time.get_ticks_msec()
+	for k in n:
+		_set_load(0.75 + 0.25 * k / float(n), "Почти готово…")
+		await get_tree().process_frame
+		if Time.get_ticks_msec() - tw > 4000:
+			break
 
 
 func _build() -> void:
@@ -103,12 +224,6 @@ func _build() -> void:
 		return
 	for c in find_children("*", "Camera3D", true, false):
 		(c as Camera3D).far = 9500.0
-	if Settings.needs_benchmark():
-		await get_tree().create_timer(0.5).timeout
-		var ag := AutoGraphics.new()
-		add_child(ag)
-		await ag.run()
-		ag.queue_free()
 
 
 const CAR_SPAWN := Vector3(-49.0, 0.0, -12.0)    ## (no home) parked on the avenue's northbound lane
