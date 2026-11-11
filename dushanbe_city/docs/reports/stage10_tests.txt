@@ -1,7 +1,11 @@
-PASS  1. condition 25 %%: the engine smokes
-PASS  2. condition 10 %%: on fire
-PASS  3. it explodes after burning: wreck true, can't get in true
-PASS  4. the blast killed the player standing 2.5 m away (dead true, health 0)
-PASS  5. respawn: alive at the hospital / start, health 100, fee 50 смн
-PASS  6. respawn on the ground, not on a roof: 0.0 m above it
-PASS  7. wreck restored at its parking place (condition 100 %)
+PASS  1. the hero's home on the lot by the avenue: (-177.0, 12.0, -2096.0)
+PASS  2. the game starts at the home's door (0.0 m from it)
+PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
+PASS  4. drives out of the garage through the gate (18 m out, condition 100 %)
+PASS  5. promo TAJDUSH: +200 000 смн
+PASS  6. gun shop across the avenue from the hero's home ((-69.0, 13.0, -2144.0), 118 m), on the map
+PASS  7. at the door: «МАГАЗИН ОРУЖИЯ»
+PASS  8. not enough money for the AK (3 500): refused
+PASS  9. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
+PASS 10. buy ammo: +60 AK rounds for 150
+PASS 11. select: unowned weapons can't be taken

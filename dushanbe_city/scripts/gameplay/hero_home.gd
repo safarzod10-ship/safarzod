@@ -338,6 +338,11 @@ func _build() -> void:
 	# the paved strip in front of the fence, out to the street's sidewalk (no grass gap)
 	var front := _front_depth()
 	_pave(Rect2(lx0 - front, lz0, front, LOT.size.y), paving, y0 - 0.02)
+	# no wild grass blades through the paving / the yard (the yard gets its own lawn blades)
+	var wdg := WorldData.get_instance()
+	if wdg and wdg.ok:
+		var xl := (lx0 - front + lx1) * 0.5
+		wdg.add_no_grass(to_global(Vector3(xl, 0, c.y)), global_basis.x, (lx1 - lx0 + front) * 0.5 + 0.5, LOT.size.y * 0.5 + 0.5)
 	# paving: the forecourt with the fountain circle, the drive to the garage, the paths
 	_pave(Rect2(lx0, hc.y - 6.0, HOUSE.position.x - lx0, 12.0), paving, y0 + 0.02)            # gate -> door
 	_pave(Rect2(-12.0, hc.y - 16.0, HOUSE.position.x + 12.0, 32.0), paving, y0 + 0.02)         # forecourt
