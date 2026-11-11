@@ -76,6 +76,22 @@ func _ready() -> void:
 		await _look("wash_top", wp + Vector3(0, 75, 0) + wb * Vector3(14, 0, 0), wp + wb * Vector3(14, 0, 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("stops"):
+		_hour(15.0)
+		var bj: BusJob = main.get("bus_job")
+		for si in [0, 3]:
+			if si >= bj.stops.size():
+				continue
+			var st9: Dictionary = bj.stops[si]
+			var rgt: Vector3 = st9["right"]
+			var sp: Vector3 = (st9["p"] as Vector3) + rgt * 5.2
+			ow.hold = sp
+			ow.preload_at(sp)
+			await _sec(2.0)
+			var fw9 := rgt.cross(Vector3.UP)
+			await _look("stop_%d" % si, sp - rgt * 9.0 + fw9 * 7.0 + Vector3(0, 2.2, 0), sp + Vector3(0, 1.4, 0))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("missions"):
 		_hour(19.0)
 		var mis9: Missions = main.get_node("Missions")
@@ -676,6 +692,22 @@ func _ready() -> void:
 			var pb := Vector3(a1[0], a1[1], a1[2])
 			var dv := (pb - pa).normalized()
 			await _look("street_%d" % k, pa - dv * 25.0 + Vector3(0, 6, 0) + dv.cross(Vector3.UP) * 4.0, pa + dv * 80.0 + Vector3(0, 3, 0))
+		get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("stops"):
+		_hour(15.0)
+		var bj: BusJob = main.get("bus_job")
+		for si in [0, 3]:
+			if si >= bj.stops.size():
+				continue
+			var st9: Dictionary = bj.stops[si]
+			var rgt: Vector3 = st9["right"]
+			var sp: Vector3 = (st9["p"] as Vector3) + rgt * 5.2
+			ow.hold = sp
+			ow.preload_at(sp)
+			await _sec(2.0)
+			var fw9 := rgt.cross(Vector3.UP)
+			await _look("stop_%d" % si, sp - rgt * 9.0 + fw9 * 7.0 + Vector3(0, 2.2, 0), sp + Vector3(0, 1.4, 0))
 		get_tree().quit()
 		return
 	if OS.get_cmdline_user_args().has("missions"):

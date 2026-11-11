@@ -187,25 +187,122 @@ func build_stops(props_mesh: Mesh) -> void:
 			mi.rotation.y = PI
 			mi.visibility_range_end = 250.0
 			root.add_child(mi)
-		var post := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.05
-		cm.bottom_radius = 0.05
-		cm.height = 2.8
-		post.mesh = cm
-		post.position = Vector3(3.2, 1.4, 1.2)
-		root.add_child(post)
-		var lb := Label3D.new()
-		lb.text = "А1 · %s" % String(s["name"])
-		lb.font_size = 56
-		lb.pixel_size = 0.006
-		lb.outline_size = 10
-		lb.modulate = Color(1, 1, 1)
-		lb.outline_modulate = Color(0.05, 0.25, 0.6)
-		lb.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-		lb.position = Vector3(3.2, 3.1, 1.2)
-		lb.visibility_range_end = 120.0
-		root.add_child(lb)
+		_stop_dressing.call_deferred(root, s, i)
+
+
+## the stop's sign (pole, blue plate «ОСТАНОВКА», route №, stop name), a lit advertising lightbox
+## (the owner's banners), a bin, two small flower beds; built once per stop
+func _stop_dressing(root: Node3D, s: Dictionary, i: int) -> void:
+	var font: Font = load("res://assets/fonts/DejaVuSans-Bold.ttf")
+	var grey := StandardMaterial3D.new()
+	grey.albedo_color = Color(0.3, 0.32, 0.35)
+	grey.metallic = 0.6
+	grey.roughness = 0.4
+	var post := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.045
+	cm.bottom_radius = 0.045
+	cm.height = 3.0
+	post.mesh = cm
+	post.material_override = grey
+	post.position = Vector3(3.4, 1.5, 1.2)
+	root.add_child(post)
+	var blue := StandardMaterial3D.new()
+	blue.albedo_color = Color(0.05, 0.3, 0.7)
+	var plate := MeshInstance3D.new()
+	var pm := BoxMesh.new()
+	pm.size = Vector3(0.7, 0.7, 0.04)
+	plate.mesh = pm
+	plate.material_override = blue
+	plate.position = Vector3(3.4, 2.75, 1.2)
+	root.add_child(plate)
+	for face: float in [1.0, -1.0]:
+		var bus := Label3D.new()
+		bus.font = font
+		bus.text = "🚌\nОСТАНОВКА"
+		bus.font_size = 40
+		bus.pixel_size = 0.0045
+		bus.outline_size = 0
+		bus.modulate = Color(1, 1, 1)
+		bus.position = Vector3(3.4, 2.78, 1.2 + face * 0.025)
+		bus.rotation.y = 0.0 if face > 0 else PI
+		bus.visibility_range_end = 90.0
+		root.add_child(bus)
+		var rt := Label3D.new()
+		rt.font = font
+		rt.text = "А1 · %s" % String(s["name"])
+		rt.font_size = 36
+		rt.pixel_size = 0.0045
+		rt.outline_size = 0
+		rt.modulate = Color(0.1, 0.12, 0.15)
+		rt.position = Vector3(3.4, 2.24, 1.2 + face * 0.025)
+		rt.rotation.y = 0.0 if face > 0 else PI
+		rt.visibility_range_end = 60.0
+		root.add_child(rt)
+	var white := StandardMaterial3D.new()
+	white.albedo_color = Color(0.95, 0.95, 0.95)
+	var rtb := MeshInstance3D.new()
+	var rb := BoxMesh.new()
+	rb.size = Vector3(1.3, 0.24, 0.035)
+	rtb.mesh = rb
+	rtb.material_override = white
+	rtb.position = Vector3(3.4, 2.24, 1.2)
+	root.add_child(rtb)
+	# lit advertising lightbox at the end of the shelter
+	var ads := ["ad_laklak", "ad_dcnext", "ad_eskhata", "ad_orienbank"]
+	var tex_path := "res://assets/textures/ads/%s.png" % ads[i % ads.size()]
+	var frame := MeshInstance3D.new()
+	var fm := BoxMesh.new()
+	fm.size = Vector3(0.18, 2.1, 1.3)
+	frame.mesh = fm
+	frame.material_override = grey
+	frame.position = Vector3(-3.1, 1.15, 0.3)
+	root.add_child(frame)
+	if ResourceLoader.exists(tex_path):
+		var am := StandardMaterial3D.new()
+		am.albedo_texture = load(tex_path)
+		am.emission_enabled = true
+		am.emission_texture = am.albedo_texture
+		am.emission_energy_multiplier = 0.7
+		for face2: float in [1.0, -1.0]:
+			var q := MeshInstance3D.new()
+			var qm := QuadMesh.new()
+			qm.size = Vector2(1.15, 1.9)
+			q.mesh = qm
+			q.material_override = am
+			q.position = Vector3(-3.1 + face2 * 0.095, 1.15, 0.3)
+			q.rotation.y = face2 * PI * 0.5
+			q.visibility_range_end = 150.0
+			root.add_child(q)
+	# a bin and two flower beds beside the stop (the vegetation catalogue may still be loading)
+	for w in 600:
+		if OpenWorld.instance and not OpenWorld.instance._veg.is_empty():
+			break
+		await get_tree().process_frame
+	if OpenWorld.instance:
+		var g := root.global_transform
+		var props := {"bin_modern_steel": [g * Transform3D(Basis.IDENTITY, Vector3(2.6, 0.0, 1.0))]}
+		var trees := {"flowers_petunia": [], "flowers_salvia": [], "flowers_marigold": []}
+		var stone := StandardMaterial3D.new()
+		stone.albedo_color = Color(0.82, 0.8, 0.76)
+		for bx in [-5.2, 5.6]:
+			var bed := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(1.8, 0.3, 1.0)
+			bed.mesh = bm
+			bed.material_override = stone
+			bed.position = Vector3(bx, 0.15, 0.6)
+			root.add_child(bed)
+			for fi in 10:
+				var kind: String = ["flowers_petunia", "flowers_salvia", "flowers_marigold"][(fi / 2 + i) % 3]
+				trees[kind].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 1.2), Vector3(bx - 0.7 + (fi % 5) * 0.35, 0.3, 0.4 + (fi / 5) * 0.4)))
+		var holder := Node3D.new()
+		holder.name = "StopProps"
+		holder.top_level = true
+		root.add_child(holder)
+		holder.global_transform = Transform3D.IDENTITY
+		OpenWorld.instance._place_props(holder, props)
+		OpenWorld.instance._trees(holder, trees, 0)
 
 
 # ------------------------------------------------------------------------------------------ shift
