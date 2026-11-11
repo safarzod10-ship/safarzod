@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Перекуп с нуля — Серия 6</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="138" step="0.01" value="0">
+    <span id="time">0:00 / 2:18</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const STYLE = '25d';
+const DUR = 138, START_MONEY = 0, HUD_FROM = 0.3, HUD_PULSE = null, COVER_T = 96;
+const CUTS = [9, 24, 57.5, 75, 85, 114, 124];
+const DAYS_TOTAL = 1095, VOTE_AT = 127;
+const DAYS = [{ t: 24.3, d: 102 }, { t: 75.3, d: 105 }];
+// the banner keeps its real length when the animation is fitted to the voice
+const HOLDS = [[48.6, 57.4]];
+const BANNER_AT = 49.4, BANNER_LEN = 7.2;
+window.AUDIO_OVERLAYS = [{ src: 'out/ep6assets/banner.wav', at: BANNER_AT, volume: 0.9 }];
+
+const SUBS = [
+  [0.3, 8.6, 'N', 'В прошлой серии отец Тимура оказался должен *полтора миллиона*. Коллекторы забрали у Тимура всё. А компьютер в кредит не принёс *ни рубля*.'],
+
+  [9.0, 13.5, 'T', 'Ребят, я задумался. Зачем мне продавать компьютер? Деньги забрали. Телефоны забрали.'],
+  [13.5, 18.5, 'T', 'Я этого *так не оставлю*. Это не мой долг. Я даже не знал отца.'],
+  [18.5, 21.0, 'T', 'По-плохому — *значит по-плохому*.'],
+  [21.0, 24.0, 'T', 'Но сначала мне нужны *деньги*.'],
+
+  [24.3, 26.5, 'N', 'День 102.'],
+  [26.5, 32.5, 'T', 'Друг скинул *GiftBoost* — бот с подарками в телеграме. Там есть *бесплатный NFT-кейс*. Думаю: ну, попробую.'],
+  [32.5, 37.0, 'T', 'Кручу… и мне выпадает *Astral Shard*. NFT-подарок.'],
+  [37.0, 43.0, 'T', 'Я в шоке. Продаю его — выходит около *130 долларов*. Это *10 500 рублей*.'],
+  [43.0, 46.0, 'T', 'Честно — мне *повезло*. Но бесплатный кейс может открыть каждый.'],
+  [46.0, 48.5, 'T', 'Спасибо, *GiftBoost*. Залетайте!'],
+
+  [57.5, 63.5, 'N', 'Десять тысяч — это не полтора миллиона. Но Тимуру нужны были не деньги. Ему нужно было *вернуть своё*.'],
+  [63.5, 65.5, 'T', 'Звоню отцу.'],
+  [65.5, 68.5, 'F', 'Не лезь туда, сын. Это *опасные люди*.'],
+  [68.5, 71.5, 'T', 'Они забрали *моё*. Где они?'],
+  [71.5, 75.0, 'F', '…Склад за рынком. Только будь осторожен.'],
+
+  [75.3, 81.0, 'N', 'День 105. Тимур написал пацанам. Пришли *тридцать два* человека.'],
+  [81.0, 85.0, 'D', 'Мы конкуренты, Тимур. Но *своих не бросаем*.'],
+
+  [85.3, 88.0, 'N', 'Склад за рынком.'],
+  [88.0, 92.0, 'X', 'Э, вы чё, бл*? Кто такие?'],
+  [92.0, 98.0, 'T', 'Отдавайте деньги и *всё, что забрали*. Это моё. Долг отца — *не мой долг*.'],
+  [98.0, 101.0, 'X', 'Слышь, малой, ты *берега попутал*?'],
+  [101.0, 104.5, 'D', 'Посчитай, сколько нас. *И подумай ещё раз*.'],
+  [104.5, 108.0, 'X', '…Ладно. Ладно! Забирайте свои шмотки.'],
+  [108.0, 113.5, 'N', 'Их было двое. Пацанов — тридцать два. Они вернули *всё*: телефоны, ноутбук, деньги.'],
+
+  [114.0, 118.0, 'T', 'Я не верю… Пацаны, *спасибо*. Каждому.'],
+  [118.0, 124.0, 'N', 'На счету снова *58 000*. Плюс 10 500. И компьютер, за который ещё *платить*.'],
+
+  [124.3, 127.0, 'T', 'Что дальше? *Решать вам*.'],
+  [127.0, 134.8, 'T', '*1* — продать компьютер и вернуться к перекупу. *2* — вложить всё и начать *стримить по-настоящему*.'],
+];
+const MONEY = [{ t: 40.5, d: 10500 }, { t: 110.0, d: 58000 }];
+
+const FATHER = { skin: '#d4a07a', shirt: '#5b5f6b', pants: '#2b2f3a', hair: 'short', hairCol: '#55524f', stubble: true, collar: '#454852', tired: true, zip: true, pocket: false };
+const COLL = { skin: '#d8a27a', shirt: '#1c1e24', pants: '#121317', hair: 'bald', hairCol: '#3a3a3a', glasses: 'sun', zip: true, collar: '#0b0c0f', shoe: '#0b0c0f', pocket: false };
+const FRIEND_COLS = ['#334155', '#7c3aed', '#0e7490', '#b45309', '#475569', '#9f1239', '#1e3a8a', '#3f6212', '#57534e', '#0f766e'];
+
+/* ---------- media frames (screen recording + banner) ---------- */
+const CASE = [], BANNER = [];
+function loadSeq(arr, dir, n, ext) {
+  const ps = [];
+  for (let i = 1; i <= n; i++) {
+    const im = new Image(); im.src = `${dir}/${String(i).padStart(3, '0')}.${ext}`; arr.push(im);
+    ps.push(new Promise(r => { im.onload = r; im.onerror = r; }));
+  }
+  return ps;
+}
+
+/* ---------- helpers ---------- */
+function grade(col, a) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a; ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+function rain(t, x0, y0, w, h, n = 60, a = .5) {
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+  ctx.strokeStyle = `rgba(200,220,255,${a})`; ctx.lineWidth = 2;
+  for (let i = 0; i < n; i++) {
+    const x = x0 + ((hash(i) * w + t * 60) % w), y = y0 + ((hash(i + 50) * h + t * (700 + hash(i + 9) * 300)) % h);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 26); ctx.stroke();
+  }
+  ctx.restore();
+}
+function lampGlow(x, y, r, col = '255,200,120', a = .45) {
+  const g = ctx.createRadialGradient(x, y, 10, x, y, r);
+  g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+function card(x, y, w, h, k, fn, rot = 0, border = OL) {
+  if (k <= 0) return;
+  at(x, y, k, rot, () => {
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+    rr(-w / 2, -h / 2, w, h, 28, '#fffdf7'); ctx.restore();
+    rr(-w / 2, -h / 2, w, h, 28, null, border, 6);
+    fn();
+  });
+}
+function creditPill(t) {
+  at(540, 428, P(t, .5, .8) * (1 - P(t, VOTE_AT, VOTE_AT + .3)), 0, () => {
+    rr(-190, -32, 380, 64, 32, '#e5484d', OL, 5);
+    txt('КРЕДИТ −90 000 ₽', 0, 3, 32, '#fff', { w: 900 });
+  });
+}
+function phoneVideo(x, y, w, h, img, k = 1, rot = 0) {
+  at(x, y, k, rot, () => {
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 24;
+    rr(-w / 2 - 16, -h / 2 - 16, w + 32, h + 32, 58, '#0b0d12'); ctx.restore();
+    rr(-w / 2 - 16, -h / 2 - 16, w + 32, h + 32, 58, null, '#3a3f4b', 4);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 44); ctx.clip();
+    if (img && img.complete && img.naturalWidth) ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    else { ctx.fillStyle = '#111'; ctx.fillRect(-w / 2, -h / 2, w, h); }
+    ctx.restore();
+    rr(-50, -h / 2 + 10, 100, 26, 13, '#0b0d12');
+  });
+}
+function hand(x, y, s, rot = 0) {
+  at(x, y, s, rot, () => {
+    const sk = '#f2c29b', d = '#c9926b';
+    for (let i = 0; i < 4; i++) { const fx = -54 + i * 36, fl = [96, 112, 108, 90][i]; rr(fx - 16, -fl - 20, 32, fl + 30, 16, sk, OL, 5); ctx.beginPath(); ctx.ellipse(fx, -fl - 4, 8, 5, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fill(); }
+    ctx.save(); ctx.translate(-78, 30); ctx.rotate(-.7); rr(-16, -70, 34, 90, 17, sk, OL, 5); ctx.restore();
+    rr(-74, -20, 148, 140, 46, sk, OL, 5);
+    line([-40, 40, 30, 30], d, 4); line([-30, 70, 40, 62], d, 4);
+  });
+}
+function crowd(t, n, y0, seed = 0, alpha = 1) {
+  // people in the back: lit silhouettes with a rim light, so the numbers read clearly
+  ctx.save(); ctx.globalAlpha = alpha;
+  const items = [];
+  for (let i = 0; i < n; i++) items.push([40 + hash(i + seed) * 1000, y0 - 120 + hash(i + 40 + seed) * 160, .75 + hash(i + 80 + seed) * .35, i]);
+  items.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, s, i] of items) {
+    const b = Math.sin(t * 2.2 + i) * 4;
+    const col = ['#3b4256', '#4a3f5c', '#3d5058', '#55483f', '#40465a'][i % 5];
+    rr(x - 72 * s, y - 235 * s + b, 144 * s, 240 * s, 44 * s, col, 'rgba(10,12,18,.9)', 4);
+    ball(x, y - 300 * s + b, 66 * s, ['#c9a184', '#b98d6c', '#d6ae8c', '#a8795a'][i % 4], 4);
+    if (i % 3 === 0) { ctx.beginPath(); ctx.arc(x, y - 312 * s + b, 68 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.fillStyle = col; ctx.fill(); }
+    ctx.beginPath(); ctx.arc(x, y - 300 * s + b, 66 * s, -1.2, .2); ctx.strokeStyle = 'rgba(255,220,170,.45)'; ctx.lineWidth = 5; ctx.stroke();
+  }
+  ctx.restore();
+}
+function friend(i, x, y, s, t, extra = {}) {
+  person(Object.assign({ skin: ['#f1c49e', '#d9a37c', '#e8b48c', '#c98f68'][i % 4], shirt: FRIEND_COLS[i % FRIEND_COLS.length], pants: '#1f2937', hair: i % 3 ? 'short' : 'hood', hood: FRIEND_COLS[i % FRIEND_COLS.length], hairCol: ['#2a2018', '#3b2a1e', '#111', '#5a3a2a'][i % 4], pocket: false, expr: 'angry', ph: i * 1.3 }, { x, y, s }, extra), t);
+}
+
+/* ---------- backgrounds ---------- */
+function bgStream(t) {
+  bgRoom(true, t); grade('#6b6fa8', .35);
+  const hue = (t * 40) % 360;
+  ctx.save(); ctx.shadowColor = `hsl(${hue},90%,60%)`; ctx.shadowBlur = 50; rr(520, 1100, 520, 10, 5, `hsl(${hue},90%,60%)`); ctx.restore();
+  lampGlow(780, 900, 520, '120,140,255', .35);
+  rr(500, 1110, 560, 34, 8, '#2a2a35', OL, 6);
+  rr(560, 850, 360, 230, 14, '#0d0f16', OL, 7);
+  const sg = ctx.createLinearGradient(0, 866, 0, 1064); sg.addColorStop(0, '#2b1f5c'); sg.addColorStop(1, '#4b2c84'); rr(574, 864, 332, 200, 8, sg);
+  rr(720, 1080, 40, 30, 4, '#0d0f16', OL, 4);
+  rr(950, 900, 70, 210, 10, '#11131d', OL, 6);
+}
+function bgWarehouse(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#15171c'); g.addColorStop(1, '#262a31');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let x = 0; x < W; x += 120) { ctx.fillStyle = 'rgba(255,255,255,.03)'; ctx.fillRect(x, 0, 60, 1300); }
+  // shelves with boxes
+  for (const sx of [40, 760]) {
+    rr(sx, 520, 280, 16, 3, '#4b5563'); rr(sx, 760, 280, 16, 3, '#4b5563'); rr(sx, 1000, 280, 16, 3, '#4b5563');
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) if (hash(sx + r * 3 + c) > .3) rr(sx + 10 + c * 90, 420 + r * 240 + hash(c + r) * 30, 80, 100 - hash(c + r) * 30, 6, '#8a6a46', OL, 4);
+  }
+  ctx.fillStyle = '#1b1d22'; ctx.fillRect(0, 1300, W, H - 1300);
+  line([540, 0, 540, 300], '#222', 4);
+  ctx.beginPath(); ctx.moveTo(480, 340); ctx.lineTo(600, 340); ctx.lineTo(560, 300); ctx.lineTo(520, 300); ctx.closePath(); ctx.fillStyle = '#2f3237'; ctx.fill();
+  const fl = .85 + .15 * Math.sin(t * 19) * Math.sin(t * 5);
+  ctx.save(); ctx.globalAlpha = .55 * fl;
+  ctx.beginPath(); ctx.moveTo(500, 340); ctx.lineTo(580, 340); ctx.lineTo(900, 1500); ctx.lineTo(180, 1500); ctx.closePath();
+  const cg = ctx.createLinearGradient(0, 340, 0, 1500); cg.addColorStop(0, 'rgba(255,230,170,.5)'); cg.addColorStop(1, 'rgba(255,230,170,0)');
+  ctx.fillStyle = cg; ctx.fill(); ctx.restore();
+}
+
+/* ================= SCENES ================= */
+function e1(t) {
+  bgDark(t);
+  const items = [[.6, 'Долг отца: 1 500 000 ₽', '#e5484d'], [2.6, 'Коллекторы забрали всё', '#111827'], [4.8, 'ПК в кредит: доход 0 ₽', '#7c3aed']];
+  items.forEach(([a, s, c], i) => card(540, 560 + i * 170, 800, 130, pop(t, a, .4), () => { circ(-330, 0, 30, c, OL, 5); txt(s, 30, 3, 44, OL, { w: 900 }); }, (i - 1) * .02));
+  person(Object.assign({}, TIMUR, { x: 540, y: lerp(1800, 1600, back(P(t, .4, .9))), s: 1.5, expr: 'sad', tired: true }), t);
+  creditPill(t);
+  vignette('rgba(0,0,0,1)', .5);
+}
+function e2(t) {
+  bgStream(t);
+  let ex = 'worry', aR = POSE.idle, aL = POSE.idle;
+  if (t > 13.5) ex = 'angry';
+  if (within(t, 18.5, 21)) { aR = POSE.up; }
+  if (t > 21) { ex = 'smirk'; }
+  person(Object.assign({}, TIMUR, { x: 330, y: 1570, s: 1.65, expr: ex, aL, aR, turn: .3, lx: .5, talk: talkAmt('T', t) }), t);
+  if (within(t, 18.6, 21.2)) { const [dx, dy] = shk(t, 18.9, .4, 16); stamp('ПО-ПЛОХОМУ', 540 + dx, 640 + dy, 84, '#e5484d', P(t, 18.6, 18.9), -.08); }
+  if (within(t, 21.1, 24)) card(540, 640, 620, 160, pop(t, 21.2), () => { coin(-210, 0, 48); txt('НУЖНЫ ДЕНЬГИ', 50, 3, 52, OL, { w: 900 }); });
+  creditPill(t);
+  vignette('rgba(0,0,10,1)', .5);
+}
+function caseFrame(t) {
+  const k = clamp((t - 32.5) * 1.6 * 20, 0, CASE.length - 1);
+  return CASE[Math.floor(k)];
+}
+function e3(t) {
+  bgRoom(true, t); grade('#8d93c4', .25);
+  lampGlow(720, 860, 520, '255,190,80', .25);
+  person(Object.assign({}, TIMUR, { x: 230, y: 1600, s: 1.45, expr: t < 32.5 ? 'n' : t < 37 ? 's' : 'h', aR: POSE.point, turn: .5, lx: .8, ly: -.2, talk: talkAmt('T', t) }), t);
+  const pk = eout(P(t, 26.4, 27.0));
+  if (pk > 0) phoneVideo(720, 880, 400, 812, caseFrame(t), pk, .03);
+  if (t > 40.3 && t < 48.6) card(235, 640, 400, 380, pop(t, 40.4), () => {
+    txt('Astral Shard', 0, -130, 40, OL, { w: 900 });
+    txt('≈ 130 $', 0, -50, 70, '#2563eb', { w: 900 });
+    txt('↓', 0, 20, 50, OL, { w: 900 });
+    txt('10 500 ₽', 0, 100, 72, '#16a34a', { w: 900 });
+  }, -.04, '#16a34a');
+  creditPill(t);
+  vignette('rgba(0,0,10,1)', .45);
+}
+// the banner break: everything freezes, a hand stops the video, banner plays on top
+function banner(t) {
+  e3(48.55);
+  ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.globalAlpha = .85 * P(t, 48.6, 48.9) * (1 - P(t, 57.0, 57.4)); ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, W, H); ctx.restore();
+  ctx.save(); ctx.globalAlpha = .45 * P(t, 48.6, 48.9) * (1 - P(t, 57.0, 57.4)); ctx.fillStyle = '#05060a'; ctx.fillRect(0, 0, W, H); ctx.restore();
+  // hand comes in and presses "stop"
+  const hin = eout(P(t, 48.6, 49.0)), press = Math.sin(clamp((t - 49.0) / .35) * Math.PI), hout = eio(P(t, 49.5, 49.9));
+  if (hin > 0 && hout < 1) hand(lerp(1250, 760, hin) + hout * 600, 1150 + hout * 200, 1.4 * (1 - .12 * press), -.25);
+  if (within(t, 49.0, 49.9)) {
+    const k = P(t, 49.0, 49.15) * (1 - P(t, 49.6, 49.9));
+    ctx.save(); ctx.globalAlpha = k; circ(540, 820, 120 + 60 * P(t, 49, 49.5), null, 'rgba(255,255,255,.8)', 8); ctx.restore();
+    at(540, 820, k, 0, () => { circ(0, 0, 90, 'rgba(10,12,20,.75)', '#fff', 6); rr(-34, -40, 22, 80, 6, '#fff'); rr(12, -40, 22, 80, 6, '#fff'); });
+  }
+  // banner on top (not full screen)
+  const bk = back(P(t, BANNER_AT - .2, BANNER_AT + .2)) * (1 - eio(P(t, BANNER_AT + BANNER_LEN - .1, BANNER_AT + BANNER_LEN + .3)));
+  if (bk > 0) {
+    const i = clamp(Math.floor((t - BANNER_AT) * 30), 0, BANNER.length - 1);
+    const img = BANNER[i], bw = 990, bh = bw * 509 / 1000;
+    at(540, 820, bk, 0, () => {
+      ctx.save(); ctx.shadowColor = 'rgba(255,190,40,.45)'; ctx.shadowBlur = 70;
+      if (img && img.naturalWidth) ctx.drawImage(img, -bw / 2, -bh / 2, bw, bh);
+      ctx.restore();
+      txt('Реклама', -bw / 2 + 70, -bh / 2 - 22, 24, 'rgba(255,255,255,.6)', { w: 600 });
+    });
+  }
+}
+function e4(t) {
+  bgStreet(t); rain(t, 0, 0, W, 1300, 90, .35); grade('#7f8bb3', .35);
+  person(Object.assign({}, TIMUR, { x: 280, y: 1600, s: 1.55, expr: t < 63.5 ? 'angry' : 'n', aR: t > 63.5 ? POSE.ear : POSE.idle, propR: t > 63.5 ? earPhone : null, turn: .4, lx: .6, talk: talkAmt('T', t) }), t);
+  personCard(t, 690, 690, 480, 520, Object.assign({}, FATHER, { expr: 'worry', aR: POSE.ear, propR: earPhone, talk: talkAmt('F', t) }), 'Отец', '#6b7280', pop(t, 65.5, .35) * (1 - P(t, 74.7, 75)));
+  if (within(t, 59, 63.5)) card(540, 640, 760, 220, pop(t, 59.2) * (1 - P(t, 63.2, 63.5)), () => {
+    txt('10 500 ₽', -180, 0, 60, '#16a34a', { w: 900 }); txt('≠', 40, 0, 70, OL, { w: 900 }); txt('1 500 000', 230, 0, 52, '#e5484d', { w: 900 });
+  });
+  vignette('rgba(0,0,10,1)', .55);
+}
+function e5(t) {
+  bgStreet(t); grade('#9aa0c8', .25);
+  crowd(t, Math.round(lerp(0, 22, eout(P(t, 75.5, 79)))), 1250, 7, .9);
+  const pos = [[150, 1500], [930, 1500], [70, 1650], [1010, 1650]];
+  pos.forEach(([x, y], i) => {
+    const wk = P(t, 76 + i * .5, 77.6 + i * .5);
+    if (wk > 0) friend(i, lerp(x < 540 ? -200 : 1280, x, eout(wk)), y, 1.3, t, { walk: wk < 1 ? 1 : 0, turn: x < 540 ? .5 : -.5, expr: 'smirk' });
+  });
+  const dk = P(t, 80.4, 81.6);
+  if (t > 80.4) person(Object.assign({}, DANYA, { x: lerp(1300, 760, eout(dk)), y: 1640, s: 1.55, expr: 'smirk', walk: dk < 1 ? 1 : 0, turn: -.5, lx: -.6, talk: talkAmt('D', t), ph: 4 }), t);
+  person(Object.assign({}, TIMUR, { x: 360, y: 1660, s: 1.6, expr: t > 81 ? 'h' : 'n', turn: .4, lx: .6, talk: talkAmt('T', t) }), t);
+  if (t > 77.5) at(540, 560, pop(t, 77.5), -.05, () => { rr(-170, -80, 340, 160, 40, '#ffd23f', OL, 8); txt(String(Math.round(lerp(1, 32, eout(P(t, 77.5, 80))))), 0, 6, 110, OL, { w: 900 }); });
+  vignette('rgba(0,0,10,1)', .5);
+}
+function e6(t) {
+  const z = lerp(1, 1.12, eio(P(t, 85, 104)));
+  const [sx, sy] = shk(t, 101.2, .4, 10);
+  cam(z, 540, 1100, sx, sy, () => {
+    bgWarehouse(t);
+    crowd(t, 22, 1300, 3, .95);
+    const give = t > 104.5;
+    for (const [i, x, sc] of [[0, 760, 1.75], [1, 940, 1.65]]) {
+      person(Object.assign({}, COLL, { x, y: 1600 - i * 40, s: sc, expr: give ? 'worry' : 'angry', turn: -.5, lx: -.6, aR: give ? POSE.shrug : i ? POSE.idle : POSE.finger, aL: give ? POSE.shrug : POSE.idle, sweat: give, talk: i ? 0 : talkAmt('X', t), ph: 5 + i }), t);
+    }
+    friend(1, 70, 1660, 1.35, t, { turn: .5 }); friend(3, 520, 1700, 1.3, t, { turn: .4 });
+    person(Object.assign({}, DANYA, { x: 160, y: 1640, s: 1.5, expr: t > 101 ? 'smirk' : 'angry', turn: .5, lx: .6, talk: talkAmt('D', t), ph: 4 }), t);
+    person(Object.assign({}, TIMUR, { x: 360, y: 1660, s: 1.62, expr: t < 104.5 ? 'angry' : 'smirk', aR: within(t, 92, 98) ? POSE.point : POSE.idle, turn: .5, lx: .7, talk: talkAmt('T', t) }), t);
+    if (within(t, 108.4, 112)) {
+      const items = [[108.5, 'phone'], [108.9, 'phone'], [109.3, 'laptop'], [109.7, 'cash'], [110.1, 'phone']];
+      items.forEach(([a, kind]) => {
+        const k = P(t, a, a + .9); if (k <= 0 || k >= 1) return;
+        at(lerp(860, 380, eio(k)), 1150 - Math.sin(k * Math.PI) * 240, 1, -k * 3, () => {
+          if (kind === 'phone') phone(0, 0, 70, 125, { s1: '#3b82f6', s2: '#1e293b' });
+          if (kind === 'laptop') { rr(-90, -60, 180, 110, 10, '#cbd5e1', OL, 5); rr(-110, 50, 220, 16, 6, '#94a3b8', OL, 4); }
+          if (kind === 'cash') { note(0, 0, 0, 1); note(10, 14, .2, 1); }
+        });
+      });
+    }
+  });
+  if (within(t, 101.2, 104.5)) at(540, 600, pop(t, 101.3), -.05, () => { rr(-210, -80, 420, 160, 40, '#ffd23f', OL, 8); txt('32 vs 2', 0, 6, 90, OL, { w: 900 }); });
+  if (t > 110.5) stamp('ВСЁ ВЕРНУЛИ', 540, 600, 74, '#16a34a', P(t, 110.5, 110.8) * (1 - P(t, 113.3, 113.6)), -.06);
+  vignette('rgba(0,0,0,1)', .6);
+}
+function e7(t) {
+  bgStreet(t);
+  const sun = P(t, 114, 124);
+  lampGlow(540, 900, 900, '255,200,140', .25 + sun * .2);
+  crowd(t, 22, 1260, 11, .85);
+  [[90, 1560], [990, 1560], [250, 1720], [830, 1720]].forEach(([x, y], i) => friend(i + 4, x, y, 1.3, t, { expr: 'h', aL: POSE.up, aR: POSE.up, turn: x < 540 ? .5 : -.5, bob: Math.abs(Math.sin(t * 6 + i)) * -14 }));
+  person(Object.assign({}, DANYA, { x: 760, y: 1650, s: 1.45, expr: 'h', aR: POSE.up, turn: -.4, ph: 4 }), t);
+  person(Object.assign({}, TIMUR, { x: 440, y: 1680, s: 1.62, expr: 'h', aL: POSE.up, aR: POSE.up, turn: 0, talk: talkAmt('T', t) }), t);
+  if (t > 118.2) card(540, 640, 760, 300, pop(t, 118.3) * (1 - P(t, 123.7, 124)), () => {
+    txt('58 000 ₽', -170, -60, 64, '#16a34a', { w: 900 }); txt('+ 10 500 ₽', 170, -60, 52, '#2563eb', { w: 900 });
+    txt('кредит за ПК: −90 000 ₽', 0, 60, 44, '#e5484d', { w: 900 });
+  });
+  creditPill(t);
+  vignette('rgba(20,10,0,1)', .4);
+}
+function e8(t) {
+  bgStream(t);
+  person(Object.assign({}, TIMUR, { x: 540, y: 1620, s: 1.55, expr: 'smirk', aR: t > 127 ? POSE.point : POSE.idle, talk: talkAmt('T', t) }), t);
+  creditPill(t);
+  voteCard(t, 127.0, [['ПРОДАТЬ ПК', 'ПЕРЕКУП', 'вернуться к истокам'], ['ВЛОЖИТЬ ВСЁ', 'СТРИМЫ', 'по-настоящему']], 133.5, 'Серия 7 — по вашему выбору');
+  vignette('rgba(0,0,10,1)', .45);
+}
+
+const SCENES = [[0, 9, e1], [9, 24, e2], [24, 48.6, e3], [48.6, 57.5, banner], [57.5, 75, e4], [75, 85, e5], [85, 114, e6], [114, 124, e7], [124, 138.1, e8]];
+Promise.all([...loadSeq(CASE, 'out/ep6assets/case', 239, 'jpg'), ...loadSeq(BANNER, 'out/ep6assets/banner', 216, 'png')]).then(startPlayer);
+</script>
+</body>
+</html>

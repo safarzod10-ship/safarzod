@@ -20,6 +20,10 @@ cfg = json.load(open(map_path, encoding='utf-8'))
 vdir = cfg['voiceDir']
 phone = set(cfg.get('phoneFilter', []))
 
+# animation ranges that must keep real-time length (e.g. an ad banner): const HOLDS = [[a, b], ...]
+mh = re.search(r'const HOLDS = (\[.*?\]);', html)
+HOLDS = json.loads(mh.group(1)) if mh else []
+
 cache = {}
 def load(name, filt=None):
     key = (name, filt)
@@ -81,7 +85,8 @@ cur, prev_b = 0.0, 0.0
 place = []
 for a, b, who in subs:
     gap = a - prev_b
-    out_gap = gap if gap <= 2 else min(gap, 3.6)
+    held = any(h0 < a and h1 > prev_b for h0, h1 in HOLDS)
+    out_gap = gap if (gap <= 2 or held) else min(gap, 3.6)
     start = cur + out_gap
     slot = b - a
     ln = by_a.get(a)

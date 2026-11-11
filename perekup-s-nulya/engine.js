@@ -30,6 +30,7 @@ const SPK = {
   K: { name: 'Покупатель', col: '#ea580c' },
   P: { name: 'Клиент', col: '#2563eb' },
   D: { name: 'Даня', col: '#ca8a04' },
+  N: { name: 'Рассказчик', col: '#334155' },
   O: { name: 'Мама', col: '#a2577a' },
   F: { name: 'Отец', col: '#6b7280' },
   X: { name: 'Коллектор', col: '#111827' },
@@ -780,7 +781,7 @@ function shade(hex, k) {
   let r, g, b;
   const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(hex);
   if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
-  else { const h = hex.replace('#', ''); r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16); }
+  else { let h = hex.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16); }
   const f = (c) => Math.round(k >= 0 ? c + (255 - c) * k : c * (1 + k));
   return `rgb(${f(r)},${f(g)},${f(b)})`;
 }
