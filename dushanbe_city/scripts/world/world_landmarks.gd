@@ -211,7 +211,7 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 				_cyl(root, null, "water", Vector3(fx, 0.5, -20), 8.4, 0.25, -1.0, 24, false)
 				_cyl(root, null, "marble", Vector3(fx, 0.5, -20), 0.6, 3.0, 0.3, 12, false)
 		"rudaki_park":
-			_box(root, null, "grass", Vector3(0, 0.08, 0), Vector3(L, 0.15, D), false)
+			pass                             # the terrain's own lawn (the slab looked like camouflage)
 			_box(root, null, "plaza", Vector3(0, 0.12, 0), Vector3(12, 0.2, D), false)
 			_box(root, null, "plaza", Vector3(0, 0.12, 0), Vector3(L, 0.2, 10), false)
 			_box(root, null, "plaza", Vector3(0, 0.07, -D * 0.5 - 5.0), Vector3(16, 0.2, 10.5), false)   # gate -> sidewalk
@@ -272,7 +272,7 @@ static func build(parent: Node3D, d: Dictionary, lod: int) -> void:
 			_box(root, null, "gold", Vector3(0, 20, -D * 0.36), Vector3(L * 0.45, 34, 0.5), false)
 			_label(root, "КИТОБХОНАИ МИЛЛӢ", Vector3(0, 4.5, -D * 0.36), PI, 0.03)
 		"flag":
-			_box(root, null, "grass", Vector3(0, 0.08, 0), Vector3(L, 0.15, D), false)
+			pass                             # the terrain's own lawn (the slab looked like camouflage)
 			_cyl(root, body, "marble", Vector3(0, 0.1, 0), 12.0, 1.2)
 			# the imported flag of Tajikistan on its pole, x20: a 150 m flagpole, 97 x 67 m cloth
 			var fl := WorldModels.place(root, "flag", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 20.0), Vector3(0, 1.3, 0)), 0.0, true)

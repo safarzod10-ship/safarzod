@@ -54,7 +54,7 @@ func _ready() -> void:
 			await _sec(2.0)
 			var side := fdir.cross(Vector3.UP)
 			await _look("tour_%s_air" % id, c + fdir * (r * 0.9 + 40.0) + side * r * 0.5 + Vector3(0, r * 0.45 + 30.0, 0), c, -1.0, NAN, true)
-			var eye := c + fdir * (r * 0.75 + 18.0) + side * 6.0
+			var eye := c + fdir * (r * 0.5 + 14.0) + side * 6.0
 			eye.y = wd.height_at(eye.x, eye.z) + 1.8
 			await _look("tour_%s_street" % id, eye, c + Vector3(0, minf(r * 0.12, 10.0), 0))
 		get_tree().quit()
