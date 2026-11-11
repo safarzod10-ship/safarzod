@@ -1,8 +1,11 @@
-PASS  1. city life present
-PASS  2. pedestrians spawned: 8, different clothes: 6
-PASS  3. punched: falls down (hp 88)
-PASS  4. gets up and runs away
-PASS  5. shot 4 times: dead (dead); 3 others panic
-PASS  6. ran over by the car: dead
-PASS  7. traffic cars: 10
-PASS  8. steal: button «», driving Stolen1 (gls)
+PASS  1. the hero's home on the lot by the avenue: (-175.0, 11.0, -2094.0)
+PASS  2. the game starts at the home's door (0.0 m from it)
+PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
+PASS  4. drives out of the garage through the gate (19 m out, condition 100 %)
+PASS  5. promo TAJDUSH: +200 000 смн
+PASS  6. account ID given automatically: 96173653 (8 digits)
+PASS  7. top-up code for this ID: +5 000 смн (money 500 смн -> 5 500 смн)
+PASS  8. the same code again: refused (Этот код уже использован)
+PASS  9. a code made for another ID: refused (Код не подходит к вашему ID)
+PASS 10. a forged amount: refused (Код не подходит к вашему ID)
+PASS 11. restart: weapons ["fist", "pistol", "ak47"], ammo 17 / 45, selected ak47, cars ["car", "camry"], money 12 345 смн

@@ -113,7 +113,11 @@ func _ready() -> void:
 		await _sec(3.0)
 		var t9 := hh9.global_transform
 		await _look("home_top", t9 * Vector3(-30, 70, -230), t9 * Vector3(10, 0, -230))
-		await _look("home_garden", t9 * Vector3(-10, 3.0, -200), t9 * Vector3(30, 1.5, -190))
+		await _look("home_garden", t9 * Vector3(-12, 3.2, -246), t9 * Vector3(14, 1.0, -282))
+		await _look("home_orchard", t9 * Vector3(-12, 3.0, -160), t9 * Vector3(14, 1.5, -190))
+		if OS.get_cmdline_user_args().has("dbg"):
+			await _look("home_dbg", t9 * Vector3(10, 25, -140), t9 * Vector3(10, 0, -170))
+			print("HOME xf ", t9, " lot y ", hh9.floor_y())
 		await _look("home_tapchan", t9 * Vector3(22, 2.5, -200), t9 * Vector3(28, 1.0, -206))
 		await _look("home_front", t9 * Vector3(-28, 3.0, -228), t9 * Vector3(10, 3, -225))
 		get_tree().quit()
@@ -843,7 +847,8 @@ func _ready() -> void:
 		await _sec(3.0)
 		var t9 := hh9.global_transform
 		await _look("home_top", t9 * Vector3(-30, 70, -230), t9 * Vector3(10, 0, -230))
-		await _look("home_garden", t9 * Vector3(-10, 3.0, -200), t9 * Vector3(30, 1.5, -190))
+		await _look("home_garden", t9 * Vector3(-12, 3.2, -246), t9 * Vector3(14, 1.0, -282))
+		await _look("home_orchard", t9 * Vector3(-12, 3.0, -160), t9 * Vector3(14, 1.5, -190))
 		await _look("home_tapchan", t9 * Vector3(22, 2.5, -200), t9 * Vector3(28, 1.0, -206))
 		await _look("home_front", t9 * Vector3(-28, 3.0, -228), t9 * Vector3(10, 3, -225))
 		get_tree().quit()

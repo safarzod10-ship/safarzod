@@ -304,8 +304,12 @@ func _build() -> void:
 	_box(Vector3(LOT.size.x - 1.0, 0.16, LOT.size.y - 1.0), Vector3(c.x, y0 - 0.06, c.y), lawn, true)
 	var g := GARAGE.get_center()
 	_box(Vector3(GARAGE.position.x - lx0 + 18.0, 0.16, 7.0), Vector3((lx0 - 18.0 + GARAGE.position.x) * 0.5, y0 + 0.05, g.y), paving)
-	_box(Vector3(HOUSE.position.x - lx0, 0.16, 2.4), Vector3((lx0 + HOUSE.position.x) * 0.5, y0 + 0.06, HOUSE.position.y + 6.0), paving)
-	# fence: low stone wall + steel bars, gaps for the drive and the path
+	_box(Vector3(HOUSE.position.x - lx0 + 18.0, 0.16, 2.4), Vector3((lx0 - 18.0 + HOUSE.position.x) * 0.5, y0 + 0.06, HOUSE.position.y + 6.0), paving)
+	# fence: low stone wall + wrought-iron bars between brick pillars, gaps for the drive and the path
+	var bars: Array[Transform3D] = []
+	var brick := _mat(Color(0.62, 0.36, 0.26), 0.85)
+	var cap := _mat(Color(0.8, 0.78, 0.74), 0.7)
+	var iron := _mat(Color(0.1, 0.1, 0.11), 0.45, 0.6)
 	for seg in [[Vector2(lx0, lz0), Vector2(lx1, lz0)], [Vector2(lx1, lz0), Vector2(lx1, lz1)], [Vector2(lx1, lz1), Vector2(lx0, lz1)],
 			[Vector2(lx0, lz1), Vector2(lx0, HOUSE.position.y + 7.4)], [Vector2(lx0, HOUSE.position.y + 4.6), Vector2(lx0, g.y + 3.6)],
 			[Vector2(lx0, g.y - 3.6), Vector2(lx0, lz0)]]:
@@ -314,8 +318,40 @@ func _build() -> void:
 		var mid := (a + b) * 0.5
 		var L := a.distance_to(b)
 		var along_x := absf(b.x - a.x) > absf(b.y - a.y)
-		_box(Vector3(L if along_x else 0.4, 0.8, 0.4 if along_x else L), Vector3(mid.x, y0 + 0.4, mid.y), stone, true)
-		_box(Vector3(L if along_x else 0.08, 0.7, 0.08 if along_x else L), Vector3(mid.x, y0 + 1.15, mid.y), steel, true)
+		_box(Vector3(L if along_x else 0.4, 0.6, 0.4 if along_x else L), Vector3(mid.x, y0 + 0.3, mid.y), stone, true)
+		_box(Vector3(L if along_x else 0.46, 0.06, 0.46 if along_x else L), Vector3(mid.x, y0 + 0.63, mid.y), cap, false)
+		# wrought-iron bars on top (one multimesh), rails, brick pillars with caps every ~3 m
+		for hh: float in [0.78, 1.62]:
+			_box(Vector3(L if along_x else 0.05, 0.05, 0.05 if along_x else L), Vector3(mid.x, y0 + hh, mid.y), iron)
+		var nb := int(L / 0.16)
+		for k in nb:
+			var t := (k + 0.5) / nb
+			var bp := a.lerp(b, t)
+			bars.append(Transform3D(Basis.IDENTITY, Vector3(bp.x, y0 + 1.15, bp.y)))
+		var np := maxi(1, int(round(L / 3.2)))
+		for k in np + 1:
+			var pp := a.lerp(b, float(k) / np)
+			_box(Vector3(0.5, 1.75, 0.5), Vector3(pp.x, y0 + 0.875, pp.y), brick, false)
+			_box(Vector3(0.62, 0.1, 0.62), Vector3(pp.x, y0 + 1.8, pp.y), cap, false)
+		var wall := CollisionShape3D.new()
+		var wsh := BoxShape3D.new()
+		wsh.size = Vector3(L if along_x else 0.4, 1.8, 0.4 if along_x else L)
+		wall.shape = wsh
+		wall.position = Vector3(mid.x, y0 + 0.9, mid.y)
+		_body.add_child(wall)
+	var bar_mm := MultiMesh.new()
+	bar_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var bar_mesh := BoxMesh.new()
+	bar_mesh.size = Vector3(0.025, 0.95, 0.025)
+	bar_mm.mesh = bar_mesh
+	bar_mm.instance_count = bars.size()
+	for k in bars.size():
+		bar_mm.set_instance_transform(k, bars[k])
+	var bar_mi := MultiMeshInstance3D.new()
+	bar_mi.multimesh = bar_mm
+	bar_mi.material_override = iron
+	bar_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(bar_mi)
 	# the house: ground floor (stone base), upper floor (stucco, overhanging), flat roof
 	var hc := HOUSE.get_center()
 	var hx := HOUSE.size.x
@@ -387,7 +423,7 @@ func _garden(y0: float, wood: Material, stone: Material) -> void:
 	if OpenWorld.instance == null:
 		return
 	var g := global_transform
-	var trees := {"mulberry": [], "sapling": [], "rose_bush": [], "thuja_cone": [], "flowers_petunia": [], "flowers_salvia": [], "flowers_marigold": [], "shrub_lilac": []}
+	var trees := {"mulberry": [], "sapling": [], "rose_bush": [], "thuja_cone": [], "flowers_petunia": [], "flowers_salvia": [], "flowers_marigold": [], "shrub_lilac": [], "hedge_privet": []}
 	var lx0 := LOT.position.x
 	var lz0 := LOT.position.y
 	var lx1 := LOT.end.x
@@ -415,6 +451,57 @@ func _garden(y0: float, wood: Material, stone: Material) -> void:
 	# lilacs at the house corners
 	for cpt in [Vector3(HOUSE.position.x - 1.5, y0, HOUSE.position.y - 1.5), Vector3(HOUSE.position.x - 1.5, y0, HOUSE.end.y + 1.5)]:
 		trees["shrub_lilac"].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.8), cpt))
+	# the south part of the yard (beyond the garage): a vineyard on trellises, vegetable beds, a tandoor, a swing
+	var soil := _mat(Color(0.3, 0.2, 0.12), 0.95)
+	var steel := _mat(Color(0.35, 0.36, 0.38), 0.4, 0.7)
+	var vx0 := lx0 + 4.0
+	var vx1 := HOUSE.end.x + 2.0
+	for row in 5:
+		var vz := lz0 + 5.0 + row * 3.4
+		_box(Vector3(vx1 - vx0, 0.04, 0.9), Vector3((vx0 + vx1) * 0.5, y0 + 0.03, vz), soil)
+		var xx4 := vx0
+		while xx4 <= vx1 + 0.01:
+			_box(Vector3(0.1, 1.9, 0.1), Vector3(xx4, y0 + 0.95, vz), wood)
+			xx4 += 4.0
+		for hh: float in [0.9, 1.4, 1.85]:
+			_box(Vector3(vx1 - vx0, 0.02, 0.02), Vector3((vx0 + vx1) * 0.5, y0 + hh, vz), steel)
+		var xx5 := vx0 + 1.0
+		while xx5 < vx1:
+			trees["hedge_privet"].append(g * Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(0.7, rng.randf_range(1.1, 1.4), 0.55)), Vector3(xx5, y0, vz)))
+			xx5 += 1.6
+	# vegetable beds (raised, with a wooden edge) between the vineyard and the drive
+	for bed in 4:
+		var bz := lz0 + 23.0 + bed * 2.2
+		_box(Vector3(12.0, 0.25, 1.3), Vector3(HOUSE.end.x - 4.0, y0 + 0.12, bz), wood)
+		_box(Vector3(11.8, 0.06, 1.15), Vector3(HOUSE.end.x - 4.0, y0 + 0.26, bz), soil)
+		for k3 in 9:
+			var kind2: String = ["flowers_marigold", "flowers_salvia", "flowers_petunia", "flowers_marigold"][bed]
+			trees[kind2].append(g * Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.9), Vector3(HOUSE.end.x - 9.0 + k3 * 1.25, y0 + 0.3, bz)))
+	# tandoor (clay oven) beside the tapchan
+	var clay := _mat(Color(0.72, 0.5, 0.33), 0.95)
+	var tp := Vector3(HOUSE.end.x + 10.0, y0, HOUSE.end.y + 3.0)
+	_box(Vector3(1.8, 0.4, 1.8), tp + Vector3(0, 0.2, 0), _mat(Color(0.6, 0.58, 0.55), 0.9), true)
+	var tm := MeshInstance3D.new()
+	var tcm := CylinderMesh.new()
+	tcm.top_radius = 0.42
+	tcm.bottom_radius = 0.7
+	tcm.height = 1.1
+	tm.mesh = tcm
+	tm.material_override = clay
+	tm.position = tp + Vector3(0, 0.95, 0)
+	add_child(tm)
+	_box(Vector3(0.5, 0.03, 0.5), tp + Vector3(0, 1.5, 0), _mat(Color(0.05, 0.04, 0.03), 1.0))
+	# a swing for the kids (A-frame)
+	var sp := Vector3(lx0 + 8.0, y0, lz0 + 30.0)
+	for sz in [-1.4, 1.4]:
+		for sx2 in [-0.8, 0.8]:
+			var leg := _box(Vector3(0.08, 2.6, 0.08), sp + Vector3(sx2 * 0.5, 1.25, sz), steel)
+			leg.rotation.z = sx2 * 0.3
+	_box(Vector3(0.1, 0.1, 3.0), sp + Vector3(0, 2.45, 0), steel)
+	for sz2 in [-0.5, 0.5]:
+		for rz in [-0.22, 0.22]:
+			_box(Vector3(0.02, 1.8, 0.02), sp + Vector3(0, 1.55, sz2 + rz), steel)
+		_box(Vector3(0.35, 0.05, 0.55), sp + Vector3(0, 0.65, sz2), _mat([Color(0.85, 0.2, 0.15), Color(0.15, 0.45, 0.85)][int(sz2 > 0.0)], 0.6))
 	var holder := Node3D.new()
 	holder.name = "Garden"
 	holder.top_level = true
