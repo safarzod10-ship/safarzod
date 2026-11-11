@@ -107,6 +107,36 @@ func _ready() -> void:
 			shots += 1
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("dusti"):
+		_hour(17.0)
+		var ppd: PhotoPlaces = main.get_node("PhotoPlaces")
+		var site: Dictionary = {}
+		for st in ppd.sites:
+			if st["id"] == "city_park":
+				site = st
+		var xfp: Transform3D = site["xf"]
+		var snd: CarSession = main.get("car_session")
+		snd.player.teleport(xfp * Vector3(0, 1, 70), 0.0)
+		ow.hold = xfp.origin
+		ow.preload_at(xfp.origin)
+		await _sec(3.0)
+		if site["node"] == null:
+			ppd.build_site(site)
+		await _sec(2.0)
+		for k in 8:
+			var a := k * TAU / 8.0
+			await _look("dusti_around_%d" % k, xfp * Vector3(sin(a) * 120.0, 45.0, cos(a) * 120.0), xfp * Vector3(0, 0, 0))
+		await _look("dusti_gate_street", xfp * Vector3(-14, 1.8, 82), xfp * Vector3(0, 8, 60))
+		await _look("dusti_inside_gate", xfp * Vector3(0, 1.8, 54), xfp * Vector3(0, 3, 0))
+		var fr: Node3D = ppd.get_node_or_null("FerrisRideDusti")
+		if fr:
+			for k2 in 4:
+				var a2 := k2 * TAU / 4.0 + 0.4
+				await _look("wheel_side_%d" % k2, fr.to_global(Vector3(sin(a2) * 34.0, 6.0, cos(a2) * 34.0)), fr.to_global(Vector3(0, 16, 0)))
+			await _look("wheel_below", fr.to_global(Vector3(6, 1.7, 9)), fr.to_global(Vector3(0, 22, 0)))
+			await _look("wheel_ticket", fr.to_global(Vector3(10, 2.0, 16)), fr.to_global(Vector3(5.5, 2, 6.5)))
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("ferris"):
 		_hour(17.5)
 		var fr: FerrisRide = main.get_node("FerrisRide")

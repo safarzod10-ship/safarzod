@@ -241,8 +241,18 @@ def perimeter_block(add, free, a, b, c, d, tall):
     # three rings: the street front right behind the sidewalk, then two inner rows (no empty
     # 400 m courtyards)
     # four rings (0.20: no empty courtyards): the street front, then three inner rows
-    for ring, inset in ((0, 17.0), (1, 58.0), (2, 102.0), (3, 146.0)):
+    # 0.27: the rings go on inwards until the block is full (big blocks had empty 100-600 m centres)
+    rings = [(0, 17.0), (1, 58.0), (2, 102.0), (3, 146.0)]
+    inset = 190.0
+    while (b - a) - 2 * inset >= 40 or (c - d) - 2 * inset >= 40:
+        rings.append((4, inset))
+        inset += 44.0
+    for ring, inset in rings:
         x0, x1, zs_, zn = a + inset, b - inset, d + inset, c - inset
+        if x1 - x0 < 30 and zn - zs_ < 30:
+            continue
+        if ring == 4 and RNG.random() < 0.12:
+            continue                     # now and then a ring left open: a small square / playground
         # edges as (start, end); the building's local +Z points into the block
         for (sx, sz, ex, ez) in [(x0, zn, x1, zn), (x1, zs_, x0, zs_), (x0, zs_, x0, zn), (x1, zn, x1, zs_)]:
             length = math.hypot(ex - sx, ez - sz)
@@ -275,7 +285,7 @@ def perimeter_block(add, free, a, b, c, d, tall):
                         else:
                             kind = "wash_lot"
                             WASH_AT.append((px_, pz_))
-                elif ring == 3:
+                elif ring >= 3:
                     kind = str(RNG.choice(["luxc_m", "panel9", "panel5", "brick5"]))
                 elif ring == 2:
                     kind = str(RNG.choice(["panel5", "panel9", "brick5", "panel5"]))
@@ -313,7 +323,7 @@ def micro_block(add, free, a, b, c, d):
     x0, x1 = a + 17, b - 17
     zn, zs_ = c - 17, d + 17
     rot = RNG.random() < 0.5
-    rows = np.arange(zs_ + 6, zn - 6, 36.0)
+    rows = np.arange(zs_ + 6, zn - 6, 31.0)
     for k, z in enumerate(rows):
         x = x0
         while x < x1 - 30:
@@ -326,7 +336,7 @@ def micro_block(add, free, a, b, c, d):
             yaw = 0.0 if not rot else 0.0
             if free(cx, z, L, 12.0, yaw, 4.0):
                 add(kind, cx, z, yaw, L if kind != "luxc_m" else 42.0, {"panel9": 13.0, "luxc_m": 16.0}.get(kind, 12.0), {"panel5": 5, "panel9": 9, "brick5": 5, "luxc_m": 12}[kind])
-            x += L + float(RNG.choice([12, 16, 22]))
+            x += L + float(RNG.choice([8, 11, 14]))
     if RNG.random() < 0.6:
         cx = (a + b) / 2 + RNG.uniform(-40, 40); cz = (c + d) / 2
         if free(cx, cz, 50, 16, 0.0):

@@ -1,6 +1,21 @@
-PASS  1. police + city life
-PASS  2. pedestrians around: 8
-PASS  3. gunshot in public (witnesses 6): stars 1
-PASS  4. a pedestrian wounded by a shot: stars 2 (>= 2)
-PASS  5. a pedestrian killed: stars 3 (>= 3)
-PASS  6. a police car is recognised (shooting it = crime)
+PASS  1. the hero's home on the lot by the avenue: (-177.0, 12.0, -2096.0)
+PASS  2. the game starts at the home's door (0.0 m from it)
+PASS  3. the Prado stands in the home's garage (0.0 m), it's the hero's own (no purchase)
+PASS  4. drives out of the garage through the gate (18 m out, condition 100 %)
+PASS  5. promo TAJDUSH: +200 000 смн
+PASS  6. property for sale: { "house": 4, "apartment": 4, "garage": 4 }
+PASS  7. at the «ПРОДАЁТСЯ» board: button «КУПИТЬ КВАРТИРА · 86 000 смн»
+PASS  8. not enough money: refused
+PASS  9. bought «улица Варзобская, дом 15» for 86 000 смн: money left 500 смн, board now «ВАШ»
+PASS 10. rest at home: health 100
+PASS 11. garage: last car brought (4 m from the garage), repaired 100 %
+PASS 12. taxi job present
+PASS 13. shift on: client waiting at (887.0, 24.0, -3180.0) (723 m away), figure at the kerb
+PASS 14. stopped by the client: boarded, going to «проспект Шотемур, дом 115» (2.5 km, fare 58 смн)
+PASS 15. arrived: paid 70 смн (fare 58 смн), next client offered
+PASS 16. got out: shift over, no client left
+PASS 17. Ferris wheel in Rudaki park
+PASS 18. no ride without 10 smn (money 5)
+PASS 19. ticket: -10 smn, riding in a gondola (money 90)
+PASS 20. one full turn: gondola 4 m .. 34 m
+PASS 21. ride over: the hero is back on the deck (0.1 m)
