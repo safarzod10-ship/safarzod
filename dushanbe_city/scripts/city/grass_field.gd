@@ -16,6 +16,7 @@ var _pending: PackedFloat32Array
 var _pending_center := Vector3.ZERO
 var _pending_radius := 0.0
 const W := 600
+var _ng_ver := 0
 
 
 const STRIDE := 20   ## floats per instance in the MultiMesh buffer
@@ -112,6 +113,9 @@ func _process(_d: float) -> void:
 		_task = -1
 		_apply(_pending, _pending_center, _pending_radius)
 	var p := cam.global_position
+	if wd and wd.no_grass_ver != _ng_ver and _task < 0:
+		_ng_ver = wd.no_grass_ver
+		_last = Vector3(INF, 0, INF)
 	if _task >= 0 or Vector2(p.x - _last.x, p.z - _last.z).length() < 3.0:
 		return
 	_last = p

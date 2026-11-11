@@ -39,6 +39,8 @@ var billboards: Array = []
 var guardrails: Array = []
 var fillets: Array = []
 var crossings: Array = []
+var no_grass: Array = []          ## paved areas added at runtime: [cx, cz, fx, fz, half along, half across]
+var no_grass_ver := 0
 var _road_hash := {}                 ## Vector2i (16 m) -> PackedFloat32Array [x, z, y, half width, ...]
 
 
@@ -177,7 +179,19 @@ func grass_ok(x: float, z: float) -> bool:
 	# inside the AMID supermarkets (they can be entered), on the car parks and the front plazas
 	if in_plaza(x, z):
 		return false
+	for a: Array in no_grass:
+		var dx := x - float(a[0])
+		var dz := z - float(a[1])
+		if absf(dx * float(a[2]) + dz * float(a[3])) < float(a[4]) and absf(dx * float(a[3]) - dz * float(a[2])) < float(a[5]):
+			return false
 	return true
+
+
+## mark a paved rectangle (centre, forward direction, half sizes): no 3D grass blades there
+func add_no_grass(c: Vector3, fwd: Vector3, half_along: float, half_across: float) -> void:
+	var f := Vector2(fwd.x, fwd.z).normalized()
+	no_grass.append([c.x, c.z, f.x, f.y, half_along, half_across])
+	no_grass_ver += 1
 
 
 var _bigs: Array = []

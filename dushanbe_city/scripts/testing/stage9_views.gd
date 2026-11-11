@@ -422,11 +422,13 @@ func _ready() -> void:
 				continue
 			if id == "police":
 				await _look("police_front", xf * Vector3(10, 4.0, 40), xf * Vector3(0, 4.0, -2))
+				await _look("police_street", xf * Vector3(18, 1.7, 44), xf * Vector3(0, 1.5, 20))
 				await _look("police_sign", xf * Vector3(-3, 3.0, 14), xf * Vector3(0, 5.6, 0))
 				await _look("police_fence", xf * Vector3(-14, 1.8, 30), xf * Vector3(-5, 1.5, 24))
 				await _look("police_top", xf * Vector3(0, 60, 30), xf * Vector3(0, 0, 0))
 			else:
 				await _look("park_gate", xf * Vector3(6, 3.0, 66), xf * Vector3(0, 6.0, 40))
+				await _look("park_street", xf * Vector3(16, 1.7, 68), xf * Vector3(0, 1.5, 44))
 				await _look("park_alley", xf * Vector3(0, 2.0, 44), xf * Vector3(0, 2.5, 0))
 				await _look("park_fountain", xf * Vector3(14, 4.0, 14), xf * Vector3(0, 2.5, 0))
 				await _look("park_pavilion", xf * Vector3(-20, 3.0, 10), xf * Vector3(-30, 3.0, 0))

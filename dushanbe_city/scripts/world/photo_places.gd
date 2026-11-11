@@ -113,6 +113,8 @@ func _apron(n: Node3D, body: StaticBody3D, s: Dictionary) -> void:
 	var xf: Transform3D = s["xf"]
 	var half_d := float(s["D"]) * 0.5
 	var w := minf(float(s["L"]), 30.0)
+	if String(s["id"]) == "city_park":
+		w = 16.0                                     # as wide as the arch gate, not the whole park front
 	var front := xf * Vector3(0, 0.08, half_d)
 	var fwd := xf.basis.z
 	fwd.y = 0.0
@@ -141,6 +143,7 @@ func _apron(n: Node3D, body: StaticBody3D, s: Dictionary) -> void:
 	if dist < 0.3:
 		return
 	var y_end := rp.y + 0.07 + 0.15                   # road lift + sidewalk kerb
+	wd.add_no_grass(front + fwd * (dist * 0.5), fwd, dist * 0.5 + 1.0, w * 0.5 + 0.8)
 	var side := fwd.cross(Vector3.UP)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
