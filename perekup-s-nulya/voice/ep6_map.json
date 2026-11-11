@@ -1,183 +1,183 @@
 {
- "comment": "Generated with ElevenLabs by tts_episode.py",
- "voiceDir": "out/voice/ep6tts",
+ "comment": "Серия 6: одна запись, все 29 фраз.",
+ "voiceDir": "out/voice/ep6",
  "phoneFilter": [
   "F"
  ],
  "lines": [
   {
    "a": 0.3,
-   "file": "00_N.mp3",
+   "file": "01_full.mp3",
    "from": 0.0,
-   "to": 8.673
+   "to": 12.62
   },
   {
    "a": 9.0,
-   "file": "01_T.mp3",
-   "from": 0.0,
-   "to": 5.094
+   "file": "01_full.mp3",
+   "from": 12.62,
+   "to": 20.66
   },
   {
    "a": 13.5,
-   "file": "02_T.mp3",
-   "from": 0.0,
-   "to": 4.075
+   "file": "01_full.mp3",
+   "from": 20.66,
+   "to": 26.58
   },
   {
    "a": 18.5,
-   "file": "03_T.mp3",
-   "from": 0.0,
-   "to": 2.22
+   "file": "01_full.mp3",
+   "from": 26.58,
+   "to": 31.14
   },
   {
    "a": 21.0,
-   "file": "04_T.mp3",
-   "from": 0.0,
-   "to": 1.698
+   "file": "01_full.mp3",
+   "from": 31.14,
+   "to": 34.76
   },
   {
    "a": 24.3,
-   "file": "05_N.mp3",
-   "from": 0.0,
-   "to": 1.437
+   "file": "01_full.mp3",
+   "from": 34.76,
+   "to": 35.8
   },
   {
    "a": 26.5,
-   "file": "06_T.mp3",
-   "from": 0.0,
-   "to": 7.236
+   "file": "01_full.mp3",
+   "from": 35.8,
+   "to": 46.1
   },
   {
    "a": 32.5,
-   "file": "07_T.mp3",
-   "from": 0.0,
-   "to": 3.474
+   "file": "01_full.mp3",
+   "from": 46.1,
+   "to": 51.74
   },
   {
    "a": 37.0,
-   "file": "08_T.mp3",
-   "from": 0.0,
-   "to": 6.635
+   "file": "01_full.mp3",
+   "from": 51.74,
+   "to": 61.5
   },
   {
    "a": 43.0,
-   "file": "09_T.mp3",
-   "from": 0.0,
-   "to": 4.18
+   "file": "01_full.mp3",
+   "from": 61.5,
+   "to": 67.72
   },
   {
    "a": 46.0,
-   "file": "10_T.mp3",
-   "from": 0.0,
-   "to": 2.22
+   "file": "01_full.mp3",
+   "from": 67.72,
+   "to": 71.04
   },
   {
    "a": 57.5,
-   "file": "11_N.mp3",
-   "from": 0.0,
-   "to": 6.348
+   "file": "01_full.mp3",
+   "from": 71.04,
+   "to": 81.28
   },
   {
    "a": 63.5,
-   "file": "12_T.mp3",
-   "from": 0.0,
-   "to": 1.097
+   "file": "01_full.mp3",
+   "from": 81.28,
+   "to": 82.38
   },
   {
    "a": 65.5,
-   "file": "13_F.mp3",
-   "from": 0.0,
-   "to": 3.161
+   "file": "01_full.mp3",
+   "from": 82.38,
+   "to": 86.74
   },
   {
    "a": 68.5,
-   "file": "14_T.mp3",
-   "from": 0.0,
-   "to": 2.09
+   "file": "01_full.mp3",
+   "from": 86.74,
+   "to": 90.34
   },
   {
    "a": 71.5,
-   "file": "15_F.mp3",
-   "from": 0.0,
-   "to": 2.743
+   "file": "01_full.mp3",
+   "from": 90.34,
+   "to": 94.26
   },
   {
    "a": 75.3,
-   "file": "16_N.mp3",
-   "from": 0.0,
-   "to": 4.833
+   "file": "01_full.mp3",
+   "from": 94.26,
+   "to": 100.78
   },
   {
    "a": 81.0,
-   "file": "17_D.mp3",
-   "from": 0.0,
-   "to": 2.743
+   "file": "01_full.mp3",
+   "from": 100.78,
+   "to": 105.34
   },
   {
    "a": 85.3,
-   "file": "18_N.mp3",
-   "from": 0.0,
-   "to": 1.384
+   "file": "01_full.mp3",
+   "from": 105.34,
+   "to": 107.72
   },
   {
    "a": 88.0,
-   "file": "19_X.mp3",
-   "from": 0.0,
-   "to": 2.09
+   "file": "01_full.mp3",
+   "from": 107.72,
+   "to": 110.78
   },
   {
    "a": 92.0,
-   "file": "20_T.mp3",
-   "from": 0.0,
-   "to": 5.669
+   "file": "01_full.mp3",
+   "from": 110.78,
+   "to": 119.32
   },
   {
    "a": 98.0,
-   "file": "21_X.mp3",
-   "from": 0.0,
-   "to": 2.168
+   "file": "01_full.mp3",
+   "from": 119.32,
+   "to": 124.62
   },
   {
    "a": 101.0,
-   "file": "22_D.mp3",
-   "from": 0.0,
-   "to": 2.351
+   "file": "01_full.mp3",
+   "from": 124.62,
+   "to": 132.96
   },
   {
    "a": 104.5,
-   "file": "23_X.mp3",
-   "from": 0.0,
-   "to": 3.37
+   "file": "01_full.mp3",
+   "from": 132.96,
+   "to": 139.24
   },
   {
    "a": 108.0,
-   "file": "24_N.mp3",
-   "from": 0.0,
-   "to": 6.165
+   "file": "01_full.mp3",
+   "from": 139.24,
+   "to": 148.0
   },
   {
    "a": 114.0,
-   "file": "25_T.mp3",
-   "from": 0.0,
-   "to": 2.508
+   "file": "01_full.mp3",
+   "from": 148.0,
+   "to": 152.94
   },
   {
    "a": 118.0,
-   "file": "26_N.mp3",
-   "from": 0.0,
-   "to": 7.471
+   "file": "01_full.mp3",
+   "from": 152.94,
+   "to": 162.3
   },
   {
    "a": 124.3,
-   "file": "27_T.mp3",
-   "from": 0.0,
-   "to": 1.985
+   "file": "01_full.mp3",
+   "from": 162.3,
+   "to": 164.92
   },
   {
    "a": 127.0,
-   "file": "28_T.mp3",
-   "from": 0.0,
-   "to": 6.766
+   "file": "01_full.mp3",
+   "from": 164.92,
+   "to": 174.13
   }
  ]
 }
