@@ -59,6 +59,26 @@ func _ready() -> void:
 			await _look("tour_%s_street" % id, eye, c + Vector3(0, minf(r * 0.12, 10.0), 0))
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("wantedhud"):
+		_hour(16.0)
+		_ui(true)
+		var polw: Police = main.get_node("Police")
+		var sw: CarSession = main.get("car_session")
+		(main.get_node("CityLife") as CityLife).enabled = true
+		sw.player.get_camera().make_current()
+		await _sec(6.0)
+		PlayerLife.armor = 70.0
+		polw.set_stars(3)
+		await _sec(10.0)
+		await _snap("wanted_chase")
+		polw._dispatch = 0.0
+		polw.last_seen = (sw.player as Node3D).global_position + Vector3(60, 0, 40)
+		for c in polw.cops:
+			(c["node"] as Node3D).global_position += Vector3(400, 0, 400)
+		await _sec(1.5)
+		await _snap("wanted_search")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("map"):
 		_ui(true)
 		var wm: WorldMapScreen = main.get_node("WorldMap")
