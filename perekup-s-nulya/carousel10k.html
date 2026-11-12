@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Карусель 10к</title>
+<style>@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+html,body{margin:0;background:#000}canvas{display:block;width:540px}#ui{display:none}</style></head>
+<body><div id="wrap"><canvas id="c" width="1080" height="1920"></canvas><div id="ui"><button id="play"></button><input id="seek" type="range"><span id="time"></span></div></div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+// t selects the slide: 0,1 = variant A; 2,3 = B; 4,5 = C
+const DUR = 6, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 0, CUTS = [], MONEY = [], SUBS = [];
+const BG = new Image(); BG.src = 'out/kg3d/hero_0001.png';
+const VARIANTS = [
+  { hook: 'пацаны', text: ['давайте я проснусь утром', 'и офигею от 10.000', 'подписчиков', '', 'осталось 9 416.', 'я знаю, вы можете'] },
+  { hook: 'проверка\nна братство', text: ['если ты это видишь —', 'ты уже в деле', '', 'давайте я проснусь', 'и не поверю своим глазам', '', '584 → 10 000'] },
+  { hook: 'у меня к вам\nодна просьба', text: ['давайте я проснусь,', 'а у меня 10к', '', 'а я в ответ запущу то,', 'чего в тиктоке', 'ещё не было'] },
+];
+// TikTok "classic" caption: white text on rounded black boxes
+function ttText(lines, cx, cy, size, inverse = false) {
+  ctx.font = `700 ${size}px ${F}`;
+  const lh = size * 1.32, top = cy - (lines.length - 1) * lh / 2;
+  lines.forEach((l, i) => {
+    if (!l) return;
+    const w = ctx.measureText(l).width + size * .7, y = top + i * lh;
+    rr(cx - w / 2, y - lh / 2 + 4, w, lh - 4, size * .28, inverse ? '#fff' : 'rgba(0,0,0,.92)');
+    txt(l, cx, y + 2, size, inverse ? '#111' : '#fff', { w: 700 });
+  });
+}
+function slideHook(v) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  // crop of the 3D city, slightly blurred and darkened for mood
+  ctx.save(); ctx.filter = 'blur(2px) brightness(.8) saturate(1.2)';
+  const s = 1.25, sw = BG.naturalWidth / s, sh = BG.naturalHeight / s;
+  ctx.drawImage(BG, (BG.naturalWidth - sw) / 2, (BG.naturalHeight - sh) * .45, sw, sh, 0, 0, W, H);
+  ctx.restore();
+  const g = ctx.createRadialGradient(540, 960, 200, 540, 960, 1100); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.7)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ttText(v.hook.split('\n'), 540, 900, 88);
+}
+function slideText(v) {
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.font = `600 64px ${F}`;
+  const lh = 90, top = 960 - (v.text.length - 1) * lh / 2;
+  v.text.forEach((l, i) => txt(l, 540, top + i * lh, 64, '#111', { w: l.match(/\d/) ? 900 : 600 }));
+}
+function scene(t) {
+  const i = Math.floor(t + 1e-6), v = VARIANTS[Math.floor(i / 2)];
+  if (i % 2 === 0) slideHook(v); else slideText(v);
+}
+const SCENES = [[0, 6.1, scene]];
+new Promise(r => BG.complete ? r() : (BG.onload = r)).then(startPlayer);
+</script></body></html>
