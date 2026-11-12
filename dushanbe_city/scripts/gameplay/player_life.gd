@@ -72,8 +72,10 @@ void fragment() {
 	_ui.add_child(_label)
 
 
+static var invulnerable := false       ## screenshots only
+
 static func damage(amount: float) -> void:
-	if instance == null or dead or amount <= 0.0:
+	if instance == null or dead or amount <= 0.0 or invulnerable:
 		return
 	if armor > 0.0:
 		var soak := minf(armor, amount * 0.75)

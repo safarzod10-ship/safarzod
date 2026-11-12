@@ -76,8 +76,9 @@ func _build() -> void:
 		var l := Label3D.new()
 		l.text = "БАНКОМАТ"
 		l.font = load("res://assets/fonts/game_font.tres")
-		l.font_size = 64
-		l.pixel_size = 0.0045
+		l.font_size = 48
+		l.pixel_size = 0.0035
+		l.double_sided = false           # the back sign must not shine through mirrored
 		l.outline_size = 8
 		l.modulate = Color(1, 1, 1)
 		l.position = Vector3(0, 1.76, 0.335 * side)

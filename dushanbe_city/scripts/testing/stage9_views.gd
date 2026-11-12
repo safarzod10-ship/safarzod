@@ -82,6 +82,7 @@ func _ready() -> void:
 	if OS.get_cmdline_user_args().has("gta"):
 		# 0.28: gangs, foot officers, ATM, clothes shop, the mission cutscene + banner, the map
 		_hour(15.0)
+		PlayerLife.invulnerable = true
 		var sg: CarSession = main.get("car_session")
 		var cmb := Combatants.instance
 		var mis: Missions = main.get_node("Missions")
@@ -106,6 +107,8 @@ func _ready() -> void:
 		cmb.deploy_officers(cp + Vector3(9, 0, 4))
 		cmb.deploy_officers(cp + Vector3(-7, 0, 8))
 		await _sec(2.0)
+		cp = sg.player.global_position
+		print("GTA cops: ", cmb.units.size(), " dead=", PlayerLife.dead)
 		await _look("gta_foot_cops", cp + Vector3(-4, 0, -6), cp + Vector3(1, 0, 4), 2.4, 1.0)
 		pol.set_stars(0)
 		await _sec(0.5)
@@ -124,6 +127,7 @@ func _ready() -> void:
 		sg.player.teleport(mp + Vector3(0, 1, 0), 0.0)
 		for i in 240:
 			await get_tree().process_frame
+		print("GTA mission: ", mis.active, " cutscene=", MissionCutscene.playing)
 		await _snap("gta_cutscene_1")
 		await _sec(3.5)
 		await _snap("gta_cutscene_2")
