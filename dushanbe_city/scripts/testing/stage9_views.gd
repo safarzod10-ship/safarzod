@@ -79,6 +79,71 @@ func _ready() -> void:
 		await _snap("wanted_search")
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("gta"):
+		# 0.28: gangs, foot officers, ATM, clothes shop, the mission cutscene + banner, the map
+		_hour(15.0)
+		var sg: CarSession = main.get("car_session")
+		var cmb := Combatants.instance
+		var mis: Missions = main.get_node("Missions")
+		# the gang district «Сино» with Karim (mission) and his men
+		var g: Vector2 = Combatants.GANGS[1]["c"]
+		var gp := Vector3(g.x + 14, 0, g.y + 10)
+		ow.hold = gp
+		ow.preload_at(gp)
+		sg.player.teleport(gp + Vector3(0, 1, 0), 0.0)
+		await _sec(3.0)
+		cmb.spawn_boss(1)
+		await _sec(1.0)
+		var bp: Vector3 = (cmb.units[cmb.units.size() - 3]["node"] as Node3D).global_position
+		await _look("gta_gang_boss", bp + Vector3(5.5, 0, 6.0), bp, 1.7, 1.2)
+		await _look("gta_gang_district", Vector3(g.x + 40, 0, g.y + 45), Vector3(g.x, 0, g.y), 14.0, 1.0)
+		for u in cmb.units.duplicate():
+			cmb._free_unit(u)
+		# foot officers around the hero (2 stars)
+		var cp := sg.player.global_position
+		var pol: Police = main.get_node("Police")
+		pol.set_stars(2)
+		cmb.deploy_officers(cp + Vector3(9, 0, 4))
+		cmb.deploy_officers(cp + Vector3(-7, 0, 8))
+		await _sec(2.0)
+		await _look("gta_foot_cops", cp + Vector3(-4, 0, -6), cp + Vector3(1, 0, 4), 2.4, 1.0)
+		pol.set_stars(0)
+		await _sec(0.5)
+		# the clothes shop and a cash machine
+		var cs: ClothesShop = main.get_node_or_null("ClothesShop")
+		if cs:
+			ow.hold = cs.global_position
+			await _look("gta_clothes", cs.to_global(Vector3(2.5, 2.2, 11.0)), cs.to_global(Vector3(0, 2.4, 0)))
+		var atm: Atm = get_tree().get_nodes_in_group(&"atm")[0]
+		ow.hold = atm.global_position
+		await _look("gta_atm", atm.to_global(Vector3(1.6, 1.7, 3.2)), atm.to_global(Vector3(0, 1.2, 0)))
+		# the mission: cutscene frames and the end banner
+		var mp: Vector3 = mis.markers["boss"]["pos"]
+		ow.hold = mp
+		ow.preload_at(mp)
+		sg.player.teleport(mp + Vector3(0, 1, 0), 0.0)
+		for i in 240:
+			await get_tree().process_frame
+		await _snap("gta_cutscene_1")
+		await _sec(3.5)
+		await _snap("gta_cutscene_2")
+		for c in mis.get_children():
+			if c is MissionCutscene:
+				(c as MissionCutscene).end()
+		await _sec(0.5)
+		_ui(true)
+		sg.player.get_camera().make_current()
+		mis._finish(true, "")
+		await _sec(0.9)
+		await _snap("gta_mission_passed")
+		var wm: WorldMapScreen = main.get_node("WorldMap")
+		wm.toggle()
+		wm.center = Vector2(-300, -3000)
+		wm.mpp = 4.5
+		await _sec(1.0)
+		await _snap("gta_map_gangs")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("map"):
 		_ui(true)
 		var wm: WorldMapScreen = main.get_node("WorldMap")

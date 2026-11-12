@@ -623,6 +623,18 @@ func steal(spot: Node) -> void:
 		if pd:
 			(pd["node"] as Node3D).global_position = xf * Vector3(-1.6, 0.0, 0.0)
 			_flee(pd, session.player.global_position)
+			# the driver shouts as he is thrown out (a speech line over his head for 3 s)
+			var shout := Label3D.new()
+			shout.text = ["Эй! Это моя машина!", "Помогите! Угон!", "Вызовите полицию!", "Ты что делаешь?!"][_rng.randi() % 4]
+			shout.font = load("res://assets/fonts/game_font.tres")
+			shout.font_size = 44
+			shout.pixel_size = 0.006
+			shout.outline_size = 10
+			shout.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			shout.modulate = Color(1, 1, 1)
+			shout.position.y = 2.2
+			(pd["node"] as Node3D).add_child(shout)
+			get_tree().create_timer(3.0).timeout.connect(shout.queue_free)
 	panic(xf.origin, 20.0)
 	crime.emit(2, xf.origin)
 	await get_tree().physics_frame
