@@ -19,7 +19,11 @@ var session: CarSession
 var nav: RoadNav
 var enabled := true
 var cops: Array = []           ## {node, body, path: PackedVector3Array, idx, v, repath, lights: [MeshInstance3D x2], omni}
-var _calm := 0.0               ## seconds without a police car near
+var _calm := 0.0               ## seconds unseen (counts faster outside the search circle)
+var last_seen := Vector3.ZERO  ## where the police last saw the player (centre of the search)
+var _clock := 0.0
+var _dispatch := 0.0           ## seconds the police still know where the player is (after a crime)
+const SIGHT := 110.0           ## a police car sees the player within this distance
 var _bust := 0.0
 var _t := 0.0
 var _ui: CanvasLayer
@@ -43,6 +47,7 @@ func _ready() -> void:
 func _on_crime(level: int, _at: Vector3) -> void:
 	if not enabled:
 		return
+	_dispatch = 12.0
 	var n := stars
 	if level >= 3:
 		n = maxi(stars + 1, 3)
@@ -91,6 +96,8 @@ func _process(delta: float) -> void:
 		_stars_lbl.text = "★".repeat(stars) + "☆".repeat(5 - stars)
 		_stars_lbl.modulate = Color(1, 1, 1, 1.0 if flash else 0.35)
 	if stars == 0 or not enabled:
+		Minimap.search_center = Vector3.INF
+		Minimap.cops = []
 		return
 	var tg := _target()
 	if tg == null:
@@ -100,24 +107,43 @@ func _process(delta: float) -> void:
 	_t -= delta
 	if _t <= 0.0:
 		_t = 1.0
-		var want := mini(stars, 3) + (1 if stars >= 4 else 0)
+		var want := stars                       # 1..5 police cars, like the GTA response levels
 		for c in cops.duplicate():
 			if (c["node"] as Node3D).global_position.distance_to(tp) > 600.0:
 				_free_cop(c)
 		if cops.size() < want:
 			_spawn_cop(tp)
+	# GTA rules: while a police car sees you the stars are solid and they come at you; out of their
+	# sight the stars flash and they search the last place they saw you (a circle on the minimap):
+	# leave the circle and stay unseen to lose them
 	var near := INF
 	for c in cops:
-		_drive_cop(c, tp, delta)
 		near = minf(near, (c["node"] as Node3D).global_position.distance_to(tp))
-	# escape
-	if near > 130.0:
-		_calm += delta
-		if _calm > 10.0 + 4.0 * stars:
-			set_stars(0)
-			return
-	else:
+	_dispatch -= delta
+	var seen := near < SIGHT or _dispatch > 0.0     # right after a crime the police are told where you are
+	if seen:
+		last_seen = tp
 		_calm = 0.0
+	var radius := 70.0 + 45.0 * stars
+	for c in cops:
+		var goal := tp if seen else last_seen + Vector3(sin(float(c["idx"]) * 1.7 + _clock) * radius * 0.5, 0, cos(float(c["idx"]) * 2.3 + _clock) * radius * 0.5)
+		_drive_cop(c, goal, delta)
+		_cop_fire(c, tp, delta)
+	_clock += delta * 0.05
+	if not seen:
+		var outside := Vector2(tp.x - last_seen.x, tp.z - last_seen.z).length() > radius
+		_calm += delta * (1.0 if outside else 0.25)
+		if _calm > 6.0 + 3.0 * stars:
+			set_stars(0)
+			_say("Вы ушли от полиции")
+			return
+	Minimap.search_center = Vector3.INF if seen else last_seen
+	Minimap.search_radius = radius
+	var blips: Array[Vector3] = []
+	for c in cops:
+		blips.append((c["node"] as Node3D).global_position)
+	Minimap.cops = blips
+	_stars_lbl.modulate.a = 1.0 if seen else (0.3 + 0.7 * float(fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.3))
 	# busted
 	var still := (session.driving and session.car.speed_kmh < 3.0) or not session.driving
 	if near < 6.0 and still and not PlayerLife.dead:
@@ -126,6 +152,43 @@ func _process(delta: float) -> void:
 			_busted()
 	else:
 		_bust = maxf(0.0, _bust - delta)
+
+
+## 2+ stars: officers shoot from their car when you are within 45 m and in sight (1 star: no shooting)
+func _cop_fire(c: Dictionary, tp: Vector3, delta: float) -> void:
+	if stars < 2 or PlayerLife.dead:
+		return
+	var n: Node3D = c["node"]
+	var from := n.global_position + Vector3(0, 1.4, 0)
+	var d := from.distance_to(tp)
+	if d > 45.0:
+		return
+	c["gun"] = float(c.get("gun", randf() * 0.8)) - delta
+	if float(c["gun"]) > 0.0:
+		return
+	c["gun"] = randf_range(0.45, 0.9) / (1.0 + 0.15 * stars)
+	var aim := tp + Vector3(randf_range(-1.2, 1.2), 1.0 + randf_range(-0.4, 0.6), randf_range(-1.2, 1.2))
+	# a wall / building between them blocks the shot
+	var space := n.get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(from, aim, 1)
+	var hit := space.intersect_ray(q)
+	var tgt := _target()
+	var blocked: bool = not hit.is_empty() and hit.collider != tgt and not (tgt is Node and (tgt as Node).is_ancestor_of(hit.collider as Node))
+	var end: Vector3 = hit.position if blocked else aim
+	WeaponFX.muzzle_flash(get_tree(), from, (end - from).normalized(), false)
+	WeaponFX.tracer(get_tree(), from, end)
+	WeaponFX.sound(get_tree(), "pistol", from, -2.0, 200.0)
+	if blocked:
+		return
+	var hit_chance := clampf(0.55 - d / 100.0, 0.15, 0.55) + 0.04 * stars
+	if randf() > hit_chance:
+		return
+	if session.driving and session.car:
+		session.car.weapon_hit(3.0 + stars)
+		if randf() < 0.25:
+			PlayerLife.damage(2.0 + stars)      # through the window
+	else:
+		PlayerLife.damage(4.0 + 1.5 * stars)
 
 
 func _spawn_cop(tp: Vector3) -> void:

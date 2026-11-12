@@ -14,6 +14,10 @@ static var target := Vector3.INF
 static var target_owner: Object = null    ## which job set the target
 ## nearest filling station when the fuel is low (green)
 static var fuel_marker := Vector3.INF
+## wanted: the police search area (red / blue flashing circle) and the police cars (blips)
+static var search_center := Vector3.INF
+static var search_radius := 120.0
+static var cops: Array[Vector3] = []
 var _map: ColorRect
 var _overlay: Control              # arrow + north marker, drawn above the map
 var _mat: ShaderMaterial
@@ -96,6 +100,7 @@ func _draw_overlay() -> void:
 	_overlay.draw_colored_polygon(inner, Color(1.0, 0.82, 0.25))
 	# the navigator's route (blue), clipped to the round map
 	_draw_route(c, R, yaw)
+	_draw_wanted(c, R, yaw)
 	# mission target (orange) / nearest filling station (green); radius of the map: 160 m
 	for mk in [[target, Color(1.0, 0.6, 0.1)], [fuel_marker, Color(0.2, 0.9, 0.35)]]:
 		_marker(mk[0], mk[1], c, R, yaw)
@@ -110,6 +115,39 @@ func _draw_overlay() -> void:
 	var fs := int(R * 0.13)
 	var tw := _font.get_string_size("N", HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
 	_overlay.draw_string(_font, np + Vector2(-tw.x * 0.5, tw.y * 0.33), "N", HORIZONTAL_ALIGNMENT_CENTER, -1, fs, Color(0.95, 0.95, 0.95))
+
+
+func _draw_wanted(c: Vector2, R: float, yaw: float) -> void:
+	var p := focus.global_position if is_instance_valid(focus) else player.global_position
+	var f := Vector2(-sin(yaw), -cos(yaw))
+	var rt := Vector2(-f.y, f.x)
+	var ph := fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.3
+	if search_center != Vector3.INF:
+		var d := Vector2(search_center.x - p.x, search_center.z - p.z)
+		var sp := c + Vector2(d.dot(rt), -d.dot(f)) * (R / 160.0)
+		var rr := search_radius * (R / 160.0)
+		var col := Color(0.95, 0.15, 0.15, 0.28) if ph else Color(0.2, 0.35, 1.0, 0.28)
+		# kept inside the round map: a filled disc as large as fits + the full ring (arcs never break)
+		var dc := (sp - c).length()
+		var fill := minf(rr, R * 0.93 - dc)
+		if fill > 2.0:
+			_overlay.draw_circle(sp, fill, col)
+		var c2 := Color(col.r, col.g, col.b, 0.85)
+		var n := 64
+		for k in n:
+			var a0 := k * TAU / n
+			var a1 := (k + 1) * TAU / n
+			var q0 := sp + Vector2(cos(a0), sin(a0)) * rr
+			var q1 := sp + Vector2(cos(a1), sin(a1)) * rr
+			if (q0 - c).length() < R * 0.93 and (q1 - c).length() < R * 0.93:
+				_overlay.draw_line(q0, q1, c2, maxf(2.0, R * 0.02))
+	for cp in cops:
+		var d2 := Vector2(cp.x - p.x, cp.z - p.z)
+		var s2 := Vector2(d2.dot(rt), -d2.dot(f)) * (R / 160.0)
+		if s2.length() > R * 0.88:
+			s2 = s2.normalized() * R * 0.88
+		_overlay.draw_circle(c + s2, R * 0.05, Color(0, 0, 0, 0.8))
+		_overlay.draw_circle(c + s2, R * 0.038, Color(1, 0.15, 0.15) if ph else Color(0.25, 0.4, 1.0))
 
 
 func _marker(target_p: Vector3, col: Color, c: Vector2, R: float, yaw: float) -> void:

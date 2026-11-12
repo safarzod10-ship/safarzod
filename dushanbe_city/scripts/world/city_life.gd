@@ -112,6 +112,7 @@ func _at(R: Dictionary, s: float, dir: int, side: float) -> Array:
 
 
 func _process(delta: float) -> void:
+	_tick_cash(delta)
 	if not enabled or _roads.is_empty():
 		return
 	var f := _focus()
@@ -411,6 +412,68 @@ func hit_body(col: Object, dmg: float, dir: Vector3, knock := true) -> bool:
 	return true
 
 
+var cash: Array = []           ## dropped money: {node, amount, t}
+
+
+## like GTA: a killed pedestrian drops their money (a green bundle; walk / drive over it to take it)
+func _drop_cash(at: Vector3) -> void:
+	var amt := randi_range(5, 80)
+	var n := Node3D.new()
+	n.name = "Cash"
+	add_child(n)
+	n.global_position = at + Vector3(randf_range(-0.6, 0.6), 0.15, randf_range(-0.6, 0.6))
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.32, 0.12, 0.16)
+	mi.mesh = bm
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.25, 0.75, 0.3)
+	m.emission_enabled = true
+	m.emission = Color(0.2, 0.9, 0.3)
+	m.emission_energy_multiplier = 0.8
+	mi.material_override = m
+	n.add_child(mi)
+	var l := Label3D.new()
+	l.text = "%d смн" % amt
+	l.font = load("res://assets/fonts/game_font.tres")
+	l.font_size = 40
+	l.pixel_size = 0.006
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.modulate = Color(0.4, 1.0, 0.45)
+	l.outline_size = 8
+	l.position.y = 0.45
+	l.no_depth_test = true
+	n.add_child(l)
+	cash.append({"node": n, "amount": amt, "t": 60.0})
+
+
+func _tick_cash(delta: float) -> void:
+	if cash.is_empty():
+		return
+	var pl := get_tree().get_nodes_in_group(&"player")
+	var pp: Vector3 = (pl[0] as Node3D).global_position if not pl.is_empty() else Vector3.INF
+	for c in cash.duplicate():
+		var n: Node3D = c["node"]
+		c["t"] = float(c["t"]) - delta
+		n.rotation.y += delta * 2.0
+		var got := pp != Vector3.INF and Vector2(pp.x - n.global_position.x, pp.z - n.global_position.z).length() < 1.6 and absf(pp.y - n.global_position.y) < 2.5
+		# driving over it picks it up too
+		if not got:
+			var s2: Node = get_tree().root.find_child("Main", true, false)
+			var sess: Variant = s2.get("car_session") if s2 else null
+			if sess and sess.driving and sess.car:
+				var cp: Vector3 = sess.car.global_position
+				got = Vector2(cp.x - n.global_position.x, cp.z - n.global_position.z).length() < 2.8
+		if got:
+			Wallet.earn(int(c["amount"]))
+			WeaponFX.sound(get_tree(), "pickup", n.global_position, -4.0)
+			n.queue_free()
+			cash.erase(c)
+		elif float(c["t"]) <= 0.0:
+			n.queue_free()
+			cash.erase(c)
+
+
 func hit(p: Dictionary, dmg: float, dir: Vector3, knock: bool) -> void:
 	if p["state"] == "dead":
 		return
@@ -420,6 +483,7 @@ func hit(p: Dictionary, dmg: float, dir: Vector3, knock: bool) -> void:
 	if float(p["hp"]) <= 0.0:
 		crime.emit(3, n.global_position)
 		_fall(p, dir, true)
+		_drop_cash(n.global_position)
 	elif knock:
 		crime.emit(1, n.global_position)
 		_fall(p, dir, false)

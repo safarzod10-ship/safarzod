@@ -1,13 +1,11 @@
-PASS  1. city life present
-PASS  2. pedestrians spawned: 8, different clothes: 6
-PASS  3. punched: falls down (hp 88)
-PASS  4. gets up and runs away
-PASS  5. shot 4 times: dead (dead); 4 others panic
-PASS  6. ran over by the car: dead
-PASS  7. traffic cars: 10
-PASS  8. steal: button «», driving Stolen1 (gls)
-PASS  9. police present
-PASS 10. stolen car -> 2 stars, police cars: 1
-PASS 11. police drive to the player: 292 m -> 38 m
-PASS 12. busted: stars 0, fine paid (money 1 400 смн)
-PASS 13. escaped after 13 s: stars 0
+PASS  1. police + city life
+PASS  2. pedestrians around: 8
+PASS  3. gunshot in public (witnesses 8): stars 1
+PASS  4. a pedestrian wounded by a shot: stars 2 (>= 2)
+PASS  5. a pedestrian killed: stars 3 (>= 3)
+PASS  6. the killed pedestrian dropped money (1 bundles)
+PASS  7. walk over the money: +7 смн
+PASS  8. unseen: a search area on the minimap
+PASS  9. outside the search area and unseen: escaped (stars 0 after 2 s)
+PASS 10. 3 stars: the police shoot at you (health 92)
+PASS 11. a police car is recognised (shooting it = crime)

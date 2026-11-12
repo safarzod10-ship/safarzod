@@ -66,7 +66,40 @@ func _t_wanted() -> void:
 	var p1: Dictionary = alive[1]
 	life.hit(p1, 200.0, Vector3.FORWARD, false)
 	_check("a pedestrian killed: stars %d (>= 3)" % Police.stars, Police.stars >= 3)
+	_check("the killed pedestrian dropped money (%d bundles)" % life.cash.size(), life.cash.size() >= 1)
+	if not life.cash.is_empty():
+		var m0 := Wallet.money
+		var cn: Node3D = life.cash[0]["node"]
+		var amt := int(life.cash[0]["amount"])
+		s.player.teleport(cn.global_position, 0.0)
+		await _frames(10)
+		_check("walk over the money: +%d смн" % amt, Wallet.money >= m0 + amt)
+	# out of the police's sight: the search circle; leaving it the stars go out
+	pol._clear_cops()
+	pol.set_stars(2)
+	pol.last_seen = (s.player as Node3D).global_position + Vector3(400, 0, 0)
+	pol._dispatch = 0.0
+	await _frames(5)
+	_check("unseen: a search area on the minimap", Minimap.search_center != Vector3.INF)
+	var t0 := Time.get_ticks_msec()
+	while Police.stars > 0 and Time.get_ticks_msec() - t0 < 30000:
+		pol._clear_cops()
+		await _frames(5)
+	_check("outside the search area and unseen: escaped (stars %d after %.0f s)" % [Police.stars, (Time.get_ticks_msec() - t0) / 1000.0], Police.stars == 0)
 	await _sec(3.0)
+	# 3 stars, a police car right beside the player on foot: they shoot, health goes down
+	PlayerLife.health = 100.0
+	pol.set_stars(3)
+	pol._dispatch = 12.0
+	var pp0: Vector3 = (s.player as Node3D).global_position
+	pol._spawn_cop(pp0)
+	if not pol.cops.is_empty():
+		(pol.cops[0]["node"] as Node3D).global_position = pp0 + Vector3(12, 0, 0)
+	var t1 := Time.get_ticks_msec()
+	while PlayerLife.health > 99.0 and Time.get_ticks_msec() - t1 < 15000:
+		await _frames(5)
+	_check("3 stars: the police shoot at you (health %.0f)" % PlayerLife.health, PlayerLife.health < 99.0)
+	PlayerLife.health = 100.0
 	var cop_ok := false
 	if not pol.cops.is_empty():
 		var c: Dictionary = pol.cops[0]
