@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Будильник на 10 000</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="18.5" step="0.01" value="0">
+    <span id="time">0:00 / 0:18</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const DUR = 18.5, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 10.2;
+const CUTS = [], MONEY = [], SUBS = [];
+window.AUDIO_OVERLAYS = [{ src: 'out/wake10k_sfx.wav', at: 0, volume: 1 }];
+let TL = null;
+const BG = new Image(); BG.src = 'out/kg3d/hero_0001.png';
+const FROM = 584, GOAL = 10000, T0 = 2.6, TB = 11.0, TR = 12.4;
+
+function followers(t) {
+  if (t < T0) return FROM;
+  if (t < TB) { const k = P(t, T0, TB), a = 4.2; return Math.round(FROM + (GOAL - FROM) * (Math.exp(a * k) - 1) / (Math.exp(a) - 1)); }
+  if (t < TR) return GOAL;
+  return Math.round(lerp(GOAL, FROM, eio(P(t, TR, TR + .9))));
+}
+function glass(x, y, w, h, r = 36, a = .42) {
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 30; rr(x, y, w, h, r, `rgba(30,30,40,${a})`); ctx.restore();
+  rr(x, y, w, h, r, 'rgba(255,255,255,.08)');
+  rr(x, y, w, h, r, null, 'rgba(255,255,255,.18)', 1.5);
+}
+function appIcon(x, y, s) {
+  rr(x - s / 2, y - s / 2, s, s, s * .24, '#0b0b0f');
+  // stylised music note with two offset colour shadows
+  for (const [dx, col] of [[-3, '#25f4ee'], [3, '#fe2c55'], [0, '#fff']]) {
+    ctx.save(); ctx.translate(dx * s / 70, 0);
+    line([x + s * .08, y + s * .16, x + s * .08, y - s * .26], col, s * .09);
+    ctx.beginPath(); ctx.arc(x - s * .06, y + s * .17, s * .13, 0, Math.PI * 2); ctx.strokeStyle = col; ctx.lineWidth = s * .08; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + s * .08, y - s * .26); ctx.quadraticCurveTo(x + s * .14, y - s * .1, x + s * .28, y - s * .12); ctx.stroke();
+    ctx.restore();
+  }
+}
+function nativeText(lines, cx, cy, size) {
+  ctx.font = `700 ${size}px ${F}`;
+  const lh = size * 1.32, top = cy - (lines.length - 1) * lh / 2;
+  lines.forEach((l, i) => {
+    const w = ctx.measureText(l).width + size * .7, y = top + i * lh;
+    rr(cx - w / 2, y - lh / 2 + 4, w, lh - 4, size * .28, 'rgba(0,0,0,.9)');
+    txt(l, cx, y + 2, size, '#fff', { w: 700 });
+  });
+}
+function notifCard(y, nick, ago, a) {
+  ctx.save(); ctx.globalAlpha *= a;
+  glass(50, y, 980, 150, 38);
+  appIcon(130, y + 75, 84);
+  txt('TikTok', 196, y + 44, 30, 'rgba(255,255,255,.75)', { w: 600, al: 'left' });
+  txt(ago, 1000, y + 44, 26, 'rgba(255,255,255,.6)', { w: 500, al: 'right' });
+  txt(`@${nick} подписался(-ась) на вас`, 196, y + 96, 34, '#fff', { w: 600, al: 'left' });
+  ctx.restore();
+}
+function confetti(t) {
+  const k = P(t, TB, TB + 1.6); if (k <= 0 || k >= 1) return;
+  for (let i = 0; i < 90; i++) {
+    const a = hash(i) * Math.PI * 2, sp = 300 + hash(i + 5) * 900;
+    const x = 540 + Math.cos(a) * sp * k, y = 900 + Math.sin(a) * sp * k + 900 * k * k;
+    ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(x, y); ctx.rotate(k * 10 + i);
+    ctx.fillStyle = ['#fe2c55', '#25f4ee', '#ffd23f', '#fff'][i % 4]; ctx.fillRect(-10, -5, 20, 10); ctx.restore();
+  }
+}
+
+function scene(t) {
+  if (!TL) return;
+  const wake = P(t, .2, .7);
+  // vibration while alarm rings and on 10k
+  const vib = (within(t, .6, 2.4) ? 7 : 0) + (within(t, TB, TB + .8) ? 16 * (1 - P(t, TB, TB + .8)) : 0);
+  const [vx, vy] = vib ? [Math.sin(t * 90) * vib, Math.cos(t * 77) * vib * .4] : [0, 0];
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(vx, vy);
+  // wallpaper
+  ctx.save(); ctx.globalAlpha = wake; ctx.filter = 'blur(6px) brightness(.62) saturate(1.25)';
+  const s = 1.15, sw = BG.naturalWidth / s, sh = BG.naturalHeight / s;
+  ctx.drawImage(BG, (BG.naturalWidth - sw) / 2, (BG.naturalHeight - sh) / 2, sw, sh, -20, -20, W + 40, H + 40);
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = wake;
+  // status bar
+  txt('07:00', 90, 120, 34, '#fff', { w: 600, al: 'left' });
+  rr(910, 104, 70, 32, 8, null, '#fff', 3); rr(916, 110, 46, 20, 4, '#fff'); rr(984, 112, 6, 16, 2, '#fff');
+  // clock
+  txt('среда, 12 ноября', 540, 280, 42, 'rgba(255,255,255,.9)', { w: 500 });
+  txt('07:00', 540, 410, 220, '#fff', { w: 300 });
+  ctx.restore();
+  // alarm banner
+  if (within(t, .6, 2.6)) {
+    const k = back(P(t, .6, .95)) * (1 - P(t, 2.3, 2.6));
+    at(540, 860, k, 0, () => {
+      glass(-490, -90, 980, 180, 46, .55);
+      circ(-400, 0, 46, '#ff9f0a'); clock(-400, 0, 30, t * 8);
+      txt('Будильник', -330, -26, 38, '#fff', { w: 700, al: 'left' });
+      txt('07:00 — подъём', -330, 24, 30, 'rgba(255,255,255,.7)', { w: 500, al: 'left' });
+      rr(210, -40, 240, 80, 40, '#ff9f0a'); txt('Стоп', 330, 2, 34, '#000', { w: 700 });
+    });
+  }
+  // notification stack (newest on top)
+  if (t > T0 && t < TR + .9) {
+    const back_k = P(t, TR, TR + .9); // rewind removes them
+    const shownT = t < TR ? t : lerp(TR, T0, eio(back_k));
+    const arrived = TL.notifs.filter(nt => nt <= shownT);
+    const n = arrived.length;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 880, W, H); ctx.clip();
+    const visible = Math.min(4, n);
+    for (let j = 0; j < visible; j++) {
+      const idx = n - 1 - j, nt = TL.notifs[idx];
+      const age = shownT - nt, slide = eout(clamp(age / .25));
+      const y = 930 + j * 166 - (1 - slide) * 166;
+      const a = (j === 3 ? .4 : 1) * (j === 0 ? slide : 1);
+      notifCard(y, TL.nicks[idx], age < 1 ? 'сейчас' : `${Math.floor(age)} с назад`, a);
+    }
+    ctx.restore();
+    if (n > 4) at(540, 930 + 4 * 166 + 30, 1, 0, () => { glass(-200, -32, 400, 64, 32, .5); txt(`+${n - 3} уведомлений`, 0, 2, 28, '#fff', { w: 600 }); });
+  }
+  // followers widget
+  if (t > 2.2) {
+    const v = followers(t), k = P(t, 2.2, 2.6);
+    at(540, 790, k, 0, () => {
+      glass(-330, -70, 660, 140, 44, .5);
+      appIcon(-250, 0, 80);
+      txt('подписчики', -170, -32, 28, 'rgba(255,255,255,.7)', { w: 600, al: 'left' });
+      txt(fmt(v), -170, 20, 64, v >= GOAL ? '#25f4ee' : '#fff', { w: 900, al: 'left' });
+    });
+  }
+  ctx.restore();
+  // 10k moment
+  if (within(t, TB, TR)) {
+    const f = 1 - P(t, TB, TB + .35);
+    ctx.save(); ctx.globalAlpha = f * .85; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    confetti(t);
+    at(540, 900, back(P(t, TB + .1, TB + .5)), -.04, () => {
+      txt('10 000', 0, 0, 220, '#fff', { w: 900, st: 22, sc: '#fe2c55' });
+      txt('подписчиков', 0, 150, 70, '#fff', { w: 800, st: 12 });
+    });
+  }
+  // glitch + rewind
+  if (within(t, TR, TR + 1.2)) {
+    const g = 1 - P(t, TR + .6, TR + 1.2);
+    for (let i = 0; i < 12; i++) {
+      const y = hash(Math.floor(t * 30) + i) * H, h = 10 + hash(i + Math.floor(t * 30)) * 60;
+      ctx.save(); ctx.globalAlpha = .6 * g; ctx.drawImage(cv, 0, y, W, h, (hash(i * 7 + Math.floor(t * 30)) - .5) * 80, y, W, h); ctx.restore();
+    }
+    ctx.save(); ctx.globalAlpha = .25 * g; ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = '#fe2c55'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    txt('◀◀', 540, 300, 90, `rgba(255,255,255,${g})`, { w: 900 });
+  }
+  // captions (TikTok native style)
+  if (within(t, 1.0, TB)) nativeText(['давайте я проснусь', 'и офигею'], 540, 640, 56);
+  if (within(t, TR + 1.0, 15.0)) nativeText(['…но пока', 'это сон'], 540, 640, 66);
+  if (t >= 15.0 && t < 18.0) {
+    nativeText(['сделаем сон правдой?'], 540, 640, 62);
+    if (t > 15.8) nativeText(['1 подписка =', '1 уведомление', 'в этом будильнике'], 540, 1060, 52);
+  }
+  // fade to the clean lock screen for a seamless loop
+  if (t > 18.0) { ctx.save(); ctx.globalAlpha = P(t, 18.0, 18.5); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+}
+const SCENES = [[0, 18.6, scene]];
+fetch('wake10k/timeline.json').then(r => r.json()).then(d => { TL = d; return new Promise(r => BG.complete ? r() : (BG.onload = r)); }).then(startPlayer);
+</script>
+</body>
+</html>
