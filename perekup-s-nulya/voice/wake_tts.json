@@ -1,0 +1,2 @@
+{"voiceDir": "out/voice/wake", "map": "voice/wake_map.json", "ref": "out/voice/ref/host.wav",
+ "exaggeration": 0.6, "cfg": 0.5, "temperature": 0.7, "takes": 4, "say": {}}
