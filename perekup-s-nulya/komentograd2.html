@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Комментоград — 2</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="31" step="0.01" value="0">
+    <span id="time">0:00 / 0:31</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const DUR = 31, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 10.5;
+const CUTS = [], MONEY = [];
+const SUBS = [
+  [0.3, 3.2, 'T', 'Комментоград *ожил*. У нас первые жители.'],
+  [3.4, 7.6, 'T', 'Встречайте: *Машка*. Она будет учителем — и уже ищет первых учеников.'],
+  [8.0, 13.0, 'T', '*Kemzo* — прокурор. Теперь в городе есть закон. И он суровый.'],
+  [13.4, 17.8, 'T', 'И *Евсейка*. Кем он станет — пока загадка даже для него.'],
+  [18.2, 24.6, 'T', 'Первая новость города: прокурор Kemzo уже открыл *первое дело*. На кого — узнаете в следующем видео.'],
+  [25.0, 29.6, 'T', 'Хочешь в город? Пиши *ник и кем хочешь быть* — заселю.'],
+];
+// residents: rooftop index from the city render, appearance time
+const RES = [
+  { nick: '@mashka', role: 'учитель', hue: 320, roof: 27, at: 4.0 },
+  { nick: 'kemzo', role: 'прокурор', hue: 210, roof: 23, at: 8.4 },
+  { nick: 'Евсейка', role: 'житель', hue: 40, roof: 41, at: 13.8 },
+];
+const BG = new Image();
+let PINS = null;
+
+/* ---------- camera over the rendered city ---------- */
+const KEYS = [ // t, cx, cy (0..1 image coords), zoom
+  [0, .5, .52, 1.08], [3.2, .5, .5, 1.0],
+  [4.4, 0, 0, 1.65], [7.6, 0, 0, 1.7],
+  [8.8, 0, 0, 1.65], [13.0, 0, 0, 1.7],
+  [14.2, 0, 0, 1.65], [17.8, 0, 0, 1.7],
+  [19.0, .5, .5, 1.0], [31, .5, .5, 1.05],
+];
+function resolveKeys() {
+  // focus keys follow each resident's rooftop
+  const f = i => { const [px, py] = PINS[RES[i].roof]; return [px, 1 - py + .06]; };
+  [[2, 0], [3, 0], [4, 1], [5, 1], [6, 2], [7, 2]].forEach(([k, r]) => { const [x, y] = f(r); KEYS[k][1] = x; KEYS[k][2] = y; });
+}
+function camAt(t) {
+  let i = 0; while (i < KEYS.length - 2 && t > KEYS[i + 1][0]) i++;
+  const [t0, x0, y0, z0] = KEYS[i], [t1, x1, y1, z1] = KEYS[i + 1];
+  const k = eio(P(t, t0, t1));
+  return [lerp(x0, x1, k), lerp(y0, y1, k), lerp(z0, z1, k)];
+}
+function view(t) {
+  const [cx, cy, z] = camAt(t);
+  const sw = BG.naturalWidth / z, sh = BG.naturalHeight / z;
+  const sx = clamp(cx * BG.naturalWidth - sw / 2, 0, BG.naturalWidth - sw), sy = clamp(cy * BG.naturalHeight - sh / 2, 0, BG.naturalHeight - sh);
+  return { sx, sy, sw, sh, z };
+}
+const toScreen = (v, px, py) => [((px * BG.naturalWidth) - v.sx) / v.sw * W, (((1 - py) * BG.naturalHeight) - v.sy) / v.sh * H];
+
+/* ---------- glass UI ---------- */
+function glass(x, y, w, h, r = 28, a = .55) {
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+  rr(x, y, w, h, r, `rgba(18,16,40,${a})`); ctx.restore();
+  rr(x, y, w, h, r, null, 'rgba(255,255,255,.22)', 2);
+  const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, 'rgba(255,255,255,.14)'); g.addColorStop(.5, 'rgba(255,255,255,0)');
+  rr(x, y, w, h, r, g);
+}
+function avatar(x, y, r, nick, hue) {
+  const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+  g.addColorStop(0, `hsl(${hue},90%,62%)`); g.addColorStop(1, `hsl(${(hue + 60) % 360},90%,52%)`);
+  ctx.save(); ctx.shadowColor = `hsl(${hue},90%,60%)`; ctx.shadowBlur = 30; circ(x, y, r + 5, '#fff'); ctx.restore();
+  circ(x, y, r, g);
+  const ch = nick.replace('@', '')[0].toUpperCase();
+  txt(ch, x, y + 2, r * 1.05, '#fff', { w: 900 });
+}
+function header(t, n) {
+  glass(40, 270, 1000, 120, 36);
+  const lg = ctx.createLinearGradient(70, 290, 150, 370); lg.addColorStop(0, '#ff4fa3'); lg.addColorStop(1, '#7c5cff');
+  rr(70, 290, 80, 80, 24, lg); txt('K', 110, 332, 52, '#fff', { w: 900 });
+  txt('КОММЕНТОГРАД', 175, 314, 40, '#fff', { w: 900, al: 'left' });
+  txt('город, который строят зрители', 175, 352, 24, 'rgba(255,255,255,.7)', { w: 600, al: 'left' });
+  const pulse = .5 + .5 * Math.sin(t * 5);
+  rr(780, 300, 235, 60, 30, 'rgba(255,79,163,.2)', '#ff4fa3', 2); circ(810, 330, 8, `rgba(255,79,163,${.4 + pulse * .6})`);
+  txt('жителей: ' + n, 830, 331, 26, '#fff', { w: 800, al: 'left' });
+}
+function pinAt(x, y, r, k, t) {
+  if (k <= 0) return;
+  const hue = r.hue;
+  // building lights up: glow + rising sparkles
+  const g = ctx.createRadialGradient(x, y + 120, 10, x, y + 120, 260);
+  g.addColorStop(0, `hsla(${hue},95%,65%,${.45 * k})`); g.addColorStop(1, `hsla(${hue},95%,65%,0)`);
+  ctx.fillStyle = g; ctx.fillRect(x - 260, y - 140, 520, 520);
+  for (let i = 0; i < 8; i++) {
+    const p = ((t * .6 + hash(i + hue)) % 1);
+    ctx.save(); ctx.globalAlpha = k * (1 - p); circ(x - 80 + hash(i + 3 + hue) * 160, y + 200 - p * 260, 4 + 3 * hash(i), `hsl(${hue},95%,80%)`); ctx.restore();
+  }
+  ctx.save(); ctx.shadowColor = `hsl(${hue},90%,60%)`; ctx.shadowBlur = 30;
+  line([x, y, x, y - 90 * k], `hsl(${hue},90%,72%)`, 5); ctx.restore();
+  circ(x, y, 10, `hsl(${hue},90%,72%)`);
+  const w = Math.max(tw(r.nick, 34, 800), tw(r.role, 26, 600)) + 130;
+  at(x, y - 150, back(clamp(k)), 0, () => {
+    glass(-w / 2, -52, w, 104, 52, .62);
+    avatar(-w / 2 + 52, 0, 34, r.nick, hue);
+    txt(r.nick, -w / 2 + 100, -16, 34, '#fff', { w: 800, al: 'left' });
+    txt(r.role, -w / 2 + 100, 22, 26, `hsl(${hue},90%,78%)`, { w: 700, al: 'left' });
+  });
+}
+function card(x, y, w, h, k, fn) { if (k > 0) at(x, y, k, 0, () => { glass(-w / 2, -h / 2, w, h, 40, .7); fn(w, h); }); }
+
+function scene(t) {
+  ctx.fillStyle = '#05040c'; ctx.fillRect(0, 0, W, H);
+  if (!BG.naturalWidth || !PINS) return;
+  const v = view(t);
+  ctx.drawImage(BG, v.sx, v.sy, v.sw, v.sh, 0, 0, W, H);
+  // twinkling windows + moving headlights for life
+  for (let i = 0; i < 40; i++) {
+    const [px, py] = PINS[i % PINS.length];
+    const [x, y] = toScreen(v, px + (hash(i) - .5) * .05, py - hash(i + 9) * .05);
+    const a = Math.max(0, Math.sin(t * (1 + hash(i) * 2) + i * 3)) * .5;
+    if (a > .05) { ctx.save(); ctx.globalAlpha = a; circ(x, y, 3 * v.z, '#ffe3a0'); ctx.restore(); }
+  }
+  // depth vignette
+  const vg = ctx.createLinearGradient(0, 0, 0, H); vg.addColorStop(0, 'rgba(8,6,24,.85)'); vg.addColorStop(.22, 'rgba(8,6,24,0)'); vg.addColorStop(.68, 'rgba(8,6,24,0)'); vg.addColorStop(1, 'rgba(8,6,24,.92)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // residents
+  let n = 0;
+  RES.forEach(r => {
+    const k = P(t, r.at, r.at + .6);
+    if (k > 0) n++;
+    const [px, py] = PINS[r.roof];
+    const [x, y] = toScreen(v, px, py);
+    pinAt(x, y, r, k, t);
+  });
+  header(t, n);
+  // hook
+  if (t < 3.3) at(540, 760, pop(t, .2, .4) * (1 - P(t, 3.0, 3.3)), 0, () => {
+    txt('ГОРОД ОЖИЛ', 0, -40, 110, '#fff', { w: 900, st: 16 });
+    txt('первые жители', 0, 60, 54, '#ff9bd0', { w: 800, st: 10 });
+  });
+  // resident cards at the bottom
+  RES.forEach((r, i) => {
+    const end = i < 2 ? RES[i + 1].at : 18.0;
+    const k = pop(t, r.at + .5, .4) * (1 - P(t, end - .3, end));
+    card(540, 1160, 900, 170, k, (w) => {
+      avatar(-w / 2 + 90, 0, 54, r.nick, r.hue);
+      txt(r.nick, -w / 2 + 170, -30, 48, '#fff', { w: 900, al: 'left' });
+      txt(r.role.toUpperCase(), -w / 2 + 170, 28, 34, `hsl(${r.hue},90%,75%)`, { w: 800, al: 'left' });
+      rr(w / 2 - 240, -30, 200, 60, 30, 'rgba(74,222,128,.15)', '#4ade80', 2);
+      txt('заселён', w / 2 - 140, 2, 28, '#4ade80', { w: 800 });
+    });
+  });
+  // city news
+  card(540, 700, 900, 330, pop(t, 18.5, .45) * (1 - P(t, 24.4, 24.8)), (w, h) => {
+    rr(-w / 2 + 40, -h / 2 + 34, 210, 50, 25, '#ff4fa3'); txt('НОВОСТИ', -w / 2 + 145, -h / 2 + 60, 26, '#fff', { w: 900 });
+    txt('Прокурор kemzo открыл', 0, -10, 46, '#fff', { w: 900 });
+    txt('ДЕЛО №1', 0, 60, 70, '#ffd23f', { w: 900 });
+    txt('подозреваемый: ???', 0, 120, 32, 'rgba(255,255,255,.7)', { w: 700 });
+  });
+  // CTA
+  if (t > 25) card(540, 1120, 940, 150, pop(t, 25.2, .4), (w) => {
+    txt('ПИШИ: НИК + КЕМ ХОЧЕШЬ БЫТЬ', 0, 3, 44, '#fff', { w: 900 });
+  });
+}
+const SCENES = [[0, 31.1, scene]];
+const SRC = (location.search.match(/bg=([^&]+)/) || [])[1] || 'out/kg3d/hero';
+BG.src = SRC + '_0001.png';
+fetch(SRC + '_pins.json').then(r => r.json()).then(d => { PINS = d.pins[0]; resolveKeys(); return new Promise(r => BG.complete ? r() : (BG.onload = r)); }).then(startPlayer);
+</script>
+</body>
+</html>
