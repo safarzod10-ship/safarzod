@@ -240,6 +240,24 @@ func _draw_map() -> void:
 			line.append(w2s(q.x, q.z))
 		_canvas.draw_polyline(line, Color(0.02, 0.1, 0.25, 0.9), 11.0, true)
 		_canvas.draw_polyline(line, Color(0.2, 0.6, 1.0), 7.0, true)
+	# gang districts (GTA: red territories) and the mission markers «M»
+	for g in Combatants.GANGS:
+		var gc: Vector2 = g["c"]
+		var gp := w2s(gc.x, gc.y)
+		var gr := maxf(float(g["r"]) / mpp, 10.0)
+		var gcol: Color = g["col"]
+		_canvas.draw_circle(gp, gr, Color(gcol.r + 0.3, gcol.g + 0.1, gcol.b + 0.1, 0.33))
+		_canvas.draw_arc(gp, gr, 0, TAU, 48, Color(0.9, 0.2, 0.2, 0.9), 3.0, true)
+		_label(gp + Vector2(0, -gr - 12), String(g["name"]), 15, Color(1.0, 0.55, 0.5))
+	var mis: Node = get_tree().root.find_child("Missions", true, false)
+	if mis:
+		for id in (mis as Missions).markers:
+			var mp: Vector3 = (mis as Missions).markers[id]["pos"]
+			var ms := w2s(mp.x, mp.z)
+			var done := Wallet.missions.has(id)
+			_canvas.draw_circle(ms, 14, Color(0.05, 0.05, 0.05, 0.9))
+			_canvas.draw_circle(ms, 11, Color(0.55, 0.55, 0.55) if done else Color(1.0, 0.8, 0.15))
+			_canvas.draw_string(_font, ms + Vector2(-7, 6), "M", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.05, 0.05, 0.05))
 	if Minimap.target != Vector3.INF:
 		var tp := w2s(Minimap.target.x, Minimap.target.z)
 		_canvas.draw_circle(tp, 15, Color(0.05, 0.05, 0.05, 0.85))

@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted", "foot", "clothes"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted", "foot", "clothes", "atm", "boss"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -804,7 +804,7 @@ func _t_signals() -> void:
 
 func _t_missions() -> void:
 	var mis: Missions = main.get_node_or_null("Missions")
-	_check("missions: %d markers" % (mis.markers.size() if mis else 0), mis != null and mis.markers.size() == 3)
+	_check("missions: %d markers" % (mis.markers.size() if mis else 0), mis != null and mis.markers.size() == 4)
 	if mis == null or mis.markers.is_empty():
 		return
 	Wallet.missions = []
@@ -818,6 +818,16 @@ func _t_missions() -> void:
 	s.player.teleport(m0 + Vector3(0, 0.5, 0), 0.0)
 	await _sec(1.0)
 	_check("race started at the marker: %d checkpoints" % mis.cps.size(), mis.active == "race" and mis.cps.size() >= 5)
+	var cut := _cutscene(mis)
+	var cam_ok := cut != null and get_viewport().get_camera_3d() != null and get_viewport().get_camera_3d().get_parent() == cut
+	var t0 := mis.t_left
+	await _sec(1.0)
+	_check("opening cutscene: letterbox camera, subtitles, the timer waits (%.1f -> %.1f)" % [t0, mis.t_left],
+		cut != null and cam_ok and MissionCutscene.playing and mis.t_left == t0 and String(cut._sub.text).begins_with("Рустам"))
+	if cut:
+		cut.end()
+	await _frames(3)
+	_check("after the cutscene: the game camera and HUD back", not MissionCutscene.playing and not mis._intro and get_viewport().get_camera_3d() != null and get_viewport().get_camera_3d().get_parent() != cut)
 	var car: VehiclePrado = main.get("car")
 	s.player.teleport(car.driver_door_point(0.7), 0.0)
 	await _frames(10)
@@ -838,10 +848,105 @@ func _t_missions() -> void:
 	ow.preload_at(m2)
 	s.player.teleport(m2 + Vector3(0, 0.5, 0), 0.0)
 	await _sec(1.0)
+	var cut2 := _cutscene(mis)
+	if cut2:
+		cut2.end()
+	await _frames(3)
 	mis.t_left = 0.5
 	await _sec(1.0)
 	_check("delivery out of time: failed, not saved", mis.active == "" and not Wallet.missions.has("delivery"))
 	Wallet.missions = []
+
+
+func _cutscene(mis: Node) -> MissionCutscene:
+	for c in mis.get_children():
+		if c is MissionCutscene and not (c as MissionCutscene)._done:
+			return c
+	return null
+
+
+## GTA cash rules: a cash machine by the mission markers; the bank keeps the money when the hero dies
+func _t_atm() -> void:
+	var atms := get_tree().get_nodes_in_group(&"atm")
+	_check("cash machines in the city: %d" % atms.size(), atms.size() >= 3)
+	if atms.is_empty():
+		return
+	if s.driving:
+		s.exit()
+		await _sec(1.0)
+	var atm: Atm = atms[0]
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(atm.global_position)
+	s.player.teleport(atm.interaction_point(null) + Vector3(0, 0.3, 0), 0.0)
+	await _sec(1.0)
+	var it: Variant = s.player.get("interaction")
+	var lbl: String = (it as CharacterInteraction).label() if it else ""
+	_check("at the machine: «%s»" % lbl, lbl == "БАНКОМАТ")
+	var wd := WorldData.get_instance()
+	var gy := wd.height_at(atm.global_position.x, atm.global_position.z)
+	_check("stands on the sidewalk (%.2f m over the ground), off the carriageway (%.1f m)" % [atm.global_position.y - gy, wd.road_edge_dist(atm.global_position.x, atm.global_position.z)],
+		absf(atm.global_position.y - gy) < 0.5 and wd.road_edge_dist(atm.global_position.x, atm.global_position.z) > 0.3)
+	Wallet.money = 5000
+	Wallet.bank = 0
+	atm.open()
+	Atm.deposit(Wallet.money)
+	_check("deposit everything: cash 0, bank 5000", Wallet.money == 0 and Wallet.bank == 5000)
+	_check("withdraw 2000: cash 2000, bank 3000", Atm.withdraw(2000) == 2000 and Wallet.money == 2000 and Wallet.bank == 3000)
+	_check("cannot take more than the account (asks 9999 -> %d)" % Atm.withdraw(9999), Wallet.bank == 0 and Wallet.money == 5000)
+	Atm.deposit(4000)
+	Atm._panel.visible = false
+	# dying: the hospital bill (10 %) comes from the cash only
+	var life: PlayerLife = main.get_node_or_null("PlayerLife")
+	if life:
+		PlayerLife.armor = 0.0
+		PlayerLife.damage(500.0)
+		await _sec(8.0)
+		_check("after the hospital: bank untouched (%s), cash %s -> %s" % [Wallet.fmt(Wallet.bank), Wallet.fmt(1000), Wallet.fmt(Wallet.money)],
+			Wallet.bank == 4000 and Wallet.money == 900 and not PlayerLife.dead)
+	Wallet.bank = 0
+
+
+## the mission «Главарь банды»: cutscene, the gang district, Karim with bodyguards, killed -> 2500
+func _t_boss() -> void:
+	var mis: Missions = main.get_node_or_null("Missions")
+	var cmb := Combatants.instance
+	_check("boss mission marker + combatants", mis != null and mis.markers.has("boss") and cmb != null)
+	if mis == null or not mis.markers.has("boss") or cmb == null:
+		return
+	Wallet.missions = []
+	if s.driving:
+		s.exit()
+		await _sec(1.0)
+	PlayerLife.health = 100.0
+	var ow: OpenWorld = main.get("open_world")
+	var m0: Vector3 = mis.markers["boss"]["pos"]
+	ow.preload_at(m0)
+	s.player.teleport(m0 + Vector3(0, 0.5, 0), 0.0)
+	await _sec(1.0)
+	var cut := _cutscene(mis)
+	_check("boss mission starts with the cutscene", mis.active == "boss" and cut != null and String(cut._sub.text).begins_with("Шариф"))
+	if cut:
+		cut.end()
+	await _frames(3)
+	var g: Vector2 = Combatants.GANGS[1]["c"]
+	var near := Vector3(g.x + 60, 0, g.y)
+	ow.preload_at(near)
+	s.player.teleport(near + Vector3(0, 1.0, 0), 0.0)
+	await _sec(1.5)
+	_check("Karim appeared in the district (hp %.0f) with guards (%d gang men)" % [float(mis._boss.get("hp", 0)), cmb.units.filter(func(u: Dictionary) -> bool: return u["kind"] == "gang").size()],
+		not mis._boss.is_empty() and float(mis._boss["hp"]) == 300.0 and cmb.units.size() >= 7)
+	var m1 := Wallet.money
+	if not mis._boss.is_empty():
+		cmb.hit(mis._boss, 150.0)
+		_check("hit: the gang turns hostile, Karim still alive", bool(mis._boss["hostile"]) and float(mis._boss["hp"]) > 0.0)
+		cmb.hit(mis._boss, 200.0)
+	await _sec(0.5)
+	_check("Karim dead -> mission passed +%s" % Wallet.fmt(Wallet.money - m1), mis.active == "" and Wallet.missions.has("boss") and Wallet.money - m1 >= 2500)
+	_check("the banner «ЗАДАНИЕ ВЫПОЛНЕНО»", mis._banner.visible and mis._banner.text == "ЗАДАНИЕ ВЫПОЛНЕНО")
+	Wallet.missions = []
+	PlayerLife.health = 100.0
+	s.player.teleport(m0 + Vector3(0, 0.5, 30), 0.0)
+	await _sec(0.5)
 
 
 func _t_amid() -> void:

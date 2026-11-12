@@ -4,6 +4,9 @@ extends Node
 ##  «Гонка по Душанбе»  : get in any car, 8 checkpoints along the avenues in 120 s       -> 1500 smn
 ##  «Срочная доставка»  : drive to the address across the city in 90 s, no big damage    -> 800 smn
 ##  «Угон на заказ»     : steal a black GLS from the traffic / the street, bring it to the garage marker -> 3000 smn
+##  «Главарь банды»     : go to the «Сино» gang district and kill their leader Karim (bodyguards)  -> 2500 smn
+## Every mission opens with a short cutscene (letterbox, camera orbit, the giver's lines) and ends with
+## the big «ЗАДАНИЕ ВЫПОЛНЕНО» banner. Dying fails the mission.
 ## Checkpoints / the target: a beacon + the navigator target; a timer on screen; fail: time out or
 ## the car wrecked. Completed missions are saved (Wallet.missions) and their marker goes grey.
 
@@ -13,7 +16,16 @@ const DEFS := {
 	"race": {"title": "Гонка по Душанбе", "pay": 1500, "time": 120.0},
 	"delivery": {"title": "Срочная доставка", "pay": 800, "time": 90.0},
 	"steal": {"title": "Угон на заказ", "pay": 3000, "time": 300.0},
+	"boss": {"title": "Главарь банды", "pay": 2500, "time": 420.0},
 }
+## the cutscene lines and the giver's clothes (ClothesShop texture index)
+const INTRO := {
+	"race": [3, ["Рустам: Говорят, ты лучший водитель в Душанбе?", "Рустам: Восемь точек по проспектам, две минуты.", "Рустам: Успеешь — 1 500 сомони твои. Садись в любую машину!"]],
+	"delivery": [4, ["Фарида: Срочная посылка, клиент ждёт на другом конце города.", "Фарида: Полторы минуты и без аварий.", "Фарида: Плачу 800 сомони. Давай быстрее!"]],
+	"steal": [6, ["Бахром: Мне нужен чёрный Mercedes GLS.", "Бахром: Найди такой на улице, угони и пригони сюда.", "Бахром: Полиция будет злиться. Получишь 3 000."]],
+	"boss": [2, ["Шариф: Банда «Сино» держит весь район и обирает людей.", "Шариф: Их главарь — Карим. С ним охрана, все с оружием.", "Шариф: Убери Карима — и 2 500 сомони твои. Купи броню!"]],
+}
+const BOSS_GANG := 1
 
 var session: CarSession
 var laklak: LakLakJob
@@ -29,7 +41,11 @@ var _ui: CanvasLayer
 var _hud: Label
 var _msg: Label
 var _msg_t := 0.0
-var _rearm := ""               ## a marker you must walk away from (6 m) before it can start again
+var _rearm := ""
+var _intro := false            ## the opening cutscene is playing
+var _boss: Dictionary = {}
+var _banner: Label
+var _banner_sub: Label               ## a marker you must walk away from (6 m) before it can start again
 
 
 func _ready() -> void:
@@ -42,7 +58,7 @@ func _ready() -> void:
 		return
 	await get_tree().process_frame
 	# markers at the kerbs of three avenues near the centre
-	var spots := {"race": Vector3(-60, 0, -2300), "delivery": Vector3(300, 0, -2650), "steal": Vector3(-150, 0, -3100)}
+	var spots := {"race": Vector3(-60, 0, -2300), "delivery": Vector3(300, 0, -2650), "steal": Vector3(-150, 0, -3100), "boss": Vector3(-850, 0, -3350)}
 	for id in spots:
 		var k := laklak._kerb_near(spots[id]) if laklak else Vector3.INF
 		if k == Vector3.INF:
@@ -57,6 +73,16 @@ func _ready() -> void:
 		add_child(n)
 		n.global_position = k
 		markers[id] = {"pos": k, "node": n}
+		# a cash machine on the same sidewalk, 4 m along the street, its screen to the road
+		if into.length() > 0.5:
+			var along := into.normalized().cross(Vector3.UP)
+			var ap := k + along * 4.0
+			ap.y = wd.height_at(ap.x, ap.z) + 0.12
+			var atm := Atm.new()
+			atm.name = "Atm_" + id
+			add_child(atm)
+			atm.global_position = ap
+			atm.rotation.y = atan2(-into.x, -into.z)
 
 
 func _road_centre(p: Vector3) -> Vector3:
@@ -123,10 +149,11 @@ func _make_marker(id: String) -> Node3D:
 	return n
 
 
-func start(id: String) -> void:
+func start(id: String, intro := true) -> void:
 	if active != "" or not DEFS.has(id):
 		return
 	active = id
+	_boss = {}
 	t_left = float(DEFS[id]["time"])
 	cp_i = 0
 	cps = PackedVector3Array()
@@ -151,8 +178,34 @@ func start(id: String) -> void:
 		"steal":
 			cps.append(from)                         # bring the GLS back here
 			_say("УГОН: найди чёрный Mercedes GLS на улицах, угони и пригони сюда")
+		"boss":
+			var g: Vector2 = Combatants.GANGS[BOSS_GANG]["c"]
+			cps.append(Vector3(g.x, wd.height_at(g.x, g.y) if wd and wd.ok else 0.0, g.y))
+			_say("ГЛАВАРЬ: езжай в район банды «Сино» и убей Карима")
 	if cps.is_empty():
 		active = ""
+		return
+	# the opening cutscene (the timer waits for it)
+	if intro and session and session.player and not session.driving and INTRO.has(id) and not MissionCutscene.playing:
+		_intro = true
+		_msg_t = 0.0
+		var cs := MissionCutscene.play(self, session.player as Node3D, PackedStringArray(INTRO[id][1]), int(INTRO[id][0]))
+		cs.finished.connect(func() -> void:
+			_intro = false
+			_say(String(DEFS[id]["title"]).to_upper() + "\n" + _goal(id)))
+
+
+func _goal(id: String) -> String:
+	match id:
+		"race":
+			return "Садись в машину: %d точек за %d с" % [cps.size(), int(t_left)]
+		"delivery":
+			return "Отвези груз на адрес за %d с" % int(t_left)
+		"steal":
+			return "Найди и угони чёрный Mercedes GLS"
+		"boss":
+			return "Район банды «Сино» отмечен на карте"
+	return ""
 
 
 func _kerb_away(p: Vector3, rmin: float, rmax: float) -> Vector3:
@@ -191,8 +244,20 @@ func _process(delta: float) -> void:
 				if dm < 2.5:
 					start(id)
 		return
+	if _intro:
+		_hud.visible = false
+		return
+	if PlayerLife.dead:
+		_finish(false, "Вы погибли")
+		return
 	t_left -= delta
 	var target := cps[cp_i]
+	if active == "boss":
+		_tick_boss(me)
+		if active == "":
+			return
+		if not _boss.is_empty() and is_instance_valid(_boss["node"]):
+			target = (_boss["node"] as Node3D).global_position
 	_beacon.visible = true
 	_beacon.global_position = target
 	Minimap.target = target
@@ -203,6 +268,10 @@ func _process(delta: float) -> void:
 	var in_car := session.driving and session.car != null
 	if active == "steal":
 		in_car = in_car and session.car is VehicleCar and (session.car as VehicleCar).preset == "gls" and String(session.car.name).begins_with("Stolen")
+	if active == "boss":
+		if t_left <= 0.0:
+			_finish(false, "Время вышло")
+		return
 	if in_car and session.car.wrecked:
 		_finish(false, "Машина разбита")
 		return
@@ -215,6 +284,25 @@ func _process(delta: float) -> void:
 			_finish(true, "")
 		else:
 			_say("Точка %d/%d" % [cp_i, cps.size()])
+
+
+## the gang leader: appears with his guards once the player is close to the district; dead -> done
+func _tick_boss(me: Node3D) -> void:
+	var cmb := Combatants.instance
+	if cmb == null:
+		return
+	var g: Dictionary = Combatants.GANGS[BOSS_GANG]
+	var c: Vector2 = g["c"]
+	var d := Vector2(me.global_position.x - c.x, me.global_position.z - c.y).length()
+	var alive := not _boss.is_empty() and cmb.units.has(_boss)
+	if not _boss.is_empty() and float(_boss["hp"]) <= 0.0:
+		_finish(true, "")
+		return
+	if not alive and d < float(g["r"]) + 100.0:
+		_boss = cmb.spawn_boss(BOSS_GANG)
+		_say("Карим где-то рядом. Его охрана вооружена!")
+	elif not alive:
+		_boss = {}
 
 
 func _finish(ok: bool, why: String) -> void:
@@ -231,7 +319,7 @@ func _finish(ok: bool, why: String) -> void:
 		if not Wallet.missions.has(id):
 			Wallet.missions.append(id)
 		Wallet.save_state()
-		_say("ЗАДАНИЕ ВЫПОЛНЕНО!\n+%s" % Wallet.fmt(pay))
+		_show_banner("ЗАДАНИЕ ВЫПОЛНЕНО", "%s   +%s" % [String(DEFS[id]["title"]), Wallet.fmt(pay)], Color(1.0, 0.82, 0.2))
 		if markers.has(id):
 			(markers[id]["node"] as Node).queue_free()
 			var n := _make_marker(id)
@@ -239,8 +327,27 @@ func _finish(ok: bool, why: String) -> void:
 			n.global_position = markers[id]["pos"]
 			markers[id]["node"] = n
 	else:
-		_say("ЗАДАНИЕ ПРОВАЛЕНО\n" + why)
+		_show_banner("ЗАДАНИЕ ПРОВАЛЕНО", why, Color(0.95, 0.25, 0.2))
 	mission_done.emit(id, ok)
+
+
+## the big GTA banner in the middle of the screen (scales in, holds, fades out)
+func _show_banner(title: String, sub: String, col: Color) -> void:
+	_msg_t = 0.0
+	_banner.text = title
+	_banner.add_theme_color_override("font_color", col)
+	_banner_sub.text = sub
+	for l: Label in [_banner, _banner_sub]:
+		l.visible = true
+		l.modulate.a = 0.0
+		l.pivot_offset = l.size * 0.5
+		l.scale = Vector2(1.6, 1.6)
+		var tw := l.create_tween()
+		tw.tween_property(l, "modulate:a", 1.0, 0.35)
+		tw.parallel().tween_property(l, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_interval(3.6)
+		tw.tween_property(l, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(func() -> void: l.visible = false)
 
 
 func _say(t: String) -> void:
@@ -280,3 +387,30 @@ func _build_ui() -> void:
 	_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_msg.visible = false
 	_ui.add_child(_msg)
+	_banner = Label.new()
+	_banner.add_theme_font_override("font", font)
+	_banner.add_theme_font_size_override("font_size", 64)
+	_banner.add_theme_color_override("font_outline_color", Color.BLACK)
+	_banner.add_theme_constant_override("outline_size", 14)
+	_banner.set_anchors_preset(Control.PRESET_CENTER)
+	_banner.offset_left = -600
+	_banner.offset_right = 600
+	_banner.offset_top = -130
+	_banner.offset_bottom = -50
+	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner.visible = false
+	_ui.add_child(_banner)
+	_banner_sub = Label.new()
+	_banner_sub.add_theme_font_override("font", font)
+	_banner_sub.add_theme_font_size_override("font_size", 30)
+	_banner_sub.add_theme_color_override("font_color", Color(1, 1, 1))
+	_banner_sub.add_theme_color_override("font_outline_color", Color.BLACK)
+	_banner_sub.add_theme_constant_override("outline_size", 8)
+	_banner_sub.set_anchors_preset(Control.PRESET_CENTER)
+	_banner_sub.offset_left = -600
+	_banner_sub.offset_right = 600
+	_banner_sub.offset_top = -45
+	_banner_sub.offset_bottom = 5
+	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_sub.visible = false
+	_ui.add_child(_banner_sub)

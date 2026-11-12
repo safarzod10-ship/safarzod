@@ -167,7 +167,8 @@ func _respawn() -> void:
 				(ow as OpenWorld).preload_at(p)
 			await get_tree().physics_frame
 		player.call("teleport", p, 0.0)
-	var fee := mini(500, Wallet.money / 10)
+	# GTA: the hospital bill comes out of the cash in the pocket (10 %, up to 2000); the bank is safe
+	var fee := mini(2000, Wallet.money / 10)
 	Wallet.money -= fee
 	Wallet.save_state()
 	health = 100.0

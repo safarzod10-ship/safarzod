@@ -120,6 +120,37 @@ func _spawn_gang(gi: int) -> void:
 	_gang_spawned[gi] = true
 
 
+## the gang's leader for the mission «Главарь банды»: bigger, tougher (300 hp), a red name over his head;
+## his men come with him. Returns the unit (its "hp" <= 0 once he is dead).
+func spawn_boss(gi: int) -> Dictionary:
+	if _scene == null:
+		return {}
+	if not _gang_spawned.has(gi):
+		_spawn_gang(gi)
+	var c: Vector2 = GANGS[gi]["c"]
+	var u := _make("gang", Vector3(c.x + 4.0, 0, c.y + 4.0), Color(0.08, 0.08, 0.09), gi)
+	u["hp"] = 300.0
+	u["boss"] = true
+	var n: Node3D = u["node"]
+	n.name = "GangBoss"
+	n.scale = Vector3.ONE * 1.08
+	var l := Label3D.new()
+	l.text = "КАРИМ · ГЛАВАРЬ"
+	l.font = load("res://assets/fonts/game_font.tres")
+	l.font_size = 56
+	l.pixel_size = 0.006
+	l.outline_size = 10
+	l.modulate = Color(1.0, 0.25, 0.2)
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.position.y = 2.25
+	n.add_child(l)
+	# two more bodyguards around him
+	for k in 2:
+		_make("gang", Vector3(c.x + 4.0 + (k * 2 - 1) * 2.5, 0, c.y + 6.5), GANGS[gi]["col"], gi)
+	return u
+
+
 func _free_unit(u: Dictionary) -> void:
 	_bodies.erase((u["body"] as Node).get_instance_id())
 	if is_instance_valid(u["node"]):

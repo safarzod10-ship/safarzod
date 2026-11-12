@@ -17,6 +17,7 @@ static var plates := {}               ## vehicle node name -> Tajik plate number
 static var missions := []             ## completed mission ids (Missions)
 static var outfit := -1                ## 0.27: the hero's clothes (ClothesShop; -1 = his own)
 static var outfits_owned := []
+static var bank := 0                  ## 0.28: money in the bank (ATM): safe when the hero dies
 static var homes := []                ## 0.25: ids of the houses / apartments / garages the player bought (Realty)
 static var tuning := {}               ## 0.25: vehicle node name -> {"tint": float, "rims": html colour, "spoiler": bool}
 static var _loaded := false
@@ -60,6 +61,7 @@ static func load_state() -> void:
 		PlayerLife.armor = float(d.get("armor", 0.0))
 		outfit = int(d.get("outfit", -1))
 		outfits_owned = d.get("outfits_owned", [])
+		bank = int(d.get("bank", 0))
 
 
 static func save_state() -> void:
@@ -67,7 +69,7 @@ static func save_state() -> void:
 		return
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "plates": plates, "homes": homes, "missions": missions, "tuning": tuning, "food": Food.to_dict(), "armor": PlayerLife.armor, "outfit": outfit, "outfits_owned": outfits_owned}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "plates": plates, "homes": homes, "missions": missions, "tuning": tuning, "food": Food.to_dict(), "armor": PlayerLife.armor, "outfit": outfit, "outfits_owned": outfits_owned, "bank": bank}))
 
 
 static func earn(amount: int) -> void:
