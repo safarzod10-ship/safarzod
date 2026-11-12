@@ -1,0 +1,43 @@
+{
+ "comment": "Generated locally by tts_clone.py",
+ "voiceDir": "out/voice/kg2",
+ "phoneFilter": [],
+ "lines": [
+  {
+   "a": 0.3,
+   "file": "00_T.wav",
+   "from": 0.0,
+   "to": 3.04
+  },
+  {
+   "a": 3.4,
+   "file": "01_T.wav",
+   "from": 0.0,
+   "to": 4.96
+  },
+  {
+   "a": 8.0,
+   "file": "02_T.wav",
+   "from": 0.0,
+   "to": 4.56
+  },
+  {
+   "a": 13.4,
+   "file": "03_T.wav",
+   "from": 0.0,
+   "to": 4.12
+  },
+  {
+   "a": 18.2,
+   "file": "04_T.wav",
+   "from": 0.0,
+   "to": 6.2
+  },
+  {
+   "a": 25.0,
+   "file": "05_T.wav",
+   "from": 0.0,
+   "to": 4.48
+  }
+ ]
+}
