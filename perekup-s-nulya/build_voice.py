@@ -100,6 +100,14 @@ for a, b, who in subs:
 end_anim = float(re.search(r'const DUR = ([\d.]+)', html).group(1))
 knots.append((end_anim, cur + 2.0))
 duration = cur + 2.0
+if re.search(r'const NO_WARP = true', html):
+    # keep the animation's own timing (e.g. synced sound effects): clips go exactly at their lines
+    knots = [(0.0, 0.0), (end_anim, end_anim)]
+    duration = end_anim
+    place = [(ln['a'] + LEAD, ln['clip']) for ln in lines]
+    for (a1, c1), (a2, _) in zip(place, place[1:]):
+        if a1 + len(c1) / SR > a2:
+            print(f'WARNING: line at {a1 - LEAD:.1f}s overlaps the next one')
 
 track = np.zeros(int(duration * SR) + SR, np.float32)
 for t0, clip in place:
