@@ -349,6 +349,14 @@ func _spawn_extra_vehicles() -> void:
 	var photo := PhotoPlaces.new()
 	photo.name = "PhotoPlaces"
 	add_child(photo)
+	# the clothes shop on the shopping street «Сомон»
+	var clo := ClothesShop.new()
+	clo.name = "ClothesShop"
+	clo.session = car_session
+	add_child(clo)
+	for st in photo.sites:
+		if st["id"] == "shop_street":
+			clo.global_transform = (st["xf"] as Transform3D) * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-6.6, 0.0, 60.8))
 	# GTA pass: working traffic lights (2-phase cycle per junction), traffic stops at red
 	var signals := TrafficSignals.new()
 	signals.name = "TrafficSignals"

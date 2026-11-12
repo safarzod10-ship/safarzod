@@ -1,9 +1,5 @@
-PASS  1. armed people on foot (police officers, gangs)
-PASS  2. the police car stopped near you: officers on foot (2)
-PASS  3. the officers shoot (health 92)
-PASS  4. an officer killed: stars 3 -> 4
-PASS  5. stars out: the officers leave (0 left)
-PASS  6. Банда «Шохмансур»: its men in the district (5)
-PASS  7. they leave you alone at first
-PASS  8. stay next to them: the gang turns on you
-PASS  9. a gang member killed drops money
+PASS  1. clothes shop on the shopping street
+PASS  2. at the door: «МАГАЗИН ОДЕЖДЫ»
+PASS  3. not enough money for «Деловой» (900)
+PASS  4. bought and put on «Деловой»: money 1 100 смн, outfit 6, the hero's texture npc_6.jpg
+PASS  5. back to his own clothes (free)

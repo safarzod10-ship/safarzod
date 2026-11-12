@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted", "foot"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted", "foot", "clothes"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -177,6 +177,32 @@ func _t_foot() -> void:
 		s.player.teleport(hh.spawn_point(), 0.0)
 	PlayerLife.health = 100.0
 	await _sec(1.0)
+
+
+func _t_clothes() -> void:
+	var cs: ClothesShop = main.get_node_or_null("ClothesShop")
+	_check("clothes shop on the shopping street", cs != null)
+	if cs == null:
+		return
+	if s.driving:
+		s.exit()
+		await _sec(1.0)
+	s.player.teleport(cs.interaction_point(null), 0.0)
+	await _sec(1.0)
+	var it: Variant = s.player.get("interaction")
+	var lbl: String = (it as CharacterInteraction).label() if it else ""
+	_check("at the door: «%s»" % lbl, lbl == "МАГАЗИН ОДЕЖДЫ")
+	Wallet.money = 100
+	_check("not enough money for «Деловой» (900)", cs.buy(7) == "money" and Wallet.outfit != 6)
+	Wallet.money = 2000
+	var ok := cs.buy(7) == ""
+	var model: Node = s.player.get("model")
+	var mi := (model as Node).find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var tex := (mi.material_override as StandardMaterial3D).albedo_texture if mi.material_override else null
+	_check("bought and put on «Деловой»: money %s, outfit %d, the hero's texture %s" % [Wallet.fmt(Wallet.money), Wallet.outfit, tex.resource_path.get_file() if tex else "-"],
+		ok and Wallet.money == 1100 and Wallet.outfit == 6 and tex != null)
+	cs.buy(0)
+	_check("back to his own clothes (free)", Wallet.outfit == -1 and Wallet.money == 1100)
 
 
 ## the Ferris wheel in Rudaki park: a ticket costs 10 smn, one full turn in a gondola, then back on the deck

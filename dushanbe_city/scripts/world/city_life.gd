@@ -273,11 +273,18 @@ func _drive(delta: float, _f: Vector3) -> void:
 			var pr := (session.player as Node3D).global_position - n.global_position
 			if pr.length() < 3.6:
 				want = 0.0
+		var blocked_by_player := false
 		for o in obstacles:
 			var rel := o - n.global_position
 			var ahead := rel.dot(fwd)
 			if ahead > 0.0 and ahead < 22.0 and absf(rel.dot(n.global_basis.x)) < 2.4:
 				want = minf(want, maxf(0.0, (ahead - 7.0) * 0.8))
+				if ahead < 12.0:
+					blocked_by_player = true
+		# like GTA: a driver held up by the player honks (after 2 s, now and then)
+		c["wait"] = float(c.get("wait", 0.0)) + delta if blocked_by_player and float(c["v"]) < 1.0 else 0.0
+		if float(c["wait"]) > 2.0 and randf() < delta * 0.5:
+			_honk(n.global_position)
 		for o2 in cars:
 			if o2 == c or o2.get("parked", false):
 				continue
@@ -290,6 +297,26 @@ func _drive(delta: float, _f: Vector3) -> void:
 		c["v"] = v
 		c["s"] = float(c["s"]) + v * delta * float(c["dir"])
 		_place_car(c)
+
+
+var _horn_s: AudioStream
+
+
+func _honk(at: Vector3) -> void:
+	if _horn_s == null:
+		var hp := "res://assets/audio/city/amb_horn.ogg"
+		if not ResourceLoader.exists(hp):
+			return
+		_horn_s = load(hp)
+	var a := AudioStreamPlayer3D.new()
+	a.stream = _horn_s
+	a.unit_size = 10.0
+	a.max_distance = 120.0
+	a.pitch_scale = randf_range(0.9, 1.15)
+	add_child(a)
+	a.global_position = at
+	a.play()
+	a.finished.connect(a.queue_free)
 
 
 func _spawn_ped(f: Vector3) -> Variant:
