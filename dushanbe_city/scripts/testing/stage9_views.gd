@@ -85,11 +85,22 @@ func _ready() -> void:
 		var cd := Combatants.instance
 		var pd: Police = main.get_node("Police")
 		var md: Missions = main.get_node("Missions")
+		var g0: Vector2 = Combatants.GANGS[1]["c"]
+		ow.preload_at(Vector3(g0.x + 14, 0, g0.y + 10))
+		sd.player.teleport(Vector3(g0.x + 14, 40, g0.y + 10), 0.0)
+		await _sec(3.0)
+		cd.spawn_boss(1)
+		await _sec(1.0)
+		for u in cd.units.duplicate():
+			cd._free_unit(u)
 		var p0 := sd.player.global_position
 		pd.set_stars(2)
+		pd.enabled = false
 		cd.deploy_officers(p0 + Vector3(9, 0, 4))
 		for i in 8:
 			await _sec(0.25)
+			for u in cd.units:
+				print("DBG  u ", u["kind"], " hp=", u["hp"], " pos=", (u["node"] as Node3D).global_position if is_instance_valid(u["node"]) else Vector3.ZERO)
 			print("DBG cops units=", cd.units.size(), " stars=", Police.stars, " pos=", sd.player.global_position, " dead=", PlayerLife.dead)
 		pd.set_stars(0)
 		var mp: Vector3 = md.markers["boss"]["pos"]
@@ -112,7 +123,7 @@ func _ready() -> void:
 		var gp := Vector3(g.x + 14, 0, g.y + 10)
 		ow.hold = gp
 		ow.preload_at(gp)
-		sg.player.teleport(gp + Vector3(0, 1, 0), 0.0)
+		sg.player.teleport(Vector3(gp.x, wd.height_at(gp.x, gp.z) + 1.0, gp.z), 0.0)
 		await _sec(3.0)
 		cmb.spawn_boss(1)
 		await _sec(1.0)
