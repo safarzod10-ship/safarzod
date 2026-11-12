@@ -174,6 +174,18 @@ func _build_ui() -> void:
 		am.visible = Weapons.uses_ammo(id)
 		h.add_child(am)
 		_rows[id] = [nm, buy, am]
+	# body armour (like GTA): 600 smn, the vest takes 3/4 of the damage until it is used up
+	var ha := HBoxContainer.new()
+	ha.add_theme_constant_override("separation", 14)
+	v.add_child(ha)
+	var an := Label.new()
+	an.custom_minimum_size = Vector2(314, 0)
+	an.add_theme_font_size_override("font_size", 22)
+	ha.add_child(an)
+	_armor_btn = _btn("", Color(0.25, 0.3, 0.38))
+	_armor_btn.pressed.connect(_buy_armor)
+	ha.add_child(_armor_btn)
+	_armor_lbl = an
 	_msg = Label.new()
 	_msg.add_theme_font_size_override("font_size", 20)
 	_msg.add_theme_color_override("font_color", Color(1, 0.85, 0.4))
@@ -215,8 +227,27 @@ func is_open() -> bool:
 	return _panel.visible
 
 
+var _armor_btn: Button
+var _armor_lbl: Label
+
+
+func _buy_armor() -> void:
+	if PlayerLife.armor >= 99.0:
+		_msg.text = "Бронежилет уже надет"
+	elif Wallet.money < PlayerLife.ARMOR_PRICE:
+		_msg.text = "Недостаточно денег"
+	else:
+		Wallet.money -= PlayerLife.ARMOR_PRICE
+		PlayerLife.armor = 100.0
+		Wallet.save_state()
+		_msg.text = "Бронежилет надет"
+	_refresh()
+
+
 func _refresh() -> void:
 	_money.text = "У вас: " + Wallet.fmt(Wallet.money)
+	_armor_lbl.text = "Бронежилет\nброня: %d%%" % int(PlayerLife.armor)
+	_armor_btn.text = "КУПИТЬ · %s" % Wallet.fmt(PlayerLife.ARMOR_PRICE)
 	for id in _rows:
 		var r: Array = _rows[id]
 		var d: Dictionary = Weapons.DATA[id]

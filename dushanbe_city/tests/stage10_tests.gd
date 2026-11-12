@@ -100,6 +100,11 @@ func _t_wanted() -> void:
 		await _frames(5)
 	_check("3 stars: the police shoot at you (health %.0f)" % PlayerLife.health, PlayerLife.health < 99.0)
 	PlayerLife.health = 100.0
+	PlayerLife.armor = 100.0
+	PlayerLife.damage(20.0)
+	_check("body armour takes most of the hit: health %.0f, armour %.0f" % [PlayerLife.health, PlayerLife.armor], PlayerLife.health == 95.0 and PlayerLife.armor == 85.0)
+	PlayerLife.armor = 0.0
+	PlayerLife.health = 100.0
 	var cop_ok := false
 	if not pol.cops.is_empty():
 		var c: Dictionary = pol.cops[0]

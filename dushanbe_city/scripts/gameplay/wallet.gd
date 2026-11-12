@@ -55,6 +55,7 @@ static func load_state() -> void:
 			tuning = d["tuning"]
 		if d.get("food") is Dictionary:
 			Food.from_dict(d["food"])
+		PlayerLife.armor = float(d.get("armor", 0.0))
 
 
 static func save_state() -> void:
@@ -62,7 +63,7 @@ static func save_state() -> void:
 		return
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "plates": plates, "homes": homes, "missions": missions, "tuning": tuning, "food": Food.to_dict()}))
+		f.store_string(JSON.stringify({"money": money, "laklak_hired": laklak_hired, "bus_hired": bus_hired, "deliveries": deliveries, "earned_total": earned_total, "weapons": Weapons.to_dict(), "paints": paints, "cars": cars, "fuel": fuel, "plates": plates, "homes": homes, "missions": missions, "tuning": tuning, "food": Food.to_dict(), "armor": PlayerLife.armor}))
 
 
 static func earn(amount: int) -> void:

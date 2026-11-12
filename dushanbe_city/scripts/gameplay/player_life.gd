@@ -5,6 +5,8 @@ extends Node
 ## (max 500 smn) for the treatment. Health slowly comes back (1 / s after 8 s without damage).
 
 static var health := 100.0
+static var armor := 0.0                ## 0..100, like GTA: the vest takes most of the damage first
+const ARMOR_PRICE := 600
 static var dead := false
 static var instance: PlayerLife
 
@@ -73,6 +75,10 @@ void fragment() {
 static func damage(amount: float) -> void:
 	if instance == null or dead or amount <= 0.0:
 		return
+	if armor > 0.0:
+		var soak := minf(armor, amount * 0.75)
+		armor -= soak
+		amount -= soak
 	health = maxf(0.0, health - amount)
 	instance._since_hit = 0.0
 	if health <= 0.0:

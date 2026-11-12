@@ -123,6 +123,8 @@ func _draw() -> void:
 		hp = session.car.health / 100.0
 		fuel = session.car.fuel_l / maxf(session.car.tank_l, 1.0)
 	_bar(Rect2(right - bw, 0.8 * u, bw, 0.2 * u), hp, Color(0.86, 0.1, 0.1))
+	if PlayerLife.armor > 0.0 and not (session and session.driving):
+		_bar(Rect2(right - bw, 0.68 * u, bw, 0.09 * u), PlayerLife.armor / 100.0, Color(0.3, 0.6, 1.0))   # armour (blue)
 	_bar(Rect2(right - bw, 1.1 * u, bw, 0.2 * u), fuel, Color(0.97, 0.97, 0.97))
 	# hunger (orange) and thirst (blue), with their icons; blink when low
 	var low := Engine.get_frames_drawn() % 40 < 20
