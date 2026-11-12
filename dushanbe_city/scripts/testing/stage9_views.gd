@@ -125,14 +125,14 @@ func _ready() -> void:
 		var cp := sg.player.global_position
 		var pol: Police = main.get_node("Police")
 		pol.set_stars(2)
-		pol._dispatch = 9999.0           # they know where he is (no escape while the shot loads)
+		pol.enabled = false              # the police AI holds still for the shot (no arrest, no escape)
 		cmb.deploy_officers(cp + Vector3(9, 0, 4))
 		cmb.deploy_officers(cp + Vector3(-7, 0, 8))
 		await _sec(2.0)
 		cp = sg.player.global_position
 		print("GTA cops: ", cmb.units.size(), " dead=", PlayerLife.dead)
 		await _look("gta_foot_cops", cp + Vector3(-4, 0, -6), cp + Vector3(1, 0, 4), 2.4, 1.0)
-		pol._dispatch = 0.0
+		pol.enabled = true
 		pol.set_stars(0)
 		await _sec(0.5)
 		# the clothes shop and a cash machine

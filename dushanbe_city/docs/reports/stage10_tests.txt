@@ -1,19 +1,11 @@
-PASS  1. missions: 4 markers
-PASS  2. race started at the marker: 8 checkpoints
-PASS  3. opening cutscene: letterbox camera, subtitles, the timer waits (120.0 -> 120.0)
-PASS  4. after the cutscene: the game camera and HUD back
-PASS  5. race finished: +1 500 смн, saved ["race"]
-PASS  6. delivery out of time: failed, not saved
-PASS  7. cash machines in the city: 4
-PASS  8. at the machine: «БАНКОМАТ»
-PASS  9. stands on the sidewalk (0.12 m over the ground), off the carriageway (1.7 m)
-PASS 10. deposit everything: cash 0, bank 5000
-PASS 11. withdraw 2000: cash 2000, bank 3000
-PASS 12. cannot take more than the account (asks 9999 -> 3000)
-PASS 13. after the hospital: bank untouched (4 000 смн), cash 1 000 смн -> 900 смн
-PASS 14. boss mission marker + combatants
-PASS 15. boss mission starts with the cutscene
-PASS 16. Karim appeared in the district (hp 300) with guards (8 gang men)
-PASS 17. hit: the gang turns hostile, Karim still alive
-PASS 18. Karim dead -> mission passed +2 500 смн
-PASS 19. the banner «ЗАДАНИЕ ВЫПОЛНЕНО»
+PASS  1. boss mission marker + combatants
+PASS  2. boss mission starts with the cutscene
+PASS  3. Karim appeared in the district (hp 300) with guards (8 gang men)
+PASS  4. hit: the gang turns hostile, Karim still alive
+PASS  5. Karim dead -> mission passed +2 500 смн
+PASS  6. the banner «ЗАДАНИЕ ВЫПОЛНЕНО»
+PASS  7. clothes shop on the shopping street
+PASS  8. at the door: «МАГАЗИН ОДЕЖДЫ»
+PASS  9. not enough money for «Деловой» (900)
+PASS 10. bought and put on «Деловой»: money 1 100 смн, outfit 6, the hero's texture npc_6.jpg
+PASS 11. back to his own clothes (free)

@@ -187,8 +187,10 @@ func _t_clothes() -> void:
 	if s.driving:
 		s.exit()
 		await _sec(1.0)
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(cs.interaction_point(null))
 	s.player.teleport(cs.interaction_point(null), 0.0)
-	await _sec(1.0)
+	await _sec(1.5)
 	var it: Variant = s.player.get("interaction")
 	var lbl: String = (it as CharacterInteraction).label() if it else ""
 	_check("at the door: «%s»" % lbl, lbl == "МАГАЗИН ОДЕЖДЫ")

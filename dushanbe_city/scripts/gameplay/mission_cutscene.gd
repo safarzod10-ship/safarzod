@@ -96,6 +96,13 @@ func _place_cam(k: float) -> void:
 	var a := _a0 + k * PI * 0.55
 	var r := lerpf(4.6, 3.6, k)
 	var p := _centre + Vector3(sin(a) * r, 0.35 + 0.25 * k, cos(a) * r)
+	# never inside a wall: stop the camera in front of the first thing between it and the actors
+	var q := PhysicsRayQueryParameters3D.create(_centre, p, 1)
+	if hero is CollisionObject3D:
+		q.exclude = [(hero as CollisionObject3D).get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if not hit.is_empty():
+		p = _centre + (hit.position - _centre) * 0.85
 	_cam.global_position = p
 	_cam.look_at(_centre, Vector3.UP)
 

@@ -186,6 +186,9 @@ func start(id: String, intro := true) -> void:
 		active = ""
 		return
 	# the opening cutscene (the timer waits for it)
+	# the marker of the running mission is hidden (it would stand in the cutscene / in the way)
+	if markers.has(id):
+		(markers[id]["node"] as Node3D).visible = false
 	if intro and session and session.player and not session.driving and INTRO.has(id) and not MissionCutscene.playing:
 		_intro = true
 		_msg_t = 0.0
@@ -328,6 +331,8 @@ func _finish(ok: bool, why: String) -> void:
 			markers[id]["node"] = n
 	else:
 		_show_banner("ЗАДАНИЕ ПРОВАЛЕНО", why, Color(0.95, 0.25, 0.2))
+	if markers.has(id) and is_instance_valid(markers[id]["node"]):
+		(markers[id]["node"] as Node3D).visible = true
 	mission_done.emit(id, ok)
 
 
