@@ -129,6 +129,10 @@ func _process(delta: float) -> void:
 		var goal := tp if seen else last_seen + Vector3(sin(float(c["idx"]) * 1.7 + _clock) * radius * 0.5, 0, cos(float(c["idx"]) * 2.3 + _clock) * radius * 0.5)
 		_drive_cop(c, goal, delta)
 		_cop_fire(c, tp, delta)
+		# close to the player: two officers jump out and go on foot (once per car)
+		if not c.get("deployed", false) and (c["node"] as Node3D).global_position.distance_to(tp) < 25.0 and Combatants.instance:
+			c["deployed"] = true
+			Combatants.instance.deploy_officers((c["node"] as Node3D).global_position + (c["node"] as Node3D).global_basis.x * 2.0)
 	_clock += delta * 0.05
 	if not seen:
 		var outside := Vector2(tp.x - last_seen.x, tp.z - last_seen.z).length() > radius

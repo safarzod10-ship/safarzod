@@ -1,19 +1,9 @@
-PASS  1. gun shop across the avenue from the hero's home ((-81.0, 13.0, -2143.0), 107 m), on the map
-PASS  2. at the door: «МАГАЗИН ОРУЖИЯ»
-PASS  3. not enough money for the AK (3 500): refused
-PASS  4. bought bat + pistol + AK: money 1 050 смн (6000 − 4950 = 1050), ammo 24 / 60
-PASS  5. buy ammo: +60 AK rounds for 150
-PASS  6. select: unowned weapons can't be taken
-PASS  7. police + city life
-PASS  8. pedestrians around: 8
-PASS  9. gunshot in public (witnesses 6): stars 1
-PASS 10. a pedestrian wounded by a shot: stars 2 (>= 2)
-PASS 11. a pedestrian killed: stars 3 (>= 3)
-PASS 12. the killed pedestrian dropped money (1 bundles)
-PASS 13. walk over the money: +42 смн
-PASS 14. unseen: a search area on the minimap
-PASS 15. outside the search area and unseen: escaped (stars 0 after 2 s)
-PASS 16. 3 stars: the police shoot at you (health 92)
-PASS 17. body armour takes most of the hit: health 95, armour 85
-PASS 18. a police car is recognised (shooting it = crime)
-PASS 19. restart: weapons ["fist", "pistol", "ak47"], ammo 17 / 45, selected ak47, cars ["car", "camry"], money 12 345 смн
+PASS  1. armed people on foot (police officers, gangs)
+PASS  2. the police car stopped near you: officers on foot (2)
+PASS  3. the officers shoot (health 92)
+PASS  4. an officer killed: stars 3 -> 4
+PASS  5. stars out: the officers leave (0 left)
+PASS  6. Банда «Шохмансур»: its men in the district (5)
+PASS  7. they leave you alone at first
+PASS  8. stay next to them: the gang turns on you
+PASS  9. a gang member killed drops money

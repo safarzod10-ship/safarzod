@@ -19,7 +19,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	await _frames(30)
 	s = main.get("car_session")
-	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted"]
+	var secs: Array = ["home", "account", "save", "dealer", "doors", "shop", "shoot", "explode", "steer", "fp", "taxi", "realty", "tune", "npc", "police", "signals", "missions", "amid", "ferris", "wanted", "foot"]
 	if not OS.get_cmdline_user_args().is_empty():
 		secs = Array(OS.get_cmdline_user_args())
 	for sec in secs:
@@ -113,6 +113,70 @@ func _t_wanted() -> void:
 	pol.set_stars(0)
 	pol._clear_cops()
 	life.enabled = false
+
+
+## GTA rules on foot: police officers leave their car near you and fight; gangs in their districts
+func _t_foot() -> void:
+	var cmb: Combatants = main.get_node_or_null("Combatants")
+	var pol: Police = main.get_node_or_null("Police")
+	_check("armed people on foot (police officers, gangs)", cmb != null and pol != null)
+	if cmb == null:
+		return
+	if s.driving:
+		s.exit()
+		await _sec(1.0)
+	var hh: HeroHome = main.get_node_or_null("HeroHome")
+	if hh:
+		s.player.teleport(hh.spawn_point(), 0.0)
+	await _sec(2.0)
+	PlayerLife.health = 100.0
+	PlayerLife.armor = 0.0
+	pol.set_stars(3)
+	pol._dispatch = 12.0
+	var pp: Vector3 = (s.player as Node3D).global_position
+	pol._spawn_cop(pp)
+	if not pol.cops.is_empty():
+		(pol.cops[0]["node"] as Node3D).global_position = pp + Vector3(15, 0, 0)
+	await _sec(1.0)
+	var cops_on_foot := cmb.units.filter(func(u: Dictionary) -> bool: return u["kind"] == "cop").size()
+	_check("the police car stopped near you: officers on foot (%d)" % cops_on_foot, cops_on_foot >= 2)
+	var t0 := Time.get_ticks_msec()
+	while PlayerLife.health > 99.0 and Time.get_ticks_msec() - t0 < 15000:
+		await _frames(5)
+	_check("the officers shoot (health %.0f)" % PlayerLife.health, PlayerLife.health < 99.0)
+	var cu: Array = cmb.units.filter(func(u: Dictionary) -> bool: return u["kind"] == "cop")
+	if not cu.is_empty():
+		var st0 := Police.stars
+		cmb.hit(cu[0], 200.0)
+		_check("an officer killed: stars %d -> %d" % [st0, Police.stars], Police.stars >= 3 and float(cu[0]["hp"]) <= 0.0)
+	pol.set_stars(0)
+	pol._clear_cops()
+	await _sec(0.5)
+	_check("stars out: the officers leave (%d left)" % cmb.units.filter(func(u: Dictionary) -> bool: return u["kind"] == "cop" and float(u["hp"]) > 0.0).size(),
+		cmb.units.filter(func(u: Dictionary) -> bool: return u["kind"] == "cop" and float(u["hp"]) > 0.0).is_empty())
+	# a gang district
+	PlayerLife.health = 100.0
+	var g: Dictionary = Combatants.GANGS[0]
+	var gc: Vector2 = g["c"]
+	var ow: OpenWorld = main.get("open_world")
+	ow.preload_at(Vector3(gc.x, 0, gc.y))
+	s.player.teleport(Vector3(gc.x, WorldData.get_instance().height_at(gc.x, gc.y) + 1.0, gc.y), 0.0)
+	await _sec(3.0)
+	var gang := cmb.units.filter(func(u: Dictionary) -> bool: return u["kind"] == "gang")
+	_check("%s: its men in the district (%d)" % [g["name"], gang.size()], gang.size() >= 3)
+	_check("they leave you alone at first", gang.filter(func(u: Dictionary) -> bool: return u["hostile"]).is_empty())
+	if not gang.is_empty():
+		var gn: Node3D = gang[0]["node"]
+		s.player.teleport(gn.global_position + Vector3(4, 0.5, 0), 0.0)
+		await _sec(4.5)
+		_check("stay next to them: the gang turns on you", gang.filter(func(u: Dictionary) -> bool: return u["hostile"]).size() >= 3)
+		var cash0: int = CityLife.instance.cash.size() if CityLife.instance else 0
+		cmb.hit(gang[0], 200.0)
+		_check("a gang member killed drops money", CityLife.instance != null and CityLife.instance.cash.size() > cash0)
+	if hh:
+		s.player.teleport(hh.spawn_point(), 0.0)
+	PlayerLife.health = 100.0
+	await _sec(1.0)
 
 
 ## the Ferris wheel in Rudaki park: a ticket costs 10 smn, one full turn in a gondola, then back on the deck

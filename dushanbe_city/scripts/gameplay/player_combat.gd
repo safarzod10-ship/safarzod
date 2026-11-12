@@ -118,6 +118,9 @@ func _shoot(w: String, d: Dictionary) -> void:
 		var pol: Node = get_tree().root.find_child("Police", true, false)
 		if pol and pol.has_method("is_cop") and pol.call("is_cop", col) and CityLife.instance:
 			CityLife.instance.crime.emit(3, target)               # shooting at the police
+		if Combatants.instance and Combatants.instance.hit_body(col, float(d["damage"])):
+			WeaponFX.impact(get_tree(), target, hit.normal, false)
+			return
 		if CityLife.instance and CityLife.instance.hit_body(col, float(d["damage"]), mdir, false):
 			WeaponFX.impact(get_tree(), target, hit.normal, false)
 			return
@@ -156,6 +159,9 @@ func _melee(w: String, d: Dictionary) -> void:
 		var res := player.get_world_3d().direct_space_state.intersect_shape(qp, 8)
 		var hit_any := false
 		for r in res:
+			if Combatants.instance and Combatants.instance.hit_body(r.collider, float(d["damage"]) * (2.0 if w == "bat" else 1.0)):
+				hit_any = true
+				continue
 			if CityLife.instance and CityLife.instance.hit_body(r.collider, float(d["damage"]) * (2.0 if w == "bat" else 1.0), fwd, true):
 				hit_any = true
 				continue

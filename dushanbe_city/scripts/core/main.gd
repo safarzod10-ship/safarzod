@@ -369,6 +369,12 @@ func _spawn_extra_vehicles() -> void:
 	police.session = car_session
 	police.nav = nav
 	add_child(police)
+	# armed people on foot: police officers out of their cars, the gangs in their districts
+	var cmb := Combatants.new()
+	cmb.name = "Combatants"
+	cmb.session = car_session
+	cmb.police = police
+	add_child(cmb)
 	# city ambience + car radio (own synthesized sounds)
 	var caud := CityAudio.new()
 	caud.name = "CityAudio"
