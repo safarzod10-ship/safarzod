@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Комментоград — стиль</title>
+<style>@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+html,body{margin:0;background:#000}canvas{display:block;width:540px}#ui{display:none}</style></head>
+<body><div id="wrap"><canvas id="c" width="1080" height="1920"></canvas><div id="ui"><button id="play"></button><input id="seek" type="range"><span id="time"></span></div></div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const DUR = 1, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 0, CUTS = [], MONEY = [];
+const SUBS = [[0, 1, 'T', 'Пишешь *ник и кем хочешь быть* — и ты живёшь в этом городе.']];
+const BG = new Image(); BG.src = 'out/kg3d/test_0001.png';
+let PINS = null;
+function glass(x, y, w, h, r = 28) {
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+  rr(x, y, w, h, r, 'rgba(18,16,40,.55)'); ctx.restore();
+  rr(x, y, w, h, r, null, 'rgba(255,255,255,.22)', 2);
+  const g = ctx.createLinearGradient(x, y, x, y + h); g.addColorStop(0, 'rgba(255,255,255,.14)'); g.addColorStop(.5, 'rgba(255,255,255,0)');
+  rr(x, y, w, h, r, g);
+}
+function avatar(x, y, r, nick, hue) {
+  const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+  g.addColorStop(0, `hsl(${hue},90%,62%)`); g.addColorStop(1, `hsl(${(hue + 60) % 360},90%,52%)`);
+  ctx.save(); ctx.shadowColor = `hsl(${hue},90%,60%)`; ctx.shadowBlur = 30; circ(x, y, r + 5, '#fff'); ctx.restore();
+  circ(x, y, r, g);
+  txt(nick[1].toUpperCase(), x, y + 2, r * 1.05, '#fff', { w: 900 });
+}
+function pin(i, nick, role, hue) {
+  const [px, py] = PINS[i]; const x = px * W, y = (1 - py) * H;
+  ctx.save(); ctx.shadowColor = `hsl(${hue},90%,60%)`; ctx.shadowBlur = 30;
+  line([x, y, x, y - 80], `hsl(${hue},90%,70%)`, 4); ctx.restore();
+  circ(x, y, 8, `hsl(${hue},90%,70%)`);
+  const w = Math.max(tw(nick, 28, 800), tw(role, 22, 600)) + 110;
+  glass(x - w / 2, y - 170, w, 84, 42);
+  avatar(x - w / 2 + 42, y - 128, 28, nick, hue);
+  txt(nick, x - w / 2 + 82, y - 142, 28, '#fff', { w: 800, al: 'left' });
+  txt(role, x - w / 2 + 82, y - 110, 22, `hsl(${hue},90%,75%)`, { w: 600, al: 'left' });
+}
+function scene(t) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (BG.naturalWidth) ctx.drawImage(BG, 0, 0, W, H);
+  const v = ctx.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(8,6,24,.85)'); v.addColorStop(.22, 'rgba(8,6,24,0)'); v.addColorStop(.7, 'rgba(8,6,24,0)'); v.addColorStop(1, 'rgba(8,6,24,.9)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  // header
+  glass(40, 270, 1000, 120, 36);
+  const lg = ctx.createLinearGradient(70, 290, 150, 370); lg.addColorStop(0, '#ff4fa3'); lg.addColorStop(1, '#7c5cff');
+  rr(70, 290, 80, 80, 24, lg); txt('K', 110, 332, 52, '#fff', { w: 900 });
+  txt('КОММЕНТОГРАД', 175, 314, 40, '#fff', { w: 900, al: 'left' });
+  txt('город, который строят зрители', 175, 352, 24, 'rgba(255,255,255,.7)', { w: 600, al: 'left' });
+  rr(805, 300, 210, 60, 30, 'rgba(255,79,163,.2)', '#ff4fa3', 2); circ(835, 330, 8, '#ff4fa3');
+  txt('LIVE · 4', 855, 331, 28, '#fff', { w: 800, al: 'left' });
+  if (PINS) { pin(17, '@dimka', 'таксист', 200); pin(23, '@alina_s', 'блогер', 320); pin(41, '@max_biz', 'бизнесмен', 40); pin(27, '@vovan', 'бандит', 0); }
+  // big stat card
+  glass(70, 1150, 940, 170, 40);
+  txt('ЖИТЕЛЕЙ', 130, 1200, 30, 'rgba(255,255,255,.7)', { w: 700, al: 'left' });
+  txt('1 284', 130, 1262, 84, '#fff', { w: 900, al: 'left' });
+  txt('+37 за час', 990, 1262, 38, '#4ade80', { w: 800, al: 'right' });
+}
+const SCENES = [[0, 1.1, scene]];
+fetch('out/kg3d/test_pins.json').then(r => r.json()).then(d => { PINS = d.pins[0]; return new Promise(r => BG.complete ? r() : (BG.onload = r)); }).then(startPlayer);
+</script></body></html>
