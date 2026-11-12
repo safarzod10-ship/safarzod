@@ -79,6 +79,27 @@ func _ready() -> void:
 		await _snap("wanted_search")
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("gtadbg"):
+		PlayerLife.invulnerable = true
+		var sd: CarSession = main.get("car_session")
+		var cd := Combatants.instance
+		var pd: Police = main.get_node("Police")
+		var md: Missions = main.get_node("Missions")
+		var p0 := sd.player.global_position
+		pd.set_stars(2)
+		cd.deploy_officers(p0 + Vector3(9, 0, 4))
+		for i in 8:
+			await _sec(0.25)
+			print("DBG cops units=", cd.units.size(), " stars=", Police.stars, " pos=", sd.player.global_position, " dead=", PlayerLife.dead)
+		pd.set_stars(0)
+		var mp: Vector3 = md.markers["boss"]["pos"]
+		ow.preload_at(mp)
+		sd.player.teleport(mp + Vector3(0, 1, 0), 0.0)
+		for i in 20:
+			await _sec(0.25)
+			print("DBG mis=", md.active, " intro=", md._intro, " cut=", MissionCutscene.playing, " ppos=", sd.player.global_position, " mp=", mp, " cam=", get_viewport().get_camera_3d().get_path())
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("gta"):
 		# 0.28: gangs, foot officers, ATM, clothes shop, the mission cutscene + banner, the map
 		_hour(15.0)
@@ -104,12 +125,14 @@ func _ready() -> void:
 		var cp := sg.player.global_position
 		var pol: Police = main.get_node("Police")
 		pol.set_stars(2)
+		pol._dispatch = 9999.0           # they know where he is (no escape while the shot loads)
 		cmb.deploy_officers(cp + Vector3(9, 0, 4))
 		cmb.deploy_officers(cp + Vector3(-7, 0, 8))
 		await _sec(2.0)
 		cp = sg.player.global_position
 		print("GTA cops: ", cmb.units.size(), " dead=", PlayerLife.dead)
 		await _look("gta_foot_cops", cp + Vector3(-4, 0, -6), cp + Vector3(1, 0, 4), 2.4, 1.0)
+		pol._dispatch = 0.0
 		pol.set_stars(0)
 		await _sec(0.5)
 		# the clothes shop and a cash machine
@@ -125,11 +148,10 @@ func _ready() -> void:
 		ow.hold = mp
 		ow.preload_at(mp)
 		sg.player.teleport(mp + Vector3(0, 1, 0), 0.0)
-		for i in 240:
-			await get_tree().process_frame
+		await _sec(1.5)
 		print("GTA mission: ", mis.active, " cutscene=", MissionCutscene.playing)
 		await _snap("gta_cutscene_1")
-		await _sec(3.5)
+		await _sec(3.0)
 		await _snap("gta_cutscene_2")
 		for c in mis.get_children():
 			if c is MissionCutscene:
