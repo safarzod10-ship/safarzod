@@ -1,0 +1,2007 @@
+{
+ "awning_shop_green": {
+  "aabb_pos": [
+   -1.52999997138977,
+   -0.720000028610229,
+   -0.00100687309168279
+  ],
+  "aabb_size": [
+   3.05999994277954,
+   0.75,
+   1.21600687503815
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "fabric_green",
+   "paint_grey_dark"
+  ],
+  "tris": 192
+ },
+ "awning_shop_red": {
+  "aabb_pos": [
+   -1.52999997138977,
+   -0.720000028610229,
+   -0.00100687309168279
+  ],
+  "aabb_size": [
+   3.05999994277954,
+   0.75,
+   1.21600687503815
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "fabric_red",
+   "paint_grey_dark"
+  ],
+  "tris": 192
+ },
+ "barrier_pedestrian": {
+  "aabb_pos": [
+   -1.0349999666214,
+   0.0,
+   -0.0350000001490116
+  ],
+  "aabb_size": [
+   2.03499984741211,
+   1.05999994277954,
+   0.0700000002980232
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_white",
+   "paint_red"
+  ],
+  "tris": 260
+ },
+ "bench_concrete_slats": {
+  "aabb_pos": [
+   -1.0,
+   0.0,
+   -0.209999993443489
+  ],
+  "aabb_size": [
+   2.0,
+   0.439999997615814,
+   0.419999986886978
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "wood"
+  ],
+  "tris": 308
+ },
+ "bench_courtyard": {
+  "aabb_pos": [
+   -0.899999976158142,
+   0.0,
+   -0.289556056261063
+  ],
+  "aabb_size": [
+   1.79999995231628,
+   0.824190557003021,
+   0.50955605506897
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "wood_painted_brown"
+  ],
+  "tris": 636
+ },
+ "bench_modern_metal": {
+  "aabb_pos": [
+   -0.96671736240387,
+   0.0,
+   -0.339591830968857
+  ],
+  "aabb_size": [
+   1.93343472480774,
+   0.854931950569153,
+   0.609591841697693
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "steel"
+  ],
+  "tris": 972
+ },
+ "bench_park_soviet": {
+  "aabb_pos": [
+   -1.0,
+   -0.00191395229194313,
+   -0.344282418489456
+  ],
+  "aabb_size": [
+   2.0,
+   0.867860674858093,
+   0.609282374382019
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_black",
+   "wood_painted_green"
+  ],
+  "tris": 544
+ },
+ "bike_rack_5": {
+  "aabb_pos": [
+   -1.0,
+   0.0,
+   -0.325000017881393
+  ],
+  "aabb_size": [
+   2.0,
+   0.772000014781952,
+   0.650000035762787
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv"
+  ],
+  "tris": 964
+ },
+ "bin_modern_steel": {
+  "aabb_pos": [
+   -0.200000002980232,
+   0.0,
+   -0.200000002980232
+  ],
+  "aabb_size": [
+   0.400000005960464,
+   0.899999976158142,
+   0.400000005960464
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "steel",
+   "plastic_black"
+  ],
+  "tris": 294
+ },
+ "bollard_concrete": {
+  "aabb_pos": [
+   -0.200000002980232,
+   0.0,
+   -0.200000002980232
+  ],
+  "aabb_size": [
+   0.400000005960464,
+   0.560000002384186,
+   0.400000005960464
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light"
+  ],
+  "tris": 128
+ },
+ "bus_stop_shelter": {
+  "aabb_pos": [
+   -2.53999996185303,
+   0.0,
+   -0.925000011920929
+  ],
+  "aabb_size": [
+   4.91499996185303,
+   2.65000009536743,
+   1.75
+  ],
+  "markers": {
+   "light_point_0_006": [
+    0.0,
+    2.45,
+    -0.1
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "paint_grey",
+   "plates",
+   "glass",
+   "ad_lightbox",
+   "wood"
+  ],
+  "tris": 608
+ },
+ "bus_stop_shelter_lod1": {
+  "aabb_pos": [
+   -2.53999996185303,
+   0.0,
+   -0.925000011920929
+  ],
+  "aabb_size": [
+   4.91499996185303,
+   2.65000009536743,
+   1.75
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "paint_grey",
+   "plates",
+   "glass",
+   "ad_lightbox",
+   "wood"
+  ],
+  "tris": 380
+ },
+ "canopy_porch_metal": {
+  "aabb_pos": [
+   -1.10000002384186,
+   -0.810000002384186,
+   -0.0104188891127706
+  ],
+  "aabb_size": [
+   2.20000004768372,
+   0.815908849239349,
+   1.30051696300507
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "roof_painted_green",
+   "paint_grey_dark"
+  ],
+  "tris": 120
+ },
+ "carpet_beating_bar": {
+  "aabb_pos": [
+   -1.42499995231628,
+   0.0,
+   -0.125
+  ],
+  "aabb_size": [
+   2.84999990463257,
+   1.92999994754791,
+   0.25
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_green",
+   "concrete"
+  ],
+  "tris": 196
+ },
+ "clothes_drying_poles": {
+  "aabb_pos": [
+   -2.125,
+   0.0,
+   -0.649999976158142
+  ],
+  "aabb_size": [
+   4.25,
+   2.20000004768372,
+   1.29999995231628
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey",
+   "concrete",
+   "rope"
+  ],
+  "tris": 264
+ },
+ "container_euro_wheeled": {
+  "aabb_pos": [
+   -0.720000028610229,
+   0.0,
+   -0.579999983310699
+  ],
+  "aabb_size": [
+   1.44000005722046,
+   1.1949999332428,
+   1.125
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_dark_green",
+   "paint_grey_dark",
+   "rubber",
+   "plates"
+  ],
+  "tris": 488
+ },
+ "container_site": {
+  "aabb_pos": [
+   -2.09999990463257,
+   0.0,
+   -1.10000002384186
+  ],
+  "aabb_size": [
+   4.19999980926514,
+   1.82000005245209,
+   2.20000004768372
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_worn",
+   "paint_grey_dark",
+   "roof_painted_green"
+  ],
+  "tris": 248
+ },
+ "container_trash_green": {
+  "aabb_pos": [
+   -0.75,
+   0.0,
+   -0.485000014305115
+  ],
+  "aabb_size": [
+   1.5,
+   1.01499998569489,
+   0.970000028610229
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_green_dark",
+   "paint_grey_dark",
+   "plates",
+   "trash"
+  ],
+  "tris": 252
+ },
+ "container_trash_grey": {
+  "aabb_pos": [
+   -0.75,
+   0.0,
+   -0.485000014305115
+  ],
+  "aabb_size": [
+   1.5,
+   1.01499998569489,
+   0.970000028610229
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey",
+   "paint_grey_dark",
+   "plates",
+   "trash"
+  ],
+  "tris": 252
+ },
+ "courtyard_table_benches": {
+  "aabb_pos": [
+   -0.699999988079071,
+   0.0,
+   -0.795000016689301
+  ],
+  "aabb_size": [
+   1.39999997615814,
+   0.767499983310699,
+   1.5900000333786
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_green_dark",
+   "wood_painted_brown"
+  ],
+  "tris": 644
+ },
+ "curb_wheel_stop": {
+  "aabb_pos": [
+   -0.899999976158142,
+   0.0,
+   -0.0799999982118607
+  ],
+  "aabb_size": [
+   1.79999995231628,
+   0.119999997317791,
+   0.162499994039536
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "paint_yellow"
+  ],
+  "tris": 30
+ },
+ "electrical_cabinet": {
+  "aabb_pos": [
+   -0.449999988079071,
+   0.0,
+   -0.224999994039536
+  ],
+  "aabb_size": [
+   0.899999976158142,
+   1.57999992370605,
+   0.449999988079071
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "paint_grey",
+   "plastic_black",
+   "steel",
+   "plates"
+  ],
+  "tris": 194
+ },
+ "fence_decorative_15": {
+  "aabb_pos": [
+   -1.30999994277954,
+   0.0,
+   -0.0599999986588955
+  ],
+  "aabb_size": [
+   2.55999994277954,
+   1.72000002861023,
+   0.119999997317791
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_black"
+  ],
+  "tris": 860
+ },
+ "fence_lawn_hoop_green": {
+  "aabb_pos": [
+   -1.10692822933197,
+   -0.119999997317791,
+   -0.0081567307934165
+  ],
+  "aabb_size": [
+   2.21385645866394,
+   0.577063918113708,
+   0.016313461586833
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_green"
+  ],
+  "tris": 652
+ },
+ "fence_lawn_hoop_white": {
+  "aabb_pos": [
+   -1.10692822933197,
+   -0.119999997317791,
+   -0.0081567307934165
+  ],
+  "aabb_size": [
+   2.21385645866394,
+   0.577063918113708,
+   0.016313461586833
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_white"
+  ],
+  "tris": 652
+ },
+ "fence_school_brick": {
+  "aabb_pos": [
+   -1.73000001907349,
+   0.0,
+   -0.230000004172325
+  ],
+  "aabb_size": [
+   3.23000001907349,
+   1.98000001907349,
+   0.46000000834465
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "brick_red",
+   "concrete_light",
+   "paint_green_dark"
+  ],
+  "tris": 444
+ },
+ "gas_pipe_elbow": {
+  "aabb_pos": [
+   -0.5,
+   -0.5,
+   0.0
+  ],
+  "aabb_size": [
+   0.528500020503998,
+   0.528500020503998,
+   0.148863703012466
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_yellow"
+  ],
+  "tris": 188
+ },
+ "gas_pipe_ground_entry": {
+  "aabb_pos": [
+   -0.0700000002980232,
+   -0.100000001490116,
+   0.0
+  ],
+  "aabb_size": [
+   0.670000016689301,
+   2.32849979400635,
+   0.550000011920929
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_yellow",
+   "paint_red",
+   "concrete"
+  ],
+  "tris": 360
+ },
+ "gas_pipe_riser_3m": {
+  "aabb_pos": [
+   -0.0700000002980232,
+   0.0,
+   0.0
+  ],
+  "aabb_size": [
+   0.140000000596046,
+   3.0,
+   0.222499996423721
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_yellow",
+   "steel",
+   "paint_red",
+   "plates"
+  ],
+  "tris": 126
+ },
+ "gas_pipe_straight_3m": {
+  "aabb_pos": [
+   -1.5,
+   -0.0649999976158142,
+   0.0
+  ],
+  "aabb_size": [
+   3.0,
+   0.0995000004768372,
+   0.148863703012466
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_yellow"
+  ],
+  "tris": 196
+ },
+ "gate_havli_blue": {
+  "aabb_pos": [
+   -2.25,
+   0.0,
+   -0.275000005960464
+  ],
+  "aabb_size": [
+   4.5,
+   2.83999991416931,
+   0.550000011920929
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "plaster_cream",
+   "concrete_light",
+   "paint_blue",
+   "steel"
+  ],
+  "tris": 1760
+ },
+ "gate_havli_green": {
+  "aabb_pos": [
+   -2.25,
+   0.0,
+   -0.275000005960464
+  ],
+  "aabb_size": [
+   4.5,
+   2.83999991416931,
+   0.550000011920929
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "plaster_cream",
+   "concrete_light",
+   "paint_green",
+   "steel"
+  ],
+  "tris": 1760
+ },
+ "house_number_0": {
+  "aabb_pos": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "aabb_size": [
+   0.25,
+   0.25,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "house_number_1": {
+  "aabb_pos": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "aabb_size": [
+   0.25,
+   0.25,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "house_number_2": {
+  "aabb_pos": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "aabb_size": [
+   0.25,
+   0.25,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "house_number_3": {
+  "aabb_pos": [
+   -0.125,
+   -0.125,
+   0.0
+  ],
+  "aabb_size": [
+   0.25,
+   0.25,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "light_avenue_double": {
+  "aabb_pos": [
+   -2.39999985694885,
+   0.0,
+   -0.25
+  ],
+  "aabb_size": [
+   4.79999971389771,
+   10.0649995803833,
+   0.5
+  ],
+  "markers": {
+   "light_point_0": [
+    -2.09,
+    9.9,
+    0.0
+   ],
+   "light_point_1": [
+    2.09,
+    9.9,
+    0.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "tris": 794
+ },
+ "light_avenue_double_lod1": {
+  "aabb_pos": [
+   -2.39999985694885,
+   0.0,
+   -0.25
+  ],
+  "aabb_size": [
+   4.79999971389771,
+   10.0450000762939,
+   0.5
+  ],
+  "markers": {
+   "light_point_0_001": [
+    -2.09,
+    9.9,
+    0.0
+   ],
+   "light_point_1_001": [
+    2.09,
+    9.9,
+    0.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "tris": 258
+ },
+ "light_park_4m": {
+  "aabb_pos": [
+   -0.236353859305382,
+   0.0,
+   -0.236353859305382
+  ],
+  "aabb_size": [
+   0.472707718610764,
+   4.11999988555908,
+   0.472707718610764
+  ],
+  "markers": {
+   "light_point_0_004": [
+    0.0,
+    3.8,
+    0.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_black",
+   "lamp_emissive"
+  ],
+  "tris": 504
+ },
+ "light_park_4m_lod1": {
+  "aabb_pos": [
+   -0.239086732268333,
+   0.0,
+   -0.207055181264877
+  ],
+  "aabb_size": [
+   0.478173464536667,
+   4.11999988555908,
+   0.414110362529755
+  ],
+  "markers": {
+   "light_point_0_005": [
+    0.0,
+    3.8,
+    0.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_black",
+   "lamp_emissive"
+  ],
+  "tris": 204
+ },
+ "light_street_single": {
+  "aabb_pos": [
+   -0.25,
+   0.0,
+   -0.25
+  ],
+  "aabb_size": [
+   0.5,
+   9.11499977111816,
+   2.51999998092651
+  ],
+  "markers": {
+   "light_point_0_002": [
+    0.0,
+    8.95,
+    2.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "tris": 516
+ },
+ "light_street_single_lod1": {
+  "aabb_pos": [
+   -0.25,
+   0.0,
+   -0.25
+  ],
+  "aabb_size": [
+   0.5,
+   9.09500026702881,
+   2.51999998092651
+  ],
+  "markers": {
+   "light_point_0_003": [
+    0.0,
+    8.95,
+    2.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "galv",
+   "paint_grey",
+   "lamp_emissive"
+  ],
+  "tris": 168
+ },
+ "manhole_cover": {
+  "aabb_pos": [
+   -0.419999986886978,
+   -0.0299999993294477,
+   -0.419999986886978
+  ],
+  "aabb_size": [
+   0.839999973773956,
+   0.0350000001490116,
+   0.839999973773956
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "manhole"
+  ],
+  "tris": 70
+ },
+ "ph_aircon_outdoor_unit": {
+  "aabb_pos": [
+   -0.400069892406464,
+   0.0,
+   0.0
+  ],
+  "aabb_size": [
+   0.800139784812927,
+   0.927573978900909,
+   0.37477433681488
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "exterior_aircon_unit_01",
+   "exterior_aircon_unit_02"
+  ],
+  "tris": 2499
+ },
+ "ph_aircon_outdoor_unit_rusted": {
+  "aabb_pos": [
+   -0.400069952011108,
+   0.0,
+   0.0
+  ],
+  "aabb_size": [
+   0.800139844417572,
+   0.927573978900909,
+   0.37477433681488
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "exterior_aircon_unit_rusted_01",
+   "exterior_aircon_unit_rusted_02"
+  ],
+  "tris": 2500
+ },
+ "ph_barrel_blue": {
+  "aabb_pos": [
+   -0.316971749067307,
+   0.0,
+   -0.319299757480621
+  ],
+  "aabb_size": [
+   0.633943498134613,
+   0.930473625659943,
+   0.638599514961243
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "barrel_03"
+  ],
+  "tris": 1473
+ },
+ "ph_cardboard_box": {
+  "aabb_pos": [
+   -0.193621098995209,
+   0.0,
+   -0.25754326581955
+  ],
+  "aabb_size": [
+   0.387242197990417,
+   0.340299785137177,
+   0.515086531639099
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "cardboard_box_01"
+  ],
+  "tris": 800
+ },
+ "ph_clay_pot": {
+  "aabb_pos": [
+   -0.133073553442955,
+   0.0,
+   -0.131955623626709
+  ],
+  "aabb_size": [
+   0.26614710688591,
+   0.222002074122429,
+   0.263911247253418
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "planter_pot_clay"
+  ],
+  "tris": 1200
+ },
+ "ph_concrete_block_barrier": {
+  "aabb_pos": [
+   -0.781678557395935,
+   0.0,
+   -0.223039656877518
+  ],
+  "aabb_size": [
+   1.56335711479187,
+   1.10815095901489,
+   0.446079313755035
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_road_barrier_02"
+  ],
+  "tris": 1499
+ },
+ "ph_plastic_chair": {
+  "aabb_pos": [
+   -0.320930629968643,
+   0.0,
+   -0.314066469669342
+  ],
+  "aabb_size": [
+   0.641861259937286,
+   0.880586445331573,
+   0.628132939338684
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "plastic_monobloc_chair_01"
+  ],
+  "tris": 1800
+ },
+ "ph_plastic_crate": {
+  "aabb_pos": [
+   -0.25275069475174,
+   0.0,
+   -0.202648997306824
+  ],
+  "aabb_size": [
+   0.505501389503479,
+   0.254089176654816,
+   0.405297994613647
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "plastic_crate_02"
+  ],
+  "tris": 1500
+ },
+ "ph_potted_aloe": {
+  "aabb_pos": [
+   -0.0839918851852417,
+   0.0,
+   -0.0922849997878075
+  ],
+  "aabb_size": [
+   0.167983770370483,
+   0.267613440752029,
+   0.184569999575615
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "potted_plant_04"
+  ],
+  "tris": 2500
+ },
+ "ph_rollershutter_door": {
+  "aabb_pos": [
+   -0.540000021457672,
+   0.0,
+   0.0
+  ],
+  "aabb_size": [
+   1.08000004291534,
+   2.39997339248657,
+   0.300085693597794
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "rollershutter_door"
+  ],
+  "tris": 552
+ },
+ "ph_rollershutter_window": {
+  "aabb_pos": [
+   -1.05000054836273,
+   0.0,
+   0.0
+  ],
+  "aabb_size": [
+   2.10000109672546,
+   1.85072457790375,
+   0.30008590221405
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "rollershutter_window_01"
+  ],
+  "tris": 552
+ },
+ "ph_security_camera": {
+  "aabb_pos": [
+   -0.0707413256168365,
+   0.0,
+   0.0
+  ],
+  "aabb_size": [
+   0.141482651233673,
+   0.209412932395935,
+   0.393464386463165
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "security_camera_02",
+   "glass"
+  ],
+  "tris": 1500
+ },
+ "ph_trash_bag": {
+  "aabb_pos": [
+   -0.26163437962532,
+   0.0,
+   -0.233013600111008
+  ],
+  "aabb_size": [
+   0.523268759250641,
+   0.574925661087036,
+   0.466027200222015
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "trashbag"
+  ],
+  "tris": 999
+ },
+ "planter_rect_concrete": {
+  "aabb_pos": [
+   -0.75,
+   0.0,
+   -0.300000011920929
+  ],
+  "aabb_size": [
+   1.5,
+   0.5,
+   0.600000023841858
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "soil"
+  ],
+  "tris": 80
+ },
+ "planter_vase_soviet": {
+  "aabb_pos": [
+   -0.550000011920929,
+   0.0,
+   -0.550000011920929
+  ],
+  "aabb_size": [
+   1.10000002384186,
+   0.980000019073486,
+   1.10000002384186
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "soil"
+  ],
+  "tris": 480
+ },
+ "playground_hbar": {
+  "aabb_pos": [
+   -1.14499998092651,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   2.28999996185303,
+   2.45000004768372,
+   0.0900000035762787
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "steel"
+  ],
+  "tris": 194
+ },
+ "playground_sandbox_mushroom": {
+  "aabb_pos": [
+   -1.89999997615814,
+   0.0,
+   -1.89999997615814
+  ],
+  "aabb_size": [
+   2.97000002861023,
+   2.70000004768372,
+   2.97000002861023
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "wood_painted_green",
+   "wood_painted_brown",
+   "sand",
+   "paint_red",
+   "paint_white"
+  ],
+  "tris": 316
+ },
+ "playground_slide": {
+  "aabb_pos": [
+   -0.330000013113022,
+   -0.010063948109746,
+   -1.5691694021225
+  ],
+  "aabb_size": [
+   0.660000026226044,
+   1.93171465396881,
+   3.96916961669922
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_red",
+   "wood_painted_brown",
+   "paint_yellow",
+   "steel"
+  ],
+  "tris": 484
+ },
+ "playground_swing": {
+  "aabb_pos": [
+   -1.25,
+   -0.0108507219702005,
+   -0.783275544643402
+  ],
+  "aabb_size": [
+   2.5,
+   2.35364818572998,
+   1.5665510892868
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_blue",
+   "steel",
+   "paint_red"
+  ],
+  "tris": 308
+ },
+ "satellite_dish_060": {
+  "aabb_pos": [
+   -0.300000011920929,
+   -0.20414237678051,
+   0.0
+  ],
+  "aabb_size": [
+   0.600000023841858,
+   0.550546586513519,
+   0.858582019805908
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "paint_white",
+   "plastic_grey"
+  ],
+  "tris": 616
+ },
+ "satellite_dish_090": {
+  "aabb_pos": [
+   -0.449999988079071,
+   -0.328677833080292,
+   0.0
+  ],
+  "aabb_size": [
+   0.899999976158142,
+   0.822438836097717,
+   1.02715528011322
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "paint_white",
+   "plastic_grey"
+  ],
+  "tris": 616
+ },
+ "sign_1_23": {
+  "aabb_pos": [
+   -0.449999988079071,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.899999976158142,
+   2.91942286491394,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 194
+ },
+ "sign_2_1": {
+  "aabb_pos": [
+   -0.494974732398987,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.989949464797974,
+   3.12994956970215,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 198
+ },
+ "sign_2_4": {
+  "aabb_pos": [
+   -0.449999988079071,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.899999976158142,
+   2.91942286491394,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 194
+ },
+ "sign_3_1": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 294
+ },
+ "sign_3_24_60": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 294
+ },
+ "sign_3_27": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 294
+ },
+ "sign_5_16": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 198
+ },
+ "sign_5_19_1": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 198
+ },
+ "sign_5_19_2": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 198
+ },
+ "sign_5_5": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 198
+ },
+ "sign_6_4": {
+  "aabb_pos": [
+   -0.349999994039536,
+   0.0,
+   -0.0450000017881393
+  ],
+  "aabb_size": [
+   0.699999988079071,
+   2.83999991416931,
+   0.127009987831116
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plastic_black",
+   "signs"
+  ],
+  "tris": 198
+ },
+ "storm_grate": {
+  "aabb_pos": [
+   -0.400000005960464,
+   -0.0339999981224537,
+   -0.25
+  ],
+  "aabb_size": [
+   0.800000011920929,
+   0.0380099974572659,
+   0.5
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "grate",
+   "grate_frame"
+  ],
+  "tris": 12
+ },
+ "street_plate_0": {
+  "aabb_pos": [
+   -0.360000014305115,
+   -0.0900000035762787,
+   0.0
+  ],
+  "aabb_size": [
+   0.720000028610229,
+   0.180000007152557,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "street_plate_1": {
+  "aabb_pos": [
+   -0.360000014305115,
+   -0.0900000035762787,
+   0.0
+  ],
+  "aabb_size": [
+   0.720000028610229,
+   0.180000007152557,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "street_plate_2": {
+  "aabb_pos": [
+   -0.360000014305115,
+   -0.0900000035762787,
+   0.0
+  ],
+  "aabb_size": [
+   0.720000028610229,
+   0.180000007152557,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "street_plate_3": {
+  "aabb_pos": [
+   -0.360000014305115,
+   -0.0900000035762787,
+   0.0
+  ],
+  "aabb_size": [
+   0.720000028610229,
+   0.180000007152557,
+   0.0125099997967482
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "galv",
+   "plates"
+  ],
+  "tris": 12
+ },
+ "tapchan": {
+  "aabb_pos": [
+   -1.0,
+   0.0,
+   -0.899999976158142
+  ],
+  "aabb_size": [
+   2.0,
+   0.974999964237213,
+   1.79999995231628
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "wood_painted_brown",
+   "wood",
+   "fabric_red"
+  ],
+  "tris": 704
+ },
+ "traffic_light_mast": {
+  "aabb_pos": [
+   -0.280000001192093,
+   0.0,
+   -0.25
+  ],
+  "aabb_size": [
+   6.38116931915283,
+   6.82000017166138,
+   0.780000030994415
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "galv",
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "tris": 868
+ },
+ "traffic_light_mast_lod1": {
+  "aabb_pos": [
+   -0.25,
+   0.0,
+   -0.25
+  ],
+  "aabb_size": [
+   6.35122919082642,
+   6.82000017166138,
+   0.562999963760376
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete",
+   "galv",
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "tris": 238
+ },
+ "traffic_light_ped": {
+  "aabb_pos": [
+   -0.159999996423721,
+   0.0,
+   -0.104616217315197
+  ],
+  "aabb_size": [
+   0.319999992847443,
+   2.90000009536743,
+   0.494616240262985
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_ped_red",
+   "tl_ped_green",
+   "paint_yellow"
+  ],
+  "tris": 274
+ },
+ "traffic_light_ped_lod1": {
+  "aabb_pos": [
+   -0.159999996423721,
+   0.0,
+   -0.0952627956867218
+  ],
+  "aabb_size": [
+   0.319999992847443,
+   2.90000009536743,
+   0.345772832632065
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_ped_red",
+   "tl_ped_green",
+   "paint_yellow"
+  ],
+  "tris": 102
+ },
+ "traffic_light_pole": {
+  "aabb_pos": [
+   -0.280000001192093,
+   0.0,
+   -0.114126779139042
+  ],
+  "aabb_size": [
+   0.560000002384186,
+   3.63000011444092,
+   0.614126801490784
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "tris": 338
+ },
+ "traffic_light_pole_lod1": {
+  "aabb_pos": [
+   -0.209999993443489,
+   0.0,
+   -0.103923045098782
+  ],
+  "aabb_size": [
+   0.419999986886978,
+   3.59999990463257,
+   0.38693305850029
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "plastic_black",
+   "tl_red",
+   "tl_yellow",
+   "tl_green",
+   "tl_countdown"
+  ],
+  "tris": 130
+ },
+ "urn_concrete_round": {
+  "aabb_pos": [
+   -0.310000002384186,
+   0.0,
+   -0.310000002384186
+  ],
+  "aabb_size": [
+   0.620000004768372,
+   0.660000026226044,
+   0.620000004768372
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "trash"
+  ],
+  "tris": 348
+ },
+ "urn_tilting": {
+  "aabb_pos": [
+   -0.330000013113022,
+   0.0,
+   -0.209609508514404
+  ],
+  "aabb_size": [
+   0.660000026226044,
+   0.850000023841858,
+   0.419219017028809
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "paint_grey_dark",
+   "paint_green",
+   "trash"
+  ],
+  "tris": 422
+ },
+ "utility_pole_concrete": {
+  "aabb_pos": [
+   -0.849999964237213,
+   0.0,
+   -0.129999995231628
+  ],
+  "aabb_size": [
+   1.69999992847443,
+   9.71500015258789,
+   0.297063380479813
+  ],
+  "markers": {
+   "wire_0": [
+    -0.75,
+    9.13,
+    0.11
+   ],
+   "wire_1": [
+    0.75,
+    9.13,
+    0.11
+   ],
+   "wire_2": [
+    0.0,
+    9.7,
+    0.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "galv",
+   "insulator",
+   "paint_white"
+  ],
+  "tris": 430
+ },
+ "utility_pole_concrete_lod1": {
+  "aabb_pos": [
+   -0.849999964237213,
+   0.0,
+   -0.129999995231628
+  ],
+  "aabb_size": [
+   1.69999992847443,
+   9.71000003814697,
+   0.280450850725174
+  ],
+  "markers": {
+   "wire_0_001": [
+    -0.75,
+    9.13,
+    0.11
+   ],
+   "wire_1_001": [
+    0.75,
+    9.13,
+    0.11
+   ],
+   "wire_2_001": [
+    0.0,
+    9.7,
+    0.0
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "galv",
+   "insulator"
+  ],
+  "tris": 166
+ },
+ "utility_pole_wood": {
+  "aabb_pos": [
+   -0.800000011920929,
+   0.0,
+   -0.319999992847443
+  ],
+  "aabb_size": [
+   1.60000002384186,
+   8.55000019073486,
+   0.507063388824463
+  ],
+  "markers": {
+   "wire_0_002": [
+    -0.7,
+    8.345,
+    0.13
+   ],
+   "wire_1_002": [
+    -0.25,
+    8.345,
+    0.13
+   ],
+   "wire_2_002": [
+    0.25,
+    8.345,
+    0.13
+   ],
+   "wire_3": [
+    0.7,
+    8.345,
+    0.13
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "wood_pole",
+   "galv",
+   "insulator"
+  ],
+  "tris": 628
+ },
+ "utility_pole_wood_lod1": {
+  "aabb_pos": [
+   -0.800000011920929,
+   0.0,
+   -0.319999992847443
+  ],
+  "aabb_size": [
+   1.60000002384186,
+   8.55000019073486,
+   0.490450859069824
+  ],
+  "markers": {
+   "wire_0_003": [
+    -0.7,
+    8.345,
+    0.13
+   ],
+   "wire_1_003": [
+    -0.25,
+    8.345,
+    0.13
+   ],
+   "wire_2_003": [
+    0.25,
+    8.345,
+    0.13
+   ],
+   "wire_3_001": [
+    0.7,
+    8.345,
+    0.13
+   ]
+  },
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "concrete_light",
+   "wood_pole",
+   "galv",
+   "insulator"
+  ],
+  "tris": 192
+ },
+ "wall_havli": {
+  "aabb_pos": [
+   -1.5,
+   0.0,
+   -0.200000002980232
+  ],
+  "aabb_size": [
+   3.0,
+   2.1800000667572,
+   0.400000005960464
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "plaster_cream",
+   "concrete_worn",
+   "concrete_light"
+  ],
+  "tris": 40
+ },
+ "wall_havli_end": {
+  "aabb_pos": [
+   -0.275000005960464,
+   0.0,
+   -0.275000005960464
+  ],
+  "aabb_size": [
+   0.550000011920929,
+   2.5,
+   0.550000011920929
+  ],
+  "markers": {},
+  "mesh_xform_identity": true,
+  "surfaces": [
+   "plaster_cream",
+   "concrete_light"
+  ],
+  "tris": 80
+ }
+}

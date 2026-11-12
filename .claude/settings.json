@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(godot:*)",
+      "Bash(timeout:*)",
+      "Bash(xvfb-run:*)",
+      "Bash(python3:*)",
+      "Bash(blender:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(ffprobe:*)",
+      "Bash(git:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(du:*)",
+      "Bash(find:*)",
+      "Bash(unzip:*)",
+      "Bash(until:*)",
+      "Bash(while:*)",
+      "Bash(for:*)",
+      "Bash(D=:*)",
+      "Bash(S=:*)",
+      "Bash(/opt/android-sdk/build-tools/35.0.1/apksigner:*)",
+      "Bash(/opt/android-sdk/build-tools/35.0.1/aapt2:*)",
+      "Bash(GODOT_ANDROID_KEYSTORE_RELEASE_PATH=:*)",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep"
+    ]
+  }
+}

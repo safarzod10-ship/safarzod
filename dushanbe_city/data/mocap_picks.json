@@ -1,0 +1,37 @@
+{
+ "walk": "16_16",
+ "run": "09_09",
+ "jump": "16_01",
+ "idle": "16_01",
+ "idle_t0": 0.05,
+ "idle_t1": 0.42,
+ "jump_prep": 0.25,
+ "land_len": 0.8,
+ "walk_back": {
+  "clip": "136_25",
+  "t0": 2.0,
+  "t1": 13.5
+ },
+ "strafe_right": {
+  "clip": "113_18",
+  "t0": 1.0,
+  "t1": 8.5
+ },
+ "strafe_left": {
+  "clip": "113_18",
+  "t0": 9.5,
+  "t1": 17.5
+ },
+ "stop_walk": {
+  "clip": "16_33",
+  "lead": 0.2,
+  "settle": 0.6,
+  "stop_speed": 0.15
+ },
+ "stop_run": {
+  "clip": "127_05",
+  "lead": 0.15,
+  "settle": 0.6,
+  "stop_speed": 0.75
+ }
+}

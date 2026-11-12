@@ -1,0 +1,363 @@
+class_name CarSession
+extends Node
+## Getting in and out of the Prado.
+## On foot: when the player stands near the driver's (left) door and the car is (almost) still, a
+## «СЕСТЬ» button appears (key E). Entering hides the walking character (its collision is removed
+## from physics), switches input to the car, the camera to VehicleCamera and the touch UI to
+## CarControls. «ВЫЙТИ» (E) puts the character next to the driver's door on free, walkable ground:
+## several candidate spots are tested with the character's capsule (never inside the body or under the
+## car); if the car is moving fast it brakes first.
+
+const ENTER_DIST := 1.9
+var player: PlayerController
+var car: VehiclePrado                   ## the vehicle being driven / last driven (Prado, LakLak van, boat)
+var vehicles: Array[VehiclePrado] = []  ## every vehicle the player can get into
+var walk_touch: CanvasLayer             # walking touch UI (hidden while driving)
+var cam: VehicleCamera
+var controls: CarControls
+var driving := false
+var _prompt: Control
+var _layer: CanvasLayer
+var _exit_requested := false
+var _font: Font
+var busy := false                       ## animated get-in / get-out running
+var door: CarDoorInteractable
+const DOOR := "door_lf_dummy"              ## driver's door part of the model (LHD)
+
+
+func _ready() -> void:
+	add_to_group(&"car_session")
+	VehicleInput.ensure_actions()
+	_font = load("res://assets/fonts/game_font.tres") if ResourceLoader.exists("res://assets/fonts/game_font.tres") else ThemeDB.fallback_font
+	cam = VehicleCamera.new()
+	cam.name = "VehicleCamera"
+	cam.car = car
+	add_child(cam)
+	_layer = CanvasLayer.new()
+	_layer.layer = 11
+	add_child(_layer)
+	controls = CarControls.new()
+	controls.car = car
+	controls.visible = false
+	_layer.add_child(controls)
+	controls.exit_pressed.connect(func() -> void: _exit_requested = true)
+	controls.repair_pressed.connect(func() -> void: car.repair())
+	controls.orbit_toggled.connect(func() -> void: cam.cycle())
+	controls.lights_pressed.connect(func() -> void: car.lights.cycle_beam())
+	controls.turn_pressed.connect(func(d: int) -> void: car.lights.set_turn(d))
+	controls.hazard_pressed.connect(func() -> void: car.lights.toggle_hazard())
+	_prompt = Control.new()
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prompt.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_prompt.visible = false
+	_prompt.draw.connect(_draw_prompt)
+	_layer.add_child(_prompt)
+	if not vehicles.has(car):
+		vehicles.push_front(car)
+	for v in vehicles:
+		_add_door(v)
+
+
+func _add_door(v: VehiclePrado) -> void:
+	var d := CarDoorInteractable.new()
+	d.name = "Door_" + String(v.name)
+	d.session = self
+	d.vehicle = v
+	add_child(d)
+	if v == car:
+		door = d
+
+
+## a vehicle added later (spawned vans / boats)
+func add_vehicle(v: VehiclePrado) -> void:
+	if vehicles.has(v):
+		return
+	vehicles.append(v)
+	if is_inside_tree():
+		_add_door(v)
+
+
+func _select(v: VehiclePrado) -> void:
+	if v == null or v == car:
+		return
+	car = v
+	cam.car = v
+	controls.car = v
+
+
+func _prompt_rect() -> Rect2:
+	var s := _prompt.size
+	var u := minf(s.x, s.y) / 10.0
+	return Rect2(s.x - 7.6 * u, s.y - 7.4 * u, 2.6 * u, 1.1 * u)
+
+
+func _draw_prompt() -> void:
+	var r := _prompt_rect()
+	_prompt.draw_rect(r, Color(0.1, 0.45, 0.9, 0.75))
+	_prompt.draw_rect(r, Color(1, 1, 1, 0.8), false, 3.0)
+	var fs := int(r.size.y * 0.42)
+	var t := "[E] СЕСТЬ"
+	var w := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
+	_prompt.draw_string(_font, r.get_center() + Vector2(-w.x * 0.5, fs * 0.36), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+
+
+func can_enter(v: VehiclePrado = null) -> bool:
+	if v == null:
+		v = nearest_enterable()
+	if driving or busy or player == null or v == null or not is_instance_valid(v) or v.wrecked or PlayerLife.dead:
+		return false
+	if not CarDealer.owns(v):
+		return false                 # not the player's: sold at the dealership
+	if v is VehicleBoat:
+		# a boat: from the pier / shore or swimming beside it, anywhere along the hull
+		var dh := Vector2(player.global_position.x - v.global_position.x, player.global_position.z - v.global_position.z).length()
+		return dh < 4.2 and absf(player.global_position.y - v.global_position.y) < 6.0 and v.speed_kmh < 6.0
+	var d := player.global_position.distance_to(v.driver_door_point(0.6))
+	return d < ENTER_DIST and v.speed_kmh < 5.0 and player.is_on_floor()
+
+
+func nearest_enterable() -> VehiclePrado:
+	var best: VehiclePrado = null
+	var bd := INF
+	for v in vehicles:
+		if not is_instance_valid(v):
+			continue
+		var d := player.global_position.distance_to(v.global_position) if player else INF
+		if d < bd and d < 8.0:
+			bd = d
+			best = v
+	return best if best else car
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"car_enter"):
+		if driving and not busy:
+			_exit_requested = true
+		# on foot: E is the generic "interact" action (CharacterInteraction -> CarDoorInteractable)
+	elif driving and event.is_action_pressed(&"car_repair"):
+		car.repair()
+	elif driving and event.is_action_pressed(&"car_camera"):
+		cam.cycle()
+	elif driving and event.is_action_pressed(&"car_lights"):
+		car.lights.cycle_beam()
+	elif driving and event.is_action_pressed(&"car_turn_left"):
+		car.lights.set_turn(-1)
+	elif driving and event.is_action_pressed(&"car_turn_right"):
+		car.lights.set_turn(1)
+	elif driving and event.is_action_pressed(&"car_hazard"):
+		car.lights.toggle_hazard()
+
+
+func _input(event: InputEvent) -> void:
+	if _prompt.visible and event is InputEventScreenTouch and event.pressed and _prompt_rect().has_point(event.position):
+		get_viewport().set_input_as_handled()
+		enter_vehicle(nearest_enterable())
+
+
+func _process(_d: float) -> void:
+	if driving:
+		controls.camera_label = VehicleCamera.NAMES[cam.mode]
+	var vs := _prompt.get_viewport_rect().size
+	if _prompt.size != vs:
+		_prompt.position = Vector2.ZERO
+		_prompt.size = vs
+	var show := can_enter() and not PlayerInput.touch_active   # touch: the ACTION button shows «СЕСТЬ»
+	if show != _prompt.visible:
+		_prompt.visible = show
+	if show:
+		_prompt.queue_redraw()
+	if driving and _exit_requested:
+		# leave only when (nearly) stopped: brake automatically until then
+		if car.speed_kmh > 6.0:
+			VehicleInput.scripted = {"brake": 1.0}
+		else:
+			VehicleInput.scripted = null
+			_exit_requested = false
+			exit_animated()
+
+
+func enter() -> void:
+	if driving:
+		return
+	driving = true
+	PlayerInput.touch_move = Vector2.ZERO
+	player.visible = false
+	player.process_mode = Node.PROCESS_MODE_DISABLED       # also removes its collision from physics
+	car.driven = true
+	car.set_driver_visible(true)
+	cam.car = car
+	cam.snap()
+	cam.make_current()
+	_set_walk_ui(false)
+	controls.visible = true
+	Minimap.focus = car
+	Minimap.focus_camera = cam
+
+
+## get into a given vehicle: animated for cars (door), direct for a boat (step / climb aboard)
+func enter_vehicle(v: VehiclePrado) -> void:
+	if v == null or not can_enter(v):
+		return
+	_select(v)
+	if v is VehicleBoat:
+		enter()
+	else:
+		enter_animated()
+
+
+## Animated get-in: walk to the door (normal locomotion, no teleport), face the car, open the door
+## (UAL Interact), sit down while sliding into the seat (UAL Sitting_Enter; the body's collision is
+## off so it passes the door opening, not the bodywork), then control and camera switch to the car.
+func enter_animated() -> void:
+	if driving or busy or not can_enter():
+		return
+	busy = true
+	player.interaction.busy = true
+	var door_pt := car.driver_door_point(0.75)
+	var bx := car.global_transform.basis.x
+	var face := atan2(-bx.x, -bx.z)                 # looking at the car's left side
+	await player.walk_to(door_pt, face, 2.5)
+	# reach for the handle, the door swings open (real hinge animation + recorded sounds)
+	car.audio_call("play_handle")
+	player.play_action("interact", 0.75)            # runs on its own; the door follows the hand
+	await get_tree().create_timer(0.2).timeout
+	car.audio_door(false)
+	await car.swing_door(DOOR, true)
+	var start := player.global_position
+	var seat := car.driver_door_point(-0.45)
+	seat.y = start.y + 0.42                          # the sitting clip lowers the hips onto a 0.85 m seat
+	var shape_on := player.collision_layer
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.set_physics_process(false)
+	player.anim.travel(&"sit_enter")
+	var T := 0.85
+	var t := 0.0
+	while t < T:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		var k := smoothstep(0.0, 1.0, t / T)
+		player.global_position = start.lerp(seat, k)
+	player.collision_layer = shape_on
+	player.collision_mask = 1
+	player.set_physics_process(true)
+	player.end_sequence()
+	enter()
+	# seated: pull the door shut
+	await car.swing_door(DOOR, false, 0.4)
+	car.audio_door(true)
+	player.interaction.busy = false
+	busy = false
+
+
+## Animated get-out: the car must be (nearly) stopped; a free spot next to the door is found first;
+## the character appears in the seat and gets out (UAL Sitting_Exit) to that spot, then walks freely.
+func exit_animated() -> void:
+	if not driving or busy:
+		return
+	busy = true
+	var spot := find_exit_spot()
+	var seat := car.driver_door_point(-0.45)
+	seat.y = spot.y + 0.42
+	exit()                                           # control / camera back to the walker
+	player.interaction.busy = true
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.set_physics_process(false)
+	player.global_position = seat
+	player.seq_active = true
+	player.anim.travel(&"sit_idle")
+	car.audio_call("play_handle")
+	car.audio_door(false)
+	await car.swing_door(DOOR, true)
+	player.anim.travel(&"sit_exit")
+	var T := 0.9
+	var t := 0.0
+	while t < T:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		player.global_position = seat.lerp(spot, smoothstep(0.0, 1.0, t / T))
+	player.global_position = spot
+	player.collision_layer = 2
+	player.collision_mask = 1
+	player.set_physics_process(true)
+	player.end_sequence()
+	# close the door behind, central lock a moment later
+	await car.swing_door(DOOR, false, 0.45)
+	car.audio_door(true)
+	player.interaction.busy = false
+	busy = false
+	await get_tree().create_timer(0.9).timeout
+	if not driving:
+		car.audio_call("play_lock")
+
+
+func exit() -> void:
+	if not driving:
+		return
+	var spot := find_exit_spot()
+	if car is VehicleBoat and CityWorld.instance:
+		# off a boat out at sea: the swimmer may cross the wading-depth boundary back to the shore
+		var bounds := CityWorld.instance.get_node_or_null("Bounds")
+		if bounds:
+			player.add_collision_exception_with(bounds)
+	driving = false
+	car.driven = false
+	car.set_driver_visible(false)
+	controls.release()
+	controls.visible = false
+	VehicleInput.release_all()
+	player.process_mode = Node.PROCESS_MODE_INHERIT
+	player.visible = true
+	var yaw := car.global_rotation.y + PI * 0.5          # face away from the door
+	player.teleport(spot, yaw)
+	player.set_camera_angles(car.global_rotation.y, player.cam_pitch)
+	player.get_camera().make_current()
+	cam.set_mode(VehicleCamera.Mode.CHASE)
+	car.lights.turn = 0
+	if car.lights.beam != VehicleLights.Beam.OFF:
+		car.lights.beam = VehicleLights.Beam.OFF
+	_set_walk_ui(true)
+	Minimap.focus = null
+	Minimap.focus_camera = null
+
+
+func find_exit_spot() -> Vector3:
+	## candidates around the driver's door first, then behind / the other side / in front;
+	## each is tested with the walking capsule (free space) and needs ground within 1.5 m below
+	var b := car.global_transform.basis
+	var door := car.driver_door_point(0.0)
+	var cands: Array[Vector3] = [
+		door - b.x * 1.0, door - b.x * 1.5, door - b.x * 1.0 + b.z * 1.2, door - b.x * 1.0 - b.z * 1.2,
+		car.global_position + b.z * 3.4 - b.x * 0.6, car.global_position + b.x * 1.9, car.global_position - b.z * 3.6,
+		door - b.x * 2.4]
+	var space := car.get_world_3d().direct_space_state
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.32
+	shape.height = 1.75
+	for c in cands:
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(c + Vector3.UP * 1.5, c + Vector3.DOWN * 2.0, 1, [car.get_rid()]))
+		if hit.is_empty() or (hit.normal as Vector3).y < 0.75:
+			continue
+		var g: Vector3 = hit.position
+		var q := PhysicsShapeQueryParameters3D.new()
+		q.shape = shape
+		q.transform = Transform3D(Basis.IDENTITY, g + Vector3.UP * (0.875 + 0.06))
+		q.collision_mask = 1
+		if space.intersect_shape(q, 1).is_empty():
+			return g
+	return door - b.x * 1.2 + Vector3.UP * 0.5
+
+
+var _walk_touch_shown := false
+
+
+func _set_walk_ui(on: bool) -> void:
+	if walk_touch == null:
+		return
+	if not on:
+		_walk_touch_shown = walk_touch.visible
+		controls.touch_mode = _walk_touch_shown      # pedals/arrows only on touch devices
+		walk_touch.call("set_shown", false)
+	else:
+		walk_touch.call("set_shown", _walk_touch_shown)

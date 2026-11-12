@@ -1,0 +1,15 @@
+[gd_resource type="ORMMaterial3D" load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/metal/albedo.jpg" id="1"]
+[ext_resource type="Texture2D" path="res://assets/textures/metal/orm.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/textures/metal/normal.png" id="3"]
+
+[resource]
+resource_name = "galv"
+albedo_color = Color(0.82, 0.84, 0.86, 1)
+albedo_texture = ExtResource("1")
+orm_texture = ExtResource("2")
+roughness = 1
+metallic = 0.45
+normal_enabled = true
+normal_texture = ExtResource("3")

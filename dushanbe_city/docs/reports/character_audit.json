@@ -1,0 +1,315 @@
+{
+ "animations": {
+  "idle": {
+   "len": 2.5,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "jog": {
+   "len": 0.933,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "jump_air": {
+   "len": 2.5,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "jump_land": {
+   "len": 1.267,
+   "lib": "player_anims.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 52
+  },
+  "jump_start": {
+   "len": 1.333,
+   "lib": "player_anims.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 52
+  },
+  "punch_cross": {
+   "len": 1.0,
+   "lib": "player_anims.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 52
+  },
+  "punch_enter": {
+   "len": 0.867,
+   "lib": "player_anims.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 52
+  },
+  "punch_jab": {
+   "len": 0.867,
+   "lib": "player_anims.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 52
+  },
+  "run": {
+   "len": 0.741,
+   "lib": "player_mocap.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 21
+  },
+  "sprint": {
+   "len": 0.667,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "stop_run": {
+   "len": 1.433,
+   "lib": "player_mocap.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 21
+  },
+  "stop_walk": {
+   "len": 2.308,
+   "lib": "player_mocap.res",
+   "loop": false,
+   "root_track": false,
+   "tracks": 21
+  },
+  "strafe_left": {
+   "len": 1.481,
+   "lib": "player_mocap.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 21
+  },
+  "strafe_right": {
+   "len": 1.629,
+   "lib": "player_mocap.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 21
+  },
+  "swim": {
+   "len": 1.333,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "swim_idle": {
+   "len": 3.333,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "walk": {
+   "len": 1.333,
+   "lib": "player_anims.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 52
+  },
+  "walk_back": {
+   "len": 1.739,
+   "lib": "player_mocap.res",
+   "loop": true,
+   "root_track": false,
+   "tracks": 21
+  }
+ },
+ "arm_clearance_mocap": {
+  "idle": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.36,
+    "worst_clearance": 0.039
+   },
+   "before": {
+    "frames_inside_pct": 100.0,
+    "hand_x": 0.02,
+    "worst_clearance": -0.137
+   }
+  },
+  "run": {
+   "after": {
+    "frames_inside_pct": 1.1,
+    "hand_x": 0.17,
+    "worst_clearance": -0.003
+   },
+   "before": {
+    "frames_inside_pct": 52.3,
+    "hand_x": 0.03,
+    "worst_clearance": -0.151
+   }
+  },
+  "stop_run": {
+   "after": {
+    "frames_inside_pct": 0.3,
+    "hand_x": 0.45,
+    "worst_clearance": -0.001
+   },
+   "before": {
+    "frames_inside_pct": 67.0,
+    "hand_x": 0.22,
+    "worst_clearance": -0.165
+   }
+  },
+  "stop_walk": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.32,
+    "worst_clearance": 0.036
+   },
+   "before": {
+    "frames_inside_pct": 85.3,
+    "hand_x": 0.02,
+    "worst_clearance": -0.186
+   }
+  },
+  "strafe_left": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.36,
+    "worst_clearance": 0.036
+   },
+   "before": {
+    "frames_inside_pct": 90.9,
+    "hand_x": 0.07,
+    "worst_clearance": -0.164
+   }
+  },
+  "strafe_right": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.36,
+    "worst_clearance": 0.035
+   },
+   "before": {
+    "frames_inside_pct": 91.1,
+    "hand_x": 0.06,
+    "worst_clearance": -0.171
+   }
+  },
+  "walk": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.32,
+    "worst_clearance": 0.037
+   },
+   "before": {
+    "frames_inside_pct": 87.2,
+    "hand_x": 0.02,
+    "worst_clearance": -0.173
+   }
+  },
+  "walk_back": {
+   "after": {
+    "frames_inside_pct": 0.0,
+    "hand_x": 0.33,
+    "worst_clearance": 0.036
+   },
+   "before": {
+    "frames_inside_pct": 94.7,
+    "hand_x": 0.17,
+    "worst_clearance": -0.069
+   }
+  }
+ },
+ "centre_of_mass_est_y": 0.95,
+ "collision": [
+  {
+   "name": "Body",
+   "size": [
+    0.3,
+    1.35
+   ],
+   "type": "CapsuleShape3D",
+   "y": 1.08
+  },
+  {
+   "name": "Feet",
+   "size": [
+    0.3,
+    0.5
+   ],
+   "type": "CylinderShape3D",
+   "y": 0.25
+  }
+ ],
+ "model": {
+  "aabb": [
+   "(-0.477604, -0.027144, -0.192875)",
+   "(0.955267, 1.749864, 0.386141)"
+  ],
+  "ankle_y": 0.0,
+  "head_y": 1.51,
+  "height_m": 1.75,
+  "hips_y": 0.9,
+  "influences_per_vertex": {
+   "1": 2128,
+   "2": 7602,
+   "3": 4325,
+   "4": 4339
+  },
+  "vertices": 18394,
+  "weights_not_normalised": 0
+ },
+ "model_forward": "Model node rotated 180 deg: mesh faces +Z, body forward = -Z (Godot convention)",
+ "rest_pose": {
+  "elbow_bend_deg": 11.6,
+  "feet_on_ground": true,
+  "neck_from_vertical_deg": 11.3,
+  "upper_arm_from_vertical_deg": 90.0
+ },
+ "skeleton": {
+  "bones": 25,
+  "humanoid_profile_bones_present": {
+   "missing": [
+    "LeftEye",
+    "RightEye",
+    "Jaw",
+    "LeftThumbMetacarpal",
+    "LeftThumbProximal",
+    "LeftThumbDistal",
+    "LeftIndexProximal",
+    "LeftIndexIntermediate",
+    "LeftIndexDistal",
+    "LeftMiddleIntermediate",
+    "LeftMiddleDistal",
+    "LeftRingProximal",
+    "LeftRingIntermediate",
+    "LeftRingDistal",
+    "LeftLittleProximal",
+    "LeftLittleIntermediate",
+    "LeftLittleDistal",
+    "RightThumbMetacarpal",
+    "RightThumbProximal",
+    "RightThumbDistal",
+    "RightIndexProximal",
+    "RightIndexIntermediate",
+    "RightIndexDistal",
+    "RightMiddleIntermediate",
+    "RightMiddleDistal",
+    "RightRingProximal",
+    "RightRingIntermediate",
+    "RightRingDistal",
+    "RightLittleProximal",
+    "RightLittleIntermediate",
+    "RightLittleDistal"
+   ],
+   "total": 56
+  },
+  "motion_scale": 0.930000007152557,
+  "name": "GeneralSkeleton"
+ }
+}

@@ -1,0 +1,26 @@
+[gd_resource type="ShaderMaterial" load_steps=11 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/terrain.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://assets/textures/ground_grass/albedo.jpg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/textures/ground_grass/normal.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/textures/sand/albedo.jpg" id="4"]
+[ext_resource type="Texture2D" path="res://assets/textures/sand/normal.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/textures/rock_cliff/albedo.jpg" id="6"]
+[ext_resource type="Texture2D" path="res://assets/textures/rock_cliff/normal.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/textures/soil/albedo.jpg" id="8"]
+[ext_resource type="Texture2D" path="res://assets/textures/asphalt_road/albedo.jpg" id="9"]
+[ext_resource type="Texture2D" path="res://assets/textures/noise_macro.png" id="10"]
+
+[resource]
+resource_name = "terrain"
+shader = ExtResource("1")
+shader_parameter/grass_alb = ExtResource("2")
+shader_parameter/grass_nrm = ExtResource("3")
+shader_parameter/sand_alb = ExtResource("4")
+shader_parameter/sand_nrm = ExtResource("5")
+shader_parameter/rock_alb = ExtResource("6")
+shader_parameter/rock_nrm = ExtResource("7")
+shader_parameter/earth_alb = ExtResource("8")
+shader_parameter/asphalt_alb = ExtResource("9")
+shader_parameter/macro_tex = ExtResource("10")
+shader_parameter/sea_level = -1.6

@@ -1,0 +1,34 @@
+PASS city loaded in 2073 ms: 36 city chunks (+39 coast chunks)
+PASS colliders 1521, trees 5475, props 5138, multimeshes 4681
+PASS all categories resolve to assets (missing: [])
+PASS player spawned
+PASS player on sidewalk at spawn: y=2.379 (relief+0.15 = 2.377)
+PASS player runs 5 s through the city: moved 20.7 m, y=2.408
+PASS rain (30 s transition): sun 3.00 -> 0.83, wetness 1.00, rain shown true
+PASS clearing up: rain stops, ground dries slowly (wetness 0.88 < 1.00), sun back 2.95
+PASS roads follow the relief: worst |ray - f| = 0.000 m
+PASS sidewalks/blocks follow the relief (+0.15): worst = 0.001 m
+PASS relief height range along the streets -0.14 .. 3.18 m (not flat)
+PASS city edge joins the terrain: |ray - terrain| 0.00 / 0.00 m
+PASS terrain collision at (-20, 385): ray -0.29 m, baked height -0.29 m
+PASS terrain collision at (420, 176): ray 21.57 m, baked height 21.57 m
+PASS terrain collision at (-300, -700): ray 8.06 m, baked height 8.06 m
+PASS promenade surface walkable at (-28, 361): y=0.87
+PASS embankment has stairs (6), a ramp (1) and railings (108 segments)
+PASS walk down the stairs to the beach: 25.1 m towards the sea, 1.58 m lower
+PASS railing at the drop keeps the walker on the promenade (moved 0.99 m towards the edge, railing at ~1.85 m)
+PASS into the sea: shallow true, medium true (deep wading speed 0.60 m/s < run), swimming true
+PASS swims at the (wavy) surface: feet 1.08 m below the local wave height ±0.00, never on/under the sea bed: true
+PASS swam out to z=447 (well beyond the wading line ~370-410) and stopped at the swimming boundary
+PASS swims back and walks out onto the beach: mode 0 (0 = dry), on floor true, z=400
+PASS sea sounds: surf + coastal wind playing near the shore (shore 15 m)
+PASS player stays inside the playable boundary: z=400
+PASS minimap present and centred on the player
+PASS Prado parked on the avenue: on 4 wheels (4), 0.0 km/h
+PASS «СЕСТЬ» only near the driver's door (far: false, near: true)
+PASS entered: car driven, car camera current, walker hidden
+PASS drove 38 m along the avenue and stopped (0.4 km/h)
+PASS traffic graph loaded: 84 lanes, 13 junctions, 511 parking spots, 8 bus stops
+PASS route found av_p1_l2_s1 -> com_n1_l0_s1 (2 lanes)
+PASS Prado drives the graph route 203 m (avenue -> turn): reached end true, max deviation from lane centre 1.56 m, no damage (100 %)
+PASS exit: on foot again beside the door (1.4 m), on the floor true, not inside/under the car (overlaps 0)

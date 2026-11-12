@@ -1,0 +1,1186 @@
+[gd_scene load_steps=98 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bench_park_soviet.res" id="1"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bench_courtyard.res" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bench_concrete_slats.res" id="3"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bench_modern_metal.res" id="4"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/urn_concrete_round.res" id="5"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/urn_tilting.res" id="6"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bin_modern_steel.res" id="7"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/container_trash_green.res" id="8"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/container_trash_grey.res" id="9"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/container_euro_wheeled.res" id="10"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/container_site.res" id="11"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/light_avenue_double.res" id="12"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/light_street_single.res" id="13"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/light_park_4m.res" id="14"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/utility_pole_concrete.res" id="15"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/utility_pole_wood.res" id="16"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/traffic_light_pole.res" id="17"]
+[ext_resource type="Material" path="res://assets/materials/props/tl_red_on.tres" id="18"]
+[ext_resource type="Material" path="res://assets/materials/props/tl_countdown_on.tres" id="19"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/traffic_light_mast.res" id="20"]
+[ext_resource type="Material" path="res://assets/materials/props/tl_green_on.tres" id="21"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/traffic_light_ped.res" id="22"]
+[ext_resource type="Material" path="res://assets/materials/props/tl_ped_green_on.tres" id="23"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_5_19_1.res" id="24"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_5_19_2.res" id="25"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_5_16.res" id="26"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_2_1.res" id="27"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_2_4.res" id="28"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_3_24_60.res" id="29"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_3_27.res" id="30"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_6_4.res" id="31"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_3_1.res" id="32"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_5_5.res" id="33"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/sign_1_23.res" id="34"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bus_stop_shelter.res" id="35"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/fence_lawn_hoop_green.res" id="36"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/fence_lawn_hoop_white.res" id="37"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/fence_decorative_15.res" id="38"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/barrier_pedestrian.res" id="39"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/fence_school_brick.res" id="40"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/wall_havli.res" id="41"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/wall_havli_end.res" id="42"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/gate_havli_blue.res" id="43"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/gate_havli_green.res" id="44"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bollard_concrete.res" id="45"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/curb_wheel_stop.res" id="46"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/playground_swing.res" id="47"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/playground_slide.res" id="48"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/playground_sandbox_mushroom.res" id="49"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/playground_hbar.res" id="50"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/carpet_beating_bar.res" id="51"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/clothes_drying_poles.res" id="52"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/courtyard_table_benches.res" id="53"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/tapchan.res" id="54"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/bike_rack_5.res" id="55"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/manhole_cover.res" id="56"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/storm_grate.res" id="57"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/planter_vase_soviet.res" id="58"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/planter_rect_concrete.res" id="59"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/electrical_cabinet.res" id="60"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_plastic_chair.res" id="61"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_concrete_block_barrier.res" id="62"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_plastic_crate.res" id="63"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_barrel_blue.res" id="64"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_trash_bag.res" id="65"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_clay_pot.res" id="66"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_potted_aloe.res" id="67"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_cardboard_box.res" id="68"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/street_plate_0.res" id="69"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/street_plate_1.res" id="70"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/street_plate_2.res" id="71"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/street_plate_3.res" id="72"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/house_number_0.res" id="73"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/house_number_1.res" id="74"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/house_number_2.res" id="75"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/house_number_3.res" id="76"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/gas_pipe_straight_3m.res" id="77"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/gas_pipe_elbow.res" id="78"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/gas_pipe_riser_3m.res" id="79"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/gas_pipe_ground_entry.res" id="80"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/satellite_dish_060.res" id="81"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/satellite_dish_090.res" id="82"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/awning_shop_red.res" id="83"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/awning_shop_green.res" id="84"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/canopy_porch_metal.res" id="85"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_aircon_outdoor_unit.res" id="86"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_aircon_outdoor_unit_rusted.res" id="87"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_rollershutter_door.res" id="88"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_rollershutter_window.res" id="89"]
+[ext_resource type="ArrayMesh" path="res://assets/models/props/meshes/ph_security_camera.res" id="90"]
+
+[ext_resource type="Texture2D" path="res://assets/textures/sidewalk/albedo.jpg" id="g1"]
+[ext_resource type="Texture2D" path="res://assets/textures/sidewalk/normal.png" id="g2"]
+[ext_resource type="Material" path="res://assets/materials/props/plaster_cream.tres" id="g3"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_top_color = Color(0.32, 0.52, 0.82, 1)
+sky_horizon_color = Color(0.72, 0.78, 0.86, 1)
+ground_horizon_color = Color(0.6, 0.6, 0.6, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_sky_contribution = 0.6
+tonemap_mode = 2
+ssao_enabled = false
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_texture = ExtResource("g1")
+normal_enabled = true
+normal_texture = ExtResource("g2")
+roughness = 0.9
+uv1_scale = Vector3(100, 100, 1)
+
+[sub_resource type="PlaneMesh" id="ground"]
+material = SubResource("ground_mat")
+size = Vector2(240, 240)
+
+[sub_resource type="BoxMesh" id="wall"]
+material = ExtResource("g3")
+size = Vector3(51.36, 5, 0.4)
+
+[node name="PropsGallery" type="Node3D"]
+
+[node name="WE" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.766, -0.413, 0.492, 0, 0.766, 0.643, -0.643, -0.492, 0.586, 0, 20, 0)
+light_energy = 1.2
+shadow_enabled = true
+directional_shadow_max_distance = 80.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0, -40)
+mesh = SubResource("ground")
+
+[node name="Wall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.68, 2.5, -74.20)
+mesh = SubResource("wall")
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="Labels" type="Node3D" parent="."]
+
+[node name="bench_park_soviet" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.000, 0.000, 0.000)
+mesh = ExtResource("1")
+
+[node name="L_bench_park_soviet" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 1.000, 0.02, 0.615)
+pixel_size = 0.0025
+text = "bench_park_soviet"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bench_courtyard" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.300, 0.000, 0.000)
+mesh = ExtResource("2")
+
+[node name="L_bench_courtyard" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 4.300, 0.02, 0.600)
+pixel_size = 0.0025
+text = "bench_courtyard"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bench_concrete_slats" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.600, 0.000, 0.000)
+mesh = ExtResource("3")
+
+[node name="L_bench_concrete_slats" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 7.600, 0.02, 0.600)
+pixel_size = 0.0025
+text = "bench_concrete_slats"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bench_modern_metal" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.967, 0.000, 0.000)
+mesh = ExtResource("4")
+
+[node name="L_bench_modern_metal" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 10.967, 0.02, 0.620)
+pixel_size = 0.0025
+text = "bench_modern_metal"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="urn_concrete_round" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.643, 0.000, 0.000)
+mesh = ExtResource("5")
+
+[node name="L_urn_concrete_round" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 13.643, 0.02, 0.660)
+pixel_size = 0.0025
+text = "urn_concrete_round"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="urn_tilting" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.683, 0.000, 0.000)
+mesh = ExtResource("6")
+
+[node name="L_urn_tilting" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 15.683, 0.02, 0.600)
+pixel_size = 0.0025
+text = "urn_tilting"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bin_modern_steel" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.613, 0.000, 0.000)
+mesh = ExtResource("7")
+
+[node name="L_bin_modern_steel" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 17.613, 0.02, 0.600)
+pixel_size = 0.0025
+text = "bin_modern_steel"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="container_trash_green" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.963, 0.000, 0.000)
+mesh = ExtResource("8")
+
+[node name="L_container_trash_green" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 19.963, 0.02, 0.835)
+pixel_size = 0.0025
+text = "container_trash_green"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="container_trash_grey" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.863, 0.000, 0.000)
+mesh = ExtResource("9")
+
+[node name="L_container_trash_grey" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 22.863, 0.02, 0.835)
+pixel_size = 0.0025
+text = "container_trash_grey"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="container_euro_wheeled" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.733, 0.000, 0.000)
+mesh = ExtResource("10")
+
+[node name="L_container_euro_wheeled" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 25.733, 0.02, 0.895)
+pixel_size = 0.0025
+text = "container_euro_wheeled"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="container_site" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.953, 0.000, 0.000)
+mesh = ExtResource("11")
+
+[node name="L_container_site" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 29.953, 0.02, 1.450)
+pixel_size = 0.0025
+text = "container_site"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="light_avenue_double" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.400, 0.000, -14.000)
+mesh = ExtResource("12")
+
+[node name="L_light_avenue_double" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 2.400, 0.02, -13.400)
+pixel_size = 0.0025
+text = "light_avenue_double"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="light_street_single" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.450, 0.000, -14.000)
+mesh = ExtResource("13")
+
+[node name="L_light_street_single" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 6.450, 0.02, -11.380)
+pixel_size = 0.0025
+text = "light_street_single"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="light_park_4m" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.336, 0.000, -14.000)
+mesh = ExtResource("14")
+
+[node name="L_light_park_4m" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 8.336, 0.02, -13.400)
+pixel_size = 0.0025
+text = "light_park_4m"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="utility_pole_concrete" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.823, 0.000, -14.000)
+mesh = ExtResource("15")
+
+[node name="L_utility_pole_concrete" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 10.823, 0.02, -13.400)
+pixel_size = 0.0025
+text = "utility_pole_concrete"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="utility_pole_wood" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.873, 0.000, -14.000)
+mesh = ExtResource("16")
+
+[node name="L_utility_pole_wood" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 13.873, 0.02, -13.400)
+pixel_size = 0.0025
+text = "utility_pole_wood"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="traffic_light_pole" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.280, 0.000, -26.000)
+mesh = ExtResource("17")
+surface_material_override/2 = ExtResource("18")
+surface_material_override/5 = ExtResource("19")
+
+[node name="L_traffic_light_pole" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0.280, 0.02, -25.150)
+pixel_size = 0.0025
+text = "traffic_light_pole"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="traffic_light_mast" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.240, 0.000, -26.000)
+mesh = ExtResource("20")
+surface_material_override/6 = ExtResource("21")
+
+[node name="L_traffic_light_mast" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 2.240, 0.02, -25.120)
+pixel_size = 0.0025
+text = "traffic_light_mast"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="traffic_light_ped" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.901, 0.000, -26.000)
+mesh = ExtResource("22")
+surface_material_override/3 = ExtResource("23")
+
+[node name="L_traffic_light_ped" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 9.901, 0.02, -25.260)
+pixel_size = 0.0025
+text = "traffic_light_ped"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_5_19_1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.811, 0.000, -26.000)
+mesh = ExtResource("24")
+
+[node name="L_sign_5_19_1" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 11.811, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_5_19_1"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_5_19_2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.911, 0.000, -26.000)
+mesh = ExtResource("25")
+
+[node name="L_sign_5_19_2" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 13.911, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_5_19_2"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_5_16" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.011, 0.000, -26.000)
+mesh = ExtResource("26")
+
+[node name="L_sign_5_16" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 16.011, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_5_16"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_2_1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.256, 0.000, -26.000)
+mesh = ExtResource("27")
+
+[node name="L_sign_2_1" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 18.256, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_2_1"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_2_4" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.601, 0.000, -26.000)
+mesh = ExtResource("28")
+
+[node name="L_sign_2_4" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 20.601, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_2_4"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_3_24_60" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.801, 0.000, -26.000)
+mesh = ExtResource("29")
+
+[node name="L_sign_3_24_60" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 22.801, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_3_24_60"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_3_27" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.901, 0.000, -26.000)
+mesh = ExtResource("30")
+
+[node name="L_sign_3_27" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 24.901, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_3_27"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_6_4" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.001, 0.000, -26.000)
+mesh = ExtResource("31")
+
+[node name="L_sign_6_4" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 27.001, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_6_4"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_3_1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.101, 0.000, -26.000)
+mesh = ExtResource("32")
+
+[node name="L_sign_3_1" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 29.101, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_3_1"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_5_5" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.201, 0.000, -26.000)
+mesh = ExtResource("33")
+
+[node name="L_sign_5_5" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 31.201, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_5_5"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="sign_1_23" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.401, 0.000, -26.000)
+mesh = ExtResource("34")
+
+[node name="L_sign_1_23" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 33.401, 0.02, -25.400)
+pixel_size = 0.0025
+text = "sign_1_23"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bus_stop_shelter" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.540, 0.000, -38.000)
+mesh = ExtResource("35")
+
+[node name="L_bus_stop_shelter" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 2.540, 0.02, -36.825)
+pixel_size = 0.0025
+text = "bus_stop_shelter"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="fence_lawn_hoop_green" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.422, 0.000, -38.000)
+mesh = ExtResource("36")
+
+[node name="L_fence_lawn_hoop_green" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 7.422, 0.02, -37.400)
+pixel_size = 0.0025
+text = "fence_lawn_hoop_green"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="fence_lawn_hoop_white" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.036, 0.000, -38.000)
+mesh = ExtResource("37")
+
+[node name="L_fence_lawn_hoop_white" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 11.036, 0.02, -37.400)
+pixel_size = 0.0025
+text = "fence_lawn_hoop_white"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="fence_decorative_15" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.853, 0.000, -38.000)
+mesh = ExtResource("38")
+
+[node name="L_fence_decorative_15" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 14.853, 0.02, -37.400)
+pixel_size = 0.0025
+text = "fence_decorative_15"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="barrier_pedestrian" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.538, 0.000, -38.000)
+mesh = ExtResource("39")
+
+[node name="L_barrier_pedestrian" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 18.538, 0.02, -37.400)
+pixel_size = 0.0025
+text = "barrier_pedestrian"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="fence_school_brick" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.668, 0.000, -38.000)
+mesh = ExtResource("40")
+
+[node name="L_fence_school_brick" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 22.668, 0.02, -37.400)
+pixel_size = 0.0025
+text = "fence_school_brick"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="wall_havli" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.068, 0.000, -38.000)
+mesh = ExtResource("41")
+
+[node name="L_wall_havli" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 27.068, 0.02, -37.400)
+pixel_size = 0.0025
+text = "wall_havli"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="wall_havli_end" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.243, 0.000, -38.000)
+mesh = ExtResource("42")
+
+[node name="L_wall_havli_end" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 30.243, 0.02, -37.375)
+pixel_size = 0.0025
+text = "wall_havli_end"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="gate_havli_blue" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34.168, 0.000, -38.000)
+mesh = ExtResource("43")
+
+[node name="L_gate_havli_blue" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 34.168, 0.02, -37.375)
+pixel_size = 0.0025
+text = "gate_havli_blue"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="gate_havli_green" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.068, 0.000, -38.000)
+mesh = ExtResource("44")
+
+[node name="L_gate_havli_green" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 40.068, 0.02, -37.375)
+pixel_size = 0.0025
+text = "gate_havli_green"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bollard_concrete" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 43.918, 0.000, -38.000)
+mesh = ExtResource("45")
+
+[node name="L_bollard_concrete" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 43.918, 0.02, -37.400)
+pixel_size = 0.0025
+text = "bollard_concrete"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="curb_wheel_stop" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 46.418, 0.000, -38.000)
+mesh = ExtResource("46")
+
+[node name="L_curb_wheel_stop" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 46.418, 0.02, -37.400)
+pixel_size = 0.0025
+text = "curb_wheel_stop"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="playground_swing" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.250, 0.000, -50.000)
+mesh = ExtResource("47")
+
+[node name="L_playground_swing" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 1.250, 0.02, -48.867)
+pixel_size = 0.0025
+text = "playground_swing"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="playground_slide" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.230, 0.000, -50.000)
+mesh = ExtResource("48")
+
+[node name="L_playground_slide" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 4.230, 0.02, -47.250)
+pixel_size = 0.0025
+text = "playground_slide"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="playground_sandbox_mushroom" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.860, 0.000, -50.000)
+mesh = ExtResource("49")
+
+[node name="L_playground_sandbox_mushroom" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 7.860, 0.02, -48.580)
+pixel_size = 0.0025
+text = "playground_sandbox_mushroom"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="playground_hbar" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.475, 0.000, -50.000)
+mesh = ExtResource("50")
+
+[node name="L_playground_hbar" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 11.475, 0.02, -49.400)
+pixel_size = 0.0025
+text = "playground_hbar"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="carpet_beating_bar" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.445, 0.000, -50.000)
+mesh = ExtResource("51")
+
+[node name="L_carpet_beating_bar" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 15.445, 0.02, -49.400)
+pixel_size = 0.0025
+text = "carpet_beating_bar"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="clothes_drying_poles" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.395, 0.000, -50.000)
+mesh = ExtResource("52")
+
+[node name="L_clothes_drying_poles" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 20.395, 0.02, -49.000)
+pixel_size = 0.0025
+text = "clothes_drying_poles"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="courtyard_table_benches" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.620, 0.000, -50.000)
+mesh = ExtResource("53")
+
+[node name="L_courtyard_table_benches" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 24.620, 0.02, -48.855)
+pixel_size = 0.0025
+text = "courtyard_table_benches"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="tapchan" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.720, 0.000, -50.000)
+mesh = ExtResource("54")
+
+[node name="L_tapchan" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 27.720, 0.02, -48.750)
+pixel_size = 0.0025
+text = "tapchan"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="bike_rack_5" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.000, 0.000, -62.000)
+mesh = ExtResource("55")
+
+[node name="L_bike_rack_5" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 1.000, 0.02, -61.325)
+pixel_size = 0.0025
+text = "bike_rack_5"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="manhole_cover" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.820, 0.000, -62.000)
+mesh = ExtResource("56")
+
+[node name="L_manhole_cover" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 3.820, 0.02, -61.230)
+pixel_size = 0.0025
+text = "manhole_cover"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="storm_grate" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.040, 0.000, -62.000)
+mesh = ExtResource("57")
+
+[node name="L_storm_grate" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 6.040, 0.02, -61.400)
+pixel_size = 0.0025
+text = "storm_grate"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="planter_vase_soviet" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.390, 0.000, -62.000)
+mesh = ExtResource("58")
+
+[node name="L_planter_vase_soviet" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 8.390, 0.02, -61.100)
+pixel_size = 0.0025
+text = "planter_vase_soviet"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="planter_rect_concrete" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.090, 0.000, -62.000)
+mesh = ExtResource("59")
+
+[node name="L_planter_rect_concrete" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 11.090, 0.02, -61.350)
+pixel_size = 0.0025
+text = "planter_rect_concrete"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="electrical_cabinet" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.690, 0.000, -62.000)
+mesh = ExtResource("60")
+
+[node name="L_electrical_cabinet" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 13.690, 0.02, -61.400)
+pixel_size = 0.0025
+text = "electrical_cabinet"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_plastic_chair" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.861, 0.000, -62.000)
+mesh = ExtResource("61")
+
+[node name="L_ph_plastic_chair" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 15.861, 0.02, -61.336)
+pixel_size = 0.0025
+text = "ph_plastic_chair"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_concrete_block_barrier" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.364, 0.000, -62.000)
+mesh = ExtResource("62")
+
+[node name="L_ph_concrete_block_barrier" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 18.364, 0.02, -61.400)
+pixel_size = 0.0025
+text = "ph_concrete_block_barrier"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_plastic_crate" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.798, 0.000, -62.000)
+mesh = ExtResource("63")
+
+[node name="L_ph_plastic_crate" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 20.798, 0.02, -61.400)
+pixel_size = 0.0025
+text = "ph_plastic_crate"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_barrel_blue" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.768, 0.000, -62.000)
+mesh = ExtResource("64")
+
+[node name="L_ph_barrel_blue" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 22.768, 0.02, -61.331)
+pixel_size = 0.0025
+text = "ph_barrel_blue"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_trash_bag" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.746, 0.000, -62.000)
+mesh = ExtResource("65")
+
+[node name="L_ph_trash_bag" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 24.746, 0.02, -61.400)
+pixel_size = 0.0025
+text = "ph_trash_bag"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_clay_pot" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.541, 0.000, -62.000)
+mesh = ExtResource("66")
+
+[node name="L_ph_clay_pot" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 26.541, 0.02, -61.400)
+pixel_size = 0.0025
+text = "ph_clay_pot"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_potted_aloe" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.158, 0.000, -62.000)
+mesh = ExtResource("67")
+
+[node name="L_ph_potted_aloe" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 28.158, 0.02, -61.400)
+pixel_size = 0.0025
+text = "ph_potted_aloe"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_cardboard_box" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.836, 0.000, -62.000)
+mesh = ExtResource("68")
+
+[node name="L_ph_cardboard_box" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 29.836, 0.02, -61.392)
+pixel_size = 0.0025
+text = "ph_cardboard_box"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="street_plate_0" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.360, 2.600, -74.000)
+mesh = ExtResource("69")
+
+[node name="L_street_plate_0" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0.360, 0.02, -73.400)
+pixel_size = 0.0025
+text = "street_plate_0"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="street_plate_1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.280, 2.600, -74.000)
+mesh = ExtResource("70")
+
+[node name="L_street_plate_1" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 2.280, 0.02, -73.400)
+pixel_size = 0.0025
+text = "street_plate_1"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="street_plate_2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.200, 2.600, -74.000)
+mesh = ExtResource("71")
+
+[node name="L_street_plate_2" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 4.200, 0.02, -73.400)
+pixel_size = 0.0025
+text = "street_plate_2"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="street_plate_3" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.120, 2.600, -74.000)
+mesh = ExtResource("72")
+
+[node name="L_street_plate_3" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 6.120, 0.02, -73.400)
+pixel_size = 0.0025
+text = "street_plate_3"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="house_number_0" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.805, 2.600, -74.000)
+mesh = ExtResource("73")
+
+[node name="L_house_number_0" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 7.805, 0.02, -73.400)
+pixel_size = 0.0025
+text = "house_number_0"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="house_number_1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.255, 2.600, -74.000)
+mesh = ExtResource("74")
+
+[node name="L_house_number_1" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 9.255, 0.02, -73.400)
+pixel_size = 0.0025
+text = "house_number_1"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="house_number_2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.705, 2.600, -74.000)
+mesh = ExtResource("75")
+
+[node name="L_house_number_2" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 10.705, 0.02, -73.400)
+pixel_size = 0.0025
+text = "house_number_2"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="house_number_3" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.155, 2.600, -74.000)
+mesh = ExtResource("76")
+
+[node name="L_house_number_3" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 12.155, 0.02, -73.400)
+pixel_size = 0.0025
+text = "house_number_3"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="gas_pipe_straight_3m" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.980, 2.300, -74.000)
+mesh = ExtResource("77")
+
+[node name="L_gas_pipe_straight_3m" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 14.980, 0.02, -73.400)
+pixel_size = 0.0025
+text = "gas_pipe_straight_3m"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="gas_pipe_elbow" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.180, 2.300, -74.000)
+mesh = ExtResource("78")
+
+[node name="L_gas_pipe_elbow" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 18.180, 0.02, -73.400)
+pixel_size = 0.0025
+text = "gas_pipe_elbow"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="gas_pipe_riser_3m" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.479, 0.000, -74.000)
+mesh = ExtResource("79")
+
+[node name="L_gas_pipe_riser_3m" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 19.479, 0.02, -73.400)
+pixel_size = 0.0025
+text = "gas_pipe_riser_3m"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="gas_pipe_ground_entry" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.819, 0.000, -74.000)
+mesh = ExtResource("80")
+
+[node name="L_gas_pipe_ground_entry" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 20.819, 0.02, -73.100)
+pixel_size = 0.0025
+text = "gas_pipe_ground_entry"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="satellite_dish_060" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.919, 3.200, -74.000)
+mesh = ExtResource("81")
+
+[node name="L_satellite_dish_060" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 22.919, 0.02, -72.791)
+pixel_size = 0.0025
+text = "satellite_dish_060"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="satellite_dish_090" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.869, 3.200, -74.000)
+mesh = ExtResource("82")
+
+[node name="L_satellite_dish_090" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 24.869, 0.02, -72.623)
+pixel_size = 0.0025
+text = "satellite_dish_090"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="awning_shop_red" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.049, 3.000, -74.000)
+mesh = ExtResource("83")
+
+[node name="L_awning_shop_red" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 28.049, 0.02, -72.435)
+pixel_size = 0.0025
+text = "awning_shop_red"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="awning_shop_green" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32.309, 3.000, -74.000)
+mesh = ExtResource("84")
+
+[node name="L_awning_shop_green" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 32.309, 0.02, -72.435)
+pixel_size = 0.0025
+text = "awning_shop_green"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="canopy_porch_metal" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.139, 2.700, -74.000)
+mesh = ExtResource("85")
+
+[node name="L_canopy_porch_metal" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 36.139, 0.02, -72.360)
+pixel_size = 0.0025
+text = "canopy_porch_metal"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_aircon_outdoor_unit" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.839, 1.200, -74.000)
+mesh = ExtResource("86")
+
+[node name="L_ph_aircon_outdoor_unit" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 38.839, 0.02, -73.275)
+pixel_size = 0.0025
+text = "ph_aircon_outdoor_unit"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_aircon_outdoor_unit_rusted" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.839, 1.200, -74.000)
+mesh = ExtResource("87")
+
+[node name="L_ph_aircon_outdoor_unit_rusted" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 40.839, 0.02, -73.275)
+pixel_size = 0.0025
+text = "ph_aircon_outdoor_unit_rusted"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_rollershutter_door" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42.979, 0.000, -74.000)
+mesh = ExtResource("88")
+
+[node name="L_ph_rollershutter_door" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 42.979, 0.02, -73.350)
+pixel_size = 0.0025
+text = "ph_rollershutter_door"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_rollershutter_window" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45.769, 0.900, -74.000)
+mesh = ExtResource("89")
+
+[node name="L_ph_rollershutter_window" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 45.769, 0.02, -73.350)
+pixel_size = 0.0025
+text = "ph_rollershutter_window"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)
+
+[node name="ph_security_camera" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.090, 3.000, -74.000)
+mesh = ExtResource("90")
+
+[node name="L_ph_security_camera" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 48.090, 0.02, -73.257)
+pixel_size = 0.0025
+text = "ph_security_camera"
+font_size = 48
+outline_size = 8
+modulate = Color(1, 1, 0.85, 1)

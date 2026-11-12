@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/foliage.gdshader" id="s"]
+[ext_resource type="Texture2D" path="res://assets/textures/foliage_thuja/albedo.png" id="t0"]
+[ext_resource type="Texture2D" path="res://assets/textures/foliage_thuja/normal.png" id="t1"]
+
+[resource]
+resource_name = "foliage_thuja"
+shader = ExtResource("s")
+shader_parameter/albedo_tex = ExtResource("t0")
+shader_parameter/normal_tex = ExtResource("t1")
+shader_parameter/sway_height = 5
+shader_parameter/tint = Color(0.92, 0.98, 0.9, 1)
+shader_parameter/use_instance_custom = true

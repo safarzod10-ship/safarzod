@@ -1,0 +1,596 @@
+class_name CityWorld
+extends Node3D
+## Loads the generated 600x600 m district: 36 chunks (100x100 m) of merged building/road
+## meshes (+ near-only "detail" meshes), box colliders, and MultiMesh instancing of trees,
+## street props, fences and facade attachments (AC units, satellite dishes).
+## Categories in the chunk data are mapped to concrete assets through
+## res://data/city/category_map.json + the vegetation / props catalogs.
+
+const CITY_JSON := "res://data/city/city.json"
+const MAP_JSON := "res://data/city/category_map.json"
+const VEG_JSON := "res://data/vegetation_catalog.json"
+const PROPS_JSON := "res://data/props_catalog.json"
+const CELL := 50.0       ## LOD/culling cell for instanced trees (m)
+const PROP_CELL := 100.0 ## props: coarser cells = fewer draw calls (their LOD ranges are short anyway)
+const COAST_CELL := 100.0 ## coast vegetation/boulders: sparse over ~3 km2
+
+var city: Dictionary
+var category_map: Dictionary
+var veg: Dictionary = {}      ## id -> entry
+var props: Dictionary = {}    ## id -> entry
+var chunks: Array[Node3D] = []
+var _mesh_cache := {}
+var _missing := {}
+var light_pool: LightPool
+var stats := {"trees": 0, "props": 0, "multimeshes": 0, "colliders": 0}
+var terrain_info := {}
+var terrain_heights := PackedFloat32Array()
+var sea: Sea
+var terrain_surface := PackedByteArray()
+static var instance: CityWorld           ## the loaded city (surface / height queries)
+enum Surface { GRASS, SAND, ROCK, EARTH, ASPHALT, PAVED, SNOW }
+var _extra_from := {}
+
+
+func _ready() -> void:
+	instance = self
+	city = _load_json(CITY_JSON)
+	light_pool = LightPool.new()
+	light_pool.name = "NightLights"
+	add_child(light_pool)
+	category_map = _load_json(MAP_JSON)
+	_load_catalogs()
+	var ground := _make_outer_ground()
+	add_child(ground)
+	for path in DirAccess.get_files_at("res://data/city/"):
+		if path.begins_with("chunk_") and path.ends_with(".json") and not _replaced_by_open_world(path):
+			_load_chunk("res://data/city/" + path)
+	_make_bounds()
+	# the decorative mountain ring / far city of the old backdrop is replaced by the real open world
+	# north of the peninsula (OpenWorld); without world data the old backdrop is kept
+	if not WorldData.get_instance().ok:
+		_load_backdrop()
+	sea = Sea.new()
+	sea.name = "Sea"
+	add_child(sea)
+	var sa := SeaAudio.new()
+	sa.name = "SeaAudio"
+	add_child(sa)
+	Settings.quality_changed.connect(func(_q: int) -> void: apply_quality())
+	apply_quality()
+	if not _missing.is_empty():
+		print("CityWorld: categories without assets: ", _missing.keys())
+
+
+## coast tiles / vegetation entirely north of the seam (z < -800) belong to the open world now
+static func _replaced_by_open_world(file: String) -> bool:
+	if not WorldData.get_instance().ok:
+		return false
+	var b := file.get_basename()
+	if b.begins_with("chunk_coast_v_"):
+		return b.ends_with("_-3")
+	if b.begins_with("chunk_coast_") and b.count("_") == 4:
+		var parts := b.split("_")
+		var z := float(parts[3])
+		var sz := float(parts[4])
+		return z + sz <= -800.0
+	return false
+
+
+static func _load_json(p: String) -> Dictionary:
+	if not FileAccess.file_exists(p):
+		return {}
+	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(p))
+	return d if d is Dictionary else {}
+
+
+func _load_catalogs() -> void:
+	var v := _load_json(VEG_JSON)
+	for e in v.get("assets", v.get("species", [])):
+		veg[e["id"]] = e
+	var p := _load_json(PROPS_JSON)
+	for e in p.get("props", p.get("assets", [])):
+		props[e["id"]] = e
+
+
+# ---------------------------------------------------------------------------------------------
+func _load_chunk(json_path: String) -> void:
+	var J := _load_json(json_path)
+	var node := Node3D.new()
+	node.name = json_path.get_file().get_basename()
+	add_child(node)
+	chunks.append(node)
+	var terrain: bool = J.get("terrain", false)
+	if String(J["glb"]) != "" and ResourceLoader.exists(J["glb"]):
+		var inst: Node = (load(J["glb"]) as PackedScene).instantiate()
+		for mi in inst.find_children("*", "MeshInstance3D", true, false):
+			var m := mi as MeshInstance3D
+			if String(m.name).begins_with("collision"):
+				# raised blocks / sidewalks on the relief: invisible collision mesh (top + curb faces)
+				var gb := StaticBody3D.new()
+				gb.name = "GroundCollision"
+				var gcs := CollisionShape3D.new()
+				gcs.shape = m.mesh.create_trimesh_shape()
+				gcs.transform = m.global_transform if m.is_inside_tree() else m.transform
+				gb.add_child(gcs)
+				node.add_child(gb)
+				stats.colliders += 1
+				continue
+			CityMaterials.remap_mesh(m.mesh)
+			var copy := MeshInstance3D.new()
+			copy.name = m.name
+			copy.mesh = m.mesh
+			copy.transform = m.global_transform if m.is_inside_tree() else m.transform
+			if String(m.name).begins_with("detail"):
+				copy.add_to_group(&"city_detail")
+				copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # frames/sills/pipes: tiny shadows, big cost
+			if terrain:
+				# coast terrain tiles: receive shadows only (gentle hills: their own shadows are not worth
+				# a shadow-map pass); mesh LODs come from the glTF import
+				copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				copy.add_to_group(&"coast_terrain")
+			node.add_child(copy)
+		inst.free()
+	# colliders
+	var body := StaticBody3D.new()
+	body.name = "Colliders"
+	node.add_child(body)
+	for c in J.get("colliders", []):
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = Vector3(c[3], c[4], c[5])
+		cs.shape = bs
+		cs.transform = Transform3D(Basis(Vector3.UP, c[6]), Vector3(c[0], c[1], c[2]))
+		body.add_child(cs)
+		stats.colliders += 1
+	for l in J.get("lights", []):
+		light_pool.add_point(Vector3(l[1], l[2], l[3]), 1 if l[0] == "entrance" else 2)
+	# instances grouped by category (coast chunks: trees carry their terrain height, boulders a scale;
+	# every second coast tree/shrub goes to an "extra" layer shown from Medium up)
+	var groups := {}
+	var extra := {}
+	var ti := 0
+	for t in J.get("trees", []):
+		var y: float = t[5] if t.size() > 5 else 0.15
+		_group(extra if terrain and ti % 2 == 1 else groups, "tree", t[0], Transform3D(Basis(Vector3.UP, t[3]).scaled(Vector3.ONE * t[4]), Vector3(t[1], y, t[2])))
+		ti += 1
+	for p in J.get("props", []):
+		var sc: float = p[5] if p.size() > 5 else 1.0
+		_group(groups, "prop", p[0], Transform3D(Basis(Vector3.UP, p[4]).scaled(Vector3.ONE * sc), Vector3(p[1], p[2], p[3])))
+	if terrain:
+		# coast: 100 m cells (sparser vegetation over a large area); every second tree/shrub is an
+		# "extra" instance appended after the main ones -> hidden on Low via visible_instance_count
+		for key in extra:
+			var main: Array = groups.get(key, [])
+			groups[key] = main + extra[key]
+			_extra_from[key] = main.size()
+		for key in groups:
+			_build_multimesh(node, key, groups[key], COAST_CELL, _extra_from.get(key, -1))
+		_extra_from.clear()
+		return
+	for a in J.get("attach", []):
+		_group(groups, "prop", a[0], Transform3D(Basis(Vector3.UP, a[4]), Vector3(a[1], a[2], a[3])))
+	for l in J.get("lines", []):
+		_line_instances(groups, l)
+	for key in groups:
+		_build_multimesh(node, key, groups[key])
+
+
+func _group(groups: Dictionary, kind: String, cat: String, xf: Transform3D) -> void:
+	var ids: Array = category_map.get(cat, [])
+	if ids.is_empty():
+		_missing[cat] = true
+		return
+	# deterministic pick by position (variety without randomness at runtime)
+	var h := absi(int(xf.origin.x * 73.0) ^ int(xf.origin.z * 151.0))
+	var id: String = ids[h % ids.size()]
+	var key := kind + ":" + id
+	if not groups.has(key):
+		groups[key] = []
+	groups[key].append(xf)
+
+
+func _line_instances(groups: Dictionary, l: Array) -> void:
+	var cat: String = l[0]
+	var ids: Array = category_map.get(cat, [])
+	if ids.is_empty():
+		_missing[cat] = true
+		return
+	var id: String = ids[0]
+	var e: Dictionary = props.get(id, veg.get(id, {}))
+	var seg: float = float(e.get("segment_length", e.get("size", [2.0])[0] if e.has("size") else 2.0))
+	var a := Vector3(l[1], l[5] if l.size() > 6 else 0.15, l[2])     # ends on the relief
+	var b := Vector3(l[3], l[6] if l.size() > 6 else 0.15, l[4])
+	var dir := b - a
+	var L := dir.length()
+	if L < 0.3:
+		return
+	var n := maxi(1, int(round(L / seg)))
+	var yaw := atan2(dir.x, dir.z) + PI / 2.0     # segment local +X runs along the line
+	var key := ("tree:" if veg.has(id) else "prop:") + id
+	if not groups.has(key):
+		groups[key] = []
+	for i in n:
+		var p := a + dir * ((i + 0.5) / n)
+		groups[key].append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(L / n / seg, 1, 1)), p))
+
+
+func _meshes_for(kind: String, id: String) -> Array:
+	## Returns [[mesh, visibility_begin, visibility_end], ...] LOD chain for the asset.
+	var key := kind + ":" + id
+	if _mesh_cache.has(key):
+		return _mesh_cache[key]
+	var out: Array = []
+	var q := Settings
+	if kind == "tree":
+		var e: Dictionary = veg.get(id, {})
+		var files: Dictionary = e.get("files", e.get("meshes", {}))
+		var vr: Dictionary = e.get("visibility", e.get("visibility_ranges", {}))
+		var l0 := float(vr.get("lod0_end", 60.0)) * (float(q.get_value("tree_lod0_dist")) / 70.0)
+		var lf := minf(float(vr.get("far_end", 700.0)), float(q.get_value("tree_draw_dist")))
+		var l1 := minf(float(vr.get("lod1_end", 160.0)), maxf(l0 + 20.0, lf * 0.45))
+		var chain := [["lod0", 0.0, l0], ["lod1", l0, l1], ["far", l1, lf]]
+		for c in chain:
+			var path: String = str(files.get(c[0], ""))
+			if path != "" and ResourceLoader.exists(path):
+				out.append([load(path), c[1], c[2]])
+		if out.size() == 1:
+			out[0][2] = lf
+	else:
+		var e: Dictionary = props.get(id, {})
+		var mesh_path: String = str(e.get("mesh", e.get("mesh_lod0", "")))
+		var far_path: String = str(e.get("mesh_lod1", e.get("mesh_far", "")))
+		var vend := minf(float(e.get("visibility_end", 120.0)), float(q.get_value("prop_dist")) * float(e.get("visibility_end", 120.0)) / 120.0)
+		if mesh_path != "" and ResourceLoader.exists(mesh_path):
+			if far_path != "" and ResourceLoader.exists(far_path):
+				out.append([load(mesh_path), 0.0, vend * 0.4])
+				out.append([load(far_path), vend * 0.4, vend])
+			else:
+				out.append([load(mesh_path), 0.0, vend])
+	_mesh_cache[key] = out
+	return out
+
+
+func _build_multimesh(parent: Node3D, key: String, xfs: Array, cell_size := -1.0, extra_from := -1) -> void:
+	var parts := key.split(":", true, 1)
+	var chain := _meshes_for(parts[0], parts[1])
+	if chain.is_empty():
+		_missing[key] = true
+		return
+	# LOD cells: instances are grouped into 50 m cells; each MultiMeshInstance sits at its cell
+	# centre with instance transforms relative to it and an explicit custom AABB. Visibility-range
+	# LOD and frustum culling are then evaluated per cell (not per 100 m chunk, and never against a
+	# stale/zero AABB at the world origin).
+	var cells := {}
+	var mains := {}
+	var cell := cell_size if cell_size > 0.0 else (CELL if parts[0] == "tree" else PROP_CELL)
+	for k in xfs.size():
+		var xf: Transform3D = xfs[k]
+		var o: Vector3 = xf.origin
+		var ck := Vector2i(floori(o.x / cell), floori(o.z / cell))
+		if not cells.has(ck):
+			cells[ck] = []
+			mains[ck] = 0
+		cells[ck].append(xf)
+		if extra_from < 0 or k < extra_from:
+			mains[ck] += 1
+	for ck in cells:
+		var origin := Vector3((ck.x + 0.5) * cell, 0.0, (ck.y + 0.5) * cell)
+		var cxfs: Array = cells[ck]
+		for li in chain.size():
+			var lod: Array = chain[li]
+			var mesh: Mesh = lod[0]
+			var maabb := mesh.get_aabb()
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			# per-instance colour (white), NOT custom data: on the GLES3 Compatibility renderer (Android
+			# fallback when Vulkan is unavailable) a MultiMesh without instance colours multiplies the
+			# vertex COLOR by 0 -> baked AO = 0 -> leaves at 15 % albedo under a white specular sheen
+			mm.use_colors = true
+			mm.mesh = mesh
+			mm.instance_count = cxfs.size()
+			var box := AABB()
+			for i in cxfs.size():
+				var w: Transform3D = cxfs[i]
+				var lx := Transform3D(w.basis, w.origin - origin)
+				mm.set_instance_transform(i, lx)
+				mm.set_instance_color(i, Color.WHITE)
+				var ib := lx * maabb
+				box = ib if i == 0 else box.merge(ib)
+			mm.custom_aabb = box
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "%s_%d_%d_lod%d" % [key.replace(":", "_"), ck.x, ck.y, li]
+			mmi.multimesh = mm
+			mmi.position = origin
+			mmi.set_meta(&"lod_kind", parts[0])
+			mmi.set_meta(&"lod_id", parts[1])
+			mmi.set_meta(&"lod_index", li)
+			if extra_from >= 0 and mains[ck] < cxfs.size():
+				mmi.set_meta(&"main_count", mains[ck])
+				mmi.add_to_group(&"coast_extra")
+			mmi.visibility_range_begin = lod[1]
+			mmi.visibility_range_end = lod[2]
+			mmi.visibility_range_begin_margin = 3.0
+			mmi.visibility_range_end_margin = 3.0
+			mmi.cast_shadow = _shadow_mode(parts[0], parts[1], li)
+			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			mmi.add_to_group(&"city_props" if parts[0] == "prop" else &"city_trees")
+			parent.add_child(mmi)
+			stats.multimeshes += 1
+	if parts[0] == "prop":
+		var e: Dictionary = props.get(parts[1], {})
+		for lp in e.get("light_points", []):
+			for xf in xfs:
+				light_pool.add_point(xf * Vector3(lp[0], lp[1], lp[2]), 0)
+	if parts[0] == "tree":
+		stats.trees += xfs.size()
+		_tree_colliders(parent, parts[1], xfs)
+	else:
+		stats.props += xfs.size()
+		_prop_colliders(parent, parts[1], xfs)
+
+
+func _tree_colliders(parent: Node3D, id: String, xfs: Array) -> void:
+	var e: Dictionary = veg.get(id, {})
+	var r: Variant = e.get("trunk_radius", null)
+	if r == null or float(r) <= 0.0:
+		return
+	var body := StaticBody3D.new()
+	body.name = "Tree_" + id                 # impact sound material (VehiclePrado.impact_material)
+	parent.add_child(body)
+	var shape := CylinderShape3D.new()
+	shape.radius = float(r)
+	shape.height = 3.0
+	for xf in xfs:
+		var cs := CollisionShape3D.new()
+		cs.shape = shape
+		cs.position = xf.origin + Vector3(0, 1.5, 0)
+		body.add_child(cs)
+
+
+func _prop_colliders(parent: Node3D, id: String, xfs: Array) -> void:
+	var e: Dictionary = props.get(id, {})
+	var c: Variant = e.get("collision", null)
+	if not (c is Dictionary):
+		return
+	var shape: Shape3D
+	var off := Vector3.ZERO
+	if c.get("offset") is Array:
+		off = Vector3(c["offset"][0], c["offset"][1], c["offset"][2])
+	if c.get("type") == "box":
+		var b := BoxShape3D.new()
+		b.size = Vector3(c["size"][0], c["size"][1], c["size"][2])
+		shape = b
+	elif c.get("type") == "cylinder":
+		var cy := CylinderShape3D.new()
+		cy.radius = float(c.get("radius", 0.1))
+		cy.height = float(c.get("height", 1.0))
+		shape = cy
+	else:
+		return
+	var body := StaticBody3D.new()
+	body.name = "Prop_" + id
+	parent.add_child(body)
+	for xf in xfs:
+		var cs := CollisionShape3D.new()
+		cs.shape = shape
+		cs.transform = Transform3D(xf.basis.orthonormalized(), xf.origin + xf.basis.orthonormalized() * off)
+		body.add_child(cs)
+
+
+# ---------------------------------------------------------------------------------------------
+func _make_outer_ground() -> Node3D:
+	## Ground under the district (fallback plane under the city square) and the collision of the whole
+	## peninsula: a HeightMapShape3D (4 m grid, +-1200 m) baked by tools/terrain/build_coast.py, the same
+	## heights as the visible terrain tiles. A world boundary far below is only a safety net.
+	var root := Node3D.new()
+	root.name = "OuterGround"
+	var mi := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(600, 600)
+	mi.mesh = pm
+	mi.position.y = -0.6                       # below the lowest point of the city relief (-0.21 m)
+	mi.material_override = CityMaterials.get_material("lawn_worn")
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(mi)
+	var body := StaticBody3D.new()
+	body.name = "TerrainBody"
+	root.add_child(body)
+	var meta := _load_json("res://data/terrain/terrain.json")
+	if not meta.is_empty() and FileAccess.file_exists("res://data/terrain/height.bin"):
+		var n: int = meta["size"]
+		var step: float = meta["step"]
+		var data := FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
+		var o: Array = meta["origin"]
+		# rows north of the open-world seam (z < -800) are not part of the peninsula collision any more
+		var skip := 0
+		if WorldData.get_instance().ok:
+			skip = clampi(int(round((WorldData.get_instance().seam_z - float(o[1])) / step)), 0, n - 2)
+		var rows := n - skip
+		var cut := data.slice(skip * n)
+		for i in cut.size():
+			cut[i] /= step                     # uniform scale by `step` below (non-uniform shape scale is unsupported)
+		var hs := HeightMapShape3D.new()
+		hs.map_width = n
+		hs.map_depth = rows
+		hs.map_data = cut
+		var cs := CollisionShape3D.new()
+		cs.shape = hs
+		cs.scale = Vector3.ONE * step
+		cs.position = Vector3(o[0] + (n - 1) * step * 0.5, 0.0, o[1] + skip * step + (rows - 1) * step * 0.5)
+		body.add_child(cs)
+		terrain_info = meta
+		terrain_heights = FileAccess.get_file_as_bytes("res://data/terrain/height.bin").to_float32_array()
+		if FileAccess.file_exists("res://data/terrain/surface.bin"):
+			terrain_surface = FileAccess.get_file_as_bytes("res://data/terrain/surface.bin")
+	else:
+		var cs0 := CollisionShape3D.new()
+		cs0.shape = WorldBoundaryShape3D.new()
+		body.add_child(cs0)
+	var safety := CollisionShape3D.new()
+	safety.shape = WorldBoundaryShape3D.new()
+	safety.position.y = -30.0
+	body.add_child(safety)
+	return root
+
+
+## City relief (same formula as dushanbe_city_src/tools/relief.py): ground height offset at (x, z);
+## raised blocks / sidewalks / lawns are at relief + 0.15, roads at relief.
+static func city_relief(x: float, z: float) -> float:
+	return (1.7 + 1.5 * (-z / 300.0) + 0.9 * sin(x / 140.0 + 0.6) * cos(z / 170.0 - 0.3)
+			+ 0.45 * sin((x + 0.6 * z) / 95.0 + 1.1))
+
+
+## Surface class of the baked terrain at (x, z) (data/terrain/surface.bin, 4 m grid, same window as
+## the heightmap): grass / sand / rock / earth / asphalt (country roads, and the city's roads).
+func surface_at(x: float, z: float) -> int:
+	var w := WorldData.get_instance()
+	if w.contains(x, z):
+		return w.surface_at(x, z)
+	if terrain_surface.is_empty() or terrain_info.is_empty():
+		return Surface.ASPHALT
+	var n: int = terrain_info["size"]
+	var step: float = terrain_info["step"]
+	var o: Array = terrain_info["origin"]
+	var i := clampi(int(round((x - float(o[0])) / step)), 0, n - 1)
+	var j := clampi(int(round((z - float(o[1])) / step)), 0, n - 1)
+	return terrain_surface[j * n + i]
+
+
+## Terrain height at a world point (bilinear, same data as the collision); 0 outside the baked area.
+func terrain_height(x: float, z: float) -> float:
+	var w := WorldData.get_instance()
+	if w.contains(x, z):
+		return w.height_at(x, z)
+	if terrain_info.is_empty():
+		return 0.0
+	var n: int = terrain_info["size"]
+	var step: float = terrain_info["step"]
+	var o: Array = terrain_info["origin"]
+	var fx := clampf((x - float(o[0])) / step, 0.0, n - 1.001)
+	var fz := clampf((z - float(o[1])) / step, 0.0, n - 1.001)
+	var i := int(fx)
+	var j := int(fz)
+	var u := fx - i
+	var v := fz - j
+	return lerpf(lerpf(terrain_heights[j * n + i], terrain_heights[j * n + i + 1], u),
+			lerpf(terrain_heights[(j + 1) * n + i], terrain_heights[(j + 1) * n + i + 1], u), v)
+
+
+func _load_backdrop() -> void:
+	const P := "res://assets/city/backdrop.glb"
+	if not ResourceLoader.exists(P):
+		return
+	var inst: Node3D = (load(P) as PackedScene).instantiate()
+	inst.name = "Backdrop"
+	add_child(inst)
+	CityMaterials.remap_tree(inst)
+	for mi in inst.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if String(m.name).begins_with("far_city"):
+			m.visibility_range_begin = 0.0
+	# distant tree canopies: far impostors of the city trees, MultiMesh
+	var ft: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/city/backdrop_trees.json")) if FileAccess.file_exists("res://data/city/backdrop_trees.json") else null
+	if ft is Array:
+		var ids: Array = category_map.get("park_tree", [])
+		var per := {}
+		for t in ft:
+			if ids.is_empty():
+				break
+			var id: String = ids[absi(int(t[0] * 13.0 + t[1] * 7.0)) % ids.size()]
+			if not per.has(id):
+				per[id] = []
+			per[id].append(Transform3D(Basis(Vector3.UP, t[2]).scaled(Vector3.ONE * t[3]), Vector3(t[0], t[4] if t.size() > 4 else 0.0, t[1])))
+		for id in per:
+			var e: Dictionary = veg.get(id, {})
+			var files: Dictionary = e.get("files", e.get("meshes", {}))
+			var path := str(files.get("far", files.get("lod1", "")))
+			if path == "" or not ResourceLoader.exists(path):
+				continue
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_colors = true          # see _build_multimesh: GLES3 multiplies vertex COLOR by the instance colour
+			mm.mesh = load(path)
+			mm.instance_count = per[id].size()
+			for i in per[id].size():
+				mm.set_instance_transform(i, per[id][i])
+				mm.set_instance_color(i, Color.WHITE)
+			var mmi := MultiMeshInstance3D.new()
+			mmi.multimesh = mm
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mmi)
+
+
+func _make_bounds() -> void:
+	## Playable boundary: invisible walls along the line where the sea gets deeper than the wading
+	## depth (0.9 m), closed across the mainland in the north (data/terrain/bounds.json).
+	var body := StaticBody3D.new()
+	body.name = "Bounds"
+	add_child(body)
+	var B := _load_json("res://data/terrain/bounds.json")
+	var pts: Array = B.get("polyline", [])
+	if pts.is_empty():
+		pts = [[-301, -301], [301, -301], [301, 301], [-301, 301]]
+	var open_north := WorldData.get_instance().ok
+	for i in pts.size():
+		var a := Vector2(pts[i][0], pts[i][1])
+		var b := Vector2(pts[(i + 1) % pts.size()][0], pts[(i + 1) % pts.size()][1])
+		if open_north and a.y < -600.0 and b.y < -600.0:
+			continue                           # the mainland is open: the open world continues north
+		var mid := (a + b) * 0.5
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = Vector3(1.0, 80.0, a.distance_to(b) + 1.0)
+		cs.shape = bs
+		cs.transform = Transform3D(Basis(Vector3.UP, atan2(b.x - a.x, b.y - a.y)), Vector3(mid.x, 10.0, mid.y))
+		body.add_child(cs)
+
+
+func _shadow_mode(kind: String, id: String, lod_index: int) -> GeometryInstance3D.ShadowCastingSetting:
+	## Shadow casters are the most expensive pass measured (alpha-tested foliage in the shadow map):
+	## trees cast only from LOD0 and only when the preset allows; small props never cast.
+	if kind == "tree":
+		var e: Dictionary = veg.get(id, {})
+		var big := String(e.get("kind", "tree")) == "tree"
+		return GeometryInstance3D.SHADOW_CASTING_SETTING_ON if (big and lod_index == 0 and Settings.get_value("tree_shadows")) else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var p: Dictionary = props.get(id, {})
+	var sz: Array = p.get("size", [1, 1, 1])
+	var tall := float(sz[1]) > 2.0 and lod_index == 0
+	return GeometryInstance3D.SHADOW_CASTING_SETTING_ON if tall else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func apply_quality() -> void:
+	_mesh_cache.clear()
+	var q := Settings.quality
+	for n in get_tree().get_nodes_in_group(&"coast_extra"):
+		var mm := (n as MultiMeshInstance3D).multimesh
+		mm.visible_instance_count = -1 if q >= Settings.Quality.MEDIUM else int(n.get_meta(&"main_count"))
+	if sea:
+		sea.apply_quality(q)
+	# mountain ring: 2.4-8.8 km away, a few pixels per triangle -> coarser mesh LODs on weaker presets
+	var bd := get_node_or_null("Backdrop")
+	if bd:
+		for mi in bd.find_children("mountains*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).lod_bias = [0.12, 0.3, 0.7, 1.0][q]
+	for mmi in find_children("*", "MultiMeshInstance3D", true, false):
+		if not mmi.has_meta(&"lod_kind"):
+			continue
+		var chain := _meshes_for(mmi.get_meta(&"lod_kind"), mmi.get_meta(&"lod_id"))
+		var li: int = mmi.get_meta(&"lod_index")
+		if li < chain.size():
+			mmi.visibility_range_begin = chain[li][1]
+			mmi.visibility_range_end = chain[li][2]
+		mmi.cast_shadow = _shadow_mode(mmi.get_meta(&"lod_kind"), mmi.get_meta(&"lod_id"), li)
+	var far := float(Settings.get_value("city_draw_dist"))
+	for ch in chunks:
+		for mi in ch.get_children():
+			if mi is MeshInstance3D and String(mi.name).begins_with("base"):
+				(mi as MeshInstance3D).visibility_range_end = far
+				(mi as MeshInstance3D).visibility_range_end_margin = 30.0
+	var dd := float(Settings.get_value("building_detail_dist")) + 50.0
+	for n in get_tree().get_nodes_in_group(&"city_detail"):
+		var gi := n as GeometryInstance3D
+		gi.visibility_range_end = dd
+		gi.visibility_range_end_margin = 10.0
+		gi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF

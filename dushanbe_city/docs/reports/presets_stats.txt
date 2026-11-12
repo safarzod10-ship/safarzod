@@ -1,0 +1,3 @@
+low CAPTURED docs/screenshots/presets/low.png fps=1.0 draw_calls=183 prims=368523
+medium CAPTURED docs/screenshots/presets/medium.png fps=1.0 draw_calls=228 prims=570757
+high CAPTURED docs/screenshots/presets/high.png fps=1.0 draw_calls=264 prims=1019512

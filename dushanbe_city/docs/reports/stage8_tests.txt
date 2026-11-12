@@ -1,0 +1,32 @@
+PASS  1. every vehicle has its own tank: { "car": 80.0, "camry": 60.0, "lexus": 72.0, "van": 70.0, "bus": 250.0, "boat": 40.0 } (Prado 80, Camry 60)
+PASS  2. new game money for fuel: 500 смн (500)
+PASS  3. Prado burns fuel while driving: 0.27 l over 0.24 km = 1.14 l/km (game x8 of ~11 l/100 km: 0.5 .. 1.6)
+PASS  4. parked vehicles burn nothing (Camry 33.00 -> 33.00 l)
+PASS  5. tank runs dry: out_of_fuel true, fuel 0.00 l, the car does not accelerate (69 -> 59 km/h)
+PASS  6. the fuel delivery window opens (18 smn/l): Бензин закончился! Доставка топлива: 18 смн/л · у вас 500 смн
+PASS  7. buy 10 l delivered: +10.0 l, money 500 смн -> 320 смн (−180)
+PASS  8. with fuel the car drives again (53 km/h after 5 s of gas)
+PASS  9. filling stations along the roads: 52
+PASS 10. nearest station from any road point: at most 1.5 km
+PASS 11. at the pumps: «ЗАПРАВИТЬ» offered (station found true, button true)
+PASS 12. filled at 14 smn/l: +60.0 l to 80 / 80 l, paid 840 смн (60 x 14)
+PASS 13. low fuel: nearest station marked on the minimap ((-103.0, 4.0, -1638.0))
+PASS 14. no money: no fuel is given (fuel 10.00 l, money 0 смн)
+PASS 15. Toyota Camry: 4 wheels (4) with spinning meshes (8), radius 0.339 m, on the ground 4
+PASS 16. Lexus RX 350: 4 wheels (4) with spinning meshes (20), radius 0.403 m, on the ground 4
+PASS 17. Автобус: 4 wheels (4) with spinning meshes (16), radius 0.497 m, on the ground 4
+PASS 18. bus: 829 source parts merged into 26 meshes (draw calls)
+PASS 19. Camry drives on the shared physics: 0-100 km/h in 12.4 s (6..14), 141 km/h after 25 s
+PASS 20. bus: 0-60 km/h in 11.5 s (8..20), limited to 85 km/h (<= 92)
+PASS 21. bus route №1: a 5.9 km loop over 4 city roads, 12 stops
+PASS 22. stops in the kerb lane (0.5 .. 4 m inside the edge): 0 off; names ["Театр оперы и балета", "Оружейный магазин", "Парк Рудаки", "Национальная библиотека", "Национальный музей"]
+PASS 23. a shelter + sign at every stop (12)
+PASS 24. terminus sign is an interactable «СТАТЬ ВОДИТЕЛЕМ АВТОБУСА», selected: true
+PASS 25. hired as a bus driver
+PASS 26. in the bus: next stop «Оружейный магазин» marked (beacon true, minimap true)
+PASS 27. stop served after 2.5 s standing: passengers 10, pay 35 смн, next stop 2
+PASS 28. driving past a stop misses it (next stop now 3)
+PASS 29. a full loop pays the bonus: loops 0 -> 1, earned 278 смн this shift 313 смн
+PASS 30. school and hospital models in the city: { "school_m": 6, "hospital_m": 4 }
+PASS 31. model sizes: school (65.0, 12.0, 55.0), hospital (31.0, 12.0, 18.0) (real-world metres)
+PASS 32. school model rendered in its sector
