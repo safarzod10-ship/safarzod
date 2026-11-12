@@ -30,6 +30,7 @@ const SPK = {
   K: { name: 'Покупатель', col: '#ea580c' },
   P: { name: 'Клиент', col: '#2563eb' },
   D: { name: 'Даня', col: '#ca8a04' },
+  H: { name: 'Ник', col: '#f97316' },
   N: { name: 'Рассказчик', col: '#334155' },
   O: { name: 'Мама', col: '#a2577a' },
   F: { name: 'Отец', col: '#6b7280' },
@@ -857,6 +858,16 @@ function person25(o, t) {
   const ns = ctx.createRadialGradient(0, -250, 4, 0, -250, 70); ns.addColorStop(0, 'rgba(0,0,0,.32)'); ns.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = ns; ctx.fillRect(-80, -260, 160, 80);
   ctx.restore();
+  if (o.jacket) {
+    for (const sd of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(sd * 58, -250); ctx.quadraticCurveTo(sd * 78, -246, sd * 73, -200); ctx.lineTo(sd * 67, -92); ctx.quadraticCurveTo(sd * 65, -66, sd * 40, -66);
+      ctx.lineTo(sd * 24, -66); ctx.lineTo(sd * 20, -200); ctx.lineTo(sd * 30, -246); ctx.closePath();
+      ctx.fillStyle = vgrad(-260, -60, o.jacket, .22, -.32); ctx.fill(); ctx.strokeStyle = OL25; ctx.lineWidth = 4; ctx.stroke();
+      line([sd * 22, -200, sd * 25, -70], o.lining || '#f97316', 4);
+    }
+    rr(-66, -78, 132, 16, 6, shade(o.jacket, -.25), OL25, 3);
+  }
   if (o.apron) { rr(-46, -205, 92, 135, [12, 12, 18, 18], vgrad(-205, -70, o.apron), OL25, 4); }
   else if (o.pocket !== false) { rr(-40, -150, 80, 46, 16, 'rgba(0,0,0,.08)', 'rgba(0,0,0,.2)', 3); }
   if (o.collar) { ctx.beginPath(); ctx.moveTo(-44, -248); ctx.lineTo(-8, -196); ctx.lineTo(-28, -252); ctx.moveTo(44, -248); ctx.lineTo(8, -196); ctx.lineTo(28, -252); ctx.fillStyle = o.collar; ctx.fill(); ctx.strokeStyle = OL25; ctx.lineWidth = 3; ctx.stroke(); }
@@ -903,6 +914,17 @@ function person25(o, t) {
     ctx.fillStyle = o.hairCol;
     ctx.beginPath(); ctx.moveTo(-62, -334); ctx.quadraticCurveTo(-58, -300, -70, -290); ctx.lineTo(-74, -334); ctx.fill();
     ctx.beginPath(); ctx.moveTo(62, -334); ctx.quadraticCurveTo(58, -300, 70, -290); ctx.lineTo(74, -334); ctx.fill();
+  } else if (o.hair === 'quiff') {
+    // faded temples
+    // swept volume on top, forehead stays visible
+    ctx.beginPath();
+    ctx.moveTo(-74, -338); ctx.quadraticCurveTo(-82, -390, -34 + fx * .3, -420);
+    ctx.quadraticCurveTo(30 + fx * .5, -446, 98 + fx * .6, -414); ctx.quadraticCurveTo(84, -404, 70 + fx * .4, -396);
+    ctx.quadraticCurveTo(82, -370, 74, -340);
+    ctx.quadraticCurveTo(46, -372, 4 + fx * .4, -370); ctx.quadraticCurveTo(-44, -368, -74, -338); ctx.closePath();
+    ctx.fillStyle = vgrad(-446, -340, o.hairCol, .32, -.28); ctx.fill(); ctx.strokeStyle = OL25; ctx.lineWidth = 4; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-44 + fx * .3, -404); ctx.quadraticCurveTo(10, -434, 66 + fx * .5, -412); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-30, -386); ctx.quadraticCurveTo(14, -404, 54, -392); ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 3; ctx.stroke();
   } else if (o.hair === 'short') {
     ctx.beginPath(); ctx.arc(0, -318, 80, Math.PI * 1.02, Math.PI * 1.98);
     ctx.quadraticCurveTo(50 + fx, -350, 10 + fx, -352); ctx.quadraticCurveTo(-30 + fx, -358, -62, -330); ctx.closePath();

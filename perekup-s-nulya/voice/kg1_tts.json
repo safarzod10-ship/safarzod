@@ -1,0 +1,8 @@
+{
+ "voiceDir": "out/voice/kg1",
+ "map": "voice/kg1_map.json",
+ "ref": "out/voice/ref/host.wav",
+ "exaggeration": 0.65,
+ "cfg": 0.4,
+ "say": {"Ник —": "Ник,"}
+}

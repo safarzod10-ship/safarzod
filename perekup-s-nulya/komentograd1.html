@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Комментоград — 1</title>
+<style>
+@font-face{font-family:'Rubik';src:url('fonts/Rubik.ttf') format('truetype');font-weight:300 900;}
+:root{--bg:#0b0d12;--fg:#f4f6fb;--accent:#ffd23f}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Rubik,Arial,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;gap:10px;padding:8px 16px;box-sizing:border-box}
+canvas{height:calc(100vh - 80px);max-width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;cursor:pointer}
+#ui{display:flex;gap:10px;align-items:center;width:min(560px,100%)}
+#ui button{background:var(--accent);color:#111;border:0;border-radius:10px;font:700 16px Rubik,Arial;padding:8px 14px;cursor:pointer}
+#ui input{flex:1;accent-color:var(--accent)}
+#time{font:600 14px Rubik,Arial;min-width:92px;text-align:right;opacity:.8}
+body.render #ui{display:none}
+body.render #wrap{padding:0}
+body.render canvas{height:auto;border-radius:0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="ui">
+    <button id="play">▶ Play</button>
+    <input id="seek" type="range" min="0" max="30" step="0.01" value="0">
+    <span id="time">0:00 / 0:30</span>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const STYLE = '25d';
+const DUR = 30, START_MONEY = 0, HUD_FROM = 999, HUD_PULSE = null, COVER_T = 17.5;
+const CUTS = [];
+const MONEY = [];
+const SUBS = [
+  [0.3, 3.6, 'T', 'Стоп. Ты только что нашёл *город, которого нет* ни в одной соцсети.'],
+  [3.6, 7.2, 'T', 'Добро пожаловать в *Комментоград*. Я Ник — его мэр.'],
+  [7.2, 10.8, 'T', 'Пока тут пусто. Потому что жителями станете *вы*.'],
+  [10.8, 16.0, 'T', 'Пишешь в комментариях *ник и кем хочешь быть* — и я рисую тебя в городе.'],
+  [16.0, 19.6, 'T', 'Таксист, блогер, бизнесмен, бандит — *кем угодно*.'],
+  [19.6, 24.0, 'T', 'А дальше — *твоя жизнь* здесь: деньги, драмы, свадьбы, разборки.'],
+  [24.0, 29.0, 'T', '*Первые десять* жителей — в следующем видео. Пиши ник — *заселю*.'],
+];
+
+/* ---------- the mayor ---------- */
+const NIK = { skin: '#efc19b', shirt: '#f8fafc', sleeve: '#16181f', jacket: '#16181f', lining: '#f97316', pants: '#1f2430', shoe: '#f1f5f9', hair: 'quiff', hairCol: '#2b1d14', iris: '#3f7a5a', chain: true, pocket: false };
+
+/* ---------- citizens generated from a nickname ---------- */
+function strHash(s) { let h = 2166136261; for (const c of s) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }
+const SKINS = ['#f3c9a5', '#e9b48c', '#d9a37c', '#c98f68', '#f6d2b5', '#b97f5a'];
+const HAIRS = ['#2a1d15', '#4a2f1d', '#111111', '#7a4a2a', '#c58b3c', '#3b3b3b'];
+const SHIRTS = ['#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#64748b'];
+function citizen(nick, role) {
+  const r = i => strHash(nick + '#' + i);
+  const c = {
+    skin: SKINS[Math.floor(r(1) * SKINS.length)], hairCol: HAIRS[Math.floor(r(2) * HAIRS.length)],
+    shirt: SHIRTS[Math.floor(r(3) * SHIRTS.length)], pants: ['#1f2937', '#334155', '#3f3f46'][Math.floor(r(4) * 3)],
+    hair: ['short', 'quiff', 'long', 'short', 'bald'][Math.floor(r(5) * 5)], pocket: false, iris: ['#4a2f1d', '#3f7a5a', '#2f5d8a'][Math.floor(r(6) * 3)],
+  };
+  if (role === 'таксист') Object.assign(c, { hair: 'cap', capCol: '#facc15', shirt: '#1f2937' });
+  if (role === 'блогер') Object.assign(c, { hair: 'long', hairCol: '#c58b3c', shirt: '#ec4899', glasses: 'round' });
+  if (role === 'бизнесмен') Object.assign(c, { hair: 'short', shirt: '#f8fafc', jacket: '#1e293b', sleeve: '#1e293b', lining: '#cbd5e1' });
+  if (role === 'бандит') Object.assign(c, { hair: 'hood', hood: '#111318', shirt: '#111318', glasses: 'sun', chain: true });
+  return c;
+}
+function nickTag(x, y, nick, role, k = 1) {
+  at(x, y, k, 0, () => {
+    const w = Math.max(tw(nick, 30, 800), tw(role, 24, 700)) + 46;
+    rr(-w / 2, -40, w, 80, 20, 'rgba(255,255,255,.96)', OL, 4);
+    txt(nick, 0, -14, 30, OL, { w: 800 }); txt(role, 0, 18, 24, '#f97316', { w: 700 });
+    ctx.beginPath(); ctx.moveTo(-12, 40); ctx.lineTo(0, 56); ctx.lineTo(12, 40); ctx.fillStyle = 'rgba(255,255,255,.96)'; ctx.fill();
+  });
+}
+
+/* ---------- city ---------- */
+function bgCity(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, 1300);
+  g.addColorStop(0, '#2b2d6e'); g.addColorStop(.45, '#a34d8c'); g.addColorStop(.8, '#ff9a6b'); g.addColorStop(1, '#ffd08a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 1300);
+  circ(800, 980, 150, 'rgba(255,230,170,.5)');
+  // far skyline
+  for (let i = 0; i < 12; i++) { const x = i * 95 - 20, h = 260 + hash(i + 7) * 320; ctx.fillStyle = 'rgba(70,40,110,.55)'; ctx.fillRect(x, 1200 - h, 88, h); }
+  // near buildings with lit windows
+  const cols = ['#5b3f8f', '#7a3f7f', '#3f4f8f', '#8f4f6a', '#4f3f7a'];
+  for (let i = 0; i < 7; i++) {
+    const x = i * 165 - 30, h = 380 + hash(i + 2) * 330, w = 150;
+    const bg = ctx.createLinearGradient(x, 0, x + w, 0); bg.addColorStop(0, shade(cols[i % 5], .1)); bg.addColorStop(1, shade(cols[i % 5], -.25));
+    ctx.fillStyle = bg; ctx.fillRect(x, 1260 - h, w, h);
+    for (let r = 0; r < h / 70 - 1; r++) for (let c = 0; c < 3; c++) {
+      const on = hash(i * 17 + r * 5 + c) > .55;
+      ctx.fillStyle = on ? 'rgba(255,214,140,.9)' : 'rgba(20,16,40,.45)';
+      ctx.fillRect(x + 18 + c * 44, 1260 - h + 30 + r * 70, 26, 36);
+    }
+  }
+  // neon sign
+  ctx.save(); ctx.shadowColor = '#ff7ac6'; ctx.shadowBlur = 30 + 8 * Math.sin(t * 6);
+  rr(300, 560, 480, 110, 22, 'rgba(20,10,40,.85)', '#ff7ac6', 6);
+  txt('КОММЕНТОГРАД', 540, 616, 56, '#ffd6f0', { w: 900 });
+  ctx.restore();
+  // street
+  ctx.fillStyle = '#3a3550'; ctx.fillRect(0, 1260, W, H - 1260);
+  ctx.fillStyle = '#4b4566'; ctx.fillRect(0, 1250, W, 22);
+  for (let x = -((t * 40) % 160); x < W; x += 160) rr(x, 1580, 90, 12, 6, 'rgba(255,255,255,.25)');
+}
+function header(t, residents, demo) {
+  ctx.save(); ctx.translate(0, 110);
+  const g = ctx.createLinearGradient(0, 150, 0, 300); g.addColorStop(0, 'rgba(10,8,24,.75)'); g.addColorStop(1, 'rgba(10,8,24,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 150, W, 160);
+  rr(50, 176, 66, 66, 18, '#f97316', OL, 4);
+  ctx.beginPath(); ctx.roundRect(64, 192, 38, 26, 8); ctx.moveTo(72, 218); ctx.lineTo(70, 232); ctx.lineTo(84, 218); ctx.fillStyle = '#fff'; ctx.fill();
+  txt('КОММЕНТОГРАД', 134, 198, 34, '#fff', { w: 900, al: 'left' });
+  txt('соцсеть, которую строят зрители', 134, 232, 22, 'rgba(255,255,255,.7)', { w: 600, al: 'left' });
+  const pulse = .5 + .5 * Math.sin(t * 5);
+  rr(780, 182, 250, 56, 28, 'rgba(255,255,255,.12)', 'rgba(255,255,255,.4)', 2);
+  circ(810, 210, 9, `rgba(239,68,68,${.5 + pulse * .5})`);
+  txt((demo ? 'демо: ' : 'жителей: ') + residents, 830, 211, 26, '#fff', { w: 800, al: 'left' });
+  ctx.restore();
+}
+function tumbleweed(x, y, r, rot) {
+  at(x, y, 1, rot, () => {
+    for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.ellipse(0, 0, r, r * .55, i * .35, 0, Math.PI * 2); ctx.strokeStyle = '#a07b4f'; ctx.lineWidth = 4; ctx.stroke(); }
+  });
+}
+function commentBubble(x, y, nick, text, k) {
+  at(x, y, k, 0, () => {
+    const w = Math.max(tw(text, 34, 600), 300) + 150;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24; rr(-w / 2, -70, w, 140, 26, '#fff'); ctx.restore();
+    circ(-w / 2 + 60, -10, 34, '#6366f1');
+    txt(nick[1].toUpperCase(), -w / 2 + 60, -8, 34, '#fff', { w: 900 });
+    txt(nick, -w / 2 + 110, -30, 28, '#64748b', { w: 700, al: 'left' });
+    txt(text, -w / 2 + 110, 12, 34, OL, { w: 700, al: 'left' });
+    heartIcon(w / 2 - 44, -6);
+  });
+}
+function heartIcon(x, y) {
+  ctx.beginPath(); ctx.moveTo(x, y + 14); ctx.bezierCurveTo(x - 26, y - 4, x - 14, y - 26, x, y - 10); ctx.bezierCurveTo(x + 14, y - 26, x + 26, y - 4, x, y + 14);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4; ctx.stroke();
+}
+function sparkleBurst(x, y, k) {
+  if (k <= 0 || k >= 1) return;
+  for (let i = 0; i < 14; i++) {
+    const a = i / 14 * Math.PI * 2, d = 40 + 260 * eout(k);
+    ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(x + Math.cos(a) * d, y + Math.sin(a) * d);
+    ctx.beginPath(); ctx.moveTo(0, -16); ctx.quadraticCurveTo(0, 0, 16, 0); ctx.quadraticCurveTo(0, 0, 0, 16); ctx.quadraticCurveTo(0, 0, -16, 0); ctx.quadraticCurveTo(0, 0, 0, -16);
+    ctx.fillStyle = ['#ffd23f', '#ff7ac6', '#7dd3fc'][i % 3]; ctx.fill(); ctx.restore();
+  }
+}
+function taxi(x, y, s) {
+  at(x, y, s, 0, () => {
+    rr(-150, -70, 300, 90, 30, '#facc15', OL, 6); rr(-90, -130, 180, 70, 24, '#facc15', OL, 6);
+    rr(-74, -118, 66, 50, 10, '#bae6fd'); rr(8, -118, 66, 50, 10, '#bae6fd');
+    rr(-30, -152, 60, 24, 6, '#111', OL, 3); txt('ТАКСИ', 0, -139, 16, '#facc15', { w: 900 });
+    for (const sd of [-1, 1]) { circ(sd * 90, 22, 34, '#1f2937', OL, 5); circ(sd * 90, 22, 14, '#9ca3af'); }
+  });
+}
+const CITIZENS = [['@dimka', 'таксист'], ['@alina_s', 'блогер'], ['@max_biz', 'бизнесмен'], ['@vovan', 'бандит']];
+
+function scene(t) {
+  // camera: slow push on the hook, gentle drift after
+  const z = lerp(1.18, 1, eio(P(t, 0, 3.6))) * (1 + .02 * Math.sin(t * .4));
+  cam(z, 540, 1100, 0, 0, () => {
+    bgCity(t);
+    // tumbleweed while the city is empty
+    if (within(t, 7.2, 11.2)) { const k = P(t, 7.2, 11.2); tumbleweed(lerp(-100, 1180, k), 1300 - Math.abs(Math.sin(k * 18)) * 40, 46, k * 20); }
+    // citizens
+    if (t > 12.6) {
+      const showAll = t > 16;
+      CITIZENS.forEach(([nick, role], i) => {
+        if (!showAll && i > 0) return;
+        const k = i === 0 ? pop(t, 13.0, .45) : pop(t, 16.2 + (i - 1) * .55, .45);
+        if (k <= 0 || t > 24.2) return;
+        const x = i === 0 && !showAll ? 760 : [140, 360, 740, 950][i], y = 1520;
+        if (i === 0) { if (!showAll) taxi(860, 1380, .9 * k); }
+        at(x, y, k, 0, () => person(Object.assign(citizen(nick, role), { x: 0, y: 0, s: 1.05, expr: ['smirk', 'h', 'n', 'angry'][i], turn: x < 540 ? .4 : -.4, ph: i * 2 }), t));
+        nickTag(x, y - 470, nick, role, k);
+      });
+    }
+    // the mayor
+    let ex = 'smirk', aR = POSE.idle, aL = POSE.idle;
+    if (t < 1.2) { aR = POSE.up; ex = 's'; }
+    if (within(t, 3.6, 7.2)) { aL = POSE.shrug; aR = POSE.shrug; ex = 'h'; }
+    if (within(t, 7.2, 10.8)) { ex = 'worry'; }
+    if (within(t, 10.8, 16)) { aR = POSE.point; ex = 'smirk'; }
+    if (within(t, 24, 29)) { aR = POSE.point; ex = 'h'; }
+    const nx = within(t, 12.6, 24.2) ? 330 : 540;
+    person(Object.assign({}, NIK, { x: nx, y: 1700, s: within(t, 12.6, 24.2) ? 1.5 : 1.8, expr: ex, aL, aR, turn: nx < 540 ? .35 : 0, lx: nx < 540 ? .5 : 0, talk: talkAmt('T', t) }), t);
+  });
+  // ----- overlays -----
+  if (t < 3.4) at(540, 520, pop(t, .2, .35) * (1 - P(t, 3.1, 3.4)), -.05, () => {
+    txt('ГОРОД', 0, -70, 130, '#fff', { w: 900, st: 18 });
+    txt('ИЗ КОММЕНТАРИЕВ', 0, 50, 80, '#ffd23f', { w: 900, st: 14 });
+  });
+  if (within(t, 4.0, 7.2)) at(540, 820, pop(t, 4.2) * (1 - P(t, 6.9, 7.2)), .03, () => {
+    rr(-200, -50, 400, 100, 50, '#f97316', OL, 6); txt('НИК · МЭР', 0, 3, 46, '#fff', { w: 900 });
+  });
+  if (within(t, 7.4, 10.8)) at(540, 780, P(t, 7.4, 7.8) * (1 - P(t, 10.5, 10.8)), 0, () => txt('*тишина*', 0, 0, 54, 'rgba(255,255,255,.85)', { w: 600 }));
+  if (within(t, 10.9, 16.0)) {
+    commentBubble(540, 760, '@dimka', 'хочу быть таксистом 🚕'.replace(' 🚕', ''), pop(t, 11.0, .35) * (1 - P(t, 15.7, 16)));
+    sparkleBurst(760, 1200, P(t, 12.6, 13.6));
+  }
+  if (within(t, 19.6, 24.1)) {
+    const items = [['💸', 'деньги', '#16a34a'], ['💍', 'свадьбы', '#ec4899'], ['🎭', 'драмы', '#a855f7'], ['🥊', 'разборки', '#ef4444']];
+    items.forEach(([_, l, c], i) => {
+      const k = pop(t, 19.8 + i * .7, .35) * (1 - P(t, 23.8, 24.1));
+      at(i % 2 ? 790 : 290, 560 + Math.floor(i / 2) * 200, k, (i % 2 ? .04 : -.04), () => {
+        rr(-210, -70, 420, 140, 34, '#fff', c, 8);
+        circ(-140, 0, 42, c); txt(l[0].toUpperCase(), -140, 2, 44, '#fff', { w: 900 });
+        txt(l, 40, 3, 50, OL, { w: 900 });
+      });
+    });
+  }
+  if (t > 24.0) {
+    const k = P(t, 24.0, 24.4) * (1 - P(t, 29.6, 30));
+    at(540, 640, k, 0, () => {
+      rr(-470, -230, 940, 460, 40, 'rgba(15,12,30,.88)', '#ffd23f', 7);
+      txt('ПЕРВЫЕ 10 ЖИТЕЛЕЙ', 0, -160, 60, '#ffd23f', { w: 900 });
+      for (let i = 0; i < 10; i++) {
+        const x = -360 + (i % 5) * 180, y = -50 + Math.floor(i / 5) * 140, f = pop(t, 24.6 + i * .12, .3);
+        at(x, y, f, 0, () => { circ(0, 0, 54, 'rgba(255,255,255,.08)', 'rgba(255,255,255,.5)', 4); txt('?', 0, 4, 54, 'rgba(255,255,255,.6)', { w: 900 }); });
+      }
+    });
+    at(540, 1000, pop(t, 25.8) * (1 - P(t, 29.6, 30)), -.02, () => {
+      rr(-420, -56, 840, 112, 56, '#f97316', OL, 7);
+      txt('ПИШИ: НИК + КЕМ ХОЧЕШЬ БЫТЬ', 0, 3, 42, '#fff', { w: 900 });
+    });
+  }
+  header(t, t < 12.6 ? 0 : t < 24.2 ? (t > 16 ? 4 : 1) : 0, within(t, 12.6, 24.2));
+  vignette('rgba(10,5,30,1)', .4);
+}
+const SCENES = [[0, 30.1, scene]];
+startPlayer();
+</script>
+</body>
+</html>
