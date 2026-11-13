@@ -22,16 +22,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,7 +126,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit, onConnect: (
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenHeader(
                 title = { Text(stringResource(if (existing == null) R.string.connection_new else R.string.connection_edit)) },
                 navigationIcon = { BackButton(onDone) },
                 actions = { TextButton(onClick = { save() }) { Text(stringResource(R.string.action_save)) } },
@@ -143,13 +138,13 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit, onConnect: (
                 Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                OutlinedTextField(
+                SafabField(
                     value = name, onValueChange = { name = it }, singleLine = true,
                     label = { Text(stringResource(R.string.field_name)) }, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
+                    SafabField(
                         value = host, singleLine = true,
                         onValueChange = { typed ->
                             val pasted = parseQuickTarget(typed)
@@ -164,7 +159,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit, onConnect: (
                         isError = showErrors && hostError != null,
                         supportingText = hostError?.takeIf { showErrors }?.let { { Text(stringResource(it)) } },
                     )
-                    OutlinedTextField(
+                    SafabField(
                         value = port, onValueChange = { v -> port = v.filter { it.isDigit() }.take(5) }, singleLine = true,
                         label = { Text(stringResource(R.string.field_port)) }, modifier = Modifier.width(104.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
@@ -174,7 +169,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit, onConnect: (
                 if (showErrors && portError != null) {
                     Text(stringResource(portError), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
-                OutlinedTextField(
+                SafabField(
                     value = username, onValueChange = { username = it }, singleLine = true,
                     label = { Text(stringResource(R.string.field_username)) }, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = PlainKeyboard.copy(keyboardType = KeyboardType.Ascii),
@@ -182,17 +177,13 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit, onConnect: (
                     supportingText = userError?.takeIf { showErrors }?.let { { Text(stringResource(it)) } },
                 )
 
-                Text(stringResource(R.string.field_auth), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = authType == AuthType.PASSWORD, onClick = { authType = AuthType.PASSWORD },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2),
-                    ) { Text(stringResource(R.string.auth_password)) }
-                    SegmentedButton(
-                        selected = authType == AuthType.KEY, onClick = { authType = AuthType.KEY },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2),
-                    ) { Text(stringResource(R.string.auth_key)) }
-                }
+                Caption(stringResource(R.string.field_auth), Modifier.padding(top = 10.dp))
+                ModeSwitch(
+                    labels = listOf(stringResource(R.string.auth_password), stringResource(R.string.auth_key)),
+                    selected = if (authType == AuthType.PASSWORD) 0 else 1,
+                    onSelect = { authType = if (it == 0) AuthType.PASSWORD else AuthType.KEY },
+                    fill = true,
+                )
 
                 if (authType == AuthType.PASSWORD) {
                     SecretField(
@@ -264,7 +255,7 @@ fun ScriptEditScreen(scriptId: String?, onDone: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenHeader(
                 title = { Text(stringResource(if (existing == null) R.string.script_new else R.string.script_edit)) },
                 navigationIcon = { BackButton(onDone) },
                 actions = {
@@ -283,16 +274,16 @@ fun ScriptEditScreen(scriptId: String?, onDone: () -> Unit) {
                 Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                OutlinedTextField(
+                SafabField(
                     value = name, onValueChange = { name = it }, singleLine = true,
                     label = { Text(stringResource(R.string.script_name)) }, modifier = Modifier.fillMaxWidth(),
                     isError = showErrors && nameError,
                     supportingText = if (showErrors && nameError) { { Text(stringResource(R.string.err_field_required)) } } else null,
                 )
-                OutlinedTextField(
+                SafabField(
                     value = commands, onValueChange = { commands = it },
                     label = { Text(stringResource(R.string.script_commands)) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp),
+                    modifier = Modifier.fillMaxWidth(), minLines = 7,
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
                     isError = showErrors && commandsError,
@@ -300,7 +291,7 @@ fun ScriptEditScreen(scriptId: String?, onDone: () -> Unit) {
                         Text(stringResource(if (showErrors && commandsError) R.string.script_no_commands else R.string.script_commands_hint))
                     },
                 )
-                Text(stringResource(R.string.script_mode), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+                Caption(stringResource(R.string.script_mode), Modifier.padding(top = 10.dp))
                 Column(Modifier.selectableGroup()) {
                     RadioRow(mode == RunMode.SEQUENTIAL, { mode = RunMode.SEQUENTIAL }, stringResource(R.string.script_mode_sequential))
                     RadioRow(mode == RunMode.PARALLEL, { mode = RunMode.PARALLEL }, stringResource(R.string.script_mode_parallel))

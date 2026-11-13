@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -33,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -108,7 +106,7 @@ fun ScriptRunScreen(scriptId: String, connectionId: String, onBack: () -> Unit) 
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenHeader(
                 title = {
                     Text(
                         stringResource(R.string.run_title, script?.name.orEmpty(), profile?.title.orEmpty()),
@@ -199,7 +197,7 @@ private fun ResultCard(r: CommandResult) {
                     when (r.status) {
                         CommandStatus.OK -> Icon(Icons.Default.CheckCircle, null, tint = StatusGreen)
                         CommandStatus.FAILED -> Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error)
-                        CommandStatus.RUNNING -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CommandStatus.RUNNING -> SafabLoader(24.dp)
                         CommandStatus.SKIPPED -> Icon(Icons.Default.Clear, null, tint = MaterialTheme.colorScheme.outline)
                         CommandStatus.PENDING -> Text("•", color = MaterialTheme.colorScheme.outline)
                     }

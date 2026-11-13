@@ -23,12 +23,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -141,7 +139,7 @@ fun KeysTab(pendingAction: KeyAction?, onActionHandled: () -> Unit) {
     } else {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 300.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -202,7 +200,7 @@ private fun GenerateKeyDialog(onDismiss: () -> Unit, onCreated: (SshKeyEntry) ->
         title = { Text(stringResource(R.string.key_generate)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+                SafabField(
                     value = name, onValueChange = { name = it }, singleLine = true, enabled = !busy,
                     label = { Text(stringResource(R.string.key_name)) }, modifier = Modifier.fillMaxWidth(),
                     isError = showErrors && name.isBlank(),
@@ -223,7 +221,7 @@ private fun GenerateKeyDialog(onDismiss: () -> Unit, onCreated: (SshKeyEntry) ->
                 }
                 if (busy) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CircularProgressIndicator(Modifier.heightIn(max = 20.dp).padding(2.dp), strokeWidth = 2.dp)
+                        SafabLoader(28.dp)
                         Text(stringResource(R.string.key_generating))
                     }
                 }
@@ -271,16 +269,16 @@ private fun ImportKeyDialog(initialText: String, onDismiss: () -> Unit, onImport
         title = { Text(stringResource(R.string.key_import_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+                SafabField(
                     value = name, onValueChange = { name = it }, singleLine = true,
                     label = { Text(stringResource(R.string.key_name)) }, modifier = Modifier.fillMaxWidth(),
                     isError = showErrors && name.isBlank(),
                     supportingText = if (showErrors && name.isBlank()) { { Text(stringResource(R.string.err_field_required)) } } else null,
                 )
-                OutlinedTextField(
+                SafabField(
                     value = text, onValueChange = { text = it; failure = null },
                     label = { Text(stringResource(R.string.key_private_text)) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp, max = 160.dp),
+                    modifier = Modifier.fillMaxWidth(), minLines = 4, maxLines = 6,
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
                     isError = failure is SshError.BadPrivateKey,

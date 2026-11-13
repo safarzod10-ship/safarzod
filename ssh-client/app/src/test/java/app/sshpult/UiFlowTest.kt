@@ -2,6 +2,7 @@ package app.sshpult
 
 import android.net.Uri
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -80,6 +81,9 @@ class UiFlowTest {
         condition()
     }
 
+    /** The editable part of one of the app's labelled fields. */
+    private fun field(label: String) = rule.onNode(hasSetTextAction() and hasAnyAncestor(hasText(label)))
+
     private fun waitForText(text: String, timeoutMs: Long = 20_000) = rule.waitUntil(timeoutMs) {
         rule.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
@@ -92,11 +96,11 @@ class UiFlowTest {
         rule.onAllNodesWithText("Save")[0].performClick() // validation kicks in
         rule.onAllNodesWithText("Required")[0].assertIsDisplayed()
         snap("validation")
-        rule.onNodeWithText("Name (optional)").performTextInput("Test box")
-        rule.onNodeWithText("Host or IP").performTextInput("127.0.0.1")
-        rule.onNodeWithText("Port").performTextReplacement(server.port.toString())
-        rule.onNodeWithText("Login").performTextInput(server.user)
-        rule.onNode(hasText("Password") and hasSetTextAction()).performTextInput(server.password)
+        field("Name (optional)").performTextInput("Test box")
+        field("Host or IP").performTextInput("127.0.0.1")
+        field("Port").performTextReplacement(server.port.toString())
+        field("Login").performTextInput(server.user)
+        field("Password").performTextInput(server.password)
         snap("new_connection")
         rule.onAllNodesWithText("Save")[0].performClick()
 

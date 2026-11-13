@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ssh-pult"
+rootProject.name = "safab"
 include(":app")

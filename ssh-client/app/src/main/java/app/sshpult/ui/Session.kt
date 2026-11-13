@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,14 +50,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -207,7 +204,7 @@ internal fun StatusBox(
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (progress) CircularProgressIndicator()
+        if (progress) SafabAvatar(76.dp, animated = true)
         if (warning) Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error)
         Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.widthIn(max = 480.dp))
         actions()
@@ -285,7 +282,7 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenHeader(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -353,18 +350,19 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
 
 /** Compact two-or-three way switch: a hairline pill with the active part filled in ink. */
 @Composable
-fun ModeSwitch(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun ModeSwitch(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, fill: Boolean = false) {
     Row(
-        modifier.clip(RoundedCornerShape(10.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp)).padding(3.dp),
+        modifier.then(if (fill) Modifier.fillMaxWidth() else Modifier).clip(RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)).padding(3.dp),
     ) {
         labels.forEachIndexed { i, label ->
             val active = i == selected
             Box(
-                Modifier.clip(RoundedCornerShape(7.dp))
+                Modifier.then(if (fill) Modifier.weight(1f) else Modifier).clip(RoundedCornerShape(9.dp))
                     .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
                     .selectable(selected = active, role = Role.Tab, onClick = { onSelect(i) })
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                    .padding(horizontal = 12.dp, vertical = if (fill) 11.dp else 7.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     label, style = MaterialTheme.typography.labelLarge,

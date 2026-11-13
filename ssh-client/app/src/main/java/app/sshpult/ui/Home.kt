@@ -1,5 +1,15 @@
 package app.sshpult.ui
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -49,17 +58,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,9 +94,8 @@ private enum class HomeTab(val label: Int, val icon: Int) {
 }
 
 /** Padding that keeps the last list item clear of the floating action button. */
-private val ListPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp)
+private val ListPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onOpenSession: (String) -> Unit,
@@ -104,55 +108,57 @@ fun HomeScreen(
     var keyMenu by remember { mutableStateOf(false) }
     var keyAction by remember { mutableStateOf<KeyAction?>(null) }
 
-    // Bottom bar on phones, side rail on tablets / landscape — chosen automatically.
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            HomeTab.entries.forEach { t ->
-                item(
-                    selected = tab == t,
-                    onClick = { tab = t },
-                    icon = { Icon(painterResource(t.icon), contentDescription = null) },
-                    label = { Text(stringResource(t.label)) },
-                )
-            }
-        },
+    Column(
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        Scaffold(
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(tab.label), fontWeight = FontWeight.SemiBold) },
-                    actions = {
-                        IconButton(onClick = { showAbout = true }) {
-                            Icon(Icons.Default.Info, contentDescription = stringResource(R.string.action_about))
-                        }
-                    },
-                )
-            },
-            floatingActionButton = {
-                Box {
-                    FloatingActionButton(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = MaterialTheme.shapes.large,
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                        onClick = {
+        // Brand row: the wordmark opens "About"; "+" adds whatever the current section holds.
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            val about = stringResource(R.string.action_about)
+            SafabWordmark(
+                Modifier.clip(MaterialTheme.shapes.small)
+                    .clickable(onClickLabel = about, role = Role.Button) { showAbout = true }
+                    .padding(vertical = 4.dp, horizontal = 2.dp),
+            )
+            Spacer(Modifier.weight(1f))
+            Box {
+                SquareButton(
+                    R.drawable.ic_plus, stringResource(R.string.action_add), filled = true,
+                    onClick = {
                         when (tab) {
                             HomeTab.CONNECTIONS -> onEditConnection(null)
                             HomeTab.SCRIPTS -> onEditScript(null)
                             HomeTab.KEYS -> keyMenu = true
                         }
-                    }) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add)) }
-                    KeyAddMenu(expanded = keyMenu, onDismiss = { keyMenu = false }, onAction = { keyAction = it })
+                    },
+                )
+                KeyAddMenu(expanded = keyMenu, onDismiss = { keyMenu = false }, onAction = { keyAction = it })
+            }
+        }
+        // Sections as large type: the active one in ink, the others quiet.
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 18.dp, end = 12.dp, top = 14.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom,
+        ) {
+            HomeTab.entries.forEach { t ->
+                val active = t == tab
+                Column(
+                    Modifier.clip(MaterialTheme.shapes.extraSmall).selectable(selected = active, role = Role.Tab, onClick = { tab = t }),
+                    horizontalAlignment = Alignment.Start,
+                ) {
+                    Text(
+                        stringResource(t.label), fontSize = 22.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                    )
+                    Box(Modifier.padding(top = 4.dp).size(width = 18.dp, height = 3.dp).clip(CircleShape).background(if (active) accent else Color.Transparent))
                 }
-            },
-        ) { inner ->
-            Box(Modifier.padding(inner).fillMaxSize()) {
-                when (tab) {
-                    HomeTab.CONNECTIONS -> ConnectionsTab(onOpenSession, onEditConnection)
-                    HomeTab.SCRIPTS -> ScriptsTab(onEditScript, onRunScript)
-                    HomeTab.KEYS -> KeysTab(pendingAction = keyAction, onActionHandled = { keyAction = null })
-                }
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (tab) {
+                HomeTab.CONNECTIONS -> ConnectionsTab(onOpenSession, onEditConnection)
+                HomeTab.SCRIPTS -> ScriptsTab(onEditScript, onRunScript)
+                HomeTab.KEYS -> KeysTab(pendingAction = keyAction, onActionHandled = { keyAction = null })
             }
         }
     }
@@ -165,13 +171,37 @@ private fun AboutDialog(onDismiss: () -> Unit) {
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "1.0"
     }
+    fun openTelegram() {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DEVELOPER_TELEGRAM_URL))) }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.app_name)) },
+        icon = { SafabAvatar(72.dp, animated = true) },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(APP_NAME, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+                Text(
+                    stringResource(R.string.about_version, version), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.about_version, version), style = MaterialTheme.typography.labelLarge)
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(stringResource(R.string.about_text))
+                Panel(Modifier.fillMaxWidth(), onClick = ::openTelegram) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Caption(stringResource(R.string.about_developer))
+                        Text(
+                            "@$DEVELOPER_TELEGRAM", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold,
+                            fontSize = 17.sp, modifier = Modifier.padding(top = 4.dp),
+                        )
+                        Text(
+                            stringResource(R.string.about_telegram), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Text(
                     stringResource(R.string.about_libraries),
                     style = MaterialTheme.typography.bodySmall,
@@ -179,7 +209,8 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+        confirmButton = { Button(onClick = ::openTelegram) { Text(stringResource(R.string.about_write)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
     )
 }
 

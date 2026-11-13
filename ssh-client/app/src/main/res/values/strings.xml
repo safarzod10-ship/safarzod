@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SSH Pult</string>
+    <string name="app_name">SAFAB</string>
     <string name="tab_connections">Servers</string>
     <string name="tab_scripts">Scripts</string>
     <string name="tab_keys">Keys</string>
@@ -185,4 +185,7 @@
     <string name="notif_disconnect">Disconnect all</string>
     <string name="auth_by_key">key</string>
     <string name="host_paste_hint">You can paste login@host:port here — the fields fill in by themselves.</string>
+    <string name="about_developer">Developer · owner · support</string>
+    <string name="about_telegram">Telegram — questions, bugs and ideas</string>
+    <string name="about_write">Message on Telegram</string>
 </resources>

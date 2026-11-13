@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SSH Пульт</string>
+    <string name="app_name">SAFAB</string>
     <string name="tab_connections">Серверы</string>
     <string name="tab_scripts">Скрипты</string>
     <string name="tab_keys">Ключи</string>
@@ -185,4 +185,7 @@
     <string name="notif_disconnect">Отключить все</string>
     <string name="auth_by_key">ключ</string>
     <string name="host_paste_hint">Сюда можно вставить логин@хост:порт — поля заполнятся сами.</string>
+    <string name="about_developer">Разработчик · владелец · поддержка</string>
+    <string name="about_telegram">Telegram — вопросы, ошибки и предложения</string>
+    <string name="about_write">Написать в Telegram</string>
 </resources>

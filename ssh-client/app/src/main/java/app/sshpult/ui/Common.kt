@@ -24,7 +24,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.BorderStroke
@@ -172,7 +171,7 @@ fun copyToClipboard(context: Context, label: String, text: String) {
 @Composable
 fun BackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+        Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.action_back), modifier = Modifier.size(22.dp))
     }
 }
 
@@ -231,7 +230,7 @@ fun SecretField(
     onDone: (() -> Unit)? = null,
 ) {
     var visible by remember { mutableStateOf(false) }
-    OutlinedTextField(
+    SafabField(
         value = value, onValueChange = onValueChange, label = { Text(label) },
         singleLine = true, modifier = modifier, isError = isError,
         supportingText = supportingText?.let { { Text(it) } },

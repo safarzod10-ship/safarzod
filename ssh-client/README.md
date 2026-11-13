@@ -1,4 +1,6 @@
-# SSH Пульт (SSH Pult)
+# SAFAB
+
+<img src="docs/brand/safab-avatar.png" width="96" alt="SAFAB"> &nbsp; <img src="docs/brand/safab-loader.gif" width="96" alt="анимация загрузки">
 
 Бесплатный Android-клиент SSH и SFTP с открытым исходным кодом: терминал, файловый менеджер,
 вход по ключам, сохранённые скрипты. Без рекламы, аналитики, регистрации и платных зависимостей.
@@ -7,11 +9,13 @@
 |---|---|---|---|
 | ![](docs/screenshots/connections.png) | ![](docs/screenshots/terminal.png) | ![](docs/screenshots/terminal_compose.png) | ![](docs/screenshots/connections_dark.png) |
 
-Планшет / альбомная ориентация — боковая панель и сетка карточек:
+Планшет / альбомная ориентация — сетка в несколько колонок:
 
 ![](docs/screenshots/tablet.png)
 
 **Руководство пользователя: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)**
+
+**Разработчик, владелец и поддержка:** Telegram [@bob_proger](https://t.me/bob_proger)
 
 ## Возможности
 
@@ -31,7 +35,7 @@
   код выхода, длительность и вывод каждой команды.
 - Проверка ключа сервера: при первом подключении показывается отпечаток, при его изменении — предупреждение.
 - Пароли и приватные ключи шифруются AES-256-GCM ключом из Android Keystore и не попадают в резервные копии.
-- Минималистичный интерфейс в нейтральной палитре, русский и английский язык, светлая и тёмная темы, адаптация под телефоны, планшеты и альбомную ориентацию.
+- Собственный минималистичный интерфейс (без стандартных панелей Android), фирменный знак с анимацией на загрузках, русский и английский язык, светлая и тёмная темы, адаптация под телефоны, планшеты и альбомную ориентацию.
 
 ## Требования
 
@@ -56,14 +60,14 @@ echo "sdk.dir=/путь/к/android-sdk" > local.properties
 рядом с `settings.gradle.kts` (оба файла исключены из Git — никогда не коммитьте их):
 
 ```bash
-keytool -genkeypair -keystore release.keystore -storetype PKCS12 -alias sshpult \
-        -keyalg RSA -keysize 4096 -validity 10950 -dname "CN=SSH Pult"
+keytool -genkeypair -keystore release.keystore -storetype PKCS12 -alias safab \
+        -keyalg RSA -keysize 4096 -validity 10950 -dname "CN=SAFAB"
 ```
 
 ```properties
 storeFile=release.keystore
 storePassword=...
-keyAlias=sshpult
+keyAlias=safab
 keyPassword=...
 ```
 
@@ -100,6 +104,14 @@ app/src/main/java/app/sshpult/
 Библиотеки (все бесплатные и открытые): [JSch (mwiede)](https://github.com/mwiede/jsch) — BSD,
 [Bouncy Castle](https://www.bouncycastle.org/) — MIT, AndroidX / Jetpack Compose, Kotlin,
 kotlinx.coroutines и kotlinx.serialization — Apache 2.0.
+
+## Фирменный знак
+
+Квадратная «S», написанная одним штрихом, и курсор терминала. Геометрия одна и та же в иконке приложения
+(`res/drawable/ic_launcher_foreground.xml`), в интерфейсе и в анимации загрузки (`ui/Brand.kt`): штрих стирается
+и пишется заново, курсор мигает. Файлы для использования вне приложения — в `docs/brand/`.
+
+Идентификатор пакета остался `app.sshpult`, чтобы новые версии ставились поверх уже установленных.
 
 ## Известные ограничения
 

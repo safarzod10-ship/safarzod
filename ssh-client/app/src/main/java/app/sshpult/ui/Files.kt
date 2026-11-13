@@ -32,7 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -450,7 +449,7 @@ private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, on
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
+            SafabField(
                 value = value, onValueChange = { value = it }, singleLine = true,
                 label = { Text(stringResource(R.string.files_name)) },
                 isError = value.isNotEmpty() && !valid,
