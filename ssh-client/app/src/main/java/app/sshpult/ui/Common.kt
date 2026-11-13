@@ -26,7 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.ImeAction
@@ -57,52 +57,52 @@ import app.sshpult.ssh.SshError
 
 val LocalApp = staticCompositionLocalOf<AppContainer> { error("AppContainer not provided") }
 
-// A deliberately quiet palette: warm paper / graphite neutrals, ink-coloured controls and one
-// vermilion accent. No wallpaper-derived ("dynamic") colours, so the app looks the same everywhere.
+// Warm sand / deep graphite surfaces, soft borderless tiles and the logo's ember orange for actions.
+// Fixed colours (no wallpaper-derived palette), so the app looks the same on every phone.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF161616), onPrimary = Color(0xFFFAFAF7),
-    primaryContainer = Color(0xFFE9E9E2), onPrimaryContainer = Color(0xFF161616),
-    secondary = Color(0xFF55554F), onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE6E6DF), onSecondaryContainer = Color(0xFF161616),
-    tertiary = Color(0xFFD9481F), onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFE3D8), onTertiaryContainer = Color(0xFF3A1004),
-    background = Color(0xFFFAFAF7), onBackground = Color(0xFF161616),
-    surface = Color(0xFFFAFAF7), onSurface = Color(0xFF161616),
-    surfaceVariant = Color(0xFFEFEFE9), onSurfaceVariant = Color(0xFF66665F),
+    primary = Color(0xFFC8401A), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFDCCF), onPrimaryContainer = Color(0xFF3A1004),
+    secondary = Color(0xFF5E5A53), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE9E5DD), onSecondaryContainer = Color(0xFF171715),
+    tertiary = Color(0xFFE2531F), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFDCCF), onTertiaryContainer = Color(0xFF3A1004),
+    background = Color(0xFFF2EFE9), onBackground = Color(0xFF171715),
+    surface = Color(0xFFF2EFE9), onSurface = Color(0xFF171715),
+    surfaceVariant = Color(0xFFE9E5DD), onSurfaceVariant = Color(0xFF6F6B63),
     surfaceTint = Color.Transparent,
-    outline = Color(0xFFB4B4AB), outlineVariant = Color(0xFFE0E0D8),
-    error = Color(0xFFC62828), onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFCE4E4), onErrorContainer = Color(0xFF5F1010),
-    inverseSurface = Color(0xFF1C1C1A), inverseOnSurface = Color(0xFFF4F4EF), inversePrimary = Color(0xFFEDEDE8),
-    surfaceBright = Color(0xFFFFFFFF), surfaceDim = Color(0xFFE4E4DD),
-    surfaceContainerLowest = Color(0xFFFFFFFF), surfaceContainerLow = Color(0xFFF6F6F2),
-    surfaceContainer = Color(0xFFF2F2ED), surfaceContainerHigh = Color(0xFFECECE6),
-    surfaceContainerHighest = Color(0xFFE6E6DF),
+    outline = Color(0xFFA9A49A), outlineVariant = Color(0xFFDDD8CE),
+    error = Color(0xFFB3261E), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFBE3E0), onErrorContainer = Color(0xFF5F1010),
+    inverseSurface = Color(0xFF1C1C1A), inverseOnSurface = Color(0xFFF2EFE9), inversePrimary = Color(0xFFFF8A5C),
+    surfaceBright = Color(0xFFFFFFFF), surfaceDim = Color(0xFFE4DFD6),
+    surfaceContainerLowest = Color(0xFFFFFFFF), surfaceContainerLow = Color(0xFFF7F5F0),
+    surfaceContainer = Color(0xFFECE8E0), surfaceContainerHigh = Color(0xFFFBFAF7),
+    surfaceContainerHighest = Color(0xFFE4DFD6),
 )
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFEDEDE8), onPrimary = Color(0xFF0C0C0B),
-    primaryContainer = Color(0xFF2A2A28), onPrimaryContainer = Color(0xFFEDEDE8),
-    secondary = Color(0xFFB5B5AE), onSecondary = Color(0xFF0C0C0B),
-    secondaryContainer = Color(0xFF2A2A28), onSecondaryContainer = Color(0xFFEDEDE8),
-    tertiary = Color(0xFFFF7A4D), onTertiary = Color(0xFF2B0B00),
+    primary = Color(0xFFFF8A5C), onPrimary = Color(0xFF1F0D05),
+    primaryContainer = Color(0xFF4A1C0B), onPrimaryContainer = Color(0xFFFFDACC),
+    secondary = Color(0xFFB8B3AA), onSecondary = Color(0xFF0D0D0C),
+    secondaryContainer = Color(0xFF2C2C29), onSecondaryContainer = Color(0xFFF2EFE9),
+    tertiary = Color(0xFFFF8A5C), onTertiary = Color(0xFF1F0D05),
     tertiaryContainer = Color(0xFF4A1C0B), onTertiaryContainer = Color(0xFFFFDACC),
-    background = Color(0xFF0C0C0B), onBackground = Color(0xFFEDEDE8),
-    surface = Color(0xFF0C0C0B), onSurface = Color(0xFFEDEDE8),
-    surfaceVariant = Color(0xFF1E1E1C), onSurfaceVariant = Color(0xFF96968F),
+    background = Color(0xFF0D0D0C), onBackground = Color(0xFFF2EFE9),
+    surface = Color(0xFF0D0D0C), onSurface = Color(0xFFF2EFE9),
+    surfaceVariant = Color(0xFF232321), onSurfaceVariant = Color(0xFF9A968E),
     surfaceTint = Color.Transparent,
-    outline = Color(0xFF55554F), outlineVariant = Color(0xFF2A2A28),
+    outline = Color(0xFF5E5B55), outlineVariant = Color(0xFF2C2C29),
     error = Color(0xFFFF6B6B), onError = Color(0xFF3A0000),
     errorContainer = Color(0xFF4A1414), onErrorContainer = Color(0xFFFFDAD6),
-    inverseSurface = Color(0xFFEDEDE8), inverseOnSurface = Color(0xFF161616), inversePrimary = Color(0xFF161616),
-    surfaceBright = Color(0xFF2A2A28), surfaceDim = Color(0xFF0C0C0B),
-    surfaceContainerLowest = Color(0xFF131312), surfaceContainerLow = Color(0xFF161615),
-    surfaceContainer = Color(0xFF1A1A18), surfaceContainerHigh = Color(0xFF212120),
-    surfaceContainerHighest = Color(0xFF2A2A28),
+    inverseSurface = Color(0xFFF2EFE9), inverseOnSurface = Color(0xFF171715), inversePrimary = Color(0xFFC8401A),
+    surfaceBright = Color(0xFF2C2C29), surfaceDim = Color(0xFF0D0D0C),
+    surfaceContainerLowest = Color(0xFF1A1A18), surfaceContainerLow = Color(0xFF151514),
+    surfaceContainer = Color(0xFF1E1E1C), surfaceContainerHigh = Color(0xFF232321),
+    surfaceContainerHighest = Color(0xFF2C2C29),
 )
 
 private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp), small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(12.dp),
-    large = RoundedCornerShape(14.dp), extraLarge = RoundedCornerShape(18.dp),
+    extraSmall = RoundedCornerShape(10.dp), small = RoundedCornerShape(14.dp), medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(24.dp), extraLarge = RoundedCornerShape(30.dp),
 )
 
 @Composable
@@ -129,14 +129,14 @@ object TerminalColors {
     val line = Color(0xFF262624)
 }
 
-/** Flat, hairline-bordered container used instead of shadowed cards. */
+/** Soft tile: no outline, generous radius; lifted by a faint shadow on the light theme. */
 @Composable
 fun Panel(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    val shape = MaterialTheme.shapes.medium
-    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    val shape = RoundedCornerShape(22.dp)
     val color = MaterialTheme.colorScheme.surfaceContainerLowest
-    if (onClick != null) Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, border = border, content = content)
-    else Surface(modifier = modifier, shape = shape, color = color, border = border, content = content)
+    val lifted = modifier.shadow(if (isSystemInDarkTheme()) 0.dp else 10.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x1F3A2A14))
+    if (onClick != null) Surface(onClick = onClick, modifier = lifted, shape = shape, color = color, content = content)
+    else Surface(modifier = lifted, shape = shape, color = color, content = content)
 }
 
 /** Human-readable, localized explanation of a failure. */
@@ -170,9 +170,7 @@ fun copyToClipboard(context: Context, label: String, text: String) {
 
 @Composable
 fun BackButton(onBack: () -> Unit) {
-    IconButton(onClick = onBack) {
-        Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.action_back), modifier = Modifier.size(22.dp))
-    }
+    RoundButton(R.drawable.ic_back, stringResource(R.string.action_back), onBack, Modifier.padding(start = 10.dp))
 }
 
 /** Centers content and keeps it at a comfortable reading width on tablets and foldables. */
@@ -195,7 +193,7 @@ fun EmptyState(@DrawableRes icon: Int, title: String, text: String, modifier: Mo
             modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(16.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
         Text(
             text, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,

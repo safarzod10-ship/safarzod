@@ -11,7 +11,13 @@ import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import app.sshpult.ui.SplashOverlay
 import app.sshpult.ui.AppNav
 import app.sshpult.ui.LocalApp
 import app.sshpult.ui.SshPultTheme
@@ -34,7 +40,14 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             SshPultTheme {
-                CompositionLocalProvider(LocalApp provides container) { AppNav() }
+                CompositionLocalProvider(LocalApp provides container) {
+                    // Saved across rotation, so the intro plays once per cold start.
+                    var intro by rememberSaveable { mutableStateOf(true) }
+                    Box {
+                        AppNav()
+                        if (intro) SplashOverlay(onFinished = { intro = false })
+                    }
+                }
             }
         }
     }

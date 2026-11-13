@@ -135,17 +135,17 @@ fun KeysTab(pendingAction: KeyAction?, onActionHandled: () -> Unit) {
     }
 
     if (data.keys.isEmpty()) {
-        EmptyState(R.drawable.ic_key, stringResource(R.string.keys_empty_title), stringResource(R.string.keys_empty_text))
+        EmptyState(R.drawable.ic_key, stringResource(R.string.keys_empty_title), stringResource(R.string.keys_empty_text), Modifier.padding(bottom = 96.dp))
     } else {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 300.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 120.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(data.keys, key = { it.id }) { k ->
                 Panel(Modifier.fillMaxWidth(), onClick = { showPublic = k }) {
-                    Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+                    Column(Modifier.padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 6.dp)) {
                         Text(k.name, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(k.type, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(

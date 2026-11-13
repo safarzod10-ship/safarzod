@@ -330,7 +330,6 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
         },
     ) { inner ->
         Column(Modifier.padding(inner).consumeWindowInsets(inner).imePadding().fillMaxSize()) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             ConnectionGate(profileId, onClose = onBack) { session, _ ->
                 if (tab == 0) TerminalPane(session) else FilesPane(session)
             }
@@ -348,25 +347,25 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
     }
 }
 
-/** Compact two-or-three way switch: a hairline pill with the active part filled in ink. */
+/** Compact switch: a soft tile with the active part as an ink pill. */
 @Composable
 fun ModeSwitch(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, fill: Boolean = false) {
     Row(
-        modifier.then(if (fill) Modifier.fillMaxWidth() else Modifier).clip(RoundedCornerShape(12.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)).padding(3.dp),
+        modifier.then(if (fill) Modifier.fillMaxWidth() else Modifier).clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest).padding(4.dp),
     ) {
         labels.forEachIndexed { i, label ->
             val active = i == selected
             Box(
-                Modifier.then(if (fill) Modifier.weight(1f) else Modifier).clip(RoundedCornerShape(9.dp))
-                    .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
+                Modifier.then(if (fill) Modifier.weight(1f) else Modifier).clip(CircleShape)
+                    .background(if (active) MaterialTheme.colorScheme.onSurface else Color.Transparent)
                     .selectable(selected = active, role = Role.Tab, onClick = { onSelect(i) })
-                    .padding(horizontal = 12.dp, vertical = if (fill) 11.dp else 7.dp),
+                    .padding(horizontal = 14.dp, vertical = if (fill) 13.dp else 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    label, style = MaterialTheme.typography.labelLarge,
-                    color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
+                    color = if (active) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

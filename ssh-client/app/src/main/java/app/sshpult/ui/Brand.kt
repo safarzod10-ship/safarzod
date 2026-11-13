@@ -20,7 +20,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -80,8 +84,8 @@ private const val NODE_Y = 164f
 private const val NODE_R = 26f
 private val Paper = Color(0xFFFAFAF7)
 private val PaperShade = Color(0xFFE2DFD6)
-private val NodeLight = Color(0xFFFF9A6B)
-private val NodeDeep = Color(0xFFF04E23)
+internal val NodeLight = Color(0xFFFF9A6B)
+internal val NodeDeep = Color(0xFFF04E23)
 
 /** The ribbon from its head (top right, next to the node) to its tail (bottom left). */
 private fun ribbon(scale: Float, ox: Float, oy: Float): Path = Path().apply {
@@ -164,7 +168,7 @@ fun SafabLoader(
 ) {
     val transition = rememberInfiniteTransition(label = "safab")
     val t by transition.animateFloat(
-        0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart), label = "phase",
+        0f, 1f, infiniteRepeatable(tween(4400, easing = LinearEasing), RepeatMode.Restart), label = "phase",
     )
     fun span(from: Float, to: Float) = ((t - from) / (to - from)).coerceIn(0f, 1f)
     val ease = FastOutSlowInEasing
@@ -192,7 +196,7 @@ fun SafabMarkIntro(size: Dp, modifier: Modifier = Modifier, color: Color = Mater
     val progress = remember { Animatable(1f) }
     LaunchedEffect(Unit) {
         progress.snapTo(0f)
-        progress.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
+        progress.animateTo(1f, tween(2000, easing = FastOutSlowInEasing))
     }
     val p = progress.value
     SafabMark(modifier.size(size), color, drawn = (p / 0.8f).coerceAtMost(1f), node = ((p - 0.75f) / 0.25f).coerceIn(0f, 1f))
@@ -211,9 +215,51 @@ fun SafabWordmark(modifier: Modifier = Modifier) {
     }
 }
 
-// ---- Own building blocks instead of the stock Material ones -----------------------------------
+/**
+ * Launch screen: on the logo's graphite field the ribbon is drawn, the node lights up, the name
+ * fades in — then the whole thing dissolves into the app. Runs once per cold start.
+ */
+@Composable
+fun SplashOverlay(onFinished: () -> Unit) {
+    val progress = remember { Animatable(0f) }
+    val fade = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, tween(2600, easing = LinearEasing))
+        fade.animateTo(0f, tween(500))
+        onFinished()
+    }
+    val p = progress.value
+    fun span(from: Float, to: Float) = ((p - from) / (to - from)).coerceIn(0f, 1f)
+    val pop = span(0.56f, 0.74f)
+    Box(
+        Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }
+            .background(Brush.verticalGradient(listOf(Color(0xFF242422), Color(0xFF0B0B0A))))
+            // swallow touches while the intro is on screen
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            SafabMark(
+                Modifier.size(168.dp), shaded = true,
+                drawn = FastOutSlowInEasing.transform(span(0.06f, 0.58f)),
+                node = if (pop <= 0f) 0f else FastOutSlowInEasing.transform(pop) + 0.28f * kotlin.math.sin(pop * Math.PI).toFloat() * (1f - pop),
+                glow = 0.5f + 0.5f * kotlin.math.sin(span(0.58f, 0.92f) * Math.PI).toFloat(),
+            )
+            Text(
+                APP_NAME, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 22.sp,
+                letterSpacing = 9.sp, color = Color(0xFFF2EFE9),
+                modifier = Modifier.padding(start = 9.dp).graphicsLayer {
+                    alpha = span(0.66f, 0.88f)
+                    translationY = (1f - span(0.66f, 0.88f)) * 14.dp.toPx()
+                },
+            )
+        }
+    }
+}
 
-/** Plain screen header: back, title, actions. No tinting, no elevation. */
+// ---- Own building blocks ----------------------------------------------------------------------
+
+/** Screen header: round back tile, bold title, actions. */
 @Composable
 fun ScreenHeader(
     title: @Composable () -> Unit,
@@ -223,38 +269,37 @@ fun ScreenHeader(
 ) {
     Row(
         modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).statusBarsPadding()
-            .heightIn(min = 56.dp).padding(horizontal = 4.dp),
+            .heightIn(min = 64.dp).padding(end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         navigationIcon()
-        Box(Modifier.weight(1f).padding(start = 8.dp, end = 8.dp)) {
-            ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 20.sp)) { title() }
+        Box(Modifier.weight(1f).padding(start = 14.dp, end = 8.dp)) {
+            ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 21.sp)) { title() }
         }
         Row(verticalAlignment = Alignment.CenterVertically, content = actions)
     }
 }
 
-/** Square icon button with a hairline frame (or solid ink when [filled]). */
+/** Round tile button; [filled] makes it the ember-coloured primary action. */
 @Composable
-fun SquareButton(
+fun RoundButton(
     icon: Int, description: String, onClick: () -> Unit,
-    modifier: Modifier = Modifier, filled: Boolean = false, enabled: Boolean = true,
+    modifier: Modifier = Modifier, filled: Boolean = false, enabled: Boolean = true, size: Dp = 44.dp,
 ) {
-    val shape = RoundedCornerShape(12.dp)
     val scheme = MaterialTheme.colorScheme
     Box(
-        modifier.size(44.dp).clip(shape)
-            .then(if (filled) Modifier.background(scheme.primary) else Modifier.border(1.dp, scheme.outlineVariant, shape))
+        modifier.size(size).clip(CircleShape)
+            .background(if (filled) Brush.linearGradient(listOf(NodeLight, NodeDeep)) else SolidColor(scheme.surfaceContainerLowest))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(painterResource(icon), description, Modifier.size(20.dp), tint = if (filled) scheme.onPrimary else scheme.onSurface)
+        Icon(painterResource(icon), description, Modifier.size(size * 0.46f), tint = if (filled) Color(0xFF1F0D05) else scheme.onSurface)
     }
 }
 
 /**
- * Text field in the app's own style: a small caption above a flat, hairline-framed box that
- * turns ink-coloured when focused. Parameters mirror the Material text field it replaces.
+ * Text field in the app's own style: a soft tile with a small caption inside it, ringed in
+ * ember when focused. Parameters mirror the Material text field it replaces.
  */
 @Composable
 fun SafabField(
@@ -278,48 +323,50 @@ fun SafabField(
     val scheme = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val frame = when {
+    val ring = when {
         isError -> scheme.error
-        focused -> scheme.primary
-        else -> scheme.outlineVariant
+        focused -> accent
+        else -> Color.Transparent
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(18.dp)
     // Caption, box and helper text form one unit for accessibility services (and UI tests).
     Column(modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (label != null) {
-            CompositionLocalProvider(LocalContentColor provides if (isError) scheme.error else scheme.onSurfaceVariant) {
-                ProvideTextStyle(MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.4.sp)) {
-                    Box(Modifier.padding(start = 2.dp)) { label() }
-                }
-            }
-        }
         Row(
             Modifier.fillMaxWidth().clip(shape).background(scheme.surfaceContainerLowest)
-                .border(if (focused || isError) 1.5.dp else 1.dp, frame, shape)
-                .heightIn(min = 50.dp).padding(start = 14.dp, end = if (trailingIcon != null) 2.dp else 14.dp),
-            verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
+                .border(1.5.dp, ring, shape)
+                .heightIn(min = 60.dp).padding(start = 16.dp, end = if (trailingIcon != null) 4.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.weight(1f).padding(vertical = 13.dp), contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart) {
-                if (value.isEmpty() && placeholder != null) {
-                    CompositionLocalProvider(LocalContentColor provides scheme.outline) {
-                        ProvideTextStyle(textStyle.merge(TextStyle(fontSize = 16.sp))) { placeholder() }
+            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                if (label != null) {
+                    CompositionLocalProvider(LocalContentColor provides if (isError) scheme.error else scheme.onSurfaceVariant) {
+                        ProvideTextStyle(MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.3.sp, fontSize = 11.5.sp)) { label() }
                     }
+                    Spacer(Modifier.size(3.dp))
                 }
-                BasicTextField(
-                    value = value, onValueChange = onValueChange, enabled = enabled, singleLine = singleLine,
-                    minLines = minLines, maxLines = maxLines,
-                    textStyle = TextStyle(fontSize = 16.sp).merge(textStyle).copy(color = if (enabled) scheme.onSurface else scheme.outline),
-                    cursorBrush = SolidColor(accent),
-                    keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
-                    visualTransformation = visualTransformation, interactionSource = interaction,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Box {
+                    if (value.isEmpty() && placeholder != null) {
+                        CompositionLocalProvider(LocalContentColor provides scheme.outline) {
+                            ProvideTextStyle(textStyle.merge(TextStyle(fontSize = 16.sp))) { placeholder() }
+                        }
+                    }
+                    BasicTextField(
+                        value = value, onValueChange = onValueChange, enabled = enabled, singleLine = singleLine,
+                        minLines = minLines, maxLines = maxLines,
+                        textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium).merge(textStyle)
+                            .copy(color = if (enabled) scheme.onSurface else scheme.outline),
+                        cursorBrush = SolidColor(accent),
+                        keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
+                        visualTransformation = visualTransformation, interactionSource = interaction,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             if (trailingIcon != null) trailingIcon()
         }
         if (supportingText != null) {
             CompositionLocalProvider(LocalContentColor provides if (isError) scheme.error else scheme.onSurfaceVariant) {
-                ProvideTextStyle(MaterialTheme.typography.bodySmall) { Box(Modifier.padding(start = 2.dp)) { supportingText() } }
+                ProvideTextStyle(MaterialTheme.typography.bodySmall) { Box(Modifier.padding(start = 16.dp, end = 8.dp)) { supportingText() } }
             }
         }
     }

@@ -65,6 +65,20 @@ class ScreenshotTest {
         shot("${prefix}_6_connection_edit")
     }
 
+    /** The launch intro: captured mid-way and at the end, then it must get out of the way. */
+    @Config(qualifiers = "ru-w411dp-h891dp-420dpi")
+    @Test fun launchIntro() {
+        rule.mainClock.autoAdvance = false
+        rule.mainClock.advanceTimeBy(1100)
+        captureScreenRoboImage("build/screenshots/layout/intro_1.png")
+        rule.mainClock.advanceTimeBy(1300)
+        captureScreenRoboImage("build/screenshots/layout/intro_2.png")
+        rule.mainClock.autoAdvance = true
+        rule.onNodeWithText("Серверов пока нет").assertExists()
+        rule.onNodeWithContentDescription("Добавить").performClick()
+        rule.onNodeWithText("Новый сервер").assertExists()
+    }
+
     @Config(qualifiers = "ru-w411dp-h891dp-420dpi")
     @Test fun phoneRussian() = tour("phone_ru", "Добавить", "Скрипты", "Ключи", "Обновление системы")
 
