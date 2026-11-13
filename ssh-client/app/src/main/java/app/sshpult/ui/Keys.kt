@@ -26,7 +26,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -147,9 +146,9 @@ fun KeysTab(pendingAction: KeyAction?, onActionHandled: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(data.keys, key = { it.id }) { k ->
-                ElevatedCard(onClick = { showPublic = k }, modifier = Modifier.fillMaxWidth()) {
+                Panel(Modifier.fillMaxWidth(), onClick = { showPublic = k }) {
                     Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
-                        Text(k.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(k.name, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(k.type, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             k.fingerprint, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace,

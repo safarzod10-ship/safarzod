@@ -100,6 +100,24 @@ class AppRepository(
         else d.copy(connections = d.connections.map { if (it.id == saved.id) saved else it })
     }
 
+    /** Returns the saved profile for this login/host/port, creating a password-less one if needed. */
+    fun findOrCreateConnection(target: QuickTarget): ConnectionProfile {
+        _data.value.connections.firstOrNull {
+            it.username == target.username && it.host.equals(target.host, ignoreCase = true) && it.port == target.port
+        }?.let { return it }
+        val created = ConnectionProfile(newId(), "", target.host, target.port, target.username)
+        saveConnection(created, "")
+        return created
+    }
+
+    /** Stores [password] for an existing password-auth profile ("remember password" at sign-in). */
+    fun rememberPassword(id: String, password: String) {
+        val profile = connection(id) ?: return
+        if (profile.authType == AuthType.PASSWORD && password.isNotEmpty()) saveConnection(profile, password)
+    }
+
+    fun setTerminalDirectInput(direct: Boolean) = update { it.copy(settings = it.settings.copy(terminalDirectInput = direct)) }
+
     fun deleteConnection(id: String) = update { d -> d.copy(connections = d.connections.filterNot { it.id == id }) }
 
     fun duplicateConnection(id: String, nameSuffix: String) = update { d ->

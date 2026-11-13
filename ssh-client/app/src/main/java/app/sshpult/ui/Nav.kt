@@ -29,7 +29,10 @@ fun AppNav() {
             )
         }
         composable("connection?id={id}", arguments = optionalId) { entry ->
-            ConnectionEditScreen(entry.arguments?.getString("id"), onDone = nav::back)
+            ConnectionEditScreen(
+                entry.arguments?.getString("id"), onDone = nav::back,
+                onConnect = { id -> nav.back(); nav.go("session/$id") },
+            )
         }
         composable("script?id={id}", arguments = optionalId) { entry ->
             ScriptEditScreen(entry.arguments?.getString("id"), onDone = nav::back)

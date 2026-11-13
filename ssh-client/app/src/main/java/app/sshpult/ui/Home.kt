@@ -1,5 +1,26 @@
 package app.sshpult.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.sp
+import app.sshpult.data.QuickTarget
+import app.sshpult.data.parseQuickTarget
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +47,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
@@ -101,7 +121,7 @@ fun HomeScreen(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(tab.label)) },
+                    title = { Text(stringResource(tab.label), fontWeight = FontWeight.SemiBold) },
                     actions = {
                         IconButton(onClick = { showAbout = true }) {
                             Icon(Icons.Default.Info, contentDescription = stringResource(R.string.action_about))
@@ -111,7 +131,12 @@ fun HomeScreen(
             },
             floatingActionButton = {
                 Box {
-                    FloatingActionButton(onClick = {
+                    FloatingActionButton(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = MaterialTheme.shapes.large,
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                        onClick = {
                         when (tab) {
                             HomeTab.CONNECTIONS -> onEditConnection(null)
                             HomeTab.SCRIPTS -> onEditScript(null)
@@ -168,28 +193,32 @@ private fun ConnectionsTab(onOpen: (String) -> Unit, onEdit: (String?) -> Unit) 
     var deleting by remember { mutableStateOf<ConnectionProfile?>(null) }
     val copySuffix = stringResource(R.string.copy_suffix)
 
-    if (data.connections.isEmpty()) {
-        EmptyState(
-            R.drawable.ic_server,
-            stringResource(R.string.connections_empty_title),
-            stringResource(R.string.connections_empty_text),
-        )
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 300.dp),
-            contentPadding = ListPadding,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(data.connections, key = { it.id }) { c ->
-                ConnectionCard(
-                    profile = c,
-                    online = c.id in online,
-                    onOpen = { onOpen(c.id) },
-                    onEdit = { onEdit(c.id) },
-                    onDuplicate = { app.repository.duplicateConnection(c.id, copySuffix) },
-                    onDelete = { deleting = c },
-                )
+    Column(Modifier.fillMaxSize()) {
+        QuickConnectBar(onConnect = { onOpen(app.repository.findOrCreateConnection(it).id) })
+        if (data.connections.isEmpty()) {
+            EmptyState(
+                R.drawable.ic_server,
+                stringResource(R.string.connections_empty_title),
+                stringResource(R.string.connections_empty_text),
+            )
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 300.dp),
+                contentPadding = ListPadding,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // open sessions first, then the saved order
+                items(data.connections.sortedByDescending { it.id in online }, key = { it.id }) { c ->
+                    ConnectionRow(
+                        profile = c,
+                        online = c.id in online,
+                        onOpen = { onOpen(c.id) },
+                        onEdit = { onEdit(c.id) },
+                        onDuplicate = { app.repository.duplicateConnection(c.id, copySuffix) },
+                        onDelete = { deleting = c },
+                    )
+                }
             }
         }
     }
@@ -208,45 +237,110 @@ private fun ConnectionsTab(onOpen: (String) -> Unit, onEdit: (String?) -> Unit) 
     }
 }
 
+/** One line to get in: `login@host[:port]`, Enter. The server is saved for next time. */
 @Composable
-private fun ConnectionCard(
+private fun QuickConnectBar(onConnect: (QuickTarget) -> Unit) {
+    var text by rememberSaveable { mutableStateOf("") }
+    var invalid by rememberSaveable { mutableStateOf(false) }
+    fun go() {
+        val target = parseQuickTarget(text)
+        if (target == null) invalid = true
+        else {
+            text = ""
+            invalid = false
+            onConnect(target)
+        }
+    }
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 6.dp)) {
+        Surface(
+            shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            border = BorderStroke(1.dp, if (invalid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Row(Modifier.heightIn(min = 52.dp).padding(start = 14.dp, end = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("❯", color = accent, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(Modifier.width(10.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (text.isEmpty()) {
+                        Text(
+                            stringResource(R.string.quick_hint), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    val label = stringResource(R.string.quick_title)
+                    BasicTextField(
+                        value = text, onValueChange = { text = it; invalid = false }, singleLine = true,
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontFamily = FontFamily.Monospace, fontSize = 15.sp),
+                        cursorBrush = SolidColor(accent),
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false,
+                            keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go,
+                        ),
+                        keyboardActions = KeyboardActions(onGo = { go() }),
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
+                    )
+                }
+                Box(
+                    Modifier.size(42.dp).clip(MaterialTheme.shapes.small)
+                        .background(if (text.isBlank()) Color.Transparent else MaterialTheme.colorScheme.primary)
+                        .clickable(enabled = text.isNotBlank(), onClick = ::go),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_arrow_right), stringResource(R.string.action_connect), Modifier.size(20.dp),
+                        tint = if (text.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            }
+        }
+        if (invalid) {
+            Text(
+                stringResource(R.string.quick_invalid), color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 14.dp, top = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConnectionRow(
     profile: ConnectionProfile, online: Boolean,
     onOpen: () -> Unit, onEdit: () -> Unit, onDuplicate: () -> Unit, onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    ElevatedCard(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                shape = CircleShape,
-                color = if (online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = if (online) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painterResource(if (profile.authType == AuthType.KEY) R.drawable.ic_key else R.drawable.ic_terminal),
-                        contentDescription = null, modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.width(16.dp))
+    Panel(Modifier.fillMaxWidth(), onClick = onOpen) {
+        Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(9.dp).clip(CircleShape)
+                    .then(
+                        if (online) Modifier.background(StatusGreen)
+                        else Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                    ),
+            )
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(profile.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    profile.address, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    profile.name.ifBlank { profile.address }, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    fontFamily = if (profile.name.isBlank()) FontFamily.Monospace else null,
                 )
-                if (online) {
+                val details = buildList {
+                    if (profile.name.isNotBlank()) add(profile.address)
+                    if (profile.authType == AuthType.KEY) add(stringResource(R.string.auth_by_key))
+                    if (online) add(stringResource(R.string.connection_online).lowercase())
+                }.joinToString(" · ")
+                if (details.isNotEmpty()) {
                     Text(
-                        stringResource(R.string.connection_online),
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                        details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
             Box {
                 IconButton(onClick = { menu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
+                    Icon(
+                        Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.action_edit)) }, onClick = { menu = false; onEdit() })
@@ -276,22 +370,22 @@ private fun ScriptsTab(onEdit: (String?) -> Unit, onRun: (String, String) -> Uni
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = ListPadding,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(data.scripts, key = { it.id }) { s ->
                 val count = remember(s.commands) { ScriptRunner.parse(s.commands).size }
-                ElevatedCard(onClick = { onEdit(s.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Panel(Modifier.fillMaxWidth(), onClick = { onEdit(s.id) }) {
+                    Row(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(s.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(s.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
                                 stringResource(
                                     if (s.mode == RunMode.PARALLEL) R.string.script_commands_count_par
                                     else R.string.script_commands_count_seq,
                                     count,
                                 ),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

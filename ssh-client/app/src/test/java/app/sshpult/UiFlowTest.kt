@@ -5,7 +5,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -82,7 +86,7 @@ class UiFlowTest {
 
     @Test fun connectRunCommandBrowseFilesAndRunScript() {
         // -- empty first launch, create a connection
-        rule.onNodeWithText("No connections yet").assertIsDisplayed()
+        rule.onNodeWithText("No servers yet").assertIsDisplayed()
         snap("empty")
         rule.onNodeWithContentDescription("Add").performClick()
         rule.onAllNodesWithText("Save")[0].performClick() // validation kicks in
@@ -91,7 +95,7 @@ class UiFlowTest {
         rule.onNodeWithText("Name (optional)").performTextInput("Test box")
         rule.onNodeWithText("Host or IP").performTextInput("127.0.0.1")
         rule.onNodeWithText("Port").performTextReplacement(server.port.toString())
-        rule.onNodeWithText("Username").performTextInput(server.user)
+        rule.onNodeWithText("Login").performTextInput(server.user)
         rule.onNode(hasText("Password") and hasSetTextAction()).performTextInput(server.password)
         snap("new_connection")
         rule.onAllNodesWithText("Save")[0].performClick()
@@ -102,13 +106,28 @@ class UiFlowTest {
         snap("host_key")
         rule.onNodeWithText("Trust and connect").performClick()
 
-        // -- terminal
+        // -- terminal, typing straight into it (default mode): keystrokes go to the shell one by one
         waitForText("Terminal")
-        rule.waitUntil(20_000) { rule.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
-        rule.onNode(hasSetTextAction()).performTextInput("echo ui-\$((40+2))")
-        rule.onNodeWithContentDescription("Send").performClick()
+        rule.waitUntil(20_000) { rule.onAllNodesWithTag("direct-input").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("direct-input").performTextInput("echo ui-")
+        rule.onNodeWithTag("direct-input").performTextInput("\$((40+2))")
+        rule.onNodeWithTag("direct-input").performImeAction()
         waitForText("ui-42")
-        snap("terminal")
+        snap("terminal_direct")
+        // Ctrl is sticky: "ctrl" then a letter sends the control byte, here Ctrl+D ends the shell
+        // -- separate input field
+        rule.onNodeWithContentDescription("Switch to separate input field").performClick()
+        rule.onNodeWithTag("compose-input").performTextInput("echo compose-\$((50+5))")
+        snap("terminal_compose_typing")
+        rule.onNodeWithContentDescription("Send").performClick()
+        waitForText("compose-55")
+        // history suggestion appears while typing a similar command
+        rule.onNodeWithTag("compose-input").performTextInput("echo")
+        waitForText("echo compose-\$((50+5))")
+        snap("terminal_compose_history")
+        rule.onNodeWithTag("compose-input").performTextClearance()
+        assertFalse((RuntimeEnvironment.getApplication() as App).container.repository.data.value.settings.terminalDirectInput)
+        rule.onNodeWithContentDescription("Switch to typing in the terminal").performClick()
 
         // -- files
         rule.onNodeWithText("Files").performClick()
@@ -141,7 +160,7 @@ class UiFlowTest {
         // -- back on the home screen the connection is marked as open
         rule.onNodeWithContentDescription("Back").performClick()
         rule.onNodeWithContentDescription("Back").performClick()
-        waitForText("Connected")
+        waitForText("connected")
         snap("home_connected")
     }
 
@@ -160,6 +179,29 @@ class UiFlowTest {
         // (Dialogs that contain a text field cannot be driven here: a stock AlertDialog with an
         // OutlinedTextField never reports "idle" under Robolectric. Their logic is covered below
         // through the view model and in RepositoryTest.)
+    }
+
+    @Test fun quickConnectLineCreatesTheServerAndOpensIt() {
+        val application = RuntimeEnvironment.getApplication() as App
+        val repo = application.container.repository
+        rule.onNodeWithContentDescription("Quick connect").performTextInput("not a target")
+        rule.onNodeWithContentDescription("Quick connect").performImeAction()
+        waitForText("Type it as login@host")
+        assertTrue(repo.data.value.connections.isEmpty())
+        rule.onNodeWithContentDescription("Quick connect").performTextClearance()
+        rule.onNodeWithContentDescription("Quick connect").performTextInput("${server.user}@127.0.0.1:${server.port}")
+        rule.onNodeWithContentDescription("Quick connect").performImeAction()
+        // (the password prompt that opens next is a dialog with a text field, see the note above)
+        await { repo.data.value.connections.size == 1 }
+        val created = repo.data.value.connections.single()
+        assertEquals(server.user, created.username)
+        assertEquals(server.port, created.port)
+        // the typed password is remembered only after it really opened the session
+        val session = application.container.sessions.session(created.id)
+        session.connect(repo.targetFor(created, server.password))
+        await { session.state.value is ConnState.Failed }
+        session.trustHostKeyAndRetry(((session.state.value as ConnState.Failed).error as SshError.UnknownHostKey).key)
+        await { session.state.value is ConnState.Connected }
     }
 
     @Test fun serverDownShowsConnectionRefused() {

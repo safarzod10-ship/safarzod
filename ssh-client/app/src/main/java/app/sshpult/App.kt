@@ -9,6 +9,7 @@ import app.sshpult.ssh.SshConnector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 
 /** App-wide singletons. Created once per process; screens reach them through LocalApp. */
@@ -27,6 +28,13 @@ open class App : Application() {
         super.onCreate()
         SshConnector.useBundledCrypto()
         container = AppContainer(AppRepository(File(filesDir, "data.json"), createCipher()))
+        // While any session is open, a foreground service keeps the connections alive in the background.
+        container.scope.launch {
+            container.sessions.connectedIds.collect { ids ->
+                val names = ids.mapNotNull { container.repository.connection(it)?.title }
+                SessionService.sync(this@App, names)
+            }
+        }
     }
 
     /** Overridden in tests, where the Android Keystore does not exist. */

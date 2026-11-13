@@ -23,8 +23,8 @@ android {
         applicationId = "app.sshpult"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     signingConfigs {
@@ -68,6 +68,9 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.maxHeapSize = "2g"
+                // One JVM per test class: Robolectric's class loader and the embedded SSH server
+                // would otherwise fight over JVM-global security providers.
+                it.setForkEvery(1)
                 // The embedded test SSH server needs a UTF-8 JVM to store non-ASCII file names.
                 it.jvmArgs("-Dsun.jnu.encoding=UTF-8", "-Dfile.encoding=UTF-8")
                 it.environment("LC_ALL", "C.UTF-8")

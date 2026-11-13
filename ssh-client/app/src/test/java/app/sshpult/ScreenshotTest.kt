@@ -60,7 +60,7 @@ class ScreenshotTest {
         rule.onNodeWithText("Мой телефон").performClick()
         shot("${prefix}_5_public_key")
         rule.onAllNodesWithText(if (add == "Add") "Close" else "Закрыть")[0].performClick()
-        rule.onAllNodesWithText(if (add == "Add") "Connections" else "Подключения")[0].performClick()
+        rule.onAllNodesWithText(if (add == "Add") "Servers" else "Серверы")[0].performClick()
         rule.onNodeWithContentDescription(add).performClick()
         shot("${prefix}_6_connection_edit")
     }

@@ -387,7 +387,7 @@ private fun FileRow(
         leadingContent = {
             Icon(
                 painterResource(if (file.isDirectory) R.drawable.ic_folder else R.drawable.ic_file), null,
-                tint = if (file.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (file.isDirectory) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
             )
         },
         headlineContent = { Text(file.name, maxLines = 1, overflow = TextOverflow.MiddleEllipsis) },

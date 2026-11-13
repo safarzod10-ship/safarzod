@@ -54,6 +54,7 @@ import app.sshpult.R
 import app.sshpult.data.AuthType
 import app.sshpult.data.ConnectionProfile
 import app.sshpult.data.Script
+import app.sshpult.data.parseQuickTarget
 import app.sshpult.ssh.RunMode
 import app.sshpult.ssh.ScriptRunner
 
@@ -81,7 +82,7 @@ private fun RadioRow(selected: Boolean, onClick: () -> Unit, label: String, subl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
+fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit, onConnect: (String) -> Unit) {
     val app = LocalApp.current
     val data by app.repository.data.collectAsStateWithLifecycle()
     val existing = remember(connectionId) { connectionId?.let { app.repository.connection(it) } }
@@ -101,7 +102,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
     val portNumber = port.toIntOrNull()
     val hostError = when {
         host.isBlank() -> R.string.err_field_required
-        host.any { it.isWhitespace() || it == '/' || it == '@' } -> R.string.err_host_invalid
+        host.trim().any { it.isWhitespace() || it == '/' || it == '@' } -> R.string.err_host_invalid
         else -> null
     }
     val portError = if (portNumber == null || portNumber !in 1..65535) R.string.err_port_invalid else null
@@ -109,7 +110,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
     val keyError = if (authType == AuthType.KEY && data.keys.none { it.id == keyId }) R.string.err_key_required else null
     val valid = hostError == null && portError == null && userError == null && keyError == null
 
-    fun save() {
+    fun save(connect: Boolean = false) {
         showErrors = true
         if (!valid) return
         val profile = ConnectionProfile(
@@ -125,7 +126,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
         app.repository.saveConnection(profile, newPassword)
         // Settings of an open session may be stale now; next open reconnects with the new ones.
         if (existing != null) app.sessions.disconnect(existing.id)
-        onDone()
+        if (connect) onConnect(profile.id) else onDone()
     }
 
     Scaffold(
@@ -133,7 +134,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
             TopAppBar(
                 title = { Text(stringResource(if (existing == null) R.string.connection_new else R.string.connection_edit)) },
                 navigationIcon = { BackButton(onDone) },
-                actions = { TextButton(onClick = ::save) { Text(stringResource(R.string.action_save)) } },
+                actions = { TextButton(onClick = { save() }) { Text(stringResource(R.string.action_save)) } },
             )
         },
     ) { inner ->
@@ -149,7 +150,15 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = host, onValueChange = { host = it.trim() }, singleLine = true,
+                        value = host, singleLine = true,
+                        onValueChange = { typed ->
+                            val pasted = parseQuickTarget(typed)
+                            if (pasted != null) {
+                                host = pasted.host
+                                username = pasted.username
+                                if (pasted.port != 22 || ':' in typed) port = pasted.port.toString()
+                            } else host = typed
+                        },
                         label = { Text(stringResource(R.string.field_host)) }, modifier = Modifier.weight(1f),
                         keyboardOptions = PlainKeyboard,
                         isError = showErrors && hostError != null,
@@ -166,7 +175,7 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
                     Text(stringResource(portError), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 OutlinedTextField(
-                    value = username, onValueChange = { username = it.trim() }, singleLine = true,
+                    value = username, onValueChange = { username = it }, singleLine = true,
                     label = { Text(stringResource(R.string.field_username)) }, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = PlainKeyboard.copy(keyboardType = KeyboardType.Ascii),
                     isError = showErrors && userError != null,
@@ -214,9 +223,16 @@ fun ConnectionEditScreen(connectionId: String?, onDone: () -> Unit) {
                         }
                     }
                 }
-                Button(onClick = ::save, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Text(stringResource(R.string.action_save))
+                if (existing == null && authType == AuthType.PASSWORD) {
+                    Text(
+                        stringResource(R.string.host_paste_hint), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                Button(
+                    onClick = { save(connect = true) }, shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 50.dp),
+                ) { Text(stringResource(R.string.action_save_connect)) }
             }
         }
     }
@@ -300,9 +316,10 @@ fun ScriptEditScreen(scriptId: String?, onDone: () -> Unit) {
                         Switch(checked = stopOnError, onCheckedChange = null)
                     }
                 }
-                Button(onClick = ::save, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Text(stringResource(R.string.action_save))
-                }
+                Button(
+                    onClick = ::save, shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 50.dp),
+                ) { Text(stringResource(R.string.action_save)) }
             }
         }
     }

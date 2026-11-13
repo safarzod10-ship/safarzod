@@ -3,6 +3,7 @@ package app.sshpult
 import app.sshpult.data.AppRepository
 import app.sshpult.data.AuthType
 import app.sshpult.data.ConnectionProfile
+import app.sshpult.data.QuickTarget
 import app.sshpult.data.Script
 import app.sshpult.data.SecretCipher
 import app.sshpult.ssh.SeenHostKey
@@ -120,6 +121,30 @@ class RepositoryTest {
         val r = repo()
         assertTrue(r.data.value.connections.isEmpty())
         assertTrue(File(tmp.root, "data.json.corrupt").exists())
+    }
+
+    @Test fun quickConnectReusesSavedServerAndRemembersPasswordOnRequest() {
+        val r = repo()
+        val a = r.findOrCreateConnection(QuickTarget("root", "Example.com", 22))
+        val b = r.findOrCreateConnection(QuickTarget("root", "example.com", 22))
+        assertEquals(a.id, b.id)
+        assertEquals(1, r.data.value.connections.size)
+        assertThrows(SshError.PasswordRequired::class.java) { r.targetFor(r.connection(a.id)!!) }
+        r.rememberPassword(a.id, "s3cret")
+        assertEquals("s3cret", r.targetFor(r.connection(a.id)!!).password)
+        r.flush()
+        assertFalse(file().readText().contains("s3cret"))
+    }
+
+    @Test fun inputModeSettingPersistsAndOldFilesStillLoad() {
+        val r = repo()
+        assertTrue(r.data.value.settings.terminalDirectInput)
+        r.setTerminalDirectInput(false)
+        r.flush()
+        assertFalse(repo().data.value.settings.terminalDirectInput)
+        // a data file written by version 1.0 has no "settings" at all
+        file().writeText("""{"connections":[],"keys":[],"scripts":[],"knownHosts":[]}""")
+        assertTrue(repo().data.value.settings.terminalDirectInput)
     }
 
     @Test fun duplicateAndDelete() {

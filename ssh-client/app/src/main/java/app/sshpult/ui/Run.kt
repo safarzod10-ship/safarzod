@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -193,12 +192,12 @@ private fun ResultCard(r: CommandResult) {
     val context = LocalContext.current
     var expanded by rememberSaveable(r.command) { mutableStateOf(true) }
     val finished = r.status == CommandStatus.OK || r.status == CommandStatus.FAILED
-    ElevatedCard(Modifier.fillMaxWidth()) {
+    Panel(Modifier.fillMaxWidth()) {
         Column(Modifier.clickable(enabled = finished) { expanded = !expanded }.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                     when (r.status) {
-                        CommandStatus.OK -> Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                        CommandStatus.OK -> Icon(Icons.Default.CheckCircle, null, tint = StatusGreen)
                         CommandStatus.FAILED -> Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error)
                         CommandStatus.RUNNING -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         CommandStatus.SKIPPED -> Icon(Icons.Default.Clear, null, tint = MaterialTheme.colorScheme.outline)

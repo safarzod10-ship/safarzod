@@ -11,7 +11,7 @@ import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 
 /** Immutable view of the terminal text. [revision] changes on every update. */
-data class TerminalSnapshot(val lines: List<String>, val revision: Long)
+data class TerminalSnapshot(val lines: List<String>, val revision: Long, val cursorColumn: Int = 0)
 
 /**
  * Turns the raw byte stream of a `TERM=dumb` shell into plain lines of text.
@@ -64,7 +64,7 @@ class TerminalBuffer(private val maxLines: Int = 3000) {
         val lines = ArrayList<String>(done.size + 1)
         lines.addAll(done)
         lines.add(current.toString())
-        return TerminalSnapshot(lines, revision)
+        return TerminalSnapshot(lines, revision, col)
     }
 
     private fun accept(c: Char) {
@@ -189,5 +189,18 @@ class ShellSession internal constructor(
         const val CTRL_D = "\u0004"
         const val CTRL_Z = "\u001a"
         const val TAB = "\t"
+        const val ESC = "\u001b"
+        const val BACKSPACE = "\u007f"
+        const val ENTER = "\r"
+        const val UP = "\u001b[A"
+        const val DOWN = "\u001b[B"
+        const val RIGHT = "\u001b[C"
+        const val LEFT = "\u001b[D"
+
+        /** Ctrl+letter as the byte a terminal would send (Ctrl+C -> 0x03); null if there is none. */
+        fun control(c: Char): String? {
+            val u = c.uppercaseChar()
+            return if (u in '@'..'_') (u.code - 64).toChar().toString() else null
+        }
     }
 }

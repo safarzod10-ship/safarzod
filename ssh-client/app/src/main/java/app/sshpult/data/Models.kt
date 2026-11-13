@@ -50,9 +50,47 @@ data class KnownHost(val hostId: String, val type: String, val keyBase64: String
 }
 
 @Serializable
+data class Settings(
+    /** true: keystrokes go straight to the shell; false: commands are composed in a separate field. */
+    val terminalDirectInput: Boolean = true,
+)
+
+/** Result of parsing a quick-connect line. */
+data class QuickTarget(val username: String, val host: String, val port: Int)
+
+/**
+ * Understands what people paste or type when they just want to get in:
+ * `login@host`, `login@host:2222`, `ssh login@host -p 2222`, `ssh://login@host:2222`.
+ */
+fun parseQuickTarget(input: String): QuickTarget? {
+    var s = input.trim()
+    s = s.removePrefix("ssh://")
+    if (s.startsWith("ssh ")) s = s.removePrefix("ssh ").trim()
+    val at = s.lastIndexOf('@')
+    if (at <= 0 || at == s.lastIndex) return null
+    val user = s.substring(0, at).trim()
+    val rest = s.substring(at + 1).trim()
+    var host = rest
+    var port = 22
+    val dashP = Regex("^(\\S+)\\s+-p\\s*(\\d{1,5})$").matchEntire(rest)
+    if (dashP != null) {
+        host = dashP.groupValues[1]
+        port = dashP.groupValues[2].toInt()
+    } else if (rest.count { it == ':' } == 1) {
+        host = rest.substringBefore(':')
+        port = rest.substringAfter(':').toIntOrNull() ?: return null
+    }
+    if (user.isEmpty() || user.any { it.isWhitespace() }) return null
+    if (host.isEmpty() || host.any { it.isWhitespace() || it == '/' || it == '@' }) return null
+    if (port !in 1..65535) return null
+    return QuickTarget(user, host, port)
+}
+
+@Serializable
 data class AppData(
     val connections: List<ConnectionProfile> = emptyList(),
     val keys: List<SshKeyEntry> = emptyList(),
     val scripts: List<Script> = emptyList(),
     val knownHosts: List<KnownHost> = emptyList(),
+    val settings: Settings = Settings(),
 )

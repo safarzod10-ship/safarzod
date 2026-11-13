@@ -1,6 +1,9 @@
 package app.sshpult
 
+import app.sshpult.data.QuickTarget
+import app.sshpult.data.parseQuickTarget
 import app.sshpult.ssh.RemotePaths
+import app.sshpult.ssh.ShellSession
 import app.sshpult.ssh.ScriptRunner
 import app.sshpult.ssh.TerminalBuffer
 import app.sshpult.ssh.hostIdOf
@@ -73,6 +76,33 @@ class CoreUnitTest {
         assertFalse(RemotePaths.isValidName("../etc"))
         assertFalse(RemotePaths.isValidName(".."))
         assertFalse(RemotePaths.isValidName(" "))
+    }
+
+    @Test fun cursorColumnFollowsEditing() {
+        val t = TerminalBuffer()
+        t.feed("\$ abc".toByteArray())
+        assertEquals(5, t.snapshot().cursorColumn)
+        t.feed("\b\b".toByteArray())
+        assertEquals(3, t.snapshot().cursorColumn)
+        t.feed("\r\n".toByteArray())
+        assertEquals(0, t.snapshot().cursorColumn)
+    }
+
+    @Test fun controlKeys() {
+        assertEquals("\u0003", ShellSession.control('c'))
+        assertEquals("\u0004", ShellSession.control('D'))
+        assertEquals("\u001b", ShellSession.control('['))
+        assertEquals(null, ShellSession.control('1'))
+    }
+
+    @Test fun quickTargets() {
+        assertEquals(QuickTarget("root", "example.com", 22), parseQuickTarget("root@example.com"))
+        assertEquals(QuickTarget("root", "10.0.0.5", 2222), parseQuickTarget("  root@10.0.0.5:2222 "))
+        assertEquals(QuickTarget("deploy", "host", 2200), parseQuickTarget("ssh deploy@host -p 2200"))
+        assertEquals(QuickTarget("u", "h.io", 22), parseQuickTarget("ssh://u@h.io"))
+        assertEquals(QuickTarget("user@corp", "h", 22), parseQuickTarget("user@corp@h"))
+        for (bad in listOf("", "host", "@host", "user@", "user@host:port", "user@host:70000", "us er@host", "user@ho st", "user@host/path"))
+            assertEquals(bad, null, parseQuickTarget(bad))
     }
 
     @Test fun hostIds() {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SSH Пульт</string>
-    <string name="tab_connections">Подключения</string>
+    <string name="tab_connections">Серверы</string>
     <string name="tab_scripts">Скрипты</string>
     <string name="tab_keys">Ключи</string>
     <string name="action_add">Добавить</string>
@@ -26,15 +26,15 @@
     <string name="action_about">О приложении</string>
     <string name="copied">Скопировано</string>
     <string name="copy_suffix">" (копия)"</string>
-    <string name="connections_empty_title">Подключений пока нет</string>
-    <string name="connections_empty_text">Нажмите +, чтобы добавить первый сервер.</string>
-    <string name="connection_new">Новое подключение</string>
-    <string name="connection_edit">Изменить подключение</string>
+    <string name="connections_empty_title">Серверов пока нет</string>
+    <string name="connections_empty_text">Введите логин@хост в строке выше, чтобы подключиться сразу, или нажмите + для подробных настроек.</string>
+    <string name="connection_new">Новый сервер</string>
+    <string name="connection_edit">Изменить сервер</string>
     <string name="connection_online">Подключено</string>
     <string name="field_name">Название (необязательно)</string>
     <string name="field_host">Хост или IP</string>
     <string name="field_port">Порт</string>
-    <string name="field_username">Имя пользователя</string>
+    <string name="field_username">Логин</string>
     <string name="field_password">Пароль</string>
     <string name="field_auth">Аутентификация</string>
     <string name="auth_password">Пароль</string>
@@ -50,7 +50,7 @@
     <string name="err_host_invalid">Введите имя хоста или IP-адрес без пробелов</string>
     <string name="err_port_invalid">Порт должен быть от 1 до 65535</string>
     <string name="err_key_required">Выберите ключ</string>
-    <string name="delete_connection_title">Удалить подключение?</string>
+    <string name="delete_connection_title">Удалить сервер?</string>
     <string name="delete_connection_text">«%1$s» и сохранённый пароль будут удалены с этого устройства.</string>
     <string name="connecting_to">Подключение к %1$s…</string>
     <string name="session_disconnected">Отключено</string>
@@ -58,9 +58,8 @@
     <string name="session_tab_files">Файлы</string>
     <string name="session_run_script">Запустить скрипт</string>
     <string name="session_no_scripts">Сохранённых скриптов пока нет</string>
-    <string name="connection_missing">Это подключение больше не существует.</string>
+    <string name="connection_missing">Этот сервер больше не существует.</string>
     <string name="password_prompt_title">Пароль для %1$s</string>
-    <string name="password_prompt_text">Пароль используется только в этом сеансе и не сохраняется.</string>
     <string name="hostkey_new_title">Неизвестный сервер</string>
     <string name="hostkey_new_text">Это первое подключение к %1$s. Прежде чем доверять серверу, убедитесь, что отпечаток ключа совпадает с отпечатком сервера.</string>
     <string name="hostkey_fingerprint">Отпечаток ключа %1$s:</string>
@@ -68,7 +67,7 @@
     <string name="hostkey_changed_title">Внимание: ключ сервера изменился!</string>
     <string name="hostkey_changed_text">Ключ сервера %1$s отличается от сохранённого ранее. Возможно, сервер переустановили — либо кто-то перехватывает соединение. Не продолжайте, если не уверены, что изменение законно.</string>
     <string name="hostkey_replace">Заменить ключ и подключиться</string>
-    <string name="terminal_input_hint">Команда</string>
+    <string name="terminal_input_hint">команда</string>
     <string name="terminal_send">Отправить</string>
     <string name="terminal_hide_input">Скрывать ввод (для паролей)</string>
     <string name="terminal_show_input">Показывать ввод</string>
@@ -115,7 +114,7 @@
     <string name="script_commands_count_seq">Команд: %1$d · последовательно</string>
     <string name="script_commands_count_par">Команд: %1$d · одновременно</string>
     <string name="script_choose_connection">На каком сервере запустить?</string>
-    <string name="script_no_connections">Сначала добавьте подключение.</string>
+    <string name="script_no_connections">Сначала добавьте сервер.</string>
     <string name="script_missing">Этот скрипт больше не существует.</string>
     <string name="delete_script_title">Удалить скрипт?</string>
     <string name="delete_script_text">«%1$s» будет удалён с этого устройства.</string>
@@ -154,8 +153,8 @@
     <string name="about_text">Бесплатный клиент SSH и SFTP с открытым исходным кодом.\n\nПароли и приватные ключи шифруются через Android Keystore и не покидают устройство. В приложении нет рекламы, аналитики и регистрации.</string>
     <string name="about_version">Версия %1$s</string>
     <string name="about_libraries">Открытые библиотеки: JSch (BSD), Bouncy Castle (MIT), AndroidX и Kotlin (Apache 2.0).</string>
-    <string name="err_auth_password">Не удалось войти. Проверьте имя пользователя и пароль.</string>
-    <string name="err_auth_key">Сервер не принял этот ключ. Убедитесь, что его публичный ключ добавлен в ~/.ssh/authorized_keys этого пользователя.</string>
+    <string name="err_auth_password">Не удалось войти. Проверьте логин и пароль.</string>
+    <string name="err_auth_key">Сервер не принял этот ключ. Убедитесь, что его публичный ключ добавлен в ~/.ssh/authorized_keys этого логина.</string>
     <string name="err_enter_password">Ввести другой пароль</string>
     <string name="err_host_not_found">Сервер «%1$s» не найден. Проверьте адрес и подключение к интернету.</string>
     <string name="err_refused">Сервер отклонил соединение. Проверьте порт и то, что SSH на сервере запущен.</string>
@@ -171,4 +170,19 @@
     <string name="err_password_required">Требуется пароль.</string>
     <string name="err_host_key">Ключ сервера не является доверенным.</string>
     <string name="err_other">Ошибка: %1$s</string>
+    <string name="password_remember">Запомнить пароль</string>
+    <string name="terminal_direct_input">Ввод с клавиатуры в терминал</string>
+    <string name="terminal_mode_compose">Перейти к отдельному полю ввода</string>
+    <string name="terminal_mode_direct">Перейти к вводу прямо в терминале</string>
+    <string name="terminal_keyboard">Показать клавиатуру</string>
+    <string name="terminal_secret_hint">Скрытый ввод</string>
+    <string name="quick_hint">логин@хост или логин@хост:порт</string>
+    <string name="quick_title">Быстрое подключение</string>
+    <string name="quick_invalid">Введите в виде логин@хост, например root@192.168.1.10</string>
+    <string name="action_save_connect">Сохранить и подключиться</string>
+    <string name="notif_channel">Активные сеансы</string>
+    <string name="notif_title">SSH-сеансы открыты</string>
+    <string name="notif_disconnect">Отключить все</string>
+    <string name="auth_by_key">ключ</string>
+    <string name="host_paste_hint">Сюда можно вставить логин@хост:порт — поля заполнятся сами.</string>
 </resources>

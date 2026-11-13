@@ -25,11 +25,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,43 +58,86 @@ import app.sshpult.ssh.SshError
 
 val LocalApp = staticCompositionLocalOf<AppContainer> { error("AppContainer not provided") }
 
+// A deliberately quiet palette: warm paper / graphite neutrals, ink-coloured controls and one
+// vermilion accent. No wallpaper-derived ("dynamic") colours, so the app looks the same everywhere.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF0F766E), onPrimary = Color.White,
-    primaryContainer = Color(0xFFA7F3E6), onPrimaryContainer = Color(0xFF00201C),
-    secondary = Color(0xFF4A635F), onSecondary = Color.White,
-    secondaryContainer = Color(0xFFCCE8E2), onSecondaryContainer = Color(0xFF06201C),
-    tertiary = Color(0xFF456179), onTertiary = Color.White,
-    background = Color(0xFFF7FAF9), surface = Color(0xFFF7FAF9),
-    surfaceVariant = Color(0xFFDAE5E2), onSurfaceVariant = Color(0xFF3F4947),
+    primary = Color(0xFF161616), onPrimary = Color(0xFFFAFAF7),
+    primaryContainer = Color(0xFFE9E9E2), onPrimaryContainer = Color(0xFF161616),
+    secondary = Color(0xFF55554F), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE6E6DF), onSecondaryContainer = Color(0xFF161616),
+    tertiary = Color(0xFFD9481F), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFE3D8), onTertiaryContainer = Color(0xFF3A1004),
+    background = Color(0xFFFAFAF7), onBackground = Color(0xFF161616),
+    surface = Color(0xFFFAFAF7), onSurface = Color(0xFF161616),
+    surfaceVariant = Color(0xFFEFEFE9), onSurfaceVariant = Color(0xFF66665F),
+    surfaceTint = Color.Transparent,
+    outline = Color(0xFFB4B4AB), outlineVariant = Color(0xFFE0E0D8),
+    error = Color(0xFFC62828), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFCE4E4), onErrorContainer = Color(0xFF5F1010),
+    inverseSurface = Color(0xFF1C1C1A), inverseOnSurface = Color(0xFFF4F4EF), inversePrimary = Color(0xFFEDEDE8),
+    surfaceBright = Color(0xFFFFFFFF), surfaceDim = Color(0xFFE4E4DD),
+    surfaceContainerLowest = Color(0xFFFFFFFF), surfaceContainerLow = Color(0xFFF6F6F2),
+    surfaceContainer = Color(0xFFF2F2ED), surfaceContainerHigh = Color(0xFFECECE6),
+    surfaceContainerHighest = Color(0xFFE6E6DF),
 )
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF5EEAD4), onPrimary = Color(0xFF003731),
-    primaryContainer = Color(0xFF005048), onPrimaryContainer = Color(0xFFA7F3E6),
-    secondary = Color(0xFFB1CCC6), onSecondary = Color(0xFF1C3531),
-    secondaryContainer = Color(0xFF334B47), onSecondaryContainer = Color(0xFFCCE8E2),
-    tertiary = Color(0xFFADCAE6), onTertiary = Color(0xFF153349),
-    background = Color(0xFF0E1513), surface = Color(0xFF0E1513),
-    surfaceVariant = Color(0xFF3F4947), onSurfaceVariant = Color(0xFFBEC9C6),
+    primary = Color(0xFFEDEDE8), onPrimary = Color(0xFF0C0C0B),
+    primaryContainer = Color(0xFF2A2A28), onPrimaryContainer = Color(0xFFEDEDE8),
+    secondary = Color(0xFFB5B5AE), onSecondary = Color(0xFF0C0C0B),
+    secondaryContainer = Color(0xFF2A2A28), onSecondaryContainer = Color(0xFFEDEDE8),
+    tertiary = Color(0xFFFF7A4D), onTertiary = Color(0xFF2B0B00),
+    tertiaryContainer = Color(0xFF4A1C0B), onTertiaryContainer = Color(0xFFFFDACC),
+    background = Color(0xFF0C0C0B), onBackground = Color(0xFFEDEDE8),
+    surface = Color(0xFF0C0C0B), onSurface = Color(0xFFEDEDE8),
+    surfaceVariant = Color(0xFF1E1E1C), onSurfaceVariant = Color(0xFF96968F),
+    surfaceTint = Color.Transparent,
+    outline = Color(0xFF55554F), outlineVariant = Color(0xFF2A2A28),
+    error = Color(0xFFFF6B6B), onError = Color(0xFF3A0000),
+    errorContainer = Color(0xFF4A1414), onErrorContainer = Color(0xFFFFDAD6),
+    inverseSurface = Color(0xFFEDEDE8), inverseOnSurface = Color(0xFF161616), inversePrimary = Color(0xFF161616),
+    surfaceBright = Color(0xFF2A2A28), surfaceDim = Color(0xFF0C0C0B),
+    surfaceContainerLowest = Color(0xFF131312), surfaceContainerLow = Color(0xFF161615),
+    surfaceContainer = Color(0xFF1A1A18), surfaceContainerHigh = Color(0xFF212120),
+    surfaceContainerHighest = Color(0xFF2A2A28),
+)
+
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(6.dp), small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(14.dp), extraLarge = RoundedCornerShape(18.dp),
 )
 
 @Composable
-fun SshPultTheme(dynamicColor: Boolean = true, content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
-    val colors = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (dark) dynamicDarkColorScheme(LocalContext.current) else dynamicLightColorScheme(LocalContext.current)
-        dark -> DarkColors
-        else -> LightColors
-    }
-    MaterialTheme(colorScheme = colors, content = content)
+fun SshPultTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        shapes = AppShapes, content = content,
+    )
 }
+
+/** The single accent colour (caret, prompt, active markers). */
+val accent: Color @Composable get() = MaterialTheme.colorScheme.tertiary
+
+/** "Session is open" marker. */
+val StatusGreen = Color(0xFF2FA35B)
 
 /** Colours of the terminal and command output panes (always dark, like a real console). */
 object TerminalColors {
-    val background = Color(0xFF0B1210)
-    val text = Color(0xFFD7E3DF)
-    val dim = Color(0xFF8A9A95)
-    val accent = Color(0xFF5EEAD4)
+    val background = Color(0xFF0B0B0A)
+    val text = Color(0xFFE4E4DE)
+    val dim = Color(0xFF85857E)
+    val cursor = Color(0xFFFF7A4D)
+    val keys = Color(0xFF151514)
+    val line = Color(0xFF262624)
+}
+
+/** Flat, hairline-bordered container used instead of shadowed cards. */
+@Composable
+fun Panel(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val shape = MaterialTheme.shapes.medium
+    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    val color = MaterialTheme.colorScheme.surfaceContainerLowest
+    if (onClick != null) Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, border = border, content = content)
+    else Surface(modifier = modifier, shape = shape, color = color, border = border, content = content)
 }
 
 /** Human-readable, localized explanation of a failure. */
@@ -181,6 +228,7 @@ fun ConfirmDialog(
 fun SecretField(
     value: String, onValueChange: (String) -> Unit, label: String,
     modifier: Modifier = Modifier, supportingText: String? = null, isError: Boolean = false,
+    onDone: (() -> Unit)? = null,
 ) {
     var visible by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -188,7 +236,11 @@ fun SecretField(
         singleLine = true, modifier = modifier, isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password, autoCorrectEnabled = false,
+            imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default,
+        ),
+        keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
                 Icon(

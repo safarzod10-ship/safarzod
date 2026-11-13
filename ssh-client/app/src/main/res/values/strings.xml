@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SSH Pult</string>
-    <string name="tab_connections">Connections</string>
+    <string name="tab_connections">Servers</string>
     <string name="tab_scripts">Scripts</string>
     <string name="tab_keys">Keys</string>
     <string name="action_add">Add</string>
@@ -26,15 +26,15 @@
     <string name="action_about">About</string>
     <string name="copied">Copied</string>
     <string name="copy_suffix">" (copy)"</string>
-    <string name="connections_empty_title">No connections yet</string>
-    <string name="connections_empty_text">Tap + to add your first server.</string>
-    <string name="connection_new">New connection</string>
-    <string name="connection_edit">Edit connection</string>
+    <string name="connections_empty_title">No servers yet</string>
+    <string name="connections_empty_text">Type login@host above to connect right away, or tap + for more options.</string>
+    <string name="connection_new">New server</string>
+    <string name="connection_edit">Edit server</string>
     <string name="connection_online">Connected</string>
     <string name="field_name">Name (optional)</string>
     <string name="field_host">Host or IP</string>
     <string name="field_port">Port</string>
-    <string name="field_username">Username</string>
+    <string name="field_username">Login</string>
     <string name="field_password">Password</string>
     <string name="field_auth">Authentication</string>
     <string name="auth_password">Password</string>
@@ -50,7 +50,7 @@
     <string name="err_host_invalid">Enter a host name or IP address without spaces</string>
     <string name="err_port_invalid">Port must be between 1 and 65535</string>
     <string name="err_key_required">Choose a key</string>
-    <string name="delete_connection_title">Delete connection?</string>
+    <string name="delete_connection_title">Delete server?</string>
     <string name="delete_connection_text">“%1$s” and its saved password will be removed from this device.</string>
     <string name="connecting_to">Connecting to %1$s…</string>
     <string name="session_disconnected">Disconnected</string>
@@ -58,9 +58,8 @@
     <string name="session_tab_files">Files</string>
     <string name="session_run_script">Run script</string>
     <string name="session_no_scripts">No saved scripts yet</string>
-    <string name="connection_missing">This connection no longer exists.</string>
+    <string name="connection_missing">This server no longer exists.</string>
     <string name="password_prompt_title">Password for %1$s</string>
-    <string name="password_prompt_text">The password is used for this session only and is not saved.</string>
     <string name="hostkey_new_title">Unknown server</string>
     <string name="hostkey_new_text">This is the first connection to %1$s. Check that the key fingerprint matches the server\'s before trusting it.</string>
     <string name="hostkey_fingerprint">%1$s key fingerprint:</string>
@@ -68,7 +67,7 @@
     <string name="hostkey_changed_title">Warning: server key has changed!</string>
     <string name="hostkey_changed_text">The key of %1$s differs from the one saved earlier. The server may have been reinstalled — or someone may be intercepting the connection. Do not continue unless you are sure the change is legitimate.</string>
     <string name="hostkey_replace">Replace key and connect</string>
-    <string name="terminal_input_hint">Command</string>
+    <string name="terminal_input_hint">command</string>
     <string name="terminal_send">Send</string>
     <string name="terminal_hide_input">Hide typed text (for passwords)</string>
     <string name="terminal_show_input">Show typed text</string>
@@ -115,7 +114,7 @@
     <string name="script_commands_count_seq">Commands: %1$d · sequential</string>
     <string name="script_commands_count_par">Commands: %1$d · parallel</string>
     <string name="script_choose_connection">Run on which server?</string>
-    <string name="script_no_connections">Add a connection first.</string>
+    <string name="script_no_connections">Add a server first.</string>
     <string name="script_missing">This script no longer exists.</string>
     <string name="delete_script_title">Delete script?</string>
     <string name="delete_script_text">“%1$s” will be removed from this device.</string>
@@ -154,8 +153,8 @@
     <string name="about_text">A free, open-source SSH and SFTP client.\n\nPasswords and private keys are encrypted with the Android Keystore and never leave this device. The app has no ads, no analytics and needs no account.</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_libraries">Open-source libraries: JSch (BSD), Bouncy Castle (MIT), AndroidX and Kotlin (Apache 2.0).</string>
-    <string name="err_auth_password">Sign-in failed. Check the username and password.</string>
-    <string name="err_auth_key">The server did not accept this key. Make sure its public key is in ~/.ssh/authorized_keys for this user.</string>
+    <string name="err_auth_password">Sign-in failed. Check the login and password.</string>
+    <string name="err_auth_key">The server did not accept this key. Make sure its public key is in ~/.ssh/authorized_keys for this login.</string>
     <string name="err_enter_password">Enter another password</string>
     <string name="err_host_not_found">Server “%1$s” was not found. Check the address and your internet connection.</string>
     <string name="err_refused">The server refused the connection. Check the port and that SSH is running on the server.</string>
@@ -171,4 +170,19 @@
     <string name="err_password_required">A password is required.</string>
     <string name="err_host_key">The server key is not trusted.</string>
     <string name="err_other">Error: %1$s</string>
+    <string name="password_remember">Remember password</string>
+    <string name="terminal_direct_input">Terminal keyboard input</string>
+    <string name="terminal_mode_compose">Switch to separate input field</string>
+    <string name="terminal_mode_direct">Switch to typing in the terminal</string>
+    <string name="terminal_keyboard">Show keyboard</string>
+    <string name="terminal_secret_hint">Hidden input</string>
+    <string name="quick_hint">login@host or login@host:port</string>
+    <string name="quick_title">Quick connect</string>
+    <string name="quick_invalid">Type it as login@host, for example root@192.168.1.10</string>
+    <string name="action_save_connect">Save and connect</string>
+    <string name="notif_channel">Active sessions</string>
+    <string name="notif_title">SSH sessions are open</string>
+    <string name="notif_disconnect">Disconnect all</string>
+    <string name="auth_by_key">key</string>
+    <string name="host_paste_hint">You can paste login@host:port here — the fields fill in by themselves.</string>
 </resources>

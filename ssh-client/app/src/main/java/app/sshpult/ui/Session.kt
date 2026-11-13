@@ -1,6 +1,20 @@
 package app.sshpult.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -114,6 +128,8 @@ fun ConnectionGate(
     var typedPassword by remember { mutableStateOf<String?>(null) }
     var localError by remember { mutableStateOf<SshError?>(null) }
     var askPassword by remember { mutableStateOf(false) }
+    // A typed password is stored only after it has actually opened the session.
+    var pendingRemember by remember { mutableStateOf<String?>(null) }
 
     fun start(password: String? = typedPassword) {
         localError = null
@@ -128,6 +144,13 @@ fun ConnectionGate(
     LaunchedEffect(profileId) { if (session.state.value is ConnState.Idle) start() }
 
     val current = state
+    LaunchedEffect(current) {
+        val pw = pendingRemember
+        if (current is ConnState.Connected && pw != null) {
+            app.repository.rememberPassword(profileId, pw)
+            pendingRemember = null
+        }
+    }
     val error = localError ?: (current as? ConnState.Failed)?.error
     when {
         current is ConnState.Connected && localError == null -> content(session, current.connection)
@@ -163,7 +186,12 @@ fun ConnectionGate(
     if (askPassword) {
         PasswordDialog(
             profile = profile,
-            onSubmit = { askPassword = false; typedPassword = it; start(it) },
+            onSubmit = { password, remember ->
+                askPassword = false
+                typedPassword = password
+                pendingRemember = if (remember) password else null
+                start(password)
+            },
             onCancel = { askPassword = false; if (session.state.value is ConnState.Idle) onClose() },
         )
     }
@@ -187,19 +215,29 @@ internal fun StatusBox(
 }
 
 @Composable
-private fun PasswordDialog(profile: ConnectionProfile, onSubmit: (String) -> Unit, onCancel: () -> Unit) {
+private fun PasswordDialog(profile: ConnectionProfile, onSubmit: (password: String, remember: Boolean) -> Unit, onCancel: () -> Unit) {
     var value by remember { mutableStateOf("") }
+    var save by remember { mutableStateOf(true) }
     AlertDialog(
         onDismissRequest = onCancel,
         title = { Text(stringResource(R.string.password_prompt_title, profile.address)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SecretField(value, { value = it }, stringResource(R.string.field_password), Modifier.fillMaxWidth())
-                Text(stringResource(R.string.password_prompt_text), style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SecretField(
+                    value, { value = it }, stringResource(R.string.field_password), Modifier.fillMaxWidth(),
+                    onDone = { if (value.isNotEmpty()) onSubmit(value, save) },
+                )
+                Row(
+                    Modifier.fillMaxWidth().toggleable(value = save, onValueChange = { save = it }, role = Role.Checkbox),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = save, onCheckedChange = null, modifier = Modifier.padding(12.dp))
+                    Text(stringResource(R.string.password_remember))
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSubmit(value) }, enabled = value.isNotEmpty()) { Text(stringResource(R.string.action_connect)) }
+            Button(onClick = { onSubmit(value, save) }, enabled = value.isNotEmpty()) { Text(stringResource(R.string.action_connect)) }
         },
         dismissButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) } },
     )
@@ -224,7 +262,7 @@ private fun HostKeyDialog(
         // For a changed key the safe choice (cancel) is the prominent one.
         confirmButton = {
             if (changed) Button(onClick = onReject) { Text(stringResource(R.string.action_cancel)) }
-            else TextButton(onClick = onAccept) { Text(stringResource(R.string.hostkey_trust)) }
+            else Button(onClick = onAccept) { Text(stringResource(R.string.hostkey_trust)) }
         },
         dismissButton = {
             if (changed) TextButton(onClick = onAccept) {
@@ -239,6 +277,7 @@ private fun HostKeyDialog(
 fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -> Unit) {
     val app = LocalApp.current
     val data by app.repository.data.collectAsStateWithLifecycle()
+    val online by app.sessions.connectedIds.collectAsStateWithLifecycle()
     val profile = data.connections.firstOrNull { it.id == profileId }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var menu by remember { mutableStateOf(false) }
@@ -248,18 +287,33 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(profile?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (profile != null && profile.name.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(8.dp).clip(CircleShape)
+                                .background(if (profileId in online) StatusGreen else MaterialTheme.colorScheme.outline),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
                             Text(
-                                profile.address, style = MaterialTheme.typography.bodySmall, maxLines = 1,
-                                overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                profile?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                             )
+                            if (profile != null && profile.name.isNotBlank()) {
+                                Text(
+                                    profile.address, style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                                    fontFamily = FontFamily.Monospace,
+                                    overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 },
                 navigationIcon = { BackButton(onBack) },
                 actions = {
+                    ModeSwitch(
+                        labels = listOf(stringResource(R.string.session_tab_terminal), stringResource(R.string.session_tab_files)),
+                        selected = tab, onSelect = { tab = it },
+                    )
                     IconButton(onClick = { menu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
                     }
@@ -279,14 +333,9 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
         },
     ) { inner ->
         Column(Modifier.padding(inner).consumeWindowInsets(inner).imePadding().fillMaxSize()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             ConnectionGate(profileId, onClose = onBack) { session, _ ->
-                Column(Modifier.fillMaxSize()) {
-                    PrimaryTabRow(selectedTabIndex = tab) {
-                        Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.session_tab_terminal)) })
-                        Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.session_tab_files)) })
-                    }
-                    if (tab == 0) TerminalPane(session) else FilesPane(session)
-                }
+                if (tab == 0) TerminalPane(session) else FilesPane(session)
             }
         }
     }
@@ -302,158 +351,25 @@ fun SessionScreen(profileId: String, onBack: () -> Unit, onRunScript: (String) -
     }
 }
 
-// ---- Terminal ----------------------------------------------------------------------------
-
-private val TerminalStyle = TextStyle(
-    fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 17.sp, color = TerminalColors.text,
-)
-
+/** Compact two-or-three way switch: a hairline pill with the active part filled in ink. */
 @Composable
-fun TerminalPane(session: SessionManager.ManagedSession) {
-    val context = LocalContext.current
-    var generation by remember { mutableIntStateOf(0) }
-    var shell by remember { mutableStateOf<ShellSession?>(null) }
-    var failure by remember { mutableStateOf<SshError?>(null) }
-    LaunchedEffect(session, generation) {
-        failure = null
-        try {
-            shell = session.shell()
-        } catch (e: SshError) {
-            failure = e
-        }
-    }
-    val sh = shell
-    when {
-        sh != null -> TerminalContent(sh, onReopen = { generation++ })
-        failure != null -> StatusBox(errorText(context, failure!!), warning = true) {
-            Button(onClick = { generation++ }) { Text(stringResource(R.string.action_retry)) }
-        }
-        else -> StatusBox(stringResource(R.string.terminal_opening), progress = true)
-    }
-}
-
-@Composable
-private fun TerminalContent(shell: ShellSession, onReopen: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val screen by shell.screen.collectAsStateWithLifecycle()
-    val closed by shell.closed.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
-    var stickToBottom by remember { mutableStateOf(true) }
-    var input by remember { mutableStateOf("") }
-    var hideInput by remember { mutableStateOf(false) }
-    val history = remember { mutableStateListOf<String>() }
-    var historyIndex by remember { mutableIntStateOf(-1) }
-
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
-            if (!scrolling) stickToBottom = !listState.canScrollForward
-        }
-    }
-    LaunchedEffect(screen.revision) {
-        if (stickToBottom && screen.lines.isNotEmpty()) listState.scrollToItem(screen.lines.lastIndex)
-    }
-
-    fun sendRaw(text: String) {
-        scope.launch(Dispatchers.IO) { runCatching { shell.send(text) } }
-    }
-    fun submit() {
-        val line = input
-        if (!hideInput && line.isNotBlank() && history.lastOrNull() != line) history.add(line)
-        historyIndex = -1
-        input = ""
-        hideInput = false
-        stickToBottom = true
-        scope.launch(Dispatchers.IO) { runCatching { shell.sendLine(line) } }
-    }
-    fun recall(step: Int) {
-        if (history.isEmpty()) return
-        val next = when {
-            historyIndex == -1 && step < 0 -> history.lastIndex
-            historyIndex == -1 -> return
-            else -> historyIndex + step
-        }
-        if (next > history.lastIndex) { historyIndex = -1; input = "" }
-        else { historyIndex = next.coerceAtLeast(0); input = history[historyIndex] }
-    }
-
-    Column(Modifier.fillMaxSize()) {
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().background(TerminalColors.background)) {
-            val measurer = rememberTextMeasurer()
-            val density = LocalDensity.current
-            val cell = remember(density) { measurer.measure("M", TerminalStyle).size }
-            val padPx = with(density) { 8.dp.roundToPx() }
-            val cols = ((constraints.maxWidth - 2 * padPx) / cell.width.coerceAtLeast(1))
-            val rows = (constraints.maxHeight / cell.height.coerceAtLeast(1))
-            LaunchedEffect(shell, cols, rows) { withContext(Dispatchers.IO) { shell.resize(cols, rows) } }
-            SelectionContainer {
-                LazyColumn(state = listState, contentPadding = PaddingValues(8.dp), modifier = Modifier.fillMaxSize()) {
-                    items(count = screen.lines.size) { i -> Text(screen.lines[i].ifEmpty { " " }, style = TerminalStyle) }
-                }
-            }
-        }
-        Surface(tonalElevation = 3.dp) {
-            Column {
-                if (closed) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(R.string.terminal_closed), Modifier.weight(1f))
-                        TextButton(onClick = onReopen) { Text(stringResource(R.string.terminal_reopen)) }
-                    }
-                }
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    AssistChip(onClick = { sendRaw(ShellSession.CTRL_C) }, enabled = !closed, label = { Text("Ctrl+C") })
-                    AssistChip(onClick = { sendRaw(ShellSession.CTRL_D) }, enabled = !closed, label = { Text("Ctrl+D") })
-                    AssistChip(onClick = { sendRaw(ShellSession.TAB) }, enabled = !closed, label = { Text("Tab") })
-                    AssistChip(
-                        onClick = { recall(-1) }, enabled = history.isNotEmpty(),
-                        label = { Icon(painterResource(R.drawable.ic_arrow_up), stringResource(R.string.terminal_history_prev)) },
-                    )
-                    AssistChip(
-                        onClick = { recall(1) }, enabled = historyIndex != -1,
-                        label = { Icon(painterResource(R.drawable.ic_arrow_down), stringResource(R.string.terminal_history_next)) },
-                    )
-                    AssistChip(onClick = { shell.clearScreen() }, label = { Text(stringResource(R.string.terminal_clear)) })
-                    AssistChip(
-                        onClick = { copyToClipboard(context, "terminal", screen.lines.joinToString("\n").trimEnd()) },
-                        label = { Text(stringResource(R.string.terminal_copy_all)) },
-                    )
-                }
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = input, onValueChange = { input = it }, singleLine = true, enabled = !closed,
-                        placeholder = { Text(stringResource(R.string.terminal_input_hint)) },
-                        modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp),
-                        visualTransformation = if (hideInput) PasswordVisualTransformation() else VisualTransformation.None,
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false,
-                            keyboardType = if (hideInput) KeyboardType.Password else KeyboardType.Ascii,
-                            imeAction = ImeAction.Send,
-                        ),
-                        keyboardActions = KeyboardActions(onSend = { submit() }),
-                        trailingIcon = {
-                            IconButton(onClick = { hideInput = !hideInput }) {
-                                Icon(
-                                    painterResource(if (hideInput) R.drawable.ic_eye_off else R.drawable.ic_eye),
-                                    stringResource(if (hideInput) R.string.terminal_show_input else R.string.terminal_hide_input),
-                                )
-                            }
-                        },
-                    )
-                    Spacer(Modifier.padding(start = 8.dp))
-                    FilledIconButton(onClick = ::submit, enabled = !closed) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.terminal_send))
-                    }
-                }
+fun ModeSwitch(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(10.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp)).padding(3.dp),
+    ) {
+        labels.forEachIndexed { i, label ->
+            val active = i == selected
+            Box(
+                Modifier.clip(RoundedCornerShape(7.dp))
+                    .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .selectable(selected = active, role = Role.Tab, onClick = { onSelect(i) })
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+            ) {
+                Text(
+                    label, style = MaterialTheme.typography.labelLarge,
+                    color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
