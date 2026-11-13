@@ -59,7 +59,7 @@ class SessionService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_terminal)
+            .setSmallIcon(R.drawable.ic_stat_safab)
             .setContentTitle(getString(R.string.notif_title))
             .setContentText(names)
             .setOngoing(true)

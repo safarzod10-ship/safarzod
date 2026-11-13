@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#242422"/><stop offset="1" stop-color="#0B0B0A"/></linearGradient>
+ <linearGradient id="paper" gradientUnits="userSpaceOnUse" x1="130" y1="130" x2="390" y2="390"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E2DFD6"/></linearGradient>
+ <linearGradient id="node" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9A6B"/><stop offset="1" stop-color="#F04E23"/></linearGradient>
+ <radialGradient id="glow"><stop offset="0" stop-color="#F04E23" stop-opacity="0.55"/><stop offset="1" stop-color="#F04E23" stop-opacity="0"/></radialGradient>
+ <radialGradient id="sheen" cx="0.28" cy="0.08" r="0.95"><stop offset="0" stop-color="#fff" stop-opacity="0.09"/><stop offset="0.6" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs><path d="M292 164 H204 A46 46 0 0 0 204 256 H308 A46 46 0 0 1 308 348 H160" fill="none" stroke="#FAFAF7" stroke-width="52" stroke-linecap="round" stroke-dasharray="629.07 1258.14" stroke-dashoffset="0"/><circle cx="366" cy="164" r="67.60000000000001" fill="url(#glow)" opacity="0.5"/><circle cx="366" cy="164" r="26" fill="url(#node)"/></svg>
