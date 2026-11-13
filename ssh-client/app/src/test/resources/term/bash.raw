@@ -1,0 +1,61 @@
+[?2004h$ PS1='$ '
+[?2004l[?2004h$ ls --color=always /
+[?2004l[0m[01;36mbin[0m                  [01;34mdev[0m   [01;34mlib.usr-is-merged[0m  [01;34mmnt[0m       [01;34mproc[0m  [01;34msrv[0m  [01;34mvar[0m
+[01;34mbin.usr-is-merged[0m    [01;34metc[0m   [01;36mlib64[0m              [01;34mnix[0m       [01;34mroot[0m  [01;34msys[0m
+[01;34mboot[0m                 [01;34mhome[0m  [01;34mlost+found[0m         [01;34mold_root[0m  [01;34mrun[0m   [30;42mtmp[0m
+container_info.json  [01;36mlib[0m   [01;34mmedia[0m              [01;34mopt[0m       [01;36msbin[0m  [01;34musr[0m
+[?2004h$ printf 'a\tb\tc\n'
+[?2004la	b	c
+[?2004h$ for i in 1 2 3; do printf '\rstep %s' $i; sleep 0.1; done; echo
+[?2004lstep 1step 2step 3
+[?2004h$ python3 -c "print('x'*200)"
+[?2004lxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+[?2004h$ seq 1 40
+[?2004l1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+[?2004h$ printf '\033[1;31mred\033[0m \033[48;5;22mgreen bg\033[0m\n'
+[?2004l[1;31mred[0m [48;5;22mgreen bg[0m
+[?2004h$ echo abc[C[C[4@xyz [C[C[C[C[C[C[C[C![K[Kdone
+[?2004lbash: xyz: command not found
+[?2004h$ clear
+[?2004l[H[2J[3J[?2004h$ echo after clear
+[?2004lafter clear
+[?2004h$ 

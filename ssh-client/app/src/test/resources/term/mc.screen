@@ -1,0 +1,24 @@
+  Left     File     Command     Options     Right
+^<─ /tmp/tmp_wgc22va ─────────────.[^]>^^<─ .../user/safarzod/ssh-client ─.[^]>^
+│.n     Name      ^@ Size  ^@Modify time│.n     Name      ^@ Size  ^@Modify time
+│/..              ^@UP--DIR^@Nov 13 14:1│/..              ^@UP--DIR^@Nov 13 11:3
+│ .demo.py.swp    ^@   4096^@Nov 13 14:1│/.gradle         ^@   4096^@Nov 13 09:3
+│ .notes.txt.swp  ^@   4096^@Nov 13 14:1│/.kotlin         ^@   4096^@Nov 13 09:3
+│ demo.py         ^@     80^@Nov 13 14:1│/app             ^@   4096^@Nov 13 09:5
+│ notes.txt       ^@   6480^@Nov 13 14:1│/docs            ^@   4096^@Nov 13 11:3
+│ rc              ^@      9^@Nov 13 14:1│/gradle          ^@   4096^@Nov 13 09:3
+│                 ^@       ^@           │/tools           ^@   4096^@Nov 13 14:1
+│                 ^@       ^@           │ .gdignore       ^@      0^@Nov 13 09:2
+│                 ^@       ^@           │ .gitignore      ^@    102^@Nov 13 09:2
+│                 ^@       ^@           │ README.md       ^@  11572^@Nov 13 12:1
+│                 ^@       ^@           │ build.gradle.kts^@    368^@Nov 13 09:2
+│                 ^@       ^@           │ gradle.p~perties^@    262^@Nov 13 09:5
+│                 ^@       ^@           │*gradlew         ^@   8733^@Nov 13 09:3
+│                 ^@       ^@           │ gradlew.bat     ^@   2937^@Nov 13 09:3
+│                 ^@       ^@           │ keystore~perties^@    112^@Nov 13 10:0
+^──────────────────────────────────────^^──────────────────────────────────────^
+│ .notes.txt.swp                       ││UP--DIR                               │
+^@───────────────── 240G / 252G (95%) ─^^@───────────────── 240G / 252G (95%) ─^
+Hint: Tab changes your current panel.
+#
+ 1Help   2Menu   3View   4Edit   5Copy   6RenMov 7Mkdir  8Delete 9PullDn10Quit

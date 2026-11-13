@@ -53,6 +53,8 @@ data class KnownHost(val hostId: String, val type: String, val keyBase64: String
 data class Settings(
     /** true: keystrokes go straight to the shell; false: commands are composed in a separate field. */
     val terminalDirectInput: Boolean = true,
+    /** Terminal font size in sp; changed with a two-finger pinch. */
+    val terminalFontSize: Float = 12f,
 )
 
 /** Result of parsing a quick-connect line. */

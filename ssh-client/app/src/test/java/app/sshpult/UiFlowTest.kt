@@ -14,7 +14,11 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.sshpult.data.ConnectionProfile
@@ -118,6 +122,22 @@ class UiFlowTest {
         rule.onNodeWithTag("direct-input").performImeAction()
         waitForText("ui-42")
         snap("terminal_direct")
+        // -- zoom: two-finger pinch changes the font, and with it the size the server is told about
+        val repo = (RuntimeEnvironment.getApplication() as App).container.repository
+        val before = repo.data.value.settings.terminalFontSize
+        rule.onNodeWithTag("terminal-output").performTouchInput {
+            pinch(start0 = center + Offset(-200f, 0f), end0 = center + Offset(-80f, 0f), start1 = center + Offset(200f, 0f), end1 = center + Offset(80f, 0f))
+        }
+        await { repo.data.value.settings.terminalFontSize < before * 0.8f }
+        val application = RuntimeEnvironment.getApplication() as App
+        val shell = kotlinx.coroutines.runBlocking { application.container.sessions.session(repo.data.value.connections.single().id).shell() }
+        await { shell.columns > 60 }                                    // smaller font -> more columns
+        rule.onNodeWithText("80⇔").performScrollTo().performClick()   // "fit 80 columns"
+        await { shell.columns == 80 }
+        rule.onNodeWithTag("direct-input").performTextInput("printf '\\033[1;32mgreen\\033[0m \\033[7minverse\\033[0m \\033[38;5;208morange-ok\\033[0m\\n'")
+        rule.onNodeWithTag("direct-input").performImeAction()
+        waitForText("orange-ok")
+        snap("terminal_colours_80_columns")
         // Ctrl is sticky: "ctrl" then a letter sends the control byte, here Ctrl+D ends the shell
         // -- separate input field
         rule.onNodeWithContentDescription("Switch to separate input field").performClick()

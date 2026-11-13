@@ -188,4 +188,5 @@
     <string name="about_developer">Developer · owner · support</string>
     <string name="about_telegram">Telegram — questions, bugs and ideas</string>
     <string name="about_write">Message on Telegram</string>
+    <string name="terminal_paste">Paste</string>
 </resources>

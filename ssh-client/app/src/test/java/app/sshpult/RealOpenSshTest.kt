@@ -77,7 +77,7 @@ class RealOpenSshTest {
 
         shell.sendLine("cd /tmp")
         shell.sendLine("echo \"here=\$(pwd) term=\$TERM\"")
-        shell.await("state kept between commands") { l -> l.any { it == "here=/tmp term=dumb" } }
+        shell.await("state kept between commands") { l -> l.any { it == "here=/tmp term=xterm-256color" } }
 
         shell.resize(100, 30)
         shell.sendLine("stty size")
@@ -92,6 +92,13 @@ class RealOpenSshTest {
         shell.sendLine("ls --color=always / ; printf '\\033[1;32mgreen\\033[0m-done\\n'")
         shell.await("colour codes stripped") { l -> l.any { it == "green-done" } }
         assertFalse(shell.screen.value.lines.any { '\u001b' in it })
+
+        // a full-screen program takes over the display and gives it back
+        shell.sendLine("vim -u NONE -N /etc/hostname")
+        shell.await("vim on the alternate screen") { shell.screen.value.fullScreen && it.any { l -> l.contains("hostname") } }
+        shell.send(shell.arrow('B'))
+        shell.send(":q!\r")
+        shell.await("back to the shell with history intact") { !shell.screen.value.fullScreen && it.any { l -> l == "green-done" } }
 
         shell.sendLine("printf 'Привет €\\n'")
         shell.await("utf-8") { l -> l.any { it == "Привет €" } }

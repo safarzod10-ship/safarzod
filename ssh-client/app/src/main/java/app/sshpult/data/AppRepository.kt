@@ -76,6 +76,11 @@ class AppRepository(
 
     fun newId(): String = UUID.randomUUID().toString()
 
+    companion object {
+        const val MIN_FONT = 5f
+        const val MAX_FONT = 28f
+    }
+
     // ---- Connections -------------------------------------------------------------------
 
     fun connection(id: String): ConnectionProfile? = _data.value.connections.firstOrNull { it.id == id }
@@ -117,6 +122,8 @@ class AppRepository(
     }
 
     fun setTerminalDirectInput(direct: Boolean) = update { it.copy(settings = it.settings.copy(terminalDirectInput = direct)) }
+
+    fun setTerminalFontSize(size: Float) = update { it.copy(settings = it.settings.copy(terminalFontSize = size.coerceIn(MIN_FONT, MAX_FONT))) }
 
     fun deleteConnection(id: String) = update { d -> d.copy(connections = d.connections.filterNot { it.id == id }) }
 

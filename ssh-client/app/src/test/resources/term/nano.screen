@@ -1,0 +1,24 @@
+  GNU nano 7.2                /tmp/tmp_wgc22va/demo.py                Modified
+import os
+
+inserted text
+    for i in range(3):
+        print("hello", i)
+
+main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+^G Help      ^O Write Out ^W Where Is  ^K Cut       ^T Execute   ^C Location
+^X Exit      ^R Read File ^\ Replace   ^U Paste     ^J Justify   ^/ Go To Line

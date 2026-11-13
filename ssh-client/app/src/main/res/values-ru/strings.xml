@@ -188,4 +188,5 @@
     <string name="about_developer">Разработчик · владелец · поддержка</string>
     <string name="about_telegram">Telegram — вопросы, ошибки и предложения</string>
     <string name="about_write">Написать в Telegram</string>
+    <string name="terminal_paste">Вставить</string>
 </resources>

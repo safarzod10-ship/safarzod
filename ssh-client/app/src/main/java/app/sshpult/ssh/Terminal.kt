@@ -10,11 +10,9 @@ import java.nio.ByteBuffer
 import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 
-/** Immutable view of the terminal text. [revision] changes on every update. */
-data class TerminalSnapshot(val lines: List<String>, val revision: Long, val cursorColumn: Int = 0)
-
 /**
- * Turns the raw byte stream of a `TERM=dumb` shell into plain lines of text.
+ * Turns a raw byte stream into plain lines of text (the interactive terminal itself uses the
+ * full [TerminalEmulator]; this light version is for simple, line-oriented output).
  *
  * This is deliberately not a full VT100 emulator: it understands newlines, carriage
  * returns, backspace, tabs, "erase line/screen" and silently drops every other escape
@@ -126,27 +124,28 @@ class TerminalBuffer(private val maxLines: Int = 3000) {
     }
 }
 
-/** An interactive login shell: output is exposed as text, input is sent as keystrokes. */
+/** An interactive login shell on a real PTY: output is emulated into a screen, input is sent as keystrokes. */
 class ShellSession internal constructor(
     private val channel: ChannelShell,
     private val input: InputStream,
     private val output: OutputStream,
+    cols: Int = 80, rows: Int = 24,
 ) : Closeable {
-    private val buffer = TerminalBuffer()
-    private val _screen = MutableStateFlow(buffer.snapshot())
+    private val emulator = TerminalEmulator(cols, rows, reply = { answer -> runCatching { send(answer) } })
+    private val _screen = MutableStateFlow(emulator.snapshot())
     val screen: StateFlow<TerminalSnapshot> = _screen
     private val _closed = MutableStateFlow(false)
     /** Becomes true when the remote shell exits or the connection drops. */
     val closed: StateFlow<Boolean> = _closed
 
     private val reader = Thread({
-        val buf = ByteArray(8192)
+        val buf = ByteArray(16384)
         try {
             while (true) {
                 val n = input.read(buf)
                 if (n < 0) break
-                buffer.feed(buf, n)
-                _screen.value = buffer.snapshot()
+                emulator.feed(buf, n)
+                _screen.value = emulator.snapshot()
             }
         } catch (e: Exception) {
             // stream closed: fall through
@@ -168,15 +167,35 @@ class ShellSession internal constructor(
         }
     }
 
+    /** Size the remote side currently sees. */
+    val columns: Int get() = emulator.cols
+    val rows: Int get() = emulator.rows
+
     fun sendLine(line: String) = send(line + "\r")
 
-    fun resize(cols: Int, rows: Int) {
-        runCatching { channel.setPtySize(cols.coerceIn(20, 500), rows.coerceIn(5, 200), 0, 0) }
+    /** Arrow keys depend on a mode full-screen programs switch on (vim, less, menus). */
+    fun arrow(direction: Char): String = (if (emulator.applicationCursorKeys) "\u001bO" else "\u001b[") + direction
+
+    /** Sends pasted text the way the remote program expects it (as one block, never run line by line by an editor). */
+    fun paste(text: String) {
+        val clean = text.replace("\r\n", "\r").replace('\n', '\r')
+        send(if (emulator.bracketedPaste) "\u001b[200~$clean\u001b[201~" else clean)
     }
 
+    fun resize(cols: Int, rows: Int) {
+        val c = cols.coerceIn(TerminalEmulator.MIN_COLS, TerminalEmulator.MAX_COLS)
+        val r = rows.coerceIn(TerminalEmulator.MIN_ROWS, TerminalEmulator.MAX_ROWS)
+        if (c == emulator.cols && r == emulator.rows) return
+        emulator.resize(c, r)
+        _screen.value = emulator.snapshot()
+        runCatching { channel.setPtySize(c, r, 0, 0) }
+    }
+
+    /** Drops the history and asks the shell to repaint (Ctrl+L). */
     fun clearScreen() {
-        buffer.clear()
-        _screen.value = buffer.snapshot()
+        emulator.clearScrollback()
+        _screen.value = emulator.snapshot()
+        runCatching { send("\u000c") }
     }
 
     override fun close() {
@@ -196,6 +215,10 @@ class ShellSession internal constructor(
         const val DOWN = "\u001b[B"
         const val RIGHT = "\u001b[C"
         const val LEFT = "\u001b[D"
+        const val HOME = "\u001b[H"
+        const val END = "\u001b[F"
+        const val PAGE_UP = "\u001b[5~"
+        const val PAGE_DOWN = "\u001b[6~"
 
         /** Ctrl+letter as the byte a terminal would send (Ctrl+C -> 0x03); null if there is none. */
         fun control(c: Char): String? {

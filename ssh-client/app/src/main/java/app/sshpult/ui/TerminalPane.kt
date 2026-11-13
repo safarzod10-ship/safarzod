@@ -1,5 +1,18 @@
 package app.sshpult.ui
 
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextDecoration
+import app.sshpult.data.AppRepository
+import app.sshpult.ssh.StyledLine
+import app.sshpult.ssh.TermFlags
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -83,8 +96,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.sshpult.R
@@ -95,9 +108,36 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val TerminalStyle = TextStyle(
-    fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 18.sp, color = TerminalColors.text,
+private fun terminalStyle(size: TextUnit) = TextStyle(
+    fontFamily = FontFamily.Monospace, fontSize = size, lineHeight = size * 1.3f, color = TerminalColors.text,
 )
+
+/** Terminal line as styled text, with a block cursor at [cursor] (or -1 for none). */
+private fun StyledLine.toAnnotated(cursor: Int): AnnotatedString = buildAnnotatedString {
+    val padded = if (cursor >= text.length) text.padEnd(cursor + 1, ' ') else text.ifEmpty { " " }
+    append(padded)
+    for (r in runs) {
+        val inverse = r.flags and TermFlags.INVERSE != 0
+        var fg = if (r.fg != 0) Color(r.fg) else TerminalColors.text
+        var bg = if (r.bg != 0) Color(r.bg) else Color.Unspecified
+        if (inverse) {
+            val f = fg
+            fg = if (r.bg != 0) Color(r.bg) else TerminalColors.background
+            bg = f
+        }
+        if (r.flags and TermFlags.DIM != 0) fg = fg.copy(alpha = 0.6f)
+        addStyle(
+            SpanStyle(
+                color = fg, background = bg,
+                fontWeight = if (r.flags and TermFlags.BOLD != 0) FontWeight.Bold else null,
+                fontStyle = if (r.flags and TermFlags.ITALIC != 0) FontStyle.Italic else null,
+                textDecoration = if (r.flags and TermFlags.UNDERLINE != 0) TextDecoration.Underline else null,
+            ),
+            r.start, r.end.coerceAtMost(padded.length),
+        )
+    }
+    if (cursor in padded.indices) addStyle(SpanStyle(background = TerminalColors.cursor, color = TerminalColors.background), cursor, cursor + 1)
+}
 
 @Composable
 fun TerminalPane(session: SessionManager.ManagedSession) {
@@ -145,6 +185,8 @@ private fun TerminalContent(shell: ShellSession, onReopen: () -> Unit) {
     val directFocus = remember { FocusRequester() }
     val composeFocus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+    var fontSp by remember { mutableFloatStateOf(data.settings.terminalFontSize) }
+    var currentCols by remember { mutableIntStateOf(80) }
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
@@ -174,26 +216,64 @@ private fun TerminalContent(shell: ShellSession, onReopen: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(TerminalColors.background)) {
         BoxWithConstraints(
-            Modifier.weight(1f).fillMaxWidth()
+            Modifier.weight(1f).fillMaxWidth().testTag("terminal-output")
+                // Two fingers: pinch to change the font size (and with it how many columns fit).
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.changes.count { it.pressed } >= 2) {
+                                val zoom = event.calculateZoom()
+                                if (zoom != 1f) fontSp = (fontSp * zoom).coerceIn(AppRepository.MIN_FONT, AppRepository.MAX_FONT)
+                                event.changes.forEach { it.consume() }
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
                 .pointerInput(direct) { detectTapGestures(onTap = { focusInput() }) },
         ) {
             val measurer = rememberTextMeasurer()
             val density = LocalDensity.current
-            val cell = remember(density) { measurer.measure("M", TerminalStyle).size }
-            val padPx = with(density) { 10.dp.roundToPx() }
-            val cols = (constraints.maxWidth - 2 * padPx) / cell.width.coerceAtLeast(1)
-            val rows = constraints.maxHeight / cell.height.coerceAtLeast(1)
+            // The size is in dp, not sp: the terminal has its own zoom and must not shrink to a
+            // handful of columns just because the system font is set to "large".
+            val style = remember(fontSp, density) { terminalStyle(with(density) { fontSp.dp.toSp() }) }
+            val probe = remember(density, style) { measurer.measure("MMMMMMMMMMMMMMMMMMMM", style, softWrap = false) }
+            val cellWidth = probe.size.width / 20f
+            val padPx = with(density) { 6.dp.roundToPx() }
+            val cols = ((constraints.maxWidth - 2 * padPx) / cellWidth.coerceAtLeast(1f)).toInt()
+            val rows = (constraints.maxHeight - padPx) / probe.size.height.coerceAtLeast(1)
+            currentCols = cols
             LaunchedEffect(shell, cols, rows) { withContext(Dispatchers.IO) { shell.resize(cols, rows) } }
             SelectionContainer {
-                LazyColumn(state = listState, contentPadding = PaddingValues(10.dp), modifier = Modifier.fillMaxSize()) {
-                    items(count = screen.lines.size) { i ->
-                        val line = screen.lines[i]
-                        if (i == screen.lines.lastIndex && !closed) Text(withCursor(line, screen.cursorColumn), style = TerminalStyle)
-                        else Text(line.ifEmpty { " " }, style = TerminalStyle)
+                LazyColumn(state = listState, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp), modifier = Modifier.fillMaxSize()) {
+                    items(count = screen.styled.size) { i ->
+                        val line = screen.styled[i]
+                        val cursor = if (i == screen.cursorLine && screen.cursorVisible && !closed) screen.cursorColumn else -1
+                        Text(remember(line, cursor) { line.toAnnotated(cursor) }, style = style, softWrap = false, maxLines = 1)
                     }
                 }
             }
-            if (direct && !closed) DirectInput(directFocus, onText = ::typed, onKey = ::send)
+            // While zooming, show what the remote side now sees as the window size.
+            var sizeHint by remember { mutableStateOf(false) }
+            LaunchedEffect(fontSp) {
+                if (fontSp != data.settings.terminalFontSize) {
+                    sizeHint = true
+                    delay(450)
+                    app.repository.setTerminalFontSize(fontSp)
+                    delay(900)
+                }
+                sizeHint = false
+            }
+            if (sizeHint) {
+                Text(
+                    "$cols × $rows", color = TerminalColors.background, fontFamily = FontFamily.Monospace, fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(10.dp))
+                        .background(TerminalColors.cursor).padding(horizontal = 10.dp, vertical = 5.dp),
+                )
+            }
+            if (direct && !closed) DirectInput(directFocus, onText = ::typed, onKey = ::send, arrow = shell::arrow)
         }
 
         if (closed) {
@@ -225,8 +305,19 @@ private fun TerminalContent(shell: ShellSession, onReopen: () -> Unit) {
             onCtrl = { ctrlArmed = !ctrlArmed },
             onSend = { ctrlArmed = false; send(it) },
             onSymbol = { if (direct) typed(it) else recall = "\u0000$it" }, // \u0000 prefix = "append"
-            onUp = { if (direct) send(ShellSession.UP) else recallStep(-1) },
-            onDown = { if (direct) send(ShellSession.DOWN) else recallStep(1) },
+            onUp = { if (direct) send(shell.arrow('A')) else recallStep(-1) },
+            onDown = { if (direct) send(shell.arrow('B')) else recallStep(1) },
+            arrow = shell::arrow,
+            // Shrink (or grow) the font so that exactly 80 columns fit — what most programs expect.
+            onFit80 = { fontSp = (fontSp * currentCols / 80.6f).coerceIn(AppRepository.MIN_FONT, AppRepository.MAX_FONT) },
+            onPaste = {
+                val clip = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip
+                val text = clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+                if (text.isNotEmpty()) {
+                    stickToBottom = true
+                    scope.launch(Dispatchers.IO) { runCatching { shell.paste(text) } }
+                }
+            },
             onKeyboard = ::focusInput,
             onClear = { shell.clearScreen() },
             onCopy = { copyToClipboard(context, "terminal", screen.lines.joinToString("\n").trimEnd()) },
@@ -246,15 +337,6 @@ private fun TerminalContent(shell: ShellSession, onReopen: () -> Unit) {
     }
 }
 
-/** The last terminal line with a block cursor drawn at [column]. */
-private fun withCursor(line: String, column: Int): AnnotatedString = buildAnnotatedString {
-    val col = column.coerceIn(0, 2000)
-    val padded = if (line.length <= col) line.padEnd(col + 1, ' ') else line
-    append(padded.substring(0, col))
-    withStyle(SpanStyle(background = TerminalColors.cursor, color = TerminalColors.background)) { append(padded[col]) }
-    append(padded.substring(col + 1))
-}
-
 /** What the invisible field holds between keystrokes, so that Backspace always has something to delete. */
 private const val SENTINEL = "  "
 private fun sentinelValue() = TextFieldValue(SENTINEL, TextRange(SENTINEL.length))
@@ -264,7 +346,7 @@ private fun sentinelValue() = TextFieldValue(SENTINEL, TextRange(SENTINEL.length
  * keystrokes. It is reset after every change, so it never accumulates text.
  */
 @Composable
-private fun DirectInput(focus: FocusRequester, onText: (String) -> Unit, onKey: (String) -> Unit) {
+private fun DirectInput(focus: FocusRequester, onText: (String) -> Unit, onKey: (String) -> Unit, arrow: (Char) -> String) {
     // neverEqualPolicy: writing the same sentinel again must still push it back to the keyboard.
     var value by remember { mutableStateOf(sentinelValue(), neverEqualPolicy()) }
     val label = stringResource(R.string.terminal_direct_input)
@@ -297,10 +379,14 @@ private fun DirectInput(focus: FocusRequester, onText: (String) -> Unit, onKey: 
                     Key.Tab -> ShellSession.TAB
                     Key.Escape -> ShellSession.ESC
                     Key.Backspace -> ShellSession.BACKSPACE
-                    Key.DirectionUp -> ShellSession.UP
-                    Key.DirectionDown -> ShellSession.DOWN
-                    Key.DirectionLeft -> ShellSession.LEFT
-                    Key.DirectionRight -> ShellSession.RIGHT
+                    Key.DirectionUp -> arrow('A')
+                    Key.DirectionDown -> arrow('B')
+                    Key.DirectionLeft -> arrow('D')
+                    Key.DirectionRight -> arrow('C')
+                    Key.MoveHome -> ShellSession.HOME
+                    Key.MoveEnd -> ShellSession.END
+                    Key.PageUp -> ShellSession.PAGE_UP
+                    Key.PageDown -> ShellSession.PAGE_DOWN
                     else -> if (e.isCtrlPressed && e.utf16CodePoint in 32..126) ShellSession.control(e.utf16CodePoint.toChar()) else null
                 }
                 if (seq != null) onKey(seq)
@@ -335,6 +421,7 @@ private fun KeyRow(
     direct: Boolean, enabled: Boolean, ctrlArmed: Boolean,
     onToggleMode: () -> Unit, onCtrl: () -> Unit, onSend: (String) -> Unit, onSymbol: (String) -> Unit,
     onUp: () -> Unit, onDown: () -> Unit, onKeyboard: () -> Unit, onClear: () -> Unit, onCopy: () -> Unit,
+    arrow: (Char) -> String, onPaste: () -> Unit, onFit80: () -> Unit,
 ) {
     Column {
         Box(Modifier.fillMaxWidth().height(1.dp).background(TerminalColors.line))
@@ -358,11 +445,17 @@ private fun KeyRow(
                 TermKey(icon = R.drawable.ic_arrow_up, description = stringResource(R.string.terminal_history_prev), enabled = enabled, onClick = onUp)
                 TermKey(icon = R.drawable.ic_arrow_down, description = stringResource(R.string.terminal_history_next), enabled = enabled, onClick = onDown)
                 if (direct) {
-                    TermKey("←", enabled = enabled) { onSend(ShellSession.LEFT) }
-                    TermKey("→", enabled = enabled) { onSend(ShellSession.RIGHT) }
+                    TermKey("←", enabled = enabled) { onSend(arrow('D')) }
+                    TermKey("→", enabled = enabled) { onSend(arrow('C')) }
+                    TermKey("home", enabled = enabled) { onSend(ShellSession.HOME) }
+                    TermKey("end", enabled = enabled) { onSend(ShellSession.END) }
+                    TermKey("pgup", enabled = enabled) { onSend(ShellSession.PAGE_UP) }
+                    TermKey("pgdn", enabled = enabled) { onSend(ShellSession.PAGE_DOWN) }
                 }
+                TermKey(stringResource(R.string.terminal_paste).lowercase(), enabled = enabled, onClick = onPaste)
                 for (symbol in listOf("/", "-", "|", "~", "$", "&", "*", ".")) TermKey(symbol, enabled = enabled) { onSymbol(symbol) }
                 if (direct) TermKey(icon = R.drawable.ic_keyboard, description = stringResource(R.string.terminal_keyboard), enabled = enabled, onClick = onKeyboard)
+                TermKey("80⇔", onClick = onFit80)
                 TermKey(icon = R.drawable.ic_copy, description = stringResource(R.string.terminal_copy_all), onClick = onCopy)
                 TermKey(stringResource(R.string.terminal_clear).lowercase(), onClick = onClear)
             }

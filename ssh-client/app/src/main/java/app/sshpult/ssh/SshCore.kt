@@ -312,7 +312,7 @@ class SshConnection internal constructor(private val session: Session) : Closeab
     fun openShell(cols: Int = 80, rows: Int = 24): ShellSession {
         try {
             val channel = session.openChannel("shell") as ChannelShell
-            channel.setPtyType("dumb", cols, rows, 0, 0)
+            channel.setPtyType("xterm-256color", cols, rows, 0, 0)
             channel.setPty(true)
             // Enter is sent as CR, like a real terminal; ask the server side to map it to a newline
             // (ICRNL = opcode 36, the default on every normal PTY, stated explicitly here).
@@ -320,7 +320,7 @@ class SshConnection internal constructor(private val session: Session) : Closeab
             val input = channel.inputStream
             val output = channel.outputStream
             channel.connect(SshConnector.DEFAULT_TIMEOUT_MS)
-            return ShellSession(channel, input, output)
+            return ShellSession(channel, input, output, cols, rows)
         } catch (e: JSchException) {
             throw channelError(e)
         }
