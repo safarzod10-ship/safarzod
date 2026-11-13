@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:R;src:url('Rubik.ttf');font-weight:300 900}body{margin:0;background:#000}</style></head><body>
+<canvas id="a" width="640" height="640"></canvas><canvas id="b" width="1280" height="720"></canvas>
+<script>
+function gift(c, x, y, s, hue) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  const g = c.createLinearGradient(-60, -40, 60, 70); g.addColorStop(0, `hsl(${hue},95%,62%)`); g.addColorStop(1, `hsl(${hue + 30},90%,42%)`);
+  c.shadowColor = `hsla(${hue},95%,60%,.7)`; c.shadowBlur = 40;
+  c.fillStyle = g; c.beginPath(); c.roundRect(-60, -20, 120, 90, 14); c.fill(); c.shadowBlur = 0;
+  c.fillStyle = `hsl(${hue},95%,70%)`; c.beginPath(); c.roundRect(-70, -48, 140, 36, 10); c.fill();
+  c.fillStyle = '#fff6d6'; c.fillRect(-11, -48, 22, 118);
+  c.beginPath(); c.ellipse(-26, -62, 24, 14, -.5, 0, 7); c.ellipse(26, -62, 24, 14, .5, 0, 7); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.roundRect(-52, -14, 30, 70, 10); c.fill();
+  c.restore();
+}
+function radar(c, cx, cy, R) {
+  const bg = c.createRadialGradient(cx, cy, 10, cx, cy, R * 1.4); bg.addColorStop(0, '#16224a'); bg.addColorStop(1, '#070a18');
+  c.fillStyle = bg; c.fillRect(0, 0, c.canvas.width, c.canvas.height);
+  c.strokeStyle = 'rgba(80,220,255,.28)'; c.lineWidth = 3;
+  for (let i = 1; i <= 4; i++) { c.beginPath(); c.arc(cx, cy, R * i / 4, 0, 7); c.stroke(); }
+  c.beginPath(); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.moveTo(cx, cy - R); c.lineTo(cx, cy + R); c.stroke();
+  const sw = c.createConicGradient(-Math.PI / 2.4, cx, cy); sw.addColorStop(0, 'rgba(80,220,255,.55)'); sw.addColorStop(.12, 'rgba(80,220,255,0)'); sw.addColorStop(1, 'rgba(80,220,255,0)');
+  c.fillStyle = sw; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R, 0, 7); c.fill();
+  [[.55, -.35, 320], [-.6, .45, 45], [.35, .62, 190]].forEach(([dx, dy, h]) => { c.shadowColor = `hsl(${h},95%,65%)`; c.shadowBlur = 20; c.fillStyle = `hsl(${h},95%,70%)`; c.beginPath(); c.arc(cx + dx * R, cy + dy * R, R * .035, 0, 7); c.fill(); c.shadowBlur = 0; });
+}
+Promise.all([document.fonts.load('900 92px R'), document.fonts.load('600 34px R'), document.fonts.load('700 30px R')]).then(() => {
+const a = document.getElementById('a').getContext('2d');
+radar(a, 320, 320, 300); gift(a, 320, 330, 1.75, 280);
+const b = document.getElementById('b').getContext('2d');
+radar(b, 960, 360, 330);
+gift(b, 960, 360, 1.6, 280); gift(b, 780, 520, .7, 30); gift(b, 1150, 200, .6, 190);
+b.fillStyle = '#fff'; b.font = '900 92px R'; b.fillText('РАДАР', 70, 270); b.fillText('ПОДАРКОВ', 70, 370);
+b.fillStyle = '#5ee0ff'; b.font = '600 34px R'; b.fillText('подарки Telegram · NFT · цены · гайды', 74, 440);
+b.fillStyle = 'rgba(255,255,255,.12)'; b.beginPath(); b.roundRect(70, 490, 330, 64, 32); b.fill();
+b.fillStyle = '#fff'; b.font = '700 30px R'; b.fillText('@radar_podarkov', 96, 532);
+window.READY = true;
+});
+</script></body></html>
