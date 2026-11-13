@@ -54,6 +54,7 @@ tools/android/               настройка Android-экспорта
 tools/setup/                 установка инструментов, swap
 docs/                        документация, отчёты, скриншоты (.gdignore)
 builds/                      APK, логи, архивы (в Git не попадают)
+ssh-client/                  отдельный проект: Android-клиент SSH/SFTP «SSH Пульт» (.gdignore), см. ssh-client/README.md
 ```
 
 ## Документация
