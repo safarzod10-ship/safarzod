@@ -49,8 +49,8 @@ func set_info(nm: String, tex: Texture2D, cards: int, status: String, ring: Colo
 
 func bump() -> void:
 	var t := create_tween()
-	avatar.scale = Vector2(1.12, 1.12)
-	t.tween_property(avatar, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	avatar.scale = Vector2(1.06, 1.06)
+	t.tween_property(avatar, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 func _draw() -> void:

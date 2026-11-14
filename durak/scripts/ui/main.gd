@@ -6,7 +6,7 @@ extends Control
 var screen := ""
 var content: Control
 var curtain: Control
-var curtain_morph: SuitMorph
+var curtain_video: SuitVideo
 var toast_box: VBoxContainer
 var table: TableScreen
 var _rooms_list: VBoxContainer
@@ -29,11 +29,9 @@ func _ready() -> void:
 	curtain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	curtain.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(curtain)
-	curtain_morph = SuitMorph.new(150)
-	curtain_morph.set_anchors_preset(Control.PRESET_CENTER)
-	curtain_morph.size = curtain_morph.custom_minimum_size
-	curtain_morph.position = -curtain_morph.size / 2.0
-	curtain.add_child(curtain_morph)
+	curtain_video = SuitVideo.new(110)
+	curtain.add_child(curtain_video)
+	_center_curtain_video(110)
 	toast_box = VBoxContainer.new()
 	toast_box.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	toast_box.position.y = 110
@@ -66,7 +64,7 @@ func _notification(what: int) -> void:
 func _splash() -> void:
 	curtain.visible = true
 	curtain.modulate.a = 1.0
-	curtain_morph.shape_size = 230
+	_center_curtain_video(200)
 	var title := UI.label("ДУРАК", 92, UI.TEXT, true, 800)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -79,11 +77,18 @@ func _splash() -> void:
 	curtain.add_child(title)
 	var t := create_tween()
 	t.tween_property(title, "modulate:a", 1.0, 0.6).set_delay(0.3)
-	t.tween_interval(2.4)
+	t.tween_interval(4.6)
 	t.tween_callback(func() -> void:
-		curtain_morph.shape_size = 150
-		go("menu" if Profile.has_profile() else "profile_first", true)
-		title.queue_free())
+		_center_curtain_video(110)
+		title.queue_free()
+		if screen == "":
+			go("menu" if Profile.has_profile() else "profile_first", true))
+
+
+func _center_curtain_video(sz: float) -> void:
+	curtain_video.set_box(sz)
+	curtain_video.set_anchors_preset(Control.PRESET_CENTER)
+	curtain_video.position = get_viewport_rect().size / 2.0 - curtain_video.size / 2.0 - Vector2(0, 40)
 
 
 ## Сменить экран через шторку.
@@ -94,10 +99,10 @@ func go(target: String, from_splash: bool = false) -> void:
 	if not from_splash:
 		curtain.visible = true
 		curtain.modulate.a = 0.0
-		t.tween_property(curtain, "modulate:a", 1.0, 0.18)
+		t.tween_property(curtain, "modulate:a", 1.0, 0.25)
 	t.tween_callback(func() -> void: _build(target))
-	t.tween_interval(0.45 if target in ["table", "lobby"] else 0.12)
-	t.tween_property(curtain, "modulate:a", 0.0, 0.25)
+	t.tween_interval(0.9 if target in ["table", "lobby"] else 0.2)
+	t.tween_property(curtain, "modulate:a", 0.0, 0.3)
 	t.tween_callback(func() -> void: curtain.visible = false)
 
 
@@ -233,13 +238,13 @@ func _menu() -> void:
 	top.add_child(snd)
 	v.add_child(top)
 	_fill_space(v)
-	var morph := SuitMorph.new(250)
+	var morph := SuitVideo.new(170)
 	morph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(morph)
 	var title := UI.label("ДУРАК", 110, UI.TEXT, true, 800)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
-	var sub := UI.label("шулерский · без интернета", 24, UI.MUTED, false, 700)
+	var sub := UI.label("с друзьями · без интернета", 24, UI.MUTED, false, 700)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(sub)
 	_fill_space(v)
@@ -372,9 +377,9 @@ func _bots() -> void:
 	v.add_child(UI.segmented(["Подкидной", "Переводной"], 1 if s.mode == "perevodnoy" else 0, func(i: int) -> void:
 		s.mode = "perevodnoy" if i == 1 else "podkidnoy"))
 	v.add_child(UI.spacer(8))
-	v.add_child(UI.caption("Шулерство"))
-	v.add_child(UI.segmented(["Можно наёбывать", "Честно"], 0 if s.cheats else 1, func(i: int) -> void: s.cheats = i == 0))
-	var hint := UI.label("Неправильный ход проходит, но если его заметят — карта вернётся. Коснись подозрительной карты на столе → «НАЁБ?».", 22, UI.MUTED, false, 600)
+	v.add_child(UI.caption("Обман"))
+	v.add_child(UI.segmented(["С обманом", "Честно"], 0 if s.cheats else 1, func(i: int) -> void: s.cheats = i == 0))
+	var hint := UI.label("Неправильный ход проходит, но его можно поймать: коснись подозрительной карты на столе и нажми «Обман?» — карта вернётся владельцу.", 22, UI.MUTED, false, 600)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hint)
 	_fill_space(v)
@@ -408,7 +413,7 @@ func _wifi() -> void:
 	v.add_child(_rooms_list)
 	_rooms_empty = HBoxContainer.new()
 	_rooms_empty.add_theme_constant_override("separation", 12)
-	var spin := SuitMorph.new(44)
+	var spin := SuitVideo.new(34)
 	_rooms_empty.add_child(spin)
 	var l := UI.label("Ищем комнаты…", 24, UI.MUTED, false, 700)
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -472,7 +477,7 @@ func _join(ip: String) -> void:
 func _connecting() -> void:
 	var v := _page("", false)
 	_fill_space(v)
-	var morph := SuitMorph.new(180)
+	var morph := SuitVideo.new(130)
 	morph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(morph)
 	var l := UI.label("Подключаемся…", 32, UI.TEXT, true, 600)
@@ -545,12 +550,12 @@ func _lobby() -> void:
 	if host:
 		v.add_child(UI.segmented(["Подкидной", "Переводной"], 1 if st.mode == "perevodnoy" else 0, func(i: int) -> void:
 			Session.set_setting("mode", "perevodnoy" if i == 1 else "podkidnoy")))
-		v.add_child(UI.segmented(["Можно наёбывать", "Честно"], 0 if st.cheats else 1, func(i: int) -> void:
+		v.add_child(UI.segmented(["С обманом", "Честно"], 0 if st.cheats else 1, func(i: int) -> void:
 			Session.set_setting("cheats", i == 0)))
 		v.add_child(UI.segmented(["Лёгкие", "Норм", "Сильные"], int(st.level), func(i: int) -> void:
 			Session.set_setting("level", i)))
 	else:
-		var txt := ("Переводной" if st.mode == "perevodnoy" else "Подкидной") + (" · можно наёбывать" if st.cheats else " · честно")
+		var txt := ("Переводной" if st.mode == "perevodnoy" else "Подкидной") + (" · с обманом" if st.cheats else " · честно")
 		v.add_child(UI.label(txt, 26, UI.TEXT, false, 700))
 	_fill_space(v)
 	if host:
@@ -566,7 +571,7 @@ func _lobby() -> void:
 		var w := HBoxContainer.new()
 		w.alignment = BoxContainer.ALIGNMENT_CENTER
 		w.add_theme_constant_override("separation", 12)
-		w.add_child(SuitMorph.new(44))
+		w.add_child(SuitVideo.new(34))
 		var l := UI.label("Ждём, когда хост начнёт", 24, UI.MUTED, false, 700)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		w.add_child(l)
@@ -590,10 +595,10 @@ func _rules() -> void:
 		["Колода", "36 карт, от шестёрки до туза (В — валет, Д — дама, К — король, Т — туз). Всем по 6, нижняя карта колоды — козырь."],
 		["Ход", "Первым ходит тот, у кого младший козырь. Отбиваются старшей картой той же масти или козырем."],
 		["Подкидной", "Подкидывать можно карты тех достоинств, что уже на столе. В первом отбое — до 5 карт, потом до 6, и не больше, чем карт у отбивающегося."],
-		["Беру", "Не можешь отбиться — забираешь все карты со стола, и ход переходит дальше. Тебе ещё могут подкинуть."],
+		["Пас и Беру", "Не можешь отбиться — нажми «Беру»: заберёшь все карты со стола. Нападающие, когда больше не хотят подкидывать, нажимают «Пас». Кон заканчивается, когда все сказали «Пас»."],
 		["Переводной", "Пока ни одна карта не побита, можно положить карту того же достоинства — и отбиваться будет следующий."],
 		["Добор", "После кона все добирают до 6: сначала ходивший, отбивавшийся — последним."],
-		["Шулерство", "Можно бить не той картой или подкинуть не то достоинство. Игра пропустит. Но если кто-то коснётся этой карты и нажмёт «НАЁБ?» — карта вернётся хозяину. Ошибся с обвинением — до конца кона ловить больше нельзя."],
+		["Обман", "Можно побить не той картой или подкинуть не то достоинство — игра пропустит. Но любой может коснуться такой карты и нажать «Обман?», и она вернётся владельцу. Ошибся с обвинением — до конца кона ловить больше нельзя."],
 		["Управление", "Коснись карты, чтобы выбрать, ещё раз — сыграть. Или перетащи на стол или на карту, которую бьёшь."],
 	]
 	for p in parts:

@@ -57,7 +57,7 @@ func set_interactive(v: bool) -> void:
 
 
 ## Переворот: сжать по X, сменить сторону, развернуть.
-func flip_to(up: bool, delay: float = 0.0, dur: float = 0.22) -> void:
+func flip_to(up: bool, delay: float = 0.0, dur: float = 0.34) -> void:
 	if up == face_up:
 		return
 	var t := create_tween()

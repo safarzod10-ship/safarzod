@@ -9,7 +9,7 @@ const CATCH_CHANCE := [0.15, 0.4, 0.75]
 const CHEAT_CHANCE := [0.05, 0.15, 0.25]
 
 
-## Попытка поймать шулера. Возвращает действие или {}.
+## Попытка поймать на обмане. Возвращает действие или {}.
 static func try_catch(g: DurakGame, seat: int, level: int, rng: RandomNumberGenerator) -> Dictionary:
 	if not g.cheats or g.false_called.has(seat) or g.out[seat]:
 		return {}

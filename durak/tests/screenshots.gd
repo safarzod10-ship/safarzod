@@ -16,9 +16,9 @@ func _ready() -> void:
 	Profile.settings.sound = false
 	main = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
-	await wait(1.3)
+	await wait(2.0)
 	await shot("01_splash")
-	await wait(2.6)
+	await wait(4.5)
 	await shot("02_menu")
 	main.go("bots")
 	await wait(1.0)

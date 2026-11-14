@@ -5,7 +5,7 @@ extends Node
 ## Клиент играет простыми ходами, хост с ботом доигрывает партию до конца.
 
 var role := "host"
-var deadline := 90.0
+var deadline := 240.0
 var acted_version := -1
 var views := 0
 var events_seen := {}

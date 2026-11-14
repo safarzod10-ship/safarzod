@@ -36,8 +36,6 @@ var host_ip := ""
 var game: DurakGame
 var rng := RandomNumberGenerator.new()
 var _bot_timer := 1.0
-var _resolve_timer := -1.0
-var _closing := false
 var _peer: ENetMultiplayerPeer
 var _udp_out: PacketPeerUDP
 var _udp_in: PacketPeerUDP
@@ -179,8 +177,7 @@ func _new_game() -> void:
 	game = DurakGame.new()
 	game.setup(seats.size(), 0, String(settings.mode), bool(settings.cheats))
 	running = true
-	_resolve_timer = -1.0
-	_bot_timer = 2.2  # дать время анимации раздачи
+	_bot_timer = 4.0  # дать время анимации раздачи
 	_push_lobby()
 	_broadcast()
 
@@ -208,7 +205,6 @@ func _broadcast() -> void:
 		if s.bot or s.away:
 			continue
 		var v := game.view_for(i)
-		v["closing"] = _closing
 		if s.peer == 1 or role == Role.LOCAL:
 			_apply_view(v, events)
 		elif role == Role.HOST:
@@ -230,6 +226,14 @@ func _apply_action(seat: int, a: Dictionary) -> void:
 	if err != "":
 		_send_toast(seat, err)
 		return
+	_after_change()
+
+
+## После хода: если все сказали «Пас» — сразу «бито» или «взял».
+func _after_change() -> void:
+	if game.ready_to_resolve():
+		game.resolve()
+		_bot_timer = maxf(_bot_timer, 2.4)
 	_broadcast()
 
 
@@ -247,27 +251,9 @@ func _process(delta: float) -> void:
 		return
 	if game.over:
 		return
-	# Пауза перед «Бито», чтобы успеть поймать шулера.
-	var ready := game.ready_to_resolve()
-	if ready and _resolve_timer < 0.0:
-		_resolve_timer = 2.2 if game.cheats else 1.1
-		_closing = true
-		_broadcast()
-	elif not ready and _resolve_timer >= 0.0:
-		_resolve_timer = -1.0
-		_closing = false
-		_broadcast()
-	if _resolve_timer >= 0.0:
-		_resolve_timer -= delta
-		if _resolve_timer < 0.0:
-			_closing = false
-			game.resolve()
-			_bot_timer = 1.4
-			_broadcast()
-			return
 	_bot_timer -= delta
 	if _bot_timer <= 0.0:
-		_bot_timer = rng.randf_range(0.6, 1.05)
+		_bot_timer = rng.randf_range(1.1, 1.7)
 		_bot_step()
 
 
@@ -288,7 +274,7 @@ func _bot_step() -> void:
 		if a.is_empty():
 			continue
 		if game.act(i, a) == "":
-			_broadcast()
+			_after_change()
 			return
 
 
@@ -341,8 +327,6 @@ func leave() -> void:
 	game = null
 	seats = []
 	view = {}
-	_closing = false
-	_resolve_timer = -1.0
 
 
 # ================================================================ RPC

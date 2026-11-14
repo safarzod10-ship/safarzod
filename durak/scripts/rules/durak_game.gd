@@ -1,6 +1,6 @@
 class_name DurakGame
 extends RefCounted
-## Правила дурака: подкидной и переводной, с режимом «шулер».
+## Правила дурака: подкидной и переводной, с режимом «обман».
 ## Без графики и сети — чистая логика. Индексы игроков (места) идут по кругу
 ## по часовой стрелке: следующий за i — (i + 1) % n.
 ##
@@ -152,8 +152,8 @@ func can_pass(seat: int) -> bool:
 		and (taking or all_defended()) and not passed.has(seat)
 
 
-## Кон готов к завершению: всё отбито (или защитник берёт) и подкинуть честно
-## больше никто не хочет/не может. Хост выдерживает паузу и вызывает resolve().
+## Кон готов к завершению: всё отбито (или защитник берёт) и каждый нападающий
+## нажал «Пас» — либо ему нечего/некуда подкинуть. Таймера нет.
 func ready_to_resolve() -> bool:
 	if over or table.is_empty():
 		return false
@@ -162,8 +162,11 @@ func ready_to_resolve() -> bool:
 	for i in n:
 		if i == defender or out[i]:
 			continue
-		if not passed.has(i) and has_honest_add(i):
-			return false
+		if passed.has(i) or not can_add(i):
+			continue
+		if not cheats and not has_honest_add(i):
+			continue
+		return false
 	return true
 
 
@@ -437,7 +440,7 @@ func view_for(seat: int) -> Dictionary:
 			"defend": seat == defender and not taking and undefended() > 0,
 			"transfer": can_tr,
 			"take": seat == defender and not taking and undefended() > 0,
-			"pass": can_pass(seat) and has_honest_add(seat),
+			"pass": can_pass(seat) and can_add(seat) and (cheats or has_honest_add(seat)),
 			"call": not false_called.has(seat) and cheats,
 		}
 	return v

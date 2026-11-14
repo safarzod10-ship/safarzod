@@ -1,15 +1,15 @@
 class_name TableScreen
 extends Control
 ## Игровой стол. Получает от Session состояние игрока и события и анимирует
-## их: раздача, ходы, «бито», «беру», добор, поимка шулера.
+## их: раздача, ходы, «бито», «беру», добор, поимка на обмане.
 ## Управление: коснуться карты — выбрать, ещё раз — сыграть; или перетащить
-## на стол / на карту, которую бьёте. Коснуться карты на столе — «НАЁБ?».
+## на стол / на карту, которую бьёте. Коснуться карты на столе — «Обман?».
 
 signal leave_requested
 
 const TS := 0.9           # масштаб карт на столе
 const HAND_SCALE := 1.16
-const MOVE := 0.34
+const MOVE := 0.55
 
 var view: Dictionary = {}
 var me := 0
@@ -32,12 +32,10 @@ var exit_btn: Button
 var info_label: Label
 var trump_chip: Control
 var toasts: VBoxContainer
-var closing_bar: ColorRect
 var call_pill: Button
 var result: Control
 var _call_target := {}
 var _exit_armed := 0.0
-var _closing_shown := false
 
 # Геометрия (пересчитывается под экран).
 var W := 720.0
@@ -113,18 +111,13 @@ func _ready() -> void:
 	trump_chip = TrumpChip.new()
 	add_child(trump_chip)
 
-	closing_bar = ColorRect.new()
-	closing_bar.color = UI.TEXT
-	closing_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	closing_bar.visible = false
-	add_child(closing_bar)
 
 	fx_layer = Control.new()
 	fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fx_layer)
 
-	call_pill = UI.button("НАЁБ?", "danger", 24)
+	call_pill = UI.button("Обман?", "danger", 24)
 	call_pill.custom_minimum_size = Vector2(150, 64)
 	call_pill.visible = false
 	call_pill.pressed.connect(_confirm_call)
@@ -203,15 +196,15 @@ func show_view(v: Dictionary, events: Array) -> void:
 				if e.t == "transfer":
 					show_toast("%s переводит на %s" % [_name(int(e.seat)), _name(int(e.to))])
 			"caught":
-				delay = 0.75
+				delay = 1.1
 				var n: CardView = nodes.get(int(e.card))
 				if n != null:
-					n.stamp = "НАЁБ!"
+					n.stamp = "ОБМАН"
 					_shake(n)
 				for b in e.back:
 					if int(b.to) != me and nodes.has(int(b.card)):
-						_fly_away(nodes[int(b.card)], _seat_pos(int(b.to)), 0.75, 0.35)
-				show_toast("%s поймал(а) %s на наёбе!" % [_name(int(e.seat)), _name(int(e.cheater))], UI.ACCENT)
+						_fly_away(nodes[int(b.card)], _seat_pos(int(b.to)), 1.1, 0.35)
+				show_toast("%s поймал(а) %s на обмане" % [_name(int(e.seat)), _name(int(e.cheater))], UI.ACCENT)
 				Sfx.caught()
 				if int(e.cheater) == me:
 					Profile.vibrate(220)
@@ -224,7 +217,7 @@ func show_view(v: Dictionary, events: Array) -> void:
 				var k := 0
 				for c in e.cards:
 					if nodes.has(int(c)):
-						_fly_away(nodes[int(c)], discard_pos + Vector2(randf_range(-10, 10), randf_range(-30, 30)), k * 0.03, TS, true)
+						_fly_away(nodes[int(c)], discard_pos + Vector2(randf_range(-10, 10), randf_range(-30, 30)), 0.7 + k * 0.06, TS, true)
 						k += 1
 				Sfx.card()
 			"took":
@@ -232,17 +225,17 @@ func show_view(v: Dictionary, events: Array) -> void:
 					var k := 0
 					for c in e.cards:
 						if nodes.has(int(c)):
-							_fly_away(nodes[int(c)], _seat_pos(int(e.seat)), k * 0.04, 0.3, true)
+							_fly_away(nodes[int(c)], _seat_pos(int(e.seat)), 0.7 + k * 0.06, 0.3, true)
 							k += 1
-					_bump(int(e.seat), 0.4)
+					_bump(int(e.seat), 1.3)
 			"take":
 				if int(e.seat) != me:
 					show_toast("%s берёт" % _name(int(e.seat)))
 			"draw":
 				if int(e.seat) != me:
 					for k in int(e.n):
-						_fly_back(deck_pos, _seat_pos(int(e.seat)), 0.3 + k * 0.07)
-					_bump(int(e.seat), 0.4 + int(e.n) * 0.07)
+						_fly_back(deck_pos, _seat_pos(int(e.seat)), 1.2 + k * 0.14)
+					_bump(int(e.seat), 1.8 + int(e.n) * 0.14)
 			"out":
 				_gap_nest(int(e.seat))
 			"over":
@@ -369,9 +362,9 @@ func _sync_cards(origin: Dictionary, delay: float, deal: bool) -> void:
 		var is_new := not nodes.has(c)
 		if is_new:
 			if deal:
-				d += 0.25 + (fresh * n + my_order) * 0.07
+				d += 0.4 + (fresh * n + my_order) * 0.13
 			else:
-				d += 0.2 + fresh * 0.08
+				d += 1.2 + fresh * 0.14
 			fresh += 1
 		var pos: Vector2 = lay[i].pos
 		if c == selected:
@@ -412,19 +405,23 @@ func _place(c: int, pos: Vector2, rot: float, sc: float, z: int, origin: Diction
 		n.rotation = PI / 2.0 if from_deck else 0.0
 		if from_deck:
 			n.face_up = false
-			n.flip_to(true, delay + MOVE * 0.45)
+			n.flip_to(true, delay + MOVE * 0.5, 0.36)
 		if delay > 0.0:
 			n.visible = false
+			var wr: WeakRef = weakref(n)
 			get_tree().create_timer(delay).timeout.connect(func() -> void:
-				if is_instance_valid(n):
-					n.visible = true
+				var nn: CardView = wr.get_ref()
+				if nn != null:
+					nn.visible = true
 					Sfx.card())
 	n.z_index = z
 	_move(n, pos, rot, sc, delay)
 	if n.stamp != "":
+		var wr2: WeakRef = weakref(n)
 		get_tree().create_timer(delay + MOVE + 0.1).timeout.connect(func() -> void:
-			if is_instance_valid(n):
-				n.stamp = "")
+			var nn: CardView = wr2.get_ref()
+			if nn != null:
+				nn.stamp = "")
 
 
 func _move(n: CardView, pos: Vector2, rot: float, sc: float, delay: float) -> void:
@@ -436,9 +433,9 @@ func _move(n: CardView, pos: Vector2, rot: float, sc: float, delay: float) -> vo
 	if n.position.distance_to(target) < 0.5 and absf(n.rotation - rot) < 0.001 and absf(n.scale.x - sc) < 0.001:
 		return
 	n.tween = n.create_tween().set_parallel(true)
-	n.tween.tween_property(n, "position", target, MOVE).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	n.tween.tween_property(n, "rotation", rot, MOVE).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	n.tween.tween_property(n, "scale", Vector2(sc, sc), MOVE).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	n.tween.tween_property(n, "position", target, MOVE).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	n.tween.tween_property(n, "rotation", rot, MOVE).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	n.tween.tween_property(n, "scale", Vector2(sc, sc), MOVE).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
 func _fly_away(n: CardView, to: Vector2, delay: float, sc: float, face_down: bool = false) -> void:
@@ -451,12 +448,12 @@ func _fly_away(n: CardView, to: Vector2, delay: float, sc: float, face_down: boo
 	if n.tween != null and n.tween.is_valid():
 		n.tween.kill()
 	if face_down:
-		n.flip_to(false, delay + 0.05)
+		n.flip_to(false, delay + 0.1, 0.36)
 	var t := n.create_tween().set_parallel(true)
-	t.tween_property(n, "position", to - n.size / 2.0, 0.42).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	t.tween_property(n, "rotation", randf_range(-0.5, 0.5), 0.42).set_delay(delay)
-	t.tween_property(n, "scale", Vector2(sc, sc), 0.42).set_delay(delay)
-	t.tween_property(n, "modulate:a", 0.0, 0.18).set_delay(delay + 0.34)
+	t.tween_property(n, "position", to - n.size / 2.0, 0.65).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(n, "rotation", randf_range(-0.3, 0.3), 0.65).set_delay(delay).set_trans(Tween.TRANS_SINE)
+	t.tween_property(n, "scale", Vector2(sc, sc), 0.65).set_delay(delay).set_trans(Tween.TRANS_SINE)
+	t.tween_property(n, "modulate:a", 0.0, 0.25).set_delay(delay + 0.5)
 	t.chain().tween_callback(n.queue_free)
 
 
@@ -473,9 +470,9 @@ func _fly_back(from: Vector2, to: Vector2, delay: float) -> void:
 	t.tween_interval(delay)
 	t.tween_callback(func() -> void: b.visible = true)
 	t.set_parallel(true)
-	t.tween_property(b, "position", to - b.size / 2.0, 0.4).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	t.tween_property(b, "scale", Vector2(0.3, 0.3), 0.4).set_delay(delay)
-	t.tween_property(b, "rotation", randf_range(-0.4, 0.4), 0.4).set_delay(delay)
+	t.tween_property(b, "position", to - b.size / 2.0, 0.6).set_delay(delay).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	t.tween_property(b, "scale", Vector2(0.3, 0.3), 0.6).set_delay(delay).set_trans(Tween.TRANS_SINE)
+	t.tween_property(b, "rotation", randf_range(-0.25, 0.25), 0.6).set_delay(delay).set_trans(Tween.TRANS_SINE)
 	t.chain().tween_callback(b.queue_free)
 
 
@@ -484,15 +481,15 @@ func _deal_backs() -> void:
 	for s in opp_views.keys():
 		var order := (int(s) - int(view.attacker) + n) % n
 		for k in 6:
-			_fly_back(deck_pos, _seat_pos(int(s)), 0.25 + (k * n + order) * 0.07)
+			_fly_back(deck_pos, _seat_pos(int(s)), 0.4 + (k * n + order) * 0.13)
 
 
 func _shake(n: CardView) -> void:
 	var r := n.rotation
 	var t := n.create_tween()
 	for i in 4:
-		t.tween_property(n, "rotation", r + (0.12 if i % 2 == 0 else -0.12), 0.05)
-	t.tween_property(n, "rotation", r, 0.05)
+		t.tween_property(n, "rotation", r + (0.08 if i % 2 == 0 else -0.08), 0.09).set_trans(Tween.TRANS_SINE)
+	t.tween_property(n, "rotation", r, 0.09).set_trans(Tween.TRANS_SINE)
 
 
 # ================================================================ ввод
@@ -714,7 +711,7 @@ func _update_hud() -> void:
 	trump_chip.queue_redraw()
 	var mode_txt := "ПЕРЕВОДНОЙ" if view.mode == "perevodnoy" else "ПОДКИДНОЙ"
 	if view.cheats:
-		mode_txt += " · ШУЛЕР"
+		mode_txt += " · С ОБМАНОМ"
 	info_label.text = mode_txt
 	info_label.position = Vector2(margins.x + 90, margins.y + 18)
 	# Я.
@@ -733,24 +730,10 @@ func _update_hud() -> void:
 	var can := _can()
 	take_btn.visible = can.get("take", false)
 	pass_btn.visible = can.get("pass", false) and not take_btn.visible
-	pass_btn.text = "Пусть берёт" if view.taking else "Бито"
-	pass_btn.custom_minimum_size.x = 210 if view.taking else 170
+	pass_btn.text = "Пас"
 	for b in [take_btn, pass_btn]:
 		b.size = b.custom_minimum_size
 		b.position = Vector2(W - margins.z - b.size.x, bar_y - 40)
-	# Таймер «бито».
-	var closing := bool(view.get("closing", false))
-	if closing and not _closing_shown:
-		closing_bar.visible = true
-		closing_bar.size = Vector2(240, 4)
-		closing_bar.position = Vector2(W / 2.0 - 120, bar_y - 72)
-		var dur := 2.2 if view.cheats else 1.1
-		var t := closing_bar.create_tween().set_parallel(true)
-		t.tween_property(closing_bar, "size:x", 0.0, dur)
-		t.tween_property(closing_bar, "position:x", W / 2.0, dur)
-	elif not closing:
-		closing_bar.visible = false
-	_closing_shown = closing
 	toasts.position = Vector2(0, table_c.y - 290)
 	toasts.size = Vector2(W, 10)
 	_sync_glow_if_selected()

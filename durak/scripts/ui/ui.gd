@@ -3,7 +3,7 @@ extends RefCounted
 ## Палитра, шрифты и фабрика элементов интерфейса. Минимализм в цветах
 ## референса: серо-бежевый фон, тёмно-синий и малиновый.
 
-const BG := Color("c2c0b1")
+const BG := Color("c2c1b2")
 const SURFACE := Color("d2d0c2")
 const LINE := Color("a5a395")
 const TEXT := Color("24253a")

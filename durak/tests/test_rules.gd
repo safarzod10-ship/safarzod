@@ -47,7 +47,7 @@ func unit_tests() -> void:
 	check(g.false_called.has(d), "штраф за ложное обвинение")
 	check(g.act(d, {"t": "call", "slot": 0, "which": "a"}) != "", "второй раз нельзя")
 	# Подкинуть не то достоинство — принимается как обман.
-	check(g.act(a, {"t": "attack", "card": Cards.make(1, 9)}) == "", "шулерский подкид")
+	check(g.act(a, {"t": "attack", "card": Cards.make(1, 9)}) == "", "подкид с обманом")
 	check(g.table[1].a_ok == false, "подкид помечен")
 
 	# Без шулерства неправильные ходы запрещены.
