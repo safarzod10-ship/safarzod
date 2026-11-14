@@ -61,7 +61,7 @@ func setup(view: Dictionary, me: int) -> void:
 	for k in places.size():
 		v.add_child(_row("%d" % (k + 1), Session.seat_name(int(places[k])), "гап нест", UI.TEXT))
 	if loser >= 0:
-		v.add_child(_row("—", Session.seat_name(loser), "чумо", UI.ACCENT))
+		v.add_child(_row("%d" % (places.size() + 1), Session.seat_name(loser), "чумо", UI.ACCENT))
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(sp)

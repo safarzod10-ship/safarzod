@@ -13,6 +13,12 @@
   «Комнаты рядом» (или вводят IP хоста). Нужна общая Wi‑Fi сеть или точка доступа
   с телефона хоста; интернет не нужен. Пустые места можно занять ботами. Если
   кто-то отключился, за него доигрывает бот, а при возвращении место отдаётся ему.
+* **iPhone (Safari)** — когда Android-телефон создаёт комнату, он сам раздаёт
+  веб-версию игры. В лобби показан адрес, например `192.168.1.5:8080/?join`:
+  открыть его в Safari на iPhone (та же Wi-Fi сеть), ввести имя — и ты в комнате.
+  «Поделиться → На экран „Домой“» добавит иконку. В браузере можно играть с ботами
+  и заходить в комнаты, но не создавать их (браузер не может быть сервером), и
+  для открытия страницы нужен хост рядом.
 * **Управление** — коснуться карты = выбрать, ещё раз = сыграть; или перетащить
   на стол / на карту, которую бьёшь. Коснуться карты на столе → «Обман?». Кон заканчивается, когда все нажали «Пас».
 
@@ -30,7 +36,8 @@
 ```
 scripts/rules/   cards.gd, durak_game.gd — правила без графики и сети
 scripts/ai/      durak_bot.gd — бот (3 уровня, жульничает и ловит)
-scripts/core/    session.gd — партия, боты, сеть ENet + поиск комнат по UDP;
+scripts/net/     web_share.gd — HTTP-сервер на хосте, раздаёт веб-версию
+scripts/core/    session.gd — партия, боты, сеть WebSocket + поиск комнат по UDP;
                  profile.gd — имя, фото; sfx.gd — звуки, синтезированные кодом
 scripts/ui/      main.gd (экраны), table_screen.gd (стол и анимации), card_view.gd,
                  suit_video.gd (видео-анимация мастей, assets/video/suits.ogv),
@@ -39,7 +46,9 @@ tests/           test_rules.gd, net_test, ui_test, screenshots
 ```
 
 Хост проверяет каждый ход; клиенты получают только свои карты (без отметок,
-где был обман). Порты: 47420 (игра, UDP/ENet), 47421 (поиск комнат, broadcast).
+где был обман). Сеть — WebSocket, чтобы в одной комнате были Android и Safari.
+Порты: 47420 (игра, WebSocket), 47421 (поиск комнат, UDP broadcast),
+8080 (веб-версия для iPhone, `scripts/net/web_share.gd`).
 
 ## Тесты
 
@@ -54,20 +63,23 @@ xvfb-run godot --rendering-method gl_compatibility --resolution 720x1520 \
   res://tests/screenshots.tscn -- /tmp/shots               # скриншоты экранов
 ```
 
-## Сборка APK
+## Сборка
 
-Нужны шаблоны экспорта 4.7.2, JDK, `apksigner`/`zipalign` (пути — в настройках
-редактора Godot, см. `../tools/android/configure_godot_android.sh`). Ключ подписи
-в репозиторий не кладётся; передаётся переменными окружения:
+`tools/build.sh` собирает веб-версию (`../builds/web`), упаковывает её в
+`web/durak_web.zip` (wasm — сжатым gzip) и собирает APK с ней внутри
+(`../builds/android/durak.apk`). Нужны шаблоны экспорта 4.7.2 (android и
+web_nothreads), JDK, `apksigner`/`zipalign` (пути — в настройках редактора, см.
+`../tools/android/configure_godot_android.sh`). Ключ подписи в репозиторий не
+кладётся, передаётся переменными окружения:
 
 ```bash
 export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/.android/durak-release.keystore
 export GODOT_ANDROID_KEYSTORE_RELEASE_USER=durak
 export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=...
-godot --headless --export-release "Android" ../builds/android/durak.apk
+tools/build.sh
 ```
 
-APK: arm64‑v8a + armeabi‑v7a, пакет `tj.durak.game`. Обновление поверх старой
+APK: arm64-v8a + armeabi-v7a, пакет `tj.durak.game`. Обновление поверх старой
 версии возможно только с тем же ключом подписи.
 
 Шрифты: Unbounded, Manrope (SIL OFL, файлы лицензий в `assets/fonts`).

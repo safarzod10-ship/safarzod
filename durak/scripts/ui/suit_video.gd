@@ -5,6 +5,25 @@ extends VideoStreamPlayer
 
 const STREAM := preload("res://assets/video/suits.ogv")
 
+static var _edge_material: ShaderMaterial
+
+
+## Края кадра плавно растворяются в фоне, чтобы не было видно границы видео.
+static func edge_material() -> ShaderMaterial:
+	if _edge_material == null:
+		var sh := Shader.new()
+		sh.code = """
+shader_type canvas_item;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	vec2 d = min(UV, vec2(1.0) - UV);
+	COLOR = vec4(c.rgb, c.a * smoothstep(0.0, 0.14, min(d.x, d.y)));
+}
+"""
+		_edge_material = ShaderMaterial.new()
+		_edge_material.shader = sh
+	return _edge_material
+
 
 func _init(sz: float = 220.0) -> void:
 	stream = STREAM
@@ -12,6 +31,7 @@ func _init(sz: float = 220.0) -> void:
 	autoplay = true
 	expand = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	material = edge_material()
 	set_box(sz)
 
 

@@ -132,6 +132,14 @@ static func segmented(options: Array, current: int, on_change: Callable) -> HBox
 	return row
 
 
+## Круглая кнопка со значком (без текста из шрифта).
+static func icon_button(kind: String, d: float = 80.0) -> Button:
+	var b := button("", "ghost", 24)
+	b.custom_minimum_size = Vector2(d, d)
+	b.add_child(IconGlyph.new(kind))
+	return b
+
+
 static func caption(text: String) -> Label:
 	var l := label(text.to_upper(), 20, MUTED, false, 700)
 	return l

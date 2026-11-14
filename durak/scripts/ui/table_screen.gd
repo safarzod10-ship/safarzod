@@ -101,8 +101,7 @@ func _ready() -> void:
 	pass_btn.pressed.connect(func() -> void: Session.send_action({"t": "pass"}))
 	add_child(pass_btn)
 
-	exit_btn = UI.button("✕", "ghost", 26)
-	exit_btn.custom_minimum_size = Vector2(72, 72)
+	exit_btn = UI.icon_button("close", 72)
 	exit_btn.add_theme_stylebox_override("normal", UI.box(Color(0, 0, 0, 0), 999, UI.LINE, 2))
 	exit_btn.pressed.connect(_on_exit)
 	add_child(exit_btn)

@@ -12,6 +12,7 @@ var table: TableScreen
 var _rooms_list: VBoxContainer
 var _rooms_empty: Control
 var _joining := false
+var _pending_join := false
 var _photo_dialog: FileDialog
 
 
@@ -42,7 +43,7 @@ func _ready() -> void:
 	Session.closed.connect(func(reason: String) -> void:
 		_joining = false
 		_toast(reason)
-		go("wifi" if screen in ["lobby", "connecting"] else "menu"))
+		go("wifi" if screen in ["lobby", "connecting"] and not Session.is_web() else "menu"))
 	Session.rooms_changed.connect(_on_rooms)
 	Session.view_changed.connect(func(_v: Dictionary, _e: Array) -> void:
 		if screen != "table":
@@ -82,7 +83,28 @@ func _splash() -> void:
 		_center_curtain_video(110)
 		title.queue_free()
 		if screen == "":
-			go("menu" if Profile.has_profile() else "profile_first", true))
+			_after_splash())
+
+
+## Веб: ссылка вида http://IP:8080/?join сразу ведёт в комнату хоста;
+## ?name=... задаёт имя, если профиля ещё нет.
+func _after_splash() -> void:
+	var query := ""
+	if Session.is_web():
+		query = str(JavaScriptBridge.eval("window.location.search", true))
+	var params := {}
+	for part in query.trim_prefix("?").split("&", false):
+		params[part.get_slice("=", 0)] = part.get_slice("=", 1).uri_decode() if part.contains("=") else ""
+	if not Profile.has_profile() and String(params.get("name", "")) != "":
+		Profile.player_name = String(params["name"]).left(16)
+		Profile.save()
+	if not Profile.has_profile():
+		_pending_join = params.has("join")
+		go("profile_first", true)
+	elif params.has("join") and Session.web_origin_host() != "":
+		_join(Session.web_origin_host())
+	else:
+		go("menu", true)
 
 
 func _center_curtain_video(sz: float) -> void:
@@ -136,7 +158,7 @@ func _on_back() -> void:
 			table.back_pressed()
 		"lobby", "connecting":
 			Session.leave()
-			go("wifi")
+			go("menu" if Session.is_web() else "wifi")
 		"menu", "profile_first":
 			get_tree().quit()
 		_:
@@ -179,8 +201,7 @@ func _page(title: String, back: bool = true) -> VBoxContainer:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 18)
 		if back:
-			var b := UI.button("←", "ghost", 28)
-			b.custom_minimum_size = Vector2(80, 80)
+			var b := UI.icon_button("back")
 			b.pressed.connect(_on_back)
 			h.add_child(b)
 		var l := UI.label(title, 44, UI.TEXT, true, 700)
@@ -229,12 +250,11 @@ func _menu() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
-	var snd := UI.button("♪" if Profile.settings.sound else "—", "ghost", 26)
-	snd.custom_minimum_size = Vector2(80, 80)
+	var snd := UI.icon_button("sound_on" if Profile.settings.sound else "sound_off")
 	snd.pressed.connect(func() -> void:
 		Profile.settings.sound = not Profile.settings.sound
 		Profile.save()
-		snd.text = "♪" if Profile.settings.sound else "—")
+		(snd.get_child(0) as IconGlyph).kind = "sound_on" if Profile.settings.sound else "sound_off")
 	top.add_child(snd)
 	v.add_child(top)
 	_fill_space(v)
@@ -252,9 +272,14 @@ func _menu() -> void:
 	b1.custom_minimum_size.y = 110
 	b1.pressed.connect(func() -> void: go("bots"))
 	v.add_child(b1)
-	var b2 := UI.button("С друзьями по Wi‑Fi", "ghost", 30)
+	var web_host := Session.web_origin_host()
+	var b2 := UI.button("Войти в комнату" if web_host != "" else "С друзьями по Wi-Fi", "ghost", 30)
 	b2.custom_minimum_size.y = 110
-	b2.pressed.connect(func() -> void: go("wifi"))
+	b2.pressed.connect(func() -> void:
+		if web_host != "":
+			_join(web_host)
+		else:
+			go("wifi"))
 	v.add_child(b2)
 	var b3 := UI.button("Правила", "ghost", 26)
 	b3.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
@@ -319,11 +344,59 @@ func _profile(first: bool) -> void:
 			return
 		Profile.player_name = nm
 		Profile.save()
-		go("menu"))
+		if _pending_join and Session.web_origin_host() != "":
+			_pending_join = false
+			_join(Session.web_origin_host())
+		else:
+			go("menu"))
 	v.add_child(save)
 
 
+var _js_photo_cb: JavaScriptObject
+
+
+## Выбор фото в браузере (Safari): обычный <input type=file>, фото уменьшается
+## на стороне браузера и приходит в игру как JPEG в base64.
+func _pick_photo_web(av: AvatarView) -> void:
+	JavaScriptBridge.eval("""
+	window.durakPickPhoto = function (cb) {
+		var input = document.createElement('input');
+		input.type = 'file';
+		input.accept = 'image/*';
+		input.onchange = function () {
+			var f = input.files && input.files[0];
+			if (!f) { return; }
+			var img = new Image();
+			img.onload = function () {
+				var s = Math.min(img.width, img.height);
+				var c = document.createElement('canvas');
+				c.width = 384; c.height = 384;
+				c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 384, 384);
+				cb(c.toDataURL('image/jpeg', 0.9).split(',')[1]);
+				URL.revokeObjectURL(img.src);
+			};
+			img.onerror = function () { cb(''); };
+			img.src = URL.createObjectURL(f);
+		};
+		input.click();
+	};
+	""", true)
+	_js_photo_cb = JavaScriptBridge.create_callback(func(args: Array) -> void:
+		var b64 := str(args[0]) if args.size() > 0 else ""
+		var img := Image.new()
+		if b64 == "" or img.load_jpg_from_buffer(Marshalls.base64_to_raw(b64)) != OK:
+			_toast("Не получилось открыть фото")
+			return
+		Profile.set_avatar_image(img)
+		av.texture = Profile.texture_from_bytes(Profile.avatar))
+	var win := JavaScriptBridge.get_interface("window")
+	win.durakPickPhoto(_js_photo_cb)
+
+
 func _pick_photo(av: AvatarView) -> void:
+	if Session.is_web():
+		_pick_photo_web(av)
+		return
 	var filters := PackedStringArray(["*.jpg, *.jpeg, *.png, *.webp ; Фото"])
 	var cb := func(status: bool, paths: PackedStringArray, _f: int) -> void:
 		if status and paths.size() > 0:
@@ -394,8 +467,8 @@ func _bots() -> void:
 # ================================================================ Wi-Fi
 
 func _wifi() -> void:
-	var v := _page("По Wi‑Fi")
-	var hint := UI.label("Все в одной Wi‑Fi сети или на точке доступа того, кто создаёт комнату. Интернет не нужен.", 22, UI.MUTED, false, 600)
+	var v := _page("По Wi-Fi")
+	var hint := UI.label("Все в одной Wi-Fi сети или на точке доступа того, кто создаёт комнату. Интернет не нужен.", 22, UI.MUTED, false, 600)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hint)
 	v.add_child(UI.spacer(6))
@@ -512,6 +585,12 @@ func _lobby() -> void:
 		var ips := Session.local_ips()
 		var ip_l := UI.label("IP: " + (", ".join(ips) if not ips.is_empty() else "нет сети"), 24, UI.MUTED, true, 500)
 		v.add_child(ip_l)
+		if Session.web_port > 0 and not ips.is_empty():
+			var web := VBoxContainer.new()
+			web.add_theme_constant_override("separation", 2)
+			web.add_child(UI.caption("iPhone: открой в Safari"))
+			web.add_child(UI.label("%s:%d/?join" % [ips[0], Session.web_port], 32, UI.ACCENT, true, 700))
+			v.add_child(web)
 	else:
 		v.add_child(UI.label("Хост: " + Session.host_name, 24, UI.MUTED, false, 700))
 	v.add_child(UI.spacer(6))
@@ -534,8 +613,7 @@ func _lobby() -> void:
 		col.add_child(UI.label(tag, 20, UI.MUTED, false, 700))
 		h.add_child(col)
 		if host and i > 0:
-			var x := UI.button("✕", "ghost", 22)
-			x.custom_minimum_size = Vector2(64, 64)
+			var x := UI.icon_button("close", 64)
 			var idx := i
 			x.pressed.connect(func() -> void: Session.remove_seat(idx))
 			h.add_child(x)

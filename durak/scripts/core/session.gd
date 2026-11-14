@@ -3,8 +3,10 @@ extends Node
 ##  LOCAL  — игра с ботами на телефоне (без сети);
 ##  HOST   — телефон-хост: ведёт партию, проверяет ходы, управляет ботами;
 ##  CLIENT — подключённый друг: отправляет действия и получает своё состояние.
-## Сеть — ENet (UDP) по локальной сети, интернет не нужен. Хост объявляет
-## комнату широковещательным UDP-пакетом, клиенты видят её в списке.
+## Сеть — WebSocket по локальной сети, интернет не нужен. WebSocket выбран,
+## чтобы в ту же комнату могли зайти iPhone через Safari: хост (Android) ещё и
+## раздаёт веб-версию игры по HTTP (WebShare). Android-клиенты находят комнату
+## по широковещательному UDP-пакету.
 
 signal lobby_changed
 signal view_changed(view: Dictionary, events: Array)
@@ -17,6 +19,7 @@ enum Role { NONE, LOCAL, HOST, CLIENT }
 
 const PORT := 47420
 const DISCOVERY_PORT := 47421
+const WEB_PORT := 8080
 const MAX_PLAYERS := 6
 const BOT_NAMES := ["Фаррух", "Шахло", "Далер", "Зарина", "Сухроб", "Мадина", "Бахром", "Нигина", "Рустам"]
 const LEVEL_NAMES := ["лёгкий", "нормальный", "сильный"]
@@ -36,7 +39,9 @@ var host_ip := ""
 var game: DurakGame
 var rng := RandomNumberGenerator.new()
 var _bot_timer := 1.0
-var _peer: ENetMultiplayerPeer
+var _peer: WebSocketMultiplayerPeer
+var _web_share: WebShare
+var web_port := 0
 var _udp_out: PacketPeerUDP
 var _udp_in: PacketPeerUDP
 var _announce_timer := 0.0
@@ -110,8 +115,10 @@ func start_local(bots: int, level: int, mode: String, cheats: bool) -> void:
 
 func host_room() -> String:
 	leave()
-	_peer = ENetMultiplayerPeer.new()
-	var err := _peer.create_server(PORT, MAX_PLAYERS)
+	if is_web():
+		return "В браузере комнату создать нельзя"
+	_peer = _new_peer()
+	var err := _peer.create_server(PORT)
 	if err != OK:
 		_peer = null
 		return "Не удалось создать комнату (порт занят?)"
@@ -126,6 +133,13 @@ func host_room() -> String:
 	host_ip = ", ".join(local_ips())
 	_udp_out = PacketPeerUDP.new()
 	_udp_out.set_broadcast_enabled(true)
+	# Раздача веб-версии для iPhone (если она вшита в сборку).
+	_web_share = WebShare.new()
+	add_child(_web_share)
+	web_port = _web_share.start(WEB_PORT)
+	if web_port == 0:
+		_web_share.queue_free()
+		_web_share = null
 	_push_lobby()
 	return ""
 
@@ -288,8 +302,8 @@ func _apply_view(v: Dictionary, events: Array) -> void:
 
 func join(ip: String) -> String:
 	leave()
-	_peer = ENetMultiplayerPeer.new()
-	var err := _peer.create_client(ip.strip_edges(), PORT)
+	_peer = _new_peer()
+	var err := _peer.create_client("ws://%s:%d" % [ip.strip_edges(), PORT])
 	if err != OK:
 		_peer = null
 		return "Не удалось подключиться"
@@ -322,6 +336,11 @@ func leave() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	_peer = null
 	_udp_out = null
+	if _web_share != null:
+		_web_share.stop()
+		_web_share.queue_free()
+		_web_share = null
+	web_port = 0
 	role = Role.NONE
 	running = false
 	game = null
@@ -448,6 +467,26 @@ func _on_peer_disconnected(peer: int) -> void:
 
 # ================================================================ поиск комнат
 
+func _new_peer() -> WebSocketMultiplayerPeer:
+	var p := WebSocketMultiplayerPeer.new()
+	p.inbound_buffer_size = 1 << 20
+	p.outbound_buffer_size = 1 << 20
+	p.max_queued_packets = 8192
+	return p
+
+
+static func is_web() -> bool:
+	return OS.has_feature("web")
+
+
+## Адрес хоста, с которого открыта веб-версия (для Safari на iPhone).
+static func web_origin_host() -> String:
+	if not is_web():
+		return ""
+	var h: Variant = JavaScriptBridge.eval("window.location.hostname", true)
+	return str(h) if h != null else ""
+
+
 func local_ips() -> Array:
 	var res := []
 	for a in IP.get_local_addresses():
@@ -460,6 +499,8 @@ func local_ips() -> Array:
 
 func start_scan() -> void:
 	stop_scan()
+	if is_web():
+		return
 	_rooms = {}
 	_udp_in = PacketPeerUDP.new()
 	if _udp_in.bind(DISCOVERY_PORT) != OK:
