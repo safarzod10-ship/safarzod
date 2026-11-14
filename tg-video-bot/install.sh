@@ -39,7 +39,21 @@ else
 fi
 
 echo ">>> Python environment"
-[ -x "$ROOT/venv/bin/python" ] || python3 -m venv "$ROOT/venv"
+# Bot needs Python >= 3.10. Old distros (Ubuntu 20.04, Debian 11) get a fresh Python via uv.
+if [ -x "$ROOT/venv/bin/python" ] && ! "$ROOT/venv/bin/python" -c 'import sys; sys.exit(sys.version_info < (3,10))'; then
+  rm -rf "$ROOT/venv"
+fi
+if [ ! -x "$ROOT/venv/bin/python" ]; then
+  if python3 -c 'import sys; sys.exit(sys.version_info < (3,10))'; then
+    python3 -m venv "$ROOT/venv"
+  else
+    echo ">>> System Python is too old, installing Python 3.12 via uv"
+    command -v curl >/dev/null || apt-get install -y -qq curl >/dev/null
+    export UV_INSTALL_DIR=/usr/local/bin UV_PYTHON_INSTALL_DIR=$ROOT/python
+    curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null
+    /usr/local/bin/uv venv -q --seed --python 3.12 "$ROOT/venv"
+  fi
+fi
 "$ROOT/venv/bin/pip" install -q --upgrade pip
 "$ROOT/venv/bin/pip" install -q --upgrade -r "$APP/requirements.txt"
 
@@ -100,7 +114,10 @@ systemctl enable -q --now $SERVICE-update.timer
 systemctl enable -q $SERVICE
 systemctl restart $SERVICE
 sleep 3
-systemctl --no-pager --lines=5 status $SERVICE || true
+systemctl --no-pager --lines=15 status $SERVICE || true
+if ! systemctl is-active -q $SERVICE; then
+  echo "❌ The bot is NOT running. Last log lines:"; journalctl -u $SERVICE -n 30 --no-pager; exit 1
+fi
 echo
 echo "✅ Done. The bot runs 24/7 and starts automatically after reboot."
 echo "   Logs:    journalctl -u $SERVICE -f"
