@@ -30,3 +30,9 @@ curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/tel
 ## Ограничение
 Обычный Bot API разрешает ботам отправлять файлы не больше 50 МБ. Бот выбирает
 лучшее качество до 1080p, которое укладывается в этот лимит.
+
+## «Cannot connect to host api.telegram.org»
+Хостер или страна блокирует Telegram. Передайте прокси вторым аргументом:
+```bash
+curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/telegram-video-downloader-tyjy8k/tg-video-bot/install.sh | sudo bash -s -- 'ВАШ_ТОКЕН' 'socks5://user:pass@host:port'
+```

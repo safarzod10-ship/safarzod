@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import shutil
+import socket
 import sqlite3
 import tempfile
 import time
@@ -47,6 +48,14 @@ MAX_PARALLEL = int(os.environ.get("MAX_PARALLEL", "8"))
 # Regular Telegram Bot API lets bots upload files up to 50 MB.
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "50"))
 COOKIES_FILE = os.environ.get("COOKIES_FILE", str(BASE_DIR / "cookies.txt"))
+# Proxy for Telegram API if it is blocked on the server: socks5://user:pass@host:port or http://...
+PROXY = os.environ.get("PROXY", "").strip()
+# Alternative Bot API server (e.g. your own mirror), default is the official one.
+TELEGRAM_API_URL = os.environ.get("TELEGRAM_API_URL", "").strip().rstrip("/")
+# Many VPS have broken IPv6 -> connect to Telegram over IPv4 only.
+FORCE_IPV4 = os.environ.get("FORCE_IPV4", "1") == "1"
+# Optional proxy for downloads (Instagram/TikTok blocked in your country).
+DL_PROXY = os.environ.get("DL_PROXY", "").strip()
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(BASE_DIR / "data")))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -128,6 +137,10 @@ def ydl_opts(workdir: str) -> dict:
     }
     if os.path.isfile(COOKIES_FILE):
         opts["cookiefile"] = COOKIES_FILE
+    if DL_PROXY:
+        opts["proxy"] = DL_PROXY
+    elif FORCE_IPV4:
+        opts["source_address"] = "0.0.0.0"
     return opts
 
 
@@ -337,15 +350,37 @@ async def main() -> None:
     for p in DATA_DIR.glob("dl_*"):
         shutil.rmtree(p, ignore_errors=True)
 
-    http_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
+    http_session = aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(total=60),
+        connector=aiohttp.TCPConnector(family=socket.AF_INET if FORCE_IPV4 else 0),
+        proxy=DL_PROXY or None,
+    )
+    tg_session = AiohttpSession(proxy=PROXY or None, timeout=600)
+    if FORCE_IPV4 and not PROXY:
+        tg_session._connector_init["family"] = socket.AF_INET
+    if TELEGRAM_API_URL:
+        from aiogram.client.telegram import TelegramAPIServer
+        tg_session.api = TelegramAPIServer.from_base(TELEGRAM_API_URL)
     bot = Bot(
         BOT_TOKEN,
-        session=AiohttpSession(timeout=600),
+        session=tg_session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    log.info("bot started")
+    log.info("bot starting (proxy=%s, ipv4=%s, api=%s)", bool(PROXY), FORCE_IPV4,
+             TELEGRAM_API_URL or "api.telegram.org")
     try:
-        await bot.delete_webhook(drop_pending_updates=False)
+        # Wait for Telegram instead of crashing if the network is not ready yet.
+        delay = 2
+        while True:
+            try:
+                me = await bot.get_me()
+                break
+            except Exception as e:
+                log.error("cannot reach Telegram API (%s), retry in %ss. "
+                          "If this repeats, Telegram is blocked on this server: set PROXY in .env", e, delay)
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 60)
+        log.info("connected as @%s", me.username)
         await dp.start_polling(bot, handle_as_tasks=True)
     finally:
         await http_session.close()

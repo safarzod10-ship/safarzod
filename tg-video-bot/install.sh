@@ -11,6 +11,7 @@ SRC="$ROOT/repo"
 APP="$SRC/$SUBDIR"
 SERVICE="tgvbot"
 TOKEN="${1:-}"
+PROXY_ARG="${2:-}"   # optional: socks5://user:pass@host:port, or "none" to remove
 
 [ "$(id -u)" -eq 0 ] || { echo "Run as root (sudo)"; exit 1; }
 
@@ -18,7 +19,7 @@ echo ">>> Installing system packages"
 if command -v apt-get >/dev/null; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
-  apt-get install -y -qq git python3 python3-venv python3-pip ffmpeg ca-certificates >/dev/null
+  apt-get install -y -qq curl git python3 python3-venv python3-pip ffmpeg ca-certificates >/dev/null
 elif command -v dnf >/dev/null; then
   dnf install -y -q git python3 python3-pip ffmpeg-free ca-certificates || dnf install -y -q git python3 python3-pip ca-certificates
 else
@@ -58,9 +59,15 @@ fi
 "$ROOT/venv/bin/pip" install -q --upgrade -r "$APP/requirements.txt"
 
 ENV_FILE="$ROOT/.env"
+OLD_PROXY=""
+[ -f "$ENV_FILE" ] && OLD_PROXY="$(grep -E '^PROXY=' "$ENV_FILE" | cut -d= -f2- || true)"
+[ -z "$TOKEN" ] && [ -f "$ENV_FILE" ] && TOKEN="$(grep -E '^BOT_TOKEN=' "$ENV_FILE" | cut -d= -f2- || true)"
+PROXY_VAL="$OLD_PROXY"
+[ -n "$PROXY_ARG" ] && PROXY_VAL="$PROXY_ARG"
+[ "$PROXY_VAL" = "none" ] && PROXY_VAL=""
 if [ -n "$TOKEN" ]; then
-  printf 'BOT_TOKEN=%s\nMAX_PARALLEL=8\nMAX_FILE_MB=50\nDATA_DIR=%s/data\nCOOKIES_FILE=%s/cookies.txt\n' \
-    "$TOKEN" "$ROOT" "$ROOT" > "$ENV_FILE"
+  printf 'BOT_TOKEN=%s\nPROXY=%s\nMAX_PARALLEL=8\nMAX_FILE_MB=50\nDATA_DIR=%s/data\nCOOKIES_FILE=%s/cookies.txt\n' \
+    "$TOKEN" "$PROXY_VAL" "$ROOT" "$ROOT" > "$ENV_FILE"
 fi
 [ -f "$ENV_FILE" ] || { echo "No token. Run again: ... | sudo bash -s -- 'BOT_TOKEN'"; exit 1; }
 chmod 600 "$ENV_FILE"
@@ -112,11 +119,23 @@ UNIT
 systemctl daemon-reload
 systemctl enable -q --now $SERVICE-update.timer
 systemctl enable -q $SERVICE
+echo ">>> Checking connection to Telegram"
+if curl -4 -s -m 15 -o /dev/null https://api.telegram.org; then
+  echo "    api.telegram.org: OK"
+elif [ -z "$PROXY_VAL" ]; then
+  echo "    ⚠️  api.telegram.org is NOT reachable from this server (blocked by hoster/country)."
+  echo "    The bot will not work without a proxy. Re-run with a proxy as 2nd argument:"
+  echo "    curl -fsSL <install.sh url> | sudo bash -s -- 'TOKEN' 'socks5://user:pass@host:port'"
+fi
 systemctl restart $SERVICE
-sleep 3
+sleep 8
 systemctl --no-pager --lines=15 status $SERVICE || true
-if ! systemctl is-active -q $SERVICE; then
+if journalctl -u $SERVICE -n 20 --no-pager | grep -q "connected as @"; then
+  echo "✅ Bot is connected to Telegram."
+elif ! systemctl is-active -q $SERVICE; then
   echo "❌ The bot is NOT running. Last log lines:"; journalctl -u $SERVICE -n 30 --no-pager; exit 1
+else
+  echo "⚠️  Bot is running but not connected to Telegram yet. Log:"; journalctl -u $SERVICE -n 5 --no-pager
 fi
 echo
 echo "✅ Done. The bot runs 24/7 and starts automatically after reboot."
