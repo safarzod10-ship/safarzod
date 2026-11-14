@@ -1,0 +1,51 @@
+; Engine configuration file.
+; ДУРАК — карточная игра для Android (Godot 4.7). Отдельный проект внутри репозитория.
+
+config_version=5
+
+[application]
+
+config/name="Дурак"
+config/description="Подкидной и переводной дурак: боты и игра по Wi-Fi без интернета."
+config/version="1.0.0"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+boot_splash/bg_color=Color(0.761, 0.757, 0.698, 1)
+boot_splash/show_image=false
+config/icon="res://icon.svg"
+config/quit_on_go_back=false
+
+[autoload]
+
+Profile="*res://scripts/core/profile.gd"
+Session="*res://scripts/core/session.gd"
+Sfx="*res://scripts/core/sfx.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1440
+window/size/window_width_override=405
+window/size/window_height_override=810
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[gui]
+
+theme/custom_font="res://assets/fonts/Manrope.ttf"
+common/drop_mouse_on_gui_input_disabled=true
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+pointing/emulate_mouse_from_touch=true
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
+rendering_device/fallback_to_opengl3=true
+anti_aliasing/quality/msaa_2d=1
+environment/defaults/default_clear_color=Color(0.761, 0.757, 0.698, 1)
