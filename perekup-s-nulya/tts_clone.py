@@ -38,7 +38,7 @@ def transcribe(path):
 say = cfg.get('say', {})
 lines = []
 for i, (a, b, who, text) in enumerate(subs):
-    t = text
+    t = text.replace('\u00a0', ' ')
     for k, v in say.items():
         t = t.replace(k, v)
     t = t.replace('*', '').replace('∗', '')
