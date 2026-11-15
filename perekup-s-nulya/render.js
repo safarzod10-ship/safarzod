@@ -65,7 +65,7 @@ const srtTime = s => {
 
   // subtitles (SRT) for CapCut / TikTok
   const subs = await page.evaluate(() => window.SUBS);
-  const names = { T: '', S: 'Продавец: ', M: 'Мастер: ', C: 'Голос: ', R: 'Рустам: ', A: 'Администратор ТЦ: ', K: 'Покупатель: ', P: 'Клиент: ', D: 'Даня: ', N: 'Рассказчик: ', O: 'Мама: ', F: 'Отец: ', X: 'Коллектор: ' };
+  const names = { T: '', S: 'Продавец: ', M: 'Мастер: ', C: 'Голос: ', R: 'Рустам: ', A: 'Администратор ТЦ: ', K: 'Покупатель: ', P: 'Клиент: ', D: 'Даня: ', N: 'Рассказчик: ', O: 'Мама: ', F: 'Отец: ', X: 'Коллектор: ', G: 'Геймер: ', L: 'Продавщица: ' };
   if (voice) await page.evaluate(env => { window.ENV = env; }, voice.env);
   const srt = subs.map((s, i) => `${i + 1}\n${srtTime(animToOut(s[0]))} --> ${srtTime(animToOut(s[1]))}\n${names[s[2]] || ''}${s[3].replace(/\*/g, '')}\n`).join('\n');
   fs.writeFileSync(path.join(outDir, `${name}.srt`), srt);

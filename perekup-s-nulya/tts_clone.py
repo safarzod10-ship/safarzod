@@ -5,6 +5,8 @@ Run with the venv that has chatterbox-tts installed:
   <venv>/bin/python tts_clone.py komentograd1.html voice/kg1_tts.json
 voice/xx_tts.json: {"voiceDir": "out/voice/kg1", "map": "voice/kg1_map.json", "ref": "out/voice/ref/host.wav",
                     "exaggeration": 0.6, "cfg": 0.4, "say": {"on-screen text": "spoken text"}}
+Optional per-speaker voices: "refs": {"N": "out/voice/ref7/narrator.wav", ...} (falls back to "ref"),
+and per-speaker overrides: "speakers": {"N": {"exaggeration": 0.4, "cfg": 0.5}}.
 """
 import json, os, re, subprocess, sys
 import torch, torchaudio
@@ -46,8 +48,10 @@ for i, (a, b, who, text) in enumerate(subs):
         best = None
         for take in range(cfg.get('takes', 3)):
             torch.manual_seed(cfg.get('seed', 7) + i * 100 + take)
-            wav = model.generate(t, language_id='ru', audio_prompt_path=cfg['ref'],
-                                 exaggeration=cfg.get('exaggeration', 0.6), cfg_weight=cfg.get('cfg', 0.4),
+            sp = cfg.get('speakers', {}).get(who, {})
+            wav = model.generate(t, language_id='ru', audio_prompt_path=cfg.get('refs', {}).get(who, cfg.get('ref')),
+                                 exaggeration=sp.get('exaggeration', cfg.get('exaggeration', 0.6)),
+                                 cfg_weight=sp.get('cfg', cfg.get('cfg', 0.4)),
                                  temperature=cfg.get('temperature', 0.7))
             tmp = out + f'.take{take}.wav'
             torchaudio.save(tmp, wav, model.sr)
