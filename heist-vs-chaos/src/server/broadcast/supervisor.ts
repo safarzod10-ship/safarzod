@@ -102,6 +102,9 @@ export class BroadcastSupervisor {
   private lastOutUs = 0;
   private slowSince = 0;
   private stopping = false;
+  private gen = 0;
+  private launchTimers: NodeJS.Timeout[] = [];
+  private launchedAt = 0;
   private sessionId: number | null = null;
   pageConnectedAt = 0;
   pageConnected = false;
@@ -173,6 +176,7 @@ export class BroadcastSupervisor {
       if (!/^rtmps?:\/\//i.test(this.s.rtmpUrl)) return { ok: false, error: 'Stream URL must start with rtmps:// or rtmp://' };
     }
     if (this.budgetExhausted()) return { ok: false, error: 'The limited stream budget is used up. Reset it or switch to 24/7 mode.' };
+    if (this.s.desired === 'running' && (this.status.state === 'live' || this.status.state === 'starting' || this.status.state === 'retrying')) return { ok: true };
     this.failures = [];
     this.status.stopReason = null;
     this.s.desired = 'running';
@@ -216,6 +220,8 @@ export class BroadcastSupervisor {
     this.clearRetry();
     this.killAll();
     this.stopping = false;
+    const gen = ++this.gen;
+    this.launchedAt = Date.now();
     this.status.state = 'starting';
     this.status.lastError = null;
     const prof = PROFILES.find((p) => p.id === this.s.profile)!;
@@ -249,7 +255,7 @@ export class BroadcastSupervisor {
       'module-always-sink',
     ], env);
     const startChrome = () => {
-      if (this.stopping) return;
+      if (this.stopping || gen !== this.gen) return;
       this.spawnLogged('chromium', this.o.chromium, [
         '--no-first-run',
         '--no-default-browser-check',
@@ -272,13 +278,13 @@ export class BroadcastSupervisor {
       ], env);
     };
     const startFfmpeg = () => {
-      if (this.stopping) return;
+      if (this.stopping || gen !== this.gen) return;
       const g = prof.fps * 2;
       const vf = prof.w !== CAPTURE_W ? ['-vf', `scale=${prof.w}:${prof.h}:flags=bilinear`] : [];
       const out =
         this.s.target === 'null'
           ? ['-f', 'null', '-']
-          : ['-f', 'flv', `${this.s.rtmpUrl}/${this.secrets.get('stream_key') ?? ''}`];
+          : ['-rw_timeout', '15000000', '-f', 'flv', `${this.s.rtmpUrl}/${this.secrets.get('stream_key') ?? ''}`];
       const args = [
         '-hide_banner', '-loglevel', 'error', '-nostats', '-progress', 'pipe:1',
         '-thread_queue_size', '1024', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(prof.fps), '-video_size', `${CAPTURE_W}x${CAPTURE_H}`, '-i', `${display}.0+0,0`,
@@ -308,8 +314,7 @@ export class BroadcastSupervisor {
       this.sessionId = Number(this.db.sql.prepare('INSERT INTO broadcast_sessions (started_at) VALUES (?)').run(Date.now()).lastInsertRowid);
     };
     // Give X and Pulse a moment, then the browser, then the encoder (page needs to load first).
-    setTimeout(startChrome, 1500);
-    setTimeout(startFfmpeg, 6000);
+    this.launchTimers.push(setTimeout(startChrome, 1500), setTimeout(startFfmpeg, 6000));
     this.errors.add('broadcast', `pipeline launch (${why}) with profile ${prof.id}, target ${this.s.target}`);
     if (!this.accTimer) this.accTimer = setInterval(() => this.watchdog(), 5000);
   }
@@ -340,6 +345,10 @@ export class BroadcastSupervisor {
   private watchdog(): void {
     const now = Date.now();
     if (this.s.desired !== 'running') return;
+    if (this.status.state === 'starting' && this.launchedAt && now - this.launchedAt > 70_000) {
+      this.restartAfterFailure('stream did not start within 70 s (page or ingest not reachable)');
+      return;
+    }
     if (this.status.state === 'live') {
       this.save(); // persist usedSeconds regularly
       if (this.sessionId) this.db.sql.prepare('UPDATE broadcast_sessions SET seconds = ? WHERE id = ?').run(Math.round((now - this.startedAt) / 1000), this.sessionId);
@@ -414,6 +423,9 @@ export class BroadcastSupervisor {
 
   private killAll(): void {
     this.stopping = true;
+    this.gen++;
+    for (const t of this.launchTimers) clearTimeout(t);
+    this.launchTimers = [];
     if (this.sessionId) {
       this.db.sql
         .prepare('UPDATE broadcast_sessions SET ended_at = ?, seconds = ?, end_reason = ? WHERE id = ?')

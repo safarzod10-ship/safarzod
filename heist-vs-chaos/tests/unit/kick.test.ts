@@ -96,6 +96,14 @@ describe('kick webhooks', () => {
     expect(r.code).toBe(400);
   });
 
+  it('an invalid payload is rejected without being marked as processed', async () => {
+    const x = setup();
+    const m = signed({ hello: 'world' }, 'bad-payload-1');
+    expect((await x.kick.handleWebhook(m.headers, m.raw)).code).toBe(400);
+    const row = x.db.sql.prepare('SELECT 1 FROM processed_events WHERE event_id = ?').get('bad-payload-1');
+    expect(row).toBeUndefined();
+  });
+
   it('gift with effects disabled is thanked, enabled maps to a queued intervention once', async () => {
     const x = setup();
     const gift = { broadcaster: { user_id: 139575365, username: 's' }, sender: { user_id: 9, username: 'Big<Fan>' }, gift: { amount: 100, name: 'Rage Quit' } };

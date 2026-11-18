@@ -93,17 +93,27 @@ export class Db {
   }
 
   /** Consistent online snapshot. Keeps the newest `keep` backups. */
-  backup(dir: string, now: Date, keep = 7): string {
+  backup(dir: string, now: Date, keep = 7, kind: 'daily' | 'manual' = 'daily'): string {
     mkdirSync(dir, { recursive: true });
     const stamp = now.toISOString().replace(/[:T]/g, '-').slice(0, 19);
-    const target = join(dir, `heist-${stamp}.sqlite`);
+    const target = join(dir, `heist-${kind}-${stamp}.sqlite`);
     this.sql.prepare('VACUUM INTO ?').run(target);
+    const re = new RegExp(`^heist-${kind}-.*\\.sqlite$`);
     const files = readdirSync(dir)
-      .filter((f) => /^heist-.*\.sqlite$/.test(f))
+      .filter((f) => re.test(f))
       .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs }))
       .sort((a, b) => b.t - a.t);
     for (const old of files.slice(keep)) rmSync(join(dir, old.f), { force: true });
     return target;
+  }
+
+  /** Newest backup time of a kind (0 if none). */
+  lastBackupAt(dir: string, kind = 'daily'): number {
+    try {
+      return Math.max(0, ...readdirSync(dir).filter((f) => f.startsWith(`heist-${kind}-`)).map((f) => statSync(join(dir, f)).mtimeMs));
+    } catch {
+      return 0;
+    }
   }
 
   close(): void {

@@ -32,6 +32,7 @@ export interface AppDeps {
 }
 
 const MAX_WS = 300;
+const MAX_WS_PER_IP = 8;
 
 export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
@@ -83,6 +84,7 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
 
   const sockets = new Set<WebSocket>();
   const broadcastSockets = new Set<WebSocket>();
+  const ipCount = new Map<string, number>();
   let pending: NodeJS.Timeout | null = null;
   const pushState = () => {
     if (pending) return;
@@ -113,11 +115,15 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
   });
 
   app.get('/ws', { websocket: true }, (socket, req) => {
-    if (sockets.size >= MAX_WS) {
+    // Only the local broadcast browser counts as the stream page; it bypasses the public limits.
+    const local = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    const isBroadcast = local && (req.query as Record<string, string>)?.broadcast === '1';
+    const perIp = (ipCount.get(req.ip) ?? 0) + 1;
+    if (!isBroadcast && (sockets.size - broadcastSockets.size >= MAX_WS || perIp > MAX_WS_PER_IP)) {
       socket.close(1013, 'busy');
       return;
     }
-    const isBroadcast = (req.query as Record<string, string>)?.broadcast === '1';
+    ipCount.set(req.ip, perIp);
     const w = socket as WebSocket & { alive?: boolean };
     w.alive = true;
     sockets.add(socket);
@@ -132,6 +138,9 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
       else w.alive = true;
     });
     socket.on('close', () => {
+      const n = (ipCount.get(req.ip) ?? 1) - 1;
+      if (n <= 0) ipCount.delete(req.ip);
+      else ipCount.set(req.ip, n);
       sockets.delete(socket);
       broadcastSockets.delete(socket);
       if (d.broadcast) d.broadcast.pageConnected = broadcastSockets.size > 0;
@@ -157,7 +166,7 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
 
   // ---------------------------------------------------------------- admin
 
-  const failures = new Map<string, { n: number; until: number }>();
+  const failures = new Map<string, { n: number; first: number; until: number }>();
   const auth = async (req: FastifyRequest, reply: FastifyReply) => {
     const ip = req.ip;
     const f = failures.get(ip);
@@ -166,8 +175,8 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
     const h = req.headers.authorization ?? '';
     const token = h.startsWith('Bearer ') ? h.slice(7) : '';
     if (!token || !safeEqual(token, d.adminToken)) {
-      const n = (f && f.until > now - 60_000 ? f.n : 0) + 1;
-      failures.set(ip, { n, until: n >= 8 ? now + 60_000 : 0 });
+      const n = (f && now - f.first < 60_000 ? f.n : 0) + 1;
+      failures.set(ip, { n, first: f && now - f.first < 60_000 ? f.first : now, until: n >= 8 ? now + 60_000 : 0 });
       if (failures.size > 5000) failures.clear();
       return reply.code(401).send({ error: 'unauthorized' });
     }
@@ -227,7 +236,7 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
     admin.post('/api/admin/game/reset', async (req, reply) => {
       const b = parse(z.object({ confirm: z.literal('RESET') }), req.body, reply);
       if (!b) return;
-      d.db.backup(d.backupDir, new Date(), 14);
+      d.db.backup(d.backupDir, new Date(), 10, 'manual');
       d.runtime.resetProgress();
       return { ok: true };
     });
@@ -235,7 +244,7 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
       setTimeout(() => d.onRestartRequested?.(), 300);
       return { ok: true, note: 'The service restarts in a few seconds; the game resumes from its saved state.' };
     });
-    admin.post('/api/admin/backup', async () => ({ file: d.db.backup(d.backupDir, new Date(), 14).split('/').pop() }));
+    admin.post('/api/admin/backup', async () => ({ file: d.db.backup(d.backupDir, new Date(), 10, 'manual').split('/').pop() }));
 
     admin.post('/api/admin/broadcast/config', async (req, reply) => {
       const b = parse(
@@ -268,7 +277,8 @@ export async function buildApp(d: AppDeps): Promise<FastifyInstance> {
     });
     admin.post('/api/admin/broadcast/reset-budget', async (req, reply) => {
       const b = parse(z.object({ confirm: z.literal('RESET') }), req.body, reply);
-      if (!b || !d.broadcast) return;
+      if (!b) return;
+      if (!d.broadcast) return reply.code(409).send({ error: 'broadcast tools are not installed on this host' });
       d.broadcast.resetBudget();
       return { ok: true };
     });

@@ -68,9 +68,13 @@ docker run --rm "$IMAGE:$HVC_VERSION" compose > compose.yaml
 docker run --rm "$IMAGE:$HVC_VERSION" caddyfile > Caddyfile
 chown -R 10001:10001 data
 
-# Remember the previous version for rollback.
-PREV="$(docker inspect --format '{{.Config.Image}}' heist-vs-chaos-app-1 2>/dev/null | sed 's/.*://' || true)"
-[ -n "$PREV" ] && [ "$PREV" != "$HVC_VERSION" ] && echo "$PREV" > .previous-version
+# Remember the exact image that is running now (even if both are tagged "latest") for rollback.
+PREV_ID="$(docker inspect --format '{{.Image}}' heist-vs-chaos-app-1 2>/dev/null || true)"
+NEW_ID="$(docker image inspect --format '{{.Id}}' "$IMAGE:$HVC_VERSION")"
+if [ -n "$PREV_ID" ] && [ "$PREV_ID" != "$NEW_ID" ]; then
+  docker tag "$PREV_ID" "$IMAGE:rollback" && echo rollback > .previous-version
+fi
+cp -p .env .env.backup   # keep a copy: losing SECRET_KEY makes saved keys unreadable
 [ -f data/heist.sqlite ] && docker run --rm -v "$DIR/data:/data" --user 10001 "$IMAGE:$HVC_VERSION" backup || true
 
 HVC_IMAGE="$IMAGE" docker compose up -d --remove-orphans

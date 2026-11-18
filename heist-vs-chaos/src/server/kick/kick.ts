@@ -170,6 +170,7 @@ export class KickIntegration {
 
   start(): void {
     if (this.timer) return;
+    void this.getPublicKey().catch(() => undefined);
     this.timer = setInterval(() => {
       if (this.now() >= this.nextRunAt) void this.maintain();
     }, 5000);
@@ -295,8 +296,26 @@ export class KickIntegration {
     }
   }
 
+  private keyFetch: Promise<string> | null = null;
+  private keyFailAt = 0;
+  /** Fetch Kick's public key once at a time; failures are cached for 30 s (protects against request floods). */
   private async getPublicKey(force = false): Promise<string> {
     if (!force && this.publicKey && this.now() - this.publicKey.at < 6 * 3600_000) return this.publicKey.pem;
+    if (this.keyFetch) return this.keyFetch;
+    if (this.now() - this.keyFailAt < 30_000) {
+      if (this.publicKey) return this.publicKey.pem;
+      throw new Error('Kick public key temporarily unavailable');
+    }
+    this.keyFetch = this.fetchPublicKey()
+      .catch((e: unknown) => {
+        this.keyFailAt = this.now();
+        throw e;
+      })
+      .finally(() => (this.keyFetch = null));
+    return this.keyFetch;
+  }
+
+  private async fetchPublicKey(): Promise<string> {
     const r = await this.f(`${this.opts.apiBase}/public/v1/public-key`, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error(`Kick public key fetch failed: HTTP ${r.status}`);
     const j = (await r.json()) as { data?: { public_key?: string } };
@@ -331,7 +350,7 @@ export class KickIntegration {
       return { code: 503, body: 'key unavailable' };
     }
     let valid = verifyKickSignature(pem, id, ts, raw, sig);
-    if (!valid && this.publicKey && this.now() - this.publicKey.at > 60_000) {
+    if (!valid && this.publicKey && this.now() - this.publicKey.at > 10 * 60_000) {
       // The key may have rotated: refresh once and retry.
       try {
         pem = await this.getPublicKey(true);
@@ -357,15 +376,28 @@ export class KickIntegration {
     }
     // Idempotency: the message id and its effect are committed in ONE transaction. A redelivery (or a
     // retry after a crash) is acknowledged without effect; a failed processing rolls back and can be retried.
-    return this.db.tx(() => {
+    const reject = new Error('reject');
+    let rejected: WebhookResult | null = null;
+    try {
+      return this.db.tx(() => {
       const ins = this.db.sql.prepare('INSERT OR IGNORE INTO processed_events (event_id, type, received_at) VALUES (?, ?, ?)').run(id, type, this.now());
       if (ins.changes === 0) {
         this.status.counters.duplicates++;
         return { code: 200, body: 'duplicate' };
       }
       this.status.lastEventAt = this.now();
-      return this.dispatch(id, type, payload, sentAt);
-    });
+      const res = this.dispatch(id, type, payload, sentAt);
+      if (res.code >= 400) {
+        // Invalid payload: roll back so the id is not marked processed (a fixed redelivery can still apply).
+        rejected = res;
+        throw reject;
+      }
+      return res;
+      });
+    } catch (e) {
+      if (e === reject && rejected) return rejected;
+      throw e;
+    }
   }
 
   private checkChannel(bid: number): boolean {

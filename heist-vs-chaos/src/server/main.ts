@@ -100,23 +100,21 @@ async function main(): Promise<void> {
   await app.listen({ port: cfg.PORT, host: cfg.HOST });
   broadcast?.resume();
 
-  // Housekeeping: prune bounded tables hourly, daily backup.
-  const hourly = setInterval(() => {
+  // Housekeeping (also right after start, so frequent restarts never skip it): prune tables, daily backup.
+  const housekeeping = () => {
     try {
       db.prune(Date.now());
     } catch (e) {
       errors.add('db', String(e));
     }
-  }, 3600_000);
-  hourly.unref();
-  const daily = setInterval(() => {
     try {
-      db.backup(cfg.backupDir, new Date(), 14);
+      if (Date.now() - db.lastBackupAt(cfg.backupDir, 'daily') > 24 * 3600_000) db.backup(cfg.backupDir, new Date(), 14, 'daily');
     } catch (e) {
       errors.add('db', `backup failed: ${String(e)}`);
     }
-  }, 24 * 3600_000);
-  daily.unref();
+  };
+  setTimeout(housekeeping, 30_000).unref();
+  setInterval(housekeeping, 3600_000).unref();
 
   process.on('SIGTERM', () => void shutdown(0));
   process.on('SIGINT', () => void shutdown(0));
