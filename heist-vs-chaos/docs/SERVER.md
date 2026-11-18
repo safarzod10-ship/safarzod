@@ -6,7 +6,7 @@ Debian 12 / Ubuntu 22.04+, x86_64, от 2 vCPU, от 2 ГБ RAM (рекомен�
 ## Установка
 В веб-консоли хостинга под root:
 ```bash
-command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.4 install | bash
+command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.5 install | bash
 ```
 Что делает установщик (`deploy/install.sh`; его можно запускать повторно):
 1. Показывает ОС, CPU, RAM и диск. Останавливается, если свободно меньше 4 ГБ.
@@ -36,7 +36,7 @@ command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghc
 
 ## Вещание
 Пульт → Stream → Stream settings:
-- **Stream URL** — из Kick Creator Dashboard, например `rtmps://fa723fc1b171.global-contribute.live-video.net:443/app`.
+- **Stream URL** — из Kick Creator Dashboard, например `rtmps://fa723fc1b171.global-contribute.live-video.net:443/app`. Если в скопированном адресе нет `:443/app`, игра допишет это сама.
 - **Stream key** — оттуда же. Хранится в зашифрованном виде и никогда не показывается и не пишется в лог.
 - **Mode**: `Limited` — эфир прекращается, когда суммарное время эфира достигнет лимита (по умолчанию 5 ч). Счётчик хранится в базе и переживает перезапуски. `24/7` — без лимита.
 - **Target**: `Encoder test` гоняет весь конвейер без отправки в Kick. Так можно измерить скорость кодирования на вашем сервере.

@@ -32,7 +32,7 @@ npm run e2e       # браузерные сценарии (Playwright)
 Одна команда в консоли хостинга (Debian/Ubuntu, root). Подробности в [docs/SERVER.md](docs/SERVER.md).
 
 ```bash
-command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.4 install | bash
+command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.5 install | bash
 ```
 
 В конце установщик выведет ссылку на игру, приватную ссылку на пульт и адрес webhook для Kick.

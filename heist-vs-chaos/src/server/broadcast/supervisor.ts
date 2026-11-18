@@ -150,7 +150,7 @@ export class BroadcastSupervisor {
   }
 
   configure(input: { rtmpUrl?: string; streamKey?: string; profile?: ProfileId; autoProfile?: boolean; mode?: Mode; budgetHours?: number; target?: 'kick' | 'null' }): void {
-    if (input.rtmpUrl !== undefined) this.s.rtmpUrl = input.rtmpUrl.trim().replace(/\/+$/, '');
+    if (input.rtmpUrl !== undefined) this.s.rtmpUrl = normalizeIngest(input.rtmpUrl);
     if (input.streamKey) this.secrets.set('stream_key', input.streamKey.trim());
     if (input.profile) this.s.profile = input.profile;
     if (input.autoProfile !== undefined) this.s.autoProfile = input.autoProfile;
@@ -284,7 +284,7 @@ export class BroadcastSupervisor {
       const out =
         this.s.target === 'null'
           ? ['-f', 'null', '-']
-          : ['-rw_timeout', '15000000', '-f', 'flv', `${this.s.rtmpUrl}/${this.secrets.get('stream_key') ?? ''}`];
+          : ['-rw_timeout', '15000000', '-f', 'flv', `${normalizeIngest(this.s.rtmpUrl)}/${this.secrets.get('stream_key') ?? ''}`];
       const args = [
         '-hide_banner', '-loglevel', 'error', '-nostats', '-progress', 'pipe:1',
         '-thread_queue_size', '1024', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(prof.fps), '-video_size', `${CAPTURE_W}x${CAPTURE_H}`, '-i', `${display}.0+0,0`,
@@ -455,4 +455,14 @@ export class BroadcastSupervisor {
     this.accTimer = null;
     this.killAll();
   }
+}
+
+/** Kick ingest (AWS IVS) needs the ":443/app" application path; the dashboard URL is often copied without it. */
+export function normalizeIngest(url: string): string {
+  let u = url.trim().replace(/\/+$/, '');
+  const m = /^(rtmps?):\/\/([^/:]+)(:\d+)?(\/.*)?$/i.exec(u);
+  if (m && /\.live-video\.net$/i.test(m[2]!) && (!m[4] || m[4] === '/')) {
+    u = `${m[1]!.toLowerCase()}://${m[2]}${m[3] ?? (m[1]!.toLowerCase() === 'rtmps' ? ':443' : '')}/app`;
+  }
+  return u;
 }

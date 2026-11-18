@@ -144,3 +144,13 @@ describe('secrets', () => {
     expect(s.get('stream_key')).toBe('super-secret-key-1');
   });
 });
+
+import { normalizeIngest } from '../../src/server/broadcast/supervisor.js';
+describe('ingest url', () => {
+  it('adds the IVS application path when missing', () => {
+    expect(normalizeIngest('rtmps://fa723fc1b171.global-contribute.live-video.net')).toBe('rtmps://fa723fc1b171.global-contribute.live-video.net:443/app');
+    expect(normalizeIngest('rtmps://fa723fc1b171.global-contribute.live-video.net/')).toBe('rtmps://fa723fc1b171.global-contribute.live-video.net:443/app');
+    expect(normalizeIngest('rtmps://fa723fc1b171.global-contribute.live-video.net:443/app/')).toBe('rtmps://fa723fc1b171.global-contribute.live-video.net:443/app');
+    expect(normalizeIngest('rtmp://127.0.0.1:1935/app')).toBe('rtmp://127.0.0.1:1935/app');
+  });
+});
