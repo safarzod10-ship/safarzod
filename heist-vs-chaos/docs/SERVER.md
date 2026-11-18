@@ -6,7 +6,7 @@ Debian 12 / Ubuntu 22.04+, x86_64, от 2 vCPU, от 2 ГБ RAM (рекомен�
 ## Установка
 В веб-консоли хостинга под root:
 ```bash
-command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.2 install | bash
+command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.3 install | bash
 ```
 Что делает установщик (`deploy/install.sh`; его можно запускать повторно):
 1. Показывает ОС, CPU, RAM и диск. Останавливается, если свободно меньше 4 ГБ.
@@ -24,6 +24,8 @@ command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghc
 1. подключает игру к Docker-сети этого Caddy;
 2. добавляет в его Caddyfile один блок между метками `# >>> heist-vs-chaos >>>` и `# <<< heist-vs-chaos <<<` (рядом сохраняется копия `Caddyfile.bak-hvc-…`);
 3. проверяет конфиг (`caddy validate`) и плавно применяет его (`caddy reload`, без остановки). Если Caddy отклонит конфиг, исходный файл возвращается.
+
+Если Caddyfile встроен в образ другого проекта (так у zuba-ruba), файлы не меняются вовсе. Маршрут игры добавляется через локальный admin API этого Caddy (`127.0.0.1:2019` внутри его контейнера). Таймер systemd `hvc-caddy-route.timer` раз в минуту проверяет маршрут и возвращает его после перезапуска или обновления того проекта. Ручная проверка: `hvc caddy-route`.
 
 Адрес игры в этом режиме: `hvc.<ip-с-дефисами>.sslip.io`, чтобы не пересекаться с сайтом другого проекта. Если другой проект перезапишет свой Caddyfile, например при своём обновлении, запустите установщик ещё раз: блок добавится заново.
 

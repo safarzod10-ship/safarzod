@@ -2,7 +2,7 @@
 # HEIST vs CHAOS server installer. Safe to run again (updates in place, never deletes data).
 # Usage (as root on Debian/Ubuntu):
 #   command -v docker || curl -fsSL https://get.docker.com | sh
-#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.2 install | bash
+#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.3 install | bash
 # Options via env: HVC_VERSION=1.0.0  SITE_ADDRESS=my.domain  HVC_DIR=/opt/heist-vs-chaos
 set -euo pipefail
 IMAGE="${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}"
@@ -58,6 +58,7 @@ set -a; . ./.env; set +a
 # Ports 80/443 are needed for HTTPS (Kick webhooks require a public HTTPS URL).
 # If another project's Caddy container already owns them, share it instead of fighting for the ports.
 MODE=own
+CADDY_MODE=""
 PROXY_CTR=""
 for c in $(docker ps --format '{{.Names}}'); do
   case "$c" in heist-vs-chaos-*) continue ;; esac
@@ -92,7 +93,14 @@ if [ "$MODE" = external ]; then
     CF_DIR="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/etc/caddy"}}{{.Source}}{{end}}{{end}}' "$PROXY_CTR")"
     [ -n "$CF_DIR" ] && CF_SRC="$CF_DIR/Caddyfile"
   fi
-  [ -n "$CF_SRC" ] && [ -f "$CF_SRC" ] || die "The Caddyfile of $PROXY_CTR is not a host file I can edit; nothing was changed. Ask for a custom setup."
+  CADDY_MODE=file
+  if [ -z "$CF_SRC" ] || [ ! -f "$CF_SRC" ]; then
+    # Caddyfile is baked into that image: add our route at runtime through Caddy's local admin API
+    # (no files of the other project are changed) and keep it present with a 1-minute systemd timer.
+    CADDY_MODE=api
+    docker exec "$PROXY_CTR" wget -q -O /dev/null http://127.0.0.1:2019/config/ 2>/dev/null \
+      || die "Caddy admin API of $PROXY_CTR is not reachable (admin off?); nothing was changed. Ask for a custom setup."
+  fi
   grep -v '^HVC_PROXY_NETWORK=' .env > .env.tmp && echo "HVC_PROXY_NETWORK=$HVC_PROXY_NETWORK" >> .env.tmp && cat .env.tmp > .env && rm -f .env.tmp
 fi
 
@@ -118,7 +126,31 @@ cp -p .env .env.backup   # keep a copy: losing SECRET_KEY makes saved keys unrea
 
 HVC_IMAGE="$IMAGE" docker compose up -d --remove-orphans
 
-if [ "$MODE" = external ]; then
+if [ "$MODE" = external ] && [ "$CADDY_MODE" = api ]; then
+  docker run --rm --network "container:$PROXY_CTR" "$IMAGE:$HVC_VERSION" caddy-route "$SITE_ADDRESS" heist-vs-chaos-app-1:8080 \
+    || die "Could not add the game route to $PROXY_CTR. The game runs locally on 127.0.0.1:8080."
+  cat > /etc/systemd/system/hvc-caddy-route.service <<UNIT
+[Unit]
+Description=HEIST vs CHAOS: keep the game route in the shared Caddy
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hvc caddy-route
+UNIT
+  cat > /etc/systemd/system/hvc-caddy-route.timer <<UNIT
+[Unit]
+Description=HEIST vs CHAOS: re-check the shared Caddy route every minute
+[Timer]
+OnBootSec=90
+OnUnitActiveSec=60
+[Install]
+WantedBy=timers.target
+UNIT
+  systemctl daemon-reload && systemctl enable --now hvc-caddy-route.timer >/dev/null 2>&1 || warn "systemd timer not installed; run 'hvc caddy-route' after restarts of $PROXY_CTR"
+  say "Added the game site to $PROXY_CTR via its admin API (re-checked every minute)"
+fi
+
+if [ "$MODE" = external ] && [ "$CADDY_MODE" = file ]; then
   # Add (or refresh) our marked block in the shared Caddyfile; validate first, restore on any failure.
   BK="$CF_SRC.bak-hvc-$(date +%Y%m%d-%H%M%S)"
   cp -p "$CF_SRC" "$BK"
@@ -167,6 +199,15 @@ case "${1:-status}" in
   start) dc up -d ;;
   restart) dc restart app ;;
   backup) docker exec heist-vs-chaos-app-1 /app/deploy/entrypoint.sh backup ;;
+  caddy-route)
+    # Find the Caddy container that owns port 443 (another project) and make sure our route is there.
+    ctr=""
+    for c in $(docker ps --format '{{.Names}}'); do
+      case "$c" in heist-vs-chaos-*) continue ;; esac
+      if docker port "$c" 2>/dev/null | grep -qE '(^|[^0-9])443/tcp' && docker inspect -f '{{.Config.Image}} {{.Path}}' "$c" | grep -qi caddy; then ctr="$c"; fi
+    done
+    [ -n "$ctr" ] || exit 0
+    docker run --rm --network "container:$ctr" "${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}:${HVC_VERSION}" caddy-route "$SITE_ADDRESS" heist-vs-chaos-app-1:8080 | grep -v '^route present$' || true ;;
   update) docker run --rm "${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}:${2:-latest}" install | HVC_VERSION="${2:-latest}" bash ;;
   rollback) [ -f .previous-version ] || { echo "no previous version recorded"; exit 1; }
             v=$(cat .previous-version); sed -i "s/^HVC_VERSION=.*/HVC_VERSION=$v/" .env; dc up -d; echo "rolled back to $v" ;;
