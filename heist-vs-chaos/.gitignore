@@ -1,0 +1,17 @@
+node_modules/
+dist/
+data/
+backups/
+logs/
+*.log
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-*
+*.db
+test-results/
+playwright-report/
+tmp/
+.cache/
+.local-ca.crt

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#3F5A4A" />
+    <title>HEIST vs CHAOS · Host</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">HEIST <span>vs</span> CHAOS <small>host</small></div>
+      <div id="badges"></div>
+    </header>
+
+    <section id="login" class="card hidden">
+      <h2>Sign in</h2>
+      <p>Paste the host token from the installer (or open the panel link with the token).</p>
+      <input id="token" type="password" autocomplete="off" placeholder="Host token" />
+      <button id="login-btn" class="big primary">Sign in</button>
+      <p id="login-err" class="err"></p>
+    </section>
+
+    <main id="app" class="hidden">
+      <section class="card" id="c-stream">
+        <h2>Stream</h2>
+        <div class="kv" id="stream-kv"></div>
+        <div class="btns">
+          <button class="big go" data-act="stream-start">START STREAM</button>
+          <button class="big stop" data-act="stream-stop">STOP STREAM</button>
+        </div>
+        <details>
+          <summary>Stream settings</summary>
+          <label>Kick stream URL <input id="rtmp" placeholder="rtmps://...live-video.net:443/app" autocomplete="off" /></label>
+          <label>Kick stream key <input id="skey" type="password" placeholder="leave empty to keep" autocomplete="off" /></label>
+          <label>Quality
+            <select id="profile"></select>
+          </label>
+          <label class="chk"><input id="autoprof" type="checkbox" /> Lower quality automatically if the server is too slow</label>
+          <label>Mode
+            <select id="mode">
+              <option value="limited">Limited (first stream: 5 hours total)</option>
+              <option value="continuous">24/7 continuous</option>
+            </select>
+          </label>
+          <label>Limit, hours <input id="hours" type="number" min="0.25" max="48" step="0.25" /></label>
+          <label>Target
+            <select id="target">
+              <option value="kick">Kick (real stream)</option>
+              <option value="null">Encoder test (nothing is uploaded)</option>
+            </select>
+          </label>
+          <button class="primary" data-act="stream-save">Save stream settings</button>
+          <button class="ghost" data-act="budget-reset">Reset hour counter…</button>
+        </details>
+      </section>
+
+      <section class="card" id="c-game">
+        <h2>Game</h2>
+        <div class="kv" id="game-kv"></div>
+        <div id="tally"></div>
+        <div class="btns">
+          <button data-act="pause">Pause</button>
+          <button data-act="resume">Resume</button>
+          <button data-act="restart-level">Restart level…</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Test interventions</h2>
+        <p class="note">Free host tests. Shown on stream as TEST events.</p>
+        <div class="grid5">
+          <button class="iv" data-iv="SCAN">SCAN<small>reveal safe moves</small></button>
+          <button class="iv" data-iv="SHIELD">SHIELD<small>block one hit</small></button>
+          <button class="iv" data-iv="REVOTE">REVOTE<small>restart vote once</small></button>
+          <button class="iv" data-iv="REVIVE">REVIVE<small>after knockout</small></button>
+          <button class="iv" data-iv="CHAOS">CHAOS<small>twist this vote</small></button>
+        </div>
+        <ul id="iv-list" class="list"></ul>
+      </section>
+
+      <section class="card" id="c-kick">
+        <h2>Kick</h2>
+        <div class="kv" id="kick-kv"></div>
+        <div class="btns"><button data-act="kick-reconnect">Reconnect</button></div>
+        <details>
+          <summary>Kick app settings</summary>
+          <p class="note">From kick.com → Settings → Developer → your app. Set its Webhook URL to the address shown above.</p>
+          <label>Client ID <input id="kid" autocomplete="off" placeholder="leave empty to keep" /></label>
+          <label>Client Secret <input id="ksecret" type="password" autocomplete="off" placeholder="leave empty to keep" /></label>
+          <label>Channel <input id="kchan" autocomplete="off" /></label>
+          <button class="primary" data-act="kick-save">Save Kick settings</button>
+        </details>
+        <details>
+          <summary>Gift effects</summary>
+          <p class="note">Only enable if Kicks gifts work on your channel. Gifts are never lost: if an effect can't apply right now it waits in a queue.</p>
+          <label class="chk"><input id="gifts" type="checkbox" /> Gifts trigger game events</label>
+          <div id="rules"></div>
+          <button class="primary" data-act="gifts-save">Save gift effects</button>
+        </details>
+      </section>
+
+      <section class="card">
+        <h2>Sound</h2>
+        <div id="vol"></div>
+      </section>
+
+      <section class="card">
+        <h2>Problems log</h2>
+        <ul id="errors" class="list small"></ul>
+      </section>
+
+      <section class="card danger">
+        <h2>Maintenance</h2>
+        <div class="btns">
+          <button data-act="backup">Backup now</button>
+          <button data-act="restart-server">Restart service…</button>
+          <button class="stop" data-act="reset">Reset all progress…</button>
+          <button class="ghost" data-act="logout">Sign out</button>
+        </div>
+      </section>
+    </main>
+    <div id="toast" class="hidden"></div>
+    <script type="module" src="./panel.ts"></script>
+  </body>
+</html>

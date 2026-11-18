@@ -1,0 +1,13 @@
+# Automatic HTTPS (Let's Encrypt). SITE_ADDRESS is e.g. 203-0-113-7.sslip.io (free DNS name for an IP).
+{$SITE_ADDRESS} {
+	encode gzip
+	request_body {
+		max_size 1MB
+	}
+	reverse_proxy app:8080
+	log {
+		output stdout
+		format console
+		level ERROR
+	}
+}

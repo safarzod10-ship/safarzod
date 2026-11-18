@@ -1,0 +1,260 @@
+:root {
+  --paper: #fbf6ea;
+  --cream: #f3ead6;
+  --deep: #e8dcc0;
+  --sage: #8fae8b;
+  --sage-dark: #5e7f66;
+  --sage-deep: #3f5a4a;
+  --terra: #c8694e;
+  --mint: #8fd3b6;
+  --gold: #c9a55a;
+  --ink: #2f3b36;
+  --laser: #e2553d;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--cream);
+  font-family: Fredoka, system-ui, sans-serif;
+  color: var(--ink);
+  font-size: 17px;
+  padding-bottom: 40px;
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--sage-deep);
+  color: var(--paper);
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.brand span {
+  color: var(--terra);
+}
+.brand small {
+  opacity: 0.7;
+  font-weight: 400;
+}
+.badge {
+  display: inline-block;
+  margin: 2px;
+  padding: 3px 9px;
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.badge.ok {
+  background: var(--mint);
+}
+.badge.warn {
+  background: #e6cf95;
+}
+.badge.bad {
+  background: var(--laser);
+  color: #fff;
+}
+main,
+#login {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 12px;
+}
+.card {
+  background: var(--paper);
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  box-shadow: 0 4px 0 rgba(47, 59, 54, 0.08), 0 6px 18px rgba(47, 59, 54, 0.12);
+}
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+.card.danger {
+  border: 2px dashed #d9a08e;
+}
+.kv div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--deep);
+}
+.kv span {
+  color: var(--sage-dark);
+}
+.kv b {
+  text-align: right;
+  word-break: break-word;
+}
+code {
+  font-size: 13px;
+  user-select: all;
+}
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+button {
+  font: 600 17px Fredoka, sans-serif;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  min-height: 52px;
+  background: var(--deep);
+  color: var(--ink);
+  cursor: pointer;
+  flex: 1 1 140px;
+}
+button:disabled {
+  opacity: 0.5;
+}
+button.big {
+  font-size: 20px;
+  min-height: 64px;
+}
+button.primary {
+  background: var(--sage-deep);
+  color: var(--paper);
+}
+button.go {
+  background: #4e9a6f;
+  color: #fff;
+}
+button.stop {
+  background: var(--laser);
+  color: #fff;
+}
+button.ghost {
+  background: transparent;
+  border: 2px solid var(--deep);
+}
+.grid5 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+button.iv {
+  background: var(--ink);
+  color: #e6cf95;
+  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+button.iv small {
+  font-size: 12px;
+  color: var(--cream);
+  font-weight: 400;
+}
+details {
+  margin-top: 12px;
+  border-top: 1px solid var(--deep);
+  padding-top: 8px;
+}
+summary {
+  font-weight: 600;
+  padding: 8px 0;
+  cursor: pointer;
+}
+label {
+  display: block;
+  margin: 10px 0;
+  font-size: 15px;
+  color: var(--sage-deep);
+}
+label.chk {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+input,
+select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  font: 17px Fredoka, sans-serif;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--deep);
+  background: #fff;
+}
+input[type='checkbox'] {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  flex: none;
+}
+input[type='range'] {
+  padding: 0;
+  height: 36px;
+}
+label.rule input {
+  display: inline-block;
+  width: 110px;
+}
+.vol {
+  text-transform: capitalize;
+}
+.note {
+  font-size: 14px;
+  color: var(--sage-dark);
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--deep);
+  word-break: break-word;
+}
+.list.small span {
+  color: var(--sage-dark);
+}
+#tally {
+  margin-top: 8px;
+  font-size: 15px;
+}
+#tally div {
+  display: flex;
+  justify-content: space-between;
+}
+.err {
+  color: var(--laser);
+}
+.hidden {
+  display: none !important;
+}
+#toast {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  z-index: 10;
+}
+#toast.bad {
+  background: var(--laser);
+}

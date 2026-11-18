@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HEIST vs CHAOS</title>
+    <meta name="description" content="A chat-controlled museum heist. Type 1, 2, 3 or 4 in chat to decide what the robot does." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="stage">
+      <div id="game"></div>
+      <div id="hud">
+        <div id="top">
+          <div class="lvl"><div id="lvl-num"></div><div id="lvl-title"></div></div>
+          <div id="track"></div>
+          <div class="right">
+            <div class="row"><div id="hearts"></div><div id="alert"></div></div>
+            <div id="stats"></div>
+            <div id="inv"></div>
+          </div>
+        </div>
+        <div id="brand">HEIST <span>vs</span> CHAOS</div>
+        <div id="auto" class="hidden"></div>
+        <div id="hint" class="hidden"><b>CLUE</b><span id="hint-text"></span></div>
+        <div id="notices"></div>
+        <div id="queue" class="hidden"></div>
+        <div id="vote" class="hidden">
+          <div class="head">
+            <div id="vote-timer">
+              <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" class="bg"/><circle id="ring-fg" cx="32" cy="32" r="28" class="fg"/></svg>
+              <span id="vote-secs"></span>
+            </div>
+            <div class="cta"><b>VOTE</b> <span id="vote-cta"></span></div>
+            <div id="vote-tags"></div>
+            <div id="recent"></div>
+          </div>
+          <div id="opts"></div>
+        </div>
+        <div id="result" class="hidden"></div>
+        <div id="card" class="hidden"><div id="card-timer"></div></div>
+        <div id="conn" class="hidden">Reconnecting to the museum...</div>
+        <div id="paused" class="hidden">PAUSED BY THE HOST · BACK SOON</div>
+      </div>
+    </div>
+    <button id="sound" type="button">Tap for sound</button>
+    <script type="module" src="./game/main.ts"></script>
+  </body>
+</html>

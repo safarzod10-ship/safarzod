@@ -1,0 +1,48 @@
+{
+  "name": "heist-vs-chaos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HEIST vs CHAOS - a chat-controlled museum heist game for 24/7 Kick livestreams",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev:server": "tsx watch src/server/main.ts",
+    "dev:client": "vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "start": "node --disable-warning=ExperimentalWarning dist/server/server/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test --trace off",
+    "validate:levels": "tsx tools/validate-levels.ts",
+    "docs:levels": "tsx tools/gen-level-docs.ts",
+    "audio": "tsx tools/gen-audio.ts",
+    "secrets:check": "node tools/check-secrets.mjs",
+    "check": "npm run typecheck && npm run validate:levels && npm test && npm run secrets:check"
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.11",
+    "@fastify/websocket": "11.3.7",
+    "@fontsource/fredoka": "5.2.8",
+    "fastify": "5.12.8",
+    "phaser": "3.90.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.18.13",
+    "@types/ws": "8.18.1",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0",
+    "ws": "8.23.0"
+  },
+  "overrides": {
+    "ws": "8.23.0"
+  }
+}

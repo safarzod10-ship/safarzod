@@ -1,0 +1,118 @@
+{
+  "generated": "tools/gen-audio.ts - all sounds synthesized, voices by espeak-ng",
+  "music": [
+    "/audio/music/calm.ogg",
+    "/audio/music/escape.ogg"
+  ],
+  "sfx": {
+    "step": "/audio/sfx/step.ogg",
+    "success": "/audio/sfx/success.ogg",
+    "zap": "/audio/sfx/zap.ogg",
+    "alarm": "/audio/sfx/alarm.ogg",
+    "trap": "/audio/sfx/trap.ogg",
+    "thud": "/audio/sfx/thud.ogg",
+    "meow": "/audio/sfx/meow.ogg",
+    "shield": "/audio/sfx/shield.ogg",
+    "click": "/audio/sfx/click.ogg",
+    "lever": "/audio/sfx/lever.ogg",
+    "pickup": "/audio/sfx/pickup.ogg",
+    "clang": "/audio/sfx/clang.ogg",
+    "beep": "/audio/sfx/beep.ogg",
+    "unlock": "/audio/sfx/unlock.ogg",
+    "coin": "/audio/sfx/coin.ogg",
+    "fan": "/audio/sfx/fan.ogg",
+    "swap": "/audio/sfx/swap.ogg",
+    "steal": "/audio/sfx/steal.ogg",
+    "ding": "/audio/sfx/ding.ogg",
+    "vote_open": "/audio/sfx/vote_open.ogg",
+    "tick": "/audio/sfx/tick.ogg",
+    "result": "/audio/sfx/result.ogg",
+    "level_complete": "/audio/sfx/level_complete.ogg",
+    "defeat": "/audio/sfx/defeat.ogg",
+    "whoosh": "/audio/sfx/whoosh.ogg"
+  },
+  "voice": {
+    "intro": [
+      "/audio/voice/intro-1.ogg",
+      "/audio/voice/intro-2.ogg",
+      "/audio/voice/intro-3.ogg",
+      "/audio/voice/intro-4.ogg"
+    ],
+    "vote": [
+      "/audio/voice/vote-1.ogg",
+      "/audio/voice/vote-2.ogg",
+      "/audio/voice/vote-3.ogg",
+      "/audio/voice/vote-4.ogg",
+      "/audio/voice/vote-5.ogg"
+    ],
+    "success": [
+      "/audio/voice/success-1.ogg",
+      "/audio/voice/success-2.ogg",
+      "/audio/voice/success-3.ogg",
+      "/audio/voice/success-4.ogg",
+      "/audio/voice/success-5.ogg"
+    ],
+    "hurt": [
+      "/audio/voice/hurt-1.ogg",
+      "/audio/voice/hurt-2.ogg",
+      "/audio/voice/hurt-3.ogg",
+      "/audio/voice/hurt-4.ogg",
+      "/audio/voice/hurt-5.ogg"
+    ],
+    "noisy": [
+      "/audio/voice/noisy-1.ogg",
+      "/audio/voice/noisy-2.ogg",
+      "/audio/voice/noisy-3.ogg"
+    ],
+    "steal": [
+      "/audio/voice/steal-1.ogg",
+      "/audio/voice/steal-2.ogg",
+      "/audio/voice/steal-3.ogg",
+      "/audio/voice/steal-4.ogg"
+    ],
+    "escape": [
+      "/audio/voice/escape-1.ogg",
+      "/audio/voice/escape-2.ogg",
+      "/audio/voice/escape-3.ogg"
+    ],
+    "defeat": [
+      "/audio/voice/defeat-1.ogg",
+      "/audio/voice/defeat-2.ogg",
+      "/audio/voice/defeat-3.ogg"
+    ],
+    "level": [
+      "/audio/voice/level-1.ogg",
+      "/audio/voice/level-2.ogg",
+      "/audio/voice/level-3.ogg"
+    ],
+    "campaign": [
+      "/audio/voice/campaign-1.ogg",
+      "/audio/voice/campaign-2.ogg"
+    ],
+    "shield": [
+      "/audio/voice/shield-1.ogg",
+      "/audio/voice/shield-2.ogg"
+    ],
+    "scan": [
+      "/audio/voice/scan-1.ogg",
+      "/audio/voice/scan-2.ogg"
+    ],
+    "revive": [
+      "/audio/voice/revive-1.ogg",
+      "/audio/voice/revive-2.ogg"
+    ],
+    "chaos": [
+      "/audio/voice/chaos-1.ogg",
+      "/audio/voice/chaos-2.ogg"
+    ],
+    "auto": [
+      "/audio/voice/auto-1.ogg",
+      "/audio/voice/auto-2.ogg",
+      "/audio/voice/auto-3.ogg"
+    ],
+    "revote": [
+      "/audio/voice/revote-1.ogg",
+      "/audio/voice/revote-2.ogg"
+    ]
+  }
+}

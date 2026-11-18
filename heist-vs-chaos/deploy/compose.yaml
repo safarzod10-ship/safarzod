@@ -1,0 +1,39 @@
+# HEIST vs CHAOS - production stack. Secrets live in .env next to this file (chmod 600), never in git.
+name: heist-vs-chaos
+services:
+  app:
+    image: ${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}:${HVC_VERSION:-latest}
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      TRUST_PROXY: "1"
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8080:8080"
+    shm_size: "512m"
+    mem_limit: 2500m
+    restart: unless-stopped
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+  caddy:
+    image: caddy:2.10-alpine
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+volumes:
+  caddy_data:
+  caddy_config:
