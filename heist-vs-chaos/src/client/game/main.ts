@@ -74,6 +74,14 @@ async function boot(): Promise<void> {
     const fakeNet = { now: () => Date.now() } as unknown as Net;
     net = fakeNet;
     const states = previewStates(Number(lv) || 1, Math.max(0, (Number(bt) || 1) - 1), opt);
+    if (bt === 'intro' || bt === 'complete' || bt === 'defeat') {
+      const v = states.vote;
+      v.phase = bt === 'complete' ? 'levelComplete' : bt;
+      v.phaseEndsAt = Date.now() + 9000;
+      v.vote = null;
+      if (bt === 'defeat') v.run = { ...v.run, hp: 0 };
+      if (bt === 'complete') v.beatIndex = 99;
+    }
     connected = true;
     state = states.vote;
     scene.sync(states.vote);

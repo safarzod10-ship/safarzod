@@ -2,17 +2,17 @@ import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 
 export default defineConfig({
-  root: resolve(__dirname, 'src/client'),
-  publicDir: resolve(__dirname, 'public'),
+  root: resolve(import.meta.dirname, 'src/client'),
+  publicDir: resolve(import.meta.dirname, 'public'),
   build: {
-    outDir: resolve(__dirname, 'dist/client'),
+    outDir: resolve(import.meta.dirname, 'dist/client'),
     emptyOutDir: true,
     sourcemap: false,
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'src/client/index.html'),
-        panel: resolve(__dirname, 'src/client/panel/index.html'),
+        main: resolve(import.meta.dirname, 'src/client/index.html'),
+        panel: resolve(import.meta.dirname, 'src/client/panel/index.html'),
       },
     },
   },
