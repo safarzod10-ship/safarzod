@@ -2,6 +2,7 @@ name: heist-vs-chaos
 on:
   push:
     paths: ['heist-vs-chaos/**', '.github/workflows/heist-vs-chaos.yml']
+    branches: ['**']
     tags: ['hvc-v*']
   pull_request:
     paths: ['heist-vs-chaos/**']
