@@ -6,15 +6,15 @@
 # Options via env: HVC_VERSION=1.0.0  SITE_ADDRESS=my.domain  HVC_DIR=/opt/heist-vs-chaos
 set -euo pipefail
 IMAGE="${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}"
-VERSION="${HVC_VERSION:-latest}"
+HVC_VER="${HVC_VERSION:-latest}"
 DIR="${HVC_DIR:-/opt/heist-vs-chaos}"
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mXX\033[0m %s\n' "$*"; exit 1; }
 
 [ "$(id -u)" = 0 ] || die "Run as root (sudo -i first)."
-. /etc/os-release 2>/dev/null || true
-say "System: ${PRETTY_NAME:-unknown} $(uname -m), $(nproc) CPU, $(awk '/MemTotal/{printf "%.1f GB", $2/1048576}' /proc/meminfo) RAM, $(df -h / | awk 'NR==2{print $4}') free disk"
+OS_NAME="$( (. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME") || echo unknown)"
+say "System: ${OS_NAME} $(uname -m), $(nproc) CPU, $(awk '/MemTotal/{printf "%.1f GB", $2/1048576}' /proc/meminfo) RAM, $(df -h / | awk 'NR==2{print $4}') free disk"
 [ "$(uname -m)" = x86_64 ] || warn "Only x86_64 is tested."
 [ "$(nproc)" -ge 2 ] || warn "1 CPU: use the 480p profile in the panel."
 FREE_KB=$(df -k / | awk 'NR==2{print $4}')
@@ -45,7 +45,7 @@ SECRET_KEY=$(openssl rand -base64 32)
 SITE_ADDRESS=$SITE
 PUBLIC_URL=https://$SITE
 KICK_CHANNEL=safarzod
-HVC_VERSION=$VERSION
+HVC_VERSION=$HVC_VER
 LOG_LEVEL=warn
 ENV
   chmod 600 .env
@@ -56,8 +56,9 @@ fi
 set -a; . ./.env; set +a
 
 # Ports 80/443 are needed for HTTPS (Kick webhooks require a public HTTPS URL).
+command -v ss >/dev/null || warn "'ss' not found: skipping the port check."
 for p in 80 443; do
-  if ss -ltnH "( sport = :$p )" | grep -q . && ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "heist-vs-chaos.*:$p->"; then
+  if command -v ss >/dev/null && ss -ltnH "( sport = :$p )" | grep -q . && ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "heist-vs-chaos.*:$p->"; then
     die "Port $p is used by another program. Free it or ask for a custom setup; nothing was changed."
   fi
 done

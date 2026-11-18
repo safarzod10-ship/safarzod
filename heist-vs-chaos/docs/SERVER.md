@@ -20,7 +20,7 @@ curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/
 Сервис работает в контейнере от непривилегированного пользователя `heist` (uid 10001). Порт игры 8080 слушается только на `127.0.0.1`, снаружи доступен только Caddy.
 
 ## Если образ не скачивается
-Пакет `ghcr.io/safarzod10-ship/heist-vs-chaos` создаёт GitHub Actions. Если репозиторий приватный, пакет тоже приватный. Есть два способа:
+Пакет `ghcr.io/safarzod10-ship/heist-vs-chaos` создаёт GitHub Actions; на 18.11.2026 он скачивается без входа. Если доступ будет закрыт, есть два способа:
 - GitHub → ваш профиль → Packages → heist-vs-chaos → Package settings → Change visibility → Public. В образе нет секретов, только код игры.
 - Или на сервере: `docker login ghcr.io -u safarzod10-ship`, в качестве пароля — токен GitHub с правом `read:packages`.
 
