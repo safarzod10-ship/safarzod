@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # HEIST vs CHAOS server installer. Safe to run again (updates in place, never deletes data).
 # Usage (as root on Debian/Ubuntu):
-#   curl -fsSL https://get.docker.com | sh            # only if Docker is missing
-#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:latest install | bash
+#   command -v docker || curl -fsSL https://get.docker.com | sh
+#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.1 install | bash
 # Options via env: HVC_VERSION=1.0.0  SITE_ADDRESS=my.domain  HVC_DIR=/opt/heist-vs-chaos
 set -euo pipefail
 IMAGE="${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}"
-HVC_VER="${HVC_VERSION:-latest}"
+HVC_VER="${HVC_VERSION:-__HVC_DEFAULT_VERSION__}"
 DIR="${HVC_DIR:-/opt/heist-vs-chaos}"
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }

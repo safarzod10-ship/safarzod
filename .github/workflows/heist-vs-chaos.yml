@@ -7,6 +7,9 @@ on:
   pull_request:
     paths: ['heist-vs-chaos/**']
   workflow_dispatch:
+concurrency:
+  group: heist-vs-chaos-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 defaults:

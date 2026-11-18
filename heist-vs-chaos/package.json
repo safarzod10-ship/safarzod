@@ -1,6 +1,6 @@
 {
   "name": "heist-vs-chaos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "HEIST vs CHAOS - a chat-controlled museum heist game for 24/7 Kick livestreams",
   "license": "UNLICENSED",
