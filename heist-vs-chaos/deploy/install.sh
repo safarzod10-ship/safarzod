@@ -2,7 +2,7 @@
 # HEIST vs CHAOS server installer. Safe to run again (updates in place, never deletes data).
 # Usage (as root on Debian/Ubuntu):
 #   command -v docker || curl -fsSL https://get.docker.com | sh
-#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.1 install | bash
+#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.2 install | bash
 # Options via env: HVC_VERSION=1.0.0  SITE_ADDRESS=my.domain  HVC_DIR=/opt/heist-vs-chaos
 set -euo pipefail
 IMAGE="${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}"
@@ -56,17 +56,55 @@ fi
 set -a; . ./.env; set +a
 
 # Ports 80/443 are needed for HTTPS (Kick webhooks require a public HTTPS URL).
-command -v ss >/dev/null || warn "'ss' not found: skipping the port check."
-for p in 80 443; do
-  if command -v ss >/dev/null && ss -ltnH "( sport = :$p )" | grep -q . && ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "heist-vs-chaos.*:$p->"; then
-    die "Port $p is used by another program. Free it or ask for a custom setup; nothing was changed."
+# If another project's Caddy container already owns them, share it instead of fighting for the ports.
+MODE=own
+PROXY_CTR=""
+for c in $(docker ps --format '{{.Names}}'); do
+  case "$c" in heist-vs-chaos-*) continue ;; esac
+  if docker port "$c" 2>/dev/null | grep -qE '(^|[^0-9])443/tcp' && docker inspect -f '{{.Config.Image}} {{.Path}}' "$c" | grep -qi caddy; then
+    PROXY_CTR="$c"
   fi
 done
+if [ -n "$PROXY_CTR" ]; then
+  MODE=external
+  say "Ports 80/443 belong to Caddy container '$PROXY_CTR' - the game will share it (that project is not restarted)."
+else
+  command -v ss >/dev/null || warn "'ss' not found: skipping the port check."
+  for p in 80 443; do
+    if command -v ss >/dev/null && ss -ltnH "( sport = :$p )" | grep -q . && ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "heist-vs-chaos.*:$p->"; then
+      die "Port $p is used by another program (not a Caddy container). Free it or ask for a custom setup; nothing was changed."
+    fi
+  done
+fi
+
+if [ "$MODE" = external ]; then
+  # Use a dedicated sub-name so we never collide with the other project's site address.
+  case "$SITE_ADDRESS" in
+    hvc.*) ;;
+    *.sslip.io) SITE_ADDRESS="hvc.$SITE_ADDRESS"
+                sed -i "s|^SITE_ADDRESS=.*|SITE_ADDRESS=$SITE_ADDRESS|; s|^PUBLIC_URL=.*|PUBLIC_URL=https://$SITE_ADDRESS|" .env ;;
+  esac
+  HVC_PROXY_NETWORK="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$PROXY_CTR" | awk '{print $1}')"
+  [ -n "$HVC_PROXY_NETWORK" ] || die "Cannot find the Docker network of $PROXY_CTR; nothing was changed."
+  CF_DEST=/etc/caddy/Caddyfile
+  CF_SRC="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/etc/caddy/Caddyfile"}}{{.Source}}{{end}}{{end}}' "$PROXY_CTR")"
+  if [ -z "$CF_SRC" ]; then
+    CF_DIR="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/etc/caddy"}}{{.Source}}{{end}}{{end}}' "$PROXY_CTR")"
+    [ -n "$CF_DIR" ] && CF_SRC="$CF_DIR/Caddyfile"
+  fi
+  [ -n "$CF_SRC" ] && [ -f "$CF_SRC" ] || die "The Caddyfile of $PROXY_CTR is not a host file I can edit; nothing was changed. Ask for a custom setup."
+  grep -v '^HVC_PROXY_NETWORK=' .env > .env.tmp && echo "HVC_PROXY_NETWORK=$HVC_PROXY_NETWORK" >> .env.tmp && cat .env.tmp > .env && rm -f .env.tmp
+fi
 
 say "Pulling image $IMAGE:$HVC_VERSION"
-docker pull "$IMAGE:$HVC_VERSION" || die "Cannot pull the image. If the GitHub package is private, run: docker login ghcr.io"
-docker run --rm "$IMAGE:$HVC_VERSION" compose > compose.yaml
-docker run --rm "$IMAGE:$HVC_VERSION" caddyfile > Caddyfile
+[ -n "${HVC_SKIP_PULL:-}" ] || docker pull "$IMAGE:$HVC_VERSION" || die "Cannot pull the image. If the GitHub package is private, run: docker login ghcr.io"
+if [ "$MODE" = external ]; then
+  docker run --rm "$IMAGE:$HVC_VERSION" compose-external > compose.yaml
+  rm -f Caddyfile
+else
+  docker run --rm "$IMAGE:$HVC_VERSION" caddyfile > Caddyfile
+  docker run --rm "$IMAGE:$HVC_VERSION" compose > compose.yaml
+fi
 chown -R 10001:10001 data
 
 # Remember the exact image that is running now (even if both are tagged "latest") for rollback.
@@ -79,6 +117,35 @@ cp -p .env .env.backup   # keep a copy: losing SECRET_KEY makes saved keys unrea
 [ -f data/heist.sqlite ] && docker run --rm -v "$DIR/data:/data" --user 10001 "$IMAGE:$HVC_VERSION" backup || true
 
 HVC_IMAGE="$IMAGE" docker compose up -d --remove-orphans
+
+if [ "$MODE" = external ]; then
+  # Add (or refresh) our marked block in the shared Caddyfile; validate first, restore on any failure.
+  BK="$CF_SRC.bak-hvc-$(date +%Y%m%d-%H%M%S)"
+  cp -p "$CF_SRC" "$BK"
+  TMP="$(mktemp)"
+  sed '/^# >>> heist-vs-chaos >>>$/,/^# <<< heist-vs-chaos <<<$/d' "$CF_SRC" > "$TMP"
+  cat >> "$TMP" <<CADDY
+# >>> heist-vs-chaos >>>
+$SITE_ADDRESS {
+	encode gzip
+	request_body {
+		max_size 1MB
+	}
+	reverse_proxy heist-vs-chaos-app-1:8080
+}
+# <<< heist-vs-chaos <<<
+CADDY
+  cat "$TMP" > "$CF_SRC"   # keep the inode: single-file bind mounts would not see a replaced file
+  rm -f "$TMP"
+  if docker exec "$PROXY_CTR" caddy validate --config "$CF_DEST" --adapter caddyfile >/dev/null 2>&1 \
+     && docker exec "$PROXY_CTR" caddy reload --config "$CF_DEST" --adapter caddyfile >/dev/null 2>&1; then
+    say "Added the game site to $PROXY_CTR (backup: $BK)"
+  else
+    cat "$BK" > "$CF_SRC"
+    docker exec "$PROXY_CTR" caddy reload --config "$CF_DEST" --adapter caddyfile >/dev/null 2>&1 || true
+    die "Caddy rejected the new config; the original was restored. The game runs locally on 127.0.0.1:8080."
+  fi
+fi
 say "Waiting for the game server..."
 for i in $(seq 1 60); do
   if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then break; fi
