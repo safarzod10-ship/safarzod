@@ -2,7 +2,7 @@
 # HEIST vs CHAOS server installer. Safe to run again (updates in place, never deletes data).
 # Usage (as root on Debian/Ubuntu):
 #   command -v docker || curl -fsSL https://get.docker.com | sh
-#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.3 install | bash
+#   docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.4 install | bash
 # Options via env: HVC_VERSION=1.0.0  SITE_ADDRESS=my.domain  HVC_DIR=/opt/heist-vs-chaos
 set -euo pipefail
 IMAGE="${HVC_IMAGE:-ghcr.io/safarzod10-ship/heist-vs-chaos}"
@@ -50,8 +50,9 @@ LOG_LEVEL=warn
 ENV
   chmod 600 .env
 else
-  say "Keeping existing .env"
-  if [ -n "${HVC_VERSION:-}" ]; then sed -i "s/^HVC_VERSION=.*/HVC_VERSION=$HVC_VERSION/" .env; fi
+  say "Keeping existing .env (secrets unchanged)"
+  # The installer always deploys its own version (or the one requested via HVC_VERSION).
+  if grep -q '^HVC_VERSION=' .env; then sed -i "s/^HVC_VERSION=.*/HVC_VERSION=$HVC_VER/" .env; else echo "HVC_VERSION=$HVC_VER" >> .env; fi
 fi
 set -a; . ./.env; set +a
 
@@ -106,12 +107,16 @@ fi
 
 say "Pulling image $IMAGE:$HVC_VERSION"
 [ -n "${HVC_SKIP_PULL:-}" ] || docker pull "$IMAGE:$HVC_VERSION" || die "Cannot pull the image. If the GitHub package is private, run: docker login ghcr.io"
+fetch() {  # fetch a file from the image; refuse anything that is not the expected file
+  docker run --rm "$IMAGE:$HVC_VERSION" "$1" > "$2.new" && head -1 "$2.new" | grep -q '^#' || { rm -f "$2.new"; die "Image $IMAGE:$HVC_VERSION does not provide '$1'; nothing was changed."; }
+  mv "$2.new" "$2"
+}
 if [ "$MODE" = external ]; then
-  docker run --rm "$IMAGE:$HVC_VERSION" compose-external > compose.yaml
+  fetch compose-external compose.yaml
   rm -f Caddyfile
 else
-  docker run --rm "$IMAGE:$HVC_VERSION" caddyfile > Caddyfile
-  docker run --rm "$IMAGE:$HVC_VERSION" compose > compose.yaml
+  fetch caddyfile Caddyfile
+  fetch compose compose.yaml
 fi
 chown -R 10001:10001 data
 

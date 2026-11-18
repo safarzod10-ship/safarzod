@@ -6,7 +6,7 @@ Debian 12 / Ubuntu 22.04+, x86_64, от 2 vCPU, от 2 ГБ RAM (рекомен�
 ## Установка
 В веб-консоли хостинга под root:
 ```bash
-command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.3 install | bash
+command -v docker || curl -fsSL https://get.docker.com | sh; docker run --rm ghcr.io/safarzod10-ship/heist-vs-chaos:1.0.4 install | bash
 ```
 Что делает установщик (`deploy/install.sh`; его можно запускать повторно):
 1. Показывает ОС, CPU, RAM и диск. Останавливается, если свободно меньше 4 ГБ.
