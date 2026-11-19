@@ -50,6 +50,7 @@ class JarvisApp : Application() {
             actions = actions,
             reminders = reminders,
             llm = llm,
+            tts = com.safarzod.jarvis.voice.Tts(this),
         )
         actions.canLaunch = { engine.appVisible.value || AndroidSettings.canDrawOverlays(this) || com.safarzod.jarvis.service.JarvisAccessibilityService.instance != null }
         actions.onBlocked = { intent -> postTapToOpen(intent) }

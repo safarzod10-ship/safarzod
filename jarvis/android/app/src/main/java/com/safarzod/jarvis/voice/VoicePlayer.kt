@@ -2,6 +2,8 @@ package com.safarzod.jarvis.voice
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
@@ -57,6 +59,7 @@ class VoicePlayer(private val context: Context) {
     var uiSounds: Boolean = true
 
     private var player: MediaPlayer? = null
+    private var track: AudioTrack? = null
     private var ticker: Job? = null
     private var finish: (() -> Unit)? = null
 
@@ -127,9 +130,71 @@ class VoicePlayer(private val context: Context) {
         }
     }
 
+    /** Проиграть синтезированную фразу (голос Джарвиса из нейросети) и дождаться окончания. */
+    suspend fun play(speech: Speech) = withContext(Dispatchers.Main.immediate) {
+        stop()
+        val frames = speech.samples.size
+        if (frames == 0) return@withContext
+        val t = try {
+            AudioTrack.Builder()
+                .setAudioAttributes(attrs)
+                .setAudioFormat(
+                    AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                        .setSampleRate(speech.sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()
+                )
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .setBufferSizeInBytes(frames * 4)
+                .build()
+        } catch (_: Exception) { return@withContext }
+        track = t
+        var myFinish: (() -> Unit)? = null
+        try {
+            t.write(speech.samples, 0, frames, AudioTrack.WRITE_BLOCKING)
+            t.setVolume(volume)
+            audio.requestAudioFocus(focus)
+            _speaking.value = true
+            t.play()
+            val env = speech.envelope
+            val started = SystemClock.uptimeMillis()
+            suspendCancellableCoroutine { cont ->
+                myFinish = { if (cont.isActive) cont.resume(Unit) }
+                finish = myFinish
+                ticker?.cancel()
+                ticker = scope.launch {
+                    while (isActive) {
+                        val pos = runCatching { t.playbackHeadPosition }.getOrDefault(0)
+                        _level.value = envLevel(env, pos * 1000L / speech.sampleRate + 40)
+                        val overdue = SystemClock.uptimeMillis() - started > speech.durationMs + 1500
+                        if (pos >= frames - 1 || overdue) {
+                            if (cont.isActive) cont.resume(Unit)
+                            break
+                        }
+                        delay(16)
+                    }
+                }
+                cont.invokeOnCancellation { runCatching { t.stop() } }
+            }
+        } catch (_: Exception) {
+            // сбой вывода звука не должен ломать диалог
+        } finally {
+            val mine = track === t || track == null
+            if (finish === myFinish) finish = null
+            if (mine) {
+                ticker?.cancel()
+                _level.value = 0f
+                _speaking.value = false
+            }
+            runCatching { t.stop() }
+            runCatching { t.release() }
+            if (track === t) track = null
+            if (mine) audio.abandonAudioFocusRequest(focus)
+        }
+    }
+
     /** Оборвать текущую фразу (ожидающий [play] сразу завершится). */
     fun stop() {
         player?.let { runCatching { it.stop() } }
+        track?.let { runCatching { it.stop() } }
         finish?.invoke()
     }
 
@@ -137,4 +202,16 @@ class VoicePlayer(private val context: Context) {
         stop()
         pool.release()
     }
+}
+
+/** Уровень огибающей (50 кадров/с) в момент [ms], с линейной интерполяцией. */
+fun envLevel(env: ByteArray, ms: Long, fps: Int = 50): Float {
+    if (env.isEmpty()) return 0f
+    val f = ms / 1000f * fps
+    val i = f.toInt().coerceIn(0, env.size - 1)
+    val j = (i + 1).coerceAtMost(env.size - 1)
+    val t = (f - i).coerceIn(0f, 1f)
+    val a = (env[i].toInt() and 0xFF) / 255f
+    val b = (env[j].toInt() and 0xFF) / 255f
+    return a + (b - a) * t
 }

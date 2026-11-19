@@ -128,6 +128,8 @@ fun SettingsScreen(app: JarvisApp, onBack: () -> Unit, onOpen: (String) -> Unit,
                 SwitchRow(Icons.Rounded.Notifications, "Звуки интерфейса", "Сигналы начала и конца прослушивания", s.uiSounds)
                 SwitchRow(Icons.Rounded.TouchApp, "Вибрация", "Лёгкий отклик, когда Джарвис слышит вас", s.haptics)
                 SwitchRow(Icons.Rounded.RecordVoiceOver, "Приветствия", "«Доброе утро, сэр» при первом обращении", s.greetings)
+                SwitchRow(Icons.Rounded.GraphicEq, "Синтез голоса Джарвиса", "Говорить любые фразы голосом, обученным на записях", s.voiceSynth)
+                SwitchRow(Icons.Rounded.Notifications, "Озвучивать детали", "Время, заряд, текст сообщений и напоминаний", s.speakDetails)
                 NavRow(Icons.Rounded.RecordVoiceOver, "Библиотека голоса", "Прослушать фразы, добавить свои записи") { onOpen("voice") }
             }
 

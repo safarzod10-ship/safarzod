@@ -30,6 +30,9 @@ import com.safarzod.jarvis.nlu.Text
 import com.safarzod.jarvis.nlu.TimeParse
 import com.safarzod.jarvis.nlu.VolumeAction
 import com.safarzod.jarvis.voice.Clip
+import com.safarzod.jarvis.voice.RuNum
+import com.safarzod.jarvis.voice.Speech
+import com.safarzod.jarvis.voice.Tts
 import com.safarzod.jarvis.voice.Ev
 import com.safarzod.jarvis.voice.Sfx
 import com.safarzod.jarvis.voice.SpeechEngine
@@ -69,6 +72,7 @@ class Engine(
     val actions: Actions,
     val reminders: Reminders,
     val llm: LocalLlm,
+    val tts: Tts,
 ) {
     /** Любая непредвиденная ошибка в диалоге не роняет приложение: пишем в лог и возвращаемся в ожидание. */
     private val crashGuard = CoroutineExceptionHandler { _, e ->
@@ -100,6 +104,7 @@ class Engine(
     private var micRestartWindow = 0L
     private var lastSaid: Pair<Ev, Card?>? = null
     private var lastClip: Clip? = null
+    private var lastSpeech: Speech? = null
     private var attached = false
     private var unknownStreak = 0
 
@@ -134,6 +139,7 @@ class Engine(
         micRestarts = 0
         speech.start()
         llm.warmUp()
+        if (settings.voiceSynth.value) scope.launch { tts.load() }
         // приветствуем голосом один раз за утро/день/вечер/ночь, а не при каждом открытии приложения
         val greetEv = if (greet && settings.greetings.value) greetingEv(force = false).takeIf { it != Ev.WAKE } else null
         if (greetEv != null) {
@@ -247,14 +253,14 @@ class Engine(
         // не перебиваем текущий разговор: подождём, пока Джарвис освободится
         scope.launch {
             while (_ui.value.phase == Phase.LISTENING || _ui.value.phase == Phase.THINKING || _ui.value.phase == Phase.SPEAKING) delay(500)
-            step { say(Ev.REMINDER_FIRE, Card.Info("Напоминание", Text.sentence(text), CardIcon.REMINDER)) }
+            step { say(Ev.REMINDER_FIRE, Card.Info("Напоминание", Text.sentence(text), CardIcon.REMINDER), line = "Сэр, напоминаю: ${text.trimEnd('.')}.") }
         }
     }
 
     private fun onIncomingMessage(m: IncomingMessage) {
         if (!settings.announceMessages.value || inCall || !micOn) return
         if (_ui.value.phase != Phase.STANDBY) return
-        step { say(Ev.MSG_INCOMING, Card.Messages(listOf(m))) }
+        step { say(Ev.MSG_INCOMING, Card.Messages(listOf(m)), line = "Сэр, новое сообщение от ${m.sender}.") }
     }
 
     private fun onSpeech(e: SpeechEngine.Event) {
@@ -531,18 +537,20 @@ class Engine(
             }
 
             // --- время ---
-            is Command.Alarm -> outcome(actions.alarm(cmd.hour, cmd.minute), Ev.ALARM_SET, Card.AlarmSet(cmd.hour, cmd.minute, cmd.dayOffset))
+            is Command.Alarm -> outcome(actions.alarm(cmd.hour, cmd.minute), Ev.ALARM_SET, Card.AlarmSet(cmd.hour, cmd.minute, cmd.dayOffset),
+                line = "Будильник на ${RuNum.time(cmd.hour, cmd.minute)}, сэр.")
             is Command.AlarmIn -> {
                 val c = Calendar.getInstance().apply { add(Calendar.SECOND, cmd.seconds.toInt()) }
                 val h = c.get(Calendar.HOUR_OF_DAY); val m = c.get(Calendar.MINUTE)
-                outcome(actions.alarm(h, m), Ev.ALARM_SET, Card.AlarmSet(h, m, 0))
+                outcome(actions.alarm(h, m), Ev.ALARM_SET, Card.AlarmSet(h, m, 0), line = "Будильник на ${RuNum.time(h, m)}, сэр.")
             }
             Command.AlarmMissingTime -> { setPending(Pending.AlarmWhen); say(Ev.ALARM_WHEN, followUp = true) }
             is Command.Timer -> {
                 val r = actions.timer(cmd.seconds)
                 val card = Card.TimerSet(cmd.seconds, System.currentTimeMillis() + cmd.seconds * 1000)
-                if (r == Outcome.NOT_FOUND) { reminders.add("Таймер: время вышло", card.endsAt); say(Ev.TIMER_SET, card) }
-                else outcome(r, Ev.TIMER_SET, card)
+                val line = "Таймер на ${durationWords(cmd.seconds)} запущен, сэр."
+                if (r == Outcome.NOT_FOUND) { reminders.add("Таймер: время вышло", card.endsAt); say(Ev.TIMER_SET, card, line = line) }
+                else outcome(r, Ev.TIMER_SET, card, line = line)
             }
             Command.TimerMissingTime -> { setPending(Pending.TimerHowLong); say(Ev.TIMER_HOW_LONG, followUp = true) }
             is Command.Reminder -> {
@@ -555,18 +563,22 @@ class Engine(
             }
             Command.ShowTime -> {
                 val now = Calendar.getInstance()
-                say(Ev.SHOW, Card.Big("Время", fmt("HH:mm", now), fmt("EEEE, d MMMM", now).replaceFirstChar { it.uppercase() }, CardIcon.CLOCK))
+                say(Ev.SHOW, Card.Big("Время", fmt("HH:mm", now), fmt("EEEE, d MMMM", now).replaceFirstChar { it.uppercase() }, CardIcon.CLOCK),
+                    line = "Сейчас ${RuNum.time(now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE))}, сэр.")
             }
             Command.ShowDate -> {
                 val now = Calendar.getInstance()
-                say(Ev.SHOW, Card.Big("Сегодня", fmt("d MMMM", now), fmt("EEEE", now).replaceFirstChar { it.uppercase() } + " · ${now.get(Calendar.WEEK_OF_YEAR)}-я неделя · ${now.get(Calendar.YEAR)}", CardIcon.CALENDAR))
+                say(Ev.SHOW, Card.Big("Сегодня", fmt("d MMMM", now), fmt("EEEE", now).replaceFirstChar { it.uppercase() } + " · ${now.get(Calendar.WEEK_OF_YEAR)}-я неделя · ${now.get(Calendar.YEAR)}", CardIcon.CALENDAR),
+                    line = "Сегодня ${fmt("EEEE", now)}, ${RuNum.dayOrdinal(now.get(Calendar.DAY_OF_MONTH))} ${monthGenitive(now.get(Calendar.MONTH))}, сэр.")
             }
             Command.ShowBattery -> {
                 val b = actions.battery()
                 val sub = listOfNotNull(if (b.charging) "Заряжается" else "От батареи", b.temperatureC?.let { "%.0f °C".format(it) }).joinToString(" · ")
-                say(Ev.SHOW, Card.Big("Заряд", "${b.percent}%", sub, CardIcon.BATTERY))
+                say(Ev.SHOW, Card.Big("Заряд", "${b.percent}%", sub, CardIcon.BATTERY),
+                    line = "Заряд ${RuNum.words(b.percent.toLong())} ${RuNum.plural(b.percent.toLong(), "процент", "процента", "процентов")}" + (if (b.charging) ", идёт зарядка, сэр." else ", сэр."))
             }
-            is Command.Calculate -> say(Ev.SHOW, Card.Big("Ответ", Calc.format(cmd.result), cmd.expression + " =", CardIcon.CALC))
+            is Command.Calculate -> say(Ev.SHOW, Card.Big("Ответ", Calc.format(cmd.result), cmd.expression + " =", CardIcon.CALC),
+                line = "Получается ${numberWords(cmd.result)}, сэр.")
 
             // --- память ---
             is Command.Remember -> remember(cmd.alias, cmd.target)
@@ -589,13 +601,23 @@ class Engine(
             Command.HowAreYou -> say(Ev.HOW_ARE_YOU)
             Command.WhoAreYou -> say(Ev.WHO_ARE_YOU)
             Command.Help -> say(Ev.HELP, Card.Help)
-            Command.Joke -> say(Ev.JOKE, Card.Info("Шутка", jokes.random(), CardIcon.INFO))
+            Command.Joke -> jokes.random().let { j -> say(Ev.JOKE, Card.Info("Шутка", j, CardIcon.INFO), line = j) }
             Command.Bye -> say(Ev.BYE)
             Command.GoodNight -> say(Ev.GOODNIGHT)
             Command.Cancel -> say(Ev.CANCEL)
             Command.Yes -> say(Ev.YES)
             Command.No, is Command.Choose -> say(Ev.ACK)
-            Command.Repeat -> lastSaid?.let { (ev, card) -> lastClip?.let { replay(it, card) } ?: say(ev, card) } ?: say(Ev.NOT_UNDERSTOOD)
+            Command.Repeat -> {
+                val s = lastSpeech
+                val c = lastClip
+                val ls = lastSaid
+                when {
+                    s != null -> { speech.pause(); _ui.update { it.copy(phase = Phase.SPEAKING, reply = s.text, card = ls?.second ?: it.card) }; player.play(s); standby() }
+                    c != null -> replay(c, ls?.second)
+                    ls != null -> say(ls.first, ls.second)
+                    else -> say(Ev.NOT_UNDERSTOOD)
+                }
+            }
             Command.StopListening -> say(Ev.BYE)
             is Command.Unknown -> {
                 unknownStreak++
@@ -624,7 +646,7 @@ class Engine(
             top.score >= 0.93 && (matches.size == 1 || matches[1].score < top.score - 0.1) -> proceed(top.contact, purpose)
             else -> {
                 setPending(Pending.Choose(query, matches, purpose, remember = true))
-                say(Ev.CALL_CHOOSE, Card.ContactChoice(query, matches), followUp = true)
+                say(Ev.CALL_CHOOSE, Card.ContactChoice(query, matches), followUp = true, line = choiceLine(matches))
             }
         }
     }
@@ -636,7 +658,7 @@ class Engine(
         }
         if (p.purpose == Purpose.RememberOnly) {
             val a = memory.find(p.query, AliasKind.CONTACT) ?: memory.put(p.query, AliasKind.CONTACT, c.name, c.phone)
-            say(Ev.MEMORY_SAVED, Card.Remembered(a))
+            say(Ev.MEMORY_SAVED, Card.Remembered(a), line = "Запомнил, сэр: ${a.alias} — это ${a.title}.")
         } else proceed(c, p.purpose)
     }
 
@@ -651,12 +673,12 @@ class Engine(
             top.score >= 0.9 && (matches.size == 1 || matches[1].score < top.score - 0.08) -> {
                 setPending(null)
                 val a = memory.put(alias, AliasKind.CONTACT, top.contact.name, top.contact.phone)
-                if (purpose == Purpose.RememberOnly) say(Ev.MEMORY_SAVED, Card.Remembered(a))
+                if (purpose == Purpose.RememberOnly) say(Ev.MEMORY_SAVED, Card.Remembered(a), line = "Запомнил, сэр: ${a.alias} — это ${a.title}.")
                 else { notice("Запомнил: «${a.alias}» → ${a.title}"); proceed(top.contact, purpose) }
             }
             else -> {
                 setPending(Pending.Choose(alias, matches, purpose, remember = true))
-                say(Ev.CALL_CHOOSE, Card.ContactChoice(alias, matches), followUp = true)
+                say(Ev.CALL_CHOOSE, Card.ContactChoice(alias, matches), followUp = true, line = choiceLine(matches))
             }
         }
     }
@@ -668,7 +690,7 @@ class Engine(
         val top = contactMatches.firstOrNull()
         if (app != null && (top == null || top.score < 0.9)) {
             val a = memory.put(alias, AliasKind.APP, app.label, app.pkg)
-            return say(Ev.MEMORY_SAVED, Card.Remembered(a))
+            return say(Ev.MEMORY_SAVED, Card.Remembered(a), line = "Запомнил, сэр: ${a.alias} — это ${a.title}.")
         }
         if (!contacts.hasPermission()) return need(Need.CONTACTS)
         when {
@@ -678,11 +700,11 @@ class Engine(
             }
             top.score >= 0.9 && (contactMatches.size == 1 || contactMatches[1].score < top.score - 0.08) -> {
                 val a = memory.put(alias, AliasKind.CONTACT, top.contact.name, top.contact.phone)
-                say(Ev.MEMORY_SAVED, Card.Remembered(a))
+                say(Ev.MEMORY_SAVED, Card.Remembered(a), line = "Запомнил, сэр: ${a.alias} — это ${a.title}.")
             }
             else -> {
                 setPending(Pending.Choose(alias, contactMatches, Purpose.RememberOnly, remember = true))
-                say(Ev.CALL_CHOOSE, Card.ContactChoice(alias, contactMatches), followUp = true)
+                say(Ev.CALL_CHOOSE, Card.ContactChoice(alias, contactMatches), followUp = true, line = choiceLine(contactMatches))
             }
         }
     }
@@ -716,7 +738,8 @@ class Engine(
         val text = polished ?: Text.sentence(raw)
         if (settings.confirmSms.value || via != null) {
             setPending(Pending.SmsConfirm(c, text, via))
-            say(Ev.SMS_CHECK, Card.SmsDraft(c.name, c.phone, text, via, polished != null), followUp = true)
+            say(Ev.SMS_CHECK, Card.SmsDraft(c.name, c.phone, text, via, polished != null), followUp = true,
+                line = "Текст: ${text.trimEnd('.', '!', '?')}. Отправить, сэр?")
         } else sendDraft(c, text, via)
     }
 
@@ -764,18 +787,18 @@ class Engine(
         if (!MessageFeed.listenerConnected) return need(Need.LISTENER)
         val items = MessageFeed.items.value
         if (items.isEmpty()) say(Ev.MSG_NONE, Card.Info("Сообщения", "Новых сообщений нет", CardIcon.MESSAGE))
-        else say(Ev.SHOW, Card.Messages(items.take(5)))
+        else say(Ev.SHOW, Card.Messages(items.take(5)), line = items.take(2).joinToString(" ") { "${it.sender} пишет: ${it.text.take(160).trimEnd('.')}." })
     }
 
     private suspend fun createReminder(text: String, at: Long) {
         val r = reminders.add(Text.sentence(text).dropLastWhile { it == '.' }, at)
-        say(Ev.REMINDER_SET, Card.ReminderSet(r.text, r.at))
+        say(Ev.REMINDER_SET, Card.ReminderSet(r.text, r.at), line = "Хорошо, сэр. Напомню: ${r.text}.")
     }
 
     /** Общая обработка результата действия: успех → фраза, иначе — понятное объяснение. */
-    private suspend fun outcome(r: Outcome, ok: Ev, card: Card?, needIfDenied: Need? = null) {
+    private suspend fun outcome(r: Outcome, ok: Ev, card: Card?, needIfDenied: Need? = null, line: String? = null) {
         when (r) {
-            Outcome.OK -> say(ok, card)
+            Outcome.OK -> say(ok, card, line = line)
             Outcome.BLOCKED -> say(Ev.PERMISSIONS_MISSING, Card.Permission(
                 "Нажмите на уведомление",
                 "Android не даёт открывать окна из фона. Разрешите Джарвису «Поверх других приложений» — и всё будет открываться сразу.",
@@ -813,13 +836,23 @@ class Engine(
      * Сказать фразу: запись из банка (если есть) или текст + звук интерфейса.
      * [followUp] — после ответа сразу слушать (без «Джарвис»).
      */
-    private suspend fun say(ev: Ev, card: Card? = null, followUp: Boolean = false, keepCard: Boolean = false) {
+    private suspend fun say(ev: Ev, card: Card? = null, followUp: Boolean = false, keepCard: Boolean = false, line: String? = null) {
         if (inCall) return
         speech.pause()
-        val clip = voice.pick(ev)
-        val text = clip?.text ?: ev.text
+        // 1) своя запись для этой ситуации — лучшее качество;
+        // 2) нет записи или нужна конкретика (время, имя, текст) — синтез голосом Джарвиса;
+        // 3) синтез недоступен — похожая по смыслу запись или текст со звуком.
+        var synth: Speech? = null
+        val synthOn = settings.voiceSynth.value && tts.available
+        val hasOwn = voice.clipsFor(ev.key).isNotEmpty()
+        if (synthOn && ((line != null && settings.speakDetails.value) || !hasOwn)) {
+            synth = tts.speak(line ?: ev.text)
+        }
+        val clip = if (synth == null) voice.pick(ev) else null
+        val text = synth?.text ?: clip?.text ?: (line ?: ev.text)
         lastSaid = ev to card
         lastClip = clip
+        lastSpeech = synth
         History.add(Turn(null, text))
         _ui.update {
             it.copy(
@@ -828,7 +861,10 @@ class Engine(
                 awaiting = followUp,
             )
         }
-        if (clip != null) {
+        if (synth != null) {
+            if (ev.sfx == Sfx.SUCCESS) player.sfx(Sfx.SUCCESS, 0.35f)
+            player.play(synth)
+        } else if (clip != null) {
             if (ev.sfx == Sfx.SUCCESS) player.sfx(Sfx.SUCCESS, 0.35f)
             player.play(clip)
         } else {
@@ -896,6 +932,28 @@ class Engine(
             v.vibrate(VibrationEffect.createOneShot(ms, 60))
         }
     }
+
+    private fun choiceLine(m: List<ContactMatch>): String {
+        val ord = listOf("первый", "второй", "третий", "четвёртый", "пятый")
+        return "Кого именно, сэр? " + m.take(3).mapIndexed { i, x -> "${ord[i]} — ${x.contact.name}" }.joinToString(", ") + "."
+    }
+
+    private fun durationWords(sec: Long): String {
+        val h = sec / 3600; val m = (sec % 3600) / 60; val s = sec % 60
+        val parts = mutableListOf<String>()
+        if (h > 0) parts += RuNum.words(h) + " " + RuNum.plural(h, "час", "часа", "часов")
+        if (m > 0) parts += RuNum.words(m, feminine = true) + " " + RuNum.plural(m, "минуту", "минуты", "минут")
+        if (s > 0 && h == 0L) parts += RuNum.words(s, feminine = true) + " " + RuNum.plural(s, "секунду", "секунды", "секунд")
+        return parts.joinToString(" ").ifEmpty { "ноль секунд" }
+    }
+
+    private fun numberWords(v: Double): String {
+        val r = kotlin.math.round(v)
+        if (kotlin.math.abs(v - r) < 1e-9 && kotlin.math.abs(r) < 1_000_000) return RuNum.words(r.toLong())
+        return Calc.format(v).replace(" ", "")
+    }
+
+    private fun monthGenitive(m: Int) = listOf("января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря")[m]
 
     private fun fmt(p: String, c: Calendar) = SimpleDateFormat(p, Locale.forLanguageTag("ru")).format(c.time)
 

@@ -24,3 +24,6 @@
 
 # --- службы, которые система создаёт по имени ---
 -keep class com.safarzod.jarvis.service.** { *; }
+
+# --- sherpa-onnx: JNI читает поля конфигов по именам ---
+-keep class com.k2fsa.sherpa.onnx.** { *; }

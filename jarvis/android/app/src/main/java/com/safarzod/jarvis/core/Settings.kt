@@ -59,6 +59,8 @@ class Settings(context: Context) {
     val announceMessages = bool("announce_messages", true)
     val searchEngine = enum("search_engine", SearchEngine.GOOGLE)
     val sensitivity = float("sensitivity", 0.5f)
+    val voiceSynth = bool("voice_synth", true)
+    val speakDetails = bool("speak_details", true)
     val llmEnabled = bool("llm_enabled", true)
     val llmPolish = bool("llm_polish", true)
     val llmModel = string("llm_model", "")

@@ -61,7 +61,7 @@ android {
     }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        jniLibs.useLegacyPackaging = false
+        jniLibs.useLegacyPackaging = true // сжатые .so: APK заметно меньше
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
@@ -101,6 +101,9 @@ dependencies {
     // офлайн-распознавание речи
     implementation("com.alphacephei:vosk-android:0.3.75")
     implementation("net.java.dev.jna:jna:5.18.1@aar")
+
+    // офлайн-синтез голоса Джарвиса (VITS/Piper через sherpa-onnx, Apache 2.0)
+    implementation(files("libs/sherpa-onnx-1.10.45.aar"))
 
     // локальная языковая модель (MediaPipe LLM Inference)
     implementation("com.google.mediapipe:tasks-genai:0.10.29")
@@ -153,4 +156,26 @@ val downloadVoskModel by tasks.registering {
         File(outDir, "uuid").writeText("$voskModelName-1\n")
     }
 }
-tasks.named("preBuild") { dependsOn(downloadVoskModel) }
+// ---- Синтез речи: библиотека sherpa-onnx и данные espeak-ng для русского (скачиваются при сборке) ----
+val downloadTtsDeps by tasks.registering {
+    description = "Скачивает sherpa-onnx (AAR) и русские данные espeak-ng для офлайн-синтеза"
+    val aar = layout.projectDirectory.file("libs/sherpa-onnx-1.10.45.aar").asFile
+    val espeak = layout.projectDirectory.dir("src/main/assets/tts/espeak-ng-data").asFile
+    outputs.file(aar)
+    outputs.dir(espeak)
+    onlyIf { !aar.exists() || !File(espeak, "ru_dict").exists() }
+    doLast {
+        fun fetch(url: String, dst: File) {
+            if (dst.exists() && dst.length() > 0) return
+            dst.parentFile.mkdirs()
+            logger.lifecycle("Скачиваю ${dst.name} …")
+            URI(url).toURL().openStream().use { input -> dst.outputStream().use { input.copyTo(it) } }
+        }
+        fetch("https://huggingface.co/csukuangfj/sherpa-onnx-libs/resolve/main/android/aar/sherpa-onnx-static-link-onnxruntime-1.10.45.aar", aar)
+        val base = "https://huggingface.co/csukuangfj/vits-piper-ru_RU-dmitri-medium/resolve/main/espeak-ng-data"
+        for (f in listOf("intonations", "phondata", "phondata-manifest", "phonindex", "phontab", "ru_dict", "lang/zle/ru")) {
+            fetch("$base/$f", File(espeak, f))
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(downloadVoskModel, downloadTtsDeps) }
