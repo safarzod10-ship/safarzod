@@ -2,6 +2,7 @@ package com.safarzod.jarvis.core
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -34,6 +35,7 @@ import com.safarzod.jarvis.voice.Sfx
 import com.safarzod.jarvis.voice.SpeechEngine
 import com.safarzod.jarvis.voice.VoiceBank
 import com.safarzod.jarvis.voice.VoicePlayer
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -68,7 +70,13 @@ class Engine(
     val reminders: Reminders,
     val llm: LocalLlm,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    /** Любая непредвиденная ошибка в диалоге не роняет приложение: пишем в лог и возвращаемся в ожидание. */
+    private val crashGuard = CoroutineExceptionHandler { _, e ->
+        Log.e("Engine", "unexpected", e)
+        _ui.update { it.copy(phase = if (micOn) Phase.STANDBY else Phase.OFF, partial = "", notice = "Что-то пошло не так — попробуйте ещё раз") }
+        if (micOn && settings.wakeWord.value) speech.listenWake() else speech.pause()
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + crashGuard)
 
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui
@@ -84,10 +92,15 @@ class Engine(
     private var job: Job? = null
     private var pending: Pending? = null
     private var pendingAt = 0L
+    /** Уточнение ещё ждёт голосового ответа (после тайм-аута — только нажатия на карточку). */
+    private var pendingVoice = false
+    /** Микрофон включён службой (между boot и shutdown). */
+    @Volatile private var micOn = false
+    private var micRestarts = 0
+    private var micRestartWindow = 0L
     private var lastSaid: Pair<Ev, Card?>? = null
     private var lastClip: Clip? = null
     private var attached = false
-    private var listenJob: Job? = null
     private var unknownStreak = 0
 
     // ------------------------------------------------------------------ жизненный цикл
@@ -116,24 +129,35 @@ class Engine(
         attach()
         if (_ui.value.phase == Phase.OFF) _ui.update { it.copy(phase = Phase.LOADING) }
         val ok = speech.load()
-        if (!ok) { _ui.update { it.copy(phase = Phase.STANDBY, notice = "Распознавание речи недоступно") }; return }
+        if (!ok) { _ui.update { it.copy(phase = Phase.OFF, notice = "Распознавание речи недоступно") }; return }
+        micOn = true
         speech.start()
         llm.warmUp()
         // приветствуем голосом один раз за утро/день/вечер/ночь, а не при каждом открытии приложения
         val greetEv = if (greet && settings.greetings.value) greetingEv(force = false).takeIf { it != Ev.WAKE } else null
         if (greetEv != null) {
-            player.sfx(Sfx.BOOT, 0.55f)
-            delay(1300)
-            say(greetEv)
+            step {
+                player.sfx(Sfx.BOOT, 0.55f)
+                delay(1300)
+                say(greetEv)
+            }
         } else {
             standby()
         }
     }
 
     fun shutdown() {
+        micOn = false
+        job?.cancel()
         speech.stop()
         player.stop()
-        _ui.update { it.copy(phase = Phase.OFF, partial = "") }
+        _ui.update { it.copy(phase = Phase.OFF, partial = "", awaiting = false) }
+    }
+
+    /** Выполнить шаг диалога, отменив предыдущий (одновременно говорит только одна фраза). */
+    private fun step(block: suspend () -> Unit) {
+        job?.cancel()
+        job = scope.launch { block() }
     }
 
     // ------------------------------------------------------------------ входы
@@ -141,10 +165,11 @@ class Engine(
     /** Кнопка микрофона / нажатие на ядро. */
     fun onMicTap() {
         when (_ui.value.phase) {
-            Phase.SPEAKING -> { player.stop(); scope.launch { delay(120); listen(followUp = true) } }
-            Phase.LISTENING -> { speech.pause(); player.sfx(Sfx.END, 0.5f); standby() }
-            Phase.THINKING -> Unit
-            else -> { if (_ui.value.micReady) scope.launch { listen(followUp = false) } else notice("Микрофон ещё загружается…") }
+            Phase.SPEAKING -> step { delay(120); listen(followUp = true) }
+            Phase.LISTENING, Phase.THINKING -> { job?.cancel(); speech.pause(); player.sfx(Sfx.END, 0.5f); standby() }
+            Phase.OFF -> com.safarzod.jarvis.service.JarvisService.start(context)
+            Phase.LOADING -> notice("Микрофон ещё загружается…")
+            Phase.STANDBY -> if (micOn) step { listen(followUp = false) } else com.safarzod.jarvis.service.JarvisService.start(context)
         }
     }
 
@@ -156,10 +181,10 @@ class Engine(
     }
 
     fun onAction(a: UiAction) {
-        scope.launch {
+        step {
             when (a) {
                 is UiAction.PickContact -> {
-                    val p = pending as? Pending.Choose ?: return@launch
+                    val p = pending as? Pending.Choose ?: return@step
                     p.matches.getOrNull(a.index)?.let { pick(p, it.contact) }
                 }
                 UiAction.SendDraft -> (pending as? Pending.SmsConfirm)?.let { pending = null; sendDraft(it.contact, it.text, it.via) }
@@ -187,7 +212,7 @@ class Engine(
 
     /** Прослушать запись (в библиотеке голоса). */
     fun preview(clip: Clip) {
-        scope.launch { if (_ui.value.phase != Phase.SPEAKING) replay(clip, null) }
+        step { replay(clip, null) }
     }
 
     fun onCallState(active: Boolean) {
@@ -197,23 +222,28 @@ class Engine(
     }
 
     fun onReminder(text: String) {
+        if (inCall) return
+        // не перебиваем текущий разговор: подождём, пока Джарвис освободится
         scope.launch {
-            if (inCall) return@launch
-            say(Ev.REMINDER_FIRE, Card.Info("Напоминание", Text.sentence(text), CardIcon.REMINDER))
+            while (_ui.value.phase == Phase.LISTENING || _ui.value.phase == Phase.THINKING || _ui.value.phase == Phase.SPEAKING) delay(500)
+            step { say(Ev.REMINDER_FIRE, Card.Info("Напоминание", Text.sentence(text), CardIcon.REMINDER)) }
         }
     }
 
     private fun onIncomingMessage(m: IncomingMessage) {
-        if (!settings.announceMessages.value || inCall) return
+        if (!settings.announceMessages.value || inCall || !micOn) return
         if (_ui.value.phase != Phase.STANDBY) return
-        scope.launch { say(Ev.MSG_INCOMING, Card.Messages(listOf(m))) }
+        step { say(Ev.MSG_INCOMING, Card.Messages(listOf(m))) }
     }
 
     private fun onSpeech(e: SpeechEngine.Event) {
         when (e) {
             SpeechEngine.Event.Wake -> {
                 if (inCall) return
+                job?.cancel()
                 player.stop()
+                // новое обращение — новый разговор; брошенное уточнение больше не перехватывает команды
+                pendingVoice = false
                 player.sfx(Sfx.LISTEN, 0.7f)
                 haptic(18)
                 _ui.update { it.copy(phase = Phase.LISTENING, partial = "", awaiting = false) }
@@ -223,30 +253,53 @@ class Engine(
                 _ui.update { it.copy(partial = p, phase = Phase.LISTENING) }
             }
             is SpeechEngine.Event.Final -> handle(e.text, typed = false)
-            SpeechEngine.Event.Timeout -> scope.launch {
+            SpeechEngine.Event.Timeout -> {
                 _ui.update { it.copy(partial = "") }
+                pendingVoice = false
                 if (pending != null || _ui.value.awaiting) {
                     player.sfx(Sfx.END, 0.5f)
                     _ui.update { it.copy(awaiting = false) }
                 }
                 standby()
             }
-            is SpeechEngine.Event.Failure -> { notice(e.message); standby() }
+            is SpeechEngine.Event.Failure -> {
+                notice(e.message)
+                restartMic()
+            }
         }
     }
 
     // ------------------------------------------------------------------ обработка фразы
 
+    /** Микрофон упал — пробуем поднять заново (не чаще 3 раз в минуту). */
+    private fun restartMic() {
+        if (!micOn) return
+        val now = System.currentTimeMillis()
+        if (now - micRestartWindow > 60_000) { micRestartWindow = now; micRestarts = 0 }
+        if (micRestarts >= 3) {
+            _ui.update { it.copy(phase = Phase.OFF, notice = "Микрофон недоступен. Нажмите на кнопку, чтобы попробовать снова") }
+            micOn = false
+            return
+        }
+        micRestarts++
+        scope.launch {
+            delay(1500)
+            if (!micOn) return@launch
+            speech.start()
+            delay(300)
+            if (speech.alive.value) standby() else _ui.update { it.copy(phase = Phase.OFF) }
+        }
+    }
+
     private fun handle(raw: String, typed: Boolean) {
-        job?.cancel()
-        job = scope.launch {
+        step {
             speech.pause()
             val clean = Parser.clean(raw)
             if (clean.isEmpty()) {
                 // сказали только «Джарвис» — ответить и слушать дальше
                 _ui.update { it.copy(partial = "") }
                 say(greetingEv(force = false), followUp = true)
-                return@launch
+                return@step
             }
             val shown = Text.sentence(clean)
             History.add(Turn(shown, null))
@@ -254,8 +307,8 @@ class Engine(
             settings.lastActiveAt.value = System.currentTimeMillis().toString()
 
             var cmd = Parser.parse(raw)
-            if (pending != null && System.currentTimeMillis() - pendingAt > 90_000) pending = null
-            pending?.let { p -> if (handlePending(p, cmd, clean)) return@launch }
+            if (pending != null && (!pendingVoice || System.currentTimeMillis() - pendingAt > 90_000)) pending = null
+            pending?.let { p -> if (handlePending(p, cmd, clean)) return@step }
 
             if (cmd is Command.Unknown && llm.available) {
                 _ui.update { it.copy(phase = Phase.THINKING) }
@@ -287,7 +340,7 @@ class Engine(
         data class ReminderWhen(val text: String) : Pending
     }
 
-    private fun setPending(p: Pending?) { pending = p; pendingAt = System.currentTimeMillis() }
+    private fun setPending(p: Pending?) { pending = p; pendingAt = System.currentTimeMillis(); pendingVoice = p != null }
 
     /** Ответ на уточняющий вопрос. true — фраза обработана. */
     private suspend fun handlePending(p: Pending, cmd: Command, clean: String): Boolean {
@@ -298,6 +351,9 @@ class Engine(
         val isNewCommand = cmd !is Command.Unknown && cmd !is Command.Yes && cmd !is Command.No &&
             cmd !is Command.Choose && cmd !is Command.WebSearch && cmd !is Command.OpenApp && cmd !is Command.Calculate &&
             cmd !is Command.Remember && cmd !is Command.Repeat
+        // в коротких ответах (выбор, «да/нет», время) любая распознанная команда — это уже новая просьба
+        val isStrong = cmd !is Command.Unknown && cmd !is Command.Yes && cmd !is Command.No &&
+            cmd !is Command.Choose && cmd !is Command.Repeat
         when (p) {
             Pending.CallWho -> {
                 if (isNewCommand) { setPending(null); return false }
@@ -317,6 +373,7 @@ class Engine(
                         setPending(Pending.SmsText(p.contact, p.via)); say(Ev.SMS_WHAT, followUp = true)
                     }
                     clean.split(' ').size >= 3 && cmd is Command.Unknown -> draft(p.contact, clean, p.via)
+                    isStrong -> { setPending(null); return false }
                     else -> say(Ev.CONFIRM_ASK, keepCard = true, followUp = true)
                 }
                 return true
@@ -332,14 +389,14 @@ class Engine(
                 when {
                     idx == -2 -> { setPending(null); say(Ev.CANCEL) }
                     idx in p.matches.indices -> pick(p, p.matches[idx].contact)
-                    isNewCommand -> { setPending(null); return false }
+                    isStrong -> { setPending(null); return false }
                     else -> say(Ev.CALL_CHOOSE, keepCard = true, followUp = true)
                 }
                 return true
             }
             is Pending.ConfirmCall -> {
                 if (cmd == Command.Yes) { setPending(null); doCall(p.contact) }
-                else if (isNewCommand) { setPending(null); return false }
+                else if (isStrong) { setPending(null); return false }
                 else say(Ev.CONFIRM_ASK, keepCard = true, followUp = true)
                 return true
             }
@@ -357,7 +414,7 @@ class Engine(
                 when {
                     dur != null -> execute(Command.AlarmIn(dur), clean)
                     clk != null -> execute(Command.Alarm(TimeParse.hour24(clk), clk.minute, clk.dayOffset), clean)
-                    isNewCommand -> return false
+                    isStrong -> return false
                     else -> say(Ev.NOT_UNDERSTOOD)
                 }
                 return true
@@ -367,7 +424,7 @@ class Engine(
                 val dur = TimeParse.duration(d) ?: TimeParse.duration("на $d")
                 setPending(null)
                 if (dur != null) execute(Command.Timer(dur), clean)
-                else if (isNewCommand) return false
+                else if (isStrong) return false
                 else say(Ev.NOT_UNDERSTOOD)
                 return true
             }
@@ -378,7 +435,7 @@ class Engine(
                 when {
                     dur != null -> { setPending(null); createReminder(p.text, System.currentTimeMillis() + dur * 1000) }
                     clk != null -> { setPending(null); createReminder(p.text, TimeParse.nextMillis(clk)) }
-                    isNewCommand -> { setPending(null); return false }
+                    isStrong -> { setPending(null); return false }
                     else -> say(Ev.REMINDER_WHEN, keepCard = true, followUp = true)
                 }
                 return true
@@ -645,7 +702,11 @@ class Engine(
         if (via != null) {
             return outcome(actions.openMessenger(via, c.phone, text), Ev.APP_OPEN, Card.Opened(via.title, "${c.name}: «$text» — нажмите «Отправить»", CardIcon.MESSAGE))
         }
+        _ui.update { it.copy(phase = Phase.THINKING) }
         val r = actions.sendSms(c.phone, text)
+        if (r == Outcome.FAILED) {
+            return say(Ev.ERROR, Card.Info("Не отправлено", "Нет сети или не выбрана SIM-карта для SMS. Текст: «$text»", CardIcon.ERROR))
+        }
         outcome(r, Ev.SMS_SENT, Card.Info("Отправлено", "${c.name}\n«$text»", CardIcon.MESSAGE), Need.SMS)
     }
 
@@ -764,6 +825,7 @@ class Engine(
 
     private suspend fun listen(followUp: Boolean) {
         if (inCall) return
+        if (!micOn) { _ui.update { it.copy(phase = Phase.OFF, awaiting = false) }; return }
         player.sfx(Sfx.LISTEN, 0.6f)
         haptic(12)
         _ui.update { it.copy(phase = Phase.LISTENING, partial = "", awaiting = followUp) }
@@ -771,7 +833,7 @@ class Engine(
     }
 
     private fun standby() {
-        if (_ui.value.phase == Phase.OFF) return
+        if (!micOn) { _ui.update { it.copy(phase = Phase.OFF, partial = "", awaiting = false) }; return }
         _ui.update { it.copy(phase = Phase.STANDBY, partial = "", awaiting = false) }
         if (inCall) { speech.pause(); return }
         if (settings.wakeWord.value) speech.listenWake() else speech.pause()

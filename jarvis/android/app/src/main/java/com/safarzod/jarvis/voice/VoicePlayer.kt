@@ -79,6 +79,7 @@ class VoicePlayer(private val context: Context) {
         stop()
         val mp = MediaPlayer()
         player = mp
+        var myFinish: (() -> Unit)? = null
         try {
             mp.setAudioAttributes(attrs)
             if (clip.builtin) {
@@ -88,7 +89,8 @@ class VoicePlayer(private val context: Context) {
             }
             mp.setVolume(volume, volume)
             suspendCancellableCoroutine { cont ->
-                finish = { if (cont.isActive) cont.resume(Unit) }
+                myFinish = { if (cont.isActive) cont.resume(Unit) }
+                finish = myFinish
                 mp.setOnPreparedListener {
                     audio.requestAudioFocus(focus)
                     _speaking.value = true
@@ -111,13 +113,17 @@ class VoicePlayer(private val context: Context) {
         } catch (_: Exception) {
             // повреждённый файл не должен ломать диалог
         } finally {
-            finish = null
-            ticker?.cancel()
-            _level.value = 0f
-            _speaking.value = false
+            // следующая фраза могла уже начаться — трогаем общее состояние, только если оно ещё наше
+            val mine = player === mp || player == null
+            if (finish === myFinish) finish = null
+            if (mine) {
+                ticker?.cancel()
+                _level.value = 0f
+                _speaking.value = false
+            }
             runCatching { mp.release() }
             if (player === mp) player = null
-            audio.abandonAudioFocusRequest(focus)
+            if (mine) audio.abandonAudioFocusRequest(focus)
         }
     }
 

@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -28,6 +30,7 @@ import org.vosk.LogLevel
 import org.vosk.Model
 import org.vosk.Recognizer
 import java.io.File
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.sqrt
 
 /**
@@ -53,40 +56,49 @@ class SpeechEngine(private val context: Context) {
     private val _level = MutableStateFlow(0f)
     val level: StateFlow<Float> = _level
     private val _ready = MutableStateFlow(false)
+    /** Модель загружена. */
     val ready: StateFlow<Boolean> = _ready
+    private val _alive = MutableStateFlow(false)
+    /** Поток микрофона работает. */
+    val alive: StateFlow<Boolean> = _alive
     private val _events = MutableSharedFlow<Event>(extraBufferCapacity = 32, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val events: SharedFlow<Event> = _events
 
     /** 0 — строго (меньше ложных срабатываний), 1 — чутко. */
     @Volatile var sensitivity: Float = 0.5f
 
-    private var model: Model? = null
+    @Volatile private var model: Model? = null
+    private val loadLock = Mutex()
     private var thread: Thread? = null
-    @Volatile private var running = false
+    /** Номер «поколения» потока: старый поток видит, что номер сменился, и завершается. */
+    @Volatile private var generation = 0
 
-    // команды от главного потока к аудиопотоку
-    @Volatile private var pendingMode: Mode? = null
-    @Volatile private var commandTimeoutMs = 7000L
-    @Volatile private var skipMs = 0L
-    @Volatile private var feedRing = false
+    /** Запрос смены режима от главного потока к аудиопотоку (забирается атомарно). */
+    private data class Request(val mode: Mode, val timeoutMs: Long = 7000, val skipMs: Long = 0, val feedRing: Boolean = false)
+    private val request = AtomicReference<Request?>(null)
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Распаковать и загрузить модель (один раз). */
-    suspend fun load(): Boolean = withContext(Dispatchers.IO) {
-        if (model != null) return@withContext true
-        _mode.value = Mode.LOADING
-        try {
-            LibVosk.setLogLevel(LogLevel.WARNINGS)
-            val dir = unpackModel()
-            model = Model(dir.absolutePath)
-            _ready.value = true
-            true
-        } catch (e: Throwable) {
-            Log.e(TAG, "model load failed", e)
-            _events.tryEmit(Event.Failure("Не удалось загрузить модель распознавания"))
-            _mode.value = Mode.OFF
-            false
+    /** Распаковать и загрузить модель (один раз; повторные вызовы ждут первый). */
+    suspend fun load(): Boolean = loadLock.withLock {
+        withContext(Dispatchers.IO) {
+            if (model != null) return@withContext true
+            _mode.value = Mode.LOADING
+            try {
+                LibVosk.setLogLevel(LogLevel.WARNINGS)
+                val dir = unpackModel()
+                model = Model(dir.absolutePath)
+                _ready.value = true
+                _mode.value = Mode.OFF
+                true
+            } catch (e: Throwable) {
+                Log.e(TAG, "model load failed", e)
+                // повреждённая распаковка — удалим, в следующий раз распакуем заново
+                File(context.filesDir, "vosk/model-ru/uuid").delete()
+                _events.tryEmit(Event.Failure("Не удалось загрузить модель распознавания"))
+                _mode.value = Mode.OFF
+                false
+            }
         }
     }
 
@@ -95,9 +107,12 @@ class SpeechEngine(private val context: Context) {
         val assetUuid = context.assets.open("model-ru/uuid").bufferedReader().use { it.readText().trim() }
         val marker = File(target, "uuid")
         if (marker.exists() && marker.readText().trim() == assetUuid) return target
+        val tmp = File(context.filesDir, "vosk/model-ru.tmp")
+        tmp.deleteRecursively()
+        copyAssetDir("model-ru", tmp)
+        File(tmp, "uuid").writeText(assetUuid)
         target.deleteRecursively()
-        copyAssetDir("model-ru", target)
-        marker.writeText(assetUuid)
+        if (!tmp.renameTo(target)) throw IllegalStateException("rename failed")
         return target
     }
 
@@ -109,20 +124,28 @@ class SpeechEngine(private val context: Context) {
             return
         }
         dst.mkdirs()
-        for (name in list) copyAssetDir("$path/$name", File(dst, name))
+        for (name in list) {
+            if (path == "model-ru" && name == "uuid") continue
+            copyAssetDir("$path/$name", File(dst, name))
+        }
     }
 
+    @Synchronized
     fun start() {
-        if (running || model == null) return
-        running = true
-        pendingMode = Mode.WAKE
-        thread = Thread(::loop, "jarvis-mic").apply { start() }
+        if (model == null) return
+        if (thread?.isAlive == true && _alive.value) return
+        thread?.join(1500)
+        val g = ++generation
+        request.set(Request(Mode.WAKE))
+        thread = Thread({ loop(g) }, "jarvis-mic").apply { start() }
     }
 
+    @Synchronized
     fun stop() {
-        running = false
+        generation++
         thread?.join(1500)
         thread = null
+        _alive.value = false
         _mode.value = Mode.OFF
         _level.value = 0f
     }
@@ -134,85 +157,133 @@ class SpeechEngine(private val context: Context) {
         _ready.value = false
     }
 
-    fun listenWake() { pendingMode = Mode.WAKE }
+    fun listenWake() { request.set(Request(Mode.WAKE)) }
 
     /** Слушать команду. [withRing] — подать в распознаватель уже записанное (речь сразу после «Джарвис»). */
     fun listenCommand(timeoutMs: Long = 7000, skipFirstMs: Long = 0, withRing: Boolean = false) {
-        commandTimeoutMs = timeoutMs
-        skipMs = skipFirstMs
-        feedRing = withRing
-        pendingMode = Mode.COMMAND
+        request.set(Request(Mode.COMMAND, timeoutMs, skipFirstMs, withRing))
     }
 
-    fun pause() { pendingMode = Mode.PAUSED }
+    fun pause() { request.set(Request(Mode.PAUSED)) }
 
     // ---------------------------------------------------------------------------------------------
 
+    private class Mic(val rec: AudioRecord, val ns: NoiseSuppressor?, val agc: AutomaticGainControl?) {
+        fun release() {
+            runCatching { rec.stop() }
+            runCatching { rec.release() }
+            runCatching { ns?.release() }
+            runCatching { agc?.release() }
+        }
+    }
+
     @SuppressLint("MissingPermission")
-    private fun loop() {
-        Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
-        val rate = 16000
+    private fun openMic(rate: Int): Mic? {
         val minBuf = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val rec = try {
             AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minBuf, rate))
         } catch (e: Throwable) {
-            _events.tryEmit(Event.Failure("Микрофон недоступен")); running = false; return
+            return null
         }
-        if (rec.state != AudioRecord.STATE_INITIALIZED) {
-            _events.tryEmit(Event.Failure("Микрофон занят другим приложением")); running = false; rec.release(); return
-        }
+        if (rec.state != AudioRecord.STATE_INITIALIZED) { rec.release(); return null }
         val ns = if (NoiseSuppressor.isAvailable()) runCatching { NoiseSuppressor.create(rec.audioSessionId)?.apply { enabled = true } }.getOrNull() else null
         val agc = if (AutomaticGainControl.isAvailable()) runCatching { AutomaticGainControl.create(rec.audioSessionId)?.apply { enabled = true } }.getOrNull() else null
+        return Mic(rec, ns, agc)
+    }
 
-        val m = model!!
-        val wakeGrammar = "[\"джарвис\", \"дарвин\", \"джаз\", \"жарко\", \"чарли\", \"давид\", \"[unk]\"]"
-        var wakeRec = Recognizer(m, rate.toFloat(), wakeGrammar).apply { setWords(true) }
+    private fun loop(g: Int) {
+        Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+        val rate = 16000
+        val m = model ?: return
+        _alive.value = true
+        var mic: Mic? = null
+        var wakeRec: Recognizer? = null
         var cmdRec: Recognizer? = null
-
-        val chunk = ShortArray(800) // 50 мс
-        val ring = ShortArray(rate * 2)
-        var ringPos = 0
-        var ringFilled = 0
-        var mode = Mode.PAUSED
-        var lastPartial = ""
-        var partialChangedAt = 0L
-        var listenStartedAt = 0L
-        var heardSpeechAt = 0L
-        var skipSamples = 0
-        var wakeHits = 0
-        var smoothLevel = 0f
-        var noiseFloor = 300f
-
+        var failedSince = 0L
+        var reportedFailure = false
         try {
-            rec.startRecording()
-            while (running) {
-                pendingMode?.let { nm ->
-                    pendingMode = null
-                    when (nm) {
-                        Mode.WAKE -> { wakeRec.reset(); wakeHits = 0 }
+            val wakeGrammar = "[\"джарвис\", \"дарвин\", \"джаз\", \"жарко\", \"чарли\", \"давид\", \"[unk]\"]"
+            wakeRec = Recognizer(m, rate.toFloat(), wakeGrammar).apply { setWords(true) }
+
+            val chunk = ShortArray(800) // 50 мс
+            val ring = ShortArray(rate * 2)
+            var ringPos = 0
+            var ringFilled = 0
+            var mode = Mode.PAUSED
+            var lastPartial = ""
+            var partialChangedAt = 0L
+            var listenStartedAt = 0L
+            var heardSpeechAt = 0L
+            var skipSamples = 0
+            var wakeHits = 0
+            var smoothLevel = 0f
+            var noiseFloor = 300f
+            var pausedAt = SystemClock.uptimeMillis()
+            var recording = false
+            var commandTimeoutMs = 7000L
+
+            fun setMode(nm: Mode) { mode = nm; _mode.value = nm; if (nm == Mode.PAUSED) pausedAt = SystemClock.uptimeMillis() }
+
+            fun startCommand(feed: Int) {
+                cmdRec?.close()
+                cmdRec = Recognizer(m, rate.toFloat())
+                if (feed > 0) feedRingInto(cmdRec!!, ring, ringPos, feed)
+                lastPartial = ""
+                listenStartedAt = SystemClock.uptimeMillis()
+                partialChangedAt = listenStartedAt
+                heardSpeechAt = if (feed > 0) listenStartedAt else 0L
+                ringFilled = 0
+                setMode(Mode.COMMAND)
+            }
+
+            while (generation == g) {
+                request.getAndSet(null)?.let { r ->
+                    when (r.mode) {
+                        Mode.WAKE -> { wakeRec!!.reset(); wakeHits = 0; setMode(Mode.WAKE) }
                         Mode.COMMAND -> {
-                            cmdRec?.close()
-                            cmdRec = Recognizer(m, rate.toFloat()).apply { setWords(false) }
-                            lastPartial = ""
-                            listenStartedAt = SystemClock.uptimeMillis()
-                            partialChangedAt = listenStartedAt
-                            heardSpeechAt = 0L
-                            skipSamples = (skipMs * rate / 1000).toInt()
-                            if (feedRing && ringFilled > 0) {
-                                // подать записанное до переключения: окончание «Джарвис …»
-                                feedRingInto(cmdRec!!, ring, ringPos, ringFilled)
-                                heardSpeechAt = listenStartedAt
-                            }
-                            feedRing = false
+                            commandTimeoutMs = r.timeoutMs
+                            skipSamples = (r.skipMs * rate / 1000).toInt()
+                            startCommand(if (r.feedRing) ringFilled else 0)
                         }
-                        else -> Unit
+                        else -> setMode(r.mode)
                     }
-                    mode = nm
-                    _mode.value = nm
                 }
 
+                // на паузе дольше 1.5 с микрофон отпускаем (индикатор приватности гаснет, другие приложения могут писать звук)
+                val wantMic = mode != Mode.PAUSED || SystemClock.uptimeMillis() - pausedAt < 1500
+                if (!wantMic) {
+                    if (recording) { mic?.release(); mic = null; recording = false; _level.value = 0f }
+                    Thread.sleep(30)
+                    continue
+                }
+                if (!recording) {
+                    mic = mic ?: openMic(rate)
+                    val ok = mic != null && runCatching { mic!!.rec.startRecording(); mic!!.rec.recordingState == AudioRecord.RECORDSTATE_RECORDING }.getOrDefault(false)
+                    if (!ok) {
+                        mic?.release(); mic = null
+                        if (failedSince == 0L) failedSince = SystemClock.uptimeMillis()
+                        if (!reportedFailure && SystemClock.uptimeMillis() - failedSince > 4000) {
+                            reportedFailure = true
+                            _events.tryEmit(Event.Failure("Микрофон занят другим приложением"))
+                        }
+                        Thread.sleep(500)
+                        continue
+                    }
+                    recording = true
+                    failedSince = 0L
+                    reportedFailure = false
+                }
+
+                val rec = mic!!.rec
                 val n = rec.read(chunk, 0, chunk.size)
-                if (n <= 0) { Thread.sleep(10); continue }
+                if (n < 0) {
+                    // ERROR_DEAD_OBJECT (перезапуск аудиосервера) и прочее — пересоздаём микрофон
+                    Log.w(TAG, "read error $n — reopening mic")
+                    mic?.release(); mic = null; recording = false
+                    Thread.sleep(300)
+                    continue
+                }
+                if (n == 0) { Thread.sleep(10); continue }
 
                 // уровень сигнала для визуала и детекции речи
                 var sum = 0.0
@@ -230,37 +301,28 @@ class SpeechEngine(private val context: Context) {
 
                 when (mode) {
                     Mode.WAKE -> {
-                        val isFinal = wakeRec.acceptWaveForm(chunk, n)
-                        if (isFinal) {
-                            val r = json.parseToJsonElement(wakeRec.result).jsonObject
-                            val words = r["result"]?.jsonArray ?: emptyList()
-                            val conf = words.firstOrNull { it.jsonObject["word"]?.jsonPrimitive?.contentOrNull == "джарвис" }
-                                ?.jsonObject?.get("conf")?.jsonPrimitive?.doubleOrNull
-                            if (conf != null && conf >= 0.92 - sensitivity * 0.3) {
-                                onWake(); mode = Mode.COMMAND; _mode.value = mode
-                                cmdRec?.close()
-                                cmdRec = Recognizer(m, rate.toFloat())
-                                feedRingInto(cmdRec!!, ring, ringPos, minOf(ringFilled, rate / 2))
-                                listenStartedAt = SystemClock.uptimeMillis(); partialChangedAt = listenStartedAt; heardSpeechAt = 0L; lastPartial = ""
-                                ringFilled = 0
-                            }
+                        val wr = wakeRec!!
+                        if (wr.acceptWaveForm(chunk, n)) {
+                            val conf = runCatching {
+                                json.parseToJsonElement(wr.result).jsonObject["result"]?.jsonArray
+                                    ?.firstOrNull { it.jsonObject["word"]?.jsonPrimitive?.contentOrNull == "джарвис" }
+                                    ?.jsonObject?.get("conf")?.jsonPrimitive?.doubleOrNull
+                            }.getOrNull()
                             wakeHits = 0
+                            if (conf != null && conf >= 0.92 - sensitivity * 0.3) {
+                                _events.tryEmit(Event.Wake)
+                                startCommand(minOf(ringFilled, rate / 2))
+                            }
                         } else {
-                            val p = partialText(wakeRec.partialResult)
+                            val p = partialText(wr.partialResult)
                             if (p.split(' ').contains("джарвис")) {
                                 wakeHits++
                                 val need = if (sensitivity > 0.66f) 1 else if (sensitivity > 0.33f) 2 else 4
                                 if (wakeHits >= need) {
-                                    onWake()
-                                    wakeRec.reset(); wakeHits = 0
-                                    mode = Mode.COMMAND; _mode.value = mode
-                                    cmdRec?.close()
-                                    cmdRec = Recognizer(m, rate.toFloat())
+                                    _events.tryEmit(Event.Wake)
+                                    wr.reset(); wakeHits = 0
                                     // подаём последние 1.2 с: само слово и начало команды, если человек не сделал паузу
-                                    feedRingInto(cmdRec!!, ring, ringPos, minOf(ringFilled, rate * 12 / 10))
-                                    listenStartedAt = SystemClock.uptimeMillis(); partialChangedAt = listenStartedAt
-                                    heardSpeechAt = listenStartedAt; lastPartial = ""
-                                    ringFilled = 0
+                                    startCommand(minOf(ringFilled, rate * 12 / 10))
                                 }
                             } else wakeHits = 0
                         }
@@ -271,10 +333,9 @@ class SpeechEngine(private val context: Context) {
                         if (skipSamples > 0) { skipSamples -= n; continue }
                         val now = SystemClock.uptimeMillis()
                         if (voiced) heardSpeechAt = now
-                        val isFinal = r.acceptWaveForm(chunk, n)
-                        if (isFinal) {
+                        if (r.acceptWaveForm(chunk, n)) {
                             val text = resultText(r.result)
-                            if (text.isNotBlank()) { finishCommand(text); mode = Mode.PAUSED; _mode.value = mode; continue }
+                            if (text.isNotBlank()) { _events.tryEmit(Event.Final(text)); setMode(Mode.PAUSED); continue }
                         } else {
                             val p = partialText(r.partialResult)
                             if (p != lastPartial) {
@@ -282,17 +343,16 @@ class SpeechEngine(private val context: Context) {
                                 if (p.isNotBlank()) _events.tryEmit(Event.Partial(p))
                             }
                         }
-                        // своя «точка конца фразы»: текст не меняется и тихо
+                        // своя «точка конца фразы»: тихо 0.9 с, или (в шуме) текст не меняется 1.7 с
                         val silentFor = now - maxOf(heardSpeechAt, partialChangedAt)
-                        // в шуме «тишины» может не быть — тогда ориентируемся на то, что текст перестал меняться
                         if (lastPartial.isNotBlank() && (silentFor > 900 || now - partialChangedAt > 1700)) {
-                            finishCommand(resultText(r.finalResult)); mode = Mode.PAUSED; _mode.value = mode; continue
+                            finishCommand(resultText(r.finalResult)); setMode(Mode.PAUSED); continue
                         }
                         if (lastPartial.isBlank() && now - listenStartedAt > commandTimeoutMs) {
-                            _events.tryEmit(Event.Timeout); mode = Mode.PAUSED; _mode.value = mode; continue
+                            _events.tryEmit(Event.Timeout); setMode(Mode.PAUSED); continue
                         }
                         if (now - listenStartedAt > 20_000) {
-                            finishCommand(resultText(r.finalResult)); mode = Mode.PAUSED; _mode.value = mode; continue
+                            finishCommand(resultText(r.finalResult)); setMode(Mode.PAUSED); continue
                         }
                     }
 
@@ -301,14 +361,14 @@ class SpeechEngine(private val context: Context) {
             }
         } catch (e: Throwable) {
             Log.e(TAG, "audio loop", e)
-            _events.tryEmit(Event.Failure("Сбой распознавания речи"))
+            if (generation == g) _events.tryEmit(Event.Failure("Сбой распознавания речи"))
         } finally {
-            runCatching { rec.stop() }
-            rec.release()
-            ns?.release(); agc?.release()
-            wakeRec.close()
-            cmdRec?.close()
+            mic?.release()
+            runCatching { wakeRec?.close() }
+            runCatching { cmdRec?.close() }
             _level.value = 0f
+            // поток упал сам (не по stop()) — сообщаем, что микрофон не работает
+            if (generation == g) { _alive.value = false; _mode.value = Mode.OFF }
         }
     }
 
@@ -319,8 +379,6 @@ class SpeechEngine(private val context: Context) {
         for (k in 0 until count) tmp[k] = ring[(start + k) % ring.size]
         r.acceptWaveForm(tmp, count)
     }
-
-    private fun onWake() { _events.tryEmit(Event.Wake) }
 
     private fun finishCommand(text: String) {
         if (text.isBlank()) _events.tryEmit(Event.Timeout) else _events.tryEmit(Event.Final(text))

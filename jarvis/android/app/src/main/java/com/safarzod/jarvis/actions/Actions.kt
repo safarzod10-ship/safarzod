@@ -2,6 +2,9 @@ package com.safarzod.jarvis.actions
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
+import android.app.Activity
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
@@ -33,6 +36,8 @@ import com.safarzod.jarvis.nlu.PanelKind
 import com.safarzod.jarvis.nlu.VolumeAction
 import com.safarzod.jarvis.service.JarvisAccessibilityService
 import java.net.URLEncoder
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Результат действия. */
 /** BLOCKED — Android запретил открыть окно из фона; пользователю показано уведомление «нажмите, чтобы открыть». */
@@ -69,7 +74,6 @@ class Actions(private val context: Context) {
     private fun start(i: Intent): Outcome {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (!canLaunch()) {
-            if (i.resolveActivity(context.packageManager) == null && i.`package` == null) return Outcome.NOT_FOUND
             onBlocked(i)
             return Outcome.BLOCKED
         }
@@ -96,16 +100,43 @@ class Actions(private val context: Context) {
         return start(Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(number))))
     }
 
-    fun sendSms(number: String, text: String): Outcome {
+    /**
+     * Отправить SMS и дождаться ответа системы (до 12 с). Без сети / без SIM по умолчанию — FAILED,
+     * а не ложное «отправлено».
+     */
+    suspend fun sendSms(number: String, text: String): Outcome {
         if (!granted(Manifest.permission.SEND_SMS)) return Outcome.NO_PERMISSION
-        return try {
-            val sms = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java) else @Suppress("DEPRECATION") SmsManager.getDefault()
-            val parts = sms.divideMessage(text)
-            if (parts.size > 1) sms.sendMultipartTextMessage(number, null, parts, null, null)
-            else sms.sendTextMessage(number, null, text, null, null)
-            Outcome.OK
+        val sms = try {
+            if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java) else @Suppress("DEPRECATION") SmsManager.getDefault()
+        } catch (_: Exception) { null } ?: return Outcome.FAILED
+        val parts = runCatching { sms.divideMessage(text) }.getOrNull() ?: return Outcome.FAILED
+        val action = "com.safarzod.jarvis.SMS_SENT." + SystemClock.uptimeMillis()
+        val result = CompletableDeferred<Outcome>()
+        var remaining = parts.size
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                if (resultCode != Activity.RESULT_OK) { result.complete(Outcome.FAILED); return }
+                remaining--
+                if (remaining <= 0) result.complete(Outcome.OK)
+            }
+        }
+        ContextCompat.registerReceiver(context, receiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
+        try {
+            val sent = ArrayList<PendingIntent>()
+            for (k in parts.indices) {
+                sent += PendingIntent.getBroadcast(
+                    context, k, Intent(action).setPackage(context.packageName),
+                    PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            }
+            if (parts.size > 1) sms.sendMultipartTextMessage(number, null, parts, sent, null)
+            else sms.sendTextMessage(number, null, text, sent[0], null)
+            // нет ответа за 12 с — система поставила сообщение в очередь, считаем отправленным
+            return withTimeoutOrNull(12_000) { result.await() } ?: Outcome.OK
         } catch (_: Exception) {
-            Outcome.FAILED
+            return Outcome.FAILED
+        } finally {
+            runCatching { context.unregisterReceiver(receiver) }
         }
     }
 

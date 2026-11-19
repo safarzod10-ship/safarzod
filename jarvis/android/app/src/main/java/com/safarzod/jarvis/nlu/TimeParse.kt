@@ -40,7 +40,7 @@ object TimeParse {
         if (bare != null && !s.contains(" полчаса ") && !s.contains(" полтора часа ")) {
             total += 3600
             val extra = bare.groupValues[1]
-            if (extra.isNotEmpty() && bare.groupValues[2].isEmpty()) total += extra.toLong() * 60
+            if (extra.isNotEmpty() && bare.groupValues[2].isEmpty()) total += (extra.toLongOrNull() ?: 0L).coerceAtMost(10_000) * 60
             found = true
         }
         if (!found) {
@@ -49,7 +49,7 @@ object TimeParse {
                 Regex(" (?:на|через) секунду ").containsMatchIn(s) -> { total = 1; found = true }
             }
         }
-        return if (found && total > 0) total else null
+        return if (found && total > 0) total.coerceAtMost(7L * 24 * 3600) else null
     }
 
     /** Время на часах или null. */
@@ -77,8 +77,8 @@ object TimeParse {
         }
         // «без пятнадцати восемь», «без 15 8» → 7:45
         Regex(" без (\\d+|четверти) (?:минут )?(\\d+) ").find(s)?.let { m ->
-            val minus = if (m.groupValues[1] == "четверти") 15 else m.groupValues[1].toInt()
-            val h = m.groupValues[2].toInt()
+            val minus = if (m.groupValues[1] == "четверти") 15 else m.groupValues[1].toIntOrNull() ?: -1
+            val h = m.groupValues[2].toIntOrNull() ?: -1
             if (minus in 1..59 && h in 0..24) return Clock((h - 1 + 24) % 24, 60 - minus, period, dayOffset)
         }
         // «7:30», «в 7 30», «на 7 часов 30 минут», «в 7», «к 9»

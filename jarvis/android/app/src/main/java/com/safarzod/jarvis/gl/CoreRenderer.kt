@@ -93,7 +93,9 @@ class CoreRenderer(private val context: Context, private val p: CoreParams) : GL
         GLES30.glEnableVertexAttribArray(0)
         GLES30.glVertexAttribPointer(0, 2, GLES30.GL_FLOAT, false, 0, 0)
         GLES30.glBindVertexArray(0)
-        program = 0; programStyle = null; pointsProgram = 0; pointsVbo = 0; pointsCount = 0
+        // новый GL-контекст: все старые объекты недействительны
+        program = 0; programStyle = null; pointsProgram = 0; pointsVbo = 0; pointsVao = 0; pointsCount = 0
+        uniforms.clear()
         lastFrame = SystemClock.elapsedRealtime()
     }
 

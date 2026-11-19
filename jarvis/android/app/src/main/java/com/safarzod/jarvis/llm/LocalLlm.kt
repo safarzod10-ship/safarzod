@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -32,6 +31,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * Локальная языковая модель (без интернета и серверов). Используется только для двух задач:
@@ -189,16 +190,27 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
     }
 
     fun delete() {
-        unload()
-        dir.listFiles()?.forEach { it.delete() }
         settings.llmModel.value = ""
         _status.value = Status.None
+        scope.launch {
+            lock.withLock {
+                runCatching { engine?.close() }
+                engine = null
+                dir.listFiles()?.forEach { it.delete() }
+            }
+            refresh()
+        }
     }
 
+    /** Выгрузить модель из памяти. Ждёт окончания текущего ответа — нельзя закрывать модель посреди генерации. */
     fun unload() {
-        runCatching { engine?.close() }
-        engine = null
-        if (_status.value is Status.Ready) refresh()
+        scope.launch {
+            lock.withLock {
+                runCatching { engine?.close() }
+                engine = null
+            }
+            if (_status.value is Status.Ready) refresh()
+        }
     }
 
     // ---------------- работа ----------------
@@ -210,7 +222,7 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
         return try {
             val opts = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(f.absolutePath)
-                .setMaxTokens(640)
+                .setMaxTokens(1024)
                 .setMaxTopK(40)
                 .build()
             LlmInference.createFromOptions(context, opts).also {
@@ -229,11 +241,16 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
     /** Прогреть модель заранее, чтобы первый ответ был быстрым. */
     fun warmUp() { if (available) scope.launch { ensureLoaded() } }
 
+    /**
+     * Сгенерировать ответ. Никогда не держит пользователя дольше [timeoutMs]: если модель ещё не загружена,
+     * загрузка идёт в фоне, а сейчас возвращается null (команду разберут правила).
+     */
     private suspend fun complete(user: String, temperature: Float, timeoutMs: Long): String? = withContext(Dispatchers.Default) {
-        val llm = ensureLoaded() ?: return@withContext null
-        withTimeoutOrNull(timeoutMs) {
-            lock.withLock {
-                runCatching {
+        if (engine == null) { warmUp(); return@withContext null }
+        if (!lock.tryLock()) return@withContext null
+        try {
+            val llm = engine ?: return@withContext null // могли выгрузить, пока ждали
+            runCatching {
                     val so = LlmInferenceSession.LlmInferenceSessionOptions.builder()
                         .setTemperature(temperature)
                         .setTopK(20)
@@ -248,10 +265,18 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
                         .build()
                     LlmInferenceSession.createFromOptions(llm, so).use { s ->
                         s.addQueryChunk(user)
-                        s.generateResponse()
+                        val future = s.generateResponseAsync()
+                        try {
+                            future.get(timeoutMs, TimeUnit.MILLISECONDS)
+                        } catch (e: TimeoutException) {
+                            runCatching { s.cancelGenerateResponseAsync() }
+                            runCatching { future.get(3, TimeUnit.SECONDS) }
+                            null
+                        }
                     }
-                }.onFailure { Log.e(TAG, "generate", it) }.getOrNull()
-            }
+            }.onFailure { Log.e(TAG, "generate", it) }.getOrNull()
+        } finally {
+            lock.unlock()
         }
     }
 

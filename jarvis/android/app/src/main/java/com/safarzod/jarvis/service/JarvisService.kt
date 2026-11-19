@@ -52,6 +52,14 @@ class JarvisService : LifecycleService() {
         when (intent?.action) {
             ACTION_STOP -> { stopSelf(); return START_NOT_STICKY }
             ACTION_LISTEN -> app.engine.onMicTap()
+            ACTION_REFRESH -> listenCalls()
+        }
+        // Система перезапустила службу сама (intent == null). С Android 11 микрофон из фона в таком случае
+        // глухой — честно просим одно нажатие вместо того, чтобы «слушать» тишину.
+        if (intent == null && Build.VERSION.SDK_INT >= 30 && !app.engine.appVisible.value) {
+            postTapToResume(this)
+            stopSelf()
+            return START_NOT_STICKY
         }
         if (!booted) {
             booted = true
@@ -100,6 +108,7 @@ class JarvisService : LifecycleService() {
 
     /** Во время телефонного разговора микрофон отдаём звонку. */
     private fun listenCalls() {
+        if (telephonyCallback != null) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return
         val tm = getSystemService(TelephonyManager::class.java) ?: return
         runCatching {
@@ -144,6 +153,7 @@ class JarvisService : LifecycleService() {
         const val NOTIF_ID = 42
         const val ACTION_STOP = "com.safarzod.jarvis.STOP"
         const val ACTION_LISTEN = "com.safarzod.jarvis.LISTEN"
+        const val ACTION_REFRESH = "com.safarzod.jarvis.REFRESH"
         const val EXTRA_GREET = "greet"
         @Volatile var running = false
             private set
@@ -156,6 +166,25 @@ class JarvisService : LifecycleService() {
 
         fun stop(context: Context) {
             context.stopService(Intent(context, JarvisService::class.java))
+        }
+
+        /** Разрешения поменялись — служба перепроверит, что может (например, слушать звонки). */
+        fun refresh(context: Context) {
+            if (!running) return
+            runCatching { context.startService(Intent(context, JarvisService::class.java).setAction(ACTION_REFRESH)) }
+        }
+
+        /** Уведомление «нажмите, чтобы включить слух» — когда Android не даёт запустить микрофон из фона. */
+        fun postTapToResume(context: Context) {
+            val pi = PendingIntent.getActivity(context, 3, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+            val n = NotificationCompat.Builder(context, JarvisApp.CH_SERVICE)
+                .setSmallIcon(R.drawable.ic_stat_jarvis)
+                .setContentTitle("Джарвис готов")
+                .setContentText("Нажмите, чтобы включить прослушивание")
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+            runCatching { androidx.core.app.NotificationManagerCompat.from(context).notify(43, n) }
         }
     }
 }

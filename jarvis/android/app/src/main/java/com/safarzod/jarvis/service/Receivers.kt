@@ -26,20 +26,10 @@ class BootReceiver : BroadcastReceiver() {
         val app = context.applicationContext as JarvisApp
         app.reminders.rescheduleAll()
         if (!app.settings.onboarded.value || !app.settings.background.value) return
-        // Android 14+ не разрешает запускать микрофон из фона — просим одно нажатие
-        if (Build.VERSION.SDK_INT >= 34) {
-            val pi = PendingIntent.getActivity(context, 3, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-            val n = NotificationCompat.Builder(context, JarvisApp.CH_SERVICE)
-                .setSmallIcon(R.drawable.ic_stat_jarvis)
-                .setContentTitle("Джарвис готов")
-                .setContentText("Нажмите, чтобы включить прослушивание")
-                .setContentIntent(pi)
-                .setAutoCancel(true)
-                .build()
-            runCatching { context.getSystemService(NotificationManager::class.java).notify(43, n) }
-        } else {
-            JarvisService.start(context)
-        }
+        // С Android 11 микрофон, запущенный из фона (в т.ч. после перезагрузки), не слышит ничего —
+        // поэтому просим одно нажатие. На Android 8–10 можно стартовать сразу.
+        if (Build.VERSION.SDK_INT >= 30) JarvisService.postTapToResume(context)
+        else JarvisService.start(context)
     }
 }
 

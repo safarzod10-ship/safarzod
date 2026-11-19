@@ -54,6 +54,9 @@ import com.safarzod.jarvis.ui.screens.VoiceScreen
 import com.safarzod.jarvis.ui.theme.JarvisTheme
 import com.safarzod.jarvis.ui.theme.deep
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -144,6 +147,7 @@ class MainActivity : ComponentActivity() {
                 startActivity(Perms.appDetails(ctx))
             }
             if (res[android.Manifest.permission.RECORD_AUDIO] == true && settings.onboarded.value) JarvisService.start(ctx)
+            if (res[android.Manifest.permission.READ_PHONE_STATE] == true) JarvisService.refresh(ctx)
             engine.contacts.invalidate()
             pendingNeed = null
         }
@@ -160,11 +164,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        LaunchedEffect(listenRequest.value) {
-            if (listenRequest.value) {
+        // плитка в шторке / жест ассистента: дождаться готовности и начать слушать
+        LaunchedEffect(Unit) {
+            snapshotFlow { listenRequest.value }.filter { it }.collect {
+                val ready = kotlinx.coroutines.withTimeoutOrNull(10_000) { engine.ui.first { it.phase == Phase.STANDBY } }
                 listenRequest.value = false
-                kotlinx.coroutines.delay(600)
-                if (engine.ui.value.phase == Phase.STANDBY) engine.onMicTap()
+                if (ready != null) engine.onMicTap()
             }
         }
 
