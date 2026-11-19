@@ -128,7 +128,7 @@ fun HomeContent(
             val aspect = hPx / wPx.coerceAtLeast(1f)
             params.centerY = when {
                 typing -> 0.20f
-                ui.card != null -> 0.22f
+                ui.card != null -> 0.205f
                 hasContent -> 0.30f
                 else -> 0.38f
             }
