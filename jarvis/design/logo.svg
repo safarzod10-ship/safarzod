@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#0E2236"/>
+      <stop offset="0.55" stop-color="#060B13"/>
+      <stop offset="1" stop-color="#020306"/>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.35" stop-color="#C9F6FF"/>
+      <stop offset="0.7" stop-color="#4FD8FF"/>
+      <stop offset="1" stop-color="#1A6CFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#5BE3FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#5BE3FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F2FBFF"/>
+      <stop offset="0.45" stop-color="#7FE6FF"/>
+      <stop offset="1" stop-color="#2F7BFF"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="150" fill="url(#halo)"/>
+  <g fill="none" stroke-linecap="round" filter="url(#glow)">
+    <!-- внешнее кольцо с тремя разрывами -->
+    <g stroke="url(#metal)" stroke-width="14">
+      <path d="M 256 106 A 150 150 0 0 1 385.9 181"/>
+      <path d="M 401.1 214 A 150 150 0 0 1 321 391.3"/>
+      <path d="M 288 402.6 A 150 150 0 0 1 111 300"/>
+      <path d="M 106.7 266 A 150 150 0 0 1 222 110"/>
+    </g>
+    <!-- наклонное кольцо (ближняя половина поверх ядра) -->
+    <g transform="rotate(-28 256 256)">
+      <path d="M 146 256 A 110 40 0 0 0 366 256" stroke="#9FEFFF" stroke-width="9" stroke-opacity="0.95"/>
+      <path d="M 366 256 A 110 40 0 0 0 146 256" stroke="#4FB8FF" stroke-width="6" stroke-opacity="0.45"/>
+    </g>
+    <!-- вертикальное кольцо -->
+    <g transform="rotate(18 256 256)">
+      <path d="M 256 152 A 34 104 0 0 1 256 360" stroke="#CFF8FF" stroke-width="8"/>
+      <path d="M 256 360 A 34 104 0 0 1 256 152" stroke="#4FB8FF" stroke-width="5" stroke-opacity="0.4"/>
+    </g>
+  </g>
+  <circle cx="256" cy="256" r="52" fill="url(#core)"/>
+  <circle cx="256" cy="256" r="22" fill="#FFFFFF"/>
+</svg>

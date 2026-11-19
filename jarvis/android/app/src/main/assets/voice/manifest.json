@@ -1,0 +1,499 @@
+{
+ "clips": [
+  {
+   "id": "wake_01",
+   "event": "wake",
+   "text": "Слушаю, сэр.",
+   "file": "voice/wake_01.ogg",
+   "durationMs": 1110,
+   "envFps": 50,
+   "env": "AAAVSGp8d53EzNXc3drLuaylnbnV4eDb1ci3rqOcmpa3ycjGvbOgkH1tXVBCPjktIBUNCAUDAgE="
+  },
+  {
+   "id": "wake_02",
+   "event": "wake",
+   "text": "Что прикажете, сэр?",
+   "file": "voice/wake_02.ogg",
+   "durationMs": 1340,
+   "envFps": 50,
+   "env": "AAApV3B9c1c9v+Dy8NnItLO72dXLr5mLyNLRy8S5n5aVlId4bm6amI+FgH2DfnWan6Wfl4RzZlZJPDUpHhMMCAUDAg=="
+  },
+  {
+   "id": "wake_03",
+   "event": "wake",
+   "text": "К вашим услугам, сэр.",
+   "file": "voice/wake_03.ogg",
+   "durationMs": 1480,
+   "envFps": 50,
+   "env": "AAAAMUWQo6nG0M/X0sOwoJCHlLu2tLCysbasn5eQi4N0oK7BwcC0qaSxwLqxrKGNg35+gXx2aYmMm6SdloBnTzspGxELBwQDAgE="
+  },
+  {
+   "id": "yes_01",
+   "event": "yes",
+   "text": "Да, сэр.",
+   "file": "voice/yes_01.ogg",
+   "durationMs": 857,
+   "envFps": 50,
+   "env": "AAApgY2JksTS0dDY0saupJ+Zk4t9lKajoZ2JcWVURTMjIR8WDgkGAwIBAQ=="
+  },
+  {
+   "id": "yes_02",
+   "event": "yes",
+   "text": "Да, сэр.",
+   "file": "voice/yes_02.ogg",
+   "durationMs": 847,
+   "envFps": 50,
+   "env": "AABdl5qXi83e2tfQxrq3t7m0qpulpKmeintvY1dWTUY8LyAVDQkFAwIBAQ=="
+  },
+  {
+   "id": "greet_morning_01",
+   "event": "greet_morning",
+   "text": "Доброе утро, сэр.",
+   "file": "voice/greet_morning_01.ogg",
+   "durationMs": 1300,
+   "envFps": 50,
+   "env": "AABFboCAfa/g4+7s5dK6r87Kx9HW3t3f29bTzsvBrJqkvbS2r6uflZCPjYuBe42nrKqln5SIfGZQPSgaEAsHBAM="
+  },
+  {
+   "id": "greet_day_01",
+   "event": "greet_day",
+   "text": "Добрый день, сэр. Чем могу помочь?",
+   "file": "voice/greet_day_01.ogg",
+   "durationMs": 2500,
+   "envFps": 50,
+   "env": "AAA4bX14h7/T09nYw7XGxcnb297a1Ma5qqa9ubatqqWek4R9e394c21oiYiRi4VzXU08Kx0TDAgFAwIBAAAAAAAAAAAkaZCOkMbQz8/LxsXCvsTX1M3DtrjKzsa2pKPKysnIwLaxtLW1saeRi4uKhXdmUUAqGxELBwQDAgE="
+  },
+  {
+   "id": "greet_evening_01",
+   "event": "greet_evening",
+   "text": "Добрый вечер, сэр.",
+   "file": "voice/greet_evening_01.ogg",
+   "durationMs": 1520,
+   "envFps": 50,
+   "env": "AABJgIyKhNHg4N7p4tPEvdva2fHv6uLk4t7Wzs3b5N3Suq2imJWqrqeWi4aGhIiHg42mo6Gqnox9b2ZbUklEOzQnGhMRDQgFAwIBAQ=="
+  },
+  {
+   "id": "greet_evening_02",
+   "event": "greet_evening",
+   "text": "Добрый вечер, сэр. Я на связи.",
+   "file": "voice/greet_evening_02.ogg",
+   "durationMs": 2770,
+   "envFps": 50,
+   "env": "AABGcHx+rby9vLmroaaxrry6uMC/wbu4wNTWzbaro5+Upbe0p52TjIuQjYOBqKajopeFcGNXT0k+NC4sIRcPCQYEAgEBAAAAAAAAAAAAADCCm6qrvcvV1NDJv7e0tbOnmJGNiYV5g4+tt7i/t7WmlYt7enp0aFlIPDMqIBYOCQYDAgEBAAAAAAAAAA=="
+  },
+  {
+   "id": "greet_night_01",
+   "event": "greet_night",
+   "text": "Ночная смена, сэр? Я с вами.",
+   "file": "voice/greet_night_01.ogg",
+   "durationMs": 2830,
+   "envFps": 50,
+   "env": "AAA9Z4yZoqqysauWhYB/f31zoK64t7SysrCzsaKTioN/dnWRpqywrra4sq2ppaWjo5OHgX97d3WWqaWknYl6Z007MCseFA0IBQMCAQAAAAAAAAAAAAAAAAAAAAAATXaaq7fM19/a1cy1opWLhX18h4aTsrm3s6qilI+EfHdoXU5KQz4tHRMMCAUDAgEAAA=="
+  },
+  {
+   "id": "ack_01",
+   "event": "ack",
+   "text": "Вас понял, сэр.",
+   "file": "voice/ack_01.ogg",
+   "durationMs": 1240,
+   "envFps": 50,
+   "env": "AAAPVYmpvtDg3t3TwLWrppqBbF1TkNXe3NjMv7GrqaGdjHuTpKyrppaVuLSul31pW005JxkSDAcFAwIBAAA="
+  },
+  {
+   "id": "ack_02",
+   "event": "ack",
+   "text": "Сию минуту, сэр.",
+   "file": "voice/ack_02.ogg",
+   "durationMs": 1200,
+   "envFps": 50,
+   "env": "AAA8dI6loZvT4ejp4tzU1NHRzc3S0NDPz83R0MvDsZyFna+roZyWlJaOr7XEwLKYhnNfUEQzIRUOCQUD"
+  },
+  {
+   "id": "ack_03",
+   "event": "ack",
+   "text": "Как пожелаете, сэр.",
+   "file": "voice/ack_03.ogg",
+   "durationMs": 1330,
+   "envFps": 50,
+   "env": "AAAAf8/U07+iiHZoXVGY0s6/raGnx8rKyMjIyMbBurWroZWBcGhoiIR5dHF3gnxze42KiYJ1YEw+MSIWDgkGBAIBAQ=="
+  },
+  {
+   "id": "done_01",
+   "event": "done",
+   "text": "Готово, сэр.",
+   "file": "voice/done_01.ogg",
+   "durationMs": 1070,
+   "envFps": 50,
+   "env": "AAAqT2CnztvVzr2kkIa4zMvOyMC7t6qdlZWTkYmBmqKgo5KDdGZWSTcjFw8JBgQCAQEAAAAA"
+  },
+  {
+   "id": "done_02",
+   "event": "done",
+   "text": "Всё готово, сэр.",
+   "file": "voice/done_02.ogg",
+   "durationMs": 1310,
+   "envFps": 50,
+   "env": "AAAfUGeCf4eQiqLM0NfPuKCcydbVxbCciXOnzcvKyr+yramikIeFgo+PhoSkrqqtnYZtXU09MCQXDwkGBAIBAQAA"
+  },
+  {
+   "id": "done_03",
+   "event": "done",
+   "text": "Задача выполнена, сэр.",
+   "file": "voice/done_03.ogg",
+   "durationMs": 1570,
+   "envFps": 50,
+   "env": "AAAklZyYl77Z2tjTwbLP6ebi38a2raGcytzTzMjf49XBqpS4zMjEvbeyq6Wfl5WUjol6dW5ueoV5dpORhn5qWUg9Ny4fGhMQCgYEAgEBAA=="
+  },
+  {
+   "id": "thinking_01",
+   "event": "thinking",
+   "text": "Минуту, сэр.",
+   "file": "voice/thinking_01.ogg",
+   "durationMs": 1110,
+   "envFps": 50,
+   "env": "AABRiaKvu8fJ0s/OytHS0tXT1MmznY6XucGwpaOkpqSjmrbN2tjNvaKLdWNTQzUoGxELBwQDAgE="
+  },
+  {
+   "id": "thinking_02",
+   "event": "thinking",
+   "text": "Почти готово, сэр.",
+   "file": "voice/thinking_02.ogg",
+   "durationMs": 1430,
+   "envFps": 50,
+   "env": "AACP2NbXzbagmZOQjn1qbni1yMG2qKbL3tHBrZeDfsHGxMe/ura8tqabkY2Jf5Oiqqebj3xsXFBFOCsnIRkQCgYEAgEBAAAA"
+  },
+  {
+   "id": "not_understood_01",
+   "event": "not_understood",
+   "text": "Простите, сэр, я не понял.",
+   "file": "voice/not_understood_01.ogg",
+   "durationMs": 2220,
+   "envFps": 50,
+   "env": "AAAywLnK2NrRv6ujm4p1bI7F1M+4nY+TrqyhnJubmpOKmrzCvru0pJKBcF1PRzQkFw8KBgQCAQEXJxwqQJTBy8rM0Nna3ODc1dHKydLQzsKrkX53c6K0sqqhlot6bmtraF98c2lRPCcZEAoGBAIB"
+  },
+  {
+   "id": "not_understood_02",
+   "event": "not_understood",
+   "text": "Повторите, пожалуйста, сэр.",
+   "file": "voice/not_understood_02.ogg",
+   "durationMs": 1510,
+   "envFps": 50,
+   "env": "AACIuMWyloyAeJLd4t7NxcLIxrGdjaDBrZqGp8XFv7GgmrvJx8G+vrCil4dza16Ftq+gmJWTkoebwbu4rJKCb2hXQTMhFQ4JBgMCAQ=="
+  },
+  {
+   "id": "error_01",
+   "event": "error",
+   "text": "Простите, сэр, не получилось.",
+   "file": "voice/error_01.ogg",
+   "durationMs": 2380,
+   "envFps": 50,
+   "env": "AACsy8fg39jLvriun4mFqebdwq6hptTIvL+5s7OsodDPzMa7nIdyY1hSSEE8Oi0oGhELBwQDBQUDAgEAABWcx9LZ3tvf3NjDsJS21tnU0tXc18Svnp6dmJWUubSoloJ8c2p6jIqHg3x4ZlM/LB8UDQgFAwIBAQA="
+  },
+  {
+   "id": "error_02",
+   "event": "error",
+   "text": "Произошла ошибка, сэр.",
+   "file": "voice/error_02.ogg",
+   "durationMs": 1560,
+   "envFps": 50,
+   "env": "AAAYmcnC3NvZ3NjQu6ectMnIuqSWjIBxZKq8ytDMy8fBt6GQg3lxZ2ynp5uHdmdbUERMjYV9e3h3c26RmZSPf2lWSzsyKRsSCwcFAwIB"
+  },
+  {
+   "id": "error_later_01",
+   "event": "error_later",
+   "text": "Простите, сэр, повторите попытку позже.",
+   "file": "voice/error_later_01.ogg",
+   "durationMs": 2890,
+   "envFps": 50,
+   "env": "AAAAsLvP19PHsqGThHNtg7C/s5iIeJubjIWCiIuBh6etraSYh3xxZVFGQD49Ojs2MC8kGh+00trMs56Hdmu81tPRx8XHx8atkYeUrZ2JeobEwruqlH99praxmX5qXlJNjqqagmxZU16ttb25tKWWjoiFhYKAjYyFe3ViV0lEPjgzMCsfFA0IBQMCAQAAAAAAAA=="
+  },
+  {
+   "id": "cant_do_01",
+   "event": "cant_do",
+   "text": "Простите, сэр, этого я пока не умею.",
+   "file": "voice/cant_do_01.ogg",
+   "durationMs": 2580,
+   "envFps": 50,
+   "env": "AABzvK/Dyse/qp6WiXVpdaimnIJ0bJWWjoB8eHh7dHGSpaKblH1uX0o2LiogFQ0JBQMCAQEAAAAAAAAAAJrV3tzZwrCVjba+s620ubm6ur+9uqWSeoqxs6OOemyGpKOclZWUko+Qj4mOjYyVj4mDgHtycWlhWVBJOzAfFA0IBQMC"
+  },
+  {
+   "id": "cant_do_02",
+   "event": "cant_do",
+   "text": "Пока не умею, сэр. Я пока учусь.",
+   "file": "voice/cant_do_02.ogg",
+   "durationMs": 2850,
+   "envFps": 50,
+   "env": "AAB5tcnUxa6diXOwx8zOysbIxsXLyc7MyczJxsbFzMnGwsG7ubexp5yOiY6SkIp3gJeSkIt0YlFCNiwdEgwIBQMCAQAAAAAAAAAAAAAAAAAAFWSXssTQ1tvXzribhaC2t6eUgWlcscHAvr7Avbmzq4hwZoabmJWNiJubj4B2hIqRj4qEfGxTNiMWDgkGBAI="
+  },
+  {
+   "id": "need_permission_01",
+   "event": "need_permission",
+   "text": "Простите, сэр, но нужные разрешения не обнаружены.",
+   "file": "voice/need_permission_01.ogg",
+   "durationMs": 3650,
+   "envFps": 50,
+   "env": "AABav8fI2drY0b21sKaUfXSOvd7bz7ejnLXQzLy0sK6ppp2cx8bDu7Wln4+AenFbSzssHBIMBwUDAgEAAAAAAABqqMTY3NvW1dHPy8nIztbW393d29vWyritpJ/H1dXW1dHOy7/C09PLu62xxcDS2NbLua+qqKabxtjb1tPPzdbU0s/RzszHwr+9xsvMzMrHt6ePiK7GysnHwr+qtL+9x7qtmZCdm5uamJycnpiAa04zIRUOCQUD"
+  },
+  {
+   "id": "permissions_missing_01",
+   "event": "permissions_missing",
+   "text": "Сэр, не все разрешения выданы.",
+   "file": "voice/permissions_missing_01.ogg",
+   "durationMs": 2690,
+   "envFps": 50,
+   "env": "AAAUQV50gX+RkIzLzs/Rz83Hr5mGdWhdT0M2JxkQCgcEAgEBAAAAAAAAAAAAAAAADFWCnJeem7Pi5OXj4NTT29rPw7a1vr7Hy8fCrqScmZWRyNnW0c3Hw8vIyMXKyMfGxMbEzszHvrrK2dbPuqCfpaSdnJeSkY2Lg3lqXVA7Kh8UDQgFAwIB"
+  },
+  {
+   "id": "cancel_01",
+   "event": "cancel",
+   "text": "Хорошо, сэр. Отбой.",
+   "file": "voice/cancel_01.ogg",
+   "durationMs": 1700,
+   "envFps": 50,
+   "env": "AAAACIG1wrO8ycnDrpuOh4F2jK+up5WJfnJwZ154dXR0YEs8KyEVDgkFAwIBAQAAAAAAAABMjcDJv6iYl42Ce4murqmglol4aVxJMycZEAoHBAIBAQ=="
+  },
+  {
+   "id": "cancel_02",
+   "event": "cancel",
+   "text": "Хорошо, сэр, отменяю.",
+   "file": "voice/cancel_02.ogg",
+   "durationMs": 2000,
+   "envFps": 50,
+   "env": "AAAAIqC4vbW7urWnkYV9dnBsoLKyr6KQhYB8eXSZmJCEb1xMPjAgFQ4JBhELBw4JBgx2r9TPspV+b5vF0M7Jwb20sqyjn5qWk5GKhXx1amJRR0VCOTQzKyEdExIOCQYDAgEBAA=="
+  },
+  {
+   "id": "cancel_03",
+   "event": "cancel",
+   "text": "Хорошо, сэр, отменяю.",
+   "file": "voice/cancel_03.ogg",
+   "durationMs": 2000,
+   "envFps": 50,
+   "env": "AAAAIqC4vbW7urWnkYV9dnBsoLKyr6KQhYB8eXSZmJCEb1xMPjAgFQ4JBhELBw4JBgx2r9TPspV+b5vF0M7Jwb20sqyjn5qWk5GKhXx1amJRR0VCOTQzKyEdExIOCQYDAgEBAA=="
+  },
+  {
+   "id": "confirm_ask_01",
+   "event": "confirm_ask",
+   "text": "Подтверждаете, сэр?",
+   "file": "voice/confirm_ask_01.ogg",
+   "durationMs": 1410,
+   "envFps": 50,
+   "env": "AACX0tK9oY6AdWRym6+61dXVy7+unZSGeXJzvtXRyMG8uLKsoYl0bWqlqpmPjYuIgXmUpZ6Ti3ZjWU1DOiwhGhELBwQDAgE="
+  },
+  {
+   "id": "confirm_ask_02",
+   "event": "confirm_ask",
+   "text": "Подтверждаете, сэр?",
+   "file": "voice/confirm_ask_02.ogg",
+   "durationMs": 1410,
+   "envFps": 50,
+   "env": "AACX0tK9oY6AdWRym6+61dXVy7+unZSGeXJzvtXRyMG8uLKsoYl0bWqlqpmPjYuIgXmUpZ6Ti3ZjWU1DOiwhGhELBwQDAgE="
+  },
+  {
+   "id": "confirm_ask_03",
+   "event": "confirm_ask",
+   "text": "Вы уверены, сэр?",
+   "file": "voice/confirm_ask_03.ogg",
+   "durationMs": 1220,
+   "envFps": 50,
+   "env": "AABTeJm60uHi397c2dXZ2c7Bt9Pv7ezq3NTX3dbOycK8tauZl5WUmZyalq63s7Ggk4V0X0k6KBoRCwcEAw=="
+  },
+  {
+   "id": "thanks_reply_01",
+   "event": "thanks_reply",
+   "text": "Рад помочь, сэр.",
+   "file": "voice/thanks_reply_01.ogg",
+   "durationMs": 1250,
+   "envFps": 50,
+   "env": "AABImqzBtMXU0tDNy76tk4ByamN5zs3LxL+5uLa0sqmTf29veYmFiYN7cY6Yk4+Fc2FQRTclGBAKBgQCAQEA"
+  },
+  {
+   "id": "thanks_reply_02",
+   "event": "thanks_reply",
+   "text": "Всегда пожалуйста, сэр.",
+   "file": "voice/thanks_reply_02.ogg",
+   "durationMs": 1510,
+   "envFps": 50,
+   "env": "AABKgH+CjsbGv6+uq6ikwuLb1cesm4yzyMjHvK6mpb7Ewb23trCxn5uVjnxiTmCak46RkZOZiZiXl4Z4al9TQTEhGA8LBwQDAgEAAA=="
+  },
+  {
+   "id": "thanks_reply_03",
+   "event": "thanks_reply",
+   "text": "Рад стараться, сэр.",
+   "file": "voice/thanks_reply_03.ogg",
+   "durationMs": 1400,
+   "envFps": 50,
+   "env": "AABViZ6fqba8urium4Nzcn+KhGhQl8TDw8fExMfEv7CVgnFsbmxrf352bnBwcG9oZpCQoZWDaFZFOC0kFw8KBgQCAQEAAA=="
+  },
+  {
+   "id": "bye_01",
+   "event": "bye",
+   "text": "До связи, сэр.",
+   "file": "voice/bye_01.ogg",
+   "durationMs": 1330,
+   "envFps": 50,
+   "env": "AAA7doiAw93c3NrOuqymo5ySkbaytc7MyMW+sJ2Pi5KUjIWEgoJ+eHaNjYiBe3RpY1ZIPDAnHBQUDQgJBQMCAQEAAA=="
+  },
+  {
+   "id": "bye_02",
+   "event": "bye",
+   "text": "Всего доброго, сэр.",
+   "file": "voice/bye_02.ogg",
+   "durationMs": 1380,
+   "envFps": 50,
+   "env": "AAA+O1Vqf5WWqN3Z0svc29rYxLO+5OTl2cKwrbuy0M7Nx8K9tKKWj4uHfIusp6KRf21eUUM7PDIuJiIgFQ0JBQMCAQEA"
+  },
+  {
+   "id": "goodnight_01",
+   "event": "goodnight",
+   "text": "Спокойной ночи, сэр!",
+   "file": "voice/goodnight_01.ogg",
+   "durationMs": 1490,
+   "envFps": 50,
+   "env": "AAAqVV5UPSdstdHNw6+TgYjS3d7h4NjQy87P1dLO0MzIxsW/saKSi4N8eIN/hZCYnKCZjKenoZOJb2NaTUQ4LBwYEQ0IBQMCAQAA"
+  },
+  {
+   "id": "how_are_you_01",
+   "event": "how_are_you",
+   "text": "Все системы в норме, сэр. Спасибо, что спросили.",
+   "file": "voice/how_are_you_01.ogg",
+   "durationMs": 2990,
+   "envFps": 50,
+   "env": "AAAaXoOUmpG82N/cyLWonbC0rKGahnJeebfk3tbLwLu7xr+woJ6mqrm6wsXGurmwo6CbnJmLfnh1endujp6YiHlnU0AvJRgPCgYEAgEBAAAAAABaamNAKlrT19PGrp6ZkLrRx7WwvbGZiHVoXHGdjIF8ZU0+RI+Lp52Gg4F/e3VpiIN0YlxWUEtDODEpIBgPCgYEAgEB"
+  },
+  {
+   "id": "who_are_you_01",
+   "event": "who_are_you",
+   "text": "Я Джарвис, ваш персональный помощник, сэр.",
+   "file": "voice/who_are_you_01.ogg",
+   "durationMs": 3190,
+   "envFps": 50,
+   "env": "AAAla4Owv8ni4ODf3dfHurCwtrHF3t3a1My7t62hm6exqJmQioeGhH5xY1NDOzYoGhEODAkGAwIVJl2Yv7zM29nX08u9sKeajIB3o9nbzsO1rKqnoarc19LHwcHAv8TAvLq8u7+9vsG5o42AxNLW0MvKzM/Qyb20qaOfjoKQs7Srlo2HnZ+eq6mhs8LRy72xnYyAdWlaSj0vHhMMCAUDAg=="
+  },
+  {
+   "id": "free_talk_refuse_01",
+   "event": "free_talk_refuse",
+   "text": "Сэр, на данный момент нет возможности свободного общения. Есть другие пожелания?",
+   "file": "voice/free_talk_refuse_01.ogg",
+   "durationMs": 5644,
+   "envFps": 50,
+   "env": "AAA3bIeUkI3W3t/c2dLIt6mWiH9zalxVUU1GR0I8OD0xJBcRa6e7x83RzcvGvrKlntDe29TNxMHByM7S2NTRzs/Pz8zHxsXJ0tDPz87NzMm6oJCDgHdyncnU1NzZ29zZzbuklIueuNjY1Ma1qpy1xcfP0M7EuKmblbbFysS1qIt5eLjU0MO2rZ6Zwdbb2cm9s83V2dPAtae5yM3LxMjR0M/MuqeVjJiXm5qUtMbFwbm3s7CurbCvrKKZgm9eWFNTTUpAPDg5OjcwKBp6v9HZ3d7m7PHr3cq6q6KWj5HI6Nzb4uHZy7250+Pw8vfx3se8r97q48q6s8bRzMvHxMK8wL26urCspqOknpWPhHpwZVVJQDoyMTg6JhgQCg=="
+  },
+  {
+   "id": "call_start_01",
+   "event": "call_start",
+   "text": "Набираю, сэр.",
+   "file": "voice/call_start_01.ogg",
+   "durationMs": 1250,
+   "envFps": 50,
+   "env": "AABUiaCsrLK8uKqcrsrM0M/GxMTFzsvHwb68uLOsn5mUj42Iho6ppZqVh2xkV1JIOCQZEAoHBAIBAQAAAAAA"
+  },
+  {
+   "id": "call_who_01",
+   "event": "call_who",
+   "text": "Кому звонить, сэр?",
+   "file": "voice/call_who_01.ogg",
+   "durationMs": 1300,
+   "envFps": 50,
+   "env": "AAAAH6zIxsjAvLu9wr+5raGYlau1x8rKyMO/vsPAvLapk4F2jKKhmZGDqKiwqJ2Jcl9RRDEgFA0IBQMCAQEAAAA="
+  },
+  {
+   "id": "call_not_found_01",
+   "event": "call_not_found",
+   "text": "Контакт не найден, сэр. Скажите, как он записан, и я запомню.",
+   "file": "voice/call_not_found_01.ogg",
+   "durationMs": 4380,
+   "envFps": 50,
+   "env": "AABFvtPRy8TBvrqqnoeE09nXzrummpKKf3fD1tfW2trZ2djX29ra19HMxrSln6iopqOgnY+OjZiWlpSZwMHBubKbhm9bTz0vIRsVDwkGBAoHBAMBAQAAAAAAAAAAXIOiqpFug8Pa2trXy7murb25r6CQi4e+uaGMeXjR4+jfvKCRptnY1tHOx7+8w9jY1MaxnY5+ydTOvrClop+Xk6mnp6eqpp+IbVJENYHM4+nh2dHM08/MyMK2qafP1tK+qpZ/a2e30M7Dt7GnpKCcnpqYkIqBalA+KRwSDAcF"
+  },
+  {
+   "id": "app_open_01",
+   "event": "app_open",
+   "text": "Открываю, сэр.",
+   "file": "voice/app_open_01.ogg",
+   "durationMs": 1210,
+   "envFps": 50,
+   "env": "AABnr8nGrJN9clxXXsa8zOXi18rGzNHQzs3FwbmuoJCHhX9+e3Kot7CvnIZ3X09BLiEXEhILBwQDAgEAAA=="
+  },
+  {
+   "id": "app_not_found_01",
+   "event": "app_not_found",
+   "text": "Не нашёл такого приложения, сэр.",
+   "file": "voice/app_not_found_01.ogg",
+   "durationMs": 2150,
+   "envFps": 50,
+   "env": "AABblqW2vcXM2tfV0c/Z19zUxbetp6KcmMnS1tLMv6iTgJPMyK+XgnCtycrJzNXVybSgj4+uvsPKysnJy8/LvKyiqry4t7KqqaKrpqyop52ZmpqZk3+qvr7BtqWPgG1iVUY4KBoRCwcEAwEB"
+  },
+  {
+   "id": "youtube_01",
+   "event": "youtube",
+   "text": "Открываю YouTube, сэр.",
+   "file": "voice/youtube_01.ogg",
+   "durationMs": 1780,
+   "envFps": 50,
+   "env": "AABLlr/d2Luljn5uapPEvtPQysrI0tLP0tLQz8nFycbAu7q1s767pYVwW33FxMOxnI58fYaOi4mAnaawp5+EdWxhVFJQP0I8NC0eEwwREAoJBgMCAQEAAAAA"
+  },
+  {
+   "id": "weather_01",
+   "event": "weather",
+   "text": "Вот прогноз погоды, сэр.",
+   "file": "voice/weather_01.ogg",
+   "durationMs": 1710,
+   "envFps": 50,
+   "env": "AAAxeJaYnqrA0tvWxaKQfHNqjLq2ysjFuKitsrnEyMfDu66onox9cIPT2tfHs6Kcs724tK+elJ2oq5eQj4yJgXeHo5+fmod9b2FXSTUmGBAKBgQCAQE="
+  },
+  {
+   "id": "no_internet_01",
+   "event": "no_internet",
+   "text": "Сэр, нет подключения к интернету.",
+   "file": "voice/no_internet_01.ogg",
+   "durationMs": 2670,
+   "envFps": 50,
+   "env": "AAAcTHSFhYaBrNHZ2NPNyLOchnNiV01KQTcoHRgRCwcEAwIdGzaBoKm4ucTEx8bMw6iNfnFglMG1m4h6aVmEp8DDv7CXhIKOipK4xsa9t7e7u7+7o4x6bK66s6+nkX1lr8rKubWroqissrGqppeBcG56gXhqYVJDRz0wJBcPCQYEAgEBAAA="
+  },
+  {
+   "id": "volume_up_01",
+   "event": "volume_up",
+   "text": "Прибавляю громкость.",
+   "file": "voice/volume_up_01.ogg",
+   "durationMs": 1500,
+   "envFps": 50,
+   "env": "AABUtarKyci9q6a6vcLEwbets8PDyc7Sz87b39nWybirl4y0xb3IxMbKzMS+t6WVhnVmgJePh4OBfXRaQTI+OjEgGA8KBgQCAQEA"
+  },
+  {
+   "id": "volume_down_01",
+   "event": "volume_down",
+   "text": "Убавляю громкость.",
+   "file": "voice/volume_down_01.ogg",
+   "durationMs": 1230,
+   "envFps": 50,
+   "env": "AABruMzBt7HU1tXV0cfBwcbJ0dvb4ubj3djQuaCYvMnFzMm9s6ifi3NiXIKJenFzcWhMOjMwJBcPCgYEAgE="
+  },
+  {
+   "id": "flash_on_01",
+   "event": "flash_on",
+   "text": "Фонарик включён, сэр.",
+   "file": "voice/flash_on_01.ogg",
+   "durationMs": 1640,
+   "envFps": 50,
+   "env": "AAAOO01ixczOzsvIyMbGxcbGucLJxKmPfGVcVUk5Y83Sz9Xg3sWonqGYkJS5vreypp6PhYqLlZGLgJqlopqMbVdFOCcbEQsHBAMCAQAAAAAAAA=="
+  },
+  {
+   "id": "flash_off_01",
+   "event": "flash_off",
+   "text": "Фонарик выключен, сэр.",
+   "file": "voice/flash_off_01.ogg",
+   "durationMs": 1790,
+   "envFps": 50,
+   "env": "AAAAEB2PtL/NzMW8tLDBwcDJwL3IxbmvnYyFmqm2ycWxno2JkpKrp5eGf3uEgYqXmZmSjoaIj5GPkIaWvLrEv6yWiHRgUkc5KB4ZFBILBwUDAgEAAAAAAAAA"
+  },
+  {
+   "id": "msg_incoming_01",
+   "event": "msg_incoming",
+   "text": "Сэр, у вас новое сообщение.",
+   "file": "voice/msg_incoming_01.ogg",
+   "durationMs": 2330,
+   "envFps": 50,
+   "env": "AAAoZ4OZn5nB4Ojj3tbPw7CklYBwZFtKSEU+NzEmHhYQHnunvMbFw8TDx8fDva2dkIiEeZGmprSytrSwsLK5xsTDuKWYj4uAsL7DwcCynIl/fH6IiYOevsW/uKqin5qZmJeOiHlwZlpNRDgoGhYOCQYDAgEB"
+  }
+ ]
+}

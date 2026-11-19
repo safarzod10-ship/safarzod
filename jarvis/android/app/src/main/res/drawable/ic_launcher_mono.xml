@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Монохромная версия для тематических иконок Android 13+ -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:pivotX="256" android:pivotY="256" android:scaleX="0.62" android:scaleY="0.62">
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="18" android:strokeLineCap="round"
+            android:pathData="M256,106 A150,150 0 0,1 385.9,181 M401.1,214 A150,150 0 0,1 321,391.3 M288,402.6 A150,150 0 0,1 111,300 M106.7,266 A150,150 0 0,1 222,110" />
+        <group android:pivotX="256" android:pivotY="256" android:rotation="-28">
+            <path android:strokeColor="#FFFFFFFF" android:strokeWidth="11" android:strokeLineCap="round"
+                android:pathData="M146,256 A110,40 0 0,0 366,256" />
+        </group>
+        <group android:pivotX="256" android:pivotY="256" android:rotation="18">
+            <path android:strokeColor="#FFFFFFFF" android:strokeWidth="10" android:strokeLineCap="round"
+                android:pathData="M256,152 A34,104 0 0,1 256,360" />
+        </group>
+        <path android:fillColor="#FFFFFFFF" android:pathData="M256,256 m-34,0 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0" />
+    </group>
+</vector>
