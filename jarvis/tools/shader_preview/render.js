@@ -22,7 +22,7 @@ function page(mode, state, time, W, H) {
 <script>
 const MODE=${JSON.stringify(mode)};
 const S=${JSON.stringify(s)};
-const T=${time};
+const T=${time};const CY=${process.env.CY||'(W===H?0.5:0.40)'};const RAD=${process.env.RAD||'(W===H?0.30:0.21)'};
 const common=${JSON.stringify(read('common.glsl'))};
 const fr={plasma:${JSON.stringify(read('core_plasma.frag'))},gyro:${JSON.stringify(read('core_gyro.frag'))},glow:${JSON.stringify(read('core_glow.frag'))}};
 const pv=${JSON.stringify(read('particles.vert'))};
@@ -40,7 +40,7 @@ function setU(p,steps){
   gl.uniform2f(u('uRes'),W,H);gl.uniform1f(u('uTime'),T);gl.uniform1f(u('uLevel'),S.level);
   gl.uniform1f(u('uEnergy'),S.energy);gl.uniform1f(u('uThink'),S.think);
   gl.uniform3fv(u('uColA'),S.colA);gl.uniform3fv(u('uColB'),S.colB);gl.uniform2f(u('uRot'),0.0,0.0);
-  gl.uniform3f(u('uFrame'),W*0.5,H*0.60,Math.min(W,H)*0.21);gl.uniform1f(u('uIntro'),1.0);
+  gl.uniform3f(u('uFrame'),W*0.5,H*(1-CY),Math.min(W,H)*RAD);gl.uniform1f(u('uIntro'),1.0);
   gl.uniform1i(u('uSteps'),steps);gl.uniform1f(u('uPointScale'),W/1080*2.6);
 }
 try{

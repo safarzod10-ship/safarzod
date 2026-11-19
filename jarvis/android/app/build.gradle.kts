@@ -59,17 +59,17 @@ android {
         compose = true
         buildConfig = true
     }
-    androidResources {
-        // модель Vosk читается напрямую из распакованной копии, её не нужно сжимать дважды
-        noCompress += listOf("fst", "mdl", "ie", "dubm", "mat")
-    }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
         jniLibs.useLegacyPackaging = false
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
-        unitTests.all { it.systemProperty("robolectric.pixelCopyRenderMode", "hardware") }
+        unitTests.all {
+            it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+            it.systemProperty("roborazzi.test.record", "true")
+            it.maxHeapSize = "3g"
+        }
     }
 }
 
@@ -88,6 +88,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.animation:animation")
     implementation("androidx.activity:activity-compose:1.12.2")
     implementation("androidx.core:core-ktx:1.17.0")
@@ -105,6 +106,7 @@ dependencies {
     implementation("com.google.mediapipe:tasks-genai:0.10.29")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.16")
