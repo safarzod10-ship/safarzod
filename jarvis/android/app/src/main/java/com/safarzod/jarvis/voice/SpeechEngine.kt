@@ -272,6 +272,8 @@ class SpeechEngine(private val context: Context) {
                     recording = true
                     failedSince = 0L
                     reportedFailure = false
+                    // после переоткрытия старый звук в буфере уже не относится к делу
+                    ringFilled = 0
                 }
 
                 val rec = mic!!.rec

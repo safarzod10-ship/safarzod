@@ -248,6 +248,7 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
     private suspend fun complete(user: String, temperature: Float, timeoutMs: Long): String? = withContext(Dispatchers.Default) {
         if (engine == null) { warmUp(); return@withContext null }
         if (!lock.tryLock()) return@withContext null
+        var handOff = false
         try {
             val llm = engine ?: return@withContext null // могли выгрузить, пока ждали
             runCatching {
@@ -263,20 +264,29 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
                                 .build()
                         )
                         .build()
-                    LlmInferenceSession.createFromOptions(llm, so).use { s ->
-                        s.addQueryChunk(user)
-                        val future = s.generateResponseAsync()
-                        try {
-                            future.get(timeoutMs, TimeUnit.MILLISECONDS)
-                        } catch (e: TimeoutException) {
-                            runCatching { s.cancelGenerateResponseAsync() }
-                            runCatching { future.get(3, TimeUnit.SECONDS) }
-                            null
+                    val s = LlmInferenceSession.createFromOptions(llm, so)
+                    s.addQueryChunk(user)
+                    val future = s.generateResponseAsync()
+                    try {
+                        future.get(timeoutMs, TimeUnit.MILLISECONDS).also { s.close() }
+                    } catch (e: TimeoutException) {
+                        runCatching { s.cancelGenerateResponseAsync() }
+                        // модель ещё считает: замок и сессию отпустим только когда генерация реально закончится,
+                        // иначе выгрузка модели посреди работы уронит нативный код
+                        handOff = true
+                        scope.launch {
+                            runCatching { future.get() }
+                            runCatching { s.close() }
+                            lock.unlock()
                         }
+                        null
+                    } catch (e: Exception) {
+                        runCatching { s.close() }
+                        throw e
                     }
             }.onFailure { Log.e(TAG, "generate", it) }.getOrNull()
         } finally {
-            lock.unlock()
+            if (!handOff) lock.unlock()
         }
     }
 

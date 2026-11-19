@@ -131,6 +131,7 @@ class Engine(
         val ok = speech.load()
         if (!ok) { _ui.update { it.copy(phase = Phase.OFF, notice = "Распознавание речи недоступно") }; return }
         micOn = true
+        micRestarts = 0
         speech.start()
         llm.warmUp()
         // приветствуем голосом один раз за утро/день/вечер/ночь, а не при каждом открытии приложения
@@ -157,7 +158,13 @@ class Engine(
     /** Выполнить шаг диалога, отменив предыдущий (одновременно говорит только одна фраза). */
     private fun step(block: suspend () -> Unit) {
         job?.cancel()
-        job = scope.launch { block() }
+        job = scope.launch {
+            block()
+            // шаг закончился, не перейдя ни к ответу, ни к слушанию (например, нажали на устаревшую карточку
+            // во время речи) — возвращаемся в ожидание, иначе слово «Джарвис» перестанет работать
+            val ph = _ui.value.phase
+            if (ph == Phase.SPEAKING || ph == Phase.THINKING) standby()
+        }
     }
 
     // ------------------------------------------------------------------ входы
@@ -167,7 +174,8 @@ class Engine(
         when (_ui.value.phase) {
             Phase.SPEAKING -> step { delay(120); listen(followUp = true) }
             Phase.LISTENING, Phase.THINKING -> { job?.cancel(); speech.pause(); player.sfx(Sfx.END, 0.5f); standby() }
-            Phase.OFF -> com.safarzod.jarvis.service.JarvisService.start(context)
+            Phase.OFF -> if (com.safarzod.jarvis.service.JarvisService.running) scope.launch { boot(greet = false) }
+                else com.safarzod.jarvis.service.JarvisService.start(context)
             Phase.LOADING -> notice("Микрофон ещё загружается…")
             Phase.STANDBY -> if (micOn) step { listen(followUp = false) } else com.safarzod.jarvis.service.JarvisService.start(context)
         }
@@ -181,6 +189,18 @@ class Engine(
     }
 
     fun onAction(a: UiAction) {
+        // действия без голосового ответа не должны обрывать текущую фразу
+        if (a == UiAction.Dismiss) { dismiss(); return }
+        if (a is UiAction.EditDraft) {
+            (pending as? Pending.SmsConfirm)?.let { p ->
+                val t = a.text.trim()
+                if (t.isNotEmpty()) {
+                    pending = p.copy(text = t)
+                    _ui.update { it.copy(card = Card.SmsDraft(p.contact.name, p.contact.phone, t, p.via, false)) }
+                }
+            }
+            return
+        }
         step {
             when (a) {
                 is UiAction.PickContact -> {
@@ -216,9 +236,10 @@ class Engine(
     }
 
     fun onCallState(active: Boolean) {
+        if (active == inCall) return // первое событие IDLE при подписке — не повод что-то менять
         inCall = active
         if (active) { player.stop(); speech.pause(); _ui.update { it.copy(phase = Phase.STANDBY, partial = "") } }
-        else scope.launch { delay(800); standby() }
+        else scope.launch { delay(800); if (!inCall && _ui.value.phase == Phase.STANDBY) standby() }
     }
 
     fun onReminder(text: String) {
@@ -274,6 +295,7 @@ class Engine(
     /** Микрофон упал — пробуем поднять заново (не чаще 3 раз в минуту). */
     private fun restartMic() {
         if (!micOn) return
+        if (speech.alive.value) return // поток жив и сам переподключает микрофон — ждём
         val now = System.currentTimeMillis()
         if (now - micRestartWindow > 60_000) { micRestartWindow = now; micRestarts = 0 }
         if (micRestarts >= 3) {
@@ -353,7 +375,7 @@ class Engine(
             cmd !is Command.Remember && cmd !is Command.Repeat
         // в коротких ответах (выбор, «да/нет», время) любая распознанная команда — это уже новая просьба
         val isStrong = cmd !is Command.Unknown && cmd !is Command.Yes && cmd !is Command.No &&
-            cmd !is Command.Choose && cmd !is Command.Repeat
+            cmd !is Command.Choose && cmd !is Command.Repeat && cmd !is Command.WebSearch
         when (p) {
             Pending.CallWho -> {
                 if (isNewCommand) { setPending(null); return false }

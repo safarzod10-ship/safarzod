@@ -91,7 +91,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (app.settings.onboarded.value) JarvisService.start(this, greet = !JarvisService.running)
+        if (app.settings.onboarded.value) {
+            JarvisService.start(this, greet = !JarvisService.running)
+            // разрешения могли выдать в системных настройках — пусть служба перепроверит
+            JarvisService.refresh(this)
+        }
     }
 
     override fun onStop() {
