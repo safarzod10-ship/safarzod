@@ -305,7 +305,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [call, demoStep]);
 
   const payDeal = useCallback(async (id: number) => {
-    if (!live) { showToast('Демо: оплата прошла'); demoStep(id, 'pay'); return; }
+    if (!live) { showToast('Демо: оплата сымитирована. В Telegram откроется настоящий счёт @CryptoBot'); demoStep(id, 'pay'); return; }
     const inv = await call(() => api<{ url: string; miniAppUrl?: string; amount: string }>(`/deals/${id}/pay`, { method: 'POST' }));
     openTg(inv.url);
   }, [call, showToast, demoStep]);

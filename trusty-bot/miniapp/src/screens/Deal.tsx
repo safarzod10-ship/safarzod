@@ -63,7 +63,7 @@ function Stars({ value, onChange }: { value: number; onChange(v: number): void }
 
 export default function DealView({ id }: { id: number }) {
   const nav = useNav();
-  const { deals, loadDeal, checkDeal, payDeal, dealAct, resolveDeal, payCfg, showToast } = useStore();
+  const { deals, loadDeal, checkDeal, payDeal, dealAct, resolveDeal, payCfg, showToast, live } = useStore();
   const [sheet, setSheet] = useState<null | 'submit' | 'accept' | 'dispute' | 'cancel' | 'review' | 'resolve'>(null);
   const [text, setText] = useState('');
   const [rating, setRating] = useState(5);
@@ -118,6 +118,7 @@ export default function DealView({ id }: { id: number }) {
         <Stepper status={d.status} />
       </div>
 
+      {!live && <div className="mt"><Note tone="amber" icon="info">Это демо в браузере: деньги не списываются. Настоящая оплата через @CryptoBot работает в боте @mytrusty_bot.</Note></div>}
       {h && <div className="mt"><Note tone={h.tone} icon={d.status === 'dispute' ? 'flag' : d.status === 'done' ? 'check' : 'shield'}>{h.text}</Note></div>}
       {waiting && d.status === 'awaiting_payment' && (
         <div className="mt-s"><Note tone="blue" icon="clock">Ждём подтверждение оплаты от @CryptoBot. Обычно это несколько секунд после оплаты.</Note></div>

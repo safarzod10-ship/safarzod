@@ -101,6 +101,7 @@ if [ -n "$CP_TOKEN" ]; then
   fi
 fi
 FEE=$(get TRUSTY_FEE_PERCENT); [ -n "$FEE" ] || FEE=5
+[ -n "$CP_TOKEN" ] || echo "ВНИМАНИЕ: без токена Crypto Pay оплата в Trusty выключена. Запустите trusty update ещё раз и введите токен."
 umask 077
 cat > $ENVF <<EOF
 TRUSTY_BOT_TOKEN=$TOKEN

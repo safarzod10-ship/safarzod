@@ -1,6 +1,7 @@
 """ASGI entry point: API + Telegram bot (long polling) in one process. Run with a single worker."""
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
@@ -82,6 +83,28 @@ app.include_router(router)
 app.include_router(admin)
 
 
+def _version() -> str:
+    """Short git commit of the deployed code, read straight from .git (no git binary needed)."""
+    git = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".git")
+    try:
+        head = open(os.path.join(git, "HEAD")).read().strip()
+        if not head.startswith("ref: "):
+            return head[:7]
+        ref = head[5:]
+        path = os.path.join(git, ref)
+        if os.path.exists(path):
+            return open(path).read().strip()[:7]
+        for line in open(os.path.join(git, "packed-refs")):
+            if line.strip().endswith(ref):
+                return line[:7]
+    except OSError:
+        pass
+    return "unknown"
+
+
+VERSION = _version()
+
+
 @app.get("/api/health")
 async def health():
-    return {"ok": True}
+    return {"ok": True, "version": VERSION, "payments": pay.enabled}
