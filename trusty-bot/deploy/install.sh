@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Trusty installer / updater for Ubuntu (run as root). Safe to run again: it updates the code and keeps data and settings.
 #
-#   curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/telegram-guarantor-dev-search-bot-t1i99z/trusty-bot/deploy/install.sh | bash
+#   curl -4 -fsSL --connect-timeout 15 -m 120 -o /tmp/trusty-install.sh \
+#     https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/telegram-guarantor-dev-search-bot-t1i99z/trusty-bot/deploy/install.sh \
+#     && bash /tmp/trusty-install.sh
 #
+# Every network step has a timeout and uses IPv4 (a broken IPv6 route made downloads hang without a word).
 # What it touches: packages git, python3-venv, postgresql; user "trusty"; /opt/trusty, /etc/trusty, /var/lib/trusty;
 # systemd units trusty.service and trusty-backup.timer; /etc/caddy/trusty.caddy plus one "import" line in the Caddyfile.
 # Existing Caddy sites are left as they are. The Caddyfile is backed up first and restored if the new config is invalid.
@@ -18,6 +21,9 @@ ENVF=/etc/trusty/trusty.env
 CADDYFILE=/etc/caddy/Caddyfile
 
 say() { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
+note() { printf '    %s\n' "$*"; }
+GITNET=(-c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20)
+CURL=(curl -4 -fsSL --connect-timeout 15 --retry 2)
 die() { printf '\n\033[1;31mОшибка: %s\033[0m\n' "$*" >&2; exit 1; }
 rand() { python3 -c "import secrets,sys; print(secrets.token_hex(int(sys.argv[1])))" "$1"; }
 
@@ -30,8 +36,16 @@ fi
 
 say "1/8 Пакеты"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git python3-venv python3-pip postgresql >/dev/null
+NEED=""
+for p in git python3-venv python3-pip postgresql; do dpkg -s "$p" >/dev/null 2>&1 || NEED="$NEED $p"; done
+if [ -n "$NEED" ]; then
+  APT=(-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=2 -o Acquire::ForceIPv4=true)
+  note "устанавливаю:$NEED"
+  timeout 600 apt-get "${APT[@]}" update -qq || note "apt update с ошибкой, продолжаю"
+  timeout 900 apt-get "${APT[@]}" install -y -qq $NEED >/dev/null || die "не удалось установить пакеты:$NEED"
+else
+  note "всё нужное уже установлено"
+fi
 
 say "2/8 Пользователь и папки"
 id trusty >/dev/null 2>&1 || useradd --system --home-dir $APP --no-create-home --shell /usr/sbin/nologin trusty
@@ -41,20 +55,41 @@ chmod 755 $APP
 chmod 700 /etc/trusty
 
 say "3/8 Код из GitHub"
+fetch_tarball() {
+  note "git не ответил, качаю архив кода (около 200 МБ, сохраняется только папка trusty-bot)…"
+  local tmp; tmp=$(mktemp -d)
+  "${CURL[@]}" -m 900 "https://codeload.github.com/safarzod10-ship/safarzod/tar.gz/refs/heads/$BRANCH" \
+    | tar -xz -C "$tmp" --wildcards '*/trusty-bot/*' || { rm -rf "$tmp"; return 1; }
+  mkdir -p $APP/src
+  rm -rf $APP/src/trusty-bot.new && mv "$tmp"/*/trusty-bot $APP/src/trusty-bot.new
+  rm -rf $APP/src/trusty-bot && mv $APP/src/trusty-bot.new $APP/src/trusty-bot
+  rm -rf "$tmp"
+}
 if [ -d $APP/src/.git ]; then
-  git -C $APP/src fetch -q --depth 1 origin "$BRANCH"
-  git -C $APP/src reset -q --hard FETCH_HEAD
+  note "обновляю…"
+  { timeout 180 git "${GITNET[@]}" -C $APP/src fetch -4 -q --depth 1 origin "$BRANCH" && git -C $APP/src reset -q --hard FETCH_HEAD; } \
+    || fetch_tarball || die "не удалось скачать код. Проверьте связь: curl -4 -I https://github.com"
 else
   rm -rf $APP/src
-  git clone -q --depth 1 --filter=blob:none --sparse -b "$BRANCH" "$REPO" $APP/src
-  git -C $APP/src sparse-checkout set trusty-bot
+  note "скачиваю…"
+  { timeout 300 git "${GITNET[@]}" clone -q --depth 1 --filter=blob:none --sparse -b "$BRANCH" "$REPO" $APP/src \
+      && git -C $APP/src sparse-checkout set trusty-bot; } \
+    || fetch_tarball || die "не удалось скачать код. Проверьте связь: curl -4 -I https://github.com"
 fi
-echo "версия: $(git -C $APP/src log -1 --format='%h %cd' --date=format:'%d.%m %H:%M')"
+note "версия: $(git -C $APP/src log -1 --format='%h от %cd' --date=format:'%d.%m %H:%M' 2>/dev/null || echo 'из архива')"
 
 say "4/8 Python-окружение"
 [ -x $APP/venv/bin/python ] || python3 -m venv $APP/venv
-$APP/venv/bin/pip install -q --upgrade pip
-$APP/venv/bin/pip install -q --only-binary :all: -r $SRC/server/requirements.txt
+REQ_HASH=$(sha256sum $SRC/server/requirements.txt | cut -c1-16)
+if [ "$(cat $APP/venv/.requirements 2>/dev/null || true)" != "$REQ_HASH" ]; then
+  note "ставлю зависимости (1–3 минуты)…"
+  PIP=(--timeout 30 --retries 3 --disable-pip-version-check)
+  timeout 900 $APP/venv/bin/pip install -q "${PIP[@]}" --only-binary :all: -r $SRC/server/requirements.txt \
+    || die "pip не смог поставить зависимости (проверьте доступ к pypi.org)"
+  echo "$REQ_HASH" > $APP/venv/.requirements
+else
+  note "зависимости не изменились"
+fi
 
 say "5/8 База данных PostgreSQL"
 systemctl enable -q --now postgresql
@@ -135,12 +170,22 @@ Persistent=true
 WantedBy=timers.target
 EOF
 cat > /usr/local/bin/trusty <<EOF
-#!/bin/sh
+#!/bin/bash
 # trusty admins | admin-remove <id> | unban <id> | stats | logs | restart | update
 case "\$1" in
   logs) exec journalctl -u trusty -n 100 -f ;;
   restart) exec systemctl restart trusty ;;
-  update) exec bash -c "curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/$BRANCH/trusty-bot/deploy/install.sh | bash" ;;
+  update)
+    echo "Скачиваю обновление с GitHub…"
+    if timeout 180 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 -C $APP/src fetch -4 -q --depth 1 origin "$BRANCH" \\
+        && git -C $APP/src reset -q --hard FETCH_HEAD; then
+      exec bash $SRC/deploy/install.sh
+    fi
+    echo "git не ответил, пробую скачать установщик напрямую…"
+    curl -4 -fsSL --connect-timeout 15 -m 120 -o /tmp/trusty-install.sh \\
+      "https://raw.githubusercontent.com/safarzod10-ship/safarzod/$BRANCH/trusty-bot/deploy/install.sh" \\
+      && exec bash /tmp/trusty-install.sh
+    echo "Не удалось связаться с GitHub. Проверьте связь: curl -4 -I https://github.com"; exit 1 ;;
 esac
 set -a; . $ENVF; set +a
 cd $SRC/server && exec $APP/venv/bin/python -m trusty.cli "\$@"
@@ -177,6 +222,7 @@ else
   echo "конфиг Caddy не изменился"
 fi
 OK=""
+note "проверяю https://$DOMAIN (до 2 минут, пока выпускается сертификат)…"
 for i in $(seq 1 40); do
   if curl -fs "https://$DOMAIN/api/health" >/dev/null 2>&1; then OK=1; break; fi
   sleep 3
