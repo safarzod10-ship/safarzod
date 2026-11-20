@@ -64,6 +64,7 @@ async def me_payload(s: AsyncSession, me: User) -> dict:
     p = await s.get(DevProfile, me.id)
     profile = (await dev_payloads(s, [(p, me)]))[0] if p else None
     return {"id": str(me.id), "name": me.name, "username": me.username, "role": me.role, "isAdmin": me.is_admin,
+            "onboarded": me.onboarded,
             "devForm": p.moderation if p else "none", "profile": profile,
             "moderationNote": p.moderation_note if p else None}
 
@@ -103,12 +104,16 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
 
 
 class MePatch(BaseModel):
-    role: str = Field(pattern="^(client|dev)$")
+    role: str | None = Field(default=None, pattern="^(client|dev)$")
+    onboarded: bool | None = None
 
 
 @router.patch("/me")
 async def patch_me(body: MePatch, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    me.role = body.role
+    if body.role:
+        me.role = body.role
+    if body.onboarded is not None:
+        me.onboarded = body.onboarded
     await s.commit()
     return await me_payload(s, me)
 

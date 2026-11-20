@@ -292,3 +292,64 @@ button.cell:active { background: var(--surface-2); }
 .center { text-align: center; }
 .mt { margin-top: 16px; }
 .mt-s { margin-top: 10px; }
+
+/* ---------------------------------------------------------------- role switch */
+.hello-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.role-pill { flex: none; margin-top: 4px; height: 32px; padding: 0 11px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow);
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--primary); }
+.roles { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.role { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: var(--r); background: var(--surface); box-shadow: var(--shadow);
+  border: 1.5px solid transparent; text-align: left; width: 100%; transition: border-color .15s, background-color .15s; }
+.role.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary-soft) 55%, var(--surface)); }
+.role-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.role-t b { font-size: 16px; }
+.role-t span { color: var(--muted); font-size: 13.5px; line-height: 1.35; }
+.role-check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: flex; align-items: center; justify-content: center; color: #fff; }
+.role.on .role-check { background: var(--primary); border-color: var(--primary); }
+button.note { font: inherit; }
+
+/* ---------------------------------------------------------------- onboarding */
+.ob { position: fixed; inset: 0; background: var(--bg); overflow: hidden; display: flex; flex-direction: column; animation: fade .35s; }
+.ob-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 0; min-height: 44px; max-width: 560px; width: 100%; margin: 0 auto; }
+.ob-dots { display: flex; gap: 6px; }
+.ob-dots i { width: 7px; height: 7px; border-radius: 4px; background: var(--line); transition: width .3s, background-color .3s; }
+.ob-dots i.past { background: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+.ob-dots i.on { width: 22px; background: var(--primary); }
+.ob-skip { color: var(--muted); font-size: 14px; font-weight: 500; padding: 6px 2px; }
+.ob-track { flex: 1; display: flex; transition: transform .45s cubic-bezier(.2, .8, .2, 1); max-width: 560px; width: 100%; margin: 0 auto; }
+.ob-slide { flex: 0 0 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 24px calc(110px + var(--safe-b)); overflow-y: auto; }
+.ob-art { flex: 1; min-height: 230px; max-height: 340px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.ob-art.small { flex: 0 0 auto; min-height: 0; padding: 18px 0 6px; }
+.ob-slide h1 { margin: 6px 0 10px; font-size: 25px; line-height: 1.15; letter-spacing: -0.015em; text-wrap: balance; }
+.ob-slide p { margin: 0 0 18px; color: var(--muted); font-size: 15.5px; line-height: 1.5; max-width: 34ch; }
+.ob-slide .roles { max-width: 420px; }
+@keyframes ob-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.ob-float { animation: ob-float 3.6s ease-in-out infinite; }
+@keyframes ob-flip { 0%, 70%, 100% { transform: scaleX(1); } 78% { transform: scaleX(0.05); } 86% { transform: scaleX(-1); } 94% { transform: scaleX(0.05); } }
+.ob-float .ob-coin { animation: ob-flip 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+/* deal flow: the coin goes from the client to Trusty, waits, then goes on to the executor */
+.ob-flow { display: flex; align-items: center; gap: 0; width: 100%; max-width: 360px; }
+.ob-node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; width: 74px; }
+.ob-node small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.ob-node.mid { width: 92px; }
+.ob-who { width: 52px; height: 52px; border-radius: 50%; background: #3d628a; color: #fff; font-weight: 700; font-size: 19px; display: flex; align-items: center; justify-content: center; }
+.ob-who.dev { background: #2f7d6b; }
+.ob-line { flex: 1; height: 2px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 11px); position: relative; margin-bottom: 22px; }
+.ob-move { position: absolute; top: 50%; left: 0; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: #26a17b; box-shadow: 0 0 0 3px color-mix(in srgb, #26a17b 25%, transparent); animation: ob-move 4s ease-in-out infinite; opacity: 0; }
+.ob-move.late { animation-name: ob-move-late; }
+@keyframes ob-move { 0% { left: 0; opacity: 0; } 6% { opacity: 1; } 34% { left: calc(100% - 14px); opacity: 1; } 40%, 100% { left: calc(100% - 14px); opacity: 0; } }
+@keyframes ob-move-late { 0%, 55% { left: 0; opacity: 0; } 60% { opacity: 1; } 88% { left: calc(100% - 14px); opacity: 1; } 94%, 100% { left: calc(100% - 14px); opacity: 0; } }
+/* safety: three real interface fragments, stacked */
+.ob-cards { position: relative; width: 100%; max-width: 300px; height: 236px; }
+.ob-card { position: absolute; left: 0; right: 0; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow), 0 1px 0 var(--line); padding: 13px 15px; text-align: left; display: flex; flex-direction: column; gap: 3px; }
+.dark .ob-card { border: 1px solid var(--line); }
+.ob-card b { font-size: 14.5px; display: flex; align-items: center; gap: 6px; }
+.ob-card span { font-size: 13px; color: var(--muted); }
+.ob-card.c1 { top: 0; transform: rotate(-2.5deg) translateX(-8px); animation: ob-in .5s .05s both; }
+.ob-card.c2 { top: 80px; transform: rotate(1.5deg) translateX(12px); animation: ob-in .5s .18s both; }
+.ob-card.c3 { top: 160px; transform: rotate(-1deg) translateX(-4px); animation: ob-in .5s .31s both; }
+.ob-card.c3 b { color: var(--red); }
+.ob-star { color: #e2a52b; }
+.ob-dot { width: 9px; height: 9px; border-radius: 50%; background: #2fc28b; display: inline-block; }
+@keyframes ob-in { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .ob-float, .ob-float .ob-coin, .ob-move, .ob-card { animation: none !important; } .ob-move { opacity: 1; } .ob-track { transition: none; } }

@@ -9,6 +9,7 @@ import DevProfile from './screens/DevProfile';
 import Devs from './screens/Devs';
 import Guide from './screens/Guide';
 import Home from './screens/Home';
+import Onboarding from './screens/Onboarding';
 import Profile from './screens/Profile';
 import { BidForm, Choose, ProjectNew } from './screens/ProjectForms';
 import Projects from './screens/Projects';
@@ -90,9 +91,10 @@ function useDeepLink(ready: boolean) {
 
 function Gate() {
   const s = useStore();
+  const nav = useNav();
   useDeepLink(s.ready && !s.error && !s.banned);
   useEffect(() => {
-    if (s.ready) setTimeout(hideSplash, Math.max(0, 900 - performance.now()));
+    if (s.ready) hideSplash();
   }, [s.ready]);
   if (!s.ready) return null;
   if (s.banned) {
@@ -101,6 +103,12 @@ function Gate() {
         <Done title="Аккаунт заблокирован" text={s.banned.until ? `Блокировка действует до ${s.banned.until}. Если считаете это ошибкой, напишите администратору.` : 'Блокировка бессрочная за повторное нарушение правил.'} />
       </div>
     );
+  }
+  if (!s.onboarded && !s.error) {
+    return <Onboarding initialRole={null} onDone={async (r) => {
+      await s.completeOnboarding(r);
+      if (r === 'dev' && !s.me.profile) nav.open('profile', 'dev-form');
+    }} />;
   }
   if (s.error) {
     return (

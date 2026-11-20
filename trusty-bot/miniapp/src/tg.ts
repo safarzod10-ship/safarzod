@@ -86,9 +86,10 @@ export const haptic = {
   error: () => tg?.HapticFeedback?.notificationOccurred('error'),
 };
 
-export function hideSplash() {
-  const s = document.getElementById('tl-splash');
-  if (!s) return;
-  s.classList.add('tl-done');
-  setTimeout(() => s.remove(), 450);
+/** plays the splash exit once its intro has finished (see brand/tools/splash.py) */
+export function hideSplash(): Promise<void> {
+  const sp = (window as unknown as { __tlSplash?: { finish(): Promise<void> } }).__tlSplash;
+  if (sp) return sp.finish();
+  document.getElementById('tl-splash')?.remove();
+  return Promise.resolve();
 }

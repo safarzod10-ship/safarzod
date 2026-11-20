@@ -10,7 +10,7 @@ import { haptic, tgUser } from './tg';
 export type Role = 'client' | 'dev';
 export type FormState = 'none' | 'review' | 'published' | 'rejected';
 export interface MyBid { projectId: number; price: number; days: number; text: string }
-export interface Me { id: string; name: string; username?: string | null; role: Role; isAdmin: boolean; devForm: FormState; profile: Dev | null; moderationNote?: string | null }
+export interface Me { id: string; name: string; username?: string | null; role: Role; isAdmin: boolean; devForm: FormState; profile: Dev | null; moderationNote?: string | null; onboarded?: boolean }
 export interface DevFormData { categories: string[]; years: number; stack: string[]; rate: number; status: 'free' | 'busy'; about: string; github: string; links: string[] }
 export interface NewComplaint { againstId: string; againstName?: string; dealId?: number; reason: ComplaintReason; text: string; files: File[]; previews: string[] }
 type NewProject = Omit<Project, 'id' | 'ago' | 'bids' | 'status' | 'clientId'>;
@@ -42,6 +42,9 @@ interface Store {
   myBidFor(projectId: number): MyBid | undefined;
   reload(): Promise<void>;
   setRole(r: Role): Promise<void>;
+  /** first-run intro finished with a role choice */
+  completeOnboarding(r: Role): Promise<void>;
+  onboarded: boolean;
   setAdmin(a: boolean): void;
   submitDevForm(d: DevFormData): Promise<void>;
   showToast(t: string): void;
@@ -67,6 +70,8 @@ interface Store {
 const Ctx = createContext<Store | null>(null);
 const now = () => new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const shortDate = (ms: number) => new Date(ms).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '');
+const OB_KEY = 'trusty.onboarded';
+const readOb = () => { try { return localStorage.getItem(OB_KEY) === '1'; } catch { return false; } };
 const demoName = tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Гость';
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -77,6 +82,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [roleDemo, setRoleDemo] = useState<Role>('client');
   const [adminDemo, setAdminDemo] = useState(true);
   const [devFormDemo, setDevFormDemo] = useState<FormState>('none');
+  const [obDemo, setObDemo] = useState(readOb);
   const [devs, setDevs] = useState<Dev[]>(live ? [] : DEVS);
   const [extraDevs, setExtraDevs] = useState<Record<string, Dev>>({});
   const [projects, setProjects] = useState<Project[]>(live ? [] : PROJECTS);
@@ -144,6 +150,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setRole = useCallback(async (r: Role) => {
     if (!live) { setRoleDemo(r); return; }
     setMeLive(await call(() => api<Me>('/me', { method: 'PATCH', body: { role: r } })));
+  }, [call]);
+
+  const completeOnboarding = useCallback(async (r: Role) => {
+    if (!live) {
+      setRoleDemo(r);
+      setObDemo(true);
+      try { localStorage.setItem(OB_KEY, '1'); } catch { /* private mode: show again next time */ }
+      return;
+    }
+    setMeLive(await call(() => api<Me>('/me', { method: 'PATCH', body: { role: r, onboarded: true } })));
   }, [call]);
 
   const submitDevForm = useCallback(async (d: DevFormData) => {
@@ -330,12 +346,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [call, loadAdmin, reload]);
 
   const value = useMemo<Store>(() => ({
-    live, ready, error, banned, me, role: me.role, admin: me.isAdmin, devs, projects, chats, complaints, myComplaints, members,
+    live, ready, error, banned, me, role: me.role, admin: me.isAdmin, onboarded: live ? !!me.onboarded : obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members,
     profiles, admins, devForm: me.devForm, toast,
     isMe, clientOf, devById, myBidFor, reload, setRole, setAdmin: setAdminDemo, submitDevForm, showToast, addProject, loadProject,
     addBid, startDeal, openChat, loadChat, refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint,
     takeComplaint, moderate, fetchDev,
-  }), [ready, error, banned, me, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
+  }), [ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
     devById, myBidFor, reload, setRole, submitDevForm, showToast, addProject, loadProject, addBid, startDeal, openChat, loadChat,
     refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint, takeComplaint, moderate, fetchDev]);
 

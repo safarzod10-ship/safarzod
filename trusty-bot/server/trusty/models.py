@@ -26,6 +26,7 @@ class User(Base):
     ban_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ban_permanent: Mapped[bool] = mapped_column(Boolean, default=False)
     bot_started: Mapped[bool] = mapped_column(Boolean, default=False)  # pressed /start, can get notifications
+    onboarded: Mapped[bool] = mapped_column(Boolean, default=False)  # saw the intro and picked a role
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

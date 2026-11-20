@@ -27,7 +27,7 @@ export default function Profile() {
       </div>
 
       <Seg<Role> value={s.role} onChange={(r) => { s.setRole(r).catch(() => {}); }}
-        items={[{ key: 'client', label: 'Я заказчик' }, { key: 'dev', label: 'Я разработчик' }]} />
+        items={[{ key: 'client', label: 'Я заказчик' }, { key: 'dev', label: 'Я исполнитель' }]} />
 
       {s.role === 'client' ? (
         <div className="stats mt" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>

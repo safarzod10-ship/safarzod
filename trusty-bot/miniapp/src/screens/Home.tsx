@@ -3,7 +3,9 @@ import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { tgUser } from '../tg';
-import { Avatar, Cell, Rating, Section } from '../ui';
+import { useState } from 'react';
+import { Avatar, Cell, Rating, Section, Sheet } from '../ui';
+import { RolePicker, ROLE_INFO } from './Onboarding';
 
 function greeting() {
   const h = new Date().getHours();
@@ -15,16 +17,31 @@ function greeting() {
 
 export default function Home() {
   const nav = useNav();
-  const { projects, role, devs, clientOf, isMe } = useStore();
+  const { projects, role, devs, clientOf, isMe, setRole, showToast, me, devForm } = useStore();
+  const [roleSheet, setRoleSheet] = useState(false);
   const online = devs.filter((d) => d.lastSeenMin <= 5);
   const fresh = projects.filter((p) => p.status === 'open' && !isMe(p.clientId)).slice(0, 3);
 
   return (
     <div className="screen root">
       <div className="hello">
-        <h1>{greeting()}{tgUser?.first_name ? `, ${tgUser.first_name}` : ''}</h1>
-        <p>{role === 'client' ? 'Найдите разработчика и проведите сделку через гаранта.' : 'Новые проекты ждут откликов.'}</p>
+        <div className="hello-row">
+          <h1>{greeting()}{tgUser?.first_name ? `, ${tgUser.first_name}` : ''}</h1>
+          <button className="role-pill" onClick={() => setRoleSheet(true)} aria-label="Сменить роль">
+            {ROLE_INFO[role].title}<Icon name="swap" size={15} />
+          </button>
+        </div>
+        <p>{role === 'client' ? 'Найдите исполнителя и проведите сделку через гаранта.' : 'Новые проекты ждут откликов.'}</p>
       </div>
+      {role === 'dev' && !me.profile && (
+        <div style={{ marginBottom: 14 }}>
+          <button className="note blue" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.open('profile', 'dev-form')}>
+            <Icon name="doc" size={18} />
+            <div><b>{devForm === 'review' ? 'Анкета на проверке' : 'Заполните анкету исполнителя'}</b><br />
+              {devForm === 'review' ? 'После проверки профиль появится в каталоге.' : 'Без неё нельзя откликаться на проекты. Это 4 коротких шага.'}</div>
+          </button>
+        </div>
+      )}
 
       <button className="search" onClick={() => nav.setTab('devs')}>
         <Icon name="search" size={19} />
@@ -86,6 +103,13 @@ export default function Home() {
           })}
         </div>}
       </Section>
+      <Sheet open={roleSheet} onClose={() => setRoleSheet(false)} title="Кто вы сейчас?">
+        <RolePicker value={role} onChange={(r) => {
+          setRoleSheet(false);
+          if (r !== role) setRole(r).then(() => showToast(`Режим: ${ROLE_INFO[r].title.toLowerCase()}`)).catch(() => {});
+        }} />
+        <p className="hint mt-s">Профиль, сделки и чаты сохраняются при смене роли.</p>
+      </Sheet>
     </div>
   );
 }

@@ -84,23 +84,34 @@ for (const [k, u] of Object.entries(USERS)) {
 fs.mkdirSync(outDir, { recursive: true });
 let n = 0;
 const shot = async (p, name, full = false) => { await p.waitForTimeout(600); await p.screenshot({ path: path.join(outDir, `${String(++n).padStart(2, '0')}-${name}.png`), fullPage: full }); };
-const open = async (p) => { await p.goto(origin); await p.waitForSelector('.tabbar', { timeout: 15000 }); };
 const tab = (p, label) => p.locator('.tabbar .tab', { hasText: label }).click();
 const main = (p) => p.evaluate(() => window.__tgMain());
 const step = (label) => console.log('•', label);
 
 const { anna, boris, admin } = pages;
 try {
-for (const p of [anna, boris, admin]) await open(p);
+// first launch: the intro and the role choice; the choice is saved on the server
+const onboard = async (p, role, name) => {
+  await p.goto(origin);
+  await p.waitForSelector('.ob', { timeout: 15000 });
+  if (name) await shot(p, name);
+  await p.getByText('Пропустить').click();
+  await p.getByRole('radio', { name: new RegExp(role) }).click();
+  if (name) await shot(p, name + '-role');
+  await main(p);
+};
+await onboard(anna, 'Заказчик', 'anna-onboarding');
+await anna.waitForSelector('.tabbar');
 await shot(anna, 'anna-home-empty');
-step('users created');
+await onboard(admin, 'Заказчик');
+await admin.waitForSelector('.tabbar');
+await onboard(boris, 'Исполнитель');
+await boris.getByText('Шаг 1 из 4').waitFor(); // an executor without a questionnaire goes straight to it
+step('users onboarded');
 // make user 2003 an administrator (in production this is the bot's /admin <code> command)
 if (process.env.MAKE_ADMIN) execSync(process.env.MAKE_ADMIN, { stdio: 'inherit' });
 
 // developer fills the questionnaire
-await tab(boris, 'Профиль');
-await boris.getByText('Я разработчик').click();
-await boris.getByText('Анкета', { exact: true }).click();
 await boris.getByRole('button', { name: 'Боты' }).click();
 await main(boris);
 await boris.getByText('Шаг 2 из 4').waitFor();
@@ -129,8 +140,9 @@ await main(admin);
 await admin.getByText('Новых анкет нет').waitFor();
 step('profile published');
 
-// client creates a project
+// client creates a project (a reload must not show the intro again)
 await anna.reload(); await anna.waitForSelector('.tabbar');
+if (await anna.locator('.ob').count()) throw new Error('intro shown again after reload');
 await tab(anna, 'Проекты');
 await anna.getByLabel('Создать проект').click();
 await anna.getByPlaceholder('Например, бот для записи в салон').fill('Бот для записи в студию маникюра');
@@ -187,7 +199,7 @@ await shot(anna, 'anna-chat-updated');
 await anna.getByLabel('Пожаловаться').click();
 await anna.getByText('Просит оплату вне гаранта').click();
 await anna.locator('textarea').fill('Предлагает перейти в личку и работать без гаранта, это против правил.');
-await anna.locator('input[type=file]').setInputFiles({ name: 'chat.png', mimeType: 'image/png', buffer: fs.readFileSync(path.join(outDir, '01-anna-home-empty.png')) });
+await anna.locator('input[type=file]').setInputFiles({ name: 'chat.png', mimeType: 'image/png', buffer: fs.readFileSync(path.join(outDir, '03-anna-home-empty.png')) });
 await shot(anna, 'anna-complaint', true);
 await main(anna);
 await anna.getByText(/Жалоба #\d+ отправлена/).waitFor();

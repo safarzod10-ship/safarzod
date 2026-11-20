@@ -43,7 +43,10 @@ async def main() -> None:
         r = await h.get("/api/bootstrap", headers={"Authorization": "tma user=%7B%7D&hash=00"})
         ok(r, 401)
         r = await h.get("/api/bootstrap", headers=A); ok(r)
-        assert r.json()["me"]["devForm"] == "none" and r.json()["devs"] == []
+        assert r.json()["me"]["devForm"] == "none" and r.json()["devs"] == [] and r.json()["me"]["onboarded"] is False
+        r = await h.patch("/api/me", json={"role": "client", "onboarded": True}, headers=A); ok(r)
+        assert r.json()["onboarded"] is True and r.json()["role"] == "client"
+        ok(await h.patch("/api/me", json={"role": "boss"}, headers=A), 422)
         await h.get("/api/bootstrap", headers=B)
         await h.get("/api/bootstrap", headers=ADM)
         async with Session() as s:

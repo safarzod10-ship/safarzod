@@ -32,10 +32,19 @@ const tab = async (label) => { await page.locator('.tabbar .tab', { hasText: lab
 const back = async () => { await page.getByLabel('Назад').first().click(); };
 
 await page.goto(url);
-await page.waitForTimeout(400);
+await page.waitForTimeout(700);
 await shot('splash', false);
-await page.waitForTimeout(1200);
+await page.waitForSelector('.ob');
+await shot('onboarding-1', false);
+for (const n of [2, 3]) { await page.getByRole('button', { name: 'Дальше' }).click(); await page.waitForTimeout(500); await shot(`onboarding-${n}`, false); }
+await page.getByRole('button', { name: 'Дальше' }).click();
+await shot('onboarding-role', false);
+await page.getByRole('radio', { name: /Заказчик/ }).click();
+await shot('onboarding-role-picked', false);
+await page.getByRole('button', { name: /Начать как/ }).click();
+await page.waitForSelector('.tabbar');
 await shot('home');
+await page.getByLabel('Сменить роль').click(); await shot('role-switch', false); await page.locator('.backdrop').click();
 await tab('Разработчики'); await shot('developers');
 await tap('Тимур Исмаилов'); await shot('developer-profile');
 await page.getByLabel('Ещё').click(); await shot('developer-menu', false);
@@ -55,7 +64,7 @@ await tap('Админ-панель'); await shot('admin');
 await tap('#52'); await shot('admin-complaint');
 await tap('Бан на 30 дней'); await shot('admin-banned');
 await back(); await tap('Баны'); await shot('admin-bans'); await back();
-await tap('Я разработчик'); await shot('profile-dev');
+await tap('Я исполнитель'); await shot('profile-dev');
 await page.getByText('Анкета', { exact: true }).first().click(); await tap('Боты'); await shot('dev-form-1'); await back();
 await tab('Разработчики'); await tap('Илья Гордеев'); await page.getByLabel('Ещё').click(); await tap('Пожаловаться'); await shot('complaint');
 
