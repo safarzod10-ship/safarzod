@@ -1,7 +1,9 @@
 """Database schema. Users are keyed by their Telegram id."""
 from datetime import datetime, timezone
 
-from sqlalchemy import (JSON, BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text,
+from decimal import Decimal
+
+from sqlalchemy import (JSON, BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text,
                         UniqueConstraint)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -107,6 +109,42 @@ class Deal(Base):
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # escrow (added in v2): the client pays amount + fee; the developer receives amount
+    fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    invoice_id: Mapped[int | None] = mapped_column(BigInteger)
+    invoice_url: Mapped[str | None] = mapped_column(String(512))
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    work_note: Mapped[str | None] = mapped_column(Text)
+    dispute_by: Mapped[int | None] = mapped_column(BigInteger)
+    dispute_reason: Mapped[str | None] = mapped_column(Text)
+    dev_share: Mapped[int | None] = mapped_column(Integer)  # % of the amount paid to the developer after a dispute
+    resolution: Mapped[str | None] = mapped_column(Text)
+
+    @property
+    def total(self) -> Decimal:
+        return Decimal(self.amount) + (self.fee or Decimal(0))
+
+
+class Payment(Base):
+    """Money ledger: every invoice, payout and refund with its Crypto Pay id and outcome."""
+    __tablename__ = "payments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    deal_id: Mapped[int] = mapped_column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # invoice | payout | refund
+    user_id: Mapped[int] = mapped_column(BigInteger)  # payer for invoices, recipient otherwise
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    asset: Mapped[str] = mapped_column(String(10), default="USDT")
+    # invoice: active | paid | expired; payout/refund: pending | sent | check | failed
+    status: Mapped[str] = mapped_column(String(10))
+    spend_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    external_id: Mapped[int | None] = mapped_column(BigInteger)  # invoice_id / transfer_id / check_id
+    url: Mapped[str | None] = mapped_column(String(512))  # invoice or check link
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class Review(Base):

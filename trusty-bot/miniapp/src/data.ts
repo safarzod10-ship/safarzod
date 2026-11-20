@@ -85,7 +85,32 @@ export interface Project {
   myBid?: { projectId: number; price: number; days: number; text: string } | null;
 }
 
-export type DealStatus = 'awaiting_payment' | 'in_work' | 'review' | 'done' | 'dispute';
+export type DealStatus = 'awaiting_payment' | 'in_work' | 'review' | 'done' | 'dispute' | 'cancelled' | 'refunded';
+
+export interface DealParty { id: string; name: string; handle: string; hue: number; lastSeenMin: number }
+export interface DealPayment { id: number; kind: 'invoice' | 'payout' | 'refund'; amount: string; status: string; userId: string; url?: string | null; error?: string | null; at: string }
+export interface Deal {
+  id: number; title: string; category: string; amount: number; fee: string | null; total: string; status: DealStatus;
+  role: 'client' | 'dev' | 'admin'; client: DealParty; dev: DealParty; days: number; due: string; dueAt: string; createdAt: string;
+  paidAt?: string | null; submittedAt?: string | null; reviewUntil?: string | null; finishedAt?: string | null;
+  workNote?: string | null; disputeReason?: string | null; disputeBy?: 'client' | 'dev' | null; resolution?: string | null;
+  devShare?: number | null; result?: string | null; projectId?: number | null; chatId?: string | null;
+  review?: { rating: number; text: string } | null; payments: DealPayment[];
+  actions: { pay: boolean; submit: boolean; accept: boolean; dispute: boolean; cancel: boolean; review: boolean; resolve: boolean };
+}
+export interface PayConfig { enabled: boolean; asset: string; feePercent: number; reviewDays: number }
+
+/** 90 -> "90", "94.50" -> "94,50" */
+export function amt(x: number | string): string {
+  const n = Number(x);
+  return Number.isInteger(n) ? n.toLocaleString('ru-RU') : n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function dateTime(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '');
+}
 
 export interface Msg {
   id: number;
@@ -398,7 +423,39 @@ export const DEAL_STATUS: Record<DealStatus, string> = {
   review: 'На приёмке',
   done: 'Завершена',
   dispute: 'Спор',
+  cancelled: 'Отменена',
+  refunded: 'Возврат',
 };
+
+export const DEAL_TONE: Record<DealStatus, 'green' | 'amber' | 'blue' | 'red' | undefined> = {
+  awaiting_payment: 'amber', in_work: 'blue', review: 'amber', done: 'green', dispute: 'red', cancelled: undefined, refunded: undefined,
+};
+
+const party = (id: string, name: string, hue: number, handle: string, lastSeenMin = 3): DealParty => ({ id, name, hue, handle, lastSeenMin });
+const ME_CLIENT = party('me', 'Вы', 0, 'you', 0);
+const noActs = { pay: false, submit: false, accept: false, dispute: false, cancel: false, review: false, resolve: false };
+
+/** demo deals for the browser preview */
+export const DEMO_DEALS: Deal[] = [
+  {
+    id: 1048, title: 'Mini App для заказов в кофейне', category: 'Веб', amount: 650, fee: '32.50', total: '682.50', status: 'in_work', role: 'client',
+    client: ME_CLIENT, dev: party('timur', 'Тимур Исмаилов', 0, 'timur_dev', 2), days: 18, due: '9 дек', dueAt: '2026-12-09T12:00:00Z',
+    createdAt: '2026-11-19T10:00:00Z', paidAt: '2026-11-19T10:20:00Z', chatId: 'c-timur', projectId: 305, payments: [],
+    actions: { ...noActs, accept: true, dispute: true },
+  },
+  {
+    id: 1053, title: 'Парсер Wildberries с выгрузкой в Google Sheets', category: 'Парсеры', amount: 100, fee: '5.00', total: '105.00',
+    status: 'awaiting_payment', role: 'client', client: ME_CLIENT, dev: party('sergey', 'Сергей Ли', 2, 'sergey_parse', 38), days: 4, due: '24 ноя',
+    dueAt: '2026-11-24T12:00:00Z', createdAt: '2026-11-20T09:00:00Z', chatId: null, projectId: 309, payments: [],
+    actions: { ...noActs, pay: true, cancel: true },
+  },
+  {
+    id: 1017, title: 'Интеграция бота с amoCRM', category: 'Боты', amount: 150, fee: '7.50', total: '157.50', status: 'done', role: 'client',
+    client: ME_CLIENT, dev: party('timur', 'Тимур Исмаилов', 0, 'timur_dev', 2), days: 6, due: '2 ноя', dueAt: '2026-11-02T12:00:00Z',
+    createdAt: '2026-10-27T10:00:00Z', paidAt: '2026-10-27T11:00:00Z', submittedAt: '2026-11-01T15:00:00Z', finishedAt: '2026-11-02T09:00:00Z',
+    result: 'ontime', review: { rating: 5, text: 'Чётко по ТЗ, на связи каждый день.' }, chatId: 'c-timur', payments: [], actions: noActs,
+  },
+];
 
 export const REASONS: { key: ComplaintReason; label: string }[] = [
   { key: 'no_work', label: 'Не выполнил работу или сорвал срок' },

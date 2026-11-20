@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const [, , outDir = 'live-shots', apiOrigin = 'http://127.0.0.1:8811', token = '123456:TEST'] = process.argv;
+const [, , outDir = 'live-shots', apiOrigin = 'http://127.0.0.1:8811', token = '123456:TEST', MOCK = 'http://127.0.0.1:18766'] = process.argv;
 const api = new URL(apiOrigin);
 const dist = path.resolve('dist');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
@@ -55,7 +55,9 @@ const stub = (init, user) => `
     hide() { if (k === 'main') { mainParams.is_visible = false; draw(); } } });
   window.Telegram = { WebApp: {
     initData: ${JSON.stringify(init)}, initDataUnsafe: { user: ${JSON.stringify(user)} }, colorScheme: 'light', version: '7.0',
-    ready() {}, expand() {}, isVersionAtLeast() { return false; }, setHeaderColor() {}, setBackgroundColor() {}, onEvent() {},
+    ready() {}, expand() {}, isVersionAtLeast() { return false; }, setHeaderColor() {}, setBackgroundColor() {},
+    onEvent(e, f) { (handlers[e] = handlers[e] || []).push(f); }, offEvent() {},
+    openTelegramLink(u) { window.__opened = u; }, openLink(u) { window.__opened = u; },
     BackButton: { show() {}, hide() {}, onClick(f) { handlers.back.push(f); }, offClick(f) { handlers.back = handlers.back.filter((x) => x !== f); } },
     MainButton: btn('main'), HapticFeedback: { impactOccurred() {}, notificationOccurred() {}, selectionChanged() {} },
   } };
@@ -176,11 +178,59 @@ await shot(anna, 'anna-bids', true);
 await anna.getByRole('button', { name: 'Выбрать' }).click();
 await shot(anna, 'anna-choose');
 await main(anna);
+await anna.getByText('Сделка #1').first().waitFor();
+await shot(anna, 'anna-deal-awaiting', true);
+step('deal created');
+
+// client pays through Crypto Bot (mock): the invoice link opens, the payment is confirmed on return
+await main(anna);
+await anna.waitForFunction(() => !!window.__opened);
+const opened = await anna.evaluate(() => window.__opened);
+if (!opened.startsWith('https://t.me/CryptoBot?start=IV')) throw new Error('unexpected invoice link ' + opened);
+await fetch(MOCK + '/_mock/pay_last', { method: 'POST' });
+await anna.getByText('В работе').first().waitFor({ timeout: 20000 });
+await shot(anna, 'anna-deal-paid', true);
+step('deal paid');
+
+// developer submits the work from the deal screen
+await boris.reload(); await boris.waitForSelector('.tabbar');
+await tab(boris, 'Чаты');
+await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
+await boris.locator('.deal-card').click();
+await boris.getByText('Сдать работу досрочно').count();
+await shot(boris, 'boris-deal-in-work', true);
+await main(boris);
+await boris.locator('.sheet textarea').fill('Бот готов: репозиторий и инструкция в чате.');
+await boris.locator('.sheet .btn.primary').click();
+await boris.getByText('На приёмке').first().waitFor();
+await shot(boris, 'boris-deal-submitted');
+step('work submitted');
+
+// client accepts: the developer is paid from the app balance
+await anna.reload(); await anna.waitForSelector('.tabbar');
+await tab(anna, 'Профиль');
+await anna.getByText('Мои сделки').click();
+await shot(anna, 'anna-deals-list');
+await anna.locator('.cell', { hasText: 'Бот для записи в студию маникюра' }).click();
+await main(anna);
+await anna.locator('.sheet .btn.primary').click();
+await anna.getByText('Завершена').first().waitFor();
+const state = await (await fetch(MOCK + '/_mock/state')).json();
+const payout = state.transfers['trusty-1-payout-2002'];
+if (!payout || payout.amount !== '90.00') throw new Error('payout missing: ' + JSON.stringify(state.transfers));
+await main(anna);
+await anna.locator('.stars button').nth(4).click();
+await anna.locator('.sheet textarea').fill('Всё сделано в срок');
+await anna.locator('.sheet .btn.primary').click();
+await anna.getByText('Отзыв заказчика').waitFor();
+await shot(anna, 'anna-deal-done', true);
+step('accepted, paid out, reviewed');
+
+await main(anna); // the deal chat
 await anna.waitForSelector('.chat');
-await anna.getByLabel('Сообщение').fill('Здравствуйте! Жду демо, ТЗ в описании проекта.');
+await anna.getByLabel('Сообщение').fill('Спасибо! Есть ещё задача, обсудим?');
 await anna.getByLabel('Отправить').click();
 await shot(anna, 'anna-deal-chat');
-step('deal created');
 
 // developer sees the deal chat and tries to go off-platform
 await boris.reload(); await boris.waitForSelector('.tabbar');
@@ -221,6 +271,14 @@ await boris.reload();
 await boris.getByText('Аккаунт заблокирован').waitFor();
 await shot(boris, 'boris-banned-screen');
 step('ban enforced');
+
+await tab(admin, 'Профиль').catch(() => {});
+await admin.reload(); await admin.waitForSelector('.tabbar');
+await tab(admin, 'Профиль');
+await admin.getByText('Финансы и споры').click();
+await admin.getByText('Последние операции').waitFor();
+await shot(admin, 'admin-finance', true);
+step('finance');
 
 } catch (e) {
   for (const [k, p] of Object.entries(pages)) await p.screenshot({ path: path.join(outDir, `fail-${k}.png`), fullPage: true }).catch(() => {});

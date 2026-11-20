@@ -5,19 +5,25 @@ import os
 import re
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import notify
+import json
+import logging
+
+from . import escrow, notify
 from .auth import admin_user, current_user
 from .config import settings
+from .cryptopay import CryptoPayError, check_signature, pay
 from .db import get_session
-from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Project, User, utcnow
-from .serial import (aware, chat_payloads, complaint_payloads, dev_payloads, member_payload, project_payloads,
-                     short_date)
+from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Payment, Project, User, utcnow
+from .serial import (aware, chat_payloads, complaint_payloads, deal_payloads, dev_payloads, member_payload,
+                     project_payloads, short_date)
+
+log = logging.getLogger("trusty.api")
 
 router = APIRouter(prefix="/api")
 
@@ -26,7 +32,6 @@ CATEGORIES = {"bots": "Боты", "web": "Веб", "parsers": "Парсеры", 
 REASONS = {"no_work", "vanished", "offsite_payment", "fraud", "other"}
 OFFSITE = re.compile(r"(@[a-z0-9_]{4,}|t\.me/|в\s?лс|в\s?личк|напрямую|без\s+(гаранта|комисси)|на\s+карт|\+7\d|"
                      r"\b\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\b)", re.I)
-NEW_DEV_LIMIT = 100
 
 
 def bad(msg: str, code: int = 400):
@@ -93,7 +98,12 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
                              .order_by(desc(Chat.updated_at)).limit(100))).scalars().all()
     complaints = (await s.execute(select(Complaint).where(Complaint.from_id == me.id)
                                   .order_by(desc(Complaint.created_at)))).scalars().all()
+    deals = (await s.execute(select(Deal).where(or_(Deal.client_id == me.id, Deal.dev_id == me.id))
+                             .order_by(desc(Deal.created_at)).limit(100))).scalars().all()
     return {
+        "deals": await deal_payloads(s, list(deals), me),
+        "payments": {"enabled": pay.enabled, "asset": settings.asset, "feePercent": settings.fee_percent,
+                     "reviewDays": settings.review_days},
         "me": await me_payload(s, me),
         "devs": devs,
         "projects": await project_payloads(s, list(projects), me),
@@ -239,21 +249,21 @@ async def choose(pid: int, body: ChooseIn, me: User = Depends(current_user), s: 
     if dev is None or dev.banned():
         bad("Разработчик заблокирован")
     done = (await dev_payloads(s, await dev_rows(s, DevProfile.user_id == dev.id)))[0]["deals"]
-    if done < 3 and b.price > NEW_DEV_LIMIT:
-        bad(f"У нового разработчика сумма сделки ограничена {NEW_DEV_LIMIT} USDT, пока нет трёх успешных сделок")
+    if done < 3 and b.price > settings.new_dev_limit:
+        bad(f"У нового исполнителя сумма сделки ограничена {settings.new_dev_limit} USDT, пока нет трёх успешных сделок")
     d = Deal(project_id=p.id, client_id=me.id, dev_id=dev.id, title=p.title, category=CATEGORIES.get(p.category, ""),
-             amount=b.price, days=b.days, due_at=utcnow() + timedelta(days=b.days))
+             amount=b.price, days=b.days, due_at=utcnow() + timedelta(days=b.days), fee=escrow.fee_for(b.price))
     s.add(d)
     p.status = "in_work"
     await s.flush()
     c = await get_or_create_chat(s, me.id, dev.id)
     c.deal_id, c.updated_at = d.id, utcnow()
     s.add(Message(chat_id=c.id, sender_id=None,
-                  text=f"Сделка #{d.id} создана. Условия зафиксированы: {d.amount} USDT, срок {d.days} дн. "
-                       f"Ожидаем оплату от заказчика."))
+                  text=f"Сделка #{d.id} создана. Условия зафиксированы: {d.amount} {settings.asset}, срок {d.days} дн. "
+                       f"Ожидаем оплату от заказчика: {escrow.fmt(d.total)} {settings.asset} с комиссией гаранта."))
     await s.commit()
-    notify.send(dev.id, f"Вас выбрали исполнителем: «{p.title}», {d.amount} USDT. Сделка #{d.id}.",
-                "Открыть чат сделки", screen="chat", id=c.id)
+    notify.send_deal(dev.id, d, f"Вас выбрали исполнителем: «{p.title}», {d.amount} {settings.asset}. "
+                                f"Начинайте после оплаты: мы пришлём уведомление.")
     return {"chatId": str(c.id), "dealId": d.id}
 
 
@@ -487,6 +497,166 @@ async def reject_profile(uid: int, body: Moderation, me: User = Depends(admin_us
     notify.send(uid, f"Анкета не прошла проверку.{(' ' + body.note) if body.note else ''} Исправьте её в профиле.",
                 "Открыть анкету", screen="dev-form")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- deals and escrow
+async def _deal_for(s: AsyncSession, deal_id: int, me: User) -> Deal:
+    d = await s.get(Deal, deal_id)
+    if d is None or (me.id not in (d.client_id, d.dev_id) and not me.is_admin):
+        bad("Сделка не найдена", 404)
+    return d
+
+
+async def _deal_out(s: AsyncSession, deal_id: int, me: User) -> dict:
+    d = await _deal_for(s, deal_id, me)
+    await s.refresh(d)
+    return (await deal_payloads(s, [d], me))[0]
+
+
+async def _run(s: AsyncSession, fn):
+    try:
+        return await fn
+    except escrow.EscrowError as e:
+        await s.rollback()
+        bad(str(e))
+    except CryptoPayError as e:
+        await s.rollback()
+        log.error("crypto pay: %s", e)
+        bad("Платёжный сервис не ответил, попробуйте ещё раз через минуту", 502)
+
+
+@router.get("/deals")
+async def list_deals(me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    deals = (await s.execute(select(Deal).where(or_(Deal.client_id == me.id, Deal.dev_id == me.id))
+                             .order_by(desc(Deal.created_at)).limit(100))).scalars().all()
+    return await deal_payloads(s, list(deals), me)
+
+
+@router.get("/deals/{deal_id}")
+async def get_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    return await _deal_out(s, deal_id, me)
+
+
+@router.post("/deals/{deal_id}/pay")
+async def pay_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    await _deal_for(s, deal_id, me)
+    return await _run(s, escrow.invoice_for(s, deal_id, me))
+
+
+@router.post("/deals/{deal_id}/check")
+async def check_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    """Called when the user comes back from @CryptoBot: picks up a payment even before the webhook."""
+    d = await _deal_for(s, deal_id, me)
+    if d.status == "awaiting_payment" and d.invoice_id and pay.enabled:
+        try:
+            found = await pay.get_invoices([d.invoice_id])
+            if found and found[0]["status"] == "paid":
+                await escrow.handle_paid_invoice(s, found[0])
+        except CryptoPayError as e:
+            log.warning("check deal %s: %s", deal_id, e)
+    return await _deal_out(s, deal_id, me)
+
+
+class NoteIn(BaseModel):
+    note: str = Field(default="", max_length=2000)
+
+
+@router.post("/deals/{deal_id}/submit")
+async def submit_deal(deal_id: int, body: NoteIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    await _run(s, escrow.submit(s, deal_id, me, body.note))
+    return await _deal_out(s, deal_id, me)
+
+
+@router.post("/deals/{deal_id}/accept")
+async def accept_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    await _run(s, escrow.accept(s, deal_id, me))
+    return await _deal_out(s, deal_id, me)
+
+
+class ReasonIn(BaseModel):
+    reason: str = Field(min_length=10, max_length=1000)
+
+
+@router.post("/deals/{deal_id}/dispute")
+async def dispute_deal(deal_id: int, body: ReasonIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    await _run(s, escrow.dispute(s, deal_id, me, body.reason))
+    return await _deal_out(s, deal_id, me)
+
+
+@router.post("/deals/{deal_id}/cancel")
+async def cancel_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    await _run(s, escrow.cancel(s, deal_id, me))
+    return await _deal_out(s, deal_id, me)
+
+
+class ReviewIn(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    text: str = Field(default="", max_length=1000)
+
+
+@router.post("/deals/{deal_id}/review")
+async def review_deal(deal_id: int, body: ReviewIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    await _run(s, escrow.review(s, deal_id, me, body.rating, body.text))
+    return await _deal_out(s, deal_id, me)
+
+
+class ResolveIn(BaseModel):
+    devShare: int = Field(ge=0, le=100)
+    note: str = Field(default="", max_length=1000)
+
+
+@admin.post("/deals/{deal_id}/resolve")
+async def resolve_deal(deal_id: int, body: ResolveIn, me: User = Depends(admin_user), s: AsyncSession = Depends(get_session)):
+    await _run(s, escrow.resolve(s, deal_id, me, body.devShare, body.note))
+    return await _deal_out(s, deal_id, me)
+
+
+@admin.get("/finance")
+async def finance(me: User = Depends(admin_user), s: AsyncSession = Depends(get_session)):
+    balance, error = [], None
+    if pay.enabled:
+        try:
+            balance = [{"asset": b["currency_code"], "available": b["available"], "onhold": b.get("onhold", "0")}
+                       for b in await pay.get_balance() if b["currency_code"] in (settings.asset, "TON") or float(b["available"])]
+        except CryptoPayError as e:
+            error = str(e)
+    payments = (await s.execute(select(Payment).order_by(desc(Payment.id)).limit(60))).scalars().all()
+    disputes = (await s.execute(select(Deal).where(Deal.status == "dispute").order_by(Deal.created_at))).scalars().all()
+    held = (await s.execute(select(Deal).where(Deal.status.in_(("in_work", "review", "dispute"))))).scalars().all()
+    users = {u.id: u for u in (await s.execute(select(User).where(User.id.in_({p.user_id for p in payments} or {0})))).scalars()}
+    return {
+        "enabled": pay.enabled, "asset": settings.asset, "feePercent": settings.fee_percent, "balance": balance, "error": error,
+        "held": str(sum((d.total for d in held), start=escrow.Decimal(0))),
+        "disputes": await deal_payloads(s, list(disputes), me),
+        "payments": [{"id": p.id, "dealId": p.deal_id, "kind": p.kind, "amount": str(p.amount), "status": p.status,
+                      "user": users[p.user_id].name if p.user_id in users else str(p.user_id), "error": p.error,
+                      "attempts": p.attempts, "at": aware(p.updated_at).isoformat()} for p in payments],
+    }
+
+
+@admin.post("/payments/{payment_id}/retry")
+async def retry_payment(payment_id: int, me: User = Depends(admin_user), s: AsyncSession = Depends(get_session)):
+    p = await s.get(Payment, payment_id)
+    if p is None or p.kind == "invoice" or p.status in ("sent", "check"):
+        bad("Повторять нечего")
+    d = await s.get(Deal, p.deal_id)
+    p = await _run(s, escrow.payout(s, d, p.user_id, p.amount, p.kind, f"Trusty, сделка #{d.id}"))
+    return {"status": p.status, "error": p.error}
+
+
+@router.post("/cryptopay/webhook", include_in_schema=False)
+async def cryptopay_webhook(request: Request, s: AsyncSession = Depends(get_session)):
+    """Crypto Pay update (invoice_paid). Authenticated by the HMAC signature, not by Telegram."""
+    raw = await request.body()
+    if not check_signature(raw, request.headers.get("crypto-pay-api-signature", "")):
+        raise HTTPException(401, "bad signature")
+    try:
+        update = json.loads(raw)
+    except ValueError:
+        raise HTTPException(400, "bad json") from None
+    if update.get("update_type") == "invoice_paid" and isinstance(update.get("payload"), dict):
+        await escrow.handle_paid_invoice(s, update["payload"])
+    return PlainTextResponse("ok")
 
 
 __all__ = ["router", "admin"]

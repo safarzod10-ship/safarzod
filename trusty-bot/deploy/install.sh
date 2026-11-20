@@ -86,6 +86,21 @@ if [ -z "$TOKEN" ]; then
 fi
 [[ "$TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}$ ]] || die "токен выглядит неправильно"
 ADMIN_CODE=$(get TRUSTY_ADMIN_CODE); [ -n "$ADMIN_CODE" ] || ADMIN_CODE=$(rand 6)
+# payments: Crypto Pay token of the app in @CryptoBot (@send) -> Crypto Pay -> My Apps
+CP_TOKEN="${TRUSTY_CRYPTOPAY_TOKEN:-$(get TRUSTY_CRYPTOPAY_TOKEN)}"
+if [ -z "$CP_TOKEN" ] && [ -r /dev/tty ]; then
+  read -rsp "Токен Crypto Pay из @CryptoBot (Enter, чтобы пропустить; ввод скрыт): " CP_TOKEN </dev/tty; echo
+fi
+CP_INFO="не подключена"
+if [ -n "$CP_TOKEN" ]; then
+  CP_ME=$(curl -s -m 15 -H "Crypto-Pay-API-Token: $CP_TOKEN" https://pay.crypt.bot/api/getMe || true)
+  if printf '%s' "$CP_ME" | grep -q '"ok":true'; then
+    CP_INFO="приложение $(printf '%s' "$CP_ME" | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['name'])")"
+  else
+    echo "Crypto Pay не принял токен: $CP_ME"; CP_INFO="токен не принят, проверьте его"
+  fi
+fi
+FEE=$(get TRUSTY_FEE_PERCENT); [ -n "$FEE" ] || FEE=5
 umask 077
 cat > $ENVF <<EOF
 TRUSTY_BOT_TOKEN=$TOKEN
@@ -94,6 +109,8 @@ TRUSTY_PUBLIC_URL=https://$DOMAIN
 TRUSTY_ADMIN_CODE=$ADMIN_CODE
 TRUSTY_UPLOAD_DIR=/var/lib/trusty/uploads
 TRUSTY_BOT_MODE=polling
+TRUSTY_CRYPTOPAY_TOKEN=$CP_TOKEN
+TRUSTY_FEE_PERCENT=$FEE
 EOF
 umask 022
 chmod 600 $ENVF
@@ -175,4 +192,10 @@ printf '\n\033[1;32mГотово.\033[0m\n'
 echo "Mini App:        https://$DOMAIN $( [ -n "$OK" ] && echo '(работает)' || echo '(сертификат ещё выпускается, проверьте через минуту)')"
 echo "Бот:             $BOT"
 echo "Стать админом:   отправьте боту  /admin $ADMIN_CODE   (максимум 2 администратора)"
+echo "Оплата:          $CP_INFO, комиссия гаранта $FEE%"
+if [ -n "$CP_TOKEN" ]; then
+  echo "Webhook оплаты:  @CryptoBot -> Crypto Pay -> My Apps -> TRUSTY -> Webhooks -> вставьте"
+  echo "                 https://$DOMAIN/api/cryptopay/webhook"
+  echo "                 (без него оплата тоже проходит, но подтверждается до 20 секунд)"
+fi
 echo "Команды:         trusty logs | trusty stats | trusty admins | trusty update"

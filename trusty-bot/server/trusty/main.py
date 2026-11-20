@@ -5,10 +5,11 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
-from . import notify
+from . import escrow, notify
 from .api import admin, router
 from .config import settings
-from .db import init_db
+from .cryptopay import pay
+from .db import Session, init_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("trusty")
@@ -32,19 +33,46 @@ async def run_bot() -> None:
             await asyncio.sleep(15)
 
 
+async def escrow_jobs() -> None:
+    """Payments safety net: invoices paid without a webhook, auto-acceptance, payout retries."""
+    tick = 0
+    while True:
+        await asyncio.sleep(20)
+        tick += 1
+        for job, every in ((escrow.sync_invoices, 1), (escrow.auto_accept_due, 3), (escrow.retry_failed_payouts, 15)):
+            if tick % every:
+                continue
+            try:
+                async with Session() as s:
+                    await job(s)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:  # noqa: BLE001 - a failing job must not stop the others
+                log.error("job %s: %s", job.__name__, e)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await init_db()
-    task = None
+    tasks = [asyncio.create_task(escrow_jobs())]
     if settings.bot_token and settings.bot_mode == "polling":
-        task = asyncio.create_task(run_bot())
+        tasks.append(asyncio.create_task(run_bot()))
     elif not settings.bot_token:
         log.warning("TRUSTY_BOT_TOKEN is empty: Mini App auth and the bot are disabled")
+    if pay.enabled:
+        try:
+            me = await pay.get_me()
+            log.info("Crypto Pay app: %s (%s)", me.get("name"), me.get("app_id"))
+        except Exception as e:  # noqa: BLE001
+            log.error("Crypto Pay token check failed: %s", e)
+    else:
+        log.warning("TRUSTY_CRYPTOPAY_TOKEN is empty: payments are disabled")
     yield
-    if task:
-        task.cancel()
+    for t in tasks:
+        t.cancel()
         with suppress(asyncio.CancelledError):
-            await task
+            await t
+    await pay.close()
     if notify.bot:
         await notify.bot.session.close()
 

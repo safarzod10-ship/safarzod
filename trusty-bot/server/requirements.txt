@@ -48,6 +48,8 @@ multidict==7.2.1
     #   yarl
 opentelemetry-api==1.45.2
     # via fastapi
+pillow==13.0.0
+    # via -r requirements.in
 propcache==0.5.4
     # via
     #   aiohttp

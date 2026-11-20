@@ -14,7 +14,7 @@ export default function Profile() {
   const username = s.live ? s.me.username : tgUser?.username;
   const p = s.me.profile;
   const myProjects = s.projects.filter((x) => s.isMe(x.clientId)).length;
-  const deals = s.chats.filter((c) => c.deal).length;
+  const deals = s.deals.length;
   const bids = s.projects.filter((x) => !!s.myBidFor(x.id)).length;
   const openComplaints = s.complaints.filter((c) => c.status === 'new' || c.status === 'review').length;
 
@@ -62,7 +62,7 @@ export default function Profile() {
               {p && <Cell lead={<IconTile name="devs" />} title="Как меня видят заказчики" chevron onClick={() => nav.push('dev', { id: p.id })} />}
             </>
           )}
-          <Cell lead={<IconTile name="shield" />} title="Мои сделки" trail={deals} chevron onClick={() => nav.setTab('chats')} />
+          <Cell lead={<IconTile name="shield" />} title="Мои сделки" trail={s.deals.length || undefined} chevron onClick={() => nav.push('deals')} />
         </div>
         {s.devForm === 'rejected' && s.me.moderationNote && s.role === 'dev' && (
           <div className="mt-s"><Note tone="red" icon="info">Комментарий модератора: {s.me.moderationNote}</Note></div>
@@ -81,6 +81,7 @@ export default function Profile() {
           <div className="group">
             <Cell lead={<IconTile name="admin" tone="amber" />} title="Админ-панель" sub="Жалобы, анкеты, блокировки"
               trail={openComplaints ? <span className="pill red">{openComplaints}</span> : undefined} chevron onClick={() => nav.push('admin')} />
+            <Cell lead={<IconTile name="coin" />} title="Финансы и споры" sub="Баланс Crypto Pay, выплаты, решения по спорам" chevron onClick={() => nav.push('finance')} />
           </div>
         </Section>
       )}

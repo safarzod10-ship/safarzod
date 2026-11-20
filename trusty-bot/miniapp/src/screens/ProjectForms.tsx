@@ -1,6 +1,6 @@
 // Create a project (client), respond to one (developer), pick a developer (client).
 import { useState } from 'react';
-import { CATEGORIES, budget, plural, usdt } from '../data';
+import { CATEGORIES, amt, budget, plural, usdt } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -158,12 +158,12 @@ export function BidForm({ id }: { id: number }) {
 
 export function Choose({ projectId, devId }: { projectId: number; devId: string }) {
   const nav = useNav();
-  const { projects, startDeal, devById } = useStore();
+  const { projects, startDeal, devById, payCfg } = useStore();
   const [busy, setBusy] = useState(false);
   const p = projects.find((x) => x.id === projectId)!;
   const b = p.bids.find((x) => x.devId === devId)!;
   const d = devById(devId)!;
-  const fee = Math.round(b.price * 0.05 * 100) / 100;
+  const fee = Math.round(b.price * payCfg.feePercent) / 100;
 
   return (
     <div className="screen no-tabs">
@@ -174,22 +174,23 @@ export function Choose({ projectId, devId }: { projectId: number; devId: string 
       </div>
       <Section title="Условия">
         <div className="group">
-          <Cell title="Сумма сделки" trail={<b className="num" style={{ color: 'var(--ink)' }}>{usdt(b.price)}</b>} />
-          <Cell title="Комиссия гаранта, 5%" trail={<span className="num">{usdt(fee)}</span>} />
+          <Cell title="Сумма сделки" sub="получит исполнитель" trail={<span className="num">{usdt(b.price)}</span>} />
+          <Cell title={`Комиссия гаранта, ${payCfg.feePercent}%`} trail={<span className="num">{amt(fee)} {payCfg.asset}</span>} />
+          <Cell title={<b>К оплате</b>} trail={<b className="num" style={{ color: 'var(--ink)' }}>{amt(b.price + fee)} {payCfg.asset}</b>} />
           <Cell title="Срок" trail={<span className="num">{b.days} {plural(b.days, 'день', 'дня', 'дней')}</span>} />
-          <Cell title="Автоприёмка" sub="Если вы не ответите 3 дня после сдачи, работа принимается автоматически" />
+          <Cell title="Автоприёмка" sub={`Если вы не ответите ${payCfg.reviewDays} дн. после сдачи, работа принимается автоматически`} />
         </div>
       </Section>
       <div className="mt stack">
         <Note tone="green" icon="shield">Условия и ТЗ зафиксируются в сделке. Изменить их можно только с согласия обеих сторон.</Note>
-        <Note tone="amber" icon="coin">В прототипе оплата не подключена: сделка создастся со статусом «Ожидает оплаты».</Note>
+        <Note tone="blue" icon="coin">Оплата через @CryptoBot в {payCfg.asset}. Деньги хранятся у гаранта, исполнитель получит их после приёмки.</Note>
       </div>
       <Actions primary={{
         label: busy ? 'Создаём сделку…' : `Создать сделку на ${usdt(b.price)}`, disabled: busy,
         onClick: async () => {
           if (busy) return;
           setBusy(true);
-          try { nav.open('chats', 'chat', { id: await startDeal(projectId, devId, b.price, b.days) }); } catch { setBusy(false); }
+          try { nav.open('chats', 'deal', { id: await startDeal(projectId, devId, b.price, b.days) }); } catch { setBusy(false); }
         },
       }} />
     </div>

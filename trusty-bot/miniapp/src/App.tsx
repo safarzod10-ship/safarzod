@@ -4,6 +4,7 @@ import { NavProvider, useNav, type Tab } from './nav';
 import Admin, { ComplaintAdmin, MemberAdmin, MyComplaints, ProfileReview } from './screens/Admin';
 import Chats, { ChatView } from './screens/Chats';
 import Complaint from './screens/Complaint';
+import DealView, { DealsList, Finance } from './screens/Deal';
 import DevForm from './screens/DevForm';
 import DevProfile from './screens/DevProfile';
 import Devs from './screens/Devs';
@@ -23,7 +24,7 @@ const SCREENS: Record<string, ComponentType<any>> = {
   home: Home, devs: Devs, dev: DevProfile, projects: Projects, project: ProjectView, 'project-new': ProjectNew,
   bid: BidForm, choose: Choose, chats: Chats, chat: ChatView, profile: Profile, 'dev-form': DevForm,
   complaint: Complaint, guide: Guide, admin: Admin, 'complaint-admin': ComplaintAdmin, member: MemberAdmin,
-  'my-complaints': MyComplaints, 'profile-review': ProfileReview,
+  'my-complaints': MyComplaints, 'profile-review': ProfileReview, deal: DealView, deals: DealsList, finance: Finance,
 };
 
 const TABS: { key: Tab; label: string; icon: IconName }[] = [
@@ -86,6 +87,9 @@ function useDeepLink(ready: boolean) {
     else if (screen === 'admin') nav.open('profile', 'admin');
     else if (screen === 'complaint-admin' && id) nav.open('profile', 'complaint-admin', { id: Number(id) });
     else if (screen === 'dev-form') nav.open('profile', 'dev-form');
+    else if (screen === 'deal' && id) nav.open('chats', 'deal', { id: Number(id) });
+    else if (screen === 'deals') nav.open('profile', 'deals');
+    else if (screen === 'finance') nav.open('profile', 'finance');
   }, [ready, nav]);
 }
 

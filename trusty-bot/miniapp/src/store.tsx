@@ -2,10 +2,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, live } from './api';
 import {
-  ADMINS, CHATS, CLIENTS, COMPLAINTS, DEVS, MEMBERS, PROJECTS,
-  type Chat, type Client, type Complaint, type ComplaintReason, type Dev, type Member, type Project,
+  ADMINS, CHATS, CLIENTS, COMPLAINTS, DEMO_DEALS, DEVS, MEMBERS, PROJECTS,
+  type Chat, type Client, type Complaint, type ComplaintReason, type Deal, type Dev, type Member, type PayConfig, type Project,
 } from './data';
-import { haptic, tgUser } from './tg';
+import { haptic, openTg, tgUser } from './tg';
 
 export type Role = 'client' | 'dev';
 export type FormState = 'none' | 'review' | 'published' | 'rejected';
@@ -15,7 +15,10 @@ export interface DevFormData { categories: string[]; years: number; stack: strin
 export interface NewComplaint { againstId: string; againstName?: string; dealId?: number; reason: ComplaintReason; text: string; files: File[]; previews: string[] }
 type NewProject = Omit<Project, 'id' | 'ago' | 'bids' | 'status' | 'clientId'>;
 
-interface Bootstrap { me: Me; devs: Dev[]; projects: Project[]; chats: Chat[]; myComplaints: Complaint[]; admins: { name: string; handle: string }[] }
+interface Bootstrap { me: Me; devs: Dev[]; projects: Project[]; chats: Chat[]; myComplaints: Complaint[]; admins: { name: string; handle: string }[]; deals?: Deal[]; payments?: PayConfig }
+export interface FinancePayment { id: number; dealId: number; kind: 'invoice' | 'payout' | 'refund'; amount: string; status: string; user: string; error?: string | null; attempts: number; at: string }
+export interface Finance { enabled: boolean; asset: string; feePercent: number; balance: { asset: string; available: string; onhold: string }[]; error?: string | null; held: string; disputes: Deal[]; payments: FinancePayment[] }
+export type DealAction = 'submit' | 'accept' | 'dispute' | 'cancel' | 'review';
 interface Overview { members: Member[]; complaints: Complaint[]; profiles: Dev[]; admins: { name: string; handle: string }[] }
 
 interface Store {
@@ -51,7 +54,8 @@ interface Store {
   addProject(p: NewProject): Promise<number>;
   loadProject(id: number): Promise<void>;
   addBid(b: MyBid): Promise<void>;
-  startDeal(projectId: number, devId: string, price: number, days: number): Promise<string>;
+  /** creates the deal for a chosen bid and returns its id */
+  startDeal(projectId: number, devId: string, price: number, days: number): Promise<number>;
   openChat(userId: string): Promise<string>;
   loadChat(id: string): Promise<void>;
   refreshChats(): Promise<void>;
@@ -65,6 +69,18 @@ interface Store {
   takeComplaint(id: number): Promise<void>;
   moderate(uid: string, approve: boolean, note?: string): Promise<void>;
   fetchDev(id: string): Promise<Dev | undefined>;
+  deals: Deal[];
+  payCfg: PayConfig;
+  finance: Finance | null;
+  loadDeal(id: number): Promise<Deal | undefined>;
+  /** submit {note} | accept | dispute {reason} | cancel | review {rating, text} */
+  dealAct(id: number, action: DealAction, body?: Record<string, unknown>): Promise<Deal>;
+  /** opens the Crypto Bot invoice; the deal is re-checked when the user comes back */
+  payDeal(id: number): Promise<void>;
+  checkDeal(id: number): Promise<Deal | undefined>;
+  loadFinance(): Promise<void>;
+  resolveDeal(id: number, devShare: number, note: string): Promise<Deal>;
+  retryPayment(id: number): Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -73,6 +89,18 @@ const shortDate = (ms: number) => new Date(ms).toLocaleDateString('ru-RU', { day
 const OB_KEY = 'trusty.onboarded';
 const readOb = () => { try { return localStorage.getItem(OB_KEY) === '1'; } catch { return false; } };
 const demoName = tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Гость';
+
+function demoActions(status: Deal['status'], role: Deal['role'], reviewed: boolean): Deal['actions'] {
+  return {
+    pay: role === 'client' && status === 'awaiting_payment',
+    submit: role === 'dev' && status === 'in_work',
+    accept: role === 'client' && (status === 'in_work' || status === 'review'),
+    dispute: role !== 'admin' && (status === 'in_work' || status === 'review'),
+    cancel: status === 'awaiting_payment' || (role === 'dev' && status === 'in_work'),
+    review: role === 'client' && status === 'done' && !reviewed,
+    resolve: role === 'admin' && status === 'dispute',
+  };
+}
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!live);
@@ -94,6 +122,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [admins, setAdmins] = useState(live ? [] : ADMINS);
   const [myBidsDemo, setMyBidsDemo] = useState<MyBid[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [deals, setDeals] = useState<Deal[]>(live ? [] : DEMO_DEALS);
+  const [payCfg, setPayCfg] = useState<PayConfig>({ enabled: !live, asset: 'USDT', feePercent: 5, reviewDays: 3 });
+  const [finance, setFinance] = useState<Finance | null>(null);
   const timer = useRef<number>();
 
   const me: Me = useMemo(() => meLive ?? {
@@ -129,6 +160,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const b = await api<Bootstrap>('/bootstrap');
       setMeLive(b.me); setDevs(b.devs); setProjects(b.projects); setChats(b.chats); setMyComplaints(b.myComplaints); setAdmins(b.admins);
+      setDeals(b.deals ?? []);
+      if (b.payments) setPayCfg(b.payments);
       setReady(true);
     } catch (e) {
       const err = e as ApiError;
@@ -218,12 +251,95 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch { /* keep cached */ }
   }, []);
 
+  const replaceDeal = (d: Deal) => setDeals((ds) => (ds.some((x) => x.id === d.id) ? ds.map((x) => (x.id === d.id ? d : x)) : [d, ...ds]));
+
+  const loadDeal = useCallback(async (id: number) => {
+    if (!live) return DEMO_DEALS.find((d) => d.id === id);
+    try {
+      const d = await api<Deal>(`/deals/${id}`);
+      replaceDeal(d);
+      return d;
+    } catch { return undefined; }
+  }, []);
+
+  const checkDeal = useCallback(async (id: number) => {
+    if (!live) return undefined;
+    try {
+      const d = await api<Deal>(`/deals/${id}/check`, { method: 'POST' });
+      replaceDeal(d);
+      return d;
+    } catch { return undefined; }
+  }, []);
+
+  /** demo mode: the same state machine as the server, without money */
+  const demoStep = useCallback((id: number, action: DealAction | 'pay' | 'resolve', body?: Record<string, unknown>) => {
+    let out: Deal | undefined;
+    setDeals((ds) => ds.map((d) => {
+      if (d.id !== id) return d;
+      const t = new Date().toISOString();
+      let n: Deal = d;
+      if (action === 'pay') n = { ...d, status: 'in_work', paidAt: t };
+      if (action === 'submit') n = { ...d, status: 'review', submittedAt: t, workNote: String(body?.note ?? '') || null, reviewUntil: new Date(Date.now() + 3 * 864e5).toISOString() };
+      if (action === 'accept') n = { ...d, status: 'done', finishedAt: t, result: 'ontime', payments: [{ id: Date.now(), kind: 'payout', amount: String(d.amount), status: 'sent', userId: d.dev.id, at: t }] };
+      if (action === 'dispute') n = { ...d, status: 'dispute', disputeReason: String(body?.reason ?? ''), disputeBy: d.role === 'dev' ? 'dev' : 'client' };
+      if (action === 'cancel') n = { ...d, status: d.status === 'awaiting_payment' ? 'cancelled' : 'refunded', finishedAt: t };
+      if (action === 'review') n = { ...d, review: { rating: Number(body?.rating ?? 5), text: String(body?.text ?? '') } };
+      if (action === 'resolve') {
+        const share = Number(body?.devShare ?? 50);
+        n = { ...d, status: share > 0 ? 'done' : 'refunded', devShare: share, finishedAt: t, resolution: `Арбитр: исполнителю ${share}%, заказчику ${100 - share}%.` };
+      }
+      n = { ...n, actions: demoActions(n.status, n.role, !!n.review) };
+      out = n;
+      return n;
+    }));
+    return out;
+  }, []);
+
+  const dealAct = useCallback(async (id: number, action: DealAction, body?: Record<string, unknown>) => {
+    if (!live) { haptic.success(); return demoStep(id, action, body) ?? DEMO_DEALS[0]; }
+    const d = await call(() => api<Deal>(`/deals/${id}/${action}`, { body: body ?? {} }));
+    replaceDeal(d);
+    haptic.success();
+    refreshChats();
+    return d;
+  }, [call, demoStep]);
+
+  const payDeal = useCallback(async (id: number) => {
+    if (!live) { showToast('Демо: оплата прошла'); demoStep(id, 'pay'); return; }
+    const inv = await call(() => api<{ url: string; miniAppUrl?: string; amount: string }>(`/deals/${id}/pay`, { method: 'POST' }));
+    openTg(inv.url);
+  }, [call, showToast, demoStep]);
+
+  const loadFinance = useCallback(async () => {
+    if (!live) {
+      setFinance({ enabled: true, asset: 'USDT', feePercent: 5, balance: [{ asset: 'USDT', available: '1240.50', onhold: '0' }], held: '682.50',
+        disputes: [], payments: [{ id: 1, dealId: 1017, kind: 'payout', amount: '150.00', status: 'sent', user: 'Тимур Исмаилов', attempts: 1, at: new Date().toISOString() }] });
+      return;
+    }
+    setFinance(await call(() => api<Finance>('/admin/finance')));
+  }, [call]);
+
+  const resolveDeal = useCallback(async (id: number, devShare: number, note: string) => {
+    if (!live) return demoStep(id, 'resolve', { devShare }) ?? DEMO_DEALS[0];
+    const d = await call(() => api<Deal>(`/admin/deals/${id}/resolve`, { body: { devShare, note } }));
+    replaceDeal(d);
+    haptic.success();
+    return d;
+  }, [call, demoStep]);
+
+  const retryPayment = useCallback(async (id: number) => {
+    if (!live) return;
+    const r = await call(() => api<{ status: string; error?: string }>(`/admin/payments/${id}/retry`, { method: 'POST' }));
+    showToast(r.status === 'sent' ? 'Выплата отправлена' : r.status === 'check' ? 'Отправлен чек' : `Не прошла: ${r.error ?? ''}`);
+    await loadFinance();
+  }, [call, showToast, loadFinance]);
+
   const startDeal = useCallback(async (projectId: number, devId: string, price: number, days: number) => {
     if (live) {
       const r = await call(() => api<{ chatId: string; dealId: number }>(`/projects/${projectId}/choose`, { body: { devId: Number(devId) } }));
-      await Promise.all([refreshChats(), loadProject(projectId)]);
+      await Promise.all([refreshChats(), loadProject(projectId), loadDeal(r.dealId)]);
       haptic.success();
-      return r.chatId;
+      return r.dealId;
     }
     const p = projects.find((x) => x.id === projectId)!;
     const d = DEVS.find((x) => x.id === devId)!;
@@ -240,9 +356,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { id: Date.now(), from: 'system', text: `Сделка #${dealId} создана. Условия зафиксированы: ${price} USDT, срок ${days} дн. Ожидаем оплату от заказчика.`, time: now() }],
       }, ...cs.filter((c) => c.id !== id)];
     });
+    const fee = Math.round(price * payCfg.feePercent) / 100;
+    setDeals((ds) => [{
+      id: dealId, title: p.title, category: '', amount: price, fee: fee.toFixed(2), total: (price + fee).toFixed(2), status: 'awaiting_payment', role: 'client',
+      client: { id: 'me', name: 'Вы', handle: 'you', hue: 0, lastSeenMin: 0 }, dev: { id: d.id, name: d.name, handle: d.handle, hue: d.hue, lastSeenMin: d.lastSeenMin },
+      days, due: shortDate(Date.now() + days * 864e5), dueAt: new Date(Date.now() + days * 864e5).toISOString(), createdAt: new Date().toISOString(),
+      chatId: id, projectId, payments: [], actions: demoActions('awaiting_payment', 'client', false),
+    }, ...ds]);
     haptic.success();
-    return id;
-  }, [projects, call, refreshChats, loadProject]);
+    return dealId;
+  }, [projects, call, refreshChats, loadProject, loadDeal, payCfg]);
 
   const openChat = useCallback(async (userId: string) => {
     if (live) {
@@ -350,8 +473,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     profiles, admins, devForm: me.devForm, toast,
     isMe, clientOf, devById, myBidFor, reload, setRole, setAdmin: setAdminDemo, submitDevForm, showToast, addProject, loadProject,
     addBid, startDeal, openChat, loadChat, refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint,
-    takeComplaint, moderate, fetchDev,
-  }), [ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
+    takeComplaint, moderate, fetchDev, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment,
+  }), [deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
     devById, myBidFor, reload, setRole, submitDevForm, showToast, addProject, loadProject, addBid, startDeal, openChat, loadChat,
     refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint, takeComplaint, moderate, fetchDev]);
 

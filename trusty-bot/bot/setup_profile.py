@@ -21,16 +21,6 @@ AVATAR = os.path.join(HERE, "..", "brand", "logo", "png", "telegram-avatar-640.j
 
 DESCRIPTION = "Безопасные сделки с разработчиками. Выберите исполнителя по отзывам и оплатите в USDT — деньги хранятся у гаранта, пока вы не примете работу."
 SHORT_DESCRIPTION = "Гарант сделок и поиск разработчиков. Оплата в USDT после приёмки работы."
-COMMANDS = [
-    ("start", "Открыть Trusty"),
-    ("developers", "Найти разработчика"),
-    ("projects", "Проекты и отклики"),
-    ("deals", "Мои сделки"),
-    ("profile", "Мой профиль"),
-    ("help", "Как работает гарант"),
-]
-
-
 def call(token, method, params=None, files=None, retries=4):
     url = f"https://api.telegram.org/bot{token}/{method}"
     if files:
@@ -73,8 +63,7 @@ def main():
         ("getMe", lambda: call(token, "getMe")),
         ("setMyDescription", lambda: call(token, "setMyDescription", {"description": DESCRIPTION})),
         ("setMyShortDescription", lambda: call(token, "setMyShortDescription", {"short_description": SHORT_DESCRIPTION})),
-        ("setMyCommands", lambda: call(token, "setMyCommands",
-                                       {"commands": [{"command": c, "description": d} for c, d in COMMANDS]})),
+        ("deleteMyCommands", lambda: call(token, "deleteMyCommands")),  # the bot works through buttons only
     ]
     if "--no-photo" not in sys.argv:
         with open(AVATAR, "rb") as fh:

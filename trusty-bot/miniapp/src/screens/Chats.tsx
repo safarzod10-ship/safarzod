@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEAL_STATUS, OFFSITE, msgTime, seen, usdt, type DealStatus } from '../data';
+import { DEAL_STATUS, DEAL_TONE as TONE, OFFSITE, msgTime, seen, usdt } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { haptic, inTelegram } from '../tg';
 import { Avatar, Note, Pill, Top } from '../ui';
 
-const TONE: Record<DealStatus, 'green' | 'amber' | 'blue' | 'red' | undefined> = {
-  awaiting_payment: 'amber', in_work: 'blue', review: 'amber', done: 'green', dispute: 'red',
-};
 
 export default function Chats() {
   const nav = useNav();
@@ -95,14 +92,15 @@ export function ChatView({ id }: { id: string }) {
           </button>
         </div>
         {c.deal && (
-          <div className="deal-card">
+          <button className="deal-card" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push('deal', { id: c.deal!.id })}>
             <span className="ic"><Icon name="shield" size={19} /></span>
             <div className="t">
               <b>Сделка #{c.deal.id} · {usdt(c.deal.amount)}</b>
               <span>{c.deal.title} · до {c.deal.due}</span>
             </div>
             <Pill tone={TONE[c.deal.status]}>{DEAL_STATUS[c.deal.status]}</Pill>
-          </div>
+            <Icon name="chevron" size={18} style={{ color: 'var(--faint)', flex: 'none' }} />
+          </button>
         )}
       </div>
 

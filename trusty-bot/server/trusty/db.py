@@ -11,8 +11,20 @@ Session = async_sessionmaker(engine, expire_on_commit=False)
 
 # Columns added after the first release: (table, column, SQL type with default). create_all only creates missing
 # tables, so new columns of existing tables are added here.
+TS = "TIMESTAMP WITH TIME ZONE"
 MIGRATIONS = [
     ("users", "onboarded", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("deals", "fee", "NUMERIC(12, 2)"),
+    ("deals", "invoice_id", "BIGINT"),
+    ("deals", "invoice_url", "VARCHAR(512)"),
+    ("deals", "paid_at", TS),
+    ("deals", "submitted_at", TS),
+    ("deals", "review_until", TS),
+    ("deals", "work_note", "TEXT"),
+    ("deals", "dispute_by", "BIGINT"),
+    ("deals", "dispute_reason", "TEXT"),
+    ("deals", "dev_share", "INTEGER"),
+    ("deals", "resolution", "TEXT"),
 ]
 
 

@@ -23,11 +23,22 @@ curl -fsSL https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/tel
 
 Администратор: отправить боту `/admin <код>` (код печатает установщик), максимум 2 администратора.
 
+## Оплата (Crypto Pay, @CryptoBot / @send)
+
+Заказчик оплачивает счёт Crypto Bot: сумма сделки + комиссия гаранта (`TRUSTY_FEE_PERCENT`, по умолчанию 5%).
+Деньги лежат на балансе приложения. После приёмки (или автоприёмки через 3 дня) сумма сделки уходит исполнителю
+переводом `transfer`; если перевод невозможен, создаётся чек, привязанный к получателю. Споры решает админ долей
+0–100%; отказ исполнителя возвращает заказчику всё. Каждое движение денег записано в таблице `payments`,
+выплаты идемпотентны (`spend_id`), ответы 5xx/обрыв связи никогда не превращаются в чек (нет двойных выплат).
+Оплата подтверждается webhook'ом `https://<домен>/api/cryptopay/webhook` (подпись HMAC) и, на всякий случай,
+опросом счетов раз в 20 секунд.
+
 ## Разработка
 
 ```bash
 cd server && uv venv && uv pip install -r requirements.txt httpx
 TRUSTY_DB_URL=postgresql+asyncpg://… python -m tests.test_flow      # сквозной тест API
+TRUSTY_DB_URL=postgresql+asyncpg://… python -m tests.test_escrow    # гарант и выплаты на имитаторе Crypto Pay
 cd miniapp && npm install && npm run dev                             # Mini App на демо-данных
 npm run release                                                      # сборка в deploy/webapp
 node scripts/live-e2e.mjs out http://127.0.0.1:8811 <токен>          # Mini App против живого API

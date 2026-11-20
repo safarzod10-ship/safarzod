@@ -20,6 +20,13 @@ class Settings:
     # local development only: accept "Authorization: dev <telegram id>" without a signed initData
     dev_auth: bool = field(default_factory=lambda: _env("TRUSTY_DEV_AUTH") == "1")
     max_admins: int = 2
+    # payments: Crypto Pay API of @CryptoBot (@send)
+    cryptopay_token: str = field(default_factory=lambda: _env("TRUSTY_CRYPTOPAY_TOKEN"))
+    cryptopay_url: str = field(default_factory=lambda: _env("TRUSTY_CRYPTOPAY_URL", "https://pay.crypt.bot"))
+    asset: str = field(default_factory=lambda: _env("TRUSTY_ASSET", "USDT"))
+    fee_percent: float = field(default_factory=lambda: float(_env("TRUSTY_FEE_PERCENT", "5")))
+    review_days: float = field(default_factory=lambda: float(_env("TRUSTY_REVIEW_DAYS", "3")))
+    new_dev_limit: int = field(default_factory=lambda: int(_env("TRUSTY_NEW_DEV_LIMIT", "100")))
 
     @property
     def secret(self) -> bytes:

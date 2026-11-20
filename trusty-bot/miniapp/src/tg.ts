@@ -21,6 +21,9 @@ interface WebApp {
   setBackgroundColor(c: string): void;
   setBottomBarColor?(c: string): void;
   onEvent(e: string, cb: () => void): void;
+  offEvent?(e: string, cb: () => void): void;
+  openTelegramLink?(url: string): void;
+  openLink?(url: string): void;
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   MainButton: NativeButton;
   SecondaryButton?: NativeButton & { setParams(p: BtnParams & { position?: string }): void };
@@ -85,6 +88,21 @@ export const haptic = {
   warning: () => tg?.HapticFeedback?.notificationOccurred('warning'),
   error: () => tg?.HapticFeedback?.notificationOccurred('error'),
 };
+
+/** opens a t.me link (Crypto Bot invoice or check) inside Telegram, or a new tab in a browser */
+export function openTg(url: string) {
+  if (tg?.openTelegramLink && /^https:\/\/t\.me\//.test(url)) tg.openTelegramLink(url);
+  else if (tg?.openLink) tg.openLink(url);
+  else window.open(url, '_blank', 'noopener');
+}
+
+/** calls fn when the user comes back to the Mini App (e.g. after paying in @CryptoBot) */
+export function onReturn(fn: () => void): () => void {
+  const vis = () => { if (document.visibilityState === 'visible') fn(); };
+  document.addEventListener('visibilitychange', vis);
+  tg?.onEvent('activated', fn);
+  return () => { document.removeEventListener('visibilitychange', vis); tg?.offEvent?.('activated', fn); };
+}
 
 /** plays the splash exit once its intro has finished (see brand/tools/splash.py) */
 export function hideSplash(): Promise<void> {

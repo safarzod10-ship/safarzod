@@ -235,3 +235,65 @@ def member_payload(u: User, is_dev: bool) -> dict:
         ban = {"until": None if u.ban_permanent else short_date(u.ban_until)}
     return {"id": str(u.id), "name": u.name, "handle": u.username or "", "hue": hue(u.id),
             "role": "dev" if is_dev else "client", "strikes": u.strikes, "ban": ban, "isAdmin": u.is_admin}
+
+
+def person(u: User | None, uid: int) -> dict:
+    return {"id": str(uid), "name": u.name if u else "Пользователь", "handle": (u.username or "") if u else "", "hue": hue(uid),
+            "lastSeenMin": minutes_since(u.last_seen_at) if u else 10 ** 6}
+
+
+async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
+    """Deals as the Mini App sees them, with the actions available to `me`."""
+    from .models import Deal, Payment  # noqa: F401 - local import keeps module import order simple
+    if not deals:
+        return []
+    ids = [d.id for d in deals]
+    uids = list({d.client_id for d in deals} | {d.dev_id for d in deals})
+    users = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(uids)))).scalars()}
+    reviews = {r.deal_id: r for r in (await s.execute(select(Review).where(Review.deal_id.in_(ids)))).scalars()}
+    pays = defaultdict(list)
+    for p in (await s.execute(select(Payment).where(Payment.deal_id.in_(ids)).order_by(Payment.id))).scalars():
+        pays[p.deal_id].append(p)
+    chats = {}
+    for c in (await s.execute(select(Chat).where(or_(*[and_pair(d.client_id, d.dev_id) for d in deals])))).scalars():
+        chats[(c.a_id, c.b_id)] = c.id
+    out = []
+    for d in deals:
+        role = "client" if d.client_id == me.id else "dev" if d.dev_id == me.id else "admin"
+        r = reviews.get(d.id)
+        visible = [p for p in pays[d.id] if role == "admin" or p.user_id == me.id]
+        out.append({
+            "id": d.id, "title": d.title, "category": d.category, "amount": d.amount,
+            "fee": str(d.fee) if d.fee is not None else None, "total": str(d.total), "status": d.status, "role": role,
+            "client": person(users.get(d.client_id), d.client_id), "dev": person(users.get(d.dev_id), d.dev_id),
+            "days": d.days, "due": short_date(d.due_at), "dueAt": aware(d.due_at).isoformat(),
+            "createdAt": aware(d.created_at).isoformat(), "paidAt": aware(d.paid_at).isoformat() if d.paid_at else None,
+            "submittedAt": aware(d.submitted_at).isoformat() if d.submitted_at else None,
+            "reviewUntil": aware(d.review_until).isoformat() if d.review_until else None,
+            "finishedAt": aware(d.finished_at).isoformat() if d.finished_at else None,
+            "workNote": d.work_note, "disputeReason": d.dispute_reason,
+            "disputeBy": None if not d.dispute_by else ("client" if d.dispute_by == d.client_id else "dev"),
+            "resolution": d.resolution, "devShare": d.dev_share, "result": d.result, "projectId": d.project_id,
+            "chatId": str(chats[tuple(sorted((d.client_id, d.dev_id)))]) if tuple(sorted((d.client_id, d.dev_id))) in chats else None,
+            "review": {"rating": r.rating, "text": r.text} if r else None,
+            "payments": [{"id": p.id, "kind": p.kind, "amount": str(p.amount), "status": p.status, "userId": str(p.user_id),
+                          "url": p.url if (p.kind != "invoice" and (p.user_id == me.id or role == "admin")) else None,
+                          "error": p.error if role == "admin" else None, "at": aware(p.updated_at).isoformat()} for p in visible],
+            "actions": {
+                "pay": role == "client" and d.status == "awaiting_payment",
+                "submit": role == "dev" and d.status == "in_work",
+                "accept": role == "client" and d.status in ("in_work", "review"),
+                "dispute": role in ("client", "dev") and d.status in ("in_work", "review"),
+                "cancel": (role in ("client", "dev") and d.status == "awaiting_payment") or (role == "dev" and d.status == "in_work"),
+                "review": role == "client" and d.status == "done" and r is None,
+                "resolve": role == "admin" and d.status == "dispute",
+            },
+        })
+    return out
+
+
+def and_pair(x: int, y: int):
+    from sqlalchemy import and_
+    from .models import Chat as _Chat
+    a, b = sorted((x, y))
+    return and_(_Chat.a_id == a, _Chat.b_id == b)
