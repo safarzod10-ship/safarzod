@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mic
@@ -37,6 +38,8 @@ import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,6 +61,7 @@ import com.safarzod.jarvis.core.Need
 import com.safarzod.jarvis.gl.CoreParams
 import com.safarzod.jarvis.ui.Perms
 import com.safarzod.jarvis.ui.components.GhostButton
+import com.safarzod.jarvis.ui.components.GlassCard
 import com.safarzod.jarvis.ui.components.PrimaryButton
 import com.safarzod.jarvis.ui.theme.J
 
@@ -101,11 +105,13 @@ fun OnboardingScreen(params: CoreParams, request: (Need) -> Unit, onDone: () -> 
                     listOf(
                         Row3(Icons.Rounded.Mic, "Микрофон", "Слышать слово «Джарвис» и команды", Need.MIC, true),
                         Row3(Icons.Rounded.Notifications, "Уведомления", "Работа в фоне и напоминания", Need.NOTIFICATIONS, false),
+                        Row3(Icons.Rounded.Cloud, "Местоположение", "Погода там, где вы (примерно, без GPS)", Need.LOCATION, false),
                     ),
                     request, canNext = Perms.granted(ctx, Need.MIC),
                     onNext = { page = 2 },
                 )
-                2 -> PermsPage(
+                2 -> VoiceSetupScreen(LocalContext.current.applicationContext as JarvisApp, embedded = true) { page = 3 }
+                3 -> PermsPage(
                     tick, "Связь", "Звонки и сообщения",
                     "Найду «маму», даже если она записана как «Mom». SMS отправляю только после вашего «да».",
                     listOf(
@@ -114,9 +120,9 @@ fun OnboardingScreen(params: CoreParams, request: (Need) -> Unit, onDone: () -> 
                         Row3(Icons.Rounded.Sms, "SMS", "Отправлять сообщения голосом", Need.SMS, false),
                     ),
                     request, canNext = true,
-                    onNext = { page = 3 },
+                    onNext = { page = 4 },
                 )
-                3 -> PermsPage(
+                4 -> PermsPage(
                     tick, "Фон", "Работа без экрана",
                     "Чтобы я открывал приложения и звонил, пока вы в другом приложении или экран погашен.",
                     listOf(
@@ -126,8 +132,9 @@ fun OnboardingScreen(params: CoreParams, request: (Need) -> Unit, onDone: () -> 
                         Row3(Icons.Rounded.TouchApp, "Спец. возможности", "Скриншоты и блокировка экрана (по желанию)", Need.ACCESSIBILITY, false),
                     ),
                     request, canNext = true,
-                    onNext = { page = 4 },
+                    onNext = { page = 5 },
                 )
+                5 -> BrainPage { page = 6 }
                 else -> StylePage(onDone)
             }
         }
@@ -228,6 +235,58 @@ fun PermissionRow(icon: ImageVector, title: String, body: String, granted: Boole
                 )
             }
         }
+    }
+}
+
+/** Шаг «Мозг»: локальная нейросеть для свободного разговора (по желанию, скачивается один раз). */
+@Composable
+private fun BrainPage(onNext: () -> Unit) {
+    val app = LocalContext.current.applicationContext as JarvisApp
+    val llm = app.llm
+    val st by llm.status.collectAsState()
+    val ramGb = remember {
+        val mi = android.app.ActivityManager.MemoryInfo()
+        (app.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(mi)
+        mi.totalMem / 1_000_000_000.0
+    }
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 16.dp)) {
+        Spacer(Modifier.weight(0.38f))
+        Text("МОЗГ", style = J.t.mono, color = J.c.accent)
+        Spacer(Modifier.height(10.dp))
+        Text("Поговорим?", style = J.t.hero.copy(fontSize = J.t.title.fontSize * 1.25f), color = J.c.text)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Чтобы со мной можно было просто разговаривать и задавать вопросы, скачайте нейросеть. Она работает на телефоне, без интернета. Команды работают и без неё.",
+            style = J.t.body, color = J.c.text2,
+        )
+        Spacer(Modifier.height(16.dp))
+        if (!llm.supported) {
+            GlassCard(Modifier.fillMaxWidth()) { Text("На этом процессоре нейросеть не запустится — но всё остальное работает.", style = J.t.body, color = J.c.text2) }
+        } else {
+            val installed = llm.installedSpec()
+            llm.models.forEach { spec ->
+                val recommended = if (ramGb >= 5.5) spec.id.contains("15b") else spec.id.contains("05b")
+                GlassCard(Modifier.fillMaxWidth().padding(bottom = 10.dp), padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(spec.title + if (recommended) " · рекомендую" else "", style = J.t.label, color = if (recommended) J.c.accent else J.c.text)
+                            Text(spec.description, style = J.t.bodyS, color = J.c.text3)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    when {
+                        installed?.id == spec.id -> Text("Установлена", style = J.t.label, color = J.c.success)
+                        st is com.safarzod.jarvis.llm.LocalLlm.Status.Downloading -> Text(
+                            "Загрузка ${((st as com.safarzod.jarvis.llm.LocalLlm.Status.Downloading).progress * 100).toInt()}% — продолжится в фоне",
+                            style = J.t.bodyS, color = J.c.text2,
+                        )
+                        else -> GhostButton("Скачать · ${"%.1f".format(spec.bytes / 1e9).replace('.', ',')} ГБ", Modifier.fillMaxWidth()) { llm.download(spec) }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.weight(0.62f))
+        PrimaryButton(if (llm.installedSpec() != null || st is com.safarzod.jarvis.llm.LocalLlm.Status.Downloading) "Дальше" else "Позже", Modifier.fillMaxWidth(), onClick = onNext)
     }
 }
 

@@ -69,7 +69,7 @@ vec3 aces(vec3 x) {
     return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-// Фон: глубокий тёмный градиент, ореол вокруг ядра, пыль с параллаксом, HUD-кольцо.
+// Фон: глубокий тёмный градиент, ореол вокруг ядра, пыль с параллаксом.
 vec3 background(vec2 frag) {
     vec2 uv = (frag - uFrame.xy) / uFrame.z;
     vec2 sc = frag / uRes;
@@ -95,20 +95,6 @@ vec3 background(vec2 frag) {
             col += mix(uColA, vec3(0.8, 0.9, 1.0), 0.6) * smoothstep(0.06, 0.0, d) * tw * (0.10 + fl * 0.06);
         }
     }
-
-    // HUD: тонкое внешнее кольцо с делениями и бегущей дугой
-    float ringR = 2.3;
-    float px = 1.0 / uFrame.z;
-    float a = atan(uv.y, uv.x);
-    float ring = smoothstep(1.2 * px, 0.0, abs(r - ringR));
-    float tickBand = step(ringR + 0.5 * px, r) * step(r, ringR + 0.045);
-    float ticks = smoothstep(1.0 * px * 120.0 / TAU / r, 0.0, abs(fract(a / TAU * 120.0 + 0.5) - 0.5)) * tickBand;
-    float majorBand = step(ringR + 0.5 * px, r) * step(r, ringR + 0.09);
-    float major = smoothstep(1.6 * px * 12.0 / TAU / r, 0.0, abs(fract(a / TAU * 12.0 + 0.5) - 0.5)) * majorBand;
-    float sweepA = fract((a / TAU) - uTime * (0.04 + uThink * 0.25));
-    float arc = smoothstep(2.0 * px, 0.0, abs(r - (ringR - 0.05))) * smoothstep(0.0, 0.12, sweepA) * smoothstep(0.26, 0.12, sweepA);
-    float hud = (ring * 0.12 + ticks * 0.10 + major * 0.28) * (0.6 + 0.4 * uEnergy) + arc * (0.35 + 0.5 * uEnergy);
-    col += uColA * hud * uIntro;
 
     // виньетка
     col *= 1.0 - 0.55 * smoothstep(0.5, 1.25, length((sc - 0.5) * vec2(uRes.x / uRes.y, 1.0)));

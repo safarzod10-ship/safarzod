@@ -82,7 +82,7 @@ class JarvisService : LifecycleService() {
     private fun buildNotification(phase: Phase): Notification {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE)
         val listen = PendingIntent.getService(this, 1, Intent(this, JarvisService::class.java).setAction(ACTION_LISTEN), PendingIntent.FLAG_IMMUTABLE)
-        val stop = PendingIntent.getBroadcast(this, 2, Intent(this, ServiceActionReceiver::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
+        val stop = PendingIntent.getBroadcast(this, 2, Intent(this, ServiceActionReceiver::class.java).setAction(ACTION_MUTE), PendingIntent.FLAG_IMMUTABLE)
         val text = when (phase) {
             Phase.LOADING -> "Загружаю распознавание речи…"
             Phase.LISTENING -> "Слушаю вас…"
@@ -102,7 +102,7 @@ class JarvisService : LifecycleService() {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .addAction(0, "Слушать", listen)
-            .addAction(0, "Выключить", stop)
+            .addAction(0, "Стоп", stop)
             .build()
     }
 
@@ -154,12 +154,14 @@ class JarvisService : LifecycleService() {
         const val ACTION_STOP = "com.safarzod.jarvis.STOP"
         const val ACTION_LISTEN = "com.safarzod.jarvis.LISTEN"
         const val ACTION_REFRESH = "com.safarzod.jarvis.REFRESH"
+        const val ACTION_MUTE = "com.safarzod.jarvis.MUTE"
         const val EXTRA_GREET = "greet"
         @Volatile var running = false
             private set
 
         fun start(context: Context, greet: Boolean = false) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
+            if ((context.applicationContext as JarvisApp).settings.muted.value) return
             val i = Intent(context, JarvisService::class.java).putExtra(EXTRA_GREET, greet)
             runCatching { ContextCompat.startForegroundService(context, i) }
         }

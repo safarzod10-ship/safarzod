@@ -8,14 +8,13 @@ import kotlinx.coroutines.flow.asStateFlow
 
 enum class CoreStyle(val title: String, val subtitle: String) {
     PLASMA("Плазма", "Энергетическая сфера с орбитами"),
-    GYRO("Гироскоп", "Металлический карданный подвес"),
     NEURO("Нейросфера", "Облако частиц, живущее от голоса"),
 }
 
-enum class Quality(val title: String, val scale: Float, val plasmaSteps: Int, val gyroSteps: Int, val particles: Int) {
-    ECO("Экономия", 0.45f, 14, 48, 4500),
-    BALANCED("Баланс", 0.62f, 20, 64, 7000),
-    ULTRA("Максимум", 0.85f, 28, 88, 11000),
+enum class Quality(val title: String, val scale: Float, val plasmaSteps: Int, val particles: Int) {
+    ECO("Экономия", 0.45f, 14, 4500),
+    BALANCED("Баланс", 0.62f, 20, 7000),
+    ULTRA("Максимум", 0.85f, 28, 11000),
 }
 
 enum class SearchEngine(val title: String, val url: String) {
@@ -45,6 +44,8 @@ class Settings(context: Context) {
     )
 
     val onboarded = bool("onboarded", false)
+    /** Кнопка «Стоп»: Джарвис полностью молчит и не слушает, пока его не включат. */
+    val muted = bool("muted", false)
     val wakeWord = bool("wake_word", true)
     val background = bool("background", true)
     val coreStyle = enum("core_style", CoreStyle.PLASMA)
@@ -56,13 +57,23 @@ class Settings(context: Context) {
     val greetings = bool("greetings", true)
     val confirmCalls = bool("confirm_calls", false)
     val confirmSms = bool("confirm_sms", true)
+    val messageGreeting = bool("message_greeting", true)
+    val homeCity = string("home_city", "")
+    // настройка голоса владельца
+    val calibrated = bool("calibrated", false)
+    val wakeVariants = string("wake_variants", "")
+    val voiceprint = string("voiceprint", "")
+    val ownerOnly = bool("owner_only", false)
+    val ownerThreshold = float("owner_threshold", 0.45f)
+    val speechLevel = float("speech_level", 0f)
     val announceMessages = bool("announce_messages", true)
     val searchEngine = enum("search_engine", SearchEngine.GOOGLE)
     val sensitivity = float("sensitivity", 0.5f)
     val voiceSynth = bool("voice_synth", true)
     val speakDetails = bool("speak_details", true)
     val llmEnabled = bool("llm_enabled", true)
-    val llmPolish = bool("llm_polish", true)
+    // правила составляют сообщения надёжнее маленькой нейросети; переписывание — по желанию
+    val llmPolish = bool("llm_polish", false)
     val llmModel = string("llm_model", "")
     val lastGreetingDay = string("last_greeting", "")
     val lastActiveAt = string("last_active", "0")

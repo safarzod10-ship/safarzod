@@ -113,8 +113,8 @@ class ScreenshotTest {
         UiState(phase = Phase.SPEAKING, micReady = true, userText = "Позвони маме.", reply = "Набираю, сэр.", card = Card.Calling(mom.name, mom.phone, mom.phoneLabel)),
     )
 
-    @Test fun home_gyro_reply() = home(
-        "08_home_gyro", "home_gyro",
+    @Test fun home_reply() = home(
+        "08_home_reply", "home_idle",
         UiState(phase = Phase.STANDBY, micReady = true, userText = "Как дела?", reply = "Все системы в норме, сэр. Спасибо, что спросили."),
     )
 
@@ -138,6 +138,19 @@ class ScreenshotTest {
         "11_home_permission", "home_card",
         UiState(phase = Phase.STANDBY, micReady = true, userText = "Сделай скриншот.", reply = "Простите, сэр, но нужные разрешения не обнаружены.",
             card = Card.Permission("Спец. возможности", "Для скриншотов, блокировки экрана и кнопок «Назад/Домой» включите службу Джарвиса в «Специальных возможностях».", Need.ACCESSIBILITY)),
+    )
+
+    @Test fun home_muted() = home("13_home_muted", "home_idle", UiState(phase = Phase.OFF, micReady = true, muted = true))
+
+    @Test fun home_weather() = home(
+        "14_home_weather", "home_card",
+        UiState(phase = Phase.SPEAKING, micReady = true, userText = "Какая погода?", reply = "Сейчас в Москве плюс четыре градуса, пасмурно. Днём до плюс шести градусов, сэр.",
+            card = Card.Weather("Москва", 0, 4, "пасмурно", 1, 2, 6, 40, 3)),
+    )
+
+    @Test fun home_chat() = home(
+        "15_home_chat", "home_listen",
+        UiState(phase = Phase.SPEAKING, micReady = true, userText = "Зачем людям сон?", reply = "Во сне мозг сортирует воспоминания и восстанавливает силы, сэр. Без него падают внимание и настроение."),
     )
 
     @Test fun home_typing() = home("12_home_typing", "home_card", UiState(phase = Phase.STANDBY, micReady = true), typing = true)

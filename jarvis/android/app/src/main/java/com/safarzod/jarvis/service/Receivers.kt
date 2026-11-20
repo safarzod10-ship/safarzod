@@ -25,7 +25,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext as JarvisApp
         app.reminders.rescheduleAll()
-        if (!app.settings.onboarded.value || !app.settings.background.value) return
+        if (!app.settings.onboarded.value || !app.settings.background.value || app.settings.muted.value) return
         // С Android 11 микрофон, запущенный из фона (в т.ч. после перезагрузки), не слышит ничего —
         // поэтому просим одно нажатие. На Android 8–10 можно стартовать сразу.
         if (Build.VERSION.SDK_INT >= 30) JarvisService.postTapToResume(context)
@@ -36,7 +36,10 @@ class BootReceiver : BroadcastReceiver() {
 /** Кнопка «Выключить» в уведомлении. */
 class ServiceActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == JarvisService.ACTION_STOP) JarvisService.stop(context)
+        when (intent.action) {
+            JarvisService.ACTION_STOP -> JarvisService.stop(context)
+            JarvisService.ACTION_MUTE -> (context.applicationContext as JarvisApp).engine.setMuted(true)
+        }
     }
 }
 

@@ -34,7 +34,6 @@ class CoreParams {
     @Volatile var radius = 0.20f        // доля меньшей стороны на единицу модели
     @Volatile var renderScale = 0.62f
     @Volatile var plasmaSteps = 20
-    @Volatile var gyroSteps = 64
     @Volatile var particles = 7000
     @Volatile var dragVx = 0f           // скорость вращения от пальца (рад/с)
     @Volatile var dragVy = 0f
@@ -113,7 +112,7 @@ class CoreRenderer(private val context: Context, private val p: CoreParams) : GL
         animate(dt)
 
         val style = p.style
-        val steps = if (style == CoreStyle.GYRO) p.gyroSteps else p.plasmaSteps
+        val steps = p.plasmaSteps
         if (programStyle != style || programSteps != steps || program == 0) {
             if (programStyle != null && programStyle != style) switchFade = 0f
             buildProgram(style)
@@ -205,7 +204,6 @@ class CoreRenderer(private val context: Context, private val p: CoreParams) : GL
         uniforms.clear()
         val frag = when (style) {
             CoreStyle.PLASMA -> "core_plasma.frag"
-            CoreStyle.GYRO -> "core_gyro.frag"
             CoreStyle.NEURO -> "core_glow.frag"
         }
         val vs = "#version 300 es\nlayout(location=0) in vec2 aPos;\nvoid main(){ gl_Position = vec4(aPos, 0.0, 1.0); }\n"

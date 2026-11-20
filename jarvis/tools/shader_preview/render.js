@@ -22,9 +22,9 @@ function page(mode, state, time, W, H) {
 <script>
 const MODE=${JSON.stringify(mode)};
 const S=${JSON.stringify(s)};
-const T=${time};const CY=${process.env.CY||'(W===H?0.5:0.40)'};const RAD=${process.env.RAD||'(W===H?0.30:0.21)'};
+const T=${time};const CY=${process.env.CY||(W===H?0.5:0.40)};const RAD=${process.env.RAD||(W===H?0.30:0.21)};
 const common=${JSON.stringify(read('common.glsl'))};
-const fr={plasma:${JSON.stringify(read('core_plasma.frag'))},gyro:${JSON.stringify(read('core_gyro.frag'))},glow:${JSON.stringify(read('core_glow.frag'))}};
+const fr={plasma:${JSON.stringify(read('core_plasma.frag'))},glow:${JSON.stringify(read('core_glow.frag'))}};
 const pv=${JSON.stringify(read('particles.vert'))};
 const pf=${JSON.stringify(read('particles.frag'))};
 const head='#version 300 es\\nprecision highp float;\\nprecision highp int;\\n';
@@ -48,7 +48,7 @@ const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.AR
 const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
 const fname=MODE==='particles'?'glow':MODE;
 const p=prog(fsq,head+common+'\\n'+fr[fname]);
-setU(p,MODE==='gyro'?96:28);
+setU(p,28);
 gl.viewport(0,0,W,H);gl.enable(gl.SCISSOR_TEST);
 for(let y=0;y<H;y+=16){for(let x=0;x<W;x+=W/2){gl.scissor(x,y,W/2,16);gl.drawArrays(gl.TRIANGLES,0,3);gl.finish();}}
 gl.disable(gl.SCISSOR_TEST);
@@ -67,7 +67,7 @@ gl.finish();document.body.setAttribute('data-img',c.toDataURL('image/png'));docu
 
 (async () => {
   const out = process.argv[2];
-  const modes = process.argv[3] ? process.argv[3].split(',') : ['plasma', 'gyro', 'particles'];
+  const modes = process.argv[3] ? process.argv[3].split(',') : ['plasma', 'particles'];
   const states = process.argv[4] ? process.argv[4].split(',') : ['idle'];
   const time = parseFloat(process.argv[5] || '7.3');
   const W = parseInt(process.argv[6] || '540'), H = parseInt(process.argv[7] || '960');

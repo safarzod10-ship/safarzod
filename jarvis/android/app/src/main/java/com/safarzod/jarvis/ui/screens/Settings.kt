@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Layers
@@ -135,6 +136,8 @@ fun SettingsScreen(app: JarvisApp, onBack: () -> Unit, onOpen: (String) -> Unit,
 
             SectionLabel("Прослушивание")
             Group {
+                NavRow(Icons.Rounded.RecordVoiceOver, "Настройка голоса", if (s.calibrated.value) "Настроено · можно пройти заново" else "Прочитать 5 фраз — Джарвис привыкнет к вам") { onOpen("voicesetup") }
+                SwitchRow(Icons.Rounded.Shield, "Только мой голос", "Игнорировать чужие команды (нужна настройка голоса)", s.ownerOnly)
                 SwitchRow(Icons.Rounded.Mic, "Слово «Джарвис»", "Отвечать на обращение без нажатий", s.wakeWord)
                 SwitchRow(Icons.Rounded.BatterySaver, "Работать в фоне", "Слушать, даже когда приложение закрыто", s.background) { on ->
                     if (on) JarvisService.start(ctx)
@@ -146,6 +149,7 @@ fun SettingsScreen(app: JarvisApp, onBack: () -> Unit, onOpen: (String) -> Unit,
             Group {
                 SwitchRow(Icons.Rounded.Call, "Подтверждать звонки", "Спрашивать «Подтверждаете, сэр?» перед вызовом", s.confirmCalls)
                 SwitchRow(Icons.Rounded.Sms, "Подтверждать SMS", "Показывать текст перед отправкой", s.confirmSms)
+                SwitchRow(Icons.Rounded.Sms, "Приветствие в сообщениях", "«Привет, мама! Я не приду.»", s.messageGreeting)
                 SwitchRow(Icons.Rounded.NotificationsActive, "Объявлять сообщения", "«Сэр, у вас новое сообщение»", s.announceMessages)
                 val engine by s.searchEngine.flow.collectAsState()
                 Column(Modifier.padding(16.dp)) {
@@ -175,6 +179,7 @@ fun SettingsScreen(app: JarvisApp, onBack: () -> Unit, onOpen: (String) -> Unit,
                 PermRow(Icons.Rounded.NotificationsActive, "Чтение уведомлений", Need.LISTENER, request)
                 PermRow(Icons.Rounded.TouchApp, "Спец. возможности", Need.ACCESSIBILITY, request)
                 PermRow(Icons.Rounded.Alarm, "Точные напоминания", Need.EXACT_ALARMS, request)
+                PermRow(Icons.Rounded.Cloud, "Местоположение для погоды", Need.LOCATION, request)
                 val bat = Perms.batteryUnrestricted(ctx)
                 StatusRow(Icons.Rounded.BatterySaver, "Без ограничений батареи", bat) { runCatching { ctx.startActivity(Perms.batteryIntent(ctx).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
             }
@@ -310,7 +315,7 @@ fun CorePicker(app: JarvisApp) {
                 Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                     Image(
                         painterResource(
-                            when (st) { CoreStyle.PLASMA -> R.drawable.core_plasma; CoreStyle.GYRO -> R.drawable.core_gyro; CoreStyle.NEURO -> R.drawable.core_neuro }
+                            when (st) { CoreStyle.PLASMA -> R.drawable.core_plasma; CoreStyle.NEURO -> R.drawable.core_neuro }
                         ),
                         st.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
                     )

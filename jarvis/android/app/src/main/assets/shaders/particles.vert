@@ -47,10 +47,12 @@ void main() {
     // волны по сфере: шум + «голосовые» полосы по широте
     float n1 = noise3(d * 2.3 + vec3(0.0, t * 0.35, t * 0.2));
     float n2 = noise3(d * 5.1 - vec3(t * 0.5, 0.0, t * 0.3));
-    float bands = sin(d.y * 14.0 - t * (2.0 + uThink * 5.0)) * 0.5 + 0.5;
+    float bands = sin(d.y * 14.0 - t * (2.0 + uThink * 5.0 + uLevel * 6.0)) * 0.5 + 0.5;
+    // голос Джарвиса: сфера заметно «говорит» — волны, полосы и общий пульс
     float disp = (n1 - 0.5) * (0.10 + 0.22 * uEnergy)
-               + (n2 - 0.5) * 0.10 * uLevel
-               + bands * uLevel * 0.12
+               + (n2 - 0.5) * 0.28 * uLevel
+               + bands * uLevel * 0.18
+               + uLevel * 0.10
                + uThink * 0.06 * sin(t * 6.0 + rnd * 30.0);
     // часть частиц — «пыль» в оболочке вокруг
     float shell = rnd > 0.92 ? (1.15 + rnd * 0.9 + 0.1 * sin(t * 0.7 + rnd * 50.0)) : 1.0;
@@ -59,8 +61,8 @@ void main() {
 
     // орбитальное вращение пыли
     vec3 p = d * r;
-    if (shell > 1.0) p = rotY(t * (0.15 + rnd * 0.2)) * p;
-    p = rotY(t * 0.1) * p;
+    if (shell > 1.0) p = rotY(t * (0.15 + rnd * 0.2) * (1.0 + uLevel * 2.0)) * p;
+    p = rotY(t * (0.1 + uLevel * 0.25)) * p;
 
     // камера (как в фрагментных ядрах)
     mat3 R = rotY(uRot.x) * rotX(clamp(uRot.y, -1.2, 1.2) - 0.18);
@@ -77,5 +79,5 @@ void main() {
     vec3 c = mix(uColB, uColA, smoothstep(0.25, 0.75, n1));
     c = mix(c, vec3(1.0), smoothstep(0.08, 0.25, disp) * 0.6);
     vCol = c;
-    vAlpha = (0.18 + 0.82 * front) * (shell > 1.0 ? 0.55 : 1.0) * (0.55 + 0.45 * uEnergy + 0.5 * uLevel) * intro;
+    vAlpha = (0.18 + 0.82 * front) * (shell > 1.0 ? 0.55 : 1.0) * (0.5 + 0.3 * uEnergy + 0.2 * uLevel) * intro;
 }

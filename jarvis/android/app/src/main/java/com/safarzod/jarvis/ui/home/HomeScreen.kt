@@ -47,7 +47,9 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Psychology
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -99,6 +101,7 @@ fun HomeScreen(
     HomeContent(
         ui = ui, micLevel = micLevel, params = params,
         onMicTap = engine::onMicTap, onSubmit = engine::submitText, onAction = engine::onAction, onOpen = onOpen,
+        onToggleMute = { engine.setMuted(!ui.muted) },
     )
 }
 
@@ -113,6 +116,7 @@ fun HomeContent(
     onAction: (UiAction) -> Unit,
     onOpen: (String) -> Unit,
     startTyping: Boolean = false,
+    onToggleMute: () -> Unit = {},
 ) {
     var typing by rememberSaveable { mutableStateOf(startTyping) }
 
@@ -161,14 +165,14 @@ fun HomeContent(
         )
 
         Column(Modifier.fillMaxSize()) {
-            TopBar(ui, onOpen)
+            TopBar(ui, onOpen, onToggleMute)
             Spacer(Modifier.weight(1f))
             Transcript(ui, typing, Modifier.padding(horizontal = 24.dp))
             Spacer(Modifier.height(14.dp))
             CardHost(ui, onAction, onOpen, Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(14.dp))
             AnimatedVisibility(
-                visible = !typing && ui.card == null && ui.phase == Phase.STANDBY && ui.reply == null,
+                visible = !typing && !ui.muted && ui.card == null && ui.phase == Phase.STANDBY && ui.reply == null,
                 enter = fadeIn(tween(400)), exit = fadeOut(tween(200)),
             ) { Suggestions { onSubmit(it) } }
             Dock(
@@ -185,7 +189,7 @@ fun HomeContent(
 }
 
 @Composable
-private fun TopBar(ui: UiState, onOpen: (String) -> Unit) {
+private fun TopBar(ui: UiState, onOpen: (String) -> Unit, onToggleMute: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().statusBarsPadding().padding(start = 22.dp, end = 14.dp, top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -194,7 +198,7 @@ private fun TopBar(ui: UiState, onOpen: (String) -> Unit) {
             Text("ДЖАРВИС", style = J.t.wordmark, color = J.c.text)
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val (label, color, pulse) = when (ui.phase) {
+                val (label, color, pulse) = if (ui.muted) Triple("НА ПАУЗЕ · НЕ СЛУШАЕТ", J.c.danger, false) else when (ui.phase) {
                     Phase.OFF -> Triple("ВЫКЛЮЧЕН", J.c.text3, false)
                     Phase.LOADING -> Triple("ЗАГРУЗКА СИСТЕМ", J.c.warn, true)
                     Phase.STANDBY -> Triple(if (ui.micReady) "НА СВЯЗИ · ОФЛАЙН" else "ГОТОВ", J.c.success, true)
@@ -209,6 +213,14 @@ private fun TopBar(ui: UiState, onOpen: (String) -> Unit) {
                 }
             }
         }
+        // «Стоп»: Джарвис полностью перестаёт слушать и реагировать
+        RoundIconButton(
+            if (ui.muted) Icons.Rounded.PlayArrow else Icons.Rounded.Stop,
+            if (ui.muted) "Включить" else "Стоп",
+            tint = if (ui.muted) J.c.success else J.c.danger,
+            onClick = onToggleMute,
+        )
+        Spacer(Modifier.width(10.dp))
         RoundIconButton(Icons.Rounded.Psychology, "Память") { onOpen("memory") }
         Spacer(Modifier.width(10.dp))
         RoundIconButton(Icons.Rounded.Tune, "Настройки") { onOpen("settings") }
@@ -220,6 +232,11 @@ private fun TopBar(ui: UiState, onOpen: (String) -> Unit) {
 private fun Transcript(ui: UiState, typing: Boolean, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         when {
+            ui.muted -> {
+                Text("Джарвис на паузе", style = J.t.reply, color = J.c.text, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(6.dp))
+                Text("Не слушает и ни на что не реагирует.\nНажмите «Включить», чтобы вернуть.", style = J.t.body, color = J.c.text3, textAlign = TextAlign.Center)
+            }
             ui.phase == Phase.LISTENING -> {
                 if (ui.awaiting && ui.reply != null) {
                     Text(ui.reply, style = J.t.reply.copy(fontSize = J.t.bodyL.fontSize, lineHeight = J.t.bodyL.lineHeight), color = J.c.text2, textAlign = TextAlign.Center)
@@ -343,12 +360,16 @@ private fun Dock(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     RoundIconButton(Icons.Rounded.Keyboard, "Написать", size = 52.dp) { onTyping(true) }
                     Spacer(Modifier.weight(1f))
-                    MicOrb(
-                        level = micLevel,
-                        listening = ui.phase == Phase.LISTENING,
-                        busy = ui.phase == Phase.THINKING || ui.phase == Phase.LOADING,
-                        onClick = onMic,
-                    )
+                    if (ui.muted) {
+                        com.safarzod.jarvis.ui.components.PrimaryButton("Включить", icon = Icons.Rounded.PlayArrow, onClick = onMic)
+                    } else {
+                        MicOrb(
+                            level = micLevel,
+                            listening = ui.phase == Phase.LISTENING,
+                            busy = ui.phase == Phase.THINKING || ui.phase == Phase.LOADING,
+                            onClick = onMic,
+                        )
+                    }
                     Spacer(Modifier.weight(1f))
                     RoundIconButton(Icons.Rounded.History, "Журнал", size = 52.dp, onClick = onHistory)
                 }

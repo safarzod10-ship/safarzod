@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -293,6 +294,111 @@ class LocalLlm(private val context: Context, private val settings: Settings) {
     private fun chat(system: String, user: String) =
         "<|im_start|>system\n$system<|im_end|>\n<|im_start|>user\n$user<|im_end|>\n<|im_start|>assistant\n"
 
+    /**
+     * Свободный разговор. Ответ приходит по предложениям в [onSentence] сразу по мере генерации —
+     * Джарвис начинает говорить, не дожидаясь конца. Возвращает весь ответ или null.
+     */
+    suspend fun converse(history: List<Pair<String, String>>, text: String, timeoutMs: Long = 30_000, onSentence: (String) -> Unit): String? =
+        withContext(Dispatchers.Default) {
+            if (!available) return@withContext null
+            // модель ещё не в памяти — подождём загрузку (это первый вопрос), но не дольше 20 с
+            if (engine == null) withTimeoutOrNull(20_000) { ensureLoaded() } ?: return@withContext null
+            if (!lock.tryLock()) return@withContext null
+            var handOff = false
+            try {
+                val llm = engine ?: return@withContext null // выгрузили, пока ждали замок
+                val now = java.text.SimpleDateFormat("EEEE, d MMMM yyyy, HH:mm", java.util.Locale.forLanguageTag("ru")).format(java.util.Date())
+                val system = """Ты — Джарвис, личный голосовой помощник владельца телефона. Сейчас $now.
+Отвечай по-русски, коротко и по делу: одно-три предложения, разговорно, без списков, markdown и эмодзи — ответ будет озвучен голосом.
+Обращайся к пользователю «сэр». Будь вежлив, с лёгкой иронией британского дворецкого.
+Пиши только по-русски, кириллицей, без английских и китайских слов.
+Не выдумывай факты. Только если вопрос про свежие новости, счёт матча или цены — скажи, что лучше поискать в интернете."""
+                val sb = StringBuilder("<|im_start|>system\n$system<|im_end|>\n")
+                // примеры задают стиль: коротко, «сэр», без воды
+                sb.append("<|im_start|>user\nкак дела?<|im_end|>\n<|im_start|>assistant\nВсе системы в норме, сэр. Чем могу помочь?<|im_end|>\n")
+                sb.append("<|im_start|>user\nзачем людям сон?<|im_end|>\n<|im_start|>assistant\nВо сне мозг сортирует воспоминания и восстанавливает силы, сэр. Без него падают внимание и настроение.<|im_end|>\n")
+                for ((u, a) in history.takeLast(4)) sb.append("<|im_start|>user\n$u<|im_end|>\n<|im_start|>assistant\n$a<|im_end|>\n")
+                sb.append("<|im_start|>user\n$text<|im_end|>\n<|im_start|>assistant\n")
+                val so = LlmInferenceSession.LlmInferenceSessionOptions.builder()
+                    .setTemperature(0.3f).setTopK(20).setTopP(0.9f)
+                    .setPromptTemplates(
+                        PromptTemplates.builder().setUserPrefix("").setUserSuffix("").setModelPrefix("").setModelSuffix("")
+                            .setSystemPrefix("").setSystemSuffix("").build()
+                    ).build()
+                val session = LlmInferenceSession.createFromOptions(llm, so)
+                session.addQueryChunk(sb.toString())
+                val buf = StringBuilder()
+                var emitted = 0
+                var spoken = 0
+                val enough = java.util.concurrent.atomic.AtomicBoolean(false)
+                // делим ответ на предложения по «сырому» тексту (позиции не плывут), чистим каждое отдельно;
+                // точка в конце ещё не законченного куска — не граница («36.6» придёт следующим токеном)
+                fun flush(final: Boolean) {
+                    val raw = buf.toString()
+                    var i = emitted
+                    while (i < raw.length) {
+                        val ch = raw[i]
+                        val boundary = (ch == '.' || ch == '!' || ch == '?' || ch == '…') &&
+                            ((i + 1 < raw.length && (raw[i + 1] == ' ' || raw[i + 1] == '\n')) || (final && i + 1 >= raw.length))
+                        if (boundary && i + 1 - emitted >= 12) {
+                            val sentence = sanitize(raw.substring(emitted, i + 1)).trim()
+                            if (sentence.isNotEmpty() && spoken < 4) { onSentence(sentence); spoken++ }
+                            emitted = i + 1
+                            if (spoken >= 4) enough.set(true) // для голоса хватит четырёх предложений
+                        }
+                        i++
+                    }
+                    if (final && emitted < raw.length) {
+                        val rest = sanitize(raw.substring(emitted)).trim()
+                        if (rest.isNotEmpty() && spoken < 4) onSentence(rest)
+                        emitted = raw.length
+                    }
+                }
+                val future = session.generateResponseAsync { partial, done ->
+                    buf.append(partial)
+                    flush(done)
+                }
+                // ждём ответ, но слушаем отмену: пользователь перебил, хватит предложений или вышло время
+                val deadline = System.currentTimeMillis() + timeoutMs
+                val ctx = coroutineContext
+                while (!future.isDone) {
+                    if (!ctx.isActive || enough.get() || System.currentTimeMillis() > deadline) break
+                    Thread.sleep(40)
+                }
+                if (!future.isDone) {
+                    runCatching { session.cancelGenerateResponseAsync() }
+                    val finished = runCatching { future.get(3, TimeUnit.SECONDS); true }.getOrDefault(false)
+                    if (finished) session.close()
+                    else {
+                        // нативная генерация ещё идёт: сессию и замок отпустим, только когда она реально закончится
+                        handOff = true
+                        scope.launch {
+                            runCatching { future.get() }
+                            runCatching { session.close() }
+                            lock.unlock()
+                        }
+                    }
+                } else {
+                    runCatching { future.get() }
+                    session.close()
+                }
+                sanitize(buf.toString()).trim().ifEmpty { null }
+            } catch (e: Throwable) {
+                Log.e(TAG, "converse", e)
+                null
+            } finally {
+                if (!handOff) lock.unlock()
+            }
+        }
+
+    /** Убрать служебные токены, разметку, иероглифы и «склеенные» рус-англ слова, которые иногда выдаёт маленькая модель. */
+    private fun sanitize(t: String): String {
+        val noTokens = t.replace(Regex("<\\|im_[a-z]+\\|>?"), "").replace(Regex("[*#_`]"), "")
+            .replace(Regex("[\\u3000-\\u9fff\\uac00-\\ud7af\\uff00-\\uffef]+"), "")
+        return noTokens.split(' ').filterNot { w -> w.any { it in 'а'..'я' || it in 'А'..'Я' } && w.any { it in 'a'..'z' || it in 'A'..'Z' } }
+            .joinToString(" ").replace(Regex(" {2,}"), " ")
+    }
+
     /** Понять фразу, которую не разобрали правила. Возвращает команду или null. */
     suspend fun interpret(text: String): Command? {
         if (!available) return null
@@ -337,16 +443,21 @@ timer {"seconds"}; reminder {"text","minutes"}; flashlight {"on": true|false}; n
     }
 
     /** Привести текст сообщения в порядок: пунктуация, заглавные буквы, без изменения смысла. */
-    suspend fun polish(text: String, recipient: String?): String? {
+    suspend fun polish(text: String, recipient: String?, greet: Boolean): String? {
         if (!available || !settings.llmPolish.value) return null
-        val system = """Ты редактируешь короткое сообщение, надиктованное голосом. Исправь пунктуацию, заглавные буквы и явные ошибки распознавания речи.
-Не меняй смысл, не добавляй новых фактов, не добавляй приветствий и подписей, не используй кавычки. Пиши от первого лица, как написал бы сам человек.
-Верни только исправленный текст сообщения."""
-        val user = (if (recipient != null) "Адресат: $recipient\n" else "") + "Текст: $text"
+        val system = """Пользователь надиктовал голосом, что написать человеку. Преврати это в готовое сообщение от его лица прямой речью:
+исправь пунктуацию и ошибки распознавания, косвенную речь сделай прямой (он/она → ты), не добавляй новых фактов, подписей и кавычек.""" +
+            (if (greet) " Начни с короткого приветствия по имени адресата." else " Без приветствия.") + """
+Примеры:
+Адресат: мама. Текст: что я не приду → Привет, мама! Я не приду.
+Адресат: Саша. Текст: чтобы он купил хлеб → Привет, Саша! Купи, пожалуйста, хлеб.
+Адресат: брат. Текст: я буду через час → Привет, брат! Буду через час.
+Верни только текст сообщения."""
+        val user = "Адресат: ${recipient ?: "друг"}. Текст: $text"
         val out = complete(chat(system, user), 0.2f, 8_000)?.trim()?.trim('"', '«', '»')?.lines()?.firstOrNull { it.isNotBlank() }?.trim()
             ?: return null
         // защита от «фантазий» модели: результат должен быть близок к исходнику по длине
-        if (out.length > text.length * 2 + 20 || out.length < text.length / 2) return null
+        if (out.length > text.length * 2 + 40 || out.length < text.length / 2) return null
         return out
     }
 

@@ -19,9 +19,11 @@ import com.safarzod.jarvis.data.Memory
 import com.safarzod.jarvis.data.MessageFeed
 import com.safarzod.jarvis.data.Reminders
 import com.safarzod.jarvis.data.Turn
+import com.safarzod.jarvis.data.WeatherService
 import com.safarzod.jarvis.llm.LocalLlm
 import com.safarzod.jarvis.nlu.Calc
 import com.safarzod.jarvis.nlu.Command
+import com.safarzod.jarvis.nlu.Compose
 import com.safarzod.jarvis.nlu.MediaAction
 import com.safarzod.jarvis.nlu.MessengerApp
 import com.safarzod.jarvis.nlu.Names
@@ -43,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +76,7 @@ class Engine(
     val reminders: Reminders,
     val llm: LocalLlm,
     val tts: Tts,
+    val weatherService: WeatherService,
 ) {
     /** Любая непредвиденная ошибка в диалоге не роняет приложение: пишем в лог и возвращаемся в ожидание. */
     private val crashGuard = CoroutineExceptionHandler { _, e ->
@@ -82,7 +86,7 @@ class Engine(
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + crashGuard)
 
-    private val _ui = MutableStateFlow(UiState())
+    private val _ui = MutableStateFlow(UiState(muted = settings.muted.value))
     val ui: StateFlow<UiState> = _ui
     private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 8)
     val events: SharedFlow<UiEvent> = _events
@@ -119,8 +123,20 @@ class Engine(
         scope.launch { settings.voiceVolume.flow.collect { player.volume = it } }
         scope.launch { settings.uiSounds.flow.collect { player.uiSounds = it } }
         scope.launch { settings.sensitivity.flow.collect { speech.sensitivity = it } }
+        scope.launch {
+            settings.wakeVariants.flow.collect { v ->
+                val list = v.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                Parser.userWakeWords = list
+                speech.extraWakeWords = list.toSet()
+            }
+        }
+        scope.launch {
+            kotlinx.coroutines.flow.combine(settings.ownerOnly.flow, settings.voiceprint.flow) { on, vp -> on && vp.isNotBlank() }
+                .collect { speech.wantSpeaker = it }
+        }
         scope.launch { speech.events.collect { onSpeech(it) } }
         scope.launch { speech.ready.collect { r -> _ui.update { it.copy(micReady = r) } } }
+        _ui.update { it.copy(muted = settings.muted.value) }
         scope.launch { MessageFeed.incoming.collect { onIncomingMessage(it) } }
         scope.launch {
             settings.wakeWord.flow.collect { on ->
@@ -132,6 +148,7 @@ class Engine(
     /** Загрузить распознавание и запустить микрофон. [greet] — поприветствовать голосом. */
     suspend fun boot(greet: Boolean) {
         attach()
+        if (settings.muted.value) { _ui.update { it.copy(phase = Phase.OFF, muted = true) }; return }
         if (_ui.value.phase == Phase.OFF) _ui.update { it.copy(phase = Phase.LOADING) }
         val ok = speech.load()
         if (!ok) { _ui.update { it.copy(phase = Phase.OFF, notice = "Распознавание речи недоступно") }; return }
@@ -150,6 +167,25 @@ class Engine(
             }
         } else {
             standby()
+        }
+    }
+
+    /**
+     * Кнопка «Стоп»: полностью выключить реакции — микрофон, ответы, объявления.
+     * Состояние сохраняется (и после перезагрузки), пока не нажмут «Включить».
+     */
+    fun setMuted(m: Boolean) {
+        settings.muted.value = m
+        _ui.update { it.copy(muted = m, notice = null) }
+        if (m) {
+            job?.cancel()
+            setPending(null)
+            player.stop()
+            _ui.update { it.copy(card = null, reply = null, userText = null, partial = "", awaiting = false) }
+            com.safarzod.jarvis.service.JarvisService.stop(context)
+            shutdown()
+        } else {
+            com.safarzod.jarvis.service.JarvisService.start(context, greet = false)
         }
     }
 
@@ -177,6 +213,7 @@ class Engine(
 
     /** Кнопка микрофона / нажатие на ядро. */
     fun onMicTap() {
+        if (settings.muted.value) { setMuted(false); return }
         when (_ui.value.phase) {
             Phase.SPEAKING -> step { delay(120); listen(followUp = true) }
             Phase.LISTENING, Phase.THINKING -> { job?.cancel(); speech.pause(); player.sfx(Sfx.END, 0.5f); standby() }
@@ -225,7 +262,11 @@ class Engine(
                     pending = null
                     createReminder(p.text, a.millis)
                 }
-                is UiAction.Search -> { pending = null; webSearch(a.query, Ev.WEB_SEARCH) }
+                is UiAction.Search -> {
+                    pending = null
+                    if (a.query.startsWith("open:")) { _events.tryEmit(UiEvent.Open(a.query.removePrefix("open:"))); dismiss() }
+                    else webSearch(a.query, Ev.WEB_SEARCH)
+                }
                 UiAction.Cancel -> { if (pending != null) { pending = null; say(Ev.CANCEL) } else dismiss() }
                 UiAction.Dismiss -> dismiss()
             }
@@ -244,12 +285,12 @@ class Engine(
     fun onCallState(active: Boolean) {
         if (active == inCall) return // первое событие IDLE при подписке — не повод что-то менять
         inCall = active
-        if (active) { player.stop(); speech.pause(); _ui.update { it.copy(phase = Phase.STANDBY, partial = "") } }
+        if (active) { job?.cancel(); player.stop(); speech.pause(); _ui.update { it.copy(phase = Phase.STANDBY, partial = "") } }
         else scope.launch { delay(800); if (!inCall && _ui.value.phase == Phase.STANDBY) standby() }
     }
 
     fun onReminder(text: String) {
-        if (inCall) return
+        if (inCall || settings.muted.value || voiceSetupActive) return
         // не перебиваем текущий разговор: подождём, пока Джарвис освободится
         scope.launch {
             while (_ui.value.phase == Phase.LISTENING || _ui.value.phase == Phase.THINKING || _ui.value.phase == Phase.SPEAKING) delay(500)
@@ -258,7 +299,8 @@ class Engine(
     }
 
     private fun onIncomingMessage(m: IncomingMessage) {
-        if (!settings.announceMessages.value || inCall || !micOn) return
+        if (voiceSetupActive) return
+        if (!settings.announceMessages.value || inCall || !micOn || settings.muted.value) return
         if (_ui.value.phase != Phase.STANDBY) return
         step { say(Ev.MSG_INCOMING, Card.Messages(listOf(m)), line = "Сэр, новое сообщение от ${m.sender}.") }
     }
@@ -279,7 +321,16 @@ class Engine(
                 val p = stripWake(e.text)
                 _ui.update { it.copy(partial = p, phase = Phase.LISTENING) }
             }
-            is SpeechEngine.Event.Final -> handle(e.text, typed = false)
+            is SpeechEngine.Event.Final -> {
+                if (voiceSetupActive) return
+                if (!isOwner(e.spk)) {
+                    // режим «только мой голос»: чужая речь — молча возвращаемся в ожидание
+                    _ui.update { it.copy(partial = "") }
+                    notice("Голос не совпал — не реагирую")
+                    player.sfx(Sfx.END, 0.4f)
+                    standby()
+                } else handle(e.text, typed = false)
+            }
             SpeechEngine.Event.Timeout -> {
                 _ui.update { it.copy(partial = "") }
                 pendingVoice = false
@@ -297,6 +348,37 @@ class Engine(
     }
 
     // ------------------------------------------------------------------ обработка фразы
+
+    private fun isOwner(spk: FloatArray?): Boolean {
+        if (!settings.ownerOnly.value || spk == null) return true
+        val vp = VoiceCalibration.parse(settings.voiceprint.value) ?: return true
+        return VoiceCalibration.cosine(vp, spk) >= settings.ownerThreshold.value
+    }
+
+    /** Вернуться к ожиданию «Джарвис» после экранов, которые брали микрофон (настройка голоса). */
+    fun resumeListening() {
+        if (_ui.value.phase == Phase.STANDBY) standby()
+    }
+
+    /**
+     * Экран настройки голоса забирает микрофон: Джарвис не должен ни отвечать, ни выполнять
+     * прочитанные фразы («позвони маме»), пока идёт настройка.
+     */
+    @Volatile var voiceSetupActive = false
+        private set
+
+    fun beginVoiceSetup() {
+        voiceSetupActive = true
+        job?.cancel()
+        player.stop()
+        setPending(null)
+        _ui.update { it.copy(phase = if (micOn) Phase.STANDBY else Phase.OFF, partial = "", awaiting = false) }
+    }
+
+    fun endVoiceSetup() {
+        voiceSetupActive = false
+        resumeListening()
+    }
 
     /** Микрофон упал — пробуем поднять заново (не чаще 3 раз в минуту). */
     private fun restartMic() {
@@ -338,7 +420,8 @@ class Engine(
             if (pending != null && (!pendingVoice || System.currentTimeMillis() - pendingAt > 90_000)) pending = null
             pending?.let { p -> if (handlePending(p, cmd, clean)) return@step }
 
-            if (cmd is Command.Unknown && llm.available) {
+            // нейросеть разбирает только фразы, похожие на команду; остальное — разговор (ниже, в execute)
+            if (cmd is Command.Unknown && llm.available && commandLike(clean)) {
                 _ui.update { it.copy(phase = Phase.THINKING) }
                 val thinking = scope.launch { delay(1400); if (_ui.value.phase == Phase.THINKING) player.sfx(Sfx.TAP, 0.3f) }
                 cmd = withContext(Dispatchers.Default) { llm.interpret(clean) } ?: cmd
@@ -377,11 +460,11 @@ class Engine(
         }
         // явная новая команда отменяет уточнение
         val isNewCommand = cmd !is Command.Unknown && cmd !is Command.Yes && cmd !is Command.No &&
-            cmd !is Command.Choose && cmd !is Command.WebSearch && cmd !is Command.OpenApp && cmd !is Command.Calculate &&
+            cmd !is Command.Choose && cmd !is Command.WebSearch && cmd !is Command.Question && cmd !is Command.OpenApp && cmd !is Command.Calculate &&
             cmd !is Command.Remember && cmd !is Command.Repeat
         // в коротких ответах (выбор, «да/нет», время) любая распознанная команда — это уже новая просьба
         val isStrong = cmd !is Command.Unknown && cmd !is Command.Yes && cmd !is Command.No &&
-            cmd !is Command.Choose && cmd !is Command.Repeat && cmd !is Command.WebSearch
+            cmd !is Command.Choose && cmd !is Command.Repeat && cmd !is Command.WebSearch && cmd !is Command.Question
         when (p) {
             Pending.CallWho -> {
                 if (isNewCommand) { setPending(null); return false }
@@ -499,7 +582,7 @@ class Engine(
             Command.GoHome -> { actions.home(); say(Ev.ACK) }
             Command.GoBack -> outcome(actions.back(), Ev.ACK, null, Need.ACCESSIBILITY)
             is Command.WebSearch -> webSearch(cmd.query, Ev.WEB_SEARCH)
-            is Command.Weather -> webSearch("погода" + (cmd.place?.let { " в $it" } ?: ""), Ev.WEATHER, CardIcon.WEATHER, "Погода")
+            is Command.Weather -> weather(cmd.place, clean)
             is Command.YouTube -> {
                 if (!actions.isOnline()) return say(Ev.NO_INTERNET, offline())
                 outcome(actions.youtube(cmd.query), Ev.YOUTUBE, Card.Opened("YouTube", cmd.query?.let { "«$it»" }, CardIcon.YOUTUBE))
@@ -602,6 +685,7 @@ class Engine(
             Command.WhoAreYou -> say(Ev.WHO_ARE_YOU)
             Command.Help -> say(Ev.HELP, Card.Help)
             Command.Joke -> jokes.random().let { j -> say(Ev.JOKE, Card.Info("Шутка", j, CardIcon.INFO), line = j) }
+            Command.Fact -> facts.random().let { f -> say(Ev.JOKE, Card.Info("Интересный факт", f, CardIcon.INFO), line = "Охотно, сэр. $f") }
             Command.Bye -> say(Ev.BYE)
             Command.GoodNight -> say(Ev.GOODNIGHT)
             Command.Cancel -> say(Ev.CANCEL)
@@ -619,13 +703,22 @@ class Engine(
                 }
             }
             Command.StopListening -> say(Ev.BYE)
+            is Command.Question -> when {
+                llm.available -> converse(clean, question = true)
+                else -> webSearch(cmd.text, Ev.WEB_SEARCH)
+            }
             is Command.Unknown -> {
                 unknownStreak++
                 val words = clean.split(' ').size
-                if (words >= 3) {
-                    say(Ev.FREE_TALK_REFUSE, Card.Offer("Поискать в интернете?", "«${Text.sentence(clean)}»", "Найти", clean))
-                } else {
-                    say(Ev.NOT_UNDERSTOOD, followUp = unknownStreak < 2)
+                when {
+                    llm.available && words >= 2 -> converse(clean, question = false)
+                    words >= 3 && llm.supported -> say(Ev.FREE_TALK_REFUSE, Card.Offer(
+                        "Хотите просто поговорить?",
+                        "Скачайте локальную нейросеть — и Джарвис будет отвечать на любые вопросы без интернета.",
+                        "Настроить нейросеть", "open:model",
+                    ))
+                    words >= 3 -> say(Ev.FREE_TALK_REFUSE, Card.Offer("Поискать в интернете?", "«${Text.sentence(clean)}»", "Найти", clean))
+                    else -> say(Ev.NOT_UNDERSTOOD, followUp = unknownStreak < 2)
                 }
             }
         }
@@ -633,7 +726,11 @@ class Engine(
 
     // ------------------------------------------------------------------ контакты
 
+    /** Как пользователь назвал адресата («маме») — для обращения в сообщении. */
+    private var spokenWho: String? = null
+
     private suspend fun resolveContact(query: String, purpose: Purpose) {
+        spokenWho = query
         if (!contacts.hasPermission()) return need(Need.CONTACTS)
         val matches = withContext(Dispatchers.IO) { contacts.find(query) }
         val top = matches.firstOrNull()
@@ -663,6 +760,7 @@ class Engine(
     }
 
     private suspend fun learn(alias: String, name: String, purpose: Purpose, attempts: Int) {
+        spokenWho = alias
         val matches = withContext(Dispatchers.IO) { contacts.findByName(name) }
         val top = matches.firstOrNull()
         when {
@@ -734,8 +832,10 @@ class Engine(
 
     private suspend fun draft(c: Contact, raw: String, via: MessengerApp?) {
         _ui.update { it.copy(phase = Phase.THINKING) }
-        val polished = withContext(Dispatchers.Default) { llm.polish(raw, c.name) }
-        val text = polished ?: Text.sentence(raw)
+        val who = spokenWho
+        val greet = settings.messageGreeting.value
+        val polished = withContext(Dispatchers.Default) { llm.polish(raw, Compose.addressee(who, c.name), greet) }
+        val text = polished ?: Compose.message(raw, who, c.name, greet)
         if (settings.confirmSms.value || via != null) {
             setPending(Pending.SmsConfirm(c, text, via))
             say(Ev.SMS_CHECK, Card.SmsDraft(c.name, c.phone, text, via, polished != null), followUp = true,
@@ -783,6 +883,74 @@ class Engine(
         outcome(r, ev, Card.Opened(title, "«${Text.sentence(query).dropLast(1)}»", icon))
     }
 
+    private suspend fun weather(placeRaw: String?, clean: String) {
+        val day = if (Regex("(^| )завтра").containsMatchIn(clean)) 1 else 0
+        val place = placeRaw?.replace(Regex("(^| )(на )?завтра( |$)"), " ")?.trim()
+            ?.replace(Regex("^(?:на|в|во|у)\\s+"), "")?.replace(Regex("\\s(?:на|в|сегодня|сейчас)$"), "")?.trim()
+            ?.takeIf { it.isNotBlank() && it != "сегодня" && it != "сейчас" }
+        if (!actions.isOnline()) return say(Ev.NO_INTERNET, offline())
+        _ui.update { it.copy(phase = Phase.THINKING) }
+        when (val r = weatherService.get(place, day)) {
+            is WeatherService.Result.Ok -> {
+                val w = r.report
+                say(Ev.WEATHER, Card.Weather(w.place, w.day, w.temp, w.description, w.feels, w.min, w.max, w.precip, w.wind), line = w.speech())
+            }
+            WeatherService.Result.NoLocation ->
+                if (!weatherService.hasLocationPermission()) need(Need.LOCATION)
+                else webSearch("погода" + if (day == 1) " завтра" else "", Ev.WEATHER, CardIcon.WEATHER, "Погода")
+            WeatherService.Result.NotFound -> say(Ev.NOT_UNDERSTOOD, Card.Info("Город не найден", "Не нашёл «${place ?: ""}». Скажите, например: «погода в Москве».", CardIcon.WEATHER))
+            WeatherService.Result.Offline -> say(Ev.NO_INTERNET, offline())
+            WeatherService.Result.Failed -> webSearch("погода" + (place?.let { " $it" } ?: "") + if (day == 1) " завтра" else "", Ev.WEATHER, CardIcon.WEATHER, "Погода")
+        }
+    }
+
+    /** История разговора с нейросетью (только в памяти, последние реплики). */
+    private val chatHistory = ArrayDeque<Pair<String, String>>()
+
+    private fun commandLike(t: String) = Regex(
+        "^(?:позвон|набер|напиш|отправ|пошли|скинь|черкн|звякн|открой|запуст|включ|выключ|постав|найд|покаж|сделай|напомн|разбуд|" +
+            "засеки|прибав|убав|сфотк|переключ|заблокир|закрой|верни|построй|отвез|вруб)"
+    ).containsMatchIn(t)
+
+    /**
+     * Свободный разговор с локальной нейросетью. Ответ озвучивается по предложениям прямо во время генерации,
+     * после ответа Джарвис сразу слушает продолжение — без слова «Джарвис».
+     */
+    private suspend fun converse(text: String, question: Boolean) {
+        speech.pause()
+        _ui.update { it.copy(phase = Phase.THINKING, card = null, reply = null) }
+        val sentences = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+        val answer = StringBuilder()
+        kotlinx.coroutines.coroutineScope {
+            val waitTick = launch { delay(1600); if (_ui.value.phase == Phase.THINKING) voice.pick(Ev.THINKING)?.let { player.play(it) } }
+            val gen = async(Dispatchers.Default) {
+                try { llm.converse(chatHistory.toList(), text) { s -> sentences.trySend(s) } } finally { sentences.close() }
+            }
+            for (s in sentences) {
+                waitTick.cancel()
+                if (inCall || voiceSetupActive) break
+                if (answer.isNotEmpty()) answer.append(' ')
+                answer.append(s)
+                _ui.update { it.copy(phase = Phase.SPEAKING, reply = answer.toString(), partial = "", awaiting = false) }
+                val sp = if (settings.voiceSynth.value) tts.speak(s) else null
+                if (sp != null) player.play(sp) else delay((s.length * 55L).coerceIn(800, 5000))
+            }
+            waitTick.cancel()
+            gen.await()
+        }
+        if (inCall) return
+        if (answer.isEmpty()) {
+            // нейросеть занята или не ответила — не молчим
+            return if (question) webSearch(text, Ev.WEB_SEARCH) else say(Ev.FREE_TALK_REFUSE)
+        }
+        chatHistory.addLast(text to answer.toString())
+        while (chatHistory.size > 6) chatHistory.removeFirst()
+        History.add(Turn(null, answer.toString()))
+        lastSaid = null; lastClip = null; lastSpeech = null
+        if (question) _ui.update { it.copy(card = Card.Offer("Проверить в интернете?", "«${Text.sentence(text)}»", "Найти", text)) }
+        listen(followUp = true)
+    }
+
     private suspend fun readMessages() {
         if (!MessageFeed.listenerConnected) return need(Need.LISTENER)
         val items = MessageFeed.items.value
@@ -823,6 +991,7 @@ class Engine(
             Need.ACCESSIBILITY -> "Спец. возможности" to "Для скриншотов, блокировки экрана и кнопок «Назад/Домой» включите службу Джарвиса в «Специальных возможностях»."
             Need.LISTENER -> "Доступ к уведомлениям" to "Чтобы читать входящие сообщения, разрешите Джарвису доступ к уведомлениям."
             Need.EXACT_ALARMS -> "Точные напоминания" to "Разрешите будильники и напоминания, чтобы Джарвис напоминал минута в минуту."
+            Need.LOCATION -> "Примерное местоположение" to "Чтобы говорить погоду там, где вы находитесь. Или просто назовите город: «погода в Москве»."
         }
         say(Ev.NEED_PERMISSION, Card.Permission(title, body, n))
         _events.tryEmit(UiEvent.RequestNeed(n))
@@ -882,7 +1051,7 @@ class Engine(
     }
 
     private suspend fun listen(followUp: Boolean) {
-        if (inCall) return
+        if (inCall || voiceSetupActive) return
         if (!micOn) { _ui.update { it.copy(phase = Phase.OFF, awaiting = false) }; return }
         player.sfx(Sfx.LISTEN, 0.6f)
         haptic(12)
@@ -891,6 +1060,7 @@ class Engine(
     }
 
     private fun standby() {
+        if (voiceSetupActive) return
         if (!micOn) { _ui.update { it.copy(phase = Phase.OFF, partial = "", awaiting = false) }; return }
         _ui.update { it.copy(phase = Phase.STANDBY, partial = "", awaiting = false) }
         if (inCall) { speech.pause(); return }
@@ -961,6 +1131,21 @@ class Engine(
         val x = d.filter { it.isDigit() }
         return if (x.length == 11) "+7 ${x.substring(1, 4)} ${x.substring(4, 7)}-${x.substring(7, 9)}-${x.substring(9)}" else d
     }
+
+    private val facts = listOf(
+        "У осьминога три сердца и голубая кровь.",
+        "Мёд не портится: в египетских гробницах находили съедобный мёд возрастом три тысячи лет.",
+        "Сутки на Венере длиннее, чем год на Венере.",
+        "Банан с точки зрения ботаники — ягода, а клубника — нет.",
+        "Молния в пять раз горячее поверхности Солнца.",
+        "У улитки около двадцати тысяч зубов.",
+        "Свет от Солнца идёт до Земли примерно восемь минут.",
+        "Акулы появились раньше деревьев.",
+        "Человеческий мозг потребляет около двадцати процентов энергии всего тела.",
+        "Эйфелева башня летом становится выше примерно на пятнадцать сантиметров — металл расширяется от жары.",
+        "В космосе нельзя заплакать по-настоящему: слёзы не стекают, а собираются шариком у глаза.",
+        "Коала спит до двадцати двух часов в сутки.",
+    )
 
     private val jokes = listOf(
         "Сэр, я бы рассказал шутку про UDP, но не уверен, что она до вас дойдёт.",

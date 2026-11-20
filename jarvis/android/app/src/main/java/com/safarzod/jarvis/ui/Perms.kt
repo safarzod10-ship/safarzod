@@ -25,6 +25,7 @@ object Perms {
         Need.CALLS -> arrayOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE, Manifest.permission.ANSWER_PHONE_CALLS)
         Need.SMS -> arrayOf(Manifest.permission.SEND_SMS)
         Need.NOTIFICATIONS -> if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.POST_NOTIFICATIONS) else emptyArray()
+        Need.LOCATION -> arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION)
         else -> emptyArray()
     }
 

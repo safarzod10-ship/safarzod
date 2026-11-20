@@ -178,4 +178,33 @@ val downloadTtsDeps by tasks.registering {
         }
     }
 }
-tasks.named("preBuild") { dependsOn(downloadVoskModel, downloadTtsDeps) }
+// ---- Модель отпечатка голоса Vosk (13 МБ): настройка голоса и режим «только мой голос» ----
+val downloadSpeakerModel by tasks.registering {
+    description = "Скачивает модель распознавания говорящего Vosk"
+    val outDir = layout.projectDirectory.dir("src/main/assets/model-spk").asFile
+    outputs.dir(outDir)
+    onlyIf { !File(outDir, "uuid").exists() }
+    doLast {
+        val name = "vosk-model-spk-0.4"
+        val cache = File(System.getProperty("user.home"), ".cache/jarvis/$name.zip")
+        if (!cache.exists()) {
+            cache.parentFile.mkdirs()
+            logger.lifecycle("Скачиваю $name …")
+            URI("https://alphacephei.com/vosk/models/$name.zip").toURL().openStream().use { input -> cache.outputStream().use { input.copyTo(it) } }
+        }
+        outDir.deleteRecursively(); outDir.mkdirs()
+        ZipInputStream(cache.inputStream()).use { zip ->
+            var e = zip.nextEntry
+            while (e != null) {
+                val rel = e.name.substringAfter('/')
+                if (rel.isNotEmpty() && !rel.startsWith("README")) {
+                    val f = File(outDir, rel)
+                    if (e.isDirectory) f.mkdirs() else { f.parentFile.mkdirs(); f.outputStream().use { zip.copyTo(it) } }
+                }
+                e = zip.nextEntry
+            }
+        }
+        File(outDir, "uuid").writeText("$name-1\n")
+    }
+}
+tasks.named("preBuild") { dependsOn(downloadVoskModel, downloadTtsDeps, downloadSpeakerModel) }

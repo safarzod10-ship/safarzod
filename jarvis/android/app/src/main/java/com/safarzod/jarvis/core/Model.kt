@@ -12,7 +12,7 @@ enum class CardIcon {
     FLASH, SETTINGS, CAMERA, MEMORY, TIMER, ALARM, REMINDER, LOCK, INFO, ERROR, MIC, NEURAL
 }
 
-enum class Need { CONTACTS, CALLS, SMS, MIC, NOTIFICATIONS, OVERLAY, ACCESSIBILITY, LISTENER, EXACT_ALARMS }
+enum class Need { CONTACTS, CALLS, SMS, MIC, NOTIFICATIONS, OVERLAY, ACCESSIBILITY, LISTENER, EXACT_ALARMS, LOCATION }
 
 /** То, что показывается под ядром как карточка-результат. */
 sealed interface Card {
@@ -30,6 +30,7 @@ sealed interface Card {
     data class Calling(val name: String, val number: String, val label: String?) : Card
     data class Opened(val title: String, val subtitle: String?, val icon: CardIcon) : Card
     data class Offer(val title: String, val body: String, val button: String, val query: String) : Card
+    data class Weather(val place: String, val day: Int, val temp: Int, val description: String, val feels: Int?, val min: Int, val max: Int, val precip: Int?, val wind: Int?) : Card
     data object Help : Card
 }
 
@@ -43,6 +44,7 @@ data class UiState(
     val awaiting: Boolean = false,
     val notice: String? = null,
     val micReady: Boolean = false,
+    val muted: Boolean = false,
 )
 
 /** Нажатия на карточки. */

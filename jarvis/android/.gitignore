@@ -11,3 +11,4 @@ local.properties
 /app/src/main/assets/tts/espeak-ng-data/
 /app/src/main/assets/tts/jarvis.onnx
 /app/src/main/assets/tts/tokens.txt
+/app/src/main/assets/model-spk/

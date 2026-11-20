@@ -60,6 +60,7 @@ sealed interface Command {
     data object WhoAreYou : Command
     data object Help : Command
     data object Joke : Command
+    data object Fact : Command
     data object Bye : Command
     data object GoodNight : Command
     data object Cancel : Command
@@ -69,6 +70,8 @@ sealed interface Command {
     data class Choose(val index: Int) : Command
     data object StopListening : Command
 
+    /** Вопрос «что/кто/почему/как…» — отвечает нейросеть (если есть), иначе поиск в интернете. */
+    data class Question(val text: String) : Command
     data class Unknown(val text: String) : Command
 }
 

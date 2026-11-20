@@ -432,7 +432,7 @@ fun ModelScreen(app: JarvisApp, onBack: () -> Unit) {
                 SectionLabel("Использование")
                 Group {
                     PrefSwitch("Понимать сложные фразы", "Подключать нейросеть, если команда не распознана", app.settings.llmEnabled)
-                    PrefSwitch("Поправлять сообщения", "Пунктуация и опечатки распознавания", app.settings.llmPolish)
+                    PrefSwitch("Переписывать сообщения нейросетью", "Обычно точнее правила; нейросеть пишет живее, но может ошибиться", app.settings.llmPolish)
                 }
             }
         }

@@ -29,6 +29,9 @@ import org.vosk.LibVosk
 import org.vosk.LogLevel
 import org.vosk.Model
 import org.vosk.Recognizer
+import org.vosk.SpeakerModel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.sqrt
@@ -41,12 +44,22 @@ import kotlin.math.sqrt
  */
 class SpeechEngine(private val context: Context) {
 
-    enum class Mode { OFF, LOADING, WAKE, COMMAND, PAUSED }
+    enum class Mode { OFF, LOADING, WAKE, COMMAND, PAUSED, ENROLL }
+
+    /** Результат одной фразы настройки голоса. */
+    class Enrollment(
+        val text: String,            // что распознал полный распознаватель
+        val firstWord: String?,      // как распознано обращение («джарвис», «жарвис»…)
+        val wakeConf: Double?,       // уверенность грамматики в слове «джарвис»
+        val spk: FloatArray?,        // отпечаток голоса (x-vector)
+        val speechRms: Float,
+        val noiseRms: Float,
+    )
 
     sealed interface Event {
         data object Wake : Event
         data class Partial(val text: String) : Event
-        data class Final(val text: String) : Event
+        data class Final(val text: String, val spk: FloatArray? = null) : Event
         data object Timeout : Event
         data class Failure(val message: String) : Event
     }
@@ -68,6 +81,12 @@ class SpeechEngine(private val context: Context) {
     @Volatile var sensitivity: Float = 0.5f
 
     @Volatile private var model: Model? = null
+    @Volatile private var spkModel: SpeakerModel? = null
+    /** Нужен ли отпечаток голоса у команд (режим «только мой голос»). */
+    @Volatile var wantSpeaker: Boolean = false
+    /** Свои варианты обращения, найденные при настройке голоса. */
+    @Volatile var extraWakeWords: Set<String> = emptySet()
+    private val enrollWaiter = AtomicReference<CompletableDeferred<Enrollment?>?>(null)
     private val loadLock = Mutex()
     private var thread: Thread? = null
     /** Номер «поколения» потока: старый поток видит, что номер сменился, и завершается. */
@@ -88,6 +107,7 @@ class SpeechEngine(private val context: Context) {
                 LibVosk.setLogLevel(LogLevel.WARNINGS)
                 val dir = unpackModel()
                 model = Model(dir.absolutePath)
+                spkModel = runCatching { SpeakerModel(unpackAsset("model-spk").absolutePath) }.getOrNull()
                 _ready.value = true
                 _mode.value = Mode.OFF
                 true
@@ -102,14 +122,16 @@ class SpeechEngine(private val context: Context) {
         }
     }
 
-    private fun unpackModel(): File {
-        val target = File(context.filesDir, "vosk/model-ru")
-        val assetUuid = context.assets.open("model-ru/uuid").bufferedReader().use { it.readText().trim() }
+    private fun unpackModel(): File = unpackAsset("model-ru")
+
+    private fun unpackAsset(name: String): File {
+        val target = File(context.filesDir, "vosk/$name")
+        val assetUuid = context.assets.open("$name/uuid").bufferedReader().use { it.readText().trim() }
         val marker = File(target, "uuid")
         if (marker.exists() && marker.readText().trim() == assetUuid) return target
-        val tmp = File(context.filesDir, "vosk/model-ru.tmp")
+        val tmp = File(context.filesDir, "vosk/$name.tmp")
         tmp.deleteRecursively()
-        copyAssetDir("model-ru", tmp)
+        copyAssetDir(name, tmp)
         File(tmp, "uuid").writeText(assetUuid)
         target.deleteRecursively()
         if (!tmp.renameTo(target)) throw IllegalStateException("rename failed")
@@ -125,7 +147,7 @@ class SpeechEngine(private val context: Context) {
         }
         dst.mkdirs()
         for (name in list) {
-            if (path == "model-ru" && name == "uuid") continue
+            if ((path == "model-ru" || path == "model-spk") && name == "uuid") continue
             copyAssetDir("$path/$name", File(dst, name))
         }
     }
@@ -166,6 +188,19 @@ class SpeechEngine(private val context: Context) {
 
     fun pause() { request.set(Request(Mode.PAUSED)) }
 
+    /**
+     * Записать одну фразу для настройки голоса: ждёт речь, затем паузу; до [timeoutMs].
+     * Возвращает распознанный текст, уверенность в слове «джарвис» и отпечаток голоса.
+     */
+    suspend fun enroll(timeoutMs: Long = 10_000): Enrollment? {
+        val d = CompletableDeferred<Enrollment?>()
+        enrollWaiter.getAndSet(d)?.complete(null)
+        request.set(Request(Mode.ENROLL, timeoutMs))
+        return withTimeoutOrNull(timeoutMs + 3000) { d.await() }
+    }
+
+    val hasSpeakerModel: Boolean get() = spkModel != null
+
     // ---------------------------------------------------------------------------------------------
 
     private class Mic(val rec: AudioRecord, val ns: NoiseSuppressor?, val agc: AutomaticGainControl?) {
@@ -199,11 +234,17 @@ class SpeechEngine(private val context: Context) {
         var mic: Mic? = null
         var wakeRec: Recognizer? = null
         var cmdRec: Recognizer? = null
+        var enrollFull: Recognizer? = null
+        var enrollWake: Recognizer? = null
         var failedSince = 0L
         var reportedFailure = false
         try {
-            val wakeGrammar = "[\"джарвис\", \"дарвин\", \"джаз\", \"жарко\", \"чарли\", \"давид\", \"[unk]\"]"
-            wakeRec = Recognizer(m, rate.toFloat(), wakeGrammar).apply { setWords(true) }
+            val decoys = listOf("дарвин", "джаз", "жарко", "чарли", "давид")
+            fun grammarFor(extra: Set<String>): String =
+                (listOf("джарвис") + extra + decoys.filter { it !in extra } + "[unk]").distinct().joinToString(", ", "[", "]") { "\"$it\"" }
+            var grammarExtra = extraWakeWords
+            val wakeGrammar = grammarFor(emptySet())
+            wakeRec = Recognizer(m, rate.toFloat(), grammarFor(grammarExtra)).apply { setWords(true) }
 
             val chunk = ShortArray(800) // 50 мс
             val ring = ShortArray(rate * 2)
@@ -221,12 +262,18 @@ class SpeechEngine(private val context: Context) {
             var pausedAt = SystemClock.uptimeMillis()
             var recording = false
             var commandTimeoutMs = 7000L
+            var enrollStart = 0L
+            var enrollHeard = 0L
+            var enrollTimeout = 10_000L
+            val enrollSpeech = ArrayList<Float>()
+            val enrollNoise = ArrayList<Float>()
 
             fun setMode(nm: Mode) { mode = nm; _mode.value = nm; if (nm == Mode.PAUSED) pausedAt = SystemClock.uptimeMillis() }
 
             fun startCommand(feed: Int) {
                 cmdRec?.close()
-                cmdRec = Recognizer(m, rate.toFloat())
+                val sm = spkModel
+                cmdRec = if (wantSpeaker && sm != null) Recognizer(m, rate.toFloat(), sm) else Recognizer(m, rate.toFloat())
                 if (feed > 0) feedRingInto(cmdRec!!, ring, ringPos, feed)
                 lastPartial = ""
                 listenStartedAt = SystemClock.uptimeMillis()
@@ -238,12 +285,35 @@ class SpeechEngine(private val context: Context) {
 
             while (generation == g) {
                 request.getAndSet(null)?.let { r ->
+                    // другой режим перебил настройку голоса — честно завершаем ожидание и освобождаем распознаватели
+                    if (mode == Mode.ENROLL && r.mode != Mode.ENROLL) {
+                        enrollWaiter.getAndSet(null)?.complete(null)
+                        enrollFull?.close(); enrollWake?.close(); enrollFull = null; enrollWake = null
+                    }
                     when (r.mode) {
-                        Mode.WAKE -> { wakeRec!!.reset(); wakeHits = 0; setMode(Mode.WAKE) }
+                        Mode.WAKE -> {
+                            // после настройки голоса — свои варианты обращения тоже будят Джарвиса
+                            if (extraWakeWords != grammarExtra) {
+                                grammarExtra = extraWakeWords
+                                wakeRec?.close()
+                                wakeRec = Recognizer(m, rate.toFloat(), grammarFor(grammarExtra)).apply { setWords(true) }
+                            }
+                            wakeRec!!.reset(); wakeHits = 0; setMode(Mode.WAKE)
+                        }
                         Mode.COMMAND -> {
                             commandTimeoutMs = r.timeoutMs
                             skipSamples = (r.skipMs * rate / 1000).toInt()
                             startCommand(if (r.feedRing) ringFilled else 0)
+                        }
+                        Mode.ENROLL -> {
+                            enrollFull?.close(); enrollWake?.close()
+                            val sm = spkModel
+                            enrollFull = (if (sm != null) Recognizer(m, rate.toFloat(), sm) else Recognizer(m, rate.toFloat())).apply { setWords(true) }
+                            enrollWake = Recognizer(m, rate.toFloat(), wakeGrammar).apply { setWords(true) }
+                            enrollStart = SystemClock.uptimeMillis(); enrollHeard = 0L; enrollTimeout = r.timeoutMs
+                            enrollSpeech.clear(); enrollNoise.clear()
+                            skipSamples = rate * 2 / 10
+                            setMode(Mode.ENROLL)
                         }
                         else -> setMode(r.mode)
                     }
@@ -294,7 +364,7 @@ class SpeechEngine(private val context: Context) {
                 if (rms < noiseFloor * 1.5f) noiseFloor = noiseFloor * 0.98f + rms * 0.02f
                 val norm = ((rms - noiseFloor) / 3500f).coerceIn(0f, 1f)
                 smoothLevel = if (norm > smoothLevel) norm else smoothLevel * 0.85f + norm * 0.15f
-                _level.value = if (mode == Mode.COMMAND || mode == Mode.WAKE) smoothLevel else 0f
+                _level.value = if (mode == Mode.COMMAND || mode == Mode.WAKE || mode == Mode.ENROLL) smoothLevel else 0f
                 val voiced = rms > noiseFloor * 2.2f + 250f
 
                 // кольцевой буфер
@@ -307,7 +377,7 @@ class SpeechEngine(private val context: Context) {
                         if (wr.acceptWaveForm(chunk, n)) {
                             val conf = runCatching {
                                 json.parseToJsonElement(wr.result).jsonObject["result"]?.jsonArray
-                                    ?.firstOrNull { it.jsonObject["word"]?.jsonPrimitive?.contentOrNull == "джарвис" }
+                                    ?.firstOrNull { val w = it.jsonObject["word"]?.jsonPrimitive?.contentOrNull; w == "джарвис" || w in grammarExtra }
                                     ?.jsonObject?.get("conf")?.jsonPrimitive?.doubleOrNull
                             }.getOrNull()
                             wakeHits = 0
@@ -317,7 +387,7 @@ class SpeechEngine(private val context: Context) {
                             }
                         } else {
                             val p = partialText(wr.partialResult)
-                            if (p.split(' ').contains("джарвис")) {
+                            if (p.split(' ').any { it == "джарвис" || it in grammarExtra }) {
                                 wakeHits++
                                 val need = if (sensitivity > 0.66f) 1 else if (sensitivity > 0.33f) 2 else 4
                                 if (wakeHits >= need) {
@@ -336,8 +406,9 @@ class SpeechEngine(private val context: Context) {
                         val now = SystemClock.uptimeMillis()
                         if (voiced) heardSpeechAt = now
                         if (r.acceptWaveForm(chunk, n)) {
-                            val text = resultText(r.result)
-                            if (text.isNotBlank()) { _events.tryEmit(Event.Final(text)); setMode(Mode.PAUSED); continue }
+                            val js = r.result
+                            val text = resultText(js)
+                            if (text.isNotBlank()) { _events.tryEmit(Event.Final(text, speakerVector(js))); setMode(Mode.PAUSED); continue }
                         } else {
                             val p = partialText(r.partialResult)
                             if (p != lastPartial) {
@@ -348,13 +419,43 @@ class SpeechEngine(private val context: Context) {
                         // своя «точка конца фразы»: тихо 0.9 с, или (в шуме) текст не меняется 1.7 с
                         val silentFor = now - maxOf(heardSpeechAt, partialChangedAt)
                         if (lastPartial.isNotBlank() && (silentFor > 900 || now - partialChangedAt > 1700)) {
-                            finishCommand(resultText(r.finalResult)); setMode(Mode.PAUSED); continue
+                            val js = r.finalResult
+                            finishCommand(resultText(js), speakerVector(js)); setMode(Mode.PAUSED); continue
                         }
                         if (lastPartial.isBlank() && now - listenStartedAt > commandTimeoutMs) {
                             _events.tryEmit(Event.Timeout); setMode(Mode.PAUSED); continue
                         }
                         if (now - listenStartedAt > 20_000) {
-                            finishCommand(resultText(r.finalResult)); setMode(Mode.PAUSED); continue
+                            val js = r.finalResult
+                            finishCommand(resultText(js), speakerVector(js)); setMode(Mode.PAUSED); continue
+                        }
+                    }
+
+                    Mode.ENROLL -> {
+                        val fr = enrollFull ?: continue
+                        val wr = enrollWake!!
+                        if (skipSamples > 0) { skipSamples -= n; enrollNoise += rms; continue }
+                        val now = SystemClock.uptimeMillis()
+                        fr.acceptWaveForm(chunk, n)
+                        wr.acceptWaveForm(chunk, n)
+                        if (voiced) { enrollHeard = now; enrollSpeech += rms } else enrollNoise += rms
+                        val done = (enrollHeard > 0 && now - enrollHeard > 1100) || now - enrollStart > enrollTimeout
+                        if (done) {
+                            val js = fr.finalResult
+                            val text = resultText(js)
+                            val conf = runCatching {
+                                json.parseToJsonElement(wr.finalResult).jsonObject["result"]?.jsonArray
+                                    ?.firstOrNull { it.jsonObject["word"]?.jsonPrimitive?.contentOrNull == "джарвис" }
+                                    ?.jsonObject?.get("conf")?.jsonPrimitive?.doubleOrNull
+                            }.getOrNull()
+                            val res = if (enrollHeard == 0L) null else Enrollment(
+                                text, text.split(' ').firstOrNull { it.isNotBlank() }, conf, speakerVector(js),
+                                enrollSpeech.sorted().getOrElse(enrollSpeech.size / 2) { 0f },
+                                enrollNoise.sorted().getOrElse(enrollNoise.size / 2) { 0f },
+                            )
+                            enrollWaiter.getAndSet(null)?.complete(res)
+                            enrollFull?.close(); enrollWake?.close(); enrollFull = null; enrollWake = null
+                            setMode(Mode.PAUSED)
                         }
                     }
 
@@ -366,6 +467,9 @@ class SpeechEngine(private val context: Context) {
             if (generation == g) _events.tryEmit(Event.Failure("Сбой распознавания речи"))
         } finally {
             mic?.release()
+            enrollWaiter.getAndSet(null)?.complete(null)
+            runCatching { enrollFull?.close() }
+            runCatching { enrollWake?.close() }
             runCatching { wakeRec?.close() }
             runCatching { cmdRec?.close() }
             _level.value = 0f
@@ -382,9 +486,15 @@ class SpeechEngine(private val context: Context) {
         r.acceptWaveForm(tmp, count)
     }
 
-    private fun finishCommand(text: String) {
-        if (text.isBlank()) _events.tryEmit(Event.Timeout) else _events.tryEmit(Event.Final(text))
+    private fun finishCommand(text: String, spk: FloatArray? = null) {
+        if (text.isBlank()) _events.tryEmit(Event.Timeout) else _events.tryEmit(Event.Final(text, spk))
     }
+
+    /** Отпечаток голоса из результата Vosk (поле "spk"), если распознаватель его посчитал. */
+    private fun speakerVector(js: String): FloatArray? = runCatching {
+        val arr = json.parseToJsonElement(js).jsonObject["spk"]?.jsonArray ?: return@runCatching null
+        FloatArray(arr.size) { i -> arr[i].jsonPrimitive.doubleOrNull?.toFloat() ?: 0f }
+    }.getOrNull()
 
     private fun partialText(js: String): String = runCatching {
         json.parseToJsonElement(js).jsonObject["partial"]?.jsonPrimitive?.contentOrNull ?: ""

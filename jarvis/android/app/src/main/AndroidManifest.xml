@@ -29,6 +29,8 @@
     <!-- интернет только для поиска в браузере и скачивания модели по желанию -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- погода «здесь»: примерная геопозиция (без GPS) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />

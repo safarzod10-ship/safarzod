@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (app.settings.onboarded.value) {
+        if (app.settings.onboarded.value && !app.settings.muted.value) {
             JarvisService.start(this, greet = !JarvisService.running)
             // разрешения могли выдать в системных настройках — пусть служба перепроверит
             JarvisService.refresh(this)
@@ -117,11 +117,11 @@ class MainActivity : ComponentActivity() {
             launch { settings.coreStyle.flow.collect { params.style = it } }
             launch {
                 settings.quality.flow.collect {
-                    params.renderScale = it.scale; params.plasmaSteps = it.plasmaSteps; params.gyroSteps = it.gyroSteps; params.particles = it.particles
+                    params.renderScale = it.scale; params.plasmaSteps = it.plasmaSteps; params.particles = it.particles
                 }
             }
             launch {
-                combine(engine.ui, settings.accent.flow) { ui, acc -> ui.phase to acc }.collect { (phase, acc) ->
+                combine(engine.ui, settings.accent.flow) { ui, acc -> Triple(ui.phase, acc, ui.muted) }.collect { (phase, acc, muted) ->
                     val a = Color(acc.argb)
                     val d = a.deep()
                     when (phase) {
@@ -134,6 +134,11 @@ class MainActivity : ComponentActivity() {
                         Phase.LISTENING -> 0.72f; Phase.THINKING -> 0.6f; Phase.SPEAKING -> 1f
                     }
                     params.think = if (phase == Phase.THINKING) 1f else 0f
+                    if (muted) {
+                        // на паузе ядро гаснет и замирает почти полностью
+                        params.colA = floatArrayOf(0.35f, 0.38f, 0.42f); params.colB = floatArrayOf(0.12f, 0.13f, 0.16f)
+                        params.energy = 0.02f; params.think = 0f
+                    }
                 }
             }
             launch {
@@ -194,7 +199,7 @@ class MainActivity : ComponentActivity() {
                     },
                 )
             } else {
-                BackHandler(screen != "home") { screen = if (screen == "model" || screen == "voice") "settings" else "home" }
+                BackHandler(screen != "home") { screen = if (screen == "model" || screen == "voice" || screen == "voicesetup") "settings" else "home" }
                 AnimatedContent(
                     screen,
                     transitionSpec = {
@@ -210,6 +215,7 @@ class MainActivity : ComponentActivity() {
                         "voice" -> VoiceScreen(engine, onBack = { screen = "settings" })
                         "model" -> ModelScreen(app, onBack = { screen = "settings" })
                         "commands" -> CommandsScreen(onBack = { screen = "home" }, onRun = { screen = "home"; engine.submitText(it) })
+                        "voicesetup" -> com.safarzod.jarvis.ui.screens.VoiceSetupScreen(app, embedded = false) { screen = "settings" }
                         else -> HomeScreen(engine, params, onOpen = open)
                     }
                 }

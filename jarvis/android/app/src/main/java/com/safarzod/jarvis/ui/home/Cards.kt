@@ -84,6 +84,7 @@ fun ResultCard(card: Card, onAction: (UiAction) -> Unit, onOpen: (String) -> Uni
         is Card.Permission -> PermissionCard(card, onOpen)
         is Card.Opened -> InfoLike(iconFor(card.icon), card.title, card.subtitle ?: "Открыто", null, compact = true, onClose = { onAction(UiAction.Dismiss) })
         is Card.Offer -> OfferCard(card, onAction)
+        is Card.Weather -> WeatherCard(card, onAction)
         Card.Help -> HelpCard(onOpen)
     }
 }
@@ -346,6 +347,38 @@ private fun PermissionCard(c: Card.Permission, onOpen: (String) -> Unit) {
         Text(c.body, style = J.t.body, color = J.c.text2)
         Spacer(Modifier.height(16.dp))
         PrimaryButton("Разрешить", Modifier.fillMaxWidth()) { onOpen("need:" + c.need.name) }
+    }
+}
+
+@Composable
+private fun WeatherCard(c: Card.Weather, onAction: (UiAction) -> Unit) {
+    fun t(v: Int) = (if (v > 0) "+" else if (v < 0) "−" else "") + kotlin.math.abs(v) + "°"
+    GlassCard(Modifier.fillMaxWidth()) {
+        CardHeader(iconFor(CardIcon.WEATHER), (if (c.day == 1) "Завтра · " else "Сейчас · ") + c.place, onClose = { onAction(UiAction.Dismiss) })
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(t(c.temp), style = J.t.big, color = J.c.text)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.padding(bottom = 8.dp)) {
+                Text(c.description.replaceFirstChar { it.uppercase() }, style = J.t.label, color = J.c.text)
+                if (c.feels != null) Text("ощущается как ${t(c.feels)}", style = J.t.bodyS, color = J.c.text3)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            WeatherPill("Мин", t(c.min))
+            WeatherPill("Макс", t(c.max))
+            if (c.precip != null) WeatherPill("Осадки", "${c.precip}%")
+            if (c.wind != null) WeatherPill("Ветер", "${c.wind} м/с")
+        }
+    }
+}
+
+@Composable
+private fun WeatherPill(label: String, value: String) {
+    Column(Modifier.glass(RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Text(label.uppercase(), style = J.t.mono, color = J.c.text3)
+        Text(value, style = J.t.label, color = J.c.text)
     }
 }
 

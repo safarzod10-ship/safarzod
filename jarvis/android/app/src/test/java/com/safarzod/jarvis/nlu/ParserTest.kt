@@ -84,7 +84,7 @@ class ParserTest {
         assertEquals(Command.YouTube(null), p("открой ютуб"))
         assertEquals(Command.Movie("интерстеллар"), p("найди фильм интерстеллар"))
         assertEquals(Command.WebSearch("рецепт борща"), p("найди в интернете рецепт борща"))
-        assertEquals(Command.WebSearch("что такое черная дыра"), p("что такое черная дыра"))
+        assertEquals(Command.Question("что такое черная дыра"), p("что такое черная дыра"))
         assertEquals(Command.Maps("аэропорта", true), p("построй маршрут до аэропорта"))
     }
 
@@ -146,7 +146,8 @@ class ParserTest {
         assertEquals(Command.Cancel, p("отмена"))
         assertEquals(Command.Choose(2), p("второй"))
         assertEquals(Command.Help, p("что ты умеешь"))
-        assertTrue(p("расскажи что нибудь интересное") is Command.Unknown)
+        assertEquals(Command.Fact, p("расскажи что нибудь интересное"))
+        assertTrue(p("мне сегодня как-то скучно") is Command.Unknown)
     }
 
     @Test fun names() {
