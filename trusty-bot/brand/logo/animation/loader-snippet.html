@@ -1,0 +1,28 @@
+<style>
+.tl-splash{--tl-bg:#FFFFFF;--tl-mark:#0D2C27;--tl-coin:#26A17B;--tl-sym:#FFFFFF;--tl-cap:#5E7A72;
+  position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:var(--tl-bg);z-index:1000;transition:opacity .35s ease,visibility .35s}
+@media (prefers-color-scheme:dark){html:not(.light) .tl-splash{--tl-bg:#0B2A27;--tl-mark:#E8F5EF;--tl-cap:#86A79D}}
+html.dark .tl-splash{--tl-bg:#0B2A27;--tl-mark:#E8F5EF;--tl-cap:#86A79D}
+.tl-splash.tl-done{opacity:0;visibility:hidden}
+.tl-splash svg{width:92px;height:92px;overflow:visible;animation:tl-in .5s cubic-bezier(.2,.8,.2,1) both}
+.tl-half{fill:none;stroke:var(--tl-mark);stroke-width:7.5;stroke-linecap:round;stroke-linejoin:round}
+.tl-nib{fill:var(--tl-mark)}
+.tl-l{animation:tl-grip 2.2s cubic-bezier(.45,0,.55,1) infinite}
+.tl-r{animation:tl-grip-r 2.2s cubic-bezier(.45,0,.55,1) infinite}
+.tl-spin{animation:tl-spin 2.2s infinite}
+.tl-shade{animation:tl-shade 2.2s infinite}
+.tl-coin{fill:var(--tl-coin)}.tl-sym{fill:var(--tl-sym)}.tl-ring{fill:none;stroke:var(--tl-sym)}
+@keyframes tl-in{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tl-spin{
+  0%{transform:scaleX(1);animation-timing-function:cubic-bezier(.55,0,.45,1)}
+  38%{transform:scaleX(-1)}
+  50%{transform:scaleX(-1);animation-timing-function:cubic-bezier(.55,0,.45,1)}
+  88%{transform:scaleX(1)}
+  100%{transform:scaleX(1)}}
+@keyframes tl-shade{0%,38%,50%,88%,100%{opacity:0}19%,69%{opacity:.34}}
+@keyframes tl-grip{0%,38%,50%,88%,100%{transform:translateX(0)}19%,69%{transform:translateX(1.8px)}}
+@keyframes tl-grip-r{0%,38%,50%,88%,100%{transform:translateX(0)}19%,69%{transform:translateX(-1.8px)}}
+@media (prefers-reduced-motion:reduce){.tl-l,.tl-r,.tl-spin,.tl-shade{animation:none}}
+</style>
+<div class="tl-splash" id="tl-splash" role="status" aria-label="Загружаем Trusty"><svg viewBox="9 9.25 82 82" aria-hidden="true"><g class="tl-l"><path class="tl-half" d="M43.5 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43.5 85.5"/><path class="tl-nib" d="M19.75 40.92H18.25C18.25 45.17 17.25 46.08 15.58 46.29A1.71 1.71 0 0 0 15.58 49.71C17.25 49.92 18.25 50.83 18.25 55.08H19.75Z"/></g><g class="tl-r"><g transform="matrix(-1 0 0 1 100 0)"><path class="tl-half" d="M43.5 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43.5 85.5"/><path class="tl-nib" d="M19.75 40.92H18.25C18.25 45.17 17.25 46.08 15.58 46.29A1.71 1.71 0 0 0 15.58 49.71C17.25 49.92 18.25 50.83 18.25 55.08H19.75Z"/></g></g><g transform="translate(50 48)"><g class="tl-spin"><circle class="tl-coin" r="14.5"/><circle class="tl-shade" r="14.5" fill="#000" opacity="0"/><path d="M-7.61 -8.1H7.61V-4.89H2.11V8.58H-2.11V-4.89H-7.61Z" class="tl-sym"/><ellipse cx="0" cy="-1.15" rx="8.82" ry="2.6" class="tl-ring" stroke-width="1.63"/></g></g></svg></div>
