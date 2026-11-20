@@ -43,7 +43,9 @@ export const tgUser = tg?.initDataUnsafe.user;
 const SURFACES = { light: '#F2F5F3', dark: '#071C19' };
 
 export function applyTheme() {
-  const dark = inTelegram ? wa!.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  // in a browser an explicit data-theme on <html> (set by some embedding pages) wins over the OS setting
+  const forced = document.documentElement.dataset.theme;
+  const dark = inTelegram ? wa!.colorScheme === 'dark' : forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   const root = document.documentElement;
   root.classList.toggle('dark', dark);
   root.classList.toggle('light', !dark);
@@ -72,6 +74,7 @@ export function initTelegram() {
     tg.onEvent('themeChanged', applyTheme);
   } else {
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
 }
 

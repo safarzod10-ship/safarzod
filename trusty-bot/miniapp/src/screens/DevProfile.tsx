@@ -1,0 +1,128 @@
+import { useState } from 'react';
+import { DEVS, RESULT_LABEL, plural, responseTime, seen, usdt, type DealResult } from '../data';
+import { Icon } from '../icons';
+import { useNav } from '../nav';
+import { useStore } from '../store';
+import { Actions, Avatar, Cell, IconTile, Note, Pill, Rating, Section, Sheet, Top, Verified } from '../ui';
+import { DevStatus } from './Devs';
+
+const RESULT_TONE: Record<DealResult, 'green' | 'amber' | 'blue' | 'red'> = {
+  ontime: 'green', late: 'amber', dispute_won: 'blue', dispute_lost: 'red',
+};
+
+export default function DevProfile({ id }: { id: string }) {
+  const nav = useNav();
+  const { role, members, openChat, projects } = useStore();
+  const [menu, setMenu] = useState(false);
+  const [offer, setOffer] = useState(false);
+  const d = DEVS.find((x) => x.id === id)!;
+  const banned = members.find((m) => m.id === id)?.ban;
+  const online = d.lastSeenMin <= 5;
+  const vol = d.volume >= 1000 ? `${(d.volume / 1000).toFixed(1).replace('.', ',')}k` : String(d.volume);
+  const mine = projects.filter((p) => p.clientId === 'me' && p.status === 'open');
+
+  const write = () => nav.open('chats', 'chat', { id: openChat(d.id) });
+
+  return (
+    <div className="screen no-tabs">
+      <Top title="" small right={
+        <button className="icon-btn" aria-label="Ещё" onClick={() => setMenu(true)}><Icon name="dots" /></button>} />
+
+      <div className="hero">
+        <Avatar name={d.name} hue={d.hue} size={88} online={online} />
+        <h1>{d.name}{d.verified && <Verified />}</h1>
+        <div className="handle">@{d.handle} · {d.title}</div>
+        <div className="line">
+          <DevStatus d={d} />
+          <Pill tone={online ? 'green' : undefined}><Icon name="clock" size={13} />{seen(d.lastSeenMin)}</Pill>
+          {d.responseMin > 0 && <Pill>отвечает {responseTime(d.responseMin)}</Pill>}
+        </div>
+      </div>
+
+      {banned && (
+        <Note tone="red" icon="ban">
+          Аккаунт заблокирован {banned.until ? `до ${banned.until}` : 'навсегда'} за нарушение правил. Сделки с ним недоступны.
+        </Note>
+      )}
+      {d.isNew && (
+        <Note tone="blue">Новый разработчик. Пока нет трёх успешных сделок, сумма одной сделки ограничена 100 USDT.</Note>
+      )}
+
+      {d.deals > 0 && (
+        <div className="stats mt">
+          <div className="stat"><b>{d.rating.toFixed(1).replace('.', ',')}</b><span>рейтинг</span></div>
+          <div className="stat"><b>{d.deals}</b><span>{plural(d.deals, 'сделка', 'сделки', 'сделок')}</span></div>
+          <div className="stat"><b>{d.onTime}%</b><span>в срок</span></div>
+          <div className="stat"><b>{vol}</b><span>USDT оборот</span></div>
+        </div>
+      )}
+
+      <Section title="Гарантии">
+        <div className="group">
+          <Cell lead={<IconTile name="shield" />} title="Личность подтверждена" sub={d.verified ? 'Telegram-аккаунт старше года, телефон' : 'Проверка не пройдена'} />
+          {d.github && <Cell lead={<IconTile name="github" tone="blue" />} title="GitHub привязан" sub={`github.com/${d.github}`} />}
+          {d.deposit && <Cell lead={<IconTile name="coin" />} title={`Залог ${usdt(d.deposit)}`} sub="Списывается в пользу заказчика при обмане" />}
+          <Cell lead={<IconTile name="flag" tone={d.disputesLost ? 'amber' : undefined} />} title={`Споры: ${d.disputes}`}
+            sub={d.disputes ? `проиграно ${d.disputesLost} из ${d.disputes}` : 'ни одного спора'} />
+        </div>
+      </Section>
+
+      <Section title="О себе">
+        <div className="text">{d.about}</div>
+        <div className="tags mt-s">{d.stack.map((s) => <span className="tag" key={s}>{s}</span>)}</div>
+      </Section>
+
+      {d.portfolio.length > 0 && (
+        <Section title="Портфолио">
+          <div className="group">
+            {d.portfolio.map((p) => <Cell key={p.title} lead={<IconTile name="doc" />} title={p.title} sub={p.text} />)}
+          </div>
+        </Section>
+      )}
+
+      <Section title={d.history.length ? 'Последние сделки' : 'Сделки'}>
+        {d.history.length ? (
+          <div className="group">
+            {d.history.map((h) => (
+              <div className="deal-row" key={h.id}>
+                <div className="h"><span>{h.title}</span>{h.rating && <Rating value={h.rating} size={13} />}</div>
+                <div className="m num">
+                  <span>#{h.id}</span><span>{h.category}</span><span>{h.amount} USDT</span><span>{h.date}</span>
+                  <Pill tone={RESULT_TONE[h.result]}>{RESULT_LABEL[h.result]}</Pill>
+                </div>
+                {h.review && <><q>«{h.review}»</q><small>{h.author}, заказчик</small></>}
+              </div>
+            ))}
+          </div>
+        ) : <div className="text muted small">Сделок через Trusty пока не было.</div>}
+        <p className="hint mt-s">Суммы показаны диапазоном, имена заказчиков сокращены.</p>
+      </Section>
+
+      <div className="small muted center mt">В Trusty с {d.joined}</div>
+
+      {!banned && role === 'client' && (
+        <Actions secondary={{ label: 'Написать', onClick: write }}
+          primary={{ label: 'Предложить проект', onClick: () => (mine.length ? setOffer(true) : nav.open('projects', 'project-new')) }} />
+      )}
+
+      <Sheet open={menu} onClose={() => setMenu(false)}>
+        <div className="group">
+          <Cell lead={<IconTile name="link" />} title="Скопировать ссылку на профиль"
+            onClick={() => { navigator.clipboard?.writeText(`https://t.me/mytrusty_bot?startapp=dev_${d.handle}`).catch(() => {}); setMenu(false); }} />
+          <Cell lead={<IconTile name="flag" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Пожаловаться</span>}
+            onClick={() => { setMenu(false); nav.push('complaint', { against: d.id }); }} />
+        </div>
+      </Sheet>
+
+      <Sheet open={offer} onClose={() => setOffer(false)} title="Какой проект предложить?">
+        <div className="group">
+          {mine.map((p) => (
+            <Cell key={p.id} title={p.title} sub={`${p.bids.length} ${plural(p.bids.length, 'отклик', 'отклика', 'откликов')}`} chevron
+              onClick={() => { setOffer(false); write(); }} />
+          ))}
+          <Cell lead={<IconTile name="plus" />} title="Новый проект" onClick={() => { setOffer(false); nav.open('projects', 'project-new'); }} />
+        </div>
+      </Sheet>
+    </div>
+  );
+}

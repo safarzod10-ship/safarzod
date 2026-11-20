@@ -15,7 +15,8 @@
       // theme before first paint: Telegram colour scheme, else the OS
       (function () {
         var tg = window.Telegram && window.Telegram.WebApp;
-        var dark = tg && tg.initData ? tg.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        var forced = document.documentElement.getAttribute('data-theme');
+        var dark = tg && tg.initData ? tg.colorScheme === 'dark' : forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
         document.documentElement.classList.add(dark ? 'dark' : 'light');
       })();
     </script>
