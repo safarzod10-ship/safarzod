@@ -1,4 +1,4 @@
-import { CATEGORIES, CLIENTS, DEVS, budget, plural, seen } from '../data';
+import { CATEGORIES, bidCount, budget, plural, seen } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -15,9 +15,9 @@ function greeting() {
 
 export default function Home() {
   const nav = useNav();
-  const { projects, role } = useStore();
-  const online = DEVS.filter((d) => d.lastSeenMin <= 5);
-  const fresh = projects.filter((p) => p.status === 'open').slice(0, 3);
+  const { projects, role, devs, clientOf, isMe } = useStore();
+  const online = devs.filter((d) => d.lastSeenMin <= 5);
+  const fresh = projects.filter((p) => p.status === 'open' && !isMe(p.clientId)).slice(0, 3);
 
   return (
     <div className="screen root">
@@ -53,13 +53,13 @@ export default function Home() {
         <div className="chips">
           {CATEGORIES.map((c) => (
             <button key={c.key} className="chip" onClick={() => nav.open('devs', 'devs', { cat: c.key })}>
-              {c.label}<small className="num">{c.count}</small>
+              {c.label}<small className="num">{devs.filter((d) => d.categories.includes(c.key)).length}</small>
             </button>
           ))}
         </div>
       </Section>
 
-      <Section title={`Сейчас в сети · ${online.length}`} action={{ label: 'Все', onClick: () => nav.setTab('devs') }}>
+      {online.length > 0 && <Section title={`Сейчас в сети · ${online.length}`} action={{ label: 'Все', onClick: () => nav.setTab('devs') }}>
         <div className="hs">
           {online.map((d) => (
             <button key={d.id} className="mini" onClick={() => nav.open('devs', 'dev', { id: d.id })}>
@@ -70,20 +70,21 @@ export default function Home() {
             </button>
           ))}
         </div>
-      </Section>
+      </Section>}
 
       <Section title="Новые проекты" action={{ label: 'Все', onClick: () => nav.setTab('projects') }}>
-        <div className="group">
+        {fresh.length === 0 && <div className="empty">Пока нет открытых проектов. {role === 'client' ? 'Опубликуйте первый.' : 'Загляните позже.'}</div>}
+        {fresh.length > 0 && <div className="group">
           {fresh.map((p) => {
-            const c = CLIENTS.find((x) => x.id === p.clientId);
+            const c = clientOf(p);
             return (
               <Cell key={p.id} onClick={() => nav.open('projects', 'project', { id: p.id })} chevron
                 title={<span className="t">{p.title}</span>}
                 sub={<span className="num">{budget(p)} · {p.days} дн.</span>}
-                meta={<>{p.bids.length} {plural(p.bids.length, 'отклик', 'отклика', 'откликов')}<span>·</span>{p.ago}{c && c.id !== 'me' && <><span>·</span>{seen(c.lastSeenMin)}</>}</>} />
+                meta={<>{bidCount(p)} {plural(bidCount(p), 'отклик', 'отклика', 'откликов')}<span>·</span>{p.ago}{c && <><span>·</span>{seen(c.lastSeenMin)}</>}</>} />
             );
           })}
-        </div>
+        </div>}
       </Section>
     </div>
   );

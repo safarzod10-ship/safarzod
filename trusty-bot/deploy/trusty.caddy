@@ -1,0 +1,22 @@
+# Trusty Mini App + API. Imported from /etc/caddy/Caddyfile; __DOMAIN__ is replaced by the installer.
+__DOMAIN__ {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8800
+	}
+	handle {
+		root * /opt/trusty/src/trusty-bot/deploy/webapp
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@page path / /index.html
+		header @page Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

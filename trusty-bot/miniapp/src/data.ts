@@ -42,6 +42,10 @@ export interface Dev {
   about: string;
   portfolio: { title: string; text: string }[];
   history: PastDeal[];
+  links?: string[];
+  years?: number;
+  moderation?: 'review' | 'published' | 'rejected';
+  banned?: { until: string | null } | null;
 }
 
 export interface Client {
@@ -75,7 +79,10 @@ export interface Project {
   ago: string;
   files: { name: string; size: string }[];
   bids: Bid[];
-  status: 'open' | 'in_work';
+  status: 'open' | 'in_work' | 'closed';
+  client?: Client | null; // live API embeds the client
+  bidsCount?: number; // live API: total bids (the list itself is only sent to the owner)
+  myBid?: { projectId: number; price: number; days: number; text: string } | null;
 }
 
 export type DealStatus = 'awaiting_payment' | 'in_work' | 'review' | 'done' | 'dispute';
@@ -84,14 +91,15 @@ export interface Msg {
   id: number;
   from: 'me' | 'peer' | 'system';
   text: string;
-  time: string;
+  time?: string;
+  at?: string; // ISO time from the API
   file?: string;
 }
 
 export interface Chat {
   id: string;
   peer: { name: string; hue: number; lastSeenMin: number; role: 'dev' | 'client'; refId: string };
-  deal?: { id: number; title: string; amount: number; status: DealStatus; due: string };
+  deal?: { id: number; title: string; amount: number; status: DealStatus; due: string; clientId?: string; devId?: string } | null;
   unread: number;
   messages: Msg[];
 }
@@ -100,16 +108,17 @@ export type ComplaintReason = 'no_work' | 'vanished' | 'offsite_payment' | 'frau
 
 export interface Complaint {
   id: number;
+  fromId?: string;
   fromName: string;
   againstId: string;
   againstName: string;
-  dealId?: number;
+  dealId?: number | null;
   reason: ComplaintReason;
   text: string;
   evidence: string[]; // image urls
   status: 'new' | 'review' | 'resolved' | 'rejected';
   ago: string;
-  decision?: string;
+  decision?: string | null;
 }
 
 export interface Member {
@@ -119,7 +128,8 @@ export interface Member {
   hue: number;
   role: 'dev' | 'client';
   strikes: number;
-  ban?: { until: string | null }; // null = permanent
+  ban?: { until: string | null } | null; // until null = permanent
+  isAdmin?: boolean;
 }
 
 export const CATEGORIES = [
@@ -338,6 +348,16 @@ export const ADMINS = [
 ];
 
 // ---------------------------------------------------------------- formatting helpers
+export function msgTime(m: { time?: string; at?: string }): string {
+  if (m.at) {
+    const d = new Date(m.at);
+    const today = new Date().toDateString() === d.toDateString();
+    return today ? d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '');
+  }
+  return m.time ?? '';
+}
+
 export function seen(min: number): string {
   if (min <= 5) return 'в сети';
   if (min < 60) return `был ${min} мин назад`;
@@ -351,6 +371,8 @@ export function responseTime(min: number): string {
   if (min < 60) return `~${min} мин`;
   return `~${Math.round(min / 60)} ч`;
 }
+
+export const bidCount = (p: { bids: unknown[]; bidsCount?: number }) => p.bidsCount ?? p.bids.length;
 
 export const usdt = (n: number) => `${n.toLocaleString('ru-RU')} USDT`;
 export const budget = (p: { budgetMin: number; budgetMax: number }) =>

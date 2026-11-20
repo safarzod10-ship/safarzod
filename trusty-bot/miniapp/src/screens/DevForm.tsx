@@ -12,18 +12,21 @@ const STACK = ['Python', 'aiogram', 'Django', 'FastAPI', 'Node.js', 'grammY', 'N
 
 export default function DevForm() {
   const nav = useNav();
-  const { setDevForm } = useStore();
+  const { submitDevForm, me, live } = useStore();
+  const prev = live ? me.profile : null;
+  const yearKey = (y?: number) => (y === undefined ? '2' : y < 1 ? '0' : y <= 3 ? '2' : y <= 5 ? '4' : '6');
   const [step, setStep] = useState(0);
-  const [cats, setCats] = useState<string[]>([]);
-  const [years, setYears] = useState('2');
-  const [stack, setStack] = useState<string[]>([]);
+  const [cats, setCats] = useState<string[]>(prev?.categories ?? []);
+  const [years, setYears] = useState(yearKey(prev?.years));
+  const [stack, setStack] = useState<string[]>(prev?.stack ?? []);
   const [custom, setCustom] = useState('');
-  const [rate, setRate] = useState('20');
-  const [status, setStatus] = useState<'free' | 'busy'>('free');
-  const [about, setAbout] = useState('');
-  const [github, setGithub] = useState('');
-  const [links, setLinks] = useState('');
+  const [rate, setRate] = useState(String(prev?.rate ?? 20));
+  const [status, setStatus] = useState<'free' | 'busy'>(prev?.status === 'busy' ? 'busy' : 'free');
+  const [about, setAbout] = useState(prev?.about ?? '');
+  const [github, setGithub] = useState(prev?.github ?? '');
+  const [links, setLinks] = useState((prev?.links ?? []).join('\n'));
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const can = [cats.length > 0 && +years >= 0, stack.length >= 2, +rate > 0, about.trim().length >= 60][step];
@@ -41,6 +44,9 @@ export default function DevForm() {
   return (
     <div className="screen no-tabs">
       <Top title="Анкета разработчика" sub={`Шаг ${step + 1} из 4 · ${titles[step]}`} />
+      {step === 0 && me.devForm === 'rejected' && me.moderationNote && (
+        <div style={{ marginBottom: 14 }}><Note tone="red" icon="info">Комментарий модератора: {me.moderationNote}</Note></div>
+      )}
       <div className="progress"><i style={{ width: `${(step + 1) * 25}%` }} /></div>
 
       {step === 0 && (
@@ -121,8 +127,17 @@ export default function DevForm() {
       <Actions
         secondary={step > 0 ? { label: 'Назад', onClick: () => setStep(step - 1) } : undefined}
         primary={{
-          label: step < 3 ? 'Дальше' : 'Отправить анкету', disabled: !can,
-          onClick: () => { if (!can) return; if (step < 3) { setStep(step + 1); window.scrollTo(0, 0); } else { setDevForm('review'); setSent(true); } },
+          label: step < 3 ? 'Дальше' : busy ? 'Отправляем…' : 'Отправить анкету', disabled: !can || busy,
+          onClick: async () => {
+            if (!can || busy) return;
+            if (step < 3) { setStep(step + 1); window.scrollTo(0, 0); return; }
+            setBusy(true);
+            try {
+              await submitDevForm({ categories: cats, years: +years, stack, rate: +rate, status, about: about.trim(), github: github.trim(),
+                links: links.split(/\n+/).map((x) => x.trim()).filter(Boolean) });
+              setSent(true);
+            } catch { /* toast shown */ } finally { setBusy(false); }
+          },
         }} />
     </div>
   );

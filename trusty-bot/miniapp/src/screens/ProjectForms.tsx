@@ -1,6 +1,6 @@
 // Create a project (client), respond to one (developer), pick a developer (client).
 import { useState } from 'react';
-import { CATEGORIES, DEVS, budget, plural, usdt } from '../data';
+import { CATEGORIES, budget, plural, usdt } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -21,6 +21,7 @@ export function ProjectNew() {
   const [files, setFiles] = useState<string[]>([]);
   const [tried, setTried] = useState(false);
   const [done, setDone] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const errs = {
     title: title.trim().length < 8 && 'Минимум 8 символов: что нужно сделать',
@@ -30,14 +31,17 @@ export function ProjectNew() {
   };
   const ok = !Object.values(errs).some(Boolean);
 
-  const submit = () => {
+  const submit = async () => {
     setTried(true);
     if (!ok) { showToast('Заполните выделенные поля'); return; }
-    const id = addProject({
-      title: title.trim(), category: cat, text: text.trim(), budgetMin: +min, budgetMax: +(max || min), days: +days,
-      stack, files: files.map((f) => ({ name: f, size: '—' })),
-    });
-    setDone(id);
+    if (busy) return;
+    setBusy(true);
+    try {
+      setDone(await addProject({
+        title: title.trim(), category: cat, text: text.trim(), budgetMin: +min, budgetMax: +(max || min), days: +days,
+        stack, files: files.map((f) => ({ name: f, size: '—' })),
+      }));
+    } catch { /* toast shown */ } finally { setBusy(false); }
   };
 
   if (done) {
@@ -96,16 +100,17 @@ export function ProjectNew() {
         </div>
       </Field>
       <div className="mt"><Note tone="green" icon="shield">Оплата пойдёт через гаранта после того, как вы выберете исполнителя.</Note></div>
-      <Actions primary={{ label: 'Опубликовать проект', onClick: submit }} />
+      <Actions primary={{ label: busy ? 'Публикуем…' : 'Опубликовать проект', onClick: submit, disabled: busy }} />
     </div>
   );
 }
 
 export function BidForm({ id }: { id: number }) {
   const nav = useNav();
-  const { projects, myBids, addBid, showToast } = useStore();
+  const { projects, myBidFor, addBid, showToast } = useStore();
   const p = projects.find((x) => x.id === id)!;
-  const prev = myBids.find((b) => b.projectId === id);
+  const prev = myBidFor(id);
+  const [busy, setBusy] = useState(false);
   const [price, setPrice] = useState(String(prev?.price ?? p.budgetMax));
   const [days, setDays] = useState(String(prev?.days ?? p.days));
   const [text, setText] = useState(prev?.text ?? '');
@@ -140,8 +145,12 @@ export function BidForm({ id }: { id: number }) {
         </Field>
       </div>
       <Actions primary={{
-        label: prev ? 'Обновить отклик' : 'Отправить отклик', disabled: !ok,
-        onClick: () => { if (!ok) return; addBid({ projectId: id, price: +price, days: +days, text: text.trim() }); showToast('Отклик отправлен'); setSent(true); },
+        label: prev ? 'Обновить отклик' : 'Отправить отклик', disabled: !ok || busy,
+        onClick: async () => {
+          if (!ok || busy) return;
+          setBusy(true);
+          try { await addBid({ projectId: id, price: +price, days: +days, text: text.trim() }); showToast('Отклик отправлен'); setSent(true); } catch { /* toast shown */ } finally { setBusy(false); }
+        },
       }} />
     </div>
   );
@@ -149,10 +158,11 @@ export function BidForm({ id }: { id: number }) {
 
 export function Choose({ projectId, devId }: { projectId: number; devId: string }) {
   const nav = useNav();
-  const { projects, startDeal } = useStore();
+  const { projects, startDeal, devById } = useStore();
+  const [busy, setBusy] = useState(false);
   const p = projects.find((x) => x.id === projectId)!;
   const b = p.bids.find((x) => x.devId === devId)!;
-  const d = DEVS.find((x) => x.id === devId)!;
+  const d = devById(devId)!;
   const fee = Math.round(b.price * 0.05 * 100) / 100;
 
   return (
@@ -174,7 +184,14 @@ export function Choose({ projectId, devId }: { projectId: number; devId: string 
         <Note tone="green" icon="shield">Условия и ТЗ зафиксируются в сделке. Изменить их можно только с согласия обеих сторон.</Note>
         <Note tone="amber" icon="coin">В прототипе оплата не подключена: сделка создастся со статусом «Ожидает оплаты».</Note>
       </div>
-      <Actions primary={{ label: `Создать сделку на ${usdt(b.price)}`, onClick: () => nav.open('chats', 'chat', { id: startDeal(projectId, devId, b.price, b.days) }) }} />
+      <Actions primary={{
+        label: busy ? 'Создаём сделку…' : `Создать сделку на ${usdt(b.price)}`, disabled: busy,
+        onClick: async () => {
+          if (busy) return;
+          setBusy(true);
+          try { nav.open('chats', 'chat', { id: await startDeal(projectId, devId, b.price, b.days) }); } catch { setBusy(false); }
+        },
+      }} />
     </div>
   );
 }

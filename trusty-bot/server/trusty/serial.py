@@ -1,0 +1,237 @@
+"""Turns database rows into the JSON shapes the Mini App uses (see miniapp/src/data.ts)."""
+from collections import defaultdict
+from datetime import datetime, timezone
+
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Project, Review, User, utcnow
+
+MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября",
+              "ноября", "декабря"]
+MONTHS_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+
+
+def aware(d: datetime | None) -> datetime | None:
+    if d is None:
+        return None
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+def minutes_since(d: datetime | None) -> int:
+    if d is None:
+        return 10 ** 6
+    return max(0, int((utcnow() - aware(d)).total_seconds() // 60))
+
+
+def plural(n: int, one: str, few: str, many: str) -> str:
+    m10, m100 = n % 10, n % 100
+    if m10 == 1 and m100 != 11:
+        return one
+    if 2 <= m10 <= 4 and not 12 <= m100 <= 14:
+        return few
+    return many
+
+
+def ago(d: datetime) -> str:
+    m = minutes_since(d)
+    if m < 1:
+        return "только что"
+    if m < 60:
+        return f"{m} мин назад"
+    h = m // 60
+    if h < 24:
+        return f"{h} ч назад"
+    days = h // 24
+    if days == 1:
+        return "вчера"
+    return f"{days} {plural(days, 'день', 'дня', 'дней')} назад"
+
+
+def short_date(d: datetime) -> str:
+    d = aware(d)
+    return f"{d.day} {MONTHS_SHORT[d.month - 1]}"
+
+
+def amount_range(a: int) -> str:
+    for lo, hi in ((0, 50), (50, 100), (100, 200), (200, 300), (300, 500), (500, 700), (700, 1000)):
+        if a < hi:
+            return f"{lo}–{hi}"
+    return "1000+"
+
+
+def hue(uid: int) -> int:
+    return uid % 8
+
+
+def client_brief(u: User, stats: dict | None = None) -> dict:
+    st = stats or {}
+    return {"id": str(u.id), "name": u.name, "handle": u.username or "", "hue": hue(u.id),
+            "rating": st.get("rating", 0), "deals": st.get("deals", 0), "lastSeenMin": minutes_since(u.last_seen_at)}
+
+
+async def client_stats(s: AsyncSession, ids: list[int]) -> dict[int, dict]:
+    out: dict[int, dict] = defaultdict(lambda: {"rating": 0, "deals": 0})
+    if not ids:
+        return out
+    rows = await s.execute(select(Deal.client_id, func.count()).where(Deal.client_id.in_(ids), Deal.status == "done")
+                           .group_by(Deal.client_id))
+    for cid, n in rows:
+        out[cid]["deals"] = n
+    rows = await s.execute(select(Review.target_id, func.avg(Review.rating)).where(Review.target_id.in_(ids))
+                           .group_by(Review.target_id))
+    for tid, avg in rows:
+        out[tid]["rating"] = round(float(avg), 1)
+    return out
+
+
+async def dev_payloads(s: AsyncSession, profiles: list[tuple[DevProfile, User]]) -> list[dict]:
+    """Full developer cards with stats computed from finished deals and reviews."""
+    ids = [u.id for _, u in profiles]
+    if not ids:
+        return []
+    deals = (await s.execute(select(Deal).where(Deal.dev_id.in_(ids)).order_by(Deal.finished_at.desc()))).scalars().all()
+    reviews = {r.deal_id: r for r in (await s.execute(select(Review).where(Review.target_id.in_(ids)))).scalars()}
+    authors = {}
+    if reviews:
+        a_ids = list({r.author_id for r in reviews.values()})
+        authors = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(a_ids)))).scalars()}
+    by_dev: dict[int, list[Deal]] = defaultdict(list)
+    for d in deals:
+        by_dev[d.dev_id].append(d)
+    out = []
+    for p, u in profiles:
+        mine = by_dev[u.id]
+        done = [d for d in mine if d.status == "done"]
+        disputes = [d for d in mine if d.status == "dispute" or (d.result or "").startswith("dispute")]
+        lost = [d for d in mine if d.result == "dispute_lost"]
+        ontime = [d for d in done if d.result == "ontime"]
+        ratings = [reviews[d.id].rating for d in done if d.id in reviews]
+        history = []
+        for d in done[:6]:
+            r = reviews.get(d.id)
+            history.append({
+                "id": d.id, "title": d.title, "category": d.category, "amount": amount_range(d.amount),
+                "date": short_date(d.finished_at or d.created_at), "result": d.result or "ontime",
+                "rating": r.rating if r else None, "review": r.text if r else None,
+                "author": authors[r.author_id].first_name if r and r.author_id in authors else None,
+            })
+        created = aware(u.created_at)
+        out.append({
+            "id": str(u.id), "name": u.name, "handle": u.username or "", "hue": hue(u.id), "title": p.title,
+            "categories": p.categories, "stack": p.stack,
+            "rating": round(sum(ratings) / len(ratings), 1) if ratings else 0,
+            "deals": len(done), "volume": sum(d.amount for d in done),
+            "onTime": round(100 * len(ontime) / len(done)) if done else 0,
+            "disputes": len(disputes), "disputesLost": len(lost),
+            "lastSeenMin": minutes_since(u.last_seen_at), "responseMin": 0,
+            "status": p.status, "busyUntil": p.busy_until, "rate": p.rate,
+            "verified": p.moderation == "published", "github": p.github or None, "deposit": p.deposit or None,
+            "isNew": len(done) < 3, "joined": f"{MONTHS_GEN[created.month - 1]} {created.year}",
+            "about": p.about, "portfolio": p.portfolio or [], "links": p.links or [], "history": history,
+            "moderation": p.moderation, "years": p.years,
+            "banned": (None if not u.banned() else {"until": None if u.ban_permanent else short_date(u.ban_until)}),
+        })
+    return out
+
+
+async def project_payloads(s: AsyncSession, projects: list[Project], me: User) -> list[dict]:
+    if not projects:
+        return []
+    pids = [p.id for p in projects]
+    client_ids = list({p.client_id for p in projects})
+    clients = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(client_ids)))).scalars()}
+    cstats = await client_stats(s, client_ids)
+    counts = dict((await s.execute(select(Bid.project_id, func.count()).where(Bid.project_id.in_(pids))
+                                   .group_by(Bid.project_id))).all())
+    owned = [p.id for p in projects if p.client_id == me.id]
+    bids: dict[int, list[Bid]] = defaultdict(list)
+    mine: dict[int, Bid] = {}
+    for b in (await s.execute(select(Bid).where(Bid.project_id.in_(pids)))).scalars():
+        if b.project_id in owned:
+            bids[b.project_id].append(b)
+        if b.dev_id == me.id:
+            mine[b.project_id] = b
+    out = []
+    for p in projects:
+        out.append({
+            "id": p.id, "title": p.title, "category": p.category, "budgetMin": p.budget_min, "budgetMax": p.budget_max,
+            "days": p.days, "stack": p.stack, "text": p.text, "clientId": str(p.client_id),
+            "client": client_brief(clients[p.client_id], cstats.get(p.client_id)) if p.client_id in clients else None,
+            "ago": ago(p.created_at), "files": p.files or [], "status": p.status,
+            "bidsCount": counts.get(p.id, 0),
+            "bids": [{"devId": str(b.dev_id), "price": b.price, "days": b.days, "text": b.text, "ago": ago(b.created_at)}
+                     for b in sorted(bids.get(p.id, []), key=lambda b: b.price)],
+            "myBid": ({"projectId": p.id, "price": mine[p.id].price, "days": mine[p.id].days, "text": mine[p.id].text}
+                      if p.id in mine else None),
+        })
+    return out
+
+
+def message_payload(m: Message, me_id: int) -> dict:
+    return {"id": m.id, "from": "system" if m.sender_id is None else ("me" if m.sender_id == me_id else "peer"),
+            "text": m.text, "at": aware(m.created_at).isoformat()}
+
+
+async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool = False) -> list[dict]:
+    if not chats:
+        return []
+    peer_ids = [c.b_id if c.a_id == me.id else c.a_id for c in chats]
+    peers = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(peer_ids)))).scalars()}
+    dev_ids = set((await s.execute(select(DevProfile.user_id).where(DevProfile.user_id.in_(peer_ids)))).scalars())
+    deals = {}
+    deal_ids = [c.deal_id for c in chats if c.deal_id]
+    if deal_ids:
+        deals = {d.id: d for d in (await s.execute(select(Deal).where(Deal.id.in_(deal_ids)))).scalars()}
+    out = []
+    for c in chats:
+        pid = c.b_id if c.a_id == me.id else c.a_id
+        read = c.a_read if c.a_id == me.id else c.b_read
+        peer = peers.get(pid)
+        unread = (await s.execute(select(func.count()).where(Message.chat_id == c.id, Message.id > read,
+                                                             or_(Message.sender_id != me.id, Message.sender_id.is_(None))))).scalar_one()
+        q = select(Message).where(Message.chat_id == c.id).order_by(Message.id.desc()).limit(300 if full else 1)
+        msgs = list(reversed((await s.execute(q)).scalars().all()))
+        d = deals.get(c.deal_id) if c.deal_id else None
+        out.append({
+            "id": str(c.id),
+            "peer": {"name": peer.name if peer else "Пользователь", "hue": hue(pid),
+                     "lastSeenMin": minutes_since(peer.last_seen_at) if peer else 10 ** 6,
+                     "role": "dev" if pid in dev_ids else "client", "refId": str(pid)},
+            "deal": ({"id": d.id, "title": d.title, "amount": d.amount, "status": d.status, "due": short_date(d.due_at),
+                      "clientId": str(d.client_id), "devId": str(d.dev_id)} if d else None),
+            "unread": unread,
+            "messages": [message_payload(m, me.id) for m in msgs],
+        })
+    return out
+
+
+def evidence_url(e: Evidence, secret: bytes) -> str:
+    import hashlib
+    import hmac
+    sig = hmac.new(secret, str(e.id).encode(), hashlib.sha256).hexdigest()[:32]
+    return f"/api/files/{e.id}?sig={sig}"
+
+
+async def complaint_payloads(s: AsyncSession, complaints: list[Complaint], secret: bytes) -> list[dict]:
+    if not complaints:
+        return []
+    uids = list({c.from_id for c in complaints} | {c.against_id for c in complaints})
+    users = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(uids)))).scalars()}
+    ev: dict[int, list[Evidence]] = defaultdict(list)
+    for e in (await s.execute(select(Evidence).where(Evidence.complaint_id.in_([c.id for c in complaints])))).scalars():
+        ev[e.complaint_id].append(e)
+    return [{
+        "id": c.id, "fromId": str(c.from_id), "fromName": users[c.from_id].name if c.from_id in users else "—",
+        "againstId": str(c.against_id), "againstName": users[c.against_id].name if c.against_id in users else "—",
+        "dealId": c.deal_id, "reason": c.reason, "text": c.text, "status": c.status, "ago": ago(c.created_at),
+        "decision": c.decision, "evidence": [evidence_url(e, secret) for e in ev[c.id]],
+    } for c in complaints]
+
+
+def member_payload(u: User, is_dev: bool) -> dict:
+    ban = None
+    if u.banned():
+        ban = {"until": None if u.ban_permanent else short_date(u.ban_until)}
+    return {"id": str(u.id), "name": u.name, "handle": u.username or "", "hue": hue(u.id),
+            "role": "dev" if is_dev else "client", "strikes": u.strikes, "ban": ban, "isAdmin": u.is_admin}

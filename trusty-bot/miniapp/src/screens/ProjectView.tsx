@@ -1,4 +1,5 @@
-import { CLIENTS, DEVS, budget, categoryLabel, plural, seen, usdt } from '../data';
+import { useEffect } from 'react';
+import { bidCount, budget, categoryLabel, plural, seen, usdt } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -6,11 +7,13 @@ import { Actions, Avatar, Cell, IconTile, Note, Pill, Rating, Section, Top, Veri
 
 export default function ProjectView({ id }: { id: number }) {
   const nav = useNav();
-  const { projects, role, myBids } = useStore();
-  const p = projects.find((x) => x.id === id)!;
-  const c = CLIENTS.find((x) => x.id === p.clientId)!;
-  const own = p.clientId === 'me';
-  const myBid = myBids.find((b) => b.projectId === p.id);
+  const { projects, role, isMe, myBidFor, clientOf, devById, loadProject } = useStore();
+  useEffect(() => { loadProject(id); }, [id, loadProject]);
+  const p = projects.find((x) => x.id === id);
+  if (!p) return <div className="screen no-tabs"><Top title="Проект" small /><div className="empty">Загружаем проект…</div></div>;
+  const c = clientOf(p);
+  const own = isMe(p.clientId);
+  const myBid = myBidFor(p.id);
 
   return (
     <div className="screen no-tabs">
@@ -22,7 +25,7 @@ export default function ProjectView({ id }: { id: number }) {
       <div className="facts">
         <div className="fact"><span>Бюджет</span><b>{budget(p)}</b></div>
         <div className="fact"><span>Срок</span><b>{p.days} {plural(p.days, 'день', 'дня', 'дней')}</b></div>
-        <div className="fact"><span>Отклики</span><b>{p.bids.length}</b></div>
+        <div className="fact"><span>Отклики</span><b>{bidCount(p)}</b></div>
         <div className="fact"><span>Опубликован</span><b>{p.ago}</b></div>
       </div>
 
@@ -39,7 +42,7 @@ export default function ProjectView({ id }: { id: number }) {
         </Section>
       )}
 
-      {!own && (
+      {!own && c && (
         <Section title="Заказчик">
           <div className="group">
             <Cell avatar lead={<Avatar name={c.name} hue={c.hue} online={c.lastSeenMin <= 5} />} title={c.name}
@@ -50,11 +53,12 @@ export default function ProjectView({ id }: { id: number }) {
       )}
 
       {own && (
-        <Section title={`Отклики · ${p.bids.length}`}>
+        <Section title={`Отклики · ${bidCount(p)}`}>
           {p.bids.length ? (
             <div className="group">
               {[...p.bids].sort((a, b) => a.price - b.price).map((b) => {
-                const d = DEVS.find((x) => x.id === b.devId)!;
+                const d = devById(b.devId);
+                if (!d) return null;
                 return (
                   <div className="bid" key={b.devId}>
                     <button className="bid-h" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push('dev', { id: d.id })}>

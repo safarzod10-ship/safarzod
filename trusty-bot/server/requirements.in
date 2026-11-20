@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+aiogram
+sqlalchemy[asyncio]
+asyncpg
+aiosqlite
+python-multipart

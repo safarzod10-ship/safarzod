@@ -1,0 +1,23 @@
+[Unit]
+Description=Trusty: Mini App API and Telegram bot
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+User=trusty
+Group=trusty
+EnvironmentFile=/etc/trusty/trusty.env
+WorkingDirectory=/opt/trusty/src/trusty-bot/server
+ExecStart=/opt/trusty/venv/bin/uvicorn trusty.main:app --host 127.0.0.1 --port 8800 --workers 1 --proxy-headers --no-server-header --log-level warning
+Restart=always
+RestartSec=3
+MemoryMax=350M
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/trusty
+
+[Install]
+WantedBy=multi-user.target

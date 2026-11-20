@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEAL_STATUS, OFFSITE, seen, usdt, type DealStatus } from '../data';
+import { DEAL_STATUS, OFFSITE, msgTime, seen, usdt, type DealStatus } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -12,7 +12,12 @@ const TONE: Record<DealStatus, 'green' | 'amber' | 'blue' | 'red' | undefined> =
 
 export default function Chats() {
   const nav = useNav();
-  const { chats } = useStore();
+  const { chats, refreshChats } = useStore();
+  useEffect(() => {
+    refreshChats();
+    const t = window.setInterval(refreshChats, 15000);
+    return () => window.clearInterval(t);
+  }, [refreshChats]);
   return (
     <div className="screen root">
       <Top title="Чаты" sub="Переписка внутри Trusty защищена гарантом" />
@@ -26,7 +31,7 @@ export default function Chats() {
                 <div className="cell-body">
                   <div className="cell-title" style={{ justifyContent: 'space-between' }}>
                     <span className="t">{c.peer.name}</span>
-                    <span className="small muted" style={{ fontWeight: 400 }}>{last?.time}</span>
+                    <span className="small muted" style={{ fontWeight: 400 }}>{last ? msgTime(last) : ''}</span>
                   </div>
                   {c.deal && (
                     <div style={{ marginTop: 3 }}><Pill tone={TONE[c.deal.status]}>#{c.deal.id} · {DEAL_STATUS[c.deal.status]}</Pill></div>
@@ -49,21 +54,30 @@ export default function Chats() {
 
 export function ChatView({ id }: { id: string }) {
   const nav = useNav();
-  const { chats, send, readChat } = useStore();
-  const c = chats.find((x) => x.id === id)!;
+  const { chats, send, readChat, loadChat } = useStore();
+  const c = chats.find((x) => x.id === id);
   const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const risky = OFFSITE.test(text);
+  const count = c?.messages.length ?? 0;
 
-  useEffect(() => { readChat(id); }, [id, readChat]);
-  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [c.messages.length]);
+  useEffect(() => {
+    loadChat(id).then(() => readChat(id));
+    const t = window.setInterval(() => loadChat(id), 4000);
+    return () => window.clearInterval(t);
+  }, [id, loadChat, readChat]);
+  useEffect(() => { if (c?.unread) readChat(id); }, [c?.unread, id, readChat]);
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [count]);
 
-  const submit = () => {
+  if (!c) return <div className="screen no-tabs"><Top title="Чат" small /><div className="empty">Загружаем переписку…</div></div>;
+
+  const submit = async () => {
     const t = text.trim();
-    if (!t) return;
+    if (!t || sending) return;
     if (risky) haptic.warning(); else haptic.tap();
-    send(id, t);
-    setText('');
+    setSending(true);
+    try { await send(id, t); setText(''); } catch { /* toast shown */ } finally { setSending(false); }
   };
 
   return (
@@ -76,7 +90,7 @@ export function ChatView({ id }: { id: string }) {
             <Avatar name={c.peer.name} hue={c.peer.hue} size={40} online={c.peer.lastSeenMin <= 5} />
             <div style={{ minWidth: 0 }}><b>{c.peer.name}</b><span>{seen(c.peer.lastSeenMin)}</span></div>
           </button>
-          <button className="icon-btn" aria-label="Пожаловаться" onClick={() => nav.push('complaint', { against: c.peer.refId, deal: c.deal?.id })}>
+          <button className="icon-btn" aria-label="Пожаловаться" onClick={() => nav.push('complaint', { against: c.peer.refId, name: c.peer.name, deal: c.deal?.id })}>
             <Icon name="flag" size={20} />
           </button>
         </div>
@@ -98,7 +112,7 @@ export function ChatView({ id }: { id: string }) {
           <div key={m.id} className={`msg ${m.from}`}>
             {m.file && <div className="att"><Icon name="doc" size={18} />{m.file}</div>}
             {m.text}
-            <time>{m.time}</time>
+            <time>{msgTime(m)}</time>
           </div>
         ))}
         <div ref={end} />
@@ -113,7 +127,7 @@ export function ChatView({ id }: { id: string }) {
           <textarea rows={1} value={text} placeholder="Сообщение" aria-label="Сообщение"
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }} />
-          <button className="send" disabled={!text.trim()} onClick={submit} aria-label="Отправить"><Icon name="send" size={20} /></button>
+          <button className="send" disabled={!text.trim() || sending} onClick={submit} aria-label="Отправить"><Icon name="send" size={20} /></button>
         </div>
       </div>
     </div>

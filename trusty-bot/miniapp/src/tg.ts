@@ -11,7 +11,7 @@ type NativeButton = {
 
 interface WebApp {
   initData: string;
-  initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string } };
+  initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string }; start_param?: string };
   colorScheme: 'light' | 'dark';
   version: string;
   ready(): void;

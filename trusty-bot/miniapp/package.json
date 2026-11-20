@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release": "npm run build && rm -rf ../deploy/webapp && cp -r dist ../deploy/webapp",
+    "e2e": "node scripts/live-e2e.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

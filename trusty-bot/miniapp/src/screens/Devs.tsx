@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { CATEGORIES, DEVS, plural, responseTime, seen, type Dev } from '../data';
+import { CATEGORIES, plural, responseTime, seen, type Dev } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
+import { useStore } from '../store';
 import { Avatar, Chips, Pill, Rating, Top, Verified } from '../ui';
 
 type Filter = 'all' | 'online' | 'free' | string;
@@ -47,20 +48,21 @@ export function DevCell({ d, onClick }: { d: Dev; onClick(): void }) {
 
 export default function Devs({ cat }: { cat?: string }) {
   const nav = useNav();
+  const { devs } = useStore();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>(cat ?? 'all');
   const [sort, setSort] = useState<Sort>('rating');
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return DEVS.filter((d) => {
+    return devs.filter((d) => {
       if (filter === 'online' && d.lastSeenMin > 5) return false;
       if (filter === 'free' && d.status !== 'free') return false;
       if (!['all', 'online', 'free'].includes(filter) && !d.categories.includes(filter)) return false;
       if (s && ![d.name, d.title, d.handle, ...d.stack].some((x) => x.toLowerCase().includes(s))) return false;
       return true;
     }).sort((a, b) => (sort === 'rating' ? b.rating - a.rating : sort === 'deals' ? b.deals - a.deals : a.lastSeenMin - b.lastSeenMin));
-  }, [q, filter, sort]);
+  }, [q, filter, sort, devs]);
 
   const sorts: { key: Sort; label: string }[] = [
     { key: 'rating', label: 'по рейтингу' }, { key: 'deals', label: 'по числу сделок' }, { key: 'seen', label: 'кто недавно в сети' },
@@ -89,7 +91,7 @@ export default function Devs({ cat }: { cat?: string }) {
       {list.length ? (
         <div className="group">{list.map((d) => <DevCell key={d.id} d={d} onClick={() => nav.push('dev', { id: d.id })} />)}</div>
       ) : (
-        <div className="empty">Никого не нашли. Попробуйте другой стек или уберите фильтр.</div>
+        <div className="empty">{devs.length ? 'Никого не нашли. Попробуйте другой стек или уберите фильтр.' : 'Каталог пока пуст: разработчики появятся после проверки анкет.'}</div>
       )}
     </div>
   );

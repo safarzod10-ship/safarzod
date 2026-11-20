@@ -56,7 +56,7 @@ await tap('#52'); await shot('admin-complaint');
 await tap('Бан на 30 дней'); await shot('admin-banned');
 await back(); await tap('Баны'); await shot('admin-bans'); await back();
 await tap('Я разработчик'); await shot('profile-dev');
-await tap('Анкета разработчика'); await tap('Боты'); await shot('dev-form-1'); await back();
+await page.getByText('Анкета', { exact: true }).first().click(); await tap('Боты'); await shot('dev-form-1'); await back();
 await tab('Разработчики'); await tap('Илья Гордеев'); await page.getByLabel('Ещё').click(); await tap('Пожаловаться'); await shot('complaint');
 
 console.log(JSON.stringify({ shots: n, errors }));

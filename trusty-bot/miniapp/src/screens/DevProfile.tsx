@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { DEVS, RESULT_LABEL, plural, responseTime, seen, usdt, type DealResult } from '../data';
+import { useEffect, useState } from 'react';
+import { RESULT_LABEL, plural, responseTime, seen, usdt, type DealResult } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -12,16 +12,27 @@ const RESULT_TONE: Record<DealResult, 'green' | 'amber' | 'blue' | 'red'> = {
 
 export default function DevProfile({ id }: { id: string }) {
   const nav = useNav();
-  const { role, members, openChat, projects } = useStore();
+  const { role, members, openChat, projects, devById, fetchDev, isMe, live } = useStore();
   const [menu, setMenu] = useState(false);
   const [offer, setOffer] = useState(false);
-  const d = DEVS.find((x) => x.id === id)!;
-  const banned = members.find((m) => m.id === id)?.ban;
+  const [missing, setMissing] = useState(false);
+  const d = devById(id);
+  useEffect(() => { if (!d) fetchDev(id).then((x) => { if (!x) setMissing(true); }); }, [id, d, fetchDev]);
+  if (!d) {
+    return (
+      <div className="screen no-tabs"><Top title="" small />
+        <div className="empty">{missing ? 'Профиль не найден или ещё на проверке.' : 'Загружаем профиль…'}</div></div>
+    );
+  }
+  const banned = live ? d.banned : members.find((m) => m.id === id)?.ban;
+  const self = isMe(d.id);
   const online = d.lastSeenMin <= 5;
   const vol = d.volume >= 1000 ? `${(d.volume / 1000).toFixed(1).replace('.', ',')}k` : String(d.volume);
-  const mine = projects.filter((p) => p.clientId === 'me' && p.status === 'open');
+  const mine = projects.filter((p) => isMe(p.clientId) && p.status === 'open');
 
-  const write = () => nav.open('chats', 'chat', { id: openChat(d.id) });
+  const write = async () => {
+    try { nav.open('chats', 'chat', { id: await openChat(d.id) }); } catch { /* toast shown */ }
+  };
 
   return (
     <div className="screen no-tabs">
@@ -44,6 +55,11 @@ export default function DevProfile({ id }: { id: string }) {
           Аккаунт заблокирован {banned.until ? `до ${banned.until}` : 'навсегда'} за нарушение правил. Сделки с ним недоступны.
         </Note>
       )}
+      {self && d.moderation && d.moderation !== 'published' && (
+        <div className="mt-s"><Note tone={d.moderation === 'rejected' ? 'red' : 'amber'} icon="clock">
+          {d.moderation === 'rejected' ? 'Анкета не прошла проверку. Исправьте её в профиле.' : 'Анкета на проверке. Так профиль будет выглядеть в каталоге.'}
+        </Note></div>
+      )}
       {d.isNew && (
         <Note tone="blue">Новый разработчик. Пока нет трёх успешных сделок, сумма одной сделки ограничена 100 USDT.</Note>
       )}
@@ -59,8 +75,8 @@ export default function DevProfile({ id }: { id: string }) {
 
       <Section title="Гарантии">
         <div className="group">
-          <Cell lead={<IconTile name="shield" />} title="Личность подтверждена" sub={d.verified ? 'Telegram-аккаунт старше года, телефон' : 'Проверка не пройдена'} />
-          {d.github && <Cell lead={<IconTile name="github" tone="blue" />} title="GitHub привязан" sub={`github.com/${d.github}`} />}
+          <Cell lead={<IconTile name="shield" />} title={d.verified ? 'Анкета проверена' : 'Анкета не проверена'} sub={d.verified ? 'Модератор Trusty проверил профиль и портфолио' : 'Профиль ещё не прошёл модерацию'} />
+          {d.github && <Cell lead={<IconTile name="github" tone="blue" />} title="GitHub" sub={`github.com/${d.github}`} />}
           {d.deposit && <Cell lead={<IconTile name="coin" />} title={`Залог ${usdt(d.deposit)}`} sub="Списывается в пользу заказчика при обмане" />}
           <Cell lead={<IconTile name="flag" tone={d.disputesLost ? 'amber' : undefined} />} title={`Споры: ${d.disputes}`}
             sub={d.disputes ? `проиграно ${d.disputesLost} из ${d.disputes}` : 'ни одного спора'} />
@@ -100,7 +116,7 @@ export default function DevProfile({ id }: { id: string }) {
 
       <div className="small muted center mt">В Trusty с {d.joined}</div>
 
-      {!banned && role === 'client' && (
+      {!banned && !self && role === 'client' && (
         <Actions secondary={{ label: 'Написать', onClick: write }}
           primary={{ label: 'Предложить проект', onClick: () => (mine.length ? setOffer(true) : nav.open('projects', 'project-new')) }} />
       )}
@@ -108,9 +124,9 @@ export default function DevProfile({ id }: { id: string }) {
       <Sheet open={menu} onClose={() => setMenu(false)}>
         <div className="group">
           <Cell lead={<IconTile name="link" />} title="Скопировать ссылку на профиль"
-            onClick={() => { navigator.clipboard?.writeText(`https://t.me/mytrusty_bot?startapp=dev_${d.handle}`).catch(() => {}); setMenu(false); }} />
+            onClick={() => { navigator.clipboard?.writeText(`https://t.me/mytrusty_bot?start=dev_${d.id}`).catch(() => {}); setMenu(false); }} />
           <Cell lead={<IconTile name="flag" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Пожаловаться</span>}
-            onClick={() => { setMenu(false); nav.push('complaint', { against: d.id }); }} />
+            onClick={() => { setMenu(false); nav.push('complaint', { against: d.id, name: d.name }); }} />
         </div>
       </Sheet>
 

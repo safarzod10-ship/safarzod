@@ -1,18 +1,23 @@
-// Complaint with evidence (screenshots, files) against a developer or a client.
+// Complaint with evidence (screenshots) against a developer or a client.
 import { useState } from 'react';
-import { MEMBERS, REASONS, type ComplaintReason } from '../data';
+import { REASONS, type ComplaintReason } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { Actions, Avatar, Cell, Done, Field, Note, Section, Top } from '../ui';
 
-export default function Complaint({ against, deal }: { against: string; deal?: number }) {
+interface Shot { file: File; url: string }
+const MAX = 6;
+
+export default function Complaint({ against, name, deal }: { against: string; name?: string; deal?: number }) {
   const nav = useNav();
-  const { addComplaint } = useStore();
-  const who = MEMBERS.find((m) => m.id === against);
+  const { addComplaint, members, devById } = useStore();
+  const who = members.find((m) => m.id === against) ?? devById(against);
+  const title = who?.name ?? name ?? 'Пользователь';
   const [reason, setReason] = useState<ComplaintReason | null>(null);
   const [text, setText] = useState('');
-  const [shots, setShots] = useState<string[]>([]);
+  const [shots, setShots] = useState<Shot[]>([]);
+  const [busy, setBusy] = useState(false);
   const [id, setId] = useState<number | null>(null);
   const ok = !!reason && text.trim().length >= 20 && shots.length > 0;
 
@@ -25,15 +30,22 @@ export default function Complaint({ against, deal }: { against: string; deal?: n
     );
   }
 
+  const submit = async () => {
+    if (!ok || !reason || busy) return;
+    setBusy(true);
+    try {
+      setId(await addComplaint({ againstId: against, againstName: title, dealId: deal, reason, text: text.trim(),
+        files: shots.map((s) => s.file), previews: shots.map((s) => s.url) }));
+    } catch { /* toast shown */ } finally { setBusy(false); }
+  };
+
   return (
     <div className="screen no-tabs">
       <Top title="Жалоба" sub="Нужны доказательства: без них арбитр не сможет принять решение" />
-      {who && (
-        <div className="group">
-          <Cell avatar lead={<Avatar name={who.name} hue={who.hue} />} title={who.name}
-            sub={`@${who.handle}${deal ? ` · сделка #${deal}` : ''}`} />
-        </div>
-      )}
+      <div className="group">
+        <Cell avatar lead={<Avatar name={title} hue={who?.hue ?? 0} />} title={title}
+          sub={`${who?.handle ? `@${who.handle}` : ''}${deal ? `${who?.handle ? ' · ' : ''}сделка #${deal}` : ''}` || undefined} />
+      </div>
 
       <Section title="Что случилось">
         <div className="group">
@@ -46,33 +58,36 @@ export default function Complaint({ against, deal }: { against: string; deal?: n
       </Section>
 
       <Section>
-        <Field label="Подробности" hint="Даты, суммы, что обещали и что произошло">
-          <textarea className="textarea" value={text} onChange={(e) => setText(e.target.value)} placeholder="Опишите ситуацию" />
+        <Field label="Подробности" hint="Даты, суммы, что обещали и что произошло. Минимум 20 символов.">
+          <textarea className="textarea" value={text} onChange={(e) => setText(e.target.value)} placeholder="Опишите ситуацию" maxLength={4000} />
         </Field>
       </Section>
 
-      <Section title={`Доказательства · ${shots.length}`}>
+      <Section title={`Доказательства · ${shots.length} из ${MAX}`}>
         <div className="thumbs">
           {shots.map((s, i) => (
-            <div className="thumb" key={s}>
-              <img src={s} alt={`Доказательство ${i + 1}`} />
+            <div className="thumb" key={s.url}>
+              <img src={s.url} alt={`Доказательство ${i + 1}`} />
               <button aria-label="Удалить" onClick={() => setShots(shots.filter((x) => x !== s))}><Icon name="x" size={14} /></button>
             </div>
           ))}
-          <label className="thumb add">
-            <Icon name="plus" size={22} />Скриншот
-            <input type="file" accept="image/*" multiple hidden
-              onChange={(e) => setShots([...shots, ...Array.from(e.target.files ?? []).map((f) => URL.createObjectURL(f))])} />
-          </label>
+          {shots.length < MAX && (
+            <label className="thumb add">
+              <Icon name="plus" size={22} />Скриншот
+              <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden
+                onChange={(e) => {
+                  const add = Array.from(e.target.files ?? []).filter((f) => f.size <= 8 * 1024 * 1024).slice(0, MAX - shots.length);
+                  setShots([...shots, ...add.map((file) => ({ file, url: URL.createObjectURL(file) }))]);
+                  e.target.value = '';
+                }} />
+            </label>
+          )}
         </div>
-        <p className="hint mt-s">Скриншоты переписки, условий, переводов. Переписку из чата Trusty арбитр увидит сам.</p>
+        <p className="hint mt-s">Скриншоты переписки, условий, переводов. До 8 МБ каждый. Переписку из чата Trusty арбитр увидит сам.</p>
       </Section>
 
       <div className="mt"><Note tone="amber">За заведомо ложные жалобы блокируют так же, как за обман.</Note></div>
-      <Actions primary={{
-        label: 'Отправить жалобу', disabled: !ok,
-        onClick: () => { if (ok && reason) setId(addComplaint({ againstId: against, dealId: deal, reason, text: text.trim(), evidence: shots })); },
-      }} />
+      <Actions primary={{ label: busy ? 'Отправляем…' : 'Отправить жалобу', disabled: !ok || busy, onClick: submit }} />
     </div>
   );
 }
