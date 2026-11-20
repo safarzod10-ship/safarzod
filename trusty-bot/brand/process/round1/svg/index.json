@@ -1,0 +1,1458 @@
+[
+ {
+  "id": 1,
+  "family": 1,
+  "name": "Split T",
+  "variant": 0,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 2,
+  "family": 1,
+  "name": "Split T",
+  "variant": 1,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 3,
+  "family": 1,
+  "name": "Split T",
+  "variant": 2,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 4,
+  "family": 1,
+  "name": "Split T",
+  "variant": 3,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 5,
+  "family": 1,
+  "name": "Split T",
+  "variant": 4,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 6,
+  "family": 1,
+  "name": "Split T",
+  "variant": 5,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 7,
+  "family": 1,
+  "name": "Split T",
+  "variant": 6,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 8,
+  "family": 1,
+  "name": "Split T",
+  "variant": 7,
+  "note": "Два участника сделки: T из двух половин"
+ },
+ {
+  "id": 9,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 0,
+  "note": "Щит с T"
+ },
+ {
+  "id": 10,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 1,
+  "note": "Щит с T"
+ },
+ {
+  "id": 11,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 2,
+  "note": "Щит с T"
+ },
+ {
+  "id": 12,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 3,
+  "note": "Щит с T"
+ },
+ {
+  "id": 13,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 4,
+  "note": "Щит с T"
+ },
+ {
+  "id": 14,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 5,
+  "note": "Щит с T"
+ },
+ {
+  "id": 15,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 6,
+  "note": "Щит с T"
+ },
+ {
+  "id": 16,
+  "family": 2,
+  "name": "Shield T",
+  "variant": 7,
+  "note": "Щит с T"
+ },
+ {
+  "id": 17,
+  "family": 3,
+  "name": "t + check",
+  "variant": 0,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 18,
+  "family": 3,
+  "name": "t + check",
+  "variant": 1,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 19,
+  "family": 3,
+  "name": "t + check",
+  "variant": 2,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 20,
+  "family": 3,
+  "name": "t + check",
+  "variant": 3,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 21,
+  "family": 3,
+  "name": "t + check",
+  "variant": 4,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 22,
+  "family": 3,
+  "name": "t + check",
+  "variant": 5,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 23,
+  "family": 3,
+  "name": "t + check",
+  "variant": 6,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 24,
+  "family": 3,
+  "name": "t + check",
+  "variant": 7,
+  "note": "Строчная t, переходящая в галочку"
+ },
+ {
+  "id": 25,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 0,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 26,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 1,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 27,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 2,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 28,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 3,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 29,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 4,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 30,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 5,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 31,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 6,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 32,
+  "family": 4,
+  "name": "Braces + coin",
+  "variant": 7,
+  "note": "Скобки кода держат монету: деньги под защитой кода"
+ },
+ {
+  "id": 33,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 0,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 34,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 1,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 35,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 2,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 36,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 3,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 37,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 4,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 38,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 5,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 39,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 6,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 40,
+  "family": 5,
+  "name": "Chevrons",
+  "variant": 7,
+  "note": "Две стороны сходятся в ромб"
+ },
+ {
+  "id": 41,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 0,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 42,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 1,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 43,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 2,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 44,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 3,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 45,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 4,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 46,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 5,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 47,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 6,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 48,
+  "family": 6,
+  "name": "Padlock T",
+  "variant": 7,
+  "note": "Замок с T-скважиной"
+ },
+ {
+  "id": 49,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 0,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 50,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 1,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 51,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 2,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 52,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 3,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 53,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 4,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 54,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 5,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 55,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 6,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 56,
+  "family": 7,
+  "name": "Chat lock",
+  "variant": 7,
+  "note": "Замок-сообщение: чат + защита"
+ },
+ {
+  "id": 57,
+  "family": 8,
+  "name": "Rings",
+  "variant": 0,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 58,
+  "family": 8,
+  "name": "Rings",
+  "variant": 1,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 59,
+  "family": 8,
+  "name": "Rings",
+  "variant": 2,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 60,
+  "family": 8,
+  "name": "Rings",
+  "variant": 3,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 61,
+  "family": 8,
+  "name": "Rings",
+  "variant": 4,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 62,
+  "family": 8,
+  "name": "Rings",
+  "variant": 5,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 63,
+  "family": 8,
+  "name": "Rings",
+  "variant": 6,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 64,
+  "family": 8,
+  "name": "Rings",
+  "variant": 7,
+  "note": "Сцепленные кольца: связь сторон"
+ },
+ {
+  "id": 65,
+  "family": 9,
+  "name": "Seal",
+  "variant": 0,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 66,
+  "family": 9,
+  "name": "Seal",
+  "variant": 1,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 67,
+  "family": 9,
+  "name": "Seal",
+  "variant": 2,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 68,
+  "family": 9,
+  "name": "Seal",
+  "variant": 3,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 69,
+  "family": 9,
+  "name": "Seal",
+  "variant": 4,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 70,
+  "family": 9,
+  "name": "Seal",
+  "variant": 5,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 71,
+  "family": 9,
+  "name": "Seal",
+  "variant": 6,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 72,
+  "family": 9,
+  "name": "Seal",
+  "variant": 7,
+  "note": "Печать гаранта"
+ },
+ {
+  "id": 73,
+  "family": 10,
+  "name": "Venn",
+  "variant": 0,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 74,
+  "family": 10,
+  "name": "Venn",
+  "variant": 1,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 75,
+  "family": 10,
+  "name": "Venn",
+  "variant": 2,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 76,
+  "family": 10,
+  "name": "Venn",
+  "variant": 3,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 77,
+  "family": 10,
+  "name": "Venn",
+  "variant": 4,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 78,
+  "family": 10,
+  "name": "Venn",
+  "variant": 5,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 79,
+  "family": 10,
+  "name": "Venn",
+  "variant": 6,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 80,
+  "family": 10,
+  "name": "Venn",
+  "variant": 7,
+  "note": "Пересечение: зона доверия"
+ },
+ {
+  "id": 81,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 0,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 82,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 1,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 83,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 2,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 84,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 3,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 85,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 4,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 86,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 5,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 87,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 6,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 88,
+  "family": 11,
+  "name": "Hooks",
+  "variant": 7,
+  "note": "Сцепленные крюки: рукопожатие"
+ },
+ {
+  "id": 89,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 0,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 90,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 1,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 91,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 2,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 92,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 3,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 93,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 4,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 94,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 5,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 95,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 6,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 96,
+  "family": 12,
+  "name": "Keyhole",
+  "variant": 7,
+  "note": "Замочная скважина / силуэт человека"
+ },
+ {
+  "id": 97,
+  "family": 13,
+  "name": "Vault",
+  "variant": 0,
+  "note": "Сейф"
+ },
+ {
+  "id": 98,
+  "family": 13,
+  "name": "Vault",
+  "variant": 1,
+  "note": "Сейф"
+ },
+ {
+  "id": 99,
+  "family": 13,
+  "name": "Vault",
+  "variant": 2,
+  "note": "Сейф"
+ },
+ {
+  "id": 100,
+  "family": 13,
+  "name": "Vault",
+  "variant": 3,
+  "note": "Сейф"
+ },
+ {
+  "id": 101,
+  "family": 13,
+  "name": "Vault",
+  "variant": 4,
+  "note": "Сейф"
+ },
+ {
+  "id": 102,
+  "family": 13,
+  "name": "Vault",
+  "variant": 5,
+  "note": "Сейф"
+ },
+ {
+  "id": 103,
+  "family": 13,
+  "name": "Vault",
+  "variant": 6,
+  "note": "Сейф"
+ },
+ {
+  "id": 104,
+  "family": 13,
+  "name": "Vault",
+  "variant": 7,
+  "note": "Сейф"
+ },
+ {
+  "id": 105,
+  "family": 14,
+  "name": "Corners",
+  "variant": 0,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 106,
+  "family": 14,
+  "name": "Corners",
+  "variant": 1,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 107,
+  "family": 14,
+  "name": "Corners",
+  "variant": 2,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 108,
+  "family": 14,
+  "name": "Corners",
+  "variant": 3,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 109,
+  "family": 14,
+  "name": "Corners",
+  "variant": 4,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 110,
+  "family": 14,
+  "name": "Corners",
+  "variant": 5,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 111,
+  "family": 14,
+  "name": "Corners",
+  "variant": 6,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 112,
+  "family": 14,
+  "name": "Corners",
+  "variant": 7,
+  "note": "Рамка держит ценность"
+ },
+ {
+  "id": 113,
+  "family": 15,
+  "name": "T-check",
+  "variant": 0,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 114,
+  "family": 15,
+  "name": "T-check",
+  "variant": 1,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 115,
+  "family": 15,
+  "name": "T-check",
+  "variant": 2,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 116,
+  "family": 15,
+  "name": "T-check",
+  "variant": 3,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 117,
+  "family": 15,
+  "name": "T-check",
+  "variant": 4,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 118,
+  "family": 15,
+  "name": "T-check",
+  "variant": 5,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 119,
+  "family": 15,
+  "name": "T-check",
+  "variant": 6,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 120,
+  "family": 15,
+  "name": "T-check",
+  "variant": 7,
+  "note": "T с галочкой"
+ },
+ {
+  "id": 121,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 0,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 122,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 1,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 123,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 2,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 124,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 3,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 125,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 4,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 126,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 5,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 127,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 6,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 128,
+  "family": 16,
+  "name": "Hourglass",
+  "variant": 7,
+  "note": "Время удержания (эскроу)"
+ },
+ {
+  "id": 129,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 0,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 130,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 1,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 131,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 2,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 132,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 3,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 133,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 4,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 134,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 5,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 135,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 6,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 136,
+  "family": 17,
+  "name": "Anchor T",
+  "variant": 7,
+  "note": "Якорь из T: надёжность"
+ },
+ {
+  "id": 137,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 0,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 138,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 1,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 139,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 2,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 140,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 3,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 141,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 4,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 142,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 5,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 143,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 6,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 144,
+  "family": 18,
+  "name": "Guard dog",
+  "variant": 7,
+  "note": "Верный пёс-охранник (trusty = верный)"
+ },
+ {
+  "id": 145,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 0,
+  "note": "T из модулей"
+ },
+ {
+  "id": 146,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 1,
+  "note": "T из модулей"
+ },
+ {
+  "id": 147,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 2,
+  "note": "T из модулей"
+ },
+ {
+  "id": 148,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 3,
+  "note": "T из модулей"
+ },
+ {
+  "id": 149,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 4,
+  "note": "T из модулей"
+ },
+ {
+  "id": 150,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 5,
+  "note": "T из модулей"
+ },
+ {
+  "id": 151,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 6,
+  "note": "T из модулей"
+ },
+ {
+  "id": 152,
+  "family": 19,
+  "name": "Modular T",
+  "variant": 7,
+  "note": "T из модулей"
+ },
+ {
+  "id": 153,
+  "family": 20,
+  "name": "Key",
+  "variant": 0,
+  "note": "Ключ"
+ },
+ {
+  "id": 154,
+  "family": 20,
+  "name": "Key",
+  "variant": 1,
+  "note": "Ключ"
+ },
+ {
+  "id": 155,
+  "family": 20,
+  "name": "Key",
+  "variant": 2,
+  "note": "Ключ"
+ },
+ {
+  "id": 156,
+  "family": 20,
+  "name": "Key",
+  "variant": 3,
+  "note": "Ключ"
+ },
+ {
+  "id": 157,
+  "family": 20,
+  "name": "Key",
+  "variant": 4,
+  "note": "Ключ"
+ },
+ {
+  "id": 158,
+  "family": 20,
+  "name": "Key",
+  "variant": 5,
+  "note": "Ключ"
+ },
+ {
+  "id": 159,
+  "family": 20,
+  "name": "Key",
+  "variant": 6,
+  "note": "Ключ"
+ },
+ {
+  "id": 160,
+  "family": 20,
+  "name": "Key",
+  "variant": 7,
+  "note": "Ключ"
+ },
+ {
+  "id": 161,
+  "family": 21,
+  "name": "Ty",
+  "variant": 0,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 162,
+  "family": 21,
+  "name": "Ty",
+  "variant": 1,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 163,
+  "family": 21,
+  "name": "Ty",
+  "variant": 2,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 164,
+  "family": 21,
+  "name": "Ty",
+  "variant": 3,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 165,
+  "family": 21,
+  "name": "Ty",
+  "variant": 4,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 166,
+  "family": 21,
+  "name": "Ty",
+  "variant": 5,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 167,
+  "family": 21,
+  "name": "Ty",
+  "variant": 6,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 168,
+  "family": 21,
+  "name": "Ty",
+  "variant": 7,
+  "note": "Лигатура Ty"
+ },
+ {
+  "id": 169,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 0,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 170,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 1,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 171,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 2,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 172,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 3,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 173,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 4,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 174,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 5,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 175,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 6,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 176,
+  "family": 22,
+  "name": "Exchange",
+  "variant": 7,
+  "note": "Обмен: деньги ⇄ работа"
+ },
+ {
+  "id": 177,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 0,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 178,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 1,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 179,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 2,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 180,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 3,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 181,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 4,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 182,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 5,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 183,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 6,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 184,
+  "family": 23,
+  "name": "Bubble T",
+  "variant": 7,
+  "note": "Сообщение с T"
+ },
+ {
+  "id": 185,
+  "family": 24,
+  "name": "Hex",
+  "variant": 0,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 186,
+  "family": 24,
+  "name": "Hex",
+  "variant": 1,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 187,
+  "family": 24,
+  "name": "Hex",
+  "variant": 2,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 188,
+  "family": 24,
+  "name": "Hex",
+  "variant": 3,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 189,
+  "family": 24,
+  "name": "Hex",
+  "variant": 4,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 190,
+  "family": 24,
+  "name": "Hex",
+  "variant": 5,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 191,
+  "family": 24,
+  "name": "Hex",
+  "variant": 6,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 192,
+  "family": 24,
+  "name": "Hex",
+  "variant": 7,
+  "note": "Гайка/шестигранник"
+ },
+ {
+  "id": 193,
+  "family": 25,
+  "name": "Coin",
+  "variant": 0,
+  "note": "Монета с T"
+ },
+ {
+  "id": 194,
+  "family": 25,
+  "name": "Coin",
+  "variant": 1,
+  "note": "Монета с T"
+ },
+ {
+  "id": 195,
+  "family": 25,
+  "name": "Coin",
+  "variant": 2,
+  "note": "Монета с T"
+ },
+ {
+  "id": 196,
+  "family": 25,
+  "name": "Coin",
+  "variant": 3,
+  "note": "Монета с T"
+ },
+ {
+  "id": 197,
+  "family": 25,
+  "name": "Coin",
+  "variant": 4,
+  "note": "Монета с T"
+ },
+ {
+  "id": 198,
+  "family": 25,
+  "name": "Coin",
+  "variant": 5,
+  "note": "Монета с T"
+ },
+ {
+  "id": 199,
+  "family": 25,
+  "name": "Coin",
+  "variant": 6,
+  "note": "Монета с T"
+ },
+ {
+  "id": 200,
+  "family": 25,
+  "name": "Coin",
+  "variant": 7,
+  "note": "Монета с T"
+ },
+ {
+  "id": 201,
+  "family": 26,
+  "name": "Arch",
+  "variant": 0,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 202,
+  "family": 26,
+  "name": "Arch",
+  "variant": 1,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 203,
+  "family": 26,
+  "name": "Arch",
+  "variant": 2,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 204,
+  "family": 26,
+  "name": "Arch",
+  "variant": 3,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 205,
+  "family": 26,
+  "name": "Arch",
+  "variant": 4,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 206,
+  "family": 26,
+  "name": "Arch",
+  "variant": 5,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 207,
+  "family": 26,
+  "name": "Arch",
+  "variant": 6,
+  "note": "Арка/врата: безопасный проход"
+ },
+ {
+  "id": 208,
+  "family": 26,
+  "name": "Arch",
+  "variant": 7,
+  "note": "Арка/врата: безопасный проход"
+ }
+]

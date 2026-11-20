@@ -1,0 +1,152 @@
+[
+ {
+  "id": 1,
+  "from_round1": "002",
+  "name": "Split T"
+ },
+ {
+  "id": 2,
+  "from_round1": "004",
+  "name": "Split T rounded"
+ },
+ {
+  "id": 3,
+  "from_round1": "006",
+  "name": "Split T diagonal"
+ },
+ {
+  "id": 4,
+  "from_round1": "003",
+  "name": "Split T offset"
+ },
+ {
+  "id": 5,
+  "from_round1": "008",
+  "name": "Pill T overlap"
+ },
+ {
+  "id": 6,
+  "from_round1": "012",
+  "name": "Shield T-gap"
+ },
+ {
+  "id": 7,
+  "from_round1": "015",
+  "name": "Half shield"
+ },
+ {
+  "id": 8,
+  "from_round1": "017",
+  "name": "t-check"
+ },
+ {
+  "id": 9,
+  "from_round1": "020",
+  "name": "t-check circle"
+ },
+ {
+  "id": 10,
+  "from_round1": "021",
+  "name": "t-check squircle"
+ },
+ {
+  "id": 11,
+  "from_round1": "024",
+  "name": "t-check sharp"
+ },
+ {
+  "id": 12,
+  "from_round1": "018",
+  "name": "t-check right bar"
+ },
+ {
+  "id": 13,
+  "from_round1": "025",
+  "name": "Braces coin"
+ },
+ {
+  "id": 14,
+  "from_round1": "026",
+  "name": "Brackets coin"
+ },
+ {
+  "id": 15,
+  "from_round1": "029",
+  "name": "Braces T-coin"
+ },
+ {
+  "id": 16,
+  "from_round1": "032",
+  "name": "Braces check"
+ },
+ {
+  "id": 17,
+  "from_round1": "033",
+  "name": "Angle coin"
+ },
+ {
+  "id": 18,
+  "from_round1": "036",
+  "name": "Chevron shield"
+ },
+ {
+  "id": 19,
+  "from_round1": "036",
+  "name": "Chevron shield sharp"
+ },
+ {
+  "id": 20,
+  "from_round1": "050",
+  "name": "Chat lock"
+ },
+ {
+  "id": 21,
+  "from_round1": "084",
+  "name": "Hooks diamond"
+ },
+ {
+  "id": 22,
+  "from_round1": "088",
+  "name": "Hooks square"
+ },
+ {
+  "id": 23,
+  "from_round1": "094",
+  "name": "Person"
+ },
+ {
+  "id": 24,
+  "from_round1": "118",
+  "name": "T check"
+ },
+ {
+  "id": 25,
+  "from_round1": "138",
+  "name": "Ear shield T"
+ },
+ {
+  "id": 26,
+  "from_round1": "137",
+  "name": "Dog shield"
+ },
+ {
+  "id": 27,
+  "from_round1": "146",
+  "name": "Three dots T"
+ },
+ {
+  "id": 28,
+  "from_round1": "161",
+  "name": "Ty"
+ },
+ {
+  "id": 29,
+  "from_round1": "205",
+  "name": "Double arch"
+ },
+ {
+  "id": 30,
+  "from_round1": "207",
+  "name": "Arch dot"
+ }
+]

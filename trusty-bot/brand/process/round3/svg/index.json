@@ -1,0 +1,82 @@
+[
+ {
+  "id": 1,
+  "combines_round2": "18 + 08",
+  "name": "Bracket shield + t-check"
+ },
+ {
+  "id": 2,
+  "combines_round2": "18 + 01",
+  "name": "Bracket shield + T"
+ },
+ {
+  "id": 3,
+  "combines_round2": "18 + 13",
+  "name": "Brace shield + coin"
+ },
+ {
+  "id": 4,
+  "combines_round2": "18 + 16",
+  "name": "Bracket shield + check"
+ },
+ {
+  "id": 5,
+  "combines_round2": "18 + 01",
+  "name": "Bracket shield + split T"
+ },
+ {
+  "id": 6,
+  "combines_round2": "08 + 01",
+  "name": "t-check in two pieces"
+ },
+ {
+  "id": 7,
+  "combines_round2": "06 + 08",
+  "name": "Shield + t-check knockout"
+ },
+ {
+  "id": 8,
+  "combines_round2": "15 + 05",
+  "name": "Coin-T avatar"
+ },
+ {
+  "id": 9,
+  "combines_round2": "18 + 25",
+  "name": "Eared bracket shield + coin"
+ },
+ {
+  "id": 10,
+  "combines_round2": "25 + 08",
+  "name": "Eared shield + t-check"
+ },
+ {
+  "id": 11,
+  "combines_round2": "03",
+  "name": "Diagonal split T avatar"
+ },
+ {
+  "id": 12,
+  "combines_round2": "18",
+  "name": "Roof bracket shield + coin"
+ },
+ {
+  "id": 13,
+  "combines_round2": "18 + 13",
+  "name": "Bracket shield + ring coin"
+ },
+ {
+  "id": 14,
+  "combines_round2": "18",
+  "name": "Bracket shield avatar"
+ },
+ {
+  "id": 15,
+  "combines_round2": "05 + 13",
+  "name": "Coin held between two bars (T)"
+ },
+ {
+  "id": 16,
+  "combines_round2": "13 + 01",
+  "name": "Brace shield + T"
+ }
+]
