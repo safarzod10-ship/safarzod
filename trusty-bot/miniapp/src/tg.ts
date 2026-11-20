@@ -1,0 +1,91 @@
+// Thin wrapper over Telegram.WebApp with browser fallbacks, so the prototype runs both inside Telegram and in a normal tab.
+
+type BtnParams = { text?: string; color?: string; text_color?: string; is_active?: boolean; is_visible?: boolean };
+type NativeButton = {
+  setParams(p: BtnParams): void;
+  onClick(cb: () => void): void;
+  offClick(cb: () => void): void;
+  show(): void;
+  hide(): void;
+};
+
+interface WebApp {
+  initData: string;
+  initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string } };
+  colorScheme: 'light' | 'dark';
+  version: string;
+  ready(): void;
+  expand(): void;
+  isVersionAtLeast(v: string): boolean;
+  setHeaderColor(c: string): void;
+  setBackgroundColor(c: string): void;
+  setBottomBarColor?(c: string): void;
+  onEvent(e: string, cb: () => void): void;
+  BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
+  MainButton: NativeButton;
+  SecondaryButton?: NativeButton & { setParams(p: BtnParams & { position?: string }): void };
+  HapticFeedback?: {
+    impactOccurred(s: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void;
+    notificationOccurred(t: 'error' | 'success' | 'warning'): void;
+    selectionChanged(): void;
+  };
+  disableVerticalSwipes?(): void;
+}
+
+const wa: WebApp | undefined = (window as unknown as { Telegram?: { WebApp?: WebApp } }).Telegram?.WebApp;
+
+/** true only when opened from Telegram (initData is empty in a normal browser tab) */
+export const inTelegram = !!wa && !!wa.initData;
+export const tg = inTelegram ? wa : undefined;
+
+export const tgUser = tg?.initDataUnsafe.user;
+
+const SURFACES = { light: '#F2F5F3', dark: '#071C19' };
+
+export function applyTheme() {
+  const dark = inTelegram ? wa!.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const root = document.documentElement;
+  root.classList.toggle('dark', dark);
+  root.classList.toggle('light', !dark);
+  if (tg) {
+    const c = dark ? SURFACES.dark : SURFACES.light;
+    try {
+      tg.setHeaderColor(c);
+      tg.setBackgroundColor(c);
+      tg.setBottomBarColor?.(c);
+    } catch {
+      /* older clients accept only keywords */
+    }
+  }
+}
+
+export function initTelegram() {
+  applyTheme();
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    try {
+      tg.disableVerticalSwipes?.();
+    } catch {
+      /* not supported */
+    }
+    tg.onEvent('themeChanged', applyTheme);
+  } else {
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  }
+}
+
+export const haptic = {
+  tap: () => tg?.HapticFeedback?.impactOccurred('light'),
+  select: () => tg?.HapticFeedback?.selectionChanged(),
+  success: () => tg?.HapticFeedback?.notificationOccurred('success'),
+  warning: () => tg?.HapticFeedback?.notificationOccurred('warning'),
+  error: () => tg?.HapticFeedback?.notificationOccurred('error'),
+};
+
+export function hideSplash() {
+  const s = document.getElementById('tl-splash');
+  if (!s) return;
+  s.classList.add('tl-done');
+  setTimeout(() => s.remove(), 450);
+}
