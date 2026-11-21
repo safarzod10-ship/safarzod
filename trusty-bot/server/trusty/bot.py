@@ -280,6 +280,11 @@ async def configure(bot: Bot) -> bool:
     Returns False (and is retried later) if Telegram is unavailable."""
     try:
         await bot.delete_my_commands()
+        me = await bot.get_me()
+        notify.bot_username, notify.main_app = me.username, bool(me.has_main_web_app)
+        if not notify.main_app:
+            log.warning("no Main Mini App for @%s: share links open the bot chat. Enable it in @BotFather -> Bot Settings -> "
+                        "Configure Mini App", me.username)
         if settings.public_url:
             await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=settings.public_url + "/")))
         log.info("bot configured")

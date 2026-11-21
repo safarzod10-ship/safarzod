@@ -17,7 +17,7 @@ export interface DevFormData { categories: string[]; years: number; stack: strin
 export interface NewComplaint { againstId: string; againstName?: string; dealId?: number; reason: ComplaintReason; text: string; files: File[]; previews: string[] }
 type NewProject = Omit<Project, 'id' | 'ago' | 'bids' | 'status' | 'clientId'>;
 
-interface Bootstrap { me: Me; devs: Dev[]; projects: Project[]; chats: Chat[]; myComplaints: Complaint[]; admins: { name: string; handle: string }[]; deals?: Deal[]; payments?: PayConfig }
+interface Bootstrap { share?: { base: string; bot: string }; me: Me; devs: Dev[]; projects: Project[]; chats: Chat[]; myComplaints: Complaint[]; admins: { name: string; handle: string }[]; deals?: Deal[]; payments?: PayConfig }
 export interface FinancePayment { id: number; dealId: number; kind: 'invoice' | 'payout' | 'refund'; amount: string; status: string; user: string; error?: string | null; attempts: number; at: string }
 export interface Finance { enabled: boolean; asset: string; feePercent: number; balance: { asset: string; available: string; onhold: string }[]; error?: string | null; held: string; disputes: Deal[]; payments: FinancePayment[] }
 export type DealAction = 'submit' | 'accept' | 'dispute' | 'cancel' | 'review';
@@ -105,6 +105,8 @@ interface Store {
   buyPro(method: 'stars' | 'crypto', plan: '1m' | '3m'): Promise<boolean>;
   checkPro(): Promise<boolean>;
   setAlerts(on: boolean): Promise<void>;
+  shareBase: string;
+  shareDev(id: string): Promise<{ link: string; card: string; prepared: string | null }>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -161,6 +163,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     pro: proDemo,
   }, [meLive, roleDemo, adminDemo, devFormDemo, demoWorks, proDemo]);
 
+  // t.me link prefix for an executor's profile: startapp opens the Mini App right away (when the bot has a Main Mini App)
+  const [shareBase, setShareBase] = useState('https://t.me/itrusty_bot?startapp=dev_');
+  const shareDev = useCallback(async (id: string) => {
+    if (!live) return { link: `${shareBase}${id}`, card: `/api/share/dev/${id}.jpg`, prepared: null };
+    return api<{ link: string; card: string; prepared: string | null }>(`/share/dev/${id}`, { method: 'POST' });
+  }, [shareBase]);
   const showToast = useCallback((t: string) => {
     setToast(t);
     window.clearTimeout(timer.current);
@@ -191,6 +199,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setMeLive(b.me); setDevs(b.devs); setProjects(b.projects); setChats(b.chats); setMyComplaints(b.myComplaints); setAdmins(b.admins);
       setDeals(b.deals ?? []);
       if (b.payments) setPayCfg(b.payments);
+      if (b.share) setShareBase(b.share.base);
       setReady(true);
     } catch (e) {
       const err = e as ApiError;
@@ -708,8 +717,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addBid, startDeal, openChat, loadChat, refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint,
     takeComplaint, moderate, fetchDev, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment,
     proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deleteChat,
-    sendFiles, uploadWorkImage, savePortfolio, invite, loadMatches, proInfo, buyPro, checkPro, setAlerts,
-  }), [sendFiles, uploadWorkImage, savePortfolio, invite, loadMatches, proInfo, buyPro, checkPro, setAlerts, deleteChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
+    sendFiles, uploadWorkImage, savePortfolio, invite, loadMatches, proInfo, buyPro, checkPro, setAlerts, shareBase, shareDev,
+  }), [shareBase, shareDev, sendFiles, uploadWorkImage, savePortfolio, invite, loadMatches, proInfo, buyPro, checkPro, setAlerts, deleteChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
     devById, myBidFor, reload, setRole, submitDevForm, showToast, addProject, loadProject, addBid, startDeal, openChat, loadChat,
     refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint, takeComplaint, moderate, fetchDev]);
 

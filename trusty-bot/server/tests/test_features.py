@@ -4,6 +4,7 @@ public share card.
 Run:  TRUSTY_DB_URL=postgresql+asyncpg://... python -m tests.test_features
 """
 import asyncio
+from types import SimpleNamespace
 import hashlib
 import hmac
 import io
@@ -55,6 +56,11 @@ class FakeBot:
 
     def __init__(self):
         self.invoices = []
+        self.prepared = []
+
+    async def save_prepared_inline_message(self, **kw):
+        self.prepared.append(kw)
+        return SimpleNamespace(id=f"prep-{len(self.prepared)}")
 
     async def create_invoice_link(self, **kw):
         self.invoices.append(kw)
@@ -212,12 +218,24 @@ async def main() -> None:
         me = ok(await h.get("/api/bootstrap", headers=B))["me"]
         assert me["pro"]["active"] and me["profile"]["pro"]
 
-        # 7. public card: a picture and a page with a link preview that opens the bot
+        # 7. sharing: a picture card and a t.me link; the server's own address is never in what people see
         r = ok(await h.get("/api/share/dev/5002.jpg"))
         assert r.headers["content-type"] == "image/jpeg" and len(r.content) > 5000
-        page = ok(await h.get("/api/u/5002")).text
-        assert 'og:image" content="https://trusty.example/api/share/dev/5002.jpg"' in page and "t.me/itrusty_bot?start=dev_5002" in page
-        ok(await h.get("/api/u/5001"), 404)  # not an executor
+        sh = ok(await h.post("/api/share/dev/5002", headers=A))  # no Main Mini App, no bot: the link opens the bot chat
+        assert sh["link"] == "https://t.me/itrusty_bot?start=dev_5002" and sh["prepared"] is None
+        assert sh["card"].startswith("/api/share/dev/5002.jpg?v=")
+        notify.bot, notify.main_app = FakeBot(), True
+        sh = ok(await h.post("/api/share/dev/5002", headers=A))
+        assert sh["link"] == "https://t.me/itrusty_bot?startapp=dev_5002" and sh["prepared"] == "prep-1"
+        kw = notify.bot.prepared[0]
+        assert kw["user_id"] == 5001 and kw["allow_user_chats"] and kw["allow_group_chats"] and not kw["allow_bot_chats"]
+        res = kw["result"]
+        assert res.photo_url.startswith("https://trusty.example/api/share/dev/5002.jpg?v=")
+        assert res.reply_markup.inline_keyboard[0][0].url == sh["link"] and "trusty.example" not in res.caption
+        assert ok(await h.get("/api/bootstrap", headers=A))["share"]["base"] == "https://t.me/itrusty_bot?startapp=dev_"
+        notify.bot, notify.main_app = None, False
+        ok(await h.post("/api/share/dev/5001", headers=A), 404)  # not an executor
+        ok(await h.get("/api/u/5002"), 404)  # no public page with the server's address
     print("features OK: files, portfolio, levels, client reputation, invites, picks, Pro (USDT + Stars), share card")
     from trusty.cryptopay import pay
     await pay.close()

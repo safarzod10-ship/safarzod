@@ -180,6 +180,7 @@ function PullMark({ pull, busy }: { pull: number; busy: boolean }) {
 /** opens the screen a bot button or a t.me/...?startapp= link points to */
 function useDeepLink(ready: boolean) {
   const nav = useNav();
+  const { role } = useStore();
   const done = useRef(false);
   useEffect(() => {
     if (!ready || done.current) return;
@@ -192,7 +193,7 @@ function useDeepLink(ready: boolean) {
     const tabs: Record<string, Tab> = { devs: 'devs', projects: 'projects', chats: 'chats', profile: 'profile', home: 'home' };
     if (!screen) return;
     if (tabs[screen]) nav.setTab(tabs[screen]);
-    else if (screen === 'dev' && id) nav.open('devs', 'dev', { id });
+    else if (screen === 'dev' && id) nav.open(role === 'dev' ? 'projects' : 'devs', 'dev', { id });
     else if (screen === 'project' && id) nav.open('projects', 'project', { id: Number(id) });
     else if (screen === 'chat' && id) nav.open('chats', 'chat', { id });
     else if (screen === 'admin') nav.open('profile', 'admin');
@@ -203,7 +204,7 @@ function useDeepLink(ready: boolean) {
     else if (screen === 'finance') nav.open('profile', 'finance');
     else if (screen === 'pro') nav.open('profile', 'pro');
     else if (screen === 'portfolio') nav.open('profile', 'portfolio');
-  }, [ready, nav]);
+  }, [ready, nav]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 function Gate() {

@@ -20,6 +20,8 @@ async def run_bot() -> None:
     from .bot import build, configure
     bot, dp = build()
     notify.bot = bot
+    from .share import watch_bot
+    watcher = asyncio.create_task(watch_bot(bot))  # noqa: F841 - lives as long as the bot
     configured = False
     while True:  # aiogram retries network errors itself; this guards against anything else (e.g. Telegram 5xx on start)
         try:

@@ -4,7 +4,7 @@ import { LEVEL_LABEL, LEVEL_RULES, budget, levelOf, plural, type Dev, type Level
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { absUrl, haptic, inTelegram, openTg, tg } from '../tg';
+import { absUrl, haptic, openTg, sharePrepared, tg } from '../tg';
 import { Avatar, Info, LevelBadge, Mark, ProBadge, Sheet, Skeleton } from '../ui';
 
 /** level pill with the rules in a popover: what each level means and how to get it */
@@ -71,17 +71,39 @@ export function Works({ items }: { items: Work[] }) {
   );
 }
 
-/** share an executor's card: to a Telegram chat, to a story or as a link */
+/** share an executor's card. Inside Telegram the bot sends the picture with an "Открыть профиль" button to a chat
+ *  the user picks; links are always t.me/<bot>?startapp=dev_<id>, never the server's own address. */
 export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(): void; d: Dev; self?: boolean }) {
-  const { live, showToast } = useStore();
+  const { live, showToast, shareBase, shareDev } = useStore();
   const [broken, setBroken] = useState(false);
-  const bot = `https://t.me/itrusty_bot?start=dev_${d.id}`;
-  const page = live ? absUrl(`/api/u/${d.id}`) : bot;
+  const [busy, setBusy] = useState(false);
+  const link = `${shareBase}${d.id}`;
   const card = absUrl(`/api/share/dev/${d.id}.jpg`);
-  const text = self ? 'Мой профиль исполнителя в IT Trusty: сделки через гаранта' : `${d.name} — ${d.title}. Профиль в IT Trusty`;
+  const text = self ? 'Мой профиль исполнителя в IT Trusty: сделки через гаранта, оплата в USDT' : `${d.name} — ${d.title}. Профиль в IT Trusty`;
   const story = live && !!tg?.shareToStory && tg.isVersionAtLeast('7.8');
+  const send = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await shareDev(d.id);
+      const sent = r.prepared ? sharePrepared(r.prepared) : null;
+      if (sent) {
+        if (await sent) { haptic.success(); showToast('Карточка отправлена'); onClose(); }
+        return;
+      }
+      // an old Telegram client or no bot: a plain t.me link, its preview shows the bot
+      openTg(`https://t.me/share/url?url=${encodeURIComponent(r.link)}&text=${encodeURIComponent(text)}`);
+      onClose();
+    } catch { showToast('Не получилось, попробуйте ещё раз'); } finally { setBusy(false); }
+  };
+  const toStory = () => {
+    // a link sticker is allowed only for Telegram Premium; others get the bot's name in the caption
+    const premium = !!tg?.initDataUnsafe.user?.is_premium;
+    tg!.shareToStory!(card, premium ? { text, widget_link: { url: link, name: 'Открыть профиль' } } : { text: `${text}\n@${link.split('/')[3].split('?')[0]}` });
+    onClose();
+  };
   const copy = () => {
-    navigator.clipboard?.writeText(page).then(() => showToast('Ссылка скопирована')).catch(() => showToast(page));
+    navigator.clipboard?.writeText(link).then(() => showToast('Ссылка скопирована')).catch(() => showToast(link));
     haptic.success();
   };
   return (
@@ -90,22 +112,23 @@ export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(
         {live && !broken ? <img src={card} alt="Карточка профиля" onError={() => setBroken(true)} /> : <CardPreview d={d} />}
       </div>
       <p className="muted small center" style={{ margin: '10px 0 14px' }}>
-        {self ? 'Ссылка откроет ваш профиль в IT Trusty. Удобно для соцсетей, чатов и резюме.' : 'Ссылка откроет профиль в IT Trusty.'}
+        Карточка уйдёт картинкой с кнопкой «Открыть профиль»: профиль откроется прямо в Telegram.
       </p>
       <div className="group">
-        <button className="cell" onClick={() => { openTg(`https://t.me/share/url?url=${encodeURIComponent(page)}&text=${encodeURIComponent(text)}`); onClose(); }}>
-          <span className="ic"><Icon name="send" size={22} /></span><div className="cell-body"><div className="cell-title">Отправить в Telegram</div></div><Icon name="chevron" size={18} className="chev" />
+        <button className="cell" onClick={send} disabled={busy}>
+          <span className="ic"><Icon name="send" size={22} /></span>
+          <div className="cell-body"><div className="cell-title">Отправить в чат</div><div className="cell-sub">Картинка и кнопка, выберите чат или канал</div></div>
+          {busy ? <span className="spin" /> : <Icon name="chevron" size={18} className="chev" />}
         </button>
         {story && (
-          <button className="cell" onClick={() => { tg!.shareToStory!(card, { text, widget_link: { url: bot, name: 'Профиль' } }); onClose(); }}>
+          <button className="cell" onClick={toStory}>
             <span className="ic"><Icon name="image" size={22} /></span><div className="cell-body"><div className="cell-title">Выложить в историю</div></div><Icon name="chevron" size={18} className="chev" />
           </button>
         )}
         <button className="cell" onClick={copy}>
-          <span className="ic"><Icon name="copy" size={22} /></span><div className="cell-body"><div className="cell-title">Скопировать ссылку</div><div className="cell-sub">{page.replace(/^https?:\/\//, '')}</div></div>
+          <span className="ic"><Icon name="copy" size={22} /></span><div className="cell-body"><div className="cell-title">Скопировать ссылку</div><div className="cell-sub">{link.replace(/^https:\/\//, '')}</div></div>
         </button>
       </div>
-      {!inTelegram && <p className="hint center mt-s">В браузере это демо: карточка рисуется сервером бота.</p>}
     </Sheet>
   );
 }

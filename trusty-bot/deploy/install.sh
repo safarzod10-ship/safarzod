@@ -139,7 +139,9 @@ FEE=$(get TRUSTY_FEE_PERCENT); [ -n "$FEE" ] || FEE=5
 # IT Trusty Pro for executors: price of one month in Telegram Stars and in USDT (change with: trusty pro <stars> <usdt>)
 PRO_STARS=$(get TRUSTY_PRO_STARS); [ -n "$PRO_STARS" ] || PRO_STARS=300
 PRO_USDT=$(get TRUSTY_PRO_USDT); [ -n "$PRO_USDT" ] || PRO_USDT=5
-BOT_USERNAME=$(curl -4 -s -m 15 "https://api.telegram.org/bot$TOKEN/getMe" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])' 2>/dev/null || true)
+BOT_ME=$(curl -4 -s -m 15 "https://api.telegram.org/bot$TOKEN/getMe" || true)
+BOT_USERNAME=$(printf '%s' "$BOT_ME" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])' 2>/dev/null || true)
+MAIN_APP=$(printf '%s' "$BOT_ME" | python3 -c 'import sys,json; print(1 if json.load(sys.stdin)["result"].get("has_main_web_app") else "")' 2>/dev/null || true)
 [ -n "$BOT_USERNAME" ] || BOT_USERNAME=$(get TRUSTY_BOT_USERNAME)
 [ -n "$BOT_USERNAME" ] || BOT_USERNAME=itrusty_bot
 [ -n "$CP_TOKEN" ] || echo "ВНИМАНИЕ: без токена Crypto Pay оплата в IT Trusty выключена. Запустите trusty update ещё раз и введите токен."
@@ -268,5 +270,10 @@ if [ -n "$CP_TOKEN" ]; then
   echo "Webhook оплаты:  @CryptoBot -> Crypto Pay -> My Apps -> TRUSTY -> Webhooks -> вставьте"
   echo "                 https://$DOMAIN/api/cryptopay/webhook"
   echo "                 (без него оплата тоже проходит, но подтверждается до 20 секунд)"
+fi
+if [ -z "$MAIN_APP" ]; then
+  echo "Ссылки профилей: сейчас ведут в чат с ботом. Чтобы t.me/$BOT_USERNAME?startapp=… открывал Mini App сразу:"
+  echo "                 @BotFather -> /mybots -> @$BOT_USERNAME -> Bot Settings -> Configure Mini App -> Enable Mini App"
+  echo "                 и укажите https://$DOMAIN (бот заметит это сам за 10 минут)"
 fi
 echo "Команды:         trusty logs | trusty stats | trusty admins | trusty update | trusty token | trusty pro <звёзды> <usdt>"

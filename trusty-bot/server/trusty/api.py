@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
 
-from . import cards, escrow, matching, notify, offers, presence, pro
+from . import cards, escrow, matching, notify, offers, presence, pro, share
 from . import files as storage
 from .auth import admin_user, current_user
 from .config import settings
@@ -106,6 +106,7 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
         "deals": await deal_payloads(s, list(deals), me),
         "payments": {"enabled": pay.enabled, "asset": settings.asset, "feePercent": settings.fee_percent,
                      "reviewDays": settings.review_days},
+        "share": {"base": share.base(), "bot": share.bot_name()},
         "me": await me_payload(s, me),
         "devs": devs,
         "projects": await project_payloads(s, list(projects), me),
@@ -506,27 +507,15 @@ async def share_card(uid: int, s: AsyncSession = Depends(get_session)):
     d = await _public_dev(s, uid)
     from .serial import LEVELS
     img = cards.dev_card(d["name"], d["title"], LEVELS[d["level"]], d["rating"], d["deals"], d["onTime"], d["stack"], d["pro"],
-                         settings.bot_username)
+                         share.bot_name())
     return Response(img, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
 
 
-@router.get("/u/{uid}", include_in_schema=False)
-async def share_page(uid: int, s: AsyncSession = Depends(get_session)):
-    """A link that shows the executor's card as a preview in Telegram and other apps, then opens the bot."""
-    from html import escape
+@router.post("/share/dev/{uid}")
+async def share_dev(uid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    """Everything the share sheet needs: the t.me link, the card and, inside Telegram, a prepared message for shareMessage."""
     d = await _public_dev(s, uid)
-    bot_link = f"https://t.me/{settings.bot_username}?start=dev_{uid}"
-    stats = f"{d['rating']:.1f} ★ · {d['deals']} сделок · " if d["deals"] else ""
-    desc = escape(f"{stats}{', '.join(d['stack'][:4])}. Сделка через гаранта IT Trusty: оплата в USDT после приёмки работы.")
-    title = escape(f"{d['name']} — исполнитель IT Trusty")
-    img = f"{settings.public_url}/api/share/dev/{uid}.jpg"
-    return HTMLResponse(f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>{title}</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta property="og:type" content="profile">
-<meta property="og:title" content="{title}"><meta property="og:description" content="{desc}">
-<meta property="og:image" content="{img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><meta http-equiv="refresh" content="0;url={bot_link}"></head>
-<body style="background:#000;color:#fff;font-family:system-ui;text-align:center;padding:40px">
-<p>{title}</p><p><a style="color:#4fb98c" href="{bot_link}">Открыть в Telegram</a></p></body></html>""")
+    return {"link": share.link(uid), "card": share.card_path(uid), "prepared": await share.prepare(me.id, d)}
 
 
 @router.post("/chats/{cid}/typing")

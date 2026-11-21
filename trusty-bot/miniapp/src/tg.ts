@@ -11,7 +11,7 @@ type NativeButton = {
 
 interface WebApp {
   initData: string;
-  initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string }; start_param?: string };
+  initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; is_premium?: boolean }; start_param?: string };
   colorScheme: 'light' | 'dark';
   version: string;
   ready(): void;
@@ -26,6 +26,7 @@ interface WebApp {
   openLink?(url: string): void;
   openInvoice?(url: string, cb?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
   shareToStory?(mediaUrl: string, params?: { text?: string; widget_link?: { url: string; name?: string } }): void;
+  shareMessage?(msgId: string, cb?: (sent: boolean) => void): void;
   downloadFile?(params: { url: string; file_name: string }, cb?: (accepted: boolean) => void): void;
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   MainButton: NativeButton;
@@ -125,4 +126,10 @@ export function hideSplash(): Promise<void> {
   if (sp) return sp.finish();
   document.getElementById('tl-splash')?.remove();
   return Promise.resolve();
+}
+
+/** sends a message the bot prepared (a photo card with a button) to a chat the user picks; null when the client is too old */
+export function sharePrepared(id: string): Promise<boolean> | null {
+  if (!tg?.shareMessage || !tg.isVersionAtLeast('8.0')) return null;
+  return new Promise((resolve) => { try { tg.shareMessage!(id, (sent) => resolve(!!sent)); } catch { resolve(false); } });
 }

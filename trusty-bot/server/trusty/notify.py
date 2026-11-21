@@ -11,6 +11,8 @@ from .config import settings
 
 log = logging.getLogger("trusty.notify")
 bot: Bot | None = None
+bot_username: str | None = None  # from getMe once the bot is configured
+main_app = False  # the bot has a Main Mini App in @BotFather: t.me/<bot>?startapp opens it directly
 _tasks: set[asyncio.Task] = set()
 
 # Bot API button colours: green for "yes", red for "no", blue for "open the app". Everything else stays neutral.
