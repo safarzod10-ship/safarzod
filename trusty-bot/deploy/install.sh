@@ -130,7 +130,7 @@ PRO_USDT=$(get TRUSTY_PRO_USDT); [ -n "$PRO_USDT" ] || PRO_USDT=5
 BOT_ME=$(curl -4 -s -m 15 "https://api.telegram.org/bot$TOKEN/getMe" || true)
 BOT_USERNAME=$(printf '%s' "$BOT_ME" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])' 2>/dev/null || true)
 [ -n "$BOT_USERNAME" ] || BOT_USERNAME=$(get TRUSTY_BOT_USERNAME)
-[ -n "$BOT_USERNAME" ] || BOT_USERNAME=itrusty_bot
+[ -n "$BOT_USERNAME" ] || BOT_USERNAME=itrustybot
 [ -n "$CP_TOKEN" ] || echo "ВНИМАНИЕ: без токена Crypto Pay оплата в IT Trusty выключена. Запустите trusty update ещё раз и введите токен."
 umask 077
 cat > $ENVF <<EOF
@@ -183,10 +183,12 @@ case "\$1" in
     [[ "\$T" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}\$ ]] || { echo "Токен выглядит неправильно"; exit 1; }
     R=\$(curl -4 -s -m 15 "https://api.telegram.org/bot\$T/getMe")
     echo "\$R" | grep -q '"ok":true' || { echo "Telegram не принял токен: \$R"; exit 1; }
+    U=\$(echo "\$R" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])')
     sed -i "s|^TRUSTY_BOT_TOKEN=.*|TRUSTY_BOT_TOKEN=\$T|" $ENVF
+    if grep -q '^TRUSTY_BOT_USERNAME=' $ENVF; then sed -i "s|^TRUSTY_BOT_USERNAME=.*|TRUSTY_BOT_USERNAME=\$U|" $ENVF; else echo "TRUSTY_BOT_USERNAME=\$U" >> $ENVF; fi
     systemctl restart trusty
-    echo "Готово, бот: @\$(echo "\$R" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])')"
-    exit 0 ;;
+    echo "Бот переключён на @\$U"
+    exec "\$0" setup ;;
   update)
     echo "Скачиваю обновление с GitHub…"
     if timeout 180 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 -C $APP/src fetch -4 -q --depth 1 origin "$BRANCH" \\

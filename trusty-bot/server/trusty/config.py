@@ -27,7 +27,7 @@ class Settings:
     pro_days: int = field(default_factory=lambda: int(_env("TRUSTY_PRO_DAYS", "30")))
     pro_stars: int = field(default_factory=lambda: int(_env("TRUSTY_PRO_STARS", "300")))
     pro_usdt: float = field(default_factory=lambda: float(_env("TRUSTY_PRO_USDT", "5")))
-    bot_username: str = field(default_factory=lambda: _env("TRUSTY_BOT_USERNAME", "itrusty_bot").lstrip("@"))
+    bot_username: str = field(default_factory=lambda: _env("TRUSTY_BOT_USERNAME", "itrustybot").lstrip("@"))
 
     @property
     def secret(self) -> bytes:

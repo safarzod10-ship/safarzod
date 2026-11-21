@@ -1,6 +1,6 @@
 # IT Trusty
 
-Гарант сделок и поиск разработчиков в Telegram: бот [@itrusty_bot](https://t.me/itrusty_bot) + Mini App.
+Гарант сделок и поиск разработчиков в Telegram: бот [@itrustybot](https://t.me/itrustybot) + Mini App.
 
 | Папка | Что внутри |
 |---|---|

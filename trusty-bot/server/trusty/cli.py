@@ -9,7 +9,6 @@ from .models import Complaint, Deal, DevProfile, Project, User
 
 
 USAGE = "trusty setup | stats | admins | admin-remove <id> | unban <id>"
-NAME = "IT Trusty"
 DESCRIPTION = ("Безопасный сервис для проведения сделок. Простой и удобный инструмент для прозрачного сотрудничества, "
                "фиксации договорённостей и комфортной работы на каждом этапе.")
 SHORT_DESCRIPTION = "Безопасные сделки с разработчиками. Оплата в USDT через гаранта, после приёмки работы."
@@ -32,10 +31,6 @@ async def setup_bot() -> int:
         except Exception as e:  # noqa: BLE001
             failed = True
             print(f"  ✗ {label}: {e}")
-
-    async def name():
-        if (await bot.get_my_name()).name != NAME:
-            await bot.set_my_name(name=NAME)
 
     async def description():
         if (await bot.get_my_description()).description != DESCRIPTION:
@@ -60,7 +55,6 @@ async def setup_bot() -> int:
     try:
         me = await bot.get_me()
         print(f"Оформление @{me.username}")
-        await step(f"Имя «{NAME}»", name())
         await step("Описание", description())
         await step("Аватар", avatar())
         await step("Кнопка «Открыть» у поля ввода", menu())

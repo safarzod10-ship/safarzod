@@ -210,17 +210,17 @@ async def main() -> None:
         from PIL import Image
         assert Image.open(io.BytesIO(ok(await h.get("/api/share/dev/5002.jpg?w=320&v=1")).content)).size == (320, 168)
         sh = ok(await h.post("/api/share/dev/5002", headers=A))
-        assert sh["link"] == "https://t.me/itrusty_bot?start=dev_5002" and sh["prepared"] is None
+        assert sh["link"] == "https://t.me/itrustybot?start=dev_5002" and sh["prepared"] is None
         assert sh["card"].startswith("/api/share/dev/5002.jpg?v=")
         notify.bot, notify.main_app = FakeBot(), True
         sh = ok(await h.post("/api/share/dev/5002", headers=A))
-        assert sh["link"] == "https://t.me/itrusty_bot?startapp=dev_5002" and sh["prepared"] == "prep-1"
+        assert sh["link"] == "https://t.me/itrustybot?startapp=dev_5002" and sh["prepared"] == "prep-1"
         kw = notify.bot.prepared[0]
         assert kw["user_id"] == 5001 and kw["allow_user_chats"] and kw["allow_group_chats"] and not kw["allow_bot_chats"]
         res = kw["result"]
         assert res.photo_url.startswith("https://trusty.example/api/share/dev/5002.jpg?v=")
         assert res.reply_markup.inline_keyboard[0][0].url == sh["link"] and "trusty.example" not in res.caption
-        assert ok(await h.get("/api/bootstrap", headers=A))["share"]["base"] == "https://t.me/itrusty_bot?startapp=dev_"
+        assert ok(await h.get("/api/bootstrap", headers=A))["share"]["base"] == "https://t.me/itrustybot?startapp=dev_"
         notify.bot, notify.main_app = None, False
         ok(await h.post("/api/share/dev/5001", headers=A), 404)
         ok(await h.get("/api/u/5002"), 404)

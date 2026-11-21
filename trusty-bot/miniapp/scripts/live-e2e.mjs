@@ -172,7 +172,7 @@ await boris.evaluate(() => { window.__opened = null; });
 await boris.locator('.sheet').getByRole('button', { name: 'Переслать' }).click();
 await boris.waitForFunction(() => !!window.__opened);
 const shared = await boris.evaluate(() => window.__opened);
-if (!/^https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Ft\.me%2Fitrusty_bot%3Fstart(app)?%3Ddev_2002/.test(shared)) throw new Error('unexpected share link ' + shared);
+if (!/^https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Ft\.me%2Fitrustybot%3Fstart(app)?%3Ddev_2002/.test(shared)) throw new Error('unexpected share link ' + shared);
 step('portfolio with a picture, share card');
 
 await anna.reload(); await anna.waitForSelector('.island');

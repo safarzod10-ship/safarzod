@@ -148,7 +148,7 @@ async def main():
     kw = await inline("dev", 70)
     r = kw["results"][0]
     assert r["type"] == "photo" and r["photo_url"].startswith("https://trusty.example/api/share/dev/43.jpg?v=") and r["thumbnail_url"].endswith("&w=320"), r
-    assert r["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://t.me/itrusty_bot?start=dev_43" and "Дев" in r["caption"], r
+    assert r["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://t.me/itrustybot?start=dev_43" and "Дев" in r["caption"], r
     assert [x["id"] for x in (await inline("@dev", 71))["results"]] == ["dev43"]
     assert [x["id"] for x in (await inline("dev_43", 72))["results"]] == ["dev43"]
     assert [x["id"] for x in (await inline("python", 73))["results"]] == ["dev43"]
@@ -168,7 +168,7 @@ class SetupSession(FakeSession):
         name = type(method).__name__
         CALLS.append((name, method.model_dump(exclude_none=True)))
         answers = {
-            "GetMe": {"id": 9, "is_bot": True, "first_name": "Bot", "username": "itrusty_bot",
+            "GetMe": {"id": 9, "is_bot": True, "first_name": "Bot", "username": "itrustybot",
                       "supports_inline_queries": False, "has_main_web_app": False},
             "GetMyName": {"name": "Old"}, "GetMyDescription": {"description": ""},
             "GetMyShortDescription": {"short_description": ""},
@@ -196,11 +196,12 @@ async def check_setup():
             aiogram.Bot = real
         names = [c[0] for c in CALLS]
         assert code == 0, out.getvalue()
-        for m in ("SetMyName", "SetMyDescription", "SetMyShortDescription", "SetChatMenuButton", "DeleteMyCommands"):
+        assert "SetMyName" not in names, names
+        for m in ("SetMyDescription", "SetMyShortDescription", "SetChatMenuButton", "DeleteMyCommands"):
             assert m in names, (m, names)
         assert ("SetMyProfilePhoto" in names) == (photos == 0), names
         text = out.getvalue()
-        assert "/setinline -> @itrusty_bot" in text and "Enable Mini App -> https://trusty.example" in text, text
+        assert "/setinline -> @itrustybot" in text and "Enable Mini App -> https://trusty.example" in text, text
     print(text)
 
 

@@ -154,7 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     pro: proDemo,
   }, [meLive, roleDemo, adminDemo, devFormDemo, demoWorks, proDemo]);
 
-  const [shareBase, setShareBase] = useState('https://t.me/itrusty_bot?startapp=dev_');
+  const [shareBase, setShareBase] = useState('https://t.me/itrustybot?startapp=dev_');
   const [shareInlineOn, setShareInlineOn] = useState(false);
   const shareDev = useCallback(async (id: string) => {
     if (!live) return { link: `${shareBase}${id}`, card: `/api/share/dev/${id}.jpg`, prepared: null };
