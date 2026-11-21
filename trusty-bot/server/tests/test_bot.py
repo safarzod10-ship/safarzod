@@ -154,8 +154,54 @@ async def main():
     assert [x["id"] for x in (await inline("python", 73))["results"]] == ["dev43"]
     kw = await inline("nobody_here", 74)
     assert kw["results"] == [] and "Никого" in kw["button"]["text"] and kw["button"]["web_app"]["url"].startswith("https://trusty.example/"), kw
+    await check_setup()
     print("bot OK:", ", ".join(sorted({c[0] for c in CALLS})))
     await engine.dispose()
+
+
+class SetupSession(FakeSession):
+    def __init__(self, photos: int):
+        super().__init__()
+        self.photos = photos
+
+    async def make_request(self, bot, method: TelegramMethod, timeout=None):
+        name = type(method).__name__
+        CALLS.append((name, method.model_dump(exclude_none=True)))
+        answers = {
+            "GetMe": {"id": 9, "is_bot": True, "first_name": "Bot", "username": "itrusty_bot",
+                      "supports_inline_queries": False, "has_main_web_app": False},
+            "GetMyName": {"name": "Old"}, "GetMyDescription": {"description": ""},
+            "GetMyShortDescription": {"short_description": ""},
+            "GetUserProfilePhotos": {"total_count": self.photos, "photos": []},
+        }
+        if name in answers:
+            return method.__returning__.model_validate(answers[name])
+        return True
+
+
+async def check_setup():
+    import contextlib
+    import io
+    import aiogram
+    from trusty import cli
+    real = aiogram.Bot
+    for photos in (0, 1):
+        CALLS.clear()
+        aiogram.Bot = lambda token, _p=photos: real(token, session=SetupSession(_p))
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                code = await cli.main(["setup"])
+        finally:
+            aiogram.Bot = real
+        names = [c[0] for c in CALLS]
+        assert code == 0, out.getvalue()
+        for m in ("SetMyName", "SetMyDescription", "SetMyShortDescription", "SetChatMenuButton", "DeleteMyCommands"):
+            assert m in names, (m, names)
+        assert ("SetMyProfilePhoto" in names) == (photos == 0), names
+        text = out.getvalue()
+        assert "/setinline -> @itrusty_bot" in text and "Enable Mini App -> https://trusty.example" in text, text
+    print(text)
 
 
 if __name__ == "__main__":

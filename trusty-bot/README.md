@@ -5,7 +5,6 @@
 | Папка | Что внутри |
 |---|---|
 | `brand/` | логотип (щит с волной: `brand/logo/it-trusty-*.svg`), баннер, аватар; старые версии в `brand/logo/v1` |
-| `bot/` | скрипты оформления бота (описание, аватар, без команд) |
 | `miniapp/` | Mini App: React + TypeScript + Vite. В Telegram работает с API, в обычном браузере на демо-данных |
 | `server/` | API (FastAPI) и бот (aiogram 3) в одном процессе, PostgreSQL |
 | `deploy/` | установщик для Ubuntu, systemd, Caddy, бэкапы, собранный Mini App (`deploy/webapp`) |
@@ -21,7 +20,7 @@ curl -4 -fsSL --connect-timeout 15 -m 120 -o /tmp/trusty-install.sh \
 Скрипт спросит токен бота, поставит PostgreSQL, Python-окружение, службу `trusty` (порт 8800, только localhost)
 и сайт `https://trusty.2-27-22-171.sslip.io` в Caddy (через `import`, остальные сайты не меняются).
 Повторный запуск обновляет код и сохраняет данные. На сервере: `trusty logs`, `trusty stats`, `trusty admins`,
-`trusty update`, `trusty token` (сменить бота). Бэкап базы каждый день в `/var/backups/trusty`, хранится 14 дней.
+`trusty update`, `trusty token` (сменить бота), `trusty setup` (имя, описание, аватар и кнопка бота; запускается и при обновлении). Бэкап базы каждый день в `/var/backups/trusty`, хранится 14 дней.
 
 Администратор: отправить боту `/admin <код>` (код печатает установщик), максимум 2 администратора.
 
