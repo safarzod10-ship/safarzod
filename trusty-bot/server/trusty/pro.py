@@ -1,6 +1,3 @@
-"""IT Trusty Pro for executors: new projects in their direction come to the bot at once, and they are shown first
-in the catalogue and in the picks sent to clients. Paid in Telegram Stars (an invoice in the bot) or in USDT
-(a Crypto Pay invoice). Each payment adds its days to the current period."""
 import logging
 from datetime import timedelta
 from decimal import Decimal
@@ -18,12 +15,10 @@ from .serial import aware, short_date
 
 log = logging.getLogger("trusty.pro")
 
-# plan -> (months, price factor)
 PLANS = {"1m": (1, Decimal("1")), "3m": (3, Decimal("0.85"))}
 
 
 def prices(plan: str) -> tuple[int, int, Decimal]:
-    """(days, stars, usdt) of a plan."""
     months, k = PLANS.get(plan, PLANS["1m"])
     stars = int(round(settings.pro_stars * months * float(k)))
     usdt = (Decimal(str(settings.pro_usdt)) * months * k).quantize(Decimal("0.01"))
@@ -51,7 +46,6 @@ async def _new(s: AsyncSession, me: User, plan: str, method: str) -> tuple[Subsc
 
 
 async def stars_link(s: AsyncSession, me: User, plan: str) -> str:
-    """An invoice link in Telegram Stars; the Mini App opens it with WebApp.openInvoice."""
     if notify.bot is None:
         raise EscrowError("Оплата звёздами сейчас недоступна")
     sub, stars, _ = await _new(s, me, plan, "stars")
@@ -82,7 +76,6 @@ async def _locked(s: AsyncSession, payload: str) -> Subscription | None:
 
 
 async def activate(s: AsyncSession, sub: Subscription, external_id: str | None = None) -> bool:
-    """Idempotent: marks the payment and extends the user's Pro period."""
     if sub.status == "paid":
         return False
     u = await s.get(User, sub.user_id, with_for_update=True, populate_existing=True)
@@ -98,7 +91,6 @@ async def activate(s: AsyncSession, sub: Subscription, external_id: str | None =
 
 
 async def check_stars(s: AsyncSession, payload: str, user_id: int, amount: int, currency: str) -> str | None:
-    """Pre-checkout: None if the payment may go through, else the reason shown to the user."""
     sub = await _locked(s, payload)
     if sub is None or sub.user_id != user_id or sub.method != "stars":
         return "Счёт не найден, откройте оплату из приложения ещё раз"
@@ -118,7 +110,6 @@ async def paid_stars(s: AsyncSession, payload: str, user_id: int, charge_id: str
 
 
 async def handle_crypto(s: AsyncSession, inv: dict) -> bool:
-    """A paid Crypto Pay invoice with a pro:<id> payload (webhook or polling)."""
     sub = await _locked(s, str(inv.get("payload") or ""))
     if sub is None or sub.method != "crypto" or str(inv.get("invoice_id")) != sub.external_id or inv.get("status") != "paid":
         return False
@@ -126,7 +117,6 @@ async def handle_crypto(s: AsyncSession, inv: dict) -> bool:
 
 
 async def sync_crypto(s: AsyncSession) -> None:
-    """Fallback for missed webhooks: checks recent unpaid USDT invoices."""
     if not pay.enabled:
         return
     pending = (await s.execute(select(Subscription).where(

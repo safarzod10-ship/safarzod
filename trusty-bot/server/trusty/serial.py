@@ -1,4 +1,3 @@
-"""Turns database rows into the JSON shapes the Mini App uses (see miniapp/src/data.ts)."""
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -77,8 +76,6 @@ FAST_PAY_HOURS = 2
 
 
 async def client_stats(s: AsyncSession, ids: list[int]) -> dict[int, dict]:
-    """A client's rating from executors, finished deals and "платит быстро": at least two deals paid, on average
-    within two hours after the deal was created."""
     out: dict[int, dict] = defaultdict(lambda: {"rating": 0, "deals": 0, "fastPay": False})
     if not ids:
         return out
@@ -103,8 +100,6 @@ LEVELS = {"new": "Новый", "verified": "Проверенный", "top": "Т�
 
 
 def level_of(verified: bool, done: int, rating: float, on_time: int, lost: int) -> str:
-    """Новый: анкета одобрена. Проверенный: 3+ сделки, рейтинг от 4.5, не больше одного проигранного спора.
-    Топ: 15+ сделок, рейтинг от 4.8, сдача в срок от 90%, ни одного проигранного спора."""
     if verified and done >= 15 and rating >= 4.8 and on_time >= 90 and lost == 0:
         return "top"
     if verified and done >= 3 and rating >= 4.5 and lost <= 1:
@@ -113,7 +108,6 @@ def level_of(verified: bool, done: int, rating: float, on_time: int, lost: int) 
 
 
 def level_next(level: str, done: int, rating: float, on_time: int, lost: int) -> dict | None:
-    """What is left to reach the next level, in plain words."""
     if level == "top":
         return None
     goal = {"deals": 3, "rating": 4.5, "onTime": 0, "lost": 1} if level == "new" else {"deals": 15, "rating": 4.8, "onTime": 90, "lost": 0}
@@ -142,7 +136,6 @@ def portfolio_payload(items: list) -> list[dict]:
 
 
 async def dev_payloads(s: AsyncSession, profiles: list[tuple[DevProfile, User]]) -> list[dict]:
-    """Full developer cards with stats computed from finished deals and reviews."""
     ids = [u.id for _, u in profiles]
     if not ids:
         return []
@@ -282,7 +275,7 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
     for c in chats:
         pid = c.b_id if c.a_id == me.id else c.a_id
         read = c.a_read if c.a_id == me.id else c.b_read
-        hidden_at = c.a_hidden if c.a_id == me.id else c.b_hidden  # None: never deleted; 0: deleted while empty
+        hidden_at = c.a_hidden if c.a_id == me.id else c.b_hidden
         hidden = hidden_at or 0
         peer = peers.get(pid)
         unread = (await s.execute(select(func.count()).where(Message.chat_id == c.id, Message.id > max(read, hidden),
@@ -291,7 +284,7 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
              .limit(300 if full else 1))
         msgs = list(reversed((await s.execute(q)).scalars().all()))
         if skip_hidden and not msgs:
-            continue  # lists show only chats with something in them: not empty ones, not ones I deleted with nothing new
+            continue
         offer_cards = await _offers_for(s, msgs, me.id) if full else {}
         files: dict[int, list] = defaultdict(list)
         if msgs:
@@ -355,8 +348,7 @@ def person(u: User | None, uid: int) -> dict:
 
 
 async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
-    """Deals as the Mini App sees them, with the actions available to `me`."""
-    from .models import Deal, Payment  # noqa: F401 - local import keeps module import order simple
+    from .models import Deal, Payment
     if not deals:
         return []
     ids = [d.id for d in deals]
@@ -372,8 +364,8 @@ async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
     out = []
     for d in deals:
         role = "client" if d.client_id == me.id else "dev" if d.dev_id == me.id else "admin"
-        r = reviews.get((d.id, d.client_id))  # the client about the developer
-        rc = reviews.get((d.id, d.dev_id))  # the developer about the client
+        r = reviews.get((d.id, d.client_id))
+        rc = reviews.get((d.id, d.dev_id))
         mine = reviews.get((d.id, me.id))
         final = d.status == "done" or (d.status == "refunded" and d.paid_at is not None)
         visible = [p for p in pays[d.id] if role == "admin" or p.user_id == me.id]

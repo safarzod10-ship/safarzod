@@ -20,7 +20,6 @@ export function ProjectCell({ p, onClick, badge }: { p: Project; onClick(): void
   );
 }
 
-/** A client sees only their own projects; an executor sees the feed of open projects and their own bids. */
 export default function Projects() {
   const nav = useNav();
   const { projects, role, isMe, myBidFor, proInfo, clientOf } = useStore();
@@ -43,7 +42,6 @@ export default function Projects() {
         ) : (
           <div className="empty-cta">
             <b>Проектов пока нет</b>
-            <span>Опубликуйте задачу с бюджетом и сроком: исполнители пришлют отклики, а в чате можно предложить цену по ней.</span>
           </div>
         )}
         <button className="btn primary mt" onClick={() => nav.push('project-new')}>Опубликовать проект</button>
@@ -52,7 +50,6 @@ export default function Projects() {
   }
 
   const mineDev = projects.filter((p) => !!myBidFor(p.id));
-  // projects I was invited to go first
   const feed = projects.filter((p) => p.status === 'open' && !isMe(p.clientId) && (cat === 'all' || p.category === cat))
     .sort((a, b) => Number(!!b.invited) - Number(!!a.invited));
   const list = view === 'feed' ? feed : mineDev;

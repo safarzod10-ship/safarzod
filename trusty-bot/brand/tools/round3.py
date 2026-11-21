@@ -1,7 +1,3 @@
-"""Round 3: hybrids — elements of the round-2 shortlist combined.
-
-Usage: python3 round3.py <out_dir>
-"""
 import json
 import os
 import sys
@@ -91,13 +87,11 @@ def h16():
 
 
 def h05():
-    # brackets-shield whose inner space holds the split T (two halves)
     Ls = [(36, 34), (48.6, 34), (48.6, 64), (45.5, 64), (45.5, 41), (36, 41)]
     return bracket_shield(9) + P(poly(Ls)) + P(poly([(100 - x, y) for x, y in Ls]))
 
 
 def h08():
-    # split-T crossbar holding the coin, inside avatar circle
     g = (P(rr(10, 20, 30, 16, 8), fill=BG) + P(rr(60, 20, 30, 16, 8), fill=BG)
          + P(cd(50, 28, 12.5), fill=BG) + P(rr(42, 45, 16, 41, 8), fill=BG))
     return P(cd(50, 50, 46)) + f'<g transform="translate(50 50) scale(0.62) translate(-50 -53)">{g}</g>'

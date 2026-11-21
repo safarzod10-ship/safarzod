@@ -1,4 +1,3 @@
-// node shot.js <page.html> <out.png> [width] [scale]
 const { chromium } = require('playwright');
 const path = require('path');
 (async () => {

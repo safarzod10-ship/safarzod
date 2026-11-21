@@ -51,9 +51,9 @@ export default function Profile() {
       {s.role === 'dev' && p && (
         <div className="group mt">
           <Cell lead={<IconTile name="badge" />} title={<>Уровень <LevelBadge level={levelOf(p)} /></>} sub={levelHint(p)} chevron onClick={() => setLevelSheet(true)} />
-          <Cell lead={<IconTile name="crown" />} title="IT Trusty Pro" sub={s.proInfo.active ? `Активен до ${s.proInfo.until}` : 'Проекты сразу в бот и первые места'}
+          <Cell lead={<IconTile name="crown" />} title="IT Trusty Pro" sub={s.proInfo.active ? `Активен до ${s.proInfo.until}` : undefined}
             trail={s.proInfo.active ? <Pill tone="green">Pro</Pill> : undefined} chevron onClick={() => nav.push('pro')} />
-          <Cell lead={<IconTile name="share" />} title="Поделиться профилем" sub="Карточка для соцсетей и чатов" chevron onClick={() => setShare(true)} />
+          <Cell lead={<IconTile name="share" />} title="Поделиться профилем" chevron onClick={() => setShare(true)} />
         </div>
       )}
       {p && <LevelSheet open={levelSheet} onClose={() => setLevelSheet(false)} d={p} />}

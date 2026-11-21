@@ -22,7 +22,6 @@ const eOutCubic = p => 1 - Math.pow(1 - p, 3);
 const eOutQuart = p => 1 - Math.pow(1 - p, 4);
 const eInQuad = p => p * p;
 const eInOutQuint = p => p < .5 ? 16 * p ** 5 : 1 - Math.pow(-2 * p + 2, 5) / 2;
-// damped spring: 1 at tau=0, settles at 0 with a soft overshoot
 const spring = (tau, zeta = .55, w = 11) => {
   if (tau <= 0) return 1;
   const wd = w * Math.sqrt(1 - zeta * zeta);
@@ -32,7 +31,6 @@ const LETTERS = [...document.querySelectorAll('.lw')];
 const T_LAND = .72;
 
 function render(t) {
-  // 1. the coin falls in while spinning; the spin slows down and ends face-on exactly at landing
   const pf = prog(t, .08, T_LAND);
   let y = -92 * (1 - eInQuad(pf));
   const theta = 2 * Math.PI * 2 * eOutQuart(pf);
@@ -48,12 +46,10 @@ function render(t) {
   $('shade').style.opacity = t > T_LAND ? 0 : .38 * (1 - Math.abs(Math.cos(theta)));
   $('coin').style.opacity = t < .08 ? 0 : 1;
 
-  // 2. braces spring in from both sides (client and developer) and draw themselves
   const tb = t - .5;
   const s = spring(tb, .5, 10.5);
   let dx = tb < 0 ? 34 : 34 * s;
   let rot = tb < 0 ? 12 : 12 * s;
-  // 3. lock: a short pinch toward the coin
   const pc = prog(t, 1.12, 1.34);
   if (pc > 0 && pc < 1) dx += 1.5 * Math.sin(Math.PI * pc);
   $('hl').setAttribute('transform', `translate(${-dx} 0) rotate(${-rot} 22 ${AXIS})`);
@@ -66,7 +62,6 @@ function render(t) {
     n.style.opacity = p;
     n.setAttribute('transform', `translate(${(1 - p) * 3} 0)`);
   });
-  // ring wave and sheen at the lock moment
   const pr = prog(t, 1.16, 2.0);
   $('ring').setAttribute('r', COIN_R + 24 * eOutCubic(pr));
   $('ring').style.strokeWidth = 2.6 * (1 - eOutCubic(pr));
@@ -75,7 +70,6 @@ function render(t) {
   $('sheen').setAttribute('transform', `translate(${-30 + 60 * eOutCubic(ps)} 0) rotate(22)`);
   $('sheen').style.opacity = ps > 0 && ps < 1 ? 1 : 0;
 
-  // 4. lock-up: the mark glides aside and uncovers the letters, which rise on a spring
   if (window.LOCKUP) {
     const pm = eInOutQuint(prog(t, 1.5, 2.35));
     const shift = MARK_SHIFT * (1 - pm);

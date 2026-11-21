@@ -1,4 +1,3 @@
-// Stack navigation per tab, wired to Telegram's native Back button.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { haptic, tg } from './tg';
 
@@ -16,10 +15,8 @@ interface Nav {
   push(name: string, params?: Record<string, unknown>): void;
   replace(name: string, params?: Record<string, unknown>): void;
   pop(): void;
-  /** go back one screen and hand it new params (it opens again with them) */
   popWith(params: Record<string, unknown>): void;
   setTab(t: Tab): void;
-  /** switch tab and open a screen on top of its root */
   open(t: Tab, name: string, params?: Record<string, unknown>): void;
 }
 
@@ -63,7 +60,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
 
   const setTab = useCallback((t: Tab) => {
     haptic.select();
-    if (t === tab) setStacks((s) => ({ ...s, [t]: [s[t][0]] })); // tapping the active tab returns to its root
+    if (t === tab) setStacks((s) => ({ ...s, [t]: [s[t][0]] }));
     setTabState(t);
     window.scrollTo(0, 0);
   }, [tab]);
@@ -75,7 +72,6 @@ export function NavProvider({ children }: { children: ReactNode }) {
     window.scrollTo(0, 0);
   }, []);
 
-  // Telegram Back button mirrors the stack depth
   useEffect(() => {
     if (!tg) return;
     if (stack.length > 1) {

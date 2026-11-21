@@ -14,7 +14,6 @@ export function DevStatus({ d }: { d: Dev }) {
   return <Pill>Не принимает заказы</Pill>;
 }
 
-/** one row of the catalogue: who, what, rating and deals; online shows as a green dot */
 export function DevCell({ d, onClick }: { d: Dev; onClick(): void }) {
   const online = d.lastSeenMin <= 5;
   return (

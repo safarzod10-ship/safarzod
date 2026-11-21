@@ -1,4 +1,3 @@
-// node capture.js <page.html> <framesDir> <width> <height> <fps> [light]
 const { chromium } = require('playwright');
 const fs = require('fs'); const path = require('path');
 (async () => {

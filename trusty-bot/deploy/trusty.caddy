@@ -1,4 +1,3 @@
-# Trusty Mini App + API. Imported from /etc/caddy/Caddyfile; __DOMAIN__ is replaced by the installer.
 __DOMAIN__ {
 	encode zstd gzip
 	header {

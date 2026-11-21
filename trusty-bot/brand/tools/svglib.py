@@ -1,4 +1,3 @@
-"""Tiny SVG helpers shared by the logo exploration scripts (viewBox 0 0 100 100)."""
 import math
 
 INK = "#16181D"
@@ -47,7 +46,6 @@ def poly(pts, close=True):
 
 
 def T_poly(cx, top, bw, bh, sw, sh):
-    """T outline: bar width/height, stem width, total height."""
     x0, x1, s0, s1 = cx - bw / 2, cx + bw / 2, cx - sw / 2, cx + sw / 2
     return poly([(x0, top), (x1, top), (x1, top + bh), (s1, top + bh), (s1, top + sh),
                  (s0, top + sh), (s0, top + bh), (x0, top + bh)])
@@ -85,7 +83,6 @@ def arc_pts(cx, cy, r, a0, a1, n=24):
 
 
 def arc_d(cx, cy, r, a0, a1):
-    """Arc path from angle a0 to a1 (radians, clockwise in SVG space when a1>a0)."""
     x0, y0 = cx + r * math.cos(a0), cy + r * math.sin(a0)
     x1, y1 = cx + r * math.cos(a1), cy + r * math.sin(a1)
     large = 1 if abs(a1 - a0) > math.pi else 0

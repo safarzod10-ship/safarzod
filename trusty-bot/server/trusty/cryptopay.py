@@ -1,9 +1,3 @@
-"""Crypto Pay API client (the payment API of @CryptoBot / @send).
-
-Base URL https://pay.crypt.bot/api/<method> (testnet: https://testnet-pay.crypt.bot), auth header Crypto-Pay-API-Token.
-Responses: {"ok": true, "result": ...} or {"ok": false, "error": {"code": 400, "name": "..."}}.
-Webhook updates are signed: header Crypto-Pay-Api-Signature = hex HMAC-SHA256(key=SHA256(token), msg=raw body).
-"""
 import hashlib
 import hmac
 import json
@@ -25,7 +19,6 @@ class CryptoPayError(Exception):
 
     @property
     def uncertain(self) -> bool:
-        """True when the request may have been executed (network failure, 5xx, unreadable answer)."""
         return self.code == 0 or self.code >= 500
 
 

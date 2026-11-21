@@ -6,7 +6,6 @@ import { useStore, type Role } from '../store';
 import { absUrl, downloadFile, haptic, inTelegram } from '../tg';
 import { Avatar, Cell, IconTile, Info, Loader, Note, Odometer, Pill, Seg, Sheet, Timer, Top, pickFiles } from '../ui';
 
-/** a chat row that slides left to show "Удалить", like in Telegram */
 function SwipeRow({ onOpen, onDelete, children }: { onOpen(): void; onDelete(): void; children: React.ReactNode }) {
   const [x, setX] = useState(0);
   const start = useRef<{ x: number; y: number; base: number; swiping: boolean | null } | null>(null);
@@ -80,10 +79,9 @@ export default function Chats() {
             );
           })}
         </div>
-      ) : <div className="empty">Здесь появятся чаты с исполнителями и заказчиками. Цену и сроки договаривайтесь офферами прямо в чате.</div>}
-      {chats.length > 0 && <p className="hint center mt">Чтобы удалить чат, сдвиньте его влево.</p>}
+      ) : <div className="empty">Чатов пока нет</div>}
       <DeleteChat chat={del} busy={busy} onClose={() => setDel(null)}
-        onDelete={async () => { if (!del) return; setBusy(true); try { await deleteChat(del.id); setDel(null); } catch { /* toast */ } finally { setBusy(false); } }} />
+        onDelete={async () => { if (!del) return; setBusy(true); try { await deleteChat(del.id); setDel(null); } catch {} finally { setBusy(false); } }} />
     </div>
   );
 }
@@ -92,8 +90,7 @@ function DeleteChat({ chat, busy, onClose, onDelete }: { chat: Chat | null; busy
   return (
     <Sheet open={!!chat} onClose={onClose} title="Удалить чат?">
       <p className="muted small" style={{ margin: '0 0 16px' }}>
-        Переписка с {chat?.peer.name} исчезнет у вас. У собеседника она останется, а арбитр сохранит её на случай спора.
-        Если он напишет снова, чат вернётся.
+        Переписка исчезнет только у вас.
       </p>
       <button className="btn danger" disabled={busy} onClick={onDelete}>{busy ? <span className="spin" /> : 'Удалить'}</button>
     </Sheet>
@@ -107,7 +104,6 @@ function filesLabel(files?: Attachment[]): string {
   return files.length === 1 ? files[0].name : `Файлы: ${files.length}`;
 }
 
-/** pictures as a grid (tap opens full screen), other files as rows that download */
 export function Files({ files, onOpen }: { files: Attachment[]; onOpen(f: Attachment): void }) {
   const pics = files.filter((f) => f.image);
   const docs = files.filter((f) => !f.image);
@@ -142,7 +138,6 @@ export function Lightbox({ file, onClose }: { file: Attachment | null; onClose()
   );
 }
 
-/** files picked for sending: small previews with a cross */
 export function PendingFiles({ files, onRemove }: { files: File[]; onRemove(i: number): void }) {
   const urls = useRef(new Map<File, string>());
   useEffect(() => () => { urls.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
@@ -161,7 +156,6 @@ export function PendingFiles({ files, onRemove }: { files: File[]; onRemove(i: n
 }
 
 const MAX_FILES = 10, MAX_SIZE = 20 * 1024 * 1024;
-/** picks files for a message, rejecting too big ones with a toast */
 export async function chooseFiles(have: File[], toast: (t: string) => void): Promise<File[]> {
   const picked = await pickFiles({ multiple: true });
   const big = picked.filter((f) => f.size > MAX_SIZE);
@@ -220,8 +214,6 @@ function OfferCard({ o, peer, onAccept, onDecline, onCounter, onWithdraw, onDeal
   );
 }
 
-/** "Своя цена" / new offer: the amount rolls like an odometer, the rest is a few taps */
-/** New offer: first the project (the client's published task), then the price and the term. "Своя цена": only price and term. */
 function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
   open: boolean; onClose(): void; base: Offer | null; chat: Chat; preselect?: number;
   onSend(d: { projectId?: number; amount: number; days: number; ttlHours: number; asRole: Role }): Promise<void>;
@@ -236,7 +228,6 @@ function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
   const [editing, setEditing] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const myRole: Role = base ? base.myRole : role;
-  // a client offers on one of their open projects, an executor on one of the client's
   const choices = projects.filter((p) => p.status === 'open' && (myRole === 'client' ? isMe(p.clientId) : p.clientId === chat.peer.refId));
   const pick = (id: number) => {
     const p = projects.find((x) => x.id === id);
@@ -244,7 +235,6 @@ function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
     setProjectId(id);
     if (p) { setAmount(p.budgetMax); setDays(p.days); }
   };
-  // fill the fields once when the sheet opens: the chat itself refreshes every few seconds and must not reset them
   useEffect(() => {
     if (!open) return;
     setAmount(base ? base.amount : 100);
@@ -254,14 +244,14 @@ function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
     setProjectId(null);
     if (!base && preselect && choices.some((p) => p.id === preselect)) pick(preselect);
     else if (!base && choices.length === 1) pick(choices[0].id);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]);
   const fee = Math.round(amount * payCfg.feePercent) / 100;
   const ok = amount > 0 && days > 0 && (!!base || projectId !== null);
   const step = (n: number) => { haptic.select(); setAmount((a) => Math.max(1, a + n)); };
   const send = async () => {
     if (!ok || busy) return;
     setBusy(true);
-    try { await onSend({ projectId: projectId ?? undefined, amount, days, ttlHours: Number(ttl), asRole: myRole }); onClose(); } catch { /* toast shown */ } finally { setBusy(false); }
+    try { await onSend({ projectId: projectId ?? undefined, amount, days, ttlHours: Number(ttl), asRole: myRole }); onClose(); } catch {} finally { setBusy(false); }
   };
   const peer = chat.peer.name.split(' ')[0];
 
@@ -270,8 +260,8 @@ function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
       <Sheet open={open} onClose={onClose} title="Сначала проект">
         <p className="muted" style={{ margin: '0 0 18px', fontWeight: 500, lineHeight: 1.5 }}>
           {myRole === 'client'
-            ? 'Оффер делается на опубликованный проект: в нём задача, бюджет и срок. Опубликуйте проект, потом предложите исполнителю цену.'
-            : `У ${peer} нет открытых проектов. Оффер можно отправить только на опубликованную задачу заказчика: попросите его опубликовать проект.`}
+            ? 'Оффер делается на опубликованный проект.'
+            : `У ${peer} нет открытых проектов.`}
         </p>
         {myRole === 'client' && <button className="btn primary" onClick={() => { onClose(); nav.push('project-new', { forOffer: true }); }}>Опубликовать проект</button>}
       </Sheet>
@@ -280,10 +270,9 @@ function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
 
   return (
     <Sheet open={open} onClose={onClose} title={base ? 'Своя цена' : 'Оффер'}>
-      <p className="muted small" style={{ margin: 0 }}>{base ? `Сейчас в оффере ${amt(base.amount)} ${payCfg.asset}. Назовите свою цену.`
-        : myRole === 'client' ? 'Выберите проект и цену. Исполнитель примет, отклонит или ответит своей.' : `Выберите проект ${peer} и назовите цену.`}</p>
+      {base && <p className="muted small" style={{ margin: 0 }}>Сейчас {amt(base.amount)} {payCfg.asset}</p>}
       {!base && (
-        <div className="group mt" role="radiogroup" aria-label="Проект">
+        <div className="group" role="radiogroup" aria-label="Проект">
           {choices.map((p) => (
             <button key={p.id} role="radio" aria-checked={projectId === p.id} className={`radio ${projectId === p.id ? 'on' : ''}`} onClick={() => pick(p.id)}>
               <i />
@@ -338,7 +327,6 @@ function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
   );
 }
 
-/** routes whose "open the offer sheet" request was already used: coming back to the chat must not open it again */
 const offerOpened = new Set<number>();
 
 export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: string; offer?: boolean; projectId?: number }) {
@@ -381,7 +369,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
       if (files.length) await sendFiles(id, files, t); else await send(id, t);
       setText('');
       setFiles([]);
-    } catch { /* toast shown */ } finally { setSending(false); }
+    } catch {} finally { setSending(false); }
   };
   const ready = !!text.trim() || files.length > 0;
   const peer = c.peer;
@@ -392,7 +380,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
   const act = async (oid: number, fn: () => Promise<unknown>) => {
     if (busyOffer) return;
     setBusyOffer(oid);
-    try { await fn(); } catch { /* toast shown */ } finally { setBusyOffer(null); }
+    try { await fn(); } catch {} finally { setBusyOffer(null); }
   };
 
   return (
@@ -426,7 +414,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
       </div>
 
       <div className="msgs">
-        {c.messages.length === 0 && <div className="empty">Напишите первое сообщение. Цену и срок предложите оффером: зелёная кнопка справа от поля ввода.</div>}
+        {c.messages.length === 0 && <div className="empty">Нет сообщений</div>}
         {c.messages.map((m) => (m.offer ? (
           <OfferCard key={m.id} o={m.offer} peer={c.peer.name} busy={busyOffer === m.offer.id}
             onAccept={() => act(m.offer!.id, async () => { const dealId = await acceptOffer(id, m.offer!.id); showToast(`Сделка #${dealId} создана`); nav.push('deal', { id: dealId }); })}
@@ -448,7 +436,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
 
       <div className="composer">
         {risky && (
-          <div className="warn"><Note tone="red" icon="ban">Похоже на попытку договориться вне IT Trusty. Такие сделки не защищены, а за это блокируют.</Note></div>
+          <div className="warn"><Note tone="red" icon="ban">Сделки вне IT Trusty не защищены. За это блокируют.</Note></div>
         )}
         <PendingFiles files={files} onRemove={(i) => setFiles((fs) => fs.filter((_, j) => j !== i))} />
         <div className="composer-row">
@@ -465,7 +453,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
       <Lightbox file={view} onClose={() => setView(null)} />
       <Sheet open={menu} onClose={() => setMenu(false)}>
         <div className="group">
-          <Cell lead={<IconTile name="handshake" />} title="Предложить цену" sub="Оффер на проект заказчика" chevron
+          <Cell lead={<IconTile name="handshake" />} title="Предложить цену" chevron
             onClick={() => { setMenu(false); setSheet({ base: null }); }} />
           <Cell lead={<IconTile name="flag" />} title="Пожаловаться" chevron
             onClick={() => { setMenu(false); nav.push('complaint', { against: c.peer.refId, name: c.peer.name, deal: c.deal?.id }); }} />
@@ -474,7 +462,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
         </div>
       </Sheet>
       <DeleteChat chat={del ? c : null} busy={deleting} onClose={() => setDel(false)}
-        onDelete={async () => { setDeleting(true); try { await deleteChat(c.id); setDel(false); nav.pop(); } catch { /* toast */ } finally { setDeleting(false); } }} />
+        onDelete={async () => { setDeleting(true); try { await deleteChat(c.id); setDel(false); nav.pop(); } catch {} finally { setDeleting(false); } }} />
       <OfferSheet open={!!sheet} base={sheet?.base ?? null} preselect={sheet?.projectId} chat={c} onClose={() => setSheet(null)}
         onSend={async (d) => {
           if (sheet?.base) await counterOffer(id, sheet.base.id, { amount: d.amount, days: d.days, ttlHours: d.ttlHours });

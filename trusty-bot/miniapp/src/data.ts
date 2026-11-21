@@ -1,5 +1,3 @@
-// Mock data for the prototype. Every person, project and amount here is an example.
-
 export type DevStatus = 'free' | 'busy' | 'away';
 export type DealResult = 'ontime' | 'late' | 'dispute_won' | 'dispute_lost';
 
@@ -7,7 +5,7 @@ export interface PastDeal {
   id: number;
   title: string;
   category: string;
-  amount: string; // shown as a range to protect the client
+  amount: string;
   date: string;
   result: DealResult;
   rating?: number;
@@ -25,15 +23,15 @@ export interface Dev {
   stack: string[];
   rating: number;
   deals: number;
-  volume: number; // USDT
-  onTime: number; // %
+  volume: number;
+  onTime: number;
   disputes: number;
   disputesLost: number;
   lastSeenMin: number;
   responseMin: number;
   status: DevStatus;
   busyUntil?: string;
-  rate: number; // USDT / hour
+  rate: number;
   verified: boolean;
   github?: string;
   deposit?: number;
@@ -46,7 +44,7 @@ export interface Dev {
   years?: number;
   moderation?: 'review' | 'published' | 'rejected';
   banned?: { until: string | null } | null;
-  pro?: boolean; // IT Trusty Pro: shown first
+  pro?: boolean;
   level?: Level;
   levelNext?: { name: string; left: string[] } | null;
 }
@@ -58,7 +56,6 @@ export const LEVEL_RULES: { key: Level; title: string; rule: string }[] = [
   { key: 'verified', title: 'Проверенный', rule: '3+ сделки, рейтинг от 4.5, не больше одного проигранного спора.' },
   { key: 'top', title: 'Топ', rule: '15+ сделок, рейтинг от 4.8, сдача в срок от 90%, без проигранных споров.' },
 ];
-/** level for the browser demo, where examples have no level from the server */
 export function levelOf(d: Dev): Level {
   if (d.level) return d.level;
   if (d.verified && d.deals >= 15 && d.rating >= 4.8 && d.onTime >= 90 && !d.disputesLost) return 'top';
@@ -75,7 +72,7 @@ export interface Client {
   rating: number;
   deals: number;
   lastSeenMin: number;
-  fastPay?: boolean; // pays quickly after the deal is created
+  fastPay?: boolean;
 }
 
 export interface Bid {
@@ -100,11 +97,11 @@ export interface Project {
   files: { name: string; size: string }[];
   bids: Bid[];
   status: 'open' | 'in_work' | 'closed';
-  client?: Client | null; // live API embeds the client
-  bidsCount?: number; // live API: total bids (the list itself is only sent to the owner)
+  client?: Client | null;
+  bidsCount?: number;
   myBid?: { projectId: number; price: number; days: number; text: string } | null;
-  invited?: boolean; // the client invited me (executor) to this project
-  invitedIds?: string[]; // the owner: executors already invited
+  invited?: boolean;
+  invitedIds?: string[];
 }
 
 export type DealStatus = 'awaiting_payment' | 'in_work' | 'review' | 'done' | 'dispute' | 'cancelled' | 'refunded';
@@ -117,14 +114,13 @@ export interface Deal {
   paidAt?: string | null; submittedAt?: string | null; reviewUntil?: string | null; finishedAt?: string | null;
   workNote?: string | null; disputeReason?: string | null; disputeBy?: 'client' | 'dev' | null; resolution?: string | null;
   devShare?: number | null; result?: string | null; projectId?: number | null; chatId?: string | null;
-  review?: { rating: number; text: string } | null; // the client about the developer
-  clientReview?: { rating: number; text: string } | null; // the developer about the client
+  review?: { rating: number; text: string } | null;
+  clientReview?: { rating: number; text: string } | null;
   payments: DealPayment[];
   actions: { pay: boolean; submit: boolean; accept: boolean; dispute: boolean; cancel: boolean; review: boolean; resolve: boolean };
 }
 export interface PayConfig { enabled: boolean; asset: string; feePercent: number; reviewDays: number }
 
-/** 90 -> "90", "94.50" -> "94,50" */
 export function amt(x: number | string): string {
   const n = Number(x);
   return Number.isInteger(n) ? n.toLocaleString('ru-RU') : n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -139,9 +135,9 @@ export function dateTime(iso?: string | null): string {
 export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'countered' | 'withdrawn' | 'expired';
 export interface Offer {
   id: number; title: string; amount: number; days: number; status: OfferStatus;
-  mine: boolean; // I sent it
+  mine: boolean;
   myRole: 'client' | 'dev';
-  prevAmount?: number | null; // the price this offer answers
+  prevAmount?: number | null;
   expiresAt: string; createdAt?: string; dealId?: number | null; fee: string; total: string;
 }
 
@@ -150,7 +146,7 @@ export interface Msg {
   from: 'me' | 'peer' | 'system';
   text: string;
   time?: string;
-  at?: string; // ISO time from the API
+  at?: string;
   file?: string;
   offer?: Offer;
   files?: Attachment[];
@@ -167,7 +163,7 @@ export interface Chat {
   peer: { name: string; hue: number; lastSeenMin: number; role: 'dev' | 'client'; refId: string; rating?: number; deals?: number; fastPay?: boolean };
   deal?: { id: number; title: string; amount: number; status: DealStatus; due: string; clientId?: string; devId?: string } | null;
   unread: number;
-  offersWaiting?: number; // offers to me that wait for an answer
+  offersWaiting?: number;
   peerTyping?: boolean;
   messages: Msg[];
 }
@@ -183,7 +179,7 @@ export interface Complaint {
   dealId?: number | null;
   reason: ComplaintReason;
   text: string;
-  evidence: string[]; // image urls
+  evidence: string[];
   status: 'new' | 'review' | 'resolved' | 'rejected';
   ago: string;
   decision?: string | null;
@@ -196,7 +192,7 @@ export interface Member {
   hue: number;
   role: 'dev' | 'client';
   strikes: number;
-  ban?: { until: string | null } | null; // until null = permanent
+  ban?: { until: string | null } | null;
   isAdmin?: boolean;
 }
 
@@ -418,7 +414,6 @@ export const ADMINS = [
   { name: 'Второй администратор', handle: 'admin2' },
 ];
 
-// ---------------------------------------------------------------- formatting helpers
 export function msgTime(m: { time?: string; at?: string }): string {
   if (m.at) {
     const d = new Date(m.at);
@@ -481,7 +476,6 @@ const party = (id: string, name: string, hue: number, handle: string, lastSeenMi
 const ME_CLIENT = party('me', 'Вы', 0, 'you', 0);
 const noActs = { pay: false, submit: false, accept: false, dispute: false, cancel: false, review: false, resolve: false };
 
-/** demo deals for the browser preview */
 export const DEMO_DEALS: Deal[] = [
   {
     id: 1048, title: 'Mini App для заказов в кофейне', category: 'Веб', amount: 650, fee: '32.50', total: '682.50', status: 'in_work', role: 'client',
@@ -511,5 +505,4 @@ export const REASONS: { key: ComplaintReason; label: string }[] = [
   { key: 'other', label: 'Другое' },
 ];
 
-/** words that usually mean someone is trying to take the deal out of Trusty */
 export const OFFSITE = /(@[a-z0-9_]{4,}|t\.me\/|в\s?лс|в\s?личк|напрямую|без\s+(гаранта|комисси)|на\s+карт|\+7\d|\b\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\b)/i;

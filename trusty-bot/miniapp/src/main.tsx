@@ -21,4 +21,3 @@ import { initTelegram } from './tg';
 initTelegram();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
 
-// the splash is hidden by <Gate> once the first data has loaded

@@ -9,8 +9,6 @@ engine = create_async_engine(settings.db_url, pool_pre_ping=True,
 Session = async_sessionmaker(engine, expire_on_commit=False)
 
 
-# Columns added after the first release: (table, column, SQL type with default). create_all only creates missing
-# tables, so new columns of existing tables are added here.
 TS = "TIMESTAMP WITH TIME ZONE"
 MIGRATIONS = [
     ("users", "onboarded", "BOOLEAN NOT NULL DEFAULT FALSE"),
@@ -32,9 +30,7 @@ MIGRATIONS = [
     ("users", "alerts", "BOOLEAN NOT NULL DEFAULT TRUE"),
 ]
 
-# Constraint changes for PostgreSQL databases created by earlier versions (each statement is idempotent).
 PG_FIXES = [
-    # reviews: one per deal -> one per deal and author (both sides rate each other)
     "ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_deal_id_key",
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_reviews_deal_author ON reviews (deal_id, author_id)",
 ]

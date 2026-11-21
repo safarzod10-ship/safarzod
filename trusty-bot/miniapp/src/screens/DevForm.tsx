@@ -1,4 +1,3 @@
-// Developer questionnaire: four short steps, then moderation.
 import { useState } from 'react';
 import { CATEGORIES } from '../data';
 import { Icon } from '../icons';
@@ -95,7 +94,6 @@ export default function DevForm() {
           <Field label="Сейчас">
             <Seg value={status} onChange={(v) => setStatus(v)} items={[{ key: 'free', label: 'Свободен' }, { key: 'busy', label: 'Занят' }]} />
           </Field>
-          <div className="mt"><Note tone="blue" icon="clock">В профиле будет видно, когда вы последний раз заходили в IT Trusty и как быстро отвечаете на сообщения.</Note></div>
         </>
       )}
 
@@ -136,7 +134,7 @@ export default function DevForm() {
               await submitDevForm({ categories: cats, years: +years, stack, rate: +rate, status, about: about.trim(), github: github.trim(),
                 links: links.split(/\n+/).map((x) => x.trim()).filter(Boolean) });
               setSent(true);
-            } catch { /* toast shown */ } finally { setBusy(false); }
+            } catch {} finally { setBusy(false); }
           },
         }} />
     </div>

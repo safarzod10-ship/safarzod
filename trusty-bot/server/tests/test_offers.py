@@ -1,8 +1,3 @@
-"""Offers in chats: always about the client's open project; counter from both sides, accept (creates the deal and
-closes other offers on that project), decline, withdraw, expiry, typing, deleting chats.
-
-Run:  TRUSTY_DB_URL=postgresql+asyncpg://... python -m tests.test_offers
-"""
 import asyncio
 import os
 import time
@@ -11,14 +6,14 @@ from datetime import timedelta
 os.environ.setdefault("TRUSTY_BOT_TOKEN", "123456:TEST_TOKEN_for_signing_only")
 os.environ["TRUSTY_BOT_MODE"] = "off"
 
-import httpx  # noqa: E402
+import httpx
 
-from trusty import offers  # noqa: E402
-from trusty.auth import sign_init_data  # noqa: E402
-from trusty.config import settings  # noqa: E402
-from trusty.db import Session, engine  # noqa: E402
-from trusty.main import app  # noqa: E402
-from trusty.models import Base, Offer, User, utcnow  # noqa: E402
+from trusty import offers
+from trusty.auth import sign_init_data
+from trusty.config import settings
+from trusty.db import Session, engine
+from trusty.main import app
+from trusty.models import Base, Offer, User, utcnow
 
 
 def auth(uid: int, name: str) -> dict:
@@ -60,30 +55,29 @@ async def main() -> None:
 
         chat = ok(await h.post("/api/chats/open", json={"userId": 2002}, headers=A))
         cid = chat["id"]
-        assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=A)))  # empty chats are not listed
+        assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=A)))
         assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=B)))
         offer = {"projectId": p1, "amount": 90, "days": 7, "ttlHours": 48, "asRole": "client"}
         ok(await h.post(f"/api/chats/{cid}/offers", json={k: v for k, v in offer.items() if k != "projectId"}, headers=A), 422)
         r = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A), 400)
-        assert "проверку анкеты" in r["detail"], r  # the developer is not verified yet
+        assert "проверку анкеты" in r["detail"], r
         ok(await h.post("/api/admin/profiles/2002/approve", headers=ADM))
 
-        # 1. Anna offers 90, Boris answers 70, Anna answers 80, Boris accepts
         chat = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A))
         o1 = offer_cards(chat)[-1]
         assert o1["mine"] and o1["status"] == "pending" and o1["myRole"] == "client" and o1["total"] == "94.50", o1
-        assert o1["title"] == "Лендинг для кофейни"  # the title comes from the project
+        assert o1["title"] == "Лендинг для кофейни"
         assert chat["messages"][-1]["from"] == "me" and chat["unread"] == 0
         b_chat = ok(await h.get(f"/api/chats/{cid}", headers=B))
         assert b_chat["offersWaiting"] == 1 and not offer_cards(b_chat)[-1]["mine"] and b_chat["unread"] == 1
         assert offer_cards(b_chat)[-1]["myRole"] == "dev"
-        ok(await h.post(f"/api/offers/{o1['id']}/accept", headers=A), 400)  # not to yourself
+        ok(await h.post(f"/api/offers/{o1['id']}/accept", headers=A), 400)
 
         chat = ok(await h.post(f"/api/offers/{o1['id']}/counter", json={"amount": 70, "days": 6}, headers=B))
         cards = offer_cards(chat)
         assert cards[0]["status"] == "countered" and cards[1]["amount"] == 70 and cards[1]["prevAmount"] == 90 and cards[1]["mine"]
         o2 = cards[1]
-        ok(await h.post(f"/api/offers/{o1['id']}/accept", headers=B), 400)  # already answered
+        ok(await h.post(f"/api/offers/{o1['id']}/accept", headers=B), 400)
         chat = ok(await h.post(f"/api/offers/{o2['id']}/counter", json={"amount": 80, "days": 6}, headers=A))
         o3 = offer_cards(chat)[-1]
         assert o3["amount"] == 80 and o3["prevAmount"] == 70 and o3["myRole"] == "client"
@@ -96,28 +90,25 @@ async def main() -> None:
         assert r["chat"]["deal"]["id"] == deal["id"] and r["chat"]["offersWaiting"] == 0
         assert any(m["from"] == "system" and f"Сделка #{deal['id']} создана" in m["text"] for m in r["chat"]["messages"])
         ok(await h.post(f"/api/offers/{o3['id']}/accept", headers=B), 400)
-        r = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A), 400)  # the project already has an executor
+        r = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A), 400)
         assert "уже выбран" in r["detail"]
         offer = {**offer, "projectId": p2}
 
-        # 2. limits: a new developer cannot take more than the new-dev limit
         big = {**offer, "amount": settings.new_dev_limit + 1}
         r = ok(await h.post(f"/api/chats/{cid}/offers", json=big, headers=A), 400)
         assert "ограничена" in r["detail"]
 
-        # 3. decline and withdraw
         chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 30}, headers=A))
         o4 = offer_cards(chat)[-1]
         chat = ok(await h.post(f"/api/offers/{o4['id']}/decline", headers=B))
         assert offer_cards(chat)[-1]["status"] == "declined"
         chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 40}, headers=A))
         o5 = offer_cards(chat)[-1]
-        ok(await h.post(f"/api/offers/{o5['id']}/withdraw", headers=B), 400)  # not his
+        ok(await h.post(f"/api/offers/{o5['id']}/withdraw", headers=B), 400)
         chat = ok(await h.post(f"/api/offers/{o5['id']}/withdraw", headers=A))
         assert offer_cards(chat)[-1]["status"] == "withdrawn"
         ok(await h.post(f"/api/offers/{o5['id']}/accept", headers=B), 400)
 
-        # 4. a developer offers to a client (sender is the dev), and expiry
         chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 25, "asRole": "dev", "ttlHours": 24}, headers=B))
         o6 = offer_cards(chat)[-1]
         assert o6["myRole"] == "dev" and o6["mine"]
@@ -132,38 +123,33 @@ async def main() -> None:
             await offers.expire_due(s)
             assert (await s.get(Offer, o6["id"])).status == "expired"
 
-        # 4b. two offers on one project: accepting one closes the other; nobody can offer on someone else's project
         ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p3, "amount": 20}, headers=A))
         chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p3, "amount": 22}, headers=A))
         first, second = offer_cards(chat)[-2:]
         chat = ok(await h.post(f"/api/offers/{second['id']}/accept", headers=B))["chat"]
         statuses = {o["id"]: o["status"] for o in offer_cards(chat)}
         assert statuses[first["id"]] == "withdrawn" and statuses[second["id"]] == "accepted", statuses
-        r = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p2, "asRole": "dev"}, headers=A), 400)  # Anna as "dev": the project is not Boris's
+        r = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p2, "asRole": "dev"}, headers=A), 400)
         assert "Выберите открытый проект" in r["detail"]
 
-        # 5. strangers cannot touch offers; typing indicator
         c_chat = ok(await h.post("/api/chats/open", json={"userId": 2001}, headers=C))
         ok(await h.post(f"/api/offers/{o1['id']}/decline", headers=C), 404)
-        r = ok(await h.post(f"/api/chats/{c_chat['id']}/offers", json=offer, headers=C), 400)  # Anna has no dev profile
+        r = ok(await h.post(f"/api/chats/{c_chat['id']}/offers", json=offer, headers=C), 400)
         ok(await h.post(f"/api/chats/{cid}/typing", headers=A))
         assert ok(await h.get(f"/api/chats/{cid}", headers=B))["peerTyping"] is True
         assert ok(await h.get(f"/api/chats/{cid}", headers=A))["peerTyping"] is False
 
-        # 6. delete a chat: gone from my list and its history hidden from me; the other side keeps it; a new message brings it back
         ok(await h.post(f"/api/chats/{cid}/delete", headers=A))
         assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=A)))
         assert any(c["id"] == cid for c in ok(await h.get("/api/chats", headers=B)))
         assert ok(await h.get(f"/api/chats/{cid}", headers=A))["messages"] == []
         ok(await h.post(f"/api/chats/{cid}/delete", headers=C), 404)
-        # an empty chat someone opened with me is not listed; deleting it keeps it away
         ok(await h.post(f"/api/chats/{c_chat['id']}/delete", headers=A))
         assert all(c["id"] != c_chat["id"] for c in ok(await h.get("/api/chats", headers=A)))
         ok(await h.post(f"/api/chats/{cid}/messages", json={"text": "Вы тут?"}, headers=B))
         back = [c for c in ok(await h.get("/api/chats", headers=A)) if c["id"] == cid]
         assert back and back[0]["unread"] == 1 and [m["text"] for m in ok(await h.get(f"/api/chats/{cid}", headers=A))["messages"]] == ["Вы тут?"]
 
-        # 7. a banned peer cannot receive offers
         ok(await h.post("/api/admin/users/2002/ban", headers=ADM))
         r = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 20}, headers=A), 400)
         assert "заблокирован" in r["detail"]

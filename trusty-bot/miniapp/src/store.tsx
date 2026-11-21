@@ -1,4 +1,3 @@
-// App state. Live mode (inside Telegram) talks to the Trusty API; demo mode (a normal browser tab) uses example data.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, live } from './api';
 import {
@@ -49,7 +48,6 @@ interface Store {
   myBidFor(projectId: number): MyBid | undefined;
   reload(): Promise<void>;
   setRole(r: Role): Promise<void>;
-  /** first-run intro finished with a role choice */
   completeOnboarding(r: Role): Promise<void>;
   onboarded: boolean;
   setAdmin(a: boolean): void;
@@ -58,7 +56,6 @@ interface Store {
   addProject(p: NewProject): Promise<number>;
   loadProject(id: number): Promise<void>;
   addBid(b: MyBid): Promise<void>;
-  /** creates the deal for a chosen bid and returns its id */
   startDeal(projectId: number, devId: string, price: number, days: number): Promise<number>;
   openChat(userId: string): Promise<string>;
   loadChat(id: string): Promise<void>;
@@ -77,9 +74,7 @@ interface Store {
   payCfg: PayConfig;
   finance: Finance | null;
   loadDeal(id: number): Promise<Deal | undefined>;
-  /** submit {note} | accept | dispute {reason} | cancel | review {rating, text} */
   dealAct(id: number, action: DealAction, body?: Record<string, unknown>): Promise<Deal>;
-  /** opens the Crypto Bot invoice; the deal is re-checked when the user comes back */
   payDeal(id: number): Promise<void>;
   checkDeal(id: number): Promise<Deal | undefined>;
   loadFinance(): Promise<void>;
@@ -87,21 +82,17 @@ interface Store {
   retryPayment(id: number): Promise<void>;
   proposeOffer(chatId: string, d: OfferDraft): Promise<void>;
   counterOffer(chatId: string, offerId: number, d: CounterDraft): Promise<void>;
-  /** accepts an offer and returns the id of the new deal */
   acceptOffer(chatId: string, offerId: number): Promise<number>;
   declineOffer(chatId: string, offerId: number): Promise<void>;
   withdrawOffer(chatId: string, offerId: number): Promise<void>;
   typing(chatId: string): void;
-  /** removes the chat from my list (the other side keeps it) */
   deleteChat(chatId: string): Promise<void>;
-  /** files (and an optional caption) into a chat */
   sendFiles(chatId: string, files: File[], text?: string): Promise<void>;
   uploadWorkImage(file: File): Promise<{ imageId: string; url: string }>;
   savePortfolio(items: Work[]): Promise<void>;
   invite(projectId: number, devId: string): Promise<void>;
   loadMatches(projectId: number): Promise<Dev[]>;
   proInfo: ProInfo;
-  /** pays for Pro; resolves true when Pro is on */
   buyPro(method: 'stars' | 'crypto', plan: '1m' | '3m'): Promise<boolean>;
   checkPro(): Promise<boolean>;
   setAlerts(on: boolean): Promise<void>;
@@ -117,7 +108,6 @@ const readOb = () => { try { return localStorage.getItem(OB_KEY) === '1'; } catc
 const demoName = tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Гость';
 
 function demoActions(status: Deal['status'], role: Deal['role'], reviewed: boolean): Deal['actions'] {
-  // both sides rate each other at the end; `reviewed` means I already did
   return {
     pay: role === 'client' && status === 'awaiting_payment',
     submit: role === 'dev' && status === 'in_work',
@@ -163,7 +153,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     pro: proDemo,
   }, [meLive, roleDemo, adminDemo, devFormDemo, demoWorks, proDemo]);
 
-  // t.me link prefix for an executor's profile: startapp opens the Mini App right away (when the bot has a Main Mini App)
   const [shareBase, setShareBase] = useState('https://t.me/itrusty_bot?startapp=dev_');
   const shareDev = useCallback(async (id: string) => {
     if (!live) return { link: `${shareBase}${id}`, card: `/api/share/dev/${id}.jpg`, prepared: null };
@@ -175,7 +164,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     timer.current = window.setTimeout(() => setToast(null), 2800);
   }, []);
 
-  /** runs an API call; errors become a toast and are re-thrown so the screen can stay put */
   const call = useCallback(async <T,>(fn: () => Promise<T>): Promise<T> => {
     try {
       return await fn();
@@ -227,7 +215,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!live) {
       setRoleDemo(r);
       setObDemo(true);
-      try { localStorage.setItem(OB_KEY, '1'); } catch { /* private mode: show again next time */ }
+      try { localStorage.setItem(OB_KEY, '1'); } catch {}
       return;
     }
     setMeLive(await call(() => api<Me>('/me', { method: 'PATCH', body: { role: r, onboarded: true } })));
@@ -262,7 +250,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const loadProject = useCallback(async (id: number) => {
     if (!live) return;
-    try { replaceProject(await api<Project>(`/projects/${id}`)); } catch { /* keep cached */ }
+    try { replaceProject(await api<Project>(`/projects/${id}`)); } catch {}
   }, []);
 
   const addBid = useCallback(async (b: MyBid) => {
@@ -278,7 +266,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshChats = useCallback(async () => {
     if (!live) return;
-    try { setChats(await api<Chat[]>('/chats')); } catch { /* offline: keep */ }
+    try { setChats(await api<Chat[]>('/chats')); } catch {}
   }, []);
 
   const loadChat = useCallback(async (id: string) => {
@@ -286,7 +274,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const c = await api<Chat>(`/chats/${id}`);
       setChats((cs) => (cs.some((x) => x.id === id) ? cs.map((x) => (x.id === id ? c : x)) : [c, ...cs]));
-    } catch { /* keep cached */ }
+    } catch {}
   }, []);
 
   const replaceDeal = (d: Deal) => setDeals((ds) => (ds.some((x) => x.id === d.id) ? ds.map((x) => (x.id === d.id ? d : x)) : [d, ...ds]));
@@ -309,7 +297,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch { return undefined; }
   }, []);
 
-  /** demo mode: the same state machine as the server, without money */
   const demoStep = useCallback((id: number, action: DealAction | 'pay' | 'resolve', body?: Record<string, unknown>) => {
     let out: Deal | undefined;
     setDeals((ds) => ds.map((d) => {
@@ -465,7 +452,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setMembers(o.members); setComplaints(o.complaints); setProfiles(o.profiles); setAdmins(o.admins);
   }, [call]);
 
-  // first violation: 30 days; repeated: permanent
   const ban = useCallback(async (memberId: string, complaintId?: number) => {
     if (live) {
       const r = complaintId
@@ -510,7 +496,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [call, loadAdmin, reload]);
 
 
-  // ---------------------------------------------------------------- offers
   const putChat = (c: Chat) => setChats((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs]));
   const feeOf = useCallback((amount: number) => {
     const fee = Math.round(amount * payCfg.feePercent) / 100;
@@ -519,13 +504,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const mkOffer = useCallback((o: Omit<Offer, 'fee' | 'total' | 'createdAt' | 'expiresAt'> & { ttlHours: number }): Offer => ({
     ...o, ...feeOf(o.amount), createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + o.ttlHours * 3600e3).toISOString(),
   }), [feeOf]);
-  /** demo: patch one chat's messages */
   const patchChat = (chatId: string, fn: (c: Chat) => Chat) => setChats((cs) => cs.map((c) => (c.id === chatId ? fn(c) : c)));
   const setOfferStatus = (chatId: string, offerId: number, status: Offer['status'], extra: Partial<Offer> = {}) =>
     patchChat(chatId, (c) => ({ ...c, offersWaiting: 0, messages: c.messages.map((m) => (m.offer?.id === offerId ? { ...m, offer: { ...m.offer, status, ...extra } } : m)) }));
   const demoTimer = useRef<number>();
 
-  /** demo only: the other side types for a moment, then answers (accepts a fair price or meets halfway) */
   const demoReply = useCallback((chatId: string, mine: Offer) => {
     window.clearTimeout(demoTimer.current);
     patchChat(chatId, (c) => ({ ...c, peerTyping: true }));
@@ -618,7 +601,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (live) api(`/chats/${chatId}/typing`, { method: 'POST' }).catch(() => {});
   }, []);
 
-  // ---------------------------------------------------------------- files, portfolio, invitations, Pro
   const sendFiles = useCallback(async (chatId: string, files: File[], text = '') => {
     if (live) {
       const f = new FormData();
@@ -683,7 +665,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (method === 'stars') {
       const st = await payInvoice(url);
       if (st === 'paid') {
-        // the bot confirms the payment a moment later
         for (let i = 0; i < 10; i++) { await new Promise((r) => setTimeout(r, 1200)); if (await checkPro()) return true; }
       }
       return false;

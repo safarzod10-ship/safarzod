@@ -33,7 +33,6 @@ html.dark .tl-splash{--tl-bg:#0B2A27;--tl-mark:#E8F5EF;--tl-cap:#86A79D}
 <div class="tl-splash" id="tl-splash" role="status" aria-label="Загружаем Trusty"><svg viewBox="9 9.25 82 82" aria-hidden="true"><g class="tl-l"><path class="tl-half" d="M43.5 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43.5 85.5"/><path class="tl-nib" d="M19.75 40.92H18.25C18.25 45.17 17.25 46.08 15.58 46.29A1.71 1.71 0 0 0 15.58 49.71C17.25 49.92 18.25 50.83 18.25 55.08H19.75Z"/></g><g class="tl-r"><g transform="matrix(-1 0 0 1 100 0)"><path class="tl-half" d="M43.5 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43.5 85.5"/><path class="tl-nib" d="M19.75 40.92H18.25C18.25 45.17 17.25 46.08 15.58 46.29A1.71 1.71 0 0 0 15.58 49.71C17.25 49.92 18.25 50.83 18.25 55.08H19.75Z"/></g></g><g transform="translate(50 48)"><g class="tl-spin"><circle class="tl-coin" r="14.5"/><circle class="tl-shade" r="14.5" fill="#000" opacity="0"/><path d="M-7.61 -8.1H7.61V-4.89H2.11V8.58H-2.11V-4.89H-7.61Z" class="tl-sym"/><ellipse cx="0" cy="-1.15" rx="8.82" ry="2.6" class="tl-ring" stroke-width="1.63"/></g></g></svg></div>
 
 <script>
-// frame capture support: ?capture pauses CSS animations, render(t) seeks them
 window.DURATION = 4.4;
 window.render = t => document.getAnimations().forEach(a => { a.pause(); a.currentTime = t * 1000 + 600; });
 if (location.search.includes('capture')) window.render(0);

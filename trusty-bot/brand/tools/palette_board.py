@@ -1,4 +1,3 @@
-"""Palette comparison for the USDT coin version. Usage: python3 palette_board.py <out.html>"""
 import os
 import sys
 

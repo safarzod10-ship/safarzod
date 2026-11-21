@@ -7,10 +7,8 @@ import { haptic, inTelegram } from './tg';
 export const MARK_UP = 'M285 468C285 432 300 412 338 401C360.8 393.5 452.9 366.4 597 280C615 269 638 269 656 280C800.1 366.4 892.2 393.5 915 401C953 412 968 432 968 468L968 492C945 476 920 470 890 470C706 470 548 704 372 704C325 704 285 685 285 635Z';
 export const MARK_LO = 'M325.3 766C338 777 370 783 400 783C608 783 738 547 890 547C935 547 968 560 968 600C968 880 640 1038 640 1038C632 1044 621 1044 613 1038C613 1038 412.9 941.6 325.3 766Z';
 
-/** the green line that runs through the cut of the shield in the loaders */
 export const MARK_WAVE = 'M975 546C960 520 935 508 890 508C722 508 578 743 386 743C340 743 310 730 296 712';
 
-/** loading: the shield splits along its wave, a green line runs through the cut, the halves close again */
 export function Loader({ size = 56, label }: { size?: number; label?: string }) {
   return (
     <div className="loader" role="status" aria-label={label ?? 'Загрузка'}>
@@ -23,7 +21,6 @@ export function Loader({ size = 56, label }: { size?: number; label?: string }) 
   );
 }
 
-/** the IT Trusty shield with the wave */
 export function Mark({ size = 22, color = 'currentColor' }: { size?: number; color?: string }) {
   return (
     <svg viewBox="285 268 684 778" width={Math.round(size * 684 / 778)} height={size} aria-hidden="true">
@@ -59,7 +56,6 @@ export function Verified() {
   return <span className="verified" title="Анкета проверена"><Icon name="badge" size={16} strokeWidth={2} /></span>;
 }
 
-/** amount with the currency: big Unbounded digits, small "USDT" */
 export function Amount({ value, cur = 'USDT', size = 15 }: { value: ReactNode; cur?: string; size?: number }) {
   return <span className="cell-amt"><b style={{ fontSize: size }}>{value}</b><small style={{ fontSize: Math.max(9, size * 0.6) }}>{cur}</small></span>;
 }
@@ -115,7 +111,6 @@ export function Cell({ lead, title, sub, meta, trail, onClick, chevron, avatar, 
   return onClick ? <button className={cls} onClick={onClick}>{body}</button> : <div className={cls}>{body}</div>;
 }
 
-/** an icon in a list row: no tile behind it */
 export function IconTile({ name, tone, className }: { name: IconName; tone?: 'red' | 'amber' | 'blue'; className?: string }) {
   return <span className={`ic ${tone ?? ''} ${className ?? ''}`}><Icon name={name} size={22} /></span>;
 }
@@ -133,7 +128,6 @@ export function Chips<T extends string>({ items, value, onChange }: { items: { k
   );
 }
 
-/** segmented control; the green thumb slides to the chosen item */
 export function Seg<T extends string>({ items, value, onChange }: { items: { key: NoInfer<T>; label: string; count?: number }[]; value: T; onChange(v: T): void }) {
   const idx = Math.max(0, items.findIndex((i) => i.key === value));
   return (
@@ -163,7 +157,6 @@ export function Note({ tone, icon = 'info', children }: { tone: 'amber' | 'red' 
   return <div className={`note ${tone}`}><Icon name={icon} size={18} /><div>{children}</div></div>;
 }
 
-/** (i) that opens a short explanation next to it; long texts live here instead of on the screen */
 export function Info({ children, label = 'Подробнее' }: { children: ReactNode; label?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
@@ -193,7 +186,6 @@ export function Info({ children, label = 'Подробнее' }: { children: Rea
 
 interface Act { label: string; onClick(): void; disabled?: boolean; tone?: 'danger'; loading?: boolean }
 
-/** Screen actions pinned to the bottom: one green main button, an optional grey one beside it and a text link under. */
 export function Actions({ primary, secondary, link }: { primary?: Act; secondary?: Act; link?: Act }) {
   if (!primary && !secondary && !link) return null;
   return (
@@ -247,7 +239,6 @@ export function Done({ title, text, children }: { title: string; text: ReactNode
   );
 }
 
-/** grey placeholder rows that shimmer while data loads */
 export function Skeleton({ rows = 4, avatar = true }: { rows?: number; avatar?: boolean }) {
   return (
     <div className="group" aria-busy="true" aria-label="Загрузка">
@@ -265,7 +256,6 @@ export function Skeleton({ rows = 4, avatar = true }: { rows?: number; avatar?: 
   );
 }
 
-/** digits roll to the new value (counter-offers, amounts) */
 export function Odometer({ value }: { value: number }) {
   const s = String(Math.max(0, Math.round(value)));
   return (
@@ -281,7 +271,6 @@ export function Odometer({ value }: { value: number }) {
   );
 }
 
-/** counts a number up from zero (success screens) */
 export function useCountUp(target: number, ms = 900, run = true) {
   const [v, setV] = useState(run ? 0 : target);
   useEffect(() => {
@@ -299,7 +288,6 @@ export function useCountUp(target: number, ms = 900, run = true) {
   return v;
 }
 
-/** full-screen confirmation: green circle, the check draws itself, the amount counts up */
 export function Success({ title, amount, cur = 'USDT', text, onDone }: { title: string; amount?: number; cur?: string; text?: string; onDone(): void }) {
   const v = useCountUp(amount ?? 0, 900, amount !== undefined);
   useEffect(() => { haptic.success(); const t = window.setTimeout(onDone, 2400); return () => window.clearTimeout(t); }, [onDone]);
@@ -313,7 +301,6 @@ export function Success({ title, amount, cur = 'USDT', text, onDone }: { title: 
   );
 }
 
-/** waiting for the payment: an arc runs round the ₮ */
 export function WaitPay({ text = 'Ждём оплату' }: { text?: string }) {
   return (
     <div className="waitpay" role="status">
@@ -327,7 +314,6 @@ export function WaitPay({ text = 'Ждём оплату' }: { text?: string }) {
   );
 }
 
-/** time left as "47ч 58м" with a ring that empties */
 export function Timer({ from, to }: { from?: string; to: string }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(t); }, []);
@@ -349,18 +335,15 @@ export function Timer({ from, to }: { from?: string; to: string }) {
   );
 }
 
-/** executor level: Новый / Проверенный / Топ */
 export function LevelBadge({ level }: { level: 'new' | 'verified' | 'top' }) {
   const label = level === 'top' ? 'Топ' : level === 'verified' ? 'Проверенный' : 'Новый';
   return <span className={`pill lvl-${level}`}>{level !== 'new' && <Icon name="badge" size={13} strokeWidth={2.2} />}{label}</span>;
 }
 
-/** IT Trusty Pro mark */
 export function ProBadge() {
   return <span className="pro-badge" title="IT Trusty Pro">PRO</span>;
 }
 
-/** a hidden file input behind any button: returns the picked files */
 export function pickFiles(opts: { multiple?: boolean; accept?: string } = {}): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input');

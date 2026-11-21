@@ -1,4 +1,3 @@
-// The executor's portfolio: works with a picture, a short text and a link. Saved at once, no new moderation.
 import { useState } from 'react';
 import { type Work } from '../data';
 import { Icon } from '../icons';
@@ -29,7 +28,7 @@ export default function Portfolio() {
 
   const save = async (next: Work[]) => {
     setBusy(true);
-    try { await savePortfolio(next); setItems(next); showToast('Портфолио сохранено'); } catch { /* toast */ } finally { setBusy(false); }
+    try { await savePortfolio(next); setItems(next); showToast('Портфолио сохранено'); } catch {} finally { setBusy(false); }
   };
   const move = (i: number, d: -1 | 1) => {
     const j = i + d;
@@ -42,7 +41,7 @@ export default function Portfolio() {
 
   return (
     <div className="screen no-tabs" style={{ paddingBottom: 'calc(120px + var(--safe-b))' }}>
-      <Top title="Портфолио" small sub="Работы с картинкой и ссылкой. Первые видны заказчикам сразу в профиле." />
+      <Top title="Портфолио" small />
       {items.length ? (
         <div className="group stagger">
           {items.map((w, i) => (
@@ -62,9 +61,7 @@ export default function Portfolio() {
           ))}
         </div>
       ) : (
-        <div className="empty">
-          Добавьте 2–3 работы: скриншот, пару слов о задаче и ссылку на бота или сайт. Заказчики чаще пишут тем, у кого видно результат.
-        </div>
+        <div className="empty">Работ пока нет</div>
       )}
       {items.length < MAX && (
         <button className="btn secondary mt" onClick={() => setEdit({ i: null, w: { ...empty } })}><Icon name="plus" size={19} />Добавить работу</button>
@@ -101,7 +98,7 @@ function WorkSheet({ open, start, isNew, onClose, onSave, onDelete }: {
     if (!f) return;
     if (f.size > 10 * 1024 * 1024) { showToast('Картинка больше 10 МБ'); return; }
     setLoading(true);
-    try { const r = await uploadWorkImage(f); setW((x) => ({ ...x, image: r.url, imageId: r.imageId })); } catch { /* toast */ } finally { setLoading(false); }
+    try { const r = await uploadWorkImage(f); setW((x) => ({ ...x, image: r.url, imageId: r.imageId })); } catch {} finally { setLoading(false); }
   };
   return (
     <Sheet open={open} onClose={onClose} title={isNew ? 'Новая работа' : 'Работа'}>

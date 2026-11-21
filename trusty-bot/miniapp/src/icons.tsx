@@ -1,4 +1,3 @@
-// Line icons (Lucide): thin strokes, no background tiles.
 import type { CSSProperties } from 'react';
 import {
   ArrowLeftRight, Ban, Copy, Crown, Download, ExternalLink, Image, Lightbulb, Share2, UserPlus, BadgeCheck, Bell, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDot,
@@ -23,7 +22,6 @@ export function Icon({ name, size = 22, strokeWidth = 1.75, style, className }: 
   name: IconName; size?: number; strokeWidth?: number; style?: CSSProperties; className?: string;
 }) {
   const C = I[name];
-  // strokeWidth 0 means a filled glyph (the rating star)
   return strokeWidth === 0
     ? <C size={size} strokeWidth={0} fill="currentColor" aria-hidden="true" style={style} className={className} />
     : <C size={size} strokeWidth={strokeWidth} aria-hidden="true" style={style} className={className} />;

@@ -1,10 +1,3 @@
-"""Price offers inside chats.
-
-An offer is always about a published project of the client: the client picks one of their open projects, an executor
-picks one of the client's. Anyone in the chat can send an offer: the project, a price and a term. The other side accepts, declines or answers with
-its own price (a counter-offer), and so on until someone accepts. Accepting creates the deal with the offer's terms.
-An unanswered offer expires after 24, 48 or 72 hours.
-"""
 from datetime import timedelta
 
 from sqlalchemy import func, select
@@ -22,7 +15,6 @@ CATEGORY_LABEL = {"bots": "Боты", "web": "Веб", "parsers": "Парсер�
 
 
 def left(o: Offer) -> str:
-    """Time left to answer: '47ч 58м'."""
     sec = max(0, int((aware(o.expires_at) - utcnow()).total_seconds()))
     h, m = sec // 3600, sec % 3600 // 60
     return f"{h}ч {m:02d}м" if h else f"{m}м"
@@ -56,7 +48,6 @@ async def _lock(s: AsyncSession, offer_id: int) -> Offer:
 
 
 async def open_project(s: AsyncSession, project_id: int | None, client_id: int) -> Project:
-    """The project an offer is about: it must belong to the client and still take offers."""
     p = await s.get(Project, project_id) if project_id else None
     if p is None or p.client_id != client_id:
         raise EscrowError("Выберите открытый проект заказчика: оффер делается на опубликованную задачу")
@@ -115,7 +106,6 @@ async def accept(s: AsyncSession, offer_id: int, me: User) -> tuple[Offer, Deal]
     p = await open_project(s, o.project_id, o.client_id)
     d = await open_deal(s, o.client_id, o.dev_id, o.title, o.amount, o.days, p.id, CATEGORY_LABEL.get(p.category, ""))
     o.status, o.decided_at, o.deal_id = "accepted", utcnow(), d.id
-    # the project now has an executor: other open offers about it are closed
     for other in (await s.execute(select(Offer).where(Offer.project_id == p.id, Offer.status == "pending",
                                                       Offer.id != o.id))).scalars():
         other.status, other.decided_at = "withdrawn", utcnow()

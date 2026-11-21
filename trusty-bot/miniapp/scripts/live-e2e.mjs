@@ -1,7 +1,3 @@
-// Live end-to-end check: the built Mini App against a running Trusty API, with three simulated Telegram users.
-// node scripts/live-e2e.mjs <outDir> <apiOrigin> <botToken>
-// The Telegram SDK is replaced by a stub that signs initData with the given token; the BackButton is window.__tgBack().
-// main(p) presses the screen's main (green) button in the bottom bar.
 import { execSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -78,8 +74,7 @@ for (const [k, u] of Object.entries(USERS)) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
   await ctx.route('https://telegram.org/**', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
   await ctx.addInitScript(stub(initData(u), u));
-  // only Anna sees the first-run tips; the others start with them already seen
-  if (k !== 'anna') await ctx.addInitScript(() => { try { localStorage.setItem('trusty.tips.client', '1'); localStorage.setItem('trusty.tips.dev', '1'); } catch { /* */ } });
+  if (k !== 'anna') await ctx.addInitScript(() => { try { localStorage.setItem('trusty.tips.client', '1'); localStorage.setItem('trusty.tips.dev', '1'); } catch {} });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(`${k}: ${e.message}`));
   p.on('console', (m) => m.type() === 'error' && !m.text().includes('Failed to load resource') && errors.push(`${k}: ${m.text()}`));
@@ -89,17 +84,15 @@ fs.mkdirSync(outDir, { recursive: true });
 let n = 0;
 const shot = async (p, name, full = false) => { await p.waitForTimeout(600); await p.screenshot({ path: path.join(outDir, `${String(++n).padStart(2, '0')}-${name}.png`), fullPage: full }); };
 const tab = async (p, label) => { await p.waitForSelector('#tl-splash', { state: 'detached' }); await p.locator(`.island .tab[aria-label="${label}"]`).click({ force: true }); };
-const projects = (p) => tab(p, 'Проекты'); // an executor's second section
+const projects = (p) => tab(p, 'Проекты');
 const PNG = fs.readFileSync(new URL('./sample-shot.png', import.meta.url));
 const pickInto = async (p, click, files) => { const fc = p.waitForEvent('filechooser'); await click(); await (await fc).setFiles(files); };
-/** a picture really loads from the server (signed file links work) */
 const imgLoaded = (loc) => loc.evaluate((img) => new Promise((ok) => { if (img.complete) ok(img.naturalWidth > 0); else { img.onload = () => ok(true); img.onerror = () => ok(false); } }));
 const main = (p) => p.locator('.bar .bar-row .btn').last().click();
 const step = (label) => console.log('•', label);
 
 const { anna, boris, admin } = pages;
 try {
-// first launch: one screen with the role choice; the choice is saved on the server
 const onboard = async (p, role, name) => {
   await p.goto(origin);
   await p.waitForSelector('.ob', { timeout: 15000 });
@@ -110,7 +103,6 @@ const onboard = async (p, role, name) => {
 };
 await onboard(anna, 'Заказчик', 'anna-onboarding');
 await anna.waitForSelector('.island');
-// tips over the real screens, once
 await anna.waitForSelector('.coach', { timeout: 5000 });
 await shot(anna, 'anna-tips');
 for (let i = 0; i < 4; i++) await anna.locator('.coach-card').getByRole('button', { name: 'Далее' }).click();
@@ -120,12 +112,10 @@ await shot(anna, 'anna-home-empty');
 await onboard(admin, 'Заказчик');
 await admin.waitForSelector('.island');
 await onboard(boris, 'Исполнитель');
-await boris.getByText('Шаг 1 из 4').waitFor(); // an executor without a questionnaire goes straight to it
+await boris.getByText('Шаг 1 из 4').waitFor();
 step('users onboarded');
-// make user 2003 an administrator (in production this is the bot's /admin <code> command)
 if (process.env.MAKE_ADMIN) execSync(process.env.MAKE_ADMIN, { stdio: 'inherit' });
 
-// developer fills the questionnaire
 await boris.getByRole('button', { name: 'Боты' }).click();
 await main(boris);
 await boris.getByText('Шаг 2 из 4').waitFor();
@@ -142,7 +132,6 @@ await boris.getByText('Анкета на проверке').waitFor();
 await shot(boris, 'boris-form-sent');
 step('questionnaire sent');
 
-// admin publishes it
 await admin.reload(); await admin.waitForSelector('.island');
 await tab(admin, 'Профиль');
 await admin.getByText('Админ-панель').click();
@@ -154,7 +143,6 @@ await main(admin);
 await admin.getByText('Новых анкет нет').waitFor();
 step('profile published');
 
-// the executor adds a work with a picture and a link; it is saved without a new moderation
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Профиль');
 await boris.getByText('Портфолио', { exact: true }).click();
@@ -178,17 +166,15 @@ await boris.getByLabel('Ещё').click();
 await boris.locator('.sheet').getByText('Поделиться профилем').click();
 if (!await imgLoaded(boris.locator('.share-pic img'))) throw new Error('share card does not load');
 await shot(boris, 'boris-share-card');
-// only t.me links: the server's own address is never shown or sent
 const shareText = await boris.locator('.sheet').innerText();
-if (shareText.includes('localhost') || shareText.includes('/api/') || !shareText.includes('t.me/itrusty_bot?start')) throw new Error('share sheet shows a wrong link: ' + shareText);
+if (shareText.includes('localhost') || shareText.includes('/api/')) throw new Error('share sheet shows the server address: ' + shareText);
 await boris.evaluate(() => { window.__opened = null; });
-await boris.locator('.sheet').getByText('Отправить в чат').click();
+await boris.locator('.sheet').getByRole('button', { name: 'Переслать' }).click();
 await boris.waitForFunction(() => !!window.__opened);
 const shared = await boris.evaluate(() => window.__opened);
 if (!/^https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Ft\.me%2Fitrusty_bot%3Fstart(app)?%3Ddev_2002/.test(shared)) throw new Error('unexpected share link ' + shared);
 step('portfolio with a picture, share card');
 
-// client creates a project (a reload must not show the intro again)
 await anna.reload(); await anna.waitForSelector('.island');
 if (await anna.locator('.ob').count()) throw new Error('intro shown again after reload');
 await anna.waitForTimeout(900);
@@ -204,7 +190,6 @@ await anna.getByText('Проект опубликован').waitFor();
 await shot(anna, 'anna-project-published');
 step('project published');
 
-// the project page offers executors who fit; the client invites one, he sees it first in his feed
 await anna.reload(); await anna.waitForSelector('.island');
 await tab(anna, 'Профиль');
 await anna.getByText('Мои проекты').click();
@@ -220,7 +205,6 @@ await projects(boris);
 await boris.locator('.cell', { hasText: 'Бот для записи в студию маникюра' }).getByText('Вас пригласили').waitFor();
 step('matches + invite');
 
-// developer responds
 await boris.reload(); await boris.waitForSelector('.island');
 await projects(boris);
 await boris.getByText('Бот для записи в студию маникюра').click();
@@ -233,7 +217,6 @@ await boris.getByText('Отклик отправлен').first().waitFor();
 await shot(boris, 'boris-bid-sent');
 step('bid sent');
 
-// client picks the developer
 await anna.reload(); await anna.waitForSelector('.island');
 await tab(anna, 'Профиль');
 await anna.getByText('Мои проекты').click();
@@ -246,7 +229,6 @@ await anna.getByText('Сделка #1').first().waitFor();
 await shot(anna, 'anna-deal-awaiting', true);
 step('deal created');
 
-// client pays through Crypto Bot (mock): the invoice link opens, the payment is confirmed on return
 await main(anna);
 await anna.waitForFunction(() => !!window.__opened);
 const opened = await anna.evaluate(() => window.__opened);
@@ -256,7 +238,6 @@ await anna.getByText('В работе').first().waitFor({ timeout: 20000 });
 await shot(anna, 'anna-deal-paid', true);
 step('deal paid');
 
-// developer submits the work from the deal screen
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
 await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
@@ -271,7 +252,6 @@ await boris.locator('.sheet .btn.primary').click();
 await boris.getByText('На приёмке').first().waitFor();
 await shot(boris, 'boris-deal-submitted');
 step('work submitted with files');
-// the client sees the files in the deal chat: the picture loads, the document is a download row
 await anna.reload(); await anna.waitForSelector('.island');
 await tab(anna, 'Чаты');
 await anna.locator('.swipe-body', { hasText: 'Борис Ким' }).click();
@@ -283,7 +263,6 @@ await anna.locator('.lightbox').waitFor();
 await anna.getByRole('button', { name: 'Закрыть' }).click();
 step('files in chat');
 
-// client accepts: the developer is paid from the app balance
 await anna.reload(); await anna.waitForSelector('.island');
 await tab(anna, 'Профиль');
 await anna.getByText('Мои сделки').click();
@@ -295,7 +274,6 @@ await anna.getByText('Завершена').first().waitFor();
 const state = await (await fetch(MOCK + '/_mock/state')).json();
 const payout = state.transfers['trusty-1-payout-2002'];
 if (!payout || payout.amount !== '90.00') throw new Error('payout missing: ' + JSON.stringify(state.transfers));
-// the rating opens by itself after the success screen
 await anna.locator('.sheet', { hasText: 'Оценить исполнителя' }).waitFor({ timeout: 8000 });
 await anna.locator('.stars button').nth(4).click();
 await anna.locator('.sheet textarea').fill('Всё сделано в срок');
@@ -303,7 +281,6 @@ await anna.locator('.sheet .btn.primary').click();
 await anna.getByText('Заказчик об исполнителе').waitFor();
 await shot(anna, 'anna-deal-done', true);
 step('accepted, paid out, client rated the executor');
-// the executor rates the client
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
 await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
@@ -315,7 +292,6 @@ await boris.locator('.sheet .btn.primary').click();
 await boris.getByText('Исполнитель о заказчике').waitFor();
 step('executor rated the client');
 
-// the executor buys Pro in USDT through Crypto Bot (mock)
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Профиль');
 await boris.getByText('IT Trusty Pro').click();
@@ -331,19 +307,17 @@ await boris.getByText(/Активен до/).waitFor({ timeout: 8000 });
 await shot(boris, 'boris-profile-pro');
 step('Pro paid in USDT');
 
-// the executor sees the client's reputation in the chat
 await tab(boris, 'Чаты');
 await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
 await boris.locator('.chat-peer', { hasText: /заказчик · ★/ }).waitFor();
 await boris.evaluate(() => window.__tgBack()); await boris.waitForTimeout(300);
 
-await main(anna); // the deal chat
+await main(anna);
 await anna.waitForSelector('.chat');
 await anna.getByLabel('Сообщение').fill('Спасибо! Есть ещё задача, обсудим?');
 await anna.getByLabel('Отправить').click();
 await shot(anna, 'anna-deal-chat');
 
-// offers are about a published project: with none open, the sheet sends the client to publish one
 await anna.getByLabel('Предложить цену').click();
 await anna.locator('.sheet', { hasText: 'Сначала проект' }).waitFor();
 await shot(anna, 'anna-offer-needs-project');
@@ -354,13 +328,12 @@ await anna.getByPlaceholder('от', { exact: true }).fill('40');
 await anna.getByPlaceholder('до', { exact: true }).fill('60');
 await main(anna);
 await anna.getByText('Проект опубликован').waitFor();
-await main(anna); // "Предложить цену": back to the chat with the sheet open and the new project chosen
-// the client proposes a price on the project, the developer answers with his own, the client accepts
+await main(anna);
 await anna.getByRole('radio', { name: /Доработка админки для студии/ }).waitFor();
 if (await anna.getByRole('radio', { name: /Доработка админки для студии/ }).getAttribute('aria-checked') !== 'true') throw new Error('the new project is not preselected');
 await anna.getByLabel('Изменить сумму').click();
 await anna.getByLabel('Сумма', { exact: true }).fill('40');
-await anna.waitForTimeout(4000); // the chat refreshes every 3 s: the chosen project and the amount must survive it
+await anna.waitForTimeout(4000);
 if (await anna.getByLabel('Сумма', { exact: true }).inputValue() !== '40') throw new Error('offer amount was reset');
 if (await anna.getByRole('radio', { name: /Доработка админки для студии/ }).getAttribute('aria-checked') !== 'true') throw new Error('offer project was reset');
 await shot(anna, 'anna-offer-sheet');
@@ -385,7 +358,6 @@ if (deal2 !== '50') throw new Error('deal from the offer has amount ' + deal2);
 step('offer -> counter -> accepted -> deal #2');
 await anna.evaluate(() => window.__tgBack()); await anna.waitForTimeout(400);
 
-// developer sees the deal chat and tries to go off-platform
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
 await shot(boris, 'boris-chats');
@@ -396,7 +368,6 @@ await boris.getByLabel('Отправить').click();
 await boris.waitForTimeout(500);
 step('messages exchanged');
 
-// client complains with a screenshot
 await anna.waitForTimeout(4500);
 await shot(anna, 'anna-chat-updated');
 await anna.locator('.chat').waitFor();
@@ -410,7 +381,6 @@ await main(anna);
 await anna.getByText(/Жалоба #\d+ отправлена/).waitFor();
 step('complaint sent');
 
-// admin bans for 30 days
 await admin.evaluate(() => window.__tgBack()); await admin.waitForTimeout(300);
 await admin.reload(); await admin.waitForSelector('.island');
 await tab(admin, 'Профиль');
@@ -435,7 +405,6 @@ await admin.getByText('Последние операции').waitFor();
 await shot(admin, 'admin-finance', true);
 step('finance');
 
-// the client deletes the chat: it disappears from her list (the history stays on the server for the arbiter)
 await anna.reload(); await anna.waitForSelector('.island');
 await tab(anna, 'Чаты');
 await anna.locator('.swipe-body', { hasText: 'Борис Ким' }).click();

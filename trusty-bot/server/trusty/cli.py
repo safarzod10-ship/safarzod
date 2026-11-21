@@ -1,10 +1,3 @@
-"""Server-side admin tools.
-
-    trusty admins              list administrators
-    trusty admin-remove <id>   take admin rights away
-    trusty unban <id>          lift a ban
-    trusty stats               counts of users, projects, deals, complaints
-"""
 import asyncio
 import sys
 

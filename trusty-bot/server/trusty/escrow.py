@@ -1,15 +1,3 @@
-"""Escrow: deal state machine and money movements through Crypto Pay.
-
-    awaiting_payment --pay--> in_work --submit--> review --accept / auto-accept--> done (payout to the developer)
-         |                       |                  |
-       cancel               dev declines        dispute --admin resolves (dev share %)--> done | refunded
-         v                  (full refund)
-     cancelled               refunded
-
-The client pays amount + fee. The developer receives the amount. After a dispute the fee stays with Trusty;
-when the developer declines a paid deal, the client gets everything back, fee included.
-Every invoice, payout and refund is a row in `payments`; payouts use a unique spend_id, so they never run twice.
-"""
 import logging
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -32,7 +20,7 @@ STATUS_LABEL = {
 
 
 class EscrowError(Exception):
-    """A user-facing reason why an action is not possible."""
+    pass
 
 
 def fee_for(amount: int) -> Decimal:
@@ -40,7 +28,6 @@ def fee_for(amount: int) -> Decimal:
 
 
 def fmt(x) -> str:
-    """90 -> '90', 94.5 -> '94,50'"""
     d = money(x)
     return f"{d:.0f}" if d == d.to_integral() else f"{d:.2f}".replace(".", ",")
 
@@ -72,7 +59,6 @@ def notify_deal(user_id: int, d: Deal, text: str, button: str = "Открыть 
 
 async def open_deal(s: AsyncSession, client_id: int, dev_id: int, title: str, amount: int, days: int,
                     project_id: int | None = None, category: str = "") -> Deal:
-    """Creates a deal awaiting payment, attaches it to the pair's chat and posts the terms there."""
     d = Deal(project_id=project_id, client_id=client_id, dev_id=dev_id, title=title, category=category,
              amount=amount, days=days, due_at=utcnow() + timedelta(days=days), fee=fee_for(amount))
     s.add(d)
@@ -94,9 +80,7 @@ async def open_deal(s: AsyncSession, client_id: int, dev_id: int, title: str, am
     return d
 
 
-# ---------------------------------------------------------------- payment in
 async def invoice_for(s: AsyncSession, deal_id: int, me: User) -> dict:
-    """Returns an active invoice for the deal (creates one if needed)."""
     d = await lock_deal(s, deal_id)
     if d.client_id != me.id:
         raise EscrowError("Оплатить сделку может только заказчик")
@@ -128,7 +112,6 @@ async def invoice_for(s: AsyncSession, deal_id: int, me: User) -> dict:
 
 
 async def mark_paid(s: AsyncSession, d: Deal, inv: dict) -> bool:
-    """Idempotent: moves the deal to in_work once its invoice is paid. Caller holds the row lock."""
     if d.status != "awaiting_payment" or int(inv.get("invoice_id", 0)) != d.invoice_id:
         return False
     if inv.get("status") != "paid" or str(inv.get("payload")) != f"deal:{d.id}":
@@ -157,7 +140,6 @@ async def handle_paid_invoice(s: AsyncSession, inv: dict) -> bool:
 
 
 async def sync_invoices(s: AsyncSession) -> None:
-    """Fallback for missed webhooks: checks every deal still waiting for its invoice."""
     deals = (await s.execute(select(Deal).where(Deal.status == "awaiting_payment", Deal.invoice_id.is_not(None)))).scalars().all()
     if not deals or not pay.enabled:
         return
@@ -177,14 +159,7 @@ async def sync_invoices(s: AsyncSession) -> None:
             await s.commit()
 
 
-# ---------------------------------------------------------------- payment out
 async def payout(s: AsyncSession, d: Deal, user_id: int, amount: Decimal, kind: str, comment: str) -> Payment:
-    """Sends `amount` to the user's Crypto Bot wallet. Idempotent per (deal, kind, user) through spend_id.
-
-    If the transfer is refused outright (for example the user never opened @CryptoBot), a check pinned to the user
-    is created instead and its link is sent to them. Network errors leave the payment `failed`; the retry job
-    repeats the same transfer (same spend_id), never a check, so money can't go out twice.
-    """
     spend_id = f"trusty-{d.id}-{kind}-{user_id}"
     p = (await s.execute(select(Payment).where(Payment.spend_id == spend_id))).scalar_one_or_none()
     if p is None:
@@ -195,7 +170,6 @@ async def payout(s: AsyncSession, d: Deal, user_id: int, amount: Decimal, kind: 
     if p.status in ("sent", "check") or p.amount <= 0:
         return p
     p.attempts += 1
-    # once an attempt ended with an unknown outcome, only the same transfer (same spend_id) may be repeated
     uncertain_before = bool(p.error) and _uncertain_code(p.error)
     try:
         t = await pay.transfer(user_id, p.amount, spend_id, comment)
@@ -203,7 +177,7 @@ async def payout(s: AsyncSession, d: Deal, user_id: int, amount: Decimal, kind: 
     except CryptoPayError as e:
         p.error = f"{e.code} {e.name}"
         if e.uncertain or uncertain_before:
-            p.status = "failed"  # outcome unknown: only the same transfer may be retried
+            p.status = "failed"
         else:
             try:
                 c = await pay.create_check(user_id, p.amount)
@@ -239,7 +213,6 @@ async def retry_failed_payouts(s: AsyncSession) -> None:
             await payout(s, d, p.user_id, p.amount, p.kind, f"IT Trusty, сделка #{d.id}")
 
 
-# ---------------------------------------------------------------- transitions
 async def submit(s: AsyncSession, deal_id: int, me: User, note: str) -> Deal:
     d = await lock_deal(s, deal_id)
     if d.dev_id != me.id:
@@ -257,7 +230,6 @@ async def submit(s: AsyncSession, deal_id: int, me: User, note: str) -> Deal:
 
 
 async def accept(s: AsyncSession, deal_id: int, me: User | None) -> Deal:
-    """me=None means auto-acceptance after the review period."""
     d = await lock_deal(s, deal_id)
     if me is not None and d.client_id != me.id:
         raise EscrowError("Принять работу может только заказчик")
@@ -277,7 +249,6 @@ async def accept(s: AsyncSession, deal_id: int, me: User | None) -> Deal:
 
 
 async def ask_reviews(s: AsyncSession, d: Deal) -> None:
-    """At the end of a deal each side gets a card with stars to rate the other one."""
     users = {u.id: u for u in (await s.execute(select(User).where(User.id.in_((d.client_id, d.dev_id))))).scalars()}
     for me_id, other_id, who in ((d.client_id, d.dev_id, "исполнителя"), (d.dev_id, d.client_id, "заказчика")):
         other = users.get(other_id)
@@ -337,7 +308,6 @@ async def cancel(s: AsyncSession, deal_id: int, me: User) -> Deal:
                 await pay.delete_invoice(d.invoice_id)
             except CryptoPayError as e:
                 log.info("delete invoice %s: %s", d.invoice_id, e)
-            # an invoice paid at this very moment must not be lost
             found = await pay.get_invoices([d.invoice_id]) if pay.enabled else []
             if found and found[0]["status"] == "paid":
                 await mark_paid(s, d, found[0])
@@ -363,12 +333,10 @@ async def cancel(s: AsyncSession, deal_id: int, me: User) -> Deal:
 
 
 def can_review(d: Deal) -> bool:
-    """Reviews are left at the end: after acceptance, or after a dispute or refund of a paid deal."""
     return d.status == "done" or (d.status == "refunded" and d.paid_at is not None)
 
 
 async def review(s: AsyncSession, deal_id: int, me: User, rating: int, text: str) -> None:
-    """The client rates the developer, the developer rates the client; once each."""
     d = await s.get(Deal, deal_id)
     if d is None or me.id not in (d.client_id, d.dev_id):
         raise EscrowError("Отзыв оставляют участники сделки")

@@ -31,7 +31,7 @@ export default function DevProfile({ id }: { id: string }) {
   const online = d.lastSeenMin <= 5;
 
   const write = async (offer = false) => {
-    try { nav.open('chats', 'chat', { id: await openChat(d.id), offer }); } catch { /* toast shown */ }
+    try { nav.open('chats', 'chat', { id: await openChat(d.id), offer }); } catch {}
   };
 
   return (

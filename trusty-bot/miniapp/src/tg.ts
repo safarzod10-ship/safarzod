@@ -1,5 +1,3 @@
-// Thin wrapper over Telegram.WebApp with browser fallbacks, so the prototype runs both inside Telegram and in a normal tab.
-
 type BtnParams = { text?: string; color?: string; text_color?: string; is_active?: boolean; is_visible?: boolean };
 type NativeButton = {
   setParams(p: BtnParams): void;
@@ -41,7 +39,6 @@ interface WebApp {
 
 const wa: WebApp | undefined = (window as unknown as { Telegram?: { WebApp?: WebApp } }).Telegram?.WebApp;
 
-/** true only when opened from Telegram (initData is empty in a normal browser tab) */
 export const inTelegram = !!wa && !!wa.initData;
 export const tg = inTelegram ? wa : undefined;
 
@@ -49,7 +46,6 @@ export const tgUser = tg?.initDataUnsafe.user;
 
 const BG = '#000000';
 
-/** IT Trusty is always dark: black ground, whatever the Telegram theme is */
 export function applyTheme() {
   const root = document.documentElement;
   root.classList.add('dark');
@@ -60,7 +56,6 @@ export function applyTheme() {
       tg.setBackgroundColor(BG);
       tg.setBottomBarColor?.(BG);
     } catch {
-      /* older clients accept only keywords */
     }
   }
 }
@@ -73,7 +68,6 @@ export function initTelegram() {
     try {
       tg.disableVerticalSwipes?.();
     } catch {
-      /* not supported */
     }
     tg.onEvent('themeChanged', applyTheme);
   }
@@ -87,14 +81,12 @@ export const haptic = {
   error: () => tg?.HapticFeedback?.notificationOccurred('error'),
 };
 
-/** opens a t.me link (Crypto Bot invoice or check) inside Telegram, or a new tab in a browser */
 export function openTg(url: string) {
   if (tg?.openTelegramLink && /^https:\/\/t\.me\//.test(url)) tg.openTelegramLink(url);
   else if (tg?.openLink) tg.openLink(url);
   else window.open(url, '_blank', 'noopener');
 }
 
-/** pays a Telegram Stars invoice inside Telegram; resolves with the final status */
 export function payInvoice(url: string): Promise<'paid' | 'cancelled' | 'failed' | 'pending'> {
   return new Promise((resolve) => {
     if (tg?.openInvoice && tg.isVersionAtLeast('6.1')) tg.openInvoice(url, (st) => resolve(st));
@@ -102,17 +94,14 @@ export function payInvoice(url: string): Promise<'paid' | 'cancelled' | 'failed'
   });
 }
 
-/** an absolute URL for a server path like /api/f/a/1?sig=... */
 export const absUrl = (path: string) => (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:') ? path : `${location.origin}${path}`);
 
-/** saves a file: Telegram's own download dialog when available, else a new tab */
 export function downloadFile(path: string, name: string) {
   const url = absUrl(path);
-  if (tg?.downloadFile && tg.isVersionAtLeast('8.0')) { try { tg.downloadFile({ url, file_name: name }); return; } catch { /* fall back */ } }
+  if (tg?.downloadFile && tg.isVersionAtLeast('8.0')) { try { tg.downloadFile({ url, file_name: name }); return; } catch {} }
   if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank', 'noopener');
 }
 
-/** calls fn when the user comes back to the Mini App (e.g. after paying in @CryptoBot) */
 export function onReturn(fn: () => void): () => void {
   const vis = () => { if (document.visibilityState === 'visible') fn(); };
   document.addEventListener('visibilitychange', vis);
@@ -120,7 +109,6 @@ export function onReturn(fn: () => void): () => void {
   return () => { document.removeEventListener('visibilitychange', vis); tg?.offEvent?.('activated', fn); };
 }
 
-/** plays the splash exit once its intro has finished (the splash lives in index.html) */
 export function hideSplash(): Promise<void> {
   const sp = (window as unknown as { __tlSplash?: { finish(): Promise<void> } }).__tlSplash;
   if (sp) return sp.finish();
@@ -128,7 +116,6 @@ export function hideSplash(): Promise<void> {
   return Promise.resolve();
 }
 
-/** sends a message the bot prepared (a photo card with a button) to a chat the user picks; null when the client is too old */
 export function sharePrepared(id: string): Promise<boolean> | null {
   if (!tg?.shareMessage || !tg.isVersionAtLeast('8.0')) return null;
   return new Promise((resolve) => { try { tg.shareMessage!(id, (sent) => resolve(!!sent)); } catch { resolve(false); } });

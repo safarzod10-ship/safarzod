@@ -1,5 +1,3 @@
-// Screenshot tour of the built Mini App: node scripts/tour.mjs <outDir> [light|dark] [scale]
-// Serves dist/ itself, walks the main flows and saves one PNG per screen.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,7 +38,6 @@ await page.getByRole('radio', { name: /Заказчик/ }).click();
 await shot('onboarding-role', false);
 await page.getByRole('button', { name: /Начать как/ }).click();
 await page.waitForSelector('.island');
-// first-run tips over the real screen
 await page.waitForSelector('.coach');
 await page.waitForTimeout(500); await shot('coach-1', false);
 await page.getByRole('button', { name: 'Далее' }).click(); await page.waitForTimeout(400); await shot('coach-2', false);

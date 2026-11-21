@@ -1,5 +1,3 @@
-// Contact sheet renderer: node sheet.js <svgDir> <out.png> [--ids 1,2,3] [--cols 8] [--cell 150] [--title "..."] [--from 1 --to 40] [--small]
-// --small adds a 32px and a 16px preview under every concept (legibility check).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');

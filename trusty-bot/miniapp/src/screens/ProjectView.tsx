@@ -15,20 +15,18 @@ export default function ProjectView({ id }: { id: number }) {
   const c = clientOf(p);
   const own = isMe(p.clientId);
   const myBid = myBidFor(p.id);
-  // in the browser demo the example executor profile counts as approved
   const form = live ? devForm : me.profile ? 'published' : devForm;
   const open = p.status === 'open';
 
-  // what the bottom button does for this person: respond, fill the profile, wait for approval or switch role
   let action: { label: string; onClick(): void } | undefined;
   let note: string | null = null;
   if (own) note = null;
   else if (!open) note = 'Исполнитель уже выбран, отклики закрыты.';
   else if (role === 'client') action = { label: 'Откликнуться как исполнитель', onClick: () => { setRole('dev').catch(() => {}); } };
   else if (form === 'published') action = { label: myBid ? 'Изменить отклик' : 'Откликнуться', onClick: () => nav.push('bid', { id: p.id }) };
-  else if (form === 'review') note = 'Анкета на проверке. Откликаться можно сразу после одобрения, мы пришлём уведомление в бот.';
-  else if (form === 'rejected') { note = 'Анкета не прошла проверку. Исправьте её, чтобы откликаться.'; action = { label: 'Исправить анкету', onClick: () => nav.open('profile', 'dev-form') }; }
-  else { note = 'Откликаться могут исполнители с одобренной анкетой. Заполните её: это 4 коротких шага.'; action = { label: 'Заполнить анкету', onClick: () => nav.open('profile', 'dev-form') }; }
+  else if (form === 'review') note = 'Анкета на проверке.';
+  else if (form === 'rejected') { note = 'Анкета не прошла проверку.'; action = { label: 'Исправить анкету', onClick: () => nav.open('profile', 'dev-form') }; }
+  else { note = 'Откликаться можно с одобренной анкетой.'; action = { label: 'Заполнить анкету', onClick: () => nav.open('profile', 'dev-form') }; }
 
   return (
     <div className="screen no-tabs">
@@ -99,18 +97,17 @@ export default function ProjectView({ id }: { id: number }) {
                 );
               })}
             </div>
-          ) : <div className="text muted small">Откликов пока нет. Обычно первые приходят в течение часа.</div>}
+          ) : <div className="text muted small">Откликов пока нет</div>}
         </Section>
       )}
 
       {own && open && (
         <Section title="Подходящие исполнители">
-          <p className="muted small" style={{ margin: '-4px 0 10px' }}>Подобрали по категории и стеку. Приглашённый получит проект в боте.</p>
           <Matches projectId={p.id} invited={p.invitedIds ?? []} />
         </Section>
       )}
 
-      {!own && myBid && <div className="mt"><Note tone="green" icon="check">Ваш отклик: {usdt(myBid.price)}, {myBid.days} дн. Заказчик получил уведомление.</Note></div>}
+      {!own && myBid && <div className="mt"><Note tone="green" icon="check">Ваш отклик: {usdt(myBid.price)}, {myBid.days} дн.</Note></div>}
       {note && <div className="mt"><Note tone="blue" icon={form === 'review' ? 'clock' : 'info'}>{note}</Note></div>}
       {action && <Actions primary={action} />}
     </div>

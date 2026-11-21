@@ -1,7 +1,3 @@
-"""Round 2: the 30 strongest round-1 concepts, redrawn with tuned proportions.
-
-Usage: python3 round2.py <out_dir>
-"""
 import json
 import os
 import sys
@@ -10,7 +6,6 @@ from svglib import BG, INK, P, S, T_poly, cd, masked, mirror, poly, rot, rr, shi
 
 
 def inset_round(pts, r):
-    """Fill + same-colour stroke = polygon with rounded convex corners (r)."""
     return P(poly(pts)) + S(poly(pts), r * 2)
 
 

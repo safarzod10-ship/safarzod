@@ -1,5 +1,3 @@
-// Admin panel: complaint queue, developer questionnaires, users, bans.
-// Rule: first violation = 30-day ban, repeated = permanent; unban any time. At most 2 admins.
 import { useEffect, useState } from 'react';
 import { CATEGORIES, REASONS, type Complaint } from '../data';
 import { Icon } from '../icons';
@@ -23,7 +21,7 @@ function ComplaintCell({ c, onClick }: { c: Complaint; onClick(): void }) {
 }
 
 type Tab = 'complaints' | 'profiles' | 'users' | 'bans';
-let lastTab: Tab = 'complaints'; // the panel reopens on the tab the admin was working in
+let lastTab: Tab = 'complaints';
 
 export default function Admin() {
   const nav = useNav();
@@ -121,7 +119,7 @@ export function ComplaintAdmin({ id }: { id: number }) {
   const act = async (fn: () => Promise<unknown>, done?: string) => {
     if (busy) return;
     setBusy(true);
-    try { const r = await fn(); showToast(typeof r === 'string' ? r : done ?? 'Готово'); } catch { /* toast shown */ } finally { setBusy(false); }
+    try { const r = await fn(); showToast(typeof r === 'string' ? r : done ?? 'Готово'); } catch {} finally { setBusy(false); }
   };
 
   return (
@@ -184,7 +182,7 @@ export function MemberAdmin({ id }: { id: string }) {
   const act = async (fn: () => Promise<unknown>, done: string) => {
     if (busy) return;
     setBusy(true);
-    try { const r = await fn(); showToast(typeof r === 'string' ? r : done); } catch { /* toast shown */ } finally { setBusy(false); }
+    try { const r = await fn(); showToast(typeof r === 'string' ? r : done); } catch {} finally { setBusy(false); }
   };
   return (
     <div className="screen no-tabs">

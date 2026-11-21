@@ -1,8 +1,3 @@
-"""Picture cards for the bot (Pillow), 1200×630: the green welcome banner and dark cards for deals and offers.
-
-Style: graphite background, white text, one green (#176345) for plates. Unbounded for amounts and headings,
-Manrope for text, the shield-with-a-wave mark.
-"""
 import io
 import os
 from functools import lru_cache
@@ -14,7 +9,7 @@ W, H = 1200, 630
 BG, WHITE, MUTED, FAINT, LINE = "#111214", "#F2F3F5", "#8E9299", "#5E636B", "#26282C"
 EMERALD, BRAND_BG = "#176345", "#176345"
 RED_BG, RED_FG = "#3A1E1C", "#FF8A80"
-X0 = 72  # left margin
+X0 = 72
 
 STEPS = ["Оплата", "Работа", "Проверка", "Выплата"]
 STEP_OF = {"awaiting_payment": 0, "in_work": 1, "review": 2, "dispute": 2, "done": 4, "refunded": 4, "cancelled": -1}
@@ -79,7 +74,6 @@ def _header(img: Image.Image, d: ImageDraw.ImageDraw, right: str | None = None, 
 
 
 def _amount(d: ImageDraw.ImageDraw, amount, asset: str, strike=None, y: int = 300) -> None:
-    """Big number on the baseline y, the currency after it, an old price crossed out."""
     big, cur = unb(160, 700), unb(42, 600)
     text = amount_text(amount)
     d.text((X0, y), text, font=big, fill=WHITE, anchor="ls")
@@ -105,7 +99,6 @@ def deal_card(deal_id: int, title: str, amount, total, status: str, asset: str =
     d = ImageDraw.Draw(img)
     _header(img, d, right=f"Сделка #{deal_id}")
     _amount(d, amount, asset)
-    # status plate + title
     label = STATUS.get(status, status)
     f = man(26, 800)
     w = int(d.textlength(label, font=f)) + 52
@@ -115,7 +108,6 @@ def deal_card(deal_id: int, title: str, amount, total, status: str, asset: str =
     d.text((X0 + w + 24, 382), _fit(d, title, man(34, 700), W - X0 - (X0 + w + 24)), font=man(34, 700), fill=WHITE, anchor="lm")
     if status == "awaiting_payment" and total:
         d.text((X0, 452), f"К оплате {amount_text(total)} {asset} с комиссией гаранта", font=man(26, 600), fill=MUTED, anchor="lm")
-    # progress: four bars with names
     step = STEP_OF.get(status, 0)
     if step >= 0:
         gap, y = 16, 520
@@ -143,18 +135,16 @@ def offer_card(amount: int, prev_amount: int | None, title: str, sender: str, da
     return _jpeg(img)
 
 
-# The welcome banner copies the brand banner: green field, white shield, "IT TRUSTY" and the four lines under it.
 BANNER_LINES = ["Безопасный сервис для проведения сделок.", "Простой и удобный инструмент для прозрачного",
                 "сотрудничества, фиксации договорённостей", "и комфортной работы на каждом этапе."]
 
 
 @lru_cache(maxsize=8)
 def banner(kind: str) -> bytes:
-    """Menu pictures: welcome (the green banner) | how | help | deals."""
     if kind == "welcome":
         img = Image.new("RGB", (W, H), BRAND_BG)
         d = ImageDraw.Draw(img)
-        k = 0.946  # the brand banner is 1230×666
+        k = 0.946
         ox = (W - 855 * k) / 2 - 222 * k
         m = mark(round(244 * k))
         img.paste(m, (round(ox + 222 * k), round(222 * k)), m)
@@ -194,7 +184,6 @@ def _plate(d: ImageDraw.ImageDraw, x: int, y: int, text: str, bg: str = EMERALD,
 
 def dev_card(name: str, title: str, level: str, rating: float, deals: int, on_time: int, stack: list[str], pro: bool,
              bot: str) -> bytes:
-    """The executor's public card for sharing: link previews and stories."""
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
     _header(img, d, right="исполнитель")
@@ -220,7 +209,6 @@ def dev_card(name: str, title: str, level: str, rating: float, deals: int, on_ti
 
 
 def project_card(title: str, budget: str, days: int, category: str, note: str = "ПРОЕКТ") -> bytes:
-    """A project in the bot: alerts for Pro executors, invitations, picks for the client."""
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
     _header(img, d, plate=note)

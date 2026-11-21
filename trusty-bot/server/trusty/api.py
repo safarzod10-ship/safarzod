@@ -1,4 +1,3 @@
-"""HTTP API for the Mini App. All routes are under /api and require Telegram auth."""
 import hashlib
 import hmac
 import os
@@ -40,7 +39,6 @@ def bad(msg: str, code: int = 400):
     raise HTTPException(code, msg)
 
 
-# ---------------------------------------------------------------- helpers
 async def dev_rows(s: AsyncSession, where) -> list[tuple[DevProfile, User]]:
     q = select(DevProfile, User).join(User, User.id == DevProfile.user_id).where(where)
     return [(p, u) for p, u in (await s.execute(q)).all()]
@@ -77,7 +75,6 @@ async def me_payload(s: AsyncSession, me: User) -> dict:
 
 
 def ban_user(u: User) -> str:
-    """First violation: 30 days. Any repeat: permanent."""
     permanent = u.strikes >= 1
     u.strikes += 1
     if permanent:
@@ -87,7 +84,6 @@ def ban_user(u: User) -> str:
     return f"Первое нарушение: блокировка до {short_date(u.ban_until)}."
 
 
-# ---------------------------------------------------------------- me / bootstrap
 @router.get("/bootstrap")
 async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
     devs = await dev_payloads(s, await dev_rows(s, DevProfile.moderation == "published"))
@@ -119,7 +115,7 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
 class MePatch(BaseModel):
     role: str | None = Field(default=None, pattern="^(client|dev)$")
     onboarded: bool | None = None
-    alerts: bool | None = None  # Pro: new projects to the bot
+    alerts: bool | None = None
 
 
 @router.patch("/me")
@@ -175,7 +171,6 @@ async def put_profile(body: DevForm, me: User = Depends(current_user), s: AsyncS
     return await me_payload(s, me)
 
 
-# ---------------------------------------------------------------- projects and bids
 class ProjectIn(BaseModel):
     title: str = Field(min_length=8, max_length=120)
     category: str
@@ -198,9 +193,9 @@ async def create_project(body: ProjectIn, me: User = Depends(current_user), s: A
                 stack=[x[:30] for x in body.stack], files=[{"name": f[:120], "size": "—"} for f in body.files])
     s.add(p)
     await s.commit()
-    try:  # picks for the client and instant alerts for Pro executors; never fails the publishing itself
+    try:
         await matching.after_publish(s, p)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning("after publish %s: %s", p.id, e)
     return (await project_payloads(s, [p], me))[0]
 
@@ -269,7 +264,6 @@ async def choose(pid: int, body: ChooseIn, me: User = Depends(current_user), s: 
     return {"chatId": str(c.id), "dealId": d.id}
 
 
-# ---------------------------------------------------------------- chats
 @router.get("/chats")
 async def list_chats(me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
     chats = (await s.execute(select(Chat).where(or_(Chat.a_id == me.id, Chat.b_id == me.id))
@@ -279,8 +273,6 @@ async def list_chats(me: User = Depends(current_user), s: AsyncSession = Depends
 
 @router.post("/chats/{cid}/delete")
 async def delete_chat(cid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    """Removes the chat from my list and hides its history from me. The other side keeps it, and the messages stay
-    on the server for the arbiter. A new message brings the chat back."""
     c = await my_chat(s, cid, me)
     last = (await s.execute(select(Message.id).where(Message.chat_id == c.id).order_by(desc(Message.id)).limit(1))).scalar() or 0
     if c.a_id == me.id:
@@ -335,7 +327,6 @@ async def post_message(cid: int, body: MessageIn, me: User = Depends(current_use
 
 
 async def _delivered(s: AsyncSession, c: Chat, me: User, m: Message, preview: str) -> None:
-    """After my message: it is read by me, and the peer gets a bot notice if they are away (at most every 10 min)."""
     now = utcnow()
     c.updated_at = now
     await s.flush()
@@ -357,7 +348,6 @@ async def _delivered(s: AsyncSession, c: Chat, me: User, m: Message, preview: st
 @router.post("/chats/{cid}/files")
 async def send_files(cid: int, text: str = Form(default=""), files: list[UploadFile] = File(...),
                      me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    """Screenshots, archives and documents in a chat, with an optional caption (e.g. when handing over work)."""
     c = await my_chat(s, cid, me)
     if not 1 <= len(files) <= 10:
         bad("Можно прикрепить от 1 до 10 файлов")
@@ -395,7 +385,6 @@ async def get_picture(ident: str, sig: str):
     return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})
 
 
-# ---------------------------------------------------------------- portfolio
 @router.post("/portfolio/image")
 async def portfolio_image(file: UploadFile = File(...), me: User = Depends(current_user)):
     ident = await storage.save_picture(file, me.id)
@@ -415,7 +404,6 @@ class PortfolioIn(BaseModel):
 
 @router.put("/portfolio")
 async def put_portfolio(body: PortfolioIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    """Works with a picture and a link to the live project; saved at once, without a new moderation."""
     p = await s.get(DevProfile, me.id)
     if p is None:
         bad("Сначала заполните анкету исполнителя")
@@ -432,7 +420,6 @@ async def put_portfolio(body: PortfolioIn, me: User = Depends(current_user), s: 
     return await me_payload(s, me)
 
 
-# ---------------------------------------------------------------- invitations and picks
 class InviteIn(BaseModel):
     devId: int
 
@@ -463,7 +450,6 @@ async def project_matches(pid: int, me: User = Depends(current_user), s: AsyncSe
     return await matching.matches(s, p, 8)
 
 
-# ---------------------------------------------------------------- IT Trusty Pro
 class PlanIn(BaseModel):
     plan: str = Field(default="1m", pattern="^(1m|3m)$")
 
@@ -485,7 +471,6 @@ async def pro_crypto(body: PlanIn, me: User = Depends(current_user), s: AsyncSes
 
 @router.post("/pro/check")
 async def pro_check(me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    """Called when the user comes back from paying: picks up a USDT payment before the webhook."""
     try:
         await pro.sync_crypto(s)
     except CryptoPayError as e:
@@ -494,7 +479,6 @@ async def pro_check(me: User = Depends(current_user), s: AsyncSession = Depends(
     return pro.info(me)
 
 
-# ---------------------------------------------------------------- public card for sharing
 async def _public_dev(s: AsyncSession, uid: int) -> dict:
     rows = await dev_rows(s, DevProfile.user_id == uid)
     if not rows or rows[0][0].moderation != "published" or rows[0][1].banned():
@@ -513,7 +497,6 @@ async def share_card(uid: int, s: AsyncSession = Depends(get_session)):
 
 @router.post("/share/dev/{uid}")
 async def share_dev(uid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    """Everything the share sheet needs: the t.me link, the card and, inside Telegram, a prepared message for shareMessage."""
     d = await _public_dev(s, uid)
     return {"link": share.link(uid), "card": share.card_path(uid), "prepared": await share.prepare(me.id, d)}
 
@@ -526,7 +509,7 @@ async def typing(cid: int, me: User = Depends(current_user), s: AsyncSession = D
 
 
 class OfferIn(BaseModel):
-    projectId: int  # the client's open project the offer is about
+    projectId: int
     amount: int = Field(gt=0, le=1_000_000)
     days: int = Field(gt=0, le=365)
     ttlHours: int = Field(default=48, ge=1, le=72)
@@ -605,7 +588,6 @@ async def read_chat(cid: int, me: User = Depends(current_user), s: AsyncSession 
     return {"ok": True}
 
 
-# ---------------------------------------------------------------- complaints and evidence
 @router.post("/complaints")
 async def create_complaint(against: int = Form(...), reason: str = Form(...), text: str = Form(...),
                            deal: int | None = Form(default=None), files: list[UploadFile] = File(default=[]),
@@ -651,7 +633,6 @@ async def get_file(eid: int, sig: str, s: AsyncSession = Depends(get_session)):
     return FileResponse(e.path, media_type=e.mime, headers={"Cache-Control": "private, max-age=86400"})
 
 
-# ---------------------------------------------------------------- admin
 admin = APIRouter(prefix="/api/admin")
 
 
@@ -757,7 +738,6 @@ async def reject_profile(uid: int, body: Moderation, me: User = Depends(admin_us
     return {"ok": True}
 
 
-# ---------------------------------------------------------------- deals and escrow
 async def _deal_for(s: AsyncSession, deal_id: int, me: User) -> Deal:
     d = await s.get(Deal, deal_id)
     if d is None or (me.id not in (d.client_id, d.dev_id) and not me.is_admin):
@@ -803,7 +783,6 @@ async def pay_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSessi
 
 @router.post("/deals/{deal_id}/check")
 async def check_deal(deal_id: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
-    """Called when the user comes back from @CryptoBot: picks up a payment even before the webhook."""
     d = await _deal_for(s, deal_id, me)
     if d.status == "awaiting_payment" and d.invoice_id and pay.enabled:
         try:
@@ -904,7 +883,6 @@ async def retry_payment(payment_id: int, me: User = Depends(admin_user), s: Asyn
 
 @router.post("/cryptopay/webhook", include_in_schema=False)
 async def cryptopay_webhook(request: Request, s: AsyncSession = Depends(get_session)):
-    """Crypto Pay update (invoice_paid). Authenticated by the HMAC signature, not by Telegram."""
     raw = await request.body()
     if not check_signature(raw, request.headers.get("crypto-pay-api-signature", "")):
         raise HTTPException(401, "bad signature")

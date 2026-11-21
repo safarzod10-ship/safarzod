@@ -1,7 +1,3 @@
-"""Escrow and payments against an in-process mock of the Crypto Pay API (no real money moves).
-
-Run:  TRUSTY_DB_URL=postgresql+asyncpg://... python -m tests.test_escrow
-"""
 import asyncio
 import hashlib
 import hmac
@@ -17,18 +13,18 @@ os.environ["TRUSTY_CRYPTOPAY_URL"] = "http://127.0.0.1:18765"
 os.environ["TRUSTY_PUBLIC_URL"] = "https://trusty.example"
 os.environ.setdefault("TRUSTY_UPLOAD_DIR", "/tmp/claude-0/-home-user-safarzod/cb7e660d-38ea-558c-88d3-b5711404703f/scratchpad/uploads")
 
-import httpx  # noqa: E402
-from aiohttp import web  # noqa: E402
-from sqlalchemy import select, update  # noqa: E402
+import httpx
+from aiohttp import web
+from sqlalchemy import select, update
 
-from trusty import escrow  # noqa: E402
-from trusty.auth import sign_init_data  # noqa: E402
-from trusty.config import settings  # noqa: E402
-from trusty.db import Session, engine  # noqa: E402
-from trusty.main import app  # noqa: E402
-from trusty.models import Base, Deal, DevProfile, Payment, User  # noqa: E402
+from trusty import escrow
+from trusty.auth import sign_init_data
+from trusty.config import settings
+from trusty.db import Session, engine
+from trusty.main import app
+from trusty.models import Base, Deal, DevProfile, Payment, User
 
-from .mock_cryptopay import MockCryptoPay  # noqa: E402
+from .mock_cryptopay import MockCryptoPay
 
 
 def auth(uid: int, name: str) -> dict:
@@ -87,7 +83,6 @@ async def main() -> None:
             ok(await h.post(f"/api/deals/{did}/check", headers=A))
             return did
 
-        # 1. invoice: only the client pays; the same active invoice is reused
         d1 = await new_deal()
         deal = ok(await h.get(f"/api/deals/{d1}", headers=A))
         assert deal["status"] == "awaiting_payment" and deal["fee"] == "4.50" and deal["total"] == "94.50", deal
@@ -99,7 +94,6 @@ async def main() -> None:
         iid = int(inv["url"].rsplit("IV", 1)[1])
         assert mock.invoices[iid]["payload"] == f"deal:{d1}" and mock.invoices[iid]["amount"] == "94.50"
 
-        # 2. webhook: bad signature rejected; good one marks the deal paid; a replay changes nothing
         paid = mock.pay(iid)
         upd = {"update_id": 1, "update_type": "invoice_paid", "request_date": "2026-11-20T00:00:00Z", "payload": paid}
         raw, hdr = signed(upd)
@@ -109,10 +103,9 @@ async def main() -> None:
         deal = ok(await h.get(f"/api/deals/{d1}", headers=B))
         assert deal["status"] == "in_work" and deal["actions"]["submit"] and deal["paidAt"]
         chat = ok(await h.get(f"/api/chats/{deal['chatId']}", headers=A))
-        assert sum("внёс 94,50 USDT" in m["text"] for m in chat["messages"]) == 1  # replay did not duplicate
-        ok(await h.post(f"/api/deals/{d1}/pay", headers=A), 400)  # already paid
+        assert sum("внёс 94,50 USDT" in m["text"] for m in chat["messages"]) == 1
+        ok(await h.post(f"/api/deals/{d1}/pay", headers=A), 400)
 
-        # 3. submit -> accept -> payout of the amount (not the fee) to the developer, once
         ok(await h.post(f"/api/deals/{d1}/submit", headers=A, json={"note": ""}), 400)
         deal = ok(await h.post(f"/api/deals/{d1}/submit", headers=B, json={"note": "Ссылка на репозиторий в чате"}))
         assert deal["status"] == "review" and deal["reviewUntil"]
@@ -123,28 +116,25 @@ async def main() -> None:
         assert t["amount"] == "90.00" and t["user_id"] == 3002 and len(mock.transfers) == 1
         ok(await h.post(f"/api/deals/{d1}/accept", headers=A), 400)
         ok(await h.post(f"/api/deals/{d1}/review", headers=A, json={"rating": 5, "text": "Отлично"}))
-        ok(await h.post(f"/api/deals/{d1}/review", headers=A, json={"rating": 4}), 400)  # once per side
+        ok(await h.post(f"/api/deals/{d1}/review", headers=A, json={"rating": 4}), 400)
         deal = ok(await h.get(f"/api/deals/{d1}", headers=B))
         assert deal["actions"]["review"] and deal["review"]["rating"] == 5 and deal["clientReview"] is None
-        # the developer rates the client too; it does not change the developer's own rating
         deal = ok(await h.post(f"/api/deals/{d1}/review", headers=B, json={"rating": 3, "text": "Долго отвечал"}))
         assert deal["clientReview"]["rating"] == 3 and not deal["actions"]["review"]
-        ok(await h.post(f"/api/deals/{d1}/review", headers=ADM, json={"rating": 1}), 400)  # not a party
+        ok(await h.post(f"/api/deals/{d1}/review", headers=ADM, json={"rating": 1}), 400)
         dev = ok(await h.get("/api/devs/3002", headers=A))
         assert dev["deals"] == 1 and dev["rating"] == 5 and dev["volume"] == 90
 
-        # 4. paid without any webhook: the background sync picks it up; the developer declines -> full refund
         d2 = await new_deal()
         inv = ok(await h.post(f"/api/deals/{d2}/pay", headers=A))
         mock.pay(int(inv["url"].rsplit("IV", 1)[1]))
         async with Session() as s:
             await escrow.sync_invoices(s)
-        ok(await h.post(f"/api/deals/{d2}/cancel", headers=A), 400)  # the client can't cancel a paid deal
+        ok(await h.post(f"/api/deals/{d2}/cancel", headers=A), 400)
         deal = ok(await h.post(f"/api/deals/{d2}/cancel", headers=B))
         assert deal["status"] == "refunded" and mock.transfers[f"trusty-{d2}-refund-3001"]["amount"] == "94.50"
         assert (ok(await h.get("/api/projects", headers=A)) if False else True)
 
-        # 5. dispute split 60/40; the client never opened @CryptoBot -> a check pinned to them instead
         d3 = await paid_deal()
         ok(await h.post(f"/api/deals/{d3}/dispute", headers=A, json={"reason": "коротко"}), 422)
         ok(await h.post(f"/api/deals/{d3}/dispute", headers=A, json={"reason": "Работа не соответствует ТЗ"}))
@@ -156,10 +146,9 @@ async def main() -> None:
         mine = ok(await h.get(f"/api/deals/{d3}", headers=A))
         refund = [p for p in mine["payments"] if p["kind"] == "refund"][0]
         assert refund["status"] == "check" and refund["amount"] == "36.00" and refund["url"].startswith("https://t.me/CryptoBot?start=CQ")
-        assert all(p["userId"] == "3001" for p in mine["payments"] if p["kind"] != "invoice")  # the developer's payout is not shown
+        assert all(p["userId"] == "3001" for p in mine["payments"] if p["kind"] != "invoice")
         mock.fail_transfer.clear()
 
-        # 6. network failure after the transfer went through: retried with the same spend_id, paid exactly once, no check
         d4 = await paid_deal()
         ok(await h.post(f"/api/deals/{d4}/submit", headers=B, json={}))
         mock.network_fail_once.add(3002)
@@ -176,7 +165,6 @@ async def main() -> None:
             assert p.status == "sent" and p.attempts == 2
         assert len([k for k in mock.transfers if k == f"trusty-{d4}-payout-3002"]) == 1 and not mock.checks.keys() - {k for k in mock.checks}
 
-        # 7. auto-acceptance after the review period
         d5 = await paid_deal()
         ok(await h.post(f"/api/deals/{d5}/submit", headers=B, json={}))
         async with Session() as s:
@@ -186,7 +174,6 @@ async def main() -> None:
         deal = ok(await h.get(f"/api/deals/{d5}", headers=B))
         assert deal["status"] == "done" and f"trusty-{d5}-payout-3002" in mock.transfers
 
-        # 8. cancel before payment; strangers can't see deals; finance for admins
         d6 = await new_deal()
         ok(await h.post(f"/api/deals/{d6}/pay", headers=A))
         deal = ok(await h.post(f"/api/deals/{d6}/cancel", headers=A))

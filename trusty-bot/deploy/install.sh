@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Trusty installer / updater for Ubuntu (run as root). Safe to run again: it updates the code and keeps data and settings.
-#
-#   curl -4 -fsSL --connect-timeout 15 -m 120 -o /tmp/trusty-install.sh \
-#     https://raw.githubusercontent.com/safarzod10-ship/safarzod/claude/telegram-guarantor-dev-search-bot-t1i99z/trusty-bot/deploy/install.sh \
-#     && bash /tmp/trusty-install.sh
-#
-# Every network step has a timeout and uses IPv4 (a broken IPv6 route made downloads hang without a word).
-# What it touches: packages git, python3-venv, postgresql; user "trusty"; /opt/trusty, /etc/trusty, /var/lib/trusty;
-# systemd units trusty.service and trusty-backup.timer; /etc/caddy/trusty.caddy plus one "import" line in the Caddyfile.
-# Existing Caddy sites are left as they are. The Caddyfile is backed up first and restored if the new config is invalid.
 set -euo pipefail
 
 REPO="https://github.com/safarzod10-ship/safarzod.git"
@@ -121,7 +111,6 @@ if [ -z "$TOKEN" ]; then
 fi
 [[ "$TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}$ ]] || die "токен выглядит неправильно"
 ADMIN_CODE=$(get TRUSTY_ADMIN_CODE); [ -n "$ADMIN_CODE" ] || ADMIN_CODE=$(rand 6)
-# payments: Crypto Pay token of the app in @CryptoBot (@send) -> Crypto Pay -> My Apps
 CP_TOKEN="${TRUSTY_CRYPTOPAY_TOKEN:-$(get TRUSTY_CRYPTOPAY_TOKEN)}"
 if [ -z "$CP_TOKEN" ] && [ -r /dev/tty ]; then
   read -rsp "Токен Crypto Pay из @CryptoBot (Enter, чтобы пропустить; ввод скрыт): " CP_TOKEN </dev/tty; echo
@@ -136,7 +125,6 @@ if [ -n "$CP_TOKEN" ]; then
   fi
 fi
 FEE=$(get TRUSTY_FEE_PERCENT); [ -n "$FEE" ] || FEE=5
-# IT Trusty Pro for executors: price of one month in Telegram Stars and in USDT (change with: trusty pro <stars> <usdt>)
 PRO_STARS=$(get TRUSTY_PRO_STARS); [ -n "$PRO_STARS" ] || PRO_STARS=300
 PRO_USDT=$(get TRUSTY_PRO_USDT); [ -n "$PRO_USDT" ] || PRO_USDT=5
 BOT_ME=$(curl -4 -s -m 15 "https://api.telegram.org/bot$TOKEN/getMe" || true)
@@ -182,7 +170,6 @@ WantedBy=timers.target
 EOF
 cat > /usr/local/bin/trusty <<EOF
 #!/bin/bash
-# trusty admins | admin-remove <id> | unban <id> | stats | logs | restart | update | token | pro <stars> <usdt>
 case "\$1" in
   pro)
     [[ "\$2" =~ ^[0-9]+\$ && "\$3" =~ ^[0-9]+([.][0-9]{1,2})?\$ ]] || { echo "Пример: trusty pro 300 5  (цена Pro за месяц: звёзды и USDT)"; exit 1; }

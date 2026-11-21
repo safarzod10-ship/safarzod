@@ -1,9 +1,3 @@
-"""Logo animation v2: spinning USDT coin drop, spring-loaded braces, lock click with sheen, lock-up reveal.
-
-Usage: python3 anim.py <brand_dir>
-Writes logo/animation/trusty-intro.html (lock-up, 16:9) and trusty-mark.html (mark only, 1:1).
-Themes via query string: ?theme=emerald (default) | dark | light ; ?capture disables autoplay (frame capture).
-"""
 import os
 import sys
 

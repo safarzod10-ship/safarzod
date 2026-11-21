@@ -1,5 +1,3 @@
-// Packs dist/ into one self-contained HTML fragment for a static preview page (no Telegram SDK, CSS/JS inlined).
-// node scripts/artifact.mjs <out.html>
 import fs from 'node:fs';
 import path from 'node:path';
 const out = process.argv[2];

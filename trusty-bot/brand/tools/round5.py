@@ -1,7 +1,3 @@
-"""Round 5: three finalists with corrected geometry, shown as a full mini identity.
-
-Usage: python3 round5.py <out_dir> <fonts_dir>
-"""
 import os
 import sys
 
@@ -9,10 +5,8 @@ from svglib import INK, P, S, cd, mirror, svg
 
 FOREST, IVORY, GOLD = "#0E4D3A", "#F4EFE3", "#E9B949"
 
-# A': braces-shield. Smaller, smoother brace nib; equal top/bottom gaps; coin lifted to optical centre.
 A_HALF = ("M43 15L27.5 20.6Q22 22.6 22 28.4V41C22 44.6 20.2 46.6 16.8 47"
           "C20.2 47.4 22 49.4 22 53V58C22 70 30.8 79.4 43 85.5")
-# B': plain bracket-shield, same skeleton without the nib.
 B_HALF = "M43 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43 85.5"
 
 

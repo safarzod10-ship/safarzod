@@ -1,4 +1,3 @@
-// Deal screen (escrow), my deals, and the admin's finance & disputes screen.
 import { useEffect, useRef, useState } from 'react';
 import { DEAL_STATUS, amt, dateTime, type Deal } from '../data';
 import { useNav } from '../nav';
@@ -22,7 +21,6 @@ function leftText(iso?: string | null) {
   return d ? `${d}д ${h}ч` : `${h}ч ${Math.floor((ms % 3600e3) / 60e3)}м`;
 }
 
-/** what the deal waits for, from my side; hot = my move */
 function stateLine(d: Deal): { text: string; hot: boolean } {
   const client = d.role === 'client';
   switch (d.status) {
@@ -116,7 +114,6 @@ export default function DealView({ id }: { id: number }) {
   const prev = useRef(d?.status);
 
   useEffect(() => { loadDeal(id); }, [id, loadDeal]);
-  // after paying in @CryptoBot: re-check on return and every few seconds for a while
   useEffect(() => {
     if (!waiting) return;
     const stop = onReturn(() => { checkDeal(id); });
@@ -143,14 +140,13 @@ export default function DealView({ id }: { id: number }) {
   const run = async (fn: () => Promise<unknown>, done?: string) => {
     if (busy) return;
     setBusy(true);
-    try { await fn(); setSheet(null); setText(''); if (done) showToast(done); } catch { /* toast shown */ } finally { setBusy(false); }
+    try { await fn(); setSheet(null); setText(''); if (done) showToast(done); } catch {} finally { setBusy(false); }
   };
   const pay = async () => {
     if (paying) return;
     setPaying(true);
-    try { await payDeal(d.id); setWaiting(true); } catch { /* toast shown */ } finally { setPaying(false); }
+    try { await payDeal(d.id); setWaiting(true); } catch {} finally { setPaying(false); }
   };
-  // after accepting, the success screen leads straight into rating the executor
   const accept = () => run(async () => {
     await dealAct(d.id, 'accept');
     setSuccess({ title: 'Работа принята', amount: d.amount, text: `Гарант отправил ${amt(d.amount)} ${asset} исполнителю.`, then: 'review' });
@@ -186,7 +182,7 @@ export default function DealView({ id }: { id: number }) {
       </div>
 
       {waiting && d.status === 'awaiting_payment' && <WaitPay text="Ждём оплату в @CryptoBot" />}
-      {!live && d.status === 'awaiting_payment' && <div className="mt"><Note tone="amber">Демо в браузере: деньги не списываются. Настоящая оплата работает в боте.</Note></div>}
+      {!live && d.status === 'awaiting_payment' && <div className="mt"><Note tone="amber">Демо: деньги не списываются.</Note></div>}
 
       <Section title="Ход сделки"><Steps d={d} /></Section>
 
@@ -231,7 +227,7 @@ export default function DealView({ id }: { id: number }) {
       <Actions primary={primary ? { ...primary, disabled: busy } : chat} secondary={primary ? chat : undefined} link={link} />
 
       <Sheet open={sheet === 'submit'} onClose={() => setSheet(null)} title="Сдать работу">
-        <p className="muted small" style={{ marginTop: 0 }}>Приложите файлы или скриншоты: они придут в чат сделки. У заказчика будет {payCfg.reviewDays} дн. на проверку, потом работа примется автоматически.</p>
+        <p className="muted small" style={{ marginTop: 0 }}>На проверку у заказчика {payCfg.reviewDays} дн., потом работа примется автоматически.</p>
         <Field label="Комментарий"><textarea className="textarea" style={{ minHeight: 90 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Что сделано, где посмотреть" /></Field>
         <PendingFiles files={files} onRemove={(i) => setFiles((fs) => fs.filter((_, j) => j !== i))} />
         {d.chatId && (
@@ -250,7 +246,7 @@ export default function DealView({ id }: { id: number }) {
         <button className="btn primary" disabled={busy} onClick={accept}>{busy ? <span className="spin" /> : 'Принять и выплатить'}</button>
       </Sheet>
       <Sheet open={sheet === 'dispute'} onClose={() => setSheet(null)} title="Открыть спор">
-        <p className="muted small" style={{ marginTop: 0 }}>Деньги заморозятся. Арбитр изучит переписку в чате сделки и решит, как их распределить.</p>
+        <p className="muted small" style={{ marginTop: 0 }}>Деньги заморозятся до решения арбитра.</p>
         <Field label="Что не так" hint="Минимум 10 символов"><textarea className="textarea" style={{ minHeight: 90 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Например: работа не соответствует ТЗ" /></Field>
         <button className="btn danger mt" disabled={busy || text.trim().length < 10} onClick={() => run(() => dealAct(d.id, 'dispute', { reason: text.trim() }), 'Спор открыт')}>Открыть спор</button>
       </Sheet>
@@ -260,7 +256,6 @@ export default function DealView({ id }: { id: number }) {
         <button className="btn danger" disabled={busy} onClick={() => run(() => dealAct(d.id, 'cancel'), 'Сделка закрыта')}>Да, {d.status === 'awaiting_payment' ? 'отменить' : 'отказаться'}</button>
       </Sheet>
       <Sheet open={sheet === 'review'} onClose={() => setSheet(null)} title={rateLabel}>
-        <p className="muted small" style={{ margin: '0 0 4px' }}>Как прошла сделка с {other.name}? Отзыв увидят другие {d.role === 'dev' ? 'исполнители' : 'заказчики'}.</p>
         <Stars value={rating} onChange={setRating} />
         <Field label="Комментарий"><textarea className="textarea" style={{ minHeight: 80 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Что понравилось" /></Field>
         <button className="btn primary mt" disabled={busy} onClick={() => run(() => dealAct(d.id, 'review', { rating, text }), 'Спасибо за отзыв')}>Отправить</button>

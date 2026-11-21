@@ -1,6 +1,3 @@
-"""Who fits a project: executors whose direction or stack matches it. Pro executors come first, then by level,
-rating, finished deals and who is online. Used for the picks sent to the client after publishing, the
-"Подходящие исполнители" list in the app, and the instant alerts Pro executors get about new projects."""
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +9,6 @@ LEVEL_RANK = {"top": 2, "verified": 1, "new": 0}
 
 
 def fit(p: Project, categories: list, stack: list) -> int:
-    """0 means it does not fit; more is better."""
     want = {x.lower() for x in (p.stack or [])}
     score = 3 if p.category in (categories or []) else 0
     score += len(want & {x.lower() for x in (stack or [])})
@@ -33,7 +29,6 @@ async def matches(s: AsyncSession, p: Project, limit: int = 5) -> list[dict]:
 
 
 async def after_publish(s: AsyncSession, p: Project) -> None:
-    """New project: the client gets the best picks in the bot, Pro executors who fit get the project at once."""
     picks = await matches(s, p, 5)
     if picks:
         notify.send_matches(p.client_id, p, picks)
@@ -42,4 +37,4 @@ async def after_publish(s: AsyncSession, p: Project) -> None:
                                    User.alerts.is_(True), User.bot_started.is_(True)))).all()
     for prof, u in pros:
         if u.pro() and not u.banned() and fit(p, prof.categories, prof.stack):
-            notify.send_project(u.id, p, "Новый проект по вашему направлению. Откликнитесь первым:")
+            notify.send_project(u.id, p, "Новый проект по вашему стеку")

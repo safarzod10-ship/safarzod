@@ -1,8 +1,3 @@
-"""Round 1: broad exploration — 26 concept families x 8 variants, black ink only.
-
-Usage: python3 round1.py <out_dir>
-Writes NNN.svg files plus index.json (id -> family, variant, note).
-"""
 import json
 import math
 import os
@@ -12,7 +7,6 @@ from svglib import (BG, INK, P, S, T_poly, arc_d, cd, f, masked, mirror, poly, r
                     rr, shield, svg, wavy_circle)
 
 
-# ---------------------------------------------------------------- 1 split T
 def fam_splitT(v):
     L = [(16, 18), (48, 18), (48, 84), (40, 84), (40, 36), (16, 36)]
     R = [(52, 18), (84, 18), (84, 36), (60, 36), (60, 84), (52, 84)]
@@ -29,7 +23,6 @@ def fam_splitT(v):
     if v == 4:
         return P(rr(14, 22, 34, 16, 8)) + P(rr(52, 22, 34, 16, 8)) + P(cd(50, 64, 15))
     if v == 5:
-        # diagonal split through the stem
         def cut(y, off):
             return 55 - (y - 18) / 66 * 10 + off
         Lp = [(16, 18), (cut(18, -2), 18), (cut(84, -2), 84), (40, 84), (40, 36), (16, 36)]
@@ -44,7 +37,6 @@ def fam_splitT(v):
                 + S(rr(44, 18, 44, 18, 9), 5, BG) + P(rr(44, 18, 44, 18, 9)))
 
 
-# ---------------------------------------------------------------- 2 shield T
 def fam_shieldT(v):
     tcut = T_poly(50, 30, 34, 10, 10, 44)
     if v == 0:
@@ -71,7 +63,6 @@ def fam_shieldT(v):
         return masked(P(shield(r=10)), cuts)
 
 
-# ---------------------------------------------------------------- 3 t + check
 def fam_tcheck(v):
     stem = "M40 14V62Q40 78 54 76L84 42"
     bar = "M24 34H60"
@@ -93,7 +84,6 @@ def fam_tcheck(v):
         return S("M40 14V70L50 80L84 40", 12, cap="square", join="miter") + S(bar, 12, cap="square")
 
 
-# ---------------------------------------------------------------- 4 braces + coin
 def brace(x, top, bot, w=10):
     mid = (top + bot) / 2
     return (f"M{x+w} {top}C{x+2} {top} {x+3} {top+8} {x+3} {top+14}V{mid-8}"
@@ -125,7 +115,6 @@ def fam_braces(v):
         return pair + S("M40 51L47 58L61 42", 7)
 
 
-# ---------------------------------------------------------------- 5 chevrons
 def fam_chevrons(v):
     L = "M44 18L16 50L44 82"
     if v == 0:
@@ -146,7 +135,6 @@ def fam_chevrons(v):
         return rot(S(L, 12) + mirror(S(L, 12)) + P(cd(50, 50, 7)), 90)
 
 
-# ---------------------------------------------------------------- 6 padlock T
 def fam_padlock(v):
     tk = T_poly(50, 55, 20, 7, 7, 22)
     if v == 0:
@@ -168,7 +156,6 @@ def fam_padlock(v):
         return S("M34 46V32A16 16 0 0 1 66 32V46", 9) + P(rr(20, 44, 60, 44, 8)) + P(cd(50, 61, 6), fill=BG) + P(poly([(46.5, 63), (53.5, 63), (55, 76), (45, 76)]), fill=BG)
 
 
-# ---------------------------------------------------------------- 7 lock-bubble
 def fam_bubblelock(v):
     shackle = S("M36 42V31A14 14 0 0 1 64 31V42", 9)
     body = P(rr(18, 40, 64, 42, 12))
@@ -194,7 +181,6 @@ def fam_bubblelock(v):
         return S("M36 42V31A14 14 0 0 1 64 31V42", 9) + P(rr(18, 40, 64, 42, 21)) + tailL + dots
 
 
-# ---------------------------------------------------------------- 8 interlocking rings
 def interlock(c1, c2, r, sw, gap=3.5, delta=0.42):
     (x1, y1), (x2, y2) = c1, c2
     dx, dy = x2 - x1, y2 - y1
@@ -235,7 +221,6 @@ def fam_rings(v):
         return c + mirror(c)
 
 
-# ---------------------------------------------------------------- 9 seal
 def fam_seal(v):
     if v == 0:
         return P(wavy_circle(50, 50, 40, 2.6, 16) + T_poly(50, 32, 32, 10, 10, 38), rule="evenodd")
@@ -262,7 +247,6 @@ def fam_seal(v):
         return P(wavy_circle(50, 50, 40, 2.6, 16)) + S("M36 52L46 62L65 41", 8, BG) + S(cd(50, 50, 32), 2, BG)
 
 
-# ---------------------------------------------------------------- 10 venn lens
 LENS = "M50 31.56A22 22 0 0 1 50 68.44A22 22 0 0 1 50 31.56Z"
 
 
@@ -286,7 +270,6 @@ def fam_venn(v):
         return P(big) + P(cd(50, 50, 7), fill=BG)
 
 
-# ---------------------------------------------------------------- 11 interlocking hooks
 def fam_hooks(v):
     A = "M18 28H58Q70 28 70 40V58"
     B = "M82 72H42Q30 72 30 60V42"
@@ -308,7 +291,6 @@ def fam_hooks(v):
         return S("M24 22H64Q76 22 76 34V50", 12) + S("M76 78H36Q24 78 24 66V50", 12)
 
 
-# ---------------------------------------------------------------- 12 keyhole
 def keyhole(cx=50, cy=40, r=13, w0=12, w1=20, bot=80):
     return cd(cx, cy, r) + poly([(cx - w0 / 2, cy + r * 0.5), (cx + w0 / 2, cy + r * 0.5), (cx + w1 / 2, bot), (cx - w1 / 2, bot)])
 
@@ -332,7 +314,6 @@ def fam_keyhole(v):
         return P(cd(50, 50, 42) + cd(50, 38, 9), rule="evenodd") + P(poly([(45.5, 44), (54.5, 44), (58, 70), (42, 70)]), fill=BG)
 
 
-# ---------------------------------------------------------------- 13 vault dial
 def fam_vault(v):
     def ticks(n, r0, r1, sw):
         return "".join(S(f"M{f(50+r0*math.cos(t))} {f(50+r0*math.sin(t))}L{f(50+r1*math.cos(t))} {f(50+r1*math.sin(t))}", sw, cap="butt")
@@ -356,7 +337,6 @@ def fam_vault(v):
         return P(rr(14, 14, 72, 72, 8)) + S(cd(50, 50, 22), 5, BG) + S("M50 32V68M32 50H68", 5, BG)
 
 
-# ---------------------------------------------------------------- 14 corner brackets
 def fam_corners(v):
     c = "M16 34V16H34"
     four = "".join(rot(S(c, 7, cap="square", join="miter"), a) for a in (0, 90, 180, 270))
@@ -380,7 +360,6 @@ def fam_corners(v):
         return S("M30 16H16V84H30", 7, cap="square", join="miter") + mirror(S("M30 16H16V84H30", 7, cap="square", join="miter")) + P(rr(34, 34, 32, 32, 3))
 
 
-# ---------------------------------------------------------------- 15 T-check
 def fam_Tcheck(v):
     if v == 0:
         return S("M22 24H78M50 24V78M34 62L50 78", 11)
@@ -400,7 +379,6 @@ def fam_Tcheck(v):
         return S("M22 24H78", 12) + S("M50 36V78", 12) + S("M50 78L76 52", 12)
 
 
-# ---------------------------------------------------------------- 16 hourglass
 def fam_hourglass(v):
     if v == 0:
         return P(rr(22, 12, 56, 8, 3)) + P(rr(22, 80, 56, 8, 3)) + P(poly([(28, 24), (72, 24), (50, 50)])) + P(poly([(28, 76), (72, 76), (50, 50)]))
@@ -420,7 +398,6 @@ def fam_hourglass(v):
         return rot(P(rr(22, 12, 56, 8, 3)) + P(rr(22, 80, 56, 8, 3)) + P(poly([(28, 24), (72, 24), (50, 50)])) + P(poly([(28, 76), (72, 76), (50, 50)])), 90)
 
 
-# ---------------------------------------------------------------- 17 anchor T
 def fam_anchor(v):
     arc = "M22 58Q26 84 50 86Q74 84 78 58"
     if v == 0:
@@ -441,7 +418,6 @@ def fam_anchor(v):
         return S("M50 14V84", 8) + S("M22 26H78", 8) + S("M18 58Q22 86 50 86Q78 86 82 58", 8) + P(cd(50, 84, 6))
 
 
-# ---------------------------------------------------------------- 18 guardian dog
 def fam_dog(v):
     head = "M20 16L36 30H64L80 16V54C80 74 66 84 50 90C34 84 20 74 20 54Z"
     if v == 0:
@@ -465,7 +441,6 @@ def fam_dog(v):
         return P(sq + cd(38, 54, 5) + cd(62, 54, 5), rule="evenodd")
 
 
-# ---------------------------------------------------------------- 19 modular T
 def fam_modT(v):
     if v == 0:
         cells = [(0, 0), (1, 0), (2, 0), (1, 1), (1, 2)]
@@ -490,7 +465,6 @@ def fam_modT(v):
         return "".join(P(rr(17 + c * 23, 17 + r * 23, 20, 20, 3)) if (c, r) != (1, 1) else S(rr(42, 42, 16, 16, 2), 4) for c, r in cells)
 
 
-# ---------------------------------------------------------------- 20 key
 def fam_key(v):
     if v == 0:
         return S(cd(30, 50, 14), 8) + S("M44 50H84", 8) + P(T_poly(76, 50, 14, 0.01, 6, 16))
@@ -510,7 +484,6 @@ def fam_key(v):
         return S("M24 22H76", 10) + S("M50 22V86M50 64H62M50 78H66", 10)
 
 
-# ---------------------------------------------------------------- 21 Ty ligature
 def fam_Ty(v):
     if v == 0:
         return S("M14 22H86", 10) + S("M34 22V82", 10) + S("M54 40L68 66M82 40L62 88", 9)
@@ -530,7 +503,6 @@ def fam_Ty(v):
         return S("M14 20H86", 8) + S("M30 20V80", 8) + S("M50 36L64 60M78 36L58 84", 8) + P(cd(80, 82, 5))
 
 
-# ---------------------------------------------------------------- 22 exchange
 def fam_exchange(v):
     if v == 0:
         return S("M18 38H80M66 24L80 38", 9) + S("M82 62H20M34 76L20 62", 9)
@@ -550,7 +522,6 @@ def fam_exchange(v):
         return S("M24 70V40Q24 26 38 26H70L60 16", 9) + S("M76 30V60Q76 74 62 74H30L40 84", 9)
 
 
-# ---------------------------------------------------------------- 23 bubble T
 def fam_bubbleT(v):
     bub = rr(14, 16, 72, 58, 16)
     tail = poly([(26, 70), (22, 90), (44, 74)])
@@ -572,7 +543,6 @@ def fam_bubbleT(v):
         return P(bub) + P(tail) + P(shield(38, 62, 28, 44, 64, r=3), fill=BG)
 
 
-# ---------------------------------------------------------------- 24 hexagon
 def hexd(cx=50, cy=50, r=40, rot0=-90):
     return poly([(cx + r * math.cos(math.radians(rot0 + 60 * i)), cy + r * math.sin(math.radians(rot0 + 60 * i))) for i in range(6)])
 
@@ -596,7 +566,6 @@ def fam_hex(v):
         return P(hexd() + hexd(r=24), rule="evenodd") + P(T_poly(50, 38, 20, 6, 6, 24))
 
 
-# ---------------------------------------------------------------- 25 coin
 def fam_coin(v):
     if v == 0:
         return P(cd(50, 50, 40) + T_poly(50, 30, 32, 10, 10, 40), rule="evenodd")
@@ -616,7 +585,6 @@ def fam_coin(v):
         return P("M50 10A40 40 0 0 1 50 90Z") + S(cd(50, 50, 37), 6) + P(T_poly(50, 32, 28, 9, 9, 36), fill=BG) + masked(P(T_poly(50, 32, 28, 9, 9, 36)), '<rect x="50" y="0" width="60" height="100" fill="black"/>', mid="c7")
 
 
-# ---------------------------------------------------------------- 26 arch / gate
 def fam_arch(v):
     if v == 0:
         return P("M18 86V50A32 32 0 0 1 82 50V86H66V52A16 16 0 0 0 34 52V86Z")

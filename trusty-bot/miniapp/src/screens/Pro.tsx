@@ -1,4 +1,3 @@
-// IT Trusty Pro for executors: projects arrive in the bot at once and the profile goes first. Paid in Stars or USDT.
 import { useState } from 'react';
 import { amt } from '../data';
 import { Icon, type IconName } from '../icons';
@@ -8,9 +7,9 @@ import { inTelegram } from '../tg';
 import { Actions, Note, Section, Success, Toggle, Top } from '../ui';
 
 const PERKS: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'bell', title: 'Новые проекты сразу в бот', text: 'Проект по вашей категории или стеку приходит в Telegram в момент публикации, раньше, чем его увидят в ленте.' },
-  { icon: 'crown', title: 'Первые места', text: 'Вы выше всех в каталоге исполнителей и первым в подборке, которую бот присылает заказчику после публикации.' },
-  { icon: 'badge', title: 'Значок PRO', text: 'В каталоге, в профиле и на карточке для соцсетей.' },
+  { icon: 'bell', title: 'Новые проекты сразу в бот', text: 'По вашему стеку, в момент публикации' },
+  { icon: 'crown', title: 'Первые места', text: 'В каталоге и подборках для заказчиков' },
+  { icon: 'badge', title: 'Значок PRO', text: 'В каталоге и профиле' },
 ];
 
 export default function Pro() {
@@ -23,7 +22,7 @@ export default function Pro() {
   const buy = async (method: 'stars' | 'crypto') => {
     if (busy) return;
     setBusy(method);
-    try { if (await buyPro(method, plan)) setDone(true); } catch { /* toast */ } finally { setBusy(null); }
+    try { if (await buyPro(method, plan)) setDone(true); } catch {} finally { setBusy(null); }
   };
   const noProfile = role === 'dev' && !me.profile;
 
@@ -33,7 +32,7 @@ export default function Pro() {
       <div className="pro-hero">
         <span className="pro-badge big">PRO</span>
         <h1>IT Trusty Pro</h1>
-        <p>{info.active ? `Подписка активна до ${info.until}.` : 'Для исполнителей, которые хотят получать заказы первыми.'}</p>
+        {info.active && <p>До {info.until}</p>}
       </div>
 
       <div className="group">
@@ -48,12 +47,12 @@ export default function Pro() {
       {info.active && (
         <div className="group mt">
           <div className="cell">
-            <div className="cell-body"><div className="cell-title">Присылать новые проекты</div><div className="cell-sub">В бот, по вашим категориям и стеку</div></div>
+            <div className="cell-body"><div className="cell-title">Присылать новые проекты</div></div>
             <Toggle on={info.alerts} onChange={(v) => { setAlerts(v).catch(() => {}); }} label="Присылать новые проекты" />
           </div>
         </div>
       )}
-      {noProfile && <div className="mt"><Note tone="amber">Проекты подбираются по анкете: категориям и стеку. Заполните её, чтобы Pro работал.</Note></div>}
+      {noProfile && <div className="mt"><Note tone="amber">Заполните анкету: проекты подбираются по ней.</Note></div>}
 
       <Section title={info.active ? 'Продлить' : 'Тариф'}>
       <div className="plans" role="radiogroup" aria-label="Тариф">
@@ -67,8 +66,8 @@ export default function Pro() {
         ))}
       </div>
       </Section>
-      <p className="hint center mt-s">Продление добавляет дни к текущему сроку. Автосписаний нет.</p>
-      {!inTelegram && <div className="mt-s"><Note tone="amber">Демо в браузере: оплата не списывается. Звёзды и USDT работают в боте.</Note></div>}
+      <p className="hint center mt-s">Без автосписаний</p>
+      {!inTelegram && <div className="mt-s"><Note tone="amber">Демо: оплата не списывается.</Note></div>}
 
       <Actions
         primary={info.stars ? { label: `Оплатить ${p.stars} ★`, onClick: () => buy('stars'), loading: busy === 'stars', disabled: !!busy }
@@ -76,7 +75,7 @@ export default function Pro() {
         secondary={info.stars && info.crypto ? { label: `Или ${amt(p.usdt)} USDT`, onClick: () => buy('crypto'), disabled: !!busy } : undefined}
         link={busy === 'crypto' ? { label: 'Ждём оплату в @CryptoBot…', onClick: () => {} } : undefined} />
 
-      {done && <Success title={info.active ? 'Pro активен' : 'Оплата получена'} text={`Pro до ${info.until ?? '…'}. Новые проекты придут в бот, а профиль уже выше в каталоге.`}
+      {done && <Success title={info.active ? 'Pro активен' : 'Оплата получена'} text={`До ${info.until ?? '…'}`}
         onDone={() => { setDone(false); nav.pop(); }} />}
     </div>
   );

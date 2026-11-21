@@ -1,4 +1,3 @@
-// Small blocks shared by several screens: level, portfolio cards, share sheet, invite sheet, matching executors.
 import { useEffect, useState } from 'react';
 import { LEVEL_LABEL, LEVEL_RULES, budget, levelOf, plural, type Dev, type Level, type Work } from '../data';
 import { Icon } from '../icons';
@@ -7,7 +6,6 @@ import { useStore } from '../store';
 import { absUrl, haptic, openTg, sharePrepared, tg } from '../tg';
 import { Avatar, Info, LevelBadge, Mark, ProBadge, Sheet, Skeleton } from '../ui';
 
-/** level pill with the rules in a popover: what each level means and how to get it */
 export function LevelInfo({ d }: { d: Dev }) {
   const level = levelOf(d);
   return (
@@ -20,14 +18,12 @@ export function LevelInfo({ d }: { d: Dev }) {
   );
 }
 
-/** the ladder for the executor's own profile: where you are and what is left to the next level */
 export function LevelSheet({ open, onClose, d }: { open: boolean; onClose(): void; d: Dev }) {
   const level = levelOf(d);
   const order: Level[] = ['new', 'verified', 'top'];
   const at = order.indexOf(level);
   return (
     <Sheet open={open} onClose={onClose} title="Ваш уровень">
-      <p className="muted small" style={{ margin: '0 0 12px' }}>Уровень виден заказчикам в каталоге и профиле. Он растёт сам, по итогам сделок.</p>
       <div className="group ladder">
         {LEVEL_RULES.map((r, i) => (
           <div key={r.key} className={`cell ${i <= at ? 'on' : ''}`}>
@@ -53,7 +49,6 @@ export function levelHint(d: Dev): string {
   return left.length ? `До «${d.levelNext!.name}»: ${left[0].toLowerCase()}` : `До «${level === 'new' ? LEVEL_LABEL.verified : LEVEL_LABEL.top}» — больше сделок`;
 }
 
-/** portfolio as cards with a picture and a link */
 export function Works({ items }: { items: Work[] }) {
   return (
     <div className="works">
@@ -71,8 +66,6 @@ export function Works({ items }: { items: Work[] }) {
   );
 }
 
-/** share an executor's card. Inside Telegram the bot sends the picture with an "Открыть профиль" button to a chat
- *  the user picks; links are always t.me/<bot>?startapp=dev_<id>, never the server's own address. */
 export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(): void; d: Dev; self?: boolean }) {
   const { live, showToast, shareBase, shareDev } = useStore();
   const [broken, setBroken] = useState(false);
@@ -91,13 +84,11 @@ export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(
         if (await sent) { haptic.success(); showToast('Карточка отправлена'); onClose(); }
         return;
       }
-      // an old Telegram client or no bot: a plain t.me link, its preview shows the bot
       openTg(`https://t.me/share/url?url=${encodeURIComponent(r.link)}&text=${encodeURIComponent(text)}`);
       onClose();
     } catch { showToast('Не получилось, попробуйте ещё раз'); } finally { setBusy(false); }
   };
   const toStory = () => {
-    // a link sticker is allowed only for Telegram Premium; others get the bot's name in the caption
     const premium = !!tg?.initDataUnsafe.user?.is_premium;
     tg!.shareToStory!(card, premium ? { text, widget_link: { url: link, name: 'Открыть профиль' } } : { text: `${text}\n@${link.split('/')[3].split('?')[0]}` });
     onClose();
@@ -111,29 +102,21 @@ export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(
       <div className="share-pic">
         {live && !broken ? <img src={card} alt="Карточка профиля" onError={() => setBroken(true)} /> : <CardPreview d={d} />}
       </div>
-      <p className="muted small center" style={{ margin: '10px 0 14px' }}>
-        Карточка уйдёт картинкой с кнопкой «Открыть профиль»: профиль откроется прямо в Telegram.
-      </p>
-      <div className="group">
-        <button className="cell" onClick={send} disabled={busy}>
-          <span className="ic"><Icon name="send" size={22} /></span>
-          <div className="cell-body"><div className="cell-title">Отправить в чат</div><div className="cell-sub">Картинка и кнопка, выберите чат или канал</div></div>
-          {busy ? <span className="spin" /> : <Icon name="chevron" size={18} className="chev" />}
-        </button>
+      <button className="btn primary mt" onClick={send} disabled={busy}>{busy ? <span className="spin" /> : <><Icon name="send" size={19} />Переслать</>}</button>
+      <div className="group mt-s">
         {story && (
           <button className="cell" onClick={toStory}>
-            <span className="ic"><Icon name="image" size={22} /></span><div className="cell-body"><div className="cell-title">Выложить в историю</div></div><Icon name="chevron" size={18} className="chev" />
+            <span className="ic"><Icon name="image" size={22} /></span><div className="cell-body"><div className="cell-title">В историю</div></div><Icon name="chevron" size={18} className="chev" />
           </button>
         )}
         <button className="cell" onClick={copy}>
-          <span className="ic"><Icon name="copy" size={22} /></span><div className="cell-body"><div className="cell-title">Скопировать ссылку</div><div className="cell-sub">{link.replace(/^https:\/\//, '')}</div></div>
+          <span className="ic"><Icon name="copy" size={22} /></span><div className="cell-body"><div className="cell-title">Скопировать ссылку</div></div>
         </button>
       </div>
     </Sheet>
   );
 }
 
-/** the same card the server draws (used in the browser demo, where there is no server) */
 function CardPreview({ d }: { d: Dev }) {
   return (
     <div className="card-preview">
@@ -152,18 +135,16 @@ function CardPreview({ d }: { d: Dev }) {
   );
 }
 
-/** a client invites an executor to one of the open projects; the executor gets it in the bot */
 export function InviteSheet({ open, onClose, d }: { open: boolean; onClose(): void; d: Dev }) {
   const nav = useNav();
   const { projects, isMe, invite } = useStore();
   const [busy, setBusy] = useState<number | null>(null);
   const mine = projects.filter((p) => p.status === 'open' && isMe(p.clientId));
-  const first = d.name.split(' ')[0];
   if (!mine.length) {
     return (
       <Sheet open={open} onClose={onClose} title="Сначала проект">
         <p className="muted" style={{ margin: '0 0 18px', fontWeight: 500, lineHeight: 1.5 }}>
-          Пригласить можно в опубликованный проект: в нём задача, бюджет и срок. Опубликуйте проект, и {first} получит приглашение в боте.
+          Пригласить можно в опубликованный проект.
         </p>
         <button className="btn primary" onClick={() => { onClose(); nav.open('home', 'project-new'); }}>Опубликовать проект</button>
       </Sheet>
@@ -171,7 +152,6 @@ export function InviteSheet({ open, onClose, d }: { open: boolean; onClose(): vo
   }
   return (
     <Sheet open={open} onClose={onClose} title="Пригласить в проект">
-      <p className="muted small" style={{ margin: '0 0 12px' }}>{first} получит проект в боте и сможет откликнуться или написать вам.</p>
       <div className="group">
         {mine.map((p) => {
           const done = p.invitedIds?.includes(d.id);
@@ -184,7 +164,7 @@ export function InviteSheet({ open, onClose, d }: { open: boolean; onClose(): vo
               {done ? <span className="pill green"><Icon name="check" size={13} strokeWidth={2.4} />Приглашён</span>
                 : <button className="btn primary sm" disabled={busy !== null} onClick={async () => {
                   setBusy(p.id);
-                  try { await invite(p.id, d.id); } catch { /* toast */ } finally { setBusy(null); }
+                  try { await invite(p.id, d.id); } catch {} finally { setBusy(null); }
                 }}>{busy === p.id ? <span className="spin" /> : 'Пригласить'}</button>}
             </div>
           );
@@ -194,7 +174,6 @@ export function InviteSheet({ open, onClose, d }: { open: boolean; onClose(): vo
   );
 }
 
-/** on the client's own open project: executors who fit it, Pro first, each with an invite button */
 export function Matches({ projectId, invited }: { projectId: number; invited: string[] }) {
   const nav = useNav();
   const { loadMatches, invite } = useStore();
@@ -202,7 +181,7 @@ export function Matches({ projectId, invited }: { projectId: number; invited: st
   const [busy, setBusy] = useState<string | null>(null);
   useEffect(() => { let on = true; loadMatches(projectId).then((x) => on && setList(x)); return () => { on = false; }; }, [projectId, loadMatches]);
   if (list === null) return <Skeleton rows={3} />;
-  if (!list.length) return <div className="text muted small">Подходящих исполнителей пока нет. Мы пришлём их в бот, как только появятся.</div>;
+  if (!list.length) return <div className="text muted small">Пока никого</div>;
   return (
     <div className="group">
       {list.map((d) => (
@@ -217,7 +196,7 @@ export function Matches({ projectId, invited }: { projectId: number; invited: st
           {invited.includes(d.id) ? <span className="pill green" style={{ flex: 'none' }}><Icon name="check" size={13} strokeWidth={2.4} />Приглашён</span>
             : <button className="btn secondary sm" style={{ flex: 'none' }} disabled={busy !== null} onClick={async () => {
               setBusy(d.id);
-              try { await invite(projectId, d.id); } catch { /* toast */ } finally { setBusy(null); }
+              try { await invite(projectId, d.id); } catch {} finally { setBusy(null); }
             }}>{busy === d.id ? <span className="spin" /> : 'Пригласить'}</button>}
         </div>
       ))}

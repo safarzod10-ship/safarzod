@@ -1,4 +1,3 @@
-"""ASGI entry point: API + Telegram bot (long polling) in one process. Run with a single worker."""
 import asyncio
 import logging
 import os
@@ -21,9 +20,9 @@ async def run_bot() -> None:
     bot, dp = build()
     notify.bot = bot
     from .share import watch_bot
-    watcher = asyncio.create_task(watch_bot(bot))  # noqa: F841 - lives as long as the bot
+    watcher = asyncio.create_task(watch_bot(bot))
     configured = False
-    while True:  # aiogram retries network errors itself; this guards against anything else (e.g. Telegram 5xx on start)
+    while True:
         try:
             if not configured:
                 configured = await configure(bot)
@@ -31,13 +30,12 @@ async def run_bot() -> None:
             return
         except asyncio.CancelledError:
             raise
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.error("polling stopped: %s; restarting in 15 s", e)
             await asyncio.sleep(15)
 
 
 async def escrow_jobs() -> None:
-    """Payments safety net: invoices paid without a webhook, auto-acceptance, payout retries."""
     tick = 0
     while True:
         await asyncio.sleep(20)
@@ -51,7 +49,7 @@ async def escrow_jobs() -> None:
                     await job(s)
             except asyncio.CancelledError:
                 raise
-            except Exception as e:  # noqa: BLE001 - a failing job must not stop the others
+            except Exception as e:
                 log.error("job %s: %s", job.__name__, e)
 
 
@@ -67,7 +65,7 @@ async def lifespan(_: FastAPI):
         try:
             me = await pay.get_me()
             log.info("Crypto Pay app: %s (%s)", me.get("name"), me.get("app_id"))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.error("Crypto Pay token check failed: %s", e)
     else:
         log.warning("TRUSTY_CRYPTOPAY_TOKEN is empty: payments are disabled")
@@ -87,7 +85,6 @@ app.include_router(admin)
 
 
 def _version() -> str:
-    """Short git commit of the deployed code, read straight from .git (no git binary needed)."""
     git = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".git")
     try:
         head = open(os.path.join(git, "HEAD")).read().strip()

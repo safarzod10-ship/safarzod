@@ -1,7 +1,3 @@
-"""Uploaded files: chat attachments (screenshots, archives, documents) and portfolio pictures.
-
-Files are served by signed links, so a link works in <img>/<a> without the Telegram auth header but cannot be guessed.
-"""
 import hashlib
 import hmac
 import io
@@ -17,7 +13,6 @@ from .config import settings
 MAX_FILE = 20 * 1024 * 1024
 MAX_PICTURE = 10 * 1024 * 1024
 IMAGES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-# what can be sent in a chat besides pictures: documents and archives with the work
 DOCS = {
     "application/pdf", "application/zip", "application/x-zip-compressed", "application/x-rar-compressed",
     "application/vnd.rar", "application/x-7z-compressed", "application/gzip", "application/x-tar", "text/plain", "text/csv",
@@ -59,7 +54,6 @@ async def _read(f: UploadFile, limit: int) -> bytes:
 
 
 async def save_attachment(f: UploadFile, chat_id: int) -> tuple[str, str, str, int]:
-    """Returns (path, name, mime, size)."""
     name = safe_name(f.filename or "file")
     mime = (f.content_type or "application/octet-stream").lower()
     ext = os.path.splitext(name)[1].lower()
@@ -75,12 +69,11 @@ async def save_attachment(f: UploadFile, chat_id: int) -> tuple[str, str, str, i
 
 
 async def save_picture(f: UploadFile, owner: int) -> str:
-    """A portfolio picture, re-encoded to JPEG (at most 1600 px), so only real images are stored. Returns its id."""
     data = await _read(f, MAX_PICTURE)
     try:
         img = Image.open(io.BytesIO(data))
         img = ImageOps.exif_transpose(img).convert("RGB")
-    except Exception:  # noqa: BLE001 - anything Pillow cannot read is not a picture
+    except Exception:
         raise HTTPException(400, "Нужна картинка: JPG, PNG или WEBP") from None
     img.thumbnail((1600, 1600))
     ident = f"{owner}-{uuid.uuid4().hex[:16]}"

@@ -1,5 +1,3 @@
-// Measures kerned pen positions of each character (font units at 1000px) using Chromium's shaper.
-// node measure.js <font.ttf> <text>  -> JSON [{ch, x}], width
 const { chromium } = require('playwright');
 const path = require('path');
 (async () => {

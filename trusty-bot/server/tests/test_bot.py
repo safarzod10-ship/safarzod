@@ -1,7 +1,3 @@
-"""Bot handlers without Telegram: a fake aiogram session records every Bot API call.
-
-Run:  TRUSTY_DB_URL=postgresql+asyncpg://... python -m tests.test_bot
-"""
 import asyncio
 import os
 
@@ -9,13 +5,13 @@ os.environ.setdefault("TRUSTY_BOT_TOKEN", "123456:TEST_TOKEN_for_signing_only")
 os.environ["TRUSTY_BOT_MODE"] = "off"
 os.environ["TRUSTY_PUBLIC_URL"] = "https://trusty.example"
 
-from aiogram.client.session.base import BaseSession  # noqa: E402
-from aiogram.methods import TelegramMethod  # noqa: E402
-from aiogram.types import Update  # noqa: E402
+from aiogram.client.session.base import BaseSession
+from aiogram.methods import TelegramMethod
+from aiogram.types import Update
 
-from trusty.bot import build  # noqa: E402
-from trusty.db import engine  # noqa: E402
-from trusty.models import Base  # noqa: E402
+from trusty.bot import build
+from trusty.db import engine
+from trusty.models import Base
 
 CALLS: list[tuple[str, dict]] = []
 
@@ -35,7 +31,7 @@ class FakeSession(BaseSession):
     async def close(self):
         pass
 
-    async def stream_content(self, *a, **k):  # pragma: no cover - not used
+    async def stream_content(self, *a, **k):
         yield b""
 
 
@@ -64,7 +60,7 @@ async def main():
     assert name == "SendPhoto" and "Деньги у гаранта" in kw["caption"], CALLS[-1]
     bs = buttons(kw)
     assert bs[0]["web_app"]["url"] == "https://trusty.example/" and any(b.get("callback_data") == "m:deals" for b in bs), bs
-    assert bs[0]["style"] == "primary", bs[0]  # the main button is blue, the rest stay neutral
+    assert bs[0]["style"] == "primary", bs[0]
 
     for i, data in enumerate(("m:how", "m:deals", "m:help", "m:home")):
         cq = {"id": str(i), "from": user(), "chat_instance": "x", "data": data,
@@ -77,10 +73,9 @@ async def main():
 
     before = len(CALLS)
     await dp.feed_update(bot, Update.model_validate({"update_id": 30, "message": msg("привет")}))
-    assert CALLS[before][0] == "SendPhoto"  # any text brings back the main card
+    assert CALLS[before][0] == "SendPhoto"
     await dp.feed_update(bot, Update.model_validate({"update_id": 31, "message": msg("/admin wrong-code")}))
-    assert CALLS[-1][0] == "SendPhoto"  # a wrong code looks like any other message
-    # an offer card: Accept in the bot creates the deal and updates the card
+    assert CALLS[-1][0] == "SendPhoto"
     from trusty import offers
     from trusty.models import Chat, Deal, DevProfile, User
     from trusty.db import Session
@@ -109,7 +104,6 @@ async def main():
     await dp.feed_update(bot, Update.model_validate({"update_id": 41, "callback_query": cq}))
     answer = [c for c in CALLS if c[0] == "AnswerCallbackQuery"][-1][1]
     assert answer.get("show_alert") and "уже принят" in answer["text"], answer
-    # end of the deal: stars in the bot save the rating; a second tap is refused
     async with Session() as s:
         d = (await s.execute(__import__("sqlalchemy").select(Deal))).scalar_one()
         d.status = "done"
@@ -128,7 +122,6 @@ async def main():
     await dp.feed_update(bot, Update.model_validate({"update_id": 51, "callback_query": rq}))
     answer = [c for c in CALLS if c[0] == "AnswerCallbackQuery"][-1][1]
     assert answer.get("show_alert") and "уже" in answer["text"], answer
-    # Pro in Telegram Stars: pre-checkout is confirmed, the successful payment switches Pro on
     from decimal import Decimal
     from trusty.models import Subscription
     async with Session() as s:

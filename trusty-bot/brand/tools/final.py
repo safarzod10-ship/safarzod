@@ -1,8 +1,3 @@
-"""TRUSTY identity v2: thinner braces-shield + USDT-style coin, wordmark (outlined Onest ExtraBold),
-lock-ups, avatar, construction.
-
-Usage: python3 final.py <brand_dir>
-"""
 import json
 import os
 import subprocess
@@ -14,27 +9,23 @@ from fontTools.ttLib import TTFont
 
 from svglib import S, P, cd, f, mirror
 
-# ---------------------------------------------------------------- palette (chosen on the palette board)
-EMERALD = "#178A66"    # brand primary: avatar / app background
-TETHER = "#26A17B"     # coin body on white and dark grounds
-DEEP = "#0B2A27"       # dark surfaces
-INK = "#0D2C27"        # mark / text on light grounds
-MINT = "#E8F5EF"       # light surfaces, mark on DEEP
+EMERALD = "#178A66"
+TETHER = "#26A17B"
+DEEP = "#0B2A27"
+INK = "#0D2C27"
+MINT = "#E8F5EF"
 WHITE = "#FFFFFF"
 COIN_SYM = WHITE
 
-# ---------------------------------------------------------------- geometry (viewBox 0 0 100 100)
-STROKE = 7.5          # brace stroke (was 9 in v1)
-AXIS = 48             # nibs and coin centre share this horizontal axis
+STROKE = 7.5
+AXIS = 48
 COIN_R = 14.5
-TIP = 43.5            # x of the inner brace tips -> top/bottom gap = 2*(50-TIP) - STROKE = 5.5
+TIP = 43.5
 HALF = f"M{TIP} 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 {TIP} 85.5"
-# visual bounding box of the mark (used for centring)
 BOX = (13.6, 11.25, 86.4, 89.25)
 
 
 def nib(sw=STROKE):
-    """Brace nib as a filled form: concave fillets into a round tip on the coin axis."""
     k = sw / 9
     xo = 22 - sw / 2
     a = AXIS
@@ -47,7 +38,6 @@ NIB = nib()
 
 
 def coin_symbol(sym=COIN_SYM, r=COIN_R):
-    """The T and the flat ring through its stem, drawn around (0,0)."""
     u = r / 12
     return (f'<path d="M{f(-6.3*u)} {f(-6.7*u)}H{f(6.3*u)}V{f(-4.05*u)}H{f(1.75*u)}V{f(7.1*u)}H{f(-1.75*u)}'
             f'V{f(-4.05*u)}H{f(-6.3*u)}Z" fill="{sym}"/>'
@@ -55,7 +45,6 @@ def coin_symbol(sym=COIN_SYM, r=COIN_R):
 
 
 def coin_inner(r=COIN_R, sym=COIN_SYM, body=TETHER, rim=True):
-    """USDT-style coin drawn around (0,0): disc, thin inner rim, symbol."""
     u = r / 12
     out = f'<circle r="{f(r)}" fill="{body}"/>'
     if rim:
@@ -64,22 +53,18 @@ def coin_inner(r=COIN_R, sym=COIN_SYM, body=TETHER, rim=True):
 
 
 def coin_mono(color, mid="knock"):
-    """One-colour coin: disc with the symbol knocked out (transparent)."""
     return (f'<mask id="{mid}"><circle r="{f(COIN_R)}" fill="#fff"/>{coin_symbol("#000")}</mask>'
             f'<circle r="{f(COIN_R)}" fill="{color}" mask="url(#{mid})"/>')
 
 
 def mark(m=INK, sw=STROKE, mono_coin=None, coin_body=TETHER, coin_sym=COIN_SYM):
-    """mono_coin: draw the coin in this single colour with the symbol knocked out."""
     half = S(HALF, sw, m) + P(nib(sw), fill=m)
     c = coin_mono(mono_coin) if mono_coin else coin_inner(body=coin_body, sym=coin_sym)
     return (f'<g class="half-l">{half}</g><g class="half-r">{mirror(half)}</g>'
             f'<g class="coin" transform="translate(50 {AXIS})">{c}</g>')
 
 
-# ---------------------------------------------------------------- wordmark
 def wordmark_paths(text="TRUSTY", font_path=None, tracking=24):
-    """Glyph outlines at Chromium-shaped (kerned) pen positions plus tracking. Font units, y flipped."""
     here = os.path.dirname(os.path.abspath(__file__))
     meas = json.loads(subprocess.check_output(["node", os.path.join(here, "measure.js"), font_path, text]))
     tt = TTFont(font_path)
@@ -169,7 +154,6 @@ def main(root):
         "mark-on-emerald.svg": doc(on_emerald, 100, 100),
         "mark-mono.svg": doc(mark(INK, mono_coin=INK), 100, 100),
         "avatar.svg": placed(on_emerald, .64, f'<circle cx="50" cy="50" r="50" fill="{EMERALD}"/>'),
-        # Telegram crops avatars to a circle itself, so the upload is a full-bleed square
         "avatar-square.svg": placed(on_emerald, .64, f'<rect width="100" height="100" fill="{EMERALD}"/>'),
         "app-icon.svg": placed(on_emerald, .66, f'<rect width="100" height="100" rx="23" fill="{EMERALD}"/>'),
         "construction.svg": construction(),

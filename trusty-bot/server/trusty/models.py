@@ -1,4 +1,3 @@
-"""Database schema. Users are keyed by their Telegram id."""
 from datetime import datetime, timezone
 
 from decimal import Decimal
@@ -22,15 +21,15 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(64))
     first_name: Mapped[str] = mapped_column(String(128), default="")
     last_name: Mapped[str | None] = mapped_column(String(128))
-    role: Mapped[str] = mapped_column(String(8), default="client")  # client | dev
+    role: Mapped[str] = mapped_column(String(8), default="client")
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     strikes: Mapped[int] = mapped_column(Integer, default=0)
     ban_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ban_permanent: Mapped[bool] = mapped_column(Boolean, default=False)
-    bot_started: Mapped[bool] = mapped_column(Boolean, default=False)  # pressed /start, can get notifications
-    onboarded: Mapped[bool] = mapped_column(Boolean, default=False)  # saw the intro and picked a role
-    pro_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # IT Trusty Pro (executors)
-    alerts: Mapped[bool] = mapped_column(Boolean, default=True)  # Pro: send new matching projects to the bot
+    bot_started: Mapped[bool] = mapped_column(Boolean, default=False)
+    onboarded: Mapped[bool] = mapped_column(Boolean, default=False)
+    pro_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    alerts: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
@@ -59,14 +58,14 @@ class DevProfile(Base):
     categories: Mapped[list] = mapped_column(JSON, default=list)
     stack: Mapped[list] = mapped_column(JSON, default=list)
     years: Mapped[int] = mapped_column(Integer, default=0)
-    rate: Mapped[int] = mapped_column(Integer, default=0)  # USDT per hour
-    status: Mapped[str] = mapped_column(String(8), default="free")  # free | busy | away
+    rate: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(8), default="free")
     busy_until: Mapped[str | None] = mapped_column(String(32))
     about: Mapped[str] = mapped_column(Text, default="")
     github: Mapped[str | None] = mapped_column(String(64))
     links: Mapped[list] = mapped_column(JSON, default=list)
-    portfolio: Mapped[list] = mapped_column(JSON, default=list)  # [{title, text}]
-    moderation: Mapped[str] = mapped_column(String(10), default="review")  # review | published | rejected
+    portfolio: Mapped[list] = mapped_column(JSON, default=list)
+    moderation: Mapped[str] = mapped_column(String(10), default="review")
     moderation_note: Mapped[str | None] = mapped_column(Text)
     deposit: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -85,7 +84,7 @@ class Project(Base):
     days: Mapped[int] = mapped_column(Integer)
     stack: Mapped[list] = mapped_column(JSON, default=list)
     files: Mapped[list] = mapped_column(JSON, default=list)
-    status: Mapped[str] = mapped_column(String(10), default="open")  # open | in_work | closed
+    status: Mapped[str] = mapped_column(String(10), default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
@@ -111,13 +110,11 @@ class Deal(Base):
     category: Mapped[str] = mapped_column(String(16), default="")
     amount: Mapped[int] = mapped_column(Integer)
     days: Mapped[int] = mapped_column(Integer)
-    # awaiting_payment | in_work | review | done | dispute | cancelled
     status: Mapped[str] = mapped_column(String(18), default="awaiting_payment")
-    result: Mapped[str | None] = mapped_column(String(14))  # ontime | late | dispute_won | dispute_lost
+    result: Mapped[str | None] = mapped_column(String(14))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # escrow (added in v2): the client pays amount + fee; the developer receives amount
     fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     invoice_id: Mapped[int | None] = mapped_column(BigInteger)
     invoice_url: Mapped[str | None] = mapped_column(String(512))
@@ -127,7 +124,7 @@ class Deal(Base):
     work_note: Mapped[str | None] = mapped_column(Text)
     dispute_by: Mapped[int | None] = mapped_column(BigInteger)
     dispute_reason: Mapped[str | None] = mapped_column(Text)
-    dev_share: Mapped[int | None] = mapped_column(Integer)  # % of the amount paid to the developer after a dispute
+    dev_share: Mapped[int | None] = mapped_column(Integer)
     resolution: Mapped[str | None] = mapped_column(Text)
 
     @property
@@ -136,19 +133,17 @@ class Deal(Base):
 
 
 class Payment(Base):
-    """Money ledger: every invoice, payout and refund with its Crypto Pay id and outcome."""
     __tablename__ = "payments"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     deal_id: Mapped[int] = mapped_column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), index=True)
-    kind: Mapped[str] = mapped_column(String(10))  # invoice | payout | refund
-    user_id: Mapped[int] = mapped_column(BigInteger)  # payer for invoices, recipient otherwise
+    kind: Mapped[str] = mapped_column(String(10))
+    user_id: Mapped[int] = mapped_column(BigInteger)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     asset: Mapped[str] = mapped_column(String(10), default="USDT")
-    # invoice: active | paid | expired; payout/refund: pending | sent | check | failed
     status: Mapped[str] = mapped_column(String(10))
     spend_id: Mapped[str | None] = mapped_column(String(64), unique=True)
-    external_id: Mapped[int | None] = mapped_column(BigInteger)  # invoice_id / transfer_id / check_id
-    url: Mapped[str | None] = mapped_column(String(512))  # invoice or check link
+    external_id: Mapped[int | None] = mapped_column(BigInteger)
+    url: Mapped[str | None] = mapped_column(String(512))
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -156,7 +151,6 @@ class Payment(Base):
 
 
 class Review(Base):
-    """After a deal both sides rate each other once: the client rates the developer and the other way round."""
     __tablename__ = "reviews"
     __table_args__ = (UniqueConstraint("deal_id", "author_id", name="uq_reviews_deal_author"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -169,18 +163,16 @@ class Review(Base):
 
 
 class Chat(Base):
-    """A conversation between two users (a_id < b_id); the latest deal between them is attached."""
     __tablename__ = "chats"
     __table_args__ = (UniqueConstraint("a_id", "b_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     a_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     b_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     deal_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("deals.id", ondelete="SET NULL"))
-    a_read: Mapped[int] = mapped_column(Integer, default=0)  # last message id read by a
+    a_read: Mapped[int] = mapped_column(Integer, default=0)
     b_read: Mapped[int] = mapped_column(Integer, default=0)
     a_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     b_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # "delete chat" for one side: messages up to this id are hidden from a (or b); new messages bring the chat back
     a_hidden: Mapped[int | None] = mapped_column(Integer)
     b_hidden: Mapped[int | None] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
@@ -191,16 +183,14 @@ class Message(Base):
     __table_args__ = (Index("ix_messages_chat_id_id", "chat_id", "id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chats.id", ondelete="CASCADE"))
-    sender_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))  # None = system message
+    sender_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     text: Mapped[str] = mapped_column(Text)
-    flagged: Mapped[bool] = mapped_column(Boolean, default=False)  # looked like an attempt to go off-platform
-    offer_id: Mapped[int | None] = mapped_column(Integer)  # the message is a price offer (shown as a card)
+    flagged: Mapped[bool] = mapped_column(Boolean, default=False)
+    offer_id: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Offer(Base):
-    """A price offer inside a chat. Either side can answer with a counter-offer until someone accepts;
-    accepting creates the deal with the offer's terms."""
     __tablename__ = "offers"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), index=True)
@@ -209,11 +199,10 @@ class Offer(Base):
     client_id: Mapped[int] = mapped_column(BigInteger)
     dev_id: Mapped[int] = mapped_column(BigInteger)
     project_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("projects.id", ondelete="SET NULL"))
-    parent_id: Mapped[int | None] = mapped_column(Integer)  # the offer this one answers
+    parent_id: Mapped[int | None] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(String(120))
     amount: Mapped[int] = mapped_column(Integer)
     days: Mapped[int] = mapped_column(Integer)
-    # pending | accepted | declined | countered | withdrawn | expired
     status: Mapped[str] = mapped_column(String(10), default="pending", index=True)
     deal_id: Mapped[int | None] = mapped_column(Integer)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -222,7 +211,6 @@ class Offer(Base):
 
 
 class Attachment(Base):
-    """A file sent in a chat (screenshots, archives, documents), e.g. when work is handed over."""
     __tablename__ = "attachments"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     message_id: Mapped[int] = mapped_column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), index=True)
@@ -235,7 +223,6 @@ class Attachment(Base):
 
 
 class Invite(Base):
-    """A client invited an executor to a project (once per pair)."""
     __tablename__ = "invites"
     __table_args__ = (UniqueConstraint("project_id", "dev_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -245,16 +232,15 @@ class Invite(Base):
 
 
 class Subscription(Base):
-    """A paid period of IT Trusty Pro: Telegram Stars (XTR) through the bot or USDT through Crypto Pay."""
     __tablename__ = "subscriptions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
-    method: Mapped[str] = mapped_column(String(8))  # stars | crypto
+    method: Mapped[str] = mapped_column(String(8))
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
-    currency: Mapped[str] = mapped_column(String(8))  # XTR | USDT
+    currency: Mapped[str] = mapped_column(String(8))
     days: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending | paid | expired
-    external_id: Mapped[str | None] = mapped_column(String(128))  # Crypto Pay invoice id / Telegram charge id
+    status: Mapped[str] = mapped_column(String(10), default="pending")
+    external_id: Mapped[str | None] = mapped_column(String(128))
     url: Mapped[str | None] = mapped_column(String(512))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -268,7 +254,7 @@ class Complaint(Base):
     deal_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("deals.id", ondelete="SET NULL"))
     reason: Mapped[str] = mapped_column(String(20))
     text: Mapped[str] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(10), default="new")  # new | review | resolved | rejected
+    status: Mapped[str] = mapped_column(String(10), default="new")
     decision: Mapped[str | None] = mapped_column(Text)
     handled_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

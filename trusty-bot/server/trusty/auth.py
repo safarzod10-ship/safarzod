@@ -1,4 +1,3 @@
-"""Mini App authentication: every API call carries Telegram initData, signed with the bot token."""
 import hashlib
 import hmac
 import json
@@ -21,7 +20,6 @@ class AuthError(Exception):
 
 
 def check_init_data(init_data: str, token: str, max_age: int = MAX_AGE) -> dict:
-    """Validates Telegram WebApp initData (HMAC-SHA256 with key HMAC("WebAppData", token)). Returns parsed fields."""
     if not init_data or not token:
         raise AuthError("no init data")
     fields = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=False))
@@ -45,7 +43,6 @@ def check_init_data(init_data: str, token: str, max_age: int = MAX_AGE) -> dict:
 
 
 def sign_init_data(fields: dict, token: str) -> str:
-    """Builds a valid initData string (used by tests and local tools)."""
     from urllib.parse import urlencode
     data = {k: (json.dumps(v, separators=(",", ":"), ensure_ascii=False) if isinstance(v, dict) else str(v)) for k, v in fields.items()}
     check = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))

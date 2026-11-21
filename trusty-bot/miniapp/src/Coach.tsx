@@ -1,4 +1,3 @@
-// First-run tips over the real screens: the spotlight moves from one element to the next with a short card.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { Role } from './store';
 import { haptic } from './tg';
@@ -7,17 +6,17 @@ type Step = { target: string; title: string; text: string };
 
 const STEPS: Record<Role, Step[]> = {
   client: [
-    { target: '.summary', title: 'Деньги у гаранта', text: 'Здесь ваши сделки. Оплата хранится у гаранта и уходит исполнителю только после того, как вы примете работу.' },
-    { target: '.island [aria-label="Исполнители"]', title: 'Исполнители', text: 'Каталог с отзывами, уровнями и портфолио. Напишите любому: цену и срок предложите оффером в чате.' },
-    { target: '.fab', title: 'Опубликуйте проект', text: 'Опишите задачу и бюджет. Исполнители пришлют отклики, а бот сразу подберёт 3–5 подходящих.' },
-    { target: '.island [aria-label="Чаты"]', title: 'Договоритесь в чате', text: 'Цену и срок предлагайте оффером. Как только его примут, появится сделка. Файлы и скриншоты тоже сюда.' },
-    { target: '.island [aria-label="Профиль"]', title: 'Профиль', text: 'Ваши проекты, сделки и смена роли. Эти подсказки можно открыть снова здесь.' },
+    { target: '.summary', title: 'Сделки', text: 'Деньги у гаранта, пока вы не примете работу.' },
+    { target: '.island [aria-label="Исполнители"]', title: 'Исполнители', text: 'Отзывы, уровни и портфолио.' },
+    { target: '.fab', title: 'Новый проект', text: 'Опубликуйте задачу и получите отклики.' },
+    { target: '.island [aria-label="Чаты"]', title: 'Чаты', text: 'Цену и срок предлагайте оффером.' },
+    { target: '.island [aria-label="Профиль"]', title: 'Профиль', text: 'Проекты, сделки и смена роли.' },
   ],
   dev: [
-    { target: '.summary', title: 'Ваши сделки', text: 'Сумма у гаранта уже оплачена заказчиком. Сдайте работу, и после приёмки деньги придут вам.' },
-    { target: '.island [aria-label="Проекты"]', title: 'Лента проектов', text: 'Откликайтесь своей ценой. Проекты, куда вас пригласили, стоят первыми.' },
-    { target: '.island [aria-label="Чаты"]', title: 'Офферы в чате', text: 'Заказчик пришлёт оффер: примите, отклоните или назовите свою цену. Работу и скриншоты сдавайте тоже здесь.' },
-    { target: '.island [aria-label="Профиль"]', title: 'Профиль и уровень', text: 'Анкета, портфолио, уровень и Pro: с ним новые проекты приходят в бот сразу, а вы выше в каталоге.' },
+    { target: '.summary', title: 'Сделки', text: 'Деньги придут после приёмки работы.' },
+    { target: '.island [aria-label="Проекты"]', title: 'Проекты', text: 'Откликайтесь своей ценой.' },
+    { target: '.island [aria-label="Чаты"]', title: 'Чаты', text: 'Офферы от заказчиков и сдача работы.' },
+    { target: '.island [aria-label="Профиль"]', title: 'Профиль', text: 'Анкета, портфолио, уровень и Pro.' },
   ],
 };
 
@@ -26,11 +25,10 @@ export function tipsSeen(r: Role): boolean {
   try { return localStorage.getItem(KEY(r)) === '1'; } catch { return true; }
 }
 function markSeen(r: Role) {
-  try { localStorage.setItem(KEY(r), '1'); } catch { /* private mode: show again next time */ }
+  try { localStorage.setItem(KEY(r), '1'); } catch {}
 }
-/** asks the app to play the tips again (from the profile) */
 export function replayTips(r: Role) {
-  try { localStorage.removeItem(KEY(r)); } catch { /* ignore */ }
+  try { localStorage.removeItem(KEY(r)); } catch {}
   window.dispatchEvent(new Event('trusty:tips'));
 }
 
@@ -46,7 +44,7 @@ export default function Coach({ role, onClose }: { role: Role; onClose(): void }
   }, [step.target]);
   useLayoutEffect(() => { measure(); }, [measure]);
   useEffect(() => {
-    const t = window.setTimeout(measure, 350); // after the screen's own entrance animation
+    const t = window.setTimeout(measure, 350);
     window.addEventListener('resize', measure);
     return () => { window.clearTimeout(t); window.removeEventListener('resize', measure); };
   }, [measure]);

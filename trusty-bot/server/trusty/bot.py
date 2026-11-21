@@ -1,9 +1,3 @@
-"""Telegram bot: picture cards with inline buttons, no slash-command menu.
-
-Everything goes through the main card (/start or any message): open the Mini App, find an executor, my deals,
-how the escrow works, rules and support. Offers arrive as cards with Accept / Decline right in the bot.
-The hidden /admin <code> grants admin rights (max 2 admins).
-"""
 import hmac
 import logging
 
@@ -26,7 +20,7 @@ from .serial import short_date
 
 log = logging.getLogger("trusty.bot")
 router = Router()
-_file_ids: dict[str, str] = {}  # banner -> Telegram file_id, so each picture is uploaded once
+_file_ids: dict[str, str] = {}
 
 BACK = cb("‹ Назад", "m:home")
 
@@ -65,7 +59,6 @@ def remember(kind: str, msg: Message | None) -> None:
 
 
 class Activity(BaseMiddleware):
-    """Records every interaction as activity ("был в сети") and stops banned users."""
 
     async def __call__(self, handler, event: TelegramObject, data: dict):
         user = data.get("event_from_user")
@@ -113,7 +106,7 @@ async def admin(m: Message, command: CommandObject):
             return
         code = (command.args or "").strip()
         if not settings.admin_code or not code or not hmac.compare_digest(code, settings.admin_code):
-            await send_home(m)  # do not reveal that the command exists
+            await send_home(m)
             return
         count = (await s.execute(select(func.count()).where(User.is_admin.is_(True)))).scalar_one()
         if count >= settings.max_admins:
@@ -125,14 +118,13 @@ async def admin(m: Message, command: CommandObject):
     await m.answer(f"Готово, вы администратор ({count + 1} из {settings.max_admins}).",
                    reply_markup=notify.open_button("Админ-панель", screen="admin"))
     try:
-        await m.delete()  # remove the message with the code from the chat
-    except Exception:  # noqa: BLE001
+        await m.delete()
+    except Exception:
         pass
 
 
 @router.pre_checkout_query()
 async def pre_checkout(q: PreCheckoutQuery):
-    """Telegram Stars: confirm the Pro invoice is still valid right before the payment."""
     async with Session() as s:
         problem = await pro.check_stars(s, q.invoice_payload, q.from_user.id, q.total_amount, q.currency)
         await s.rollback()
@@ -157,7 +149,7 @@ async def show(cq: CallbackQuery, kind: str, caption: str, markup, data: bytes |
     try:
         msg = await cq.message.edit_media(media, reply_markup=markup)
         remember(kind, msg if isinstance(msg, Message) else None)
-    except Exception as e:  # noqa: BLE001 - e.g. the message is too old to edit: send a new card instead
+    except Exception as e:
         log.info("edit failed (%s), sending a new card", e)
         sent = await cq.message.answer_photo(photo(kind, data), caption=caption, reply_markup=markup)
         remember(kind, sent)
@@ -208,7 +200,6 @@ async def cb_deals(cq: CallbackQuery):
 
 @router.callback_query(F.data.startswith("r:"))
 async def cb_rate(cq: CallbackQuery):
-    """Stars under the "deal finished" message: the rating is saved at once, a comment can be added in the app."""
     parts = cq.data.split(":")
     if len(parts) != 3 or not parts[1].isdigit() or parts[2] not in ("1", "2", "3", "4", "5"):
         await cq.answer()
@@ -226,14 +217,13 @@ async def cb_rate(cq: CallbackQuery):
         base = cq.message.html_text if cq.message and cq.message.text else ""
         await cq.message.edit_text(f"{base}\n\n<b>Ваша оценка: {'★' * rating}{'☆' * (5 - rating)}</b>"[:4096],
                                    reply_markup=keyboard([app_button("Добавить комментарий", screen="deal", id=deal_id)]))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.info("rate edit failed: %s", e)
     await cq.answer("Спасибо за оценку!")
 
 
 @router.callback_query(F.data.startswith("o:"))
 async def cb_offer(cq: CallbackQuery):
-    """Accept / decline an offer from its card in the bot."""
     parts = cq.data.split(":")
     if len(parts) != 3 or not parts[2].isdigit() or parts[1] not in ("acc", "dec"):
         await cq.answer()
@@ -261,7 +251,7 @@ async def cb_offer(cq: CallbackQuery):
             await cq.message.edit_caption(caption=text[:1024], reply_markup=markup)
         else:
             await cq.message.edit_text(text[:4096], reply_markup=markup)
-    except Exception as e:  # noqa: BLE001 - the answer is recorded anyway
+    except Exception as e:
         log.info("offer card edit failed: %s", e)
     await cq.answer(note)
 
@@ -276,8 +266,6 @@ def build() -> tuple[Bot, Dispatcher]:
 
 
 async def configure(bot: Bot) -> bool:
-    """No slash-command menu (everything is buttons); the menu button opens the Mini App.
-    Returns False (and is retried later) if Telegram is unavailable."""
     try:
         await bot.delete_my_commands()
         me = await bot.get_me()
@@ -289,7 +277,7 @@ async def configure(bot: Bot) -> bool:
             await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=settings.public_url + "/")))
         log.info("bot configured")
         return True
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning("bot configuration skipped: %s", e)
         return False
 

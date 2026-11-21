@@ -1,8 +1,3 @@
-"""Round 4: six finalists in colour, lock-up and real Telegram context.
-
-Usage: python3 round4.py <out_dir> <fonts_dir>
-Writes NN.svg (mono) and round4.html (board to screenshot).
-"""
 import os
 import sys
 

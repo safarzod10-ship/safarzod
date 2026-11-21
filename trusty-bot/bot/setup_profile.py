@@ -1,13 +1,3 @@
-"""Applies the IT Trusty public profile to the bot: avatar, descriptions, command menu.
-
-Usage:
-    TRUSTY_BOT_TOKEN=123:abc python3 setup_profile.py            # everything
-    TRUSTY_BOT_TOKEN=123:abc python3 setup_profile.py --no-photo # texts and commands only
-
-The token is read from the environment only and is never written to disk.
-The picture/animation of the "What can this bot do?" block has no Bot API method:
-upload brand/logo/png/it-trusty-description-640x360.jpg in @BotFather -> Edit Bot -> Edit Description Picture.
-"""
 import json
 import os
 import sys
@@ -64,7 +54,7 @@ def main():
         ("getMe", lambda: call(token, "getMe")),
         ("setMyDescription", lambda: call(token, "setMyDescription", {"description": DESCRIPTION})),
         ("setMyShortDescription", lambda: call(token, "setMyShortDescription", {"short_description": SHORT_DESCRIPTION})),
-        ("deleteMyCommands", lambda: call(token, "deleteMyCommands")),  # the bot works through buttons only
+        ("deleteMyCommands", lambda: call(token, "deleteMyCommands")),
     ]
     if "--no-photo" not in sys.argv:
         with open(AVATAR, "rb") as fh:

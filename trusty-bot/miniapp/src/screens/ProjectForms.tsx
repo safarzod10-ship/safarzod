@@ -1,4 +1,3 @@
-// Create a project (client), respond to one (developer), pick a developer (client).
 import { useState } from 'react';
 import { CATEGORIES, amt, budget, plural, usdt } from '../data';
 import { Icon } from '../icons';
@@ -8,7 +7,6 @@ import { Actions, Avatar, Cell, Chips, Done, Field, Note, Rating, Section, Top }
 
 const STACK_HINTS = ['Python', 'aiogram', 'Node.js', 'React', 'Next.js', 'PostgreSQL', 'Mini Apps', 'Figma', 'Flutter', 'Docker', 'TON'];
 
-/** forOffer: opened from the offer sheet in a chat; after publishing, go back there with this project chosen */
 export function ProjectNew({ forOffer }: { forOffer?: boolean }) {
   const nav = useNav();
   const { addProject, showToast } = useStore();
@@ -42,7 +40,7 @@ export function ProjectNew({ forOffer }: { forOffer?: boolean }) {
         title: title.trim(), category: cat, text: text.trim(), budgetMin: +min, budgetMax: +(max || min), days: +days,
         stack, files: files.map((f) => ({ name: f, size: '—' })),
       }));
-    } catch { /* toast shown */ } finally { setBusy(false); }
+    } catch {} finally { setBusy(false); }
   };
 
   if (done) {
@@ -60,7 +58,7 @@ export function ProjectNew({ forOffer }: { forOffer?: boolean }) {
 
   return (
     <div className="screen no-tabs">
-      <Top title="Новый проект" sub="Чем точнее задача, тем точнее цены в откликах" />
+      <Top title="Новый проект" />
       <Field label="Что нужно сделать" error={tried && errs.title}>
         <input className={`input ${tried && errs.title ? 'bad' : ''}`} value={title} onChange={(e) => setTitle(e.target.value)}
           placeholder="Например, бот для записи в салон" maxLength={90} />
@@ -103,7 +101,6 @@ export function ProjectNew({ forOffer }: { forOffer?: boolean }) {
           </label>
         </div>
       </Field>
-      <div className="mt"><Note tone="green" icon="shield">Оплата пойдёт через гаранта после того, как вы выберете исполнителя.</Note></div>
       <Actions primary={{ label: busy ? 'Публикуем…' : 'Опубликовать проект', onClick: submit, disabled: busy }} />
     </div>
   );
@@ -156,7 +153,7 @@ export function BidForm({ id }: { id: number }) {
           if (!ok) { showToast('Заполните выделенные поля'); return; }
           if (busy) return;
           setBusy(true);
-          try { await addBid({ projectId: id, price: +price, days: +days, text: text.trim() }); showToast('Отклик отправлен'); setSent(true); } catch { /* toast shown */ } finally { setBusy(false); }
+          try { await addBid({ projectId: id, price: +price, days: +days, text: text.trim() }); showToast('Отклик отправлен'); setSent(true); } catch {} finally { setBusy(false); }
         },
       }} />
     </div>
@@ -185,12 +182,11 @@ export function Choose({ projectId, devId }: { projectId: number; devId: string 
           <Cell title={`Комиссия гаранта, ${payCfg.feePercent}%`} trail={<span className="num">{amt(fee)} {payCfg.asset}</span>} />
           <Cell title={<b>К оплате</b>} trail={<b className="num" style={{ color: 'var(--ink)' }}>{amt(b.price + fee)} {payCfg.asset}</b>} />
           <Cell title="Срок" trail={<span className="num">{b.days} {plural(b.days, 'день', 'дня', 'дней')}</span>} />
-          <Cell title="Автоприёмка" sub={`Если вы не ответите ${payCfg.reviewDays} дн. после сдачи, работа принимается автоматически`} />
+          <Cell title="Автоприёмка" sub={`Через ${payCfg.reviewDays} дн. после сдачи, если вы не ответите`} />
         </div>
       </Section>
       <div className="mt stack">
-        <Note tone="green" icon="shield">Условия и ТЗ зафиксируются в сделке. Изменить их можно только с согласия обеих сторон.</Note>
-        <Note tone="blue" icon="coin">Оплата через @CryptoBot в {payCfg.asset}. Деньги хранятся у гаранта, исполнитель получит их после приёмки.</Note>
+        <Note tone="blue" icon="coin">Оплата в {payCfg.asset} через @CryptoBot. Исполнитель получит деньги после приёмки.</Note>
       </div>
       <Actions primary={{
         label: busy ? 'Создаём сделку…' : `Создать сделку на ${usdt(b.price)}`, disabled: busy,

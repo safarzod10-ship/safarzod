@@ -1,12 +1,3 @@
-"""Mini App loading animation: pure CSS + inline SVG, works before any JS loads.
-
-The coin turns on its vertical axis (flip, pause, flip back); the braces tighten
-around it each time it is edge-on. Theme follows Telegram (class "dark" on <html>) or the OS.
-
-Usage: python3 loader.py <brand_dir>
-Writes logo/animation/trusty-loader.html (demo, frame-capturable) and logo/animation/loader-snippet.html
-(the <style> + markup to paste into the Mini App's index.html).
-"""
 import os
 import sys
 

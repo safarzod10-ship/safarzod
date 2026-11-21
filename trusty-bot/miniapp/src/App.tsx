@@ -22,7 +22,6 @@ import { StoreProvider, useStore } from './store';
 import { haptic, hideSplash, tg } from './tg';
 import { Cell, Done, IconTile, MARK_LO, MARK_UP, MARK_WAVE, Sheet } from './ui';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SCREENS: Record<string, ComponentType<any>> = {
   home: Home, devs: Devs, dev: DevProfile, projects: Projects, project: ProjectView, 'project-new': ProjectNew,
   bid: BidForm, choose: Choose, chats: Chats, chat: ChatView, profile: Profile, 'dev-form': DevForm,
@@ -32,7 +31,6 @@ const SCREENS: Record<string, ComponentType<any>> = {
 };
 
 type TabItem = { key: Tab; label: string; icon: IconName };
-/** the second section depends on the role: a client looks for executors, an executor looks for projects */
 const tabsFor = (role: 'client' | 'dev'): TabItem[] => [
   { key: 'home', label: 'Главная', icon: 'home' },
   role === 'client' ? { key: 'devs', label: 'Исполнители', icon: 'search' } : { key: 'projects', label: 'Проекты', icon: 'projects' },
@@ -40,8 +38,6 @@ const tabsFor = (role: 'client' | 'dev'): TabItem[] => [
   { key: 'profile', label: 'Профиль', icon: 'profile' },
 ];
 
-/** floating island with four sections and a separate green "+".
- *  Like Telegram: press anywhere on it and slide the finger; the section under the finger opens on release. */
 function Island() {
   const nav = useNav();
   const { chats, role } = useStore();
@@ -57,7 +53,6 @@ function Island() {
     const r = box.current!.getBoundingClientRect();
     return Math.max(0, Math.min(TABS.length - 1, Math.floor(((x - r.left - 6) / (r.width - 12)) * TABS.length)));
   };
-  // the search tab holds both executors and projects: coming back to it keeps whichever was open
   const open = (i: number) => nav.setTab(TABS[i].key);
   return (
     <>
@@ -86,18 +81,18 @@ function Island() {
         <div className="group mt-s">
           {role === 'client' ? (
             <>
-              <Cell icon lead={<IconTile name="projects" />} title="Опубликовать проект" sub="Исполнители пришлют отклики с ценой" chevron
+              <Cell icon lead={<IconTile name="projects" />} title="Опубликовать проект" chevron
                 onClick={() => go(() => nav.open('home', 'project-new'))} />
-              <Cell icon lead={<IconTile name="search" />} title="Найти исполнителя" sub="По отзывам и сделкам, потом оффер в чате" chevron
+              <Cell icon lead={<IconTile name="search" />} title="Найти исполнителя" chevron
                 onClick={() => go(() => nav.setTab('devs'))} />
             </>
           ) : (
             <>
-              <Cell icon lead={<IconTile name="projects" />} title="Найти проект" sub="Откликнитесь со своей ценой" chevron
+              <Cell icon lead={<IconTile name="projects" />} title="Найти проект" chevron
                 onClick={() => go(() => nav.setTab('projects'))} />
-              <Cell icon lead={<IconTile name="doc" />} title="Моя анкета" sub="Без неё нельзя брать сделки" chevron
+              <Cell icon lead={<IconTile name="doc" />} title="Моя анкета" chevron
                 onClick={() => go(() => nav.open('profile', 'dev-form'))} />
-              <Cell icon lead={<IconTile name="crown" />} title="IT Trusty Pro" sub="Проекты сразу в бот и первые места" chevron
+              <Cell icon lead={<IconTile name="crown" />} title="IT Trusty Pro" chevron
                 onClick={() => go(() => nav.open('profile', 'pro'))} />
             </>
           )}
@@ -118,7 +113,7 @@ function Toast() {
     setOut(true);
     const t = window.setTimeout(() => setShown(null), 300);
     return () => window.clearTimeout(t);
-  }, [toast]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [toast]);
   if (!shown) return null;
   return (
     <div className={`toast ${out ? 'out' : ''}`} role="status">
@@ -127,7 +122,6 @@ function Toast() {
   );
 }
 
-/** pull down on a root screen: the shield fills with green, release to refresh */
 function usePull(enabled: boolean, onRefresh: () => Promise<unknown>) {
   const [pull, setPull] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -158,11 +152,10 @@ function usePull(enabled: boolean, onRefresh: () => Promise<unknown>) {
     window.addEventListener('touchend', up);
     return () => { window.removeEventListener('touchstart', down); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', up); };
   }, [enabled, onRefresh, busy]);
-  useEffect(() => { if (!busy && pull === 56) setPull(0); }, [busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!busy && pull === 56) setPull(0); }, [busy]);
   return { pull, busy };
 }
 
-/** pulling opens the shield along its wave and draws the green line; while refreshing it keeps splitting and closing */
 function PullMark({ pull, busy }: { pull: number; busy: boolean }) {
   if (!pull && !busy) return null;
   const p = busy ? 0 : Math.min(1, pull / 70);
@@ -177,7 +170,6 @@ function PullMark({ pull, busy }: { pull: number; busy: boolean }) {
   );
 }
 
-/** opens the screen a bot button or a t.me/...?startapp= link points to */
 function useDeepLink(ready: boolean) {
   const nav = useNav();
   const { role } = useStore();
@@ -204,7 +196,7 @@ function useDeepLink(ready: boolean) {
     else if (screen === 'finance') nav.open('profile', 'finance');
     else if (screen === 'pro') nav.open('profile', 'pro');
     else if (screen === 'portfolio') nav.open('profile', 'portfolio');
-  }, [ready, nav]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, nav]);
 }
 
 function Gate() {
@@ -245,9 +237,8 @@ function Screen() {
   useEffect(() => {
     if (role === 'dev' && tab === 'devs' && depth === 1) setTab('projects');
     if (role === 'client' && tab === 'projects' && depth === 1) setTab('devs');
-  }, [role]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [role]);
   const C = SCREENS[route.name] ?? Home;
-  // first-run tips over the real home screen, once per role (replayed from the profile)
   const [tips, setTips] = useState(false);
   useEffect(() => {
     if (depth === 1 && tab === 'home' && !tipsSeen(role)) { const t = window.setTimeout(() => setTips(true), 500); return () => window.clearTimeout(t); }

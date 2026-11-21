@@ -1,8 +1,3 @@
-"""Files in chats, portfolio pictures, executor levels, client reputation, invitations, picks, Pro (Stars and USDT),
-public share card.
-
-Run:  TRUSTY_DB_URL=postgresql+asyncpg://... python -m tests.test_features
-"""
 import asyncio
 from types import SimpleNamespace
 import hashlib
@@ -21,18 +16,18 @@ os.environ["TRUSTY_CRYPTOPAY_URL"] = "http://127.0.0.1:18767"
 os.environ["TRUSTY_PUBLIC_URL"] = "https://trusty.example"
 os.environ.setdefault("TRUSTY_UPLOAD_DIR", "/tmp/claude-0/-home-user-safarzod/cb7e660d-38ea-558c-88d3-b5711404703f/scratchpad/uploads")
 
-import httpx  # noqa: E402
-from aiohttp import web  # noqa: E402
-from PIL import Image  # noqa: E402
+import httpx
+from aiohttp import web
+from PIL import Image
 
-from trusty import notify, pro  # noqa: E402
-from trusty.auth import sign_init_data  # noqa: E402
-from trusty.config import settings  # noqa: E402
-from trusty.db import Session, engine  # noqa: E402
-from trusty.main import app  # noqa: E402
-from trusty.models import Base, Deal, Review, User, utcnow  # noqa: E402
+from trusty import notify, pro
+from trusty.auth import sign_init_data
+from trusty.config import settings
+from trusty.db import Session, engine
+from trusty.main import app
+from trusty.models import Base, Deal, Review, User, utcnow
 
-from .mock_cryptopay import MockCryptoPay  # noqa: E402
+from .mock_cryptopay import MockCryptoPay
 
 
 def auth(uid: int, name: str) -> dict:
@@ -52,7 +47,6 @@ def png(color=(23, 99, 69), size=(40, 30)) -> bytes:
 
 
 class FakeBot:
-    """Only what Pro needs from the bot: an invoice link in Telegram Stars."""
 
     def __init__(self):
         self.invoices = []
@@ -74,7 +68,6 @@ async def main() -> None:
     runner = web.AppRunner(mapp)
     await runner.setup()
     await web.TCPSite(runner, "127.0.0.1", 18767).start()
-    # record what would go to Telegram
     notify.send_project = lambda chat_id, p, text, note="НОВЫЙ ПРОЕКТ": CALLS.append(("project", chat_id, p.id, note))
     notify.send_matches = lambda chat_id, p, devs: CALLS.append(("matches", chat_id, p.id, [d["id"] for d in devs]))
 
@@ -99,7 +92,6 @@ async def main() -> None:
         for uid in (5002, 5003):
             ok(await h.post(f"/api/admin/profiles/{uid}/approve", headers=ADM))
 
-        # 1. files in a chat: pictures and documents with a caption; signed links; unknown types refused
         chat = ok(await h.post("/api/chats/open", json={"userId": 5002}, headers=A))
         cid = chat["id"]
         chat = ok(await h.post(f"/api/chats/{cid}/files", headers=A, data={"text": "Макеты и ТЗ"},
@@ -115,7 +107,6 @@ async def main() -> None:
         b_list = ok(await h.get("/api/chats", headers=A))
         assert b_list[0]["unread"] == 1 and b_list[0]["messages"][-1]["files"][0]["name"] == "work.zip"
 
-        # 2. portfolio: a picture (re-encoded to JPEG) and a link; links are checked; pictures belong to their owner
         up = ok(await h.post("/api/portfolio/image", headers=B, files={"file": ("shot.png", png((200, 10, 10)), "image/png")}))
         ok(await h.post("/api/portfolio/image", headers=B, files={"file": ("bad.png", b"not an image", "image/png")}), 400)
         me = ok(await h.put("/api/portfolio", headers=B, json={"items": [
@@ -126,9 +117,8 @@ async def main() -> None:
         assert r.headers["content-type"] == "image/jpeg"
         ok(await h.put("/api/portfolio", headers=B, json={"items": [{"title": "Сайт", "url": "javascript:alert(1)"}]}), 400)
         ok(await h.put("/api/portfolio", headers=D, json={"items": [{"title": "Чужое", "imageId": up["imageId"]}]}), 400)
-        ok(await h.put("/api/portfolio", headers=A, json={"items": []}), 400)  # no profile
+        ok(await h.put("/api/portfolio", headers=A, json={"items": []}), 400)
 
-        # 3. levels: Новый -> Проверенный -> Топ, with what is left in plain words
         dev = ok(await h.get("/api/devs/5002", headers=A))
         assert dev["level"] == "new" and dev["levelNext"]["name"] == "Проверенный" and "ещё 3 сделки" in dev["levelNext"]["left"]
 
@@ -149,7 +139,6 @@ async def main() -> None:
         dev = ok(await h.get("/api/devs/5002", headers=A))
         assert dev["level"] == "top" and dev["levelNext"] is None
 
-        # 4. the client's reputation for executors: rating and "платит быстро" (paid within two hours, on average)
         async with Session() as s:
             for d in (await s.execute(__import__("sqlalchemy").select(Deal).limit(2))).scalars():
                 s.add(Review(deal_id=d.id, author_id=5002, target_id=5001, rating=4))
@@ -157,12 +146,11 @@ async def main() -> None:
         chat = ok(await h.get(f"/api/chats/{cid}", headers=B))
         assert chat["peer"]["fastPay"] is True and chat["peer"]["rating"] == 4.0 and chat["peer"]["deals"] == 15, chat["peer"]
 
-        # 5. invitations and picks; Pro executors come first; Pro executors get new projects at once
         new = {"title": "Бот для записи в студию", "category": "bots", "text": "Запись к мастеру, напоминания, админка расписания и оплата.",
                "budgetMin": 50, "budgetMax": 90, "days": 7, "stack": ["Python"]}
         CALLS.clear()
         p = ok(await h.post("/api/projects", headers=A, json=new))
-        assert ("matches", 5001, p["id"], ["5002"]) in CALLS and not any(c[0] == "project" for c in CALLS)  # nobody is Pro yet
+        assert ("matches", 5001, p["id"], ["5002"]) in CALLS and not any(c[0] == "project" for c in CALLS)
         p2 = ok(await h.post(f"/api/projects/{p['id']}/invite", headers=A, json={"devId": 5002}))
         assert p2["invitedIds"] == ["5002"] and ("project", 5002, p["id"], "ПРИГЛАШЕНИЕ") in CALLS
         ok(await h.post(f"/api/projects/{p['id']}/invite", headers=A, json={"devId": 5002}), 400)
@@ -175,16 +163,15 @@ async def main() -> None:
             (await s.get(User, 5003)).pro_until = utcnow() + timedelta(days=5)
             await s.commit()
         picks = ok(await h.get(f"/api/projects/{p['id']}/matches", headers=A))
-        assert [d["id"] for d in picks] == ["5003", "5002"] and picks[0]["pro"], [(d["id"], d["pro"]) for d in picks]  # Pro first
+        assert [d["id"] for d in picks] == ["5003", "5002"] and picks[0]["pro"], [(d["id"], d["pro"]) for d in picks]
         CALLS.clear()
         ok(await h.post("/api/projects", headers=A, json={**new, "title": "Ещё один бот для записи"}))
-        assert [c[1] for c in CALLS if c[0] == "project"] == [5003]  # only the Pro executor who fits
+        assert [c[1] for c in CALLS if c[0] == "project"] == [5003]
         ok(await h.patch("/api/me", headers=D, json={"alerts": False}))
         CALLS.clear()
         ok(await h.post("/api/projects", headers=A, json={**new, "title": "Третий бот для записи"}))
-        assert not any(c[0] == "project" for c in CALLS)  # alerts switched off
+        assert not any(c[0] == "project" for c in CALLS)
 
-        # 6. Pro in USDT through Crypto Pay (webhook) and in Telegram Stars (pre-checkout + successful payment)
         info = ok(await h.get("/api/pro", headers=B))
         assert info["active"] is False and info["plans"][0]["stars"] == settings.pro_stars and info["plans"][1]["discount"] == 15
         url = ok(await h.post("/api/pro/crypto", headers=B, json={"plan": "1m"}))["url"]
@@ -205,23 +192,22 @@ async def main() -> None:
         assert link.startswith("https://t.me/") and inv["currency"] == "XTR" and inv["prices"][0].amount == round(settings.pro_stars * 3 * 0.85)
         async with Session() as s:
             assert await pro.check_stars(s, inv["payload"], 5002, inv["prices"][0].amount, "XTR") is None
-            assert await pro.check_stars(s, inv["payload"], 5002, 1, "XTR")  # wrong amount
-            assert await pro.check_stars(s, inv["payload"], 5001, inv["prices"][0].amount, "XTR")  # someone else
+            assert await pro.check_stars(s, inv["payload"], 5002, 1, "XTR")
+            assert await pro.check_stars(s, inv["payload"], 5001, inv["prices"][0].amount, "XTR")
             await s.rollback()
         async with Session() as s:
             assert await pro.paid_stars(s, inv["payload"], 5002, "charge-1") is True
         async with Session() as s:
-            assert await pro.paid_stars(s, inv["payload"], 5002, "charge-1") is False  # once
+            assert await pro.paid_stars(s, inv["payload"], 5002, "charge-1") is False
             u = await s.get(User, 5002)
-            assert abs((u.pro_until - utcnow()) - timedelta(days=30 + 90)) < timedelta(minutes=1)  # periods add up
+            assert abs((u.pro_until - utcnow()) - timedelta(days=30 + 90)) < timedelta(minutes=1)
         notify.bot = None
         me = ok(await h.get("/api/bootstrap", headers=B))["me"]
         assert me["pro"]["active"] and me["profile"]["pro"]
 
-        # 7. sharing: a picture card and a t.me link; the server's own address is never in what people see
         r = ok(await h.get("/api/share/dev/5002.jpg"))
         assert r.headers["content-type"] == "image/jpeg" and len(r.content) > 5000
-        sh = ok(await h.post("/api/share/dev/5002", headers=A))  # no Main Mini App, no bot: the link opens the bot chat
+        sh = ok(await h.post("/api/share/dev/5002", headers=A))
         assert sh["link"] == "https://t.me/itrusty_bot?start=dev_5002" and sh["prepared"] is None
         assert sh["card"].startswith("/api/share/dev/5002.jpg?v=")
         notify.bot, notify.main_app = FakeBot(), True
@@ -234,8 +220,8 @@ async def main() -> None:
         assert res.reply_markup.inline_keyboard[0][0].url == sh["link"] and "trusty.example" not in res.caption
         assert ok(await h.get("/api/bootstrap", headers=A))["share"]["base"] == "https://t.me/itrusty_bot?startapp=dev_"
         notify.bot, notify.main_app = None, False
-        ok(await h.post("/api/share/dev/5001", headers=A), 404)  # not an executor
-        ok(await h.get("/api/u/5002"), 404)  # no public page with the server's address
+        ok(await h.post("/api/share/dev/5001", headers=A), 404)
+        ok(await h.get("/api/u/5002"), 404)
     print("features OK: files, portfolio, levels, client reputation, invites, picks, Pro (USDT + Stars), share card")
     from trusty.cryptopay import pay
     await pay.close()

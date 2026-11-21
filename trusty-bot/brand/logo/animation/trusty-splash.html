@@ -21,7 +21,6 @@
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function render(t) {
-    // coin: falls in spinning, lands face-on with a small squash
     var pf = prog(t, .04, LAND), y = -95 * (1 - inQuad(pf)), sx = Math.cos(2 * Math.PI * 1.5 * outQuart(pf)), sy = 1, shade = 0;
     shade = .38 * (1 - Math.abs(sx));
     if (t > LAND) {
@@ -30,7 +29,6 @@
       var sq = .12 * Math.exp(-7 * tau) * Math.cos(16 * tau);
       sx = 1 + sq; sy = 1 - sq; shade = 0;
     }
-    // idle: while the app keeps loading, the coin turns over now and then
     if (t > INTRO + .25) {
       var c = ((t - INTRO - .25) % CYCLE) / CYCLE, p = inOut(clamp(c / .55));
       sx = Math.cos(2 * Math.PI * p); shade = .34 * (1 - Math.abs(sx)); y = 0; sy = 1;
@@ -39,7 +37,6 @@
     $('tl-spin').setAttribute('transform', 'scale(' + (Math.max(Math.abs(sx), .04) * (sx < 0 ? -1 : 1)) + ' ' + sy + ')');
     $('tl-shade').style.opacity = shade;
     $('tl-coin').style.opacity = t < .04 ? 0 : 1;
-    // braces spring in from both sides and draw themselves; a short pinch when they lock
     var tb = t - .28, s = spring(tb, .5, 11), dx = tb < 0 ? 30 : 30 * s, rot = tb < 0 ? 12 : 12 * s;
     var pc = prog(t, .8, .98);
     if (pc > 0 && pc < 1) dx += 1.4 * Math.sin(Math.PI * pc);
@@ -50,7 +47,6 @@
     $('tl-hl').style.opacity = $('tl-hr').style.opacity = outCubic(prog(t, .28, .38));
     var pn = outCubic(prog(t, .5, .7));
     nibs.forEach(function (n) { n.style.opacity = pn; });
-    // ring wave and sheen at the lock moment
     var pr = prog(t, .82, 1.5);
     $('tl-ring').setAttribute('r', 14.5 + 20 * outCubic(pr));
     $('tl-ring').style.strokeWidth = 2.4 * (1 - outCubic(pr));
@@ -58,7 +54,6 @@
     var ps = prog(t, .86, 1.35);
     $('tl-sheen').setAttribute('transform', 'translate(' + (-30 + 60 * outCubic(ps)) + ' 0) rotate(22)');
     $('tl-sheen').style.opacity = ps > 0 && ps < 1 ? 1 : 0;
-    // wordmark letters rise on a spring
     letters.forEach(function (el, i) {
       var tl = t - (.92 + i * .045), yy = tl < 0 ? 16 : 16 * spring(tl, .62, 13);
       el.setAttribute('transform', 'translate(0 ' + yy + ')');

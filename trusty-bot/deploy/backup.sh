@@ -1,5 +1,4 @@
 #!/bin/sh
-# Daily PostgreSQL dump of the Trusty database, kept for 14 days.
 set -e
 mkdir -p /var/backups/trusty
 chmod 700 /var/backups/trusty

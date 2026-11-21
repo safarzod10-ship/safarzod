@@ -1,12 +1,3 @@
-"""Mini App loading screen: a short version of the logo intro, then an idle coin turn until the app is ready.
-
-The snippet is plain HTML + CSS + JS (no dependencies) so it plays before the app bundle loads.
-Usage: python3 splash.py <brand_dir> <miniapp index.html>
-It replaces the block between <!-- splash:start --> and <!-- splash:end --> in the given index.html, and also writes
-logo/animation/trusty-splash.html for previewing (?theme=dark, ?capture for frame capture).
-
-API for the app: window.__tlSplash.finish() -> Promise; plays the exit once the intro has finished, then removes itself.
-"""
 import os
 import re
 import sys
@@ -14,7 +5,7 @@ import sys
 from final import AXIS, BOX, COIN_R, DEEP, HALF, INK, MINT, STROKE, TETHER, WHITE, coin_symbol, nib, wordmark_svg
 from svglib import f
 
-LIGHT_BG, DARK_BG = "#F2F5F3", "#071C19"  # the app's own background tokens, so the hand-off is seamless
+LIGHT_BG, DARK_BG = "#F2F5F3", "#071C19"
 CAP = 15.0
 
 CSS = f"""
@@ -132,7 +123,6 @@ JS = r"""
 def markup(font: str) -> str:
     base = BOX[3] + 12 + CAP
     text, tw = wordmark_svg("X", CAP, 0, 0, font, cls="tl-li")
-    # each glyph group: wrap so it can rise on its own; centre the word under the mark
     parts = text.split('<g class="tl-li"')[1:]
     x0 = 50 - tw / 2
     letters = "".join(f'<g class="tl-l" style="opacity:0"><g class="tl-li"{p}</g>' for p in parts)

@@ -1,7 +1,3 @@
-"""In-process mock of the Crypto Pay API (invoices, idempotent transfers, checks, balance). No real money.
-
-Standalone:  python -m tests.mock_cryptopay 18765   (adds POST /_mock/pay_last to mark the newest invoice paid)
-"""
 import sys
 
 from aiohttp import web
@@ -10,20 +6,19 @@ TOKEN = "777:MOCK_TOKEN"
 
 
 class MockCryptoPay:
-    """Just enough of the Crypto Pay API: invoices, transfers (idempotent by spend_id), checks, balance."""
 
     def __init__(self):
         self.invoices, self.transfers, self.checks = {}, {}, {}
-        self.fail_transfer: dict[int, str] = {}  # user_id -> error name (API error)
-        self.network_fail_once: set[int] = set()  # user ids whose next transfer "times out" after being executed
+        self.fail_transfer: dict[int, str] = {}
+        self.network_fail_once: set[int] = set()
         self.seq = 1000
 
     async def handle(self, request: web.Request):
         assert request.headers.get("Crypto-Pay-API-Token") == TOKEN
         method = request.match_info["method"]
         p = await request.json() if request.can_read_body else {}
-        ok = lambda r: web.json_response({"ok": True, "result": r})  # noqa: E731
-        err = lambda name, code=400: web.json_response({"ok": False, "error": {"code": code, "name": name}})  # noqa: E731
+        ok = lambda r: web.json_response({"ok": True, "result": r})
+        err = lambda name, code=400: web.json_response({"ok": False, "error": {"code": code, "name": name}})
         if method == "getMe":
             return ok({"app_id": 1, "name": "MOCK", "payment_processing_bot_username": "CryptoTestnetBot"})
         if method == "getBalance":
@@ -46,7 +41,7 @@ class MockCryptoPay:
         if method == "transfer":
             uid, spend = int(p["user_id"]), p["spend_id"]
             if spend in self.transfers:
-                return ok(self.transfers[spend])  # idempotent
+                return ok(self.transfers[spend])
             if uid in self.fail_transfer:
                 return err(self.fail_transfer[uid])
             self.seq += 1
@@ -55,7 +50,7 @@ class MockCryptoPay:
             self.transfers[spend] = t
             if uid in self.network_fail_once:
                 self.network_fail_once.discard(uid)
-                return web.Response(status=502, text="<html>bad gateway</html>")  # executed, but the answer is lost
+                return web.Response(status=502, text="<html>bad gateway</html>")
             return ok(t)
         if method == "createCheck":
             self.seq += 1
@@ -68,7 +63,6 @@ class MockCryptoPay:
     def pay(self, invoice_id: int):
         self.invoices[invoice_id]["status"] = "paid"
         return self.invoices[invoice_id]
-
 
 
 def make_app(mock: MockCryptoPay) -> web.Application:

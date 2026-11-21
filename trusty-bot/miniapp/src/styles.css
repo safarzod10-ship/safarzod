@@ -1,6 +1,3 @@
-/* IT Trusty Mini App
-   Black ground, graphite lists, one green (#176345) for plates and the main action. Icons without tiles.
-   Manrope for text, Unbounded for amounts. Floating island instead of a tab bar. */
 :root {
   --bg: #000000;
   --surface: #101113;
@@ -45,7 +42,6 @@ img { max-width: 100%; display: block; }
 .screen.root { animation-name: fade; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-/* ---------------------------------------------------------------- header */
 .brandbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 2px; min-height: 44px; }
 .brandbar .mark { display: flex; color: var(--ink); }
 .top { display: flex; align-items: center; gap: 10px; padding: 12px 0 16px; min-height: 56px; }
@@ -58,7 +54,6 @@ img { max-width: 100%; display: block; }
 .summary { display: flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 14px; margin: -8px 0 16px; }
 .summary b { color: var(--ink); }
 
-/* ---------------------------------------------------------------- sections and grouped lists */
 .section { margin-top: 26px; }
 .section:first-child { margin-top: 0; }
 .section-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 10px; }
@@ -85,14 +80,12 @@ button.cell:active { background: var(--surface-2); }
 .ic.red { color: var(--red); }
 .ic.amber, .ic.blue { color: var(--ink); }
 
-/* ---------------------------------------------------------------- avatar */
 .av { position: relative; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--ink); font-weight: 700; letter-spacing: .01em; }
 .av .on { position: absolute; right: 0; bottom: 0; width: 26%; height: 26%; min-width: 10px; min-height: 10px; border-radius: 50%; background: var(--online); box-shadow: 0 0 0 2.5px var(--bg); }
 .group .av .on { box-shadow: 0 0 0 2.5px var(--surface); }
 @keyframes ping { 0% { box-shadow: 0 0 0 2.5px var(--surface), 0 0 0 2.5px rgb(43 154 108 / .6); } 100% { box-shadow: 0 0 0 2.5px var(--surface), 0 0 0 9px rgb(43 154 108 / 0); } }
 .av .on.live { animation: ping 1.8s ease-out infinite; }
 
-/* ---------------------------------------------------------------- pills, chips, rating */
 .pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--surface-2); color: var(--ink); }
 .pill.green { background: var(--primary); color: var(--primary-ink); }
 .pill.red { background: var(--red-soft); color: var(--red); }
@@ -109,7 +102,6 @@ button.cell:active { background: var(--surface-2); }
 .rating svg { color: var(--ink); }
 .verified { color: var(--ink); display: inline-flex; flex: none; }
 
-/* ---------------------------------------------------------------- search and inputs */
 .search { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; background: var(--surface); border-radius: 16px; color: var(--muted); width: 100%; font-weight: 500; }
 .search input { border: 0; outline: 0; background: none; flex: 1; min-width: 0; color: var(--ink); font-size: 15px; }
 .search input::placeholder { color: var(--muted); }
@@ -128,14 +120,12 @@ button.cell:active { background: var(--surface-2); }
 .suffix span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
 .suffix .input { padding-right: 62px; }
 
-/* ---------------------------------------------------------------- segmented */
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface-2); border-radius: 14px; padding: 3px; gap: 3px; position: relative; }
 .seg button { height: 36px; border-radius: 11px; font-size: 13.5px; font-weight: 700; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; z-index: 1; transition: color .25s; }
 .seg button.on { color: var(--primary-ink); }
 .seg .seg-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; border-radius: 11px; background: var(--primary); transition: transform .35s var(--ease); z-index: 0; }
 .seg .count { font-size: 12px; opacity: .8; }
 
-/* ---------------------------------------------------------------- buttons and bottom bar */
 .btn { height: 52px; border-radius: 16px; padding: 0 18px; font-weight: 700; font-size: 15.5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: transform .12s var(--ease), background .15s, opacity .2s; position: relative; overflow: hidden; }
 .btn:active { transform: scale(.97); }
 .btn.primary { background: var(--primary); color: var(--primary-ink); }
@@ -154,11 +144,9 @@ button.cell:active { background: var(--surface-2); }
 .bar-link { text-align: center; font-weight: 700; font-size: 13.5px; color: var(--muted); padding: 6px 0 0; }
 .bar-link.danger { color: var(--red); }
 
-/* main button: press -> shrinks into a spinning circle while the request runs */
 .bar-row .paybtn { transition: flex-basis .45s var(--ease), border-radius .45s var(--ease), padding .45s var(--ease), transform .12s var(--ease); }
 .bar-row .paybtn.loading { flex: 0 0 52px; border-radius: 26px; padding: 0; margin: 0 auto; opacity: 1; }
 
-/* ---------------------------------------------------------------- island navigation */
 .nav { position: fixed; left: 0; right: 0; bottom: calc(14px + var(--safe-b)); z-index: 30; pointer-events: none; }
 .nav-in { max-width: 528px; margin: 0 auto; padding: 0 16px; display: flex; gap: 10px; align-items: center; }
 .island { pointer-events: auto; flex: 1; height: var(--island-h); border-radius: 33px; background: rgb(20 21 23 / .94); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid #232428; display: grid; grid-template-columns: repeat(4, 1fr); position: relative; padding: 0 6px; box-shadow: 0 12px 30px rgb(0 0 0 / .5); }
@@ -176,14 +164,12 @@ button.cell:active { background: var(--surface-2); }
 .fab.open svg { transform: rotate(45deg); }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ---------------------------------------------------------------- lists appear one after another */
 .stagger > * { animation: rise .45s var(--ease) both; }
 .stagger > :nth-child(2) { animation-delay: .04s; } .stagger > :nth-child(3) { animation-delay: .08s; }
 .stagger > :nth-child(4) { animation-delay: .12s; } .stagger > :nth-child(5) { animation-delay: .16s; }
 .stagger > :nth-child(6) { animation-delay: .2s; } .stagger > :nth-child(n+7) { animation-delay: .24s; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-/* ---------------------------------------------------------------- skeleton */
 .sk { background: linear-gradient(90deg, #16171a 0%, #16171a 35%, #25272b 50%, #16171a 65%, #16171a 100%); background-size: 300% 100%; animation: shim 1.4s linear infinite; border-radius: 8px; }
 @keyframes shim { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .sk-row { display: flex; gap: 12px; align-items: center; padding: 14px 16px; }
@@ -203,11 +189,9 @@ button.cell:active { background: var(--surface-2); }
 .loader .split .lo { animation-name: split-lo; }
 .loader .split .wave { animation: split-wave 1.5s ease-in-out infinite; }
 
-/* ---------------------------------------------------------------- pull to refresh */
 .ptr { position: fixed; top: 0; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; pointer-events: none; }
 .ptr svg { margin-top: 12px; }
 
-/* ---------------------------------------------------------------- home */
 .empty-cta { text-align: center; padding: 34px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); }
 .empty-cta b { color: var(--ink); font-size: 17px; }
 .hs { display: flex; gap: 14px; overflow-x: auto; margin: 0 -16px; padding: 4px 16px 4px; scrollbar-width: none; }
@@ -223,7 +207,6 @@ button.cell:active { background: var(--surface-2); }
 .step b { display: block; font-size: 15px; }
 .step span { color: var(--muted); font-size: 13.5px; }
 
-/* ---------------------------------------------------------------- profile (developer) */
 .hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 0 20px; gap: 4px; }
 .hero h1 { margin: 12px 0 0; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
 .hero .handle { color: var(--muted); font-weight: 500; }
@@ -246,7 +229,6 @@ button.cell:active { background: var(--surface-2); }
 .deal-row q { display: block; margin-top: 8px; font-size: 14px; quotes: none; color: var(--soft); }
 .deal-row q + small { color: var(--faint); font-size: 12.5px; }
 
-/* ---------------------------------------------------------------- project */
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-radius: var(--r); overflow: hidden; }
 .fact { background: var(--surface); padding: 13px 16px; }
 .fact span { font-size: 12px; color: var(--muted); font-weight: 600; }
@@ -259,7 +241,6 @@ button.cell:active { background: var(--surface-2); }
 .bid-f { display: flex; gap: 8px; align-items: center; }
 .price { font-family: var(--display); font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
 
-/* ---------------------------------------------------------------- chat */
 .chat { display: flex; flex-direction: column; min-height: 100vh; }
 .chat-top { position: sticky; top: 0; z-index: 20; background: rgb(0 0 0 / .86); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding: 8px 12px 10px; border-bottom: 1px solid var(--line); }
 .chat-peer { display: flex; align-items: center; gap: 10px; }
@@ -292,7 +273,6 @@ button.cell:active { background: var(--surface-2); }
 .send:active { transform: scale(.9); }
 .send:disabled { background: transparent; color: var(--dim); }
 
-/* swipe a chat row to the left to delete it */
 .swipe { position: relative; overflow: hidden; }
 .swipe + .swipe .cell::before { content: ''; position: absolute; top: 0; right: 0; left: 70px; border-top: 1px solid var(--line); }
 .swipe-del { position: absolute; top: 0; right: 0; bottom: 0; width: 92px; background: #c8372b; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-weight: 700; font-size: 12.5px; }
@@ -300,7 +280,6 @@ button.cell:active { background: var(--surface-2); }
 .swipe-body:active { background: var(--surface-2); }
 .amount-input { font-family: var(--display); font-weight: 700; font-size: 56px; line-height: 1; background: transparent; border: 0; outline: 0; color: var(--ink); text-align: right; padding: 0; width: auto; caret-color: var(--green-text); }
 
-/* offer card in the chat */
 .offer { align-self: center; width: min(320px, 100%); margin: 8px 0 2px; animation: msg-in .35s var(--ease); }
 .offer-card { background: var(--surface); border-radius: 24px; padding: 18px 18px 16px; text-align: center; position: relative; }
 .offer-card.closed { opacity: .55; }
@@ -323,7 +302,6 @@ button.cell:active { background: var(--surface-2); }
 .timer .track { stroke: var(--surface-3); }
 .timer .left { stroke: var(--ink); transition: stroke-dashoffset 1s linear; }
 
-/* odometer: rolling digits */
 .odo { display: inline-flex; font-family: var(--display); font-weight: 700; overflow: hidden; line-height: 1; }
 .odo .col { display: inline-block; overflow: hidden; height: 1em; position: relative; }
 .odo .strip { display: flex; flex-direction: column; transition: transform .45s var(--ease); }
@@ -335,7 +313,6 @@ button.cell:active { background: var(--surface-2); }
 .steppers button { height: 42px; border-radius: 14px; background: var(--surface-3); font-weight: 700; font-size: 14px; transition: background .15s, transform .12s; }
 .steppers button:active { transform: scale(.95); background: #303136; }
 
-/* ---------------------------------------------------------------- form wizard */
 .progress { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; margin: 2px 0 18px; }
 .progress i { display: block; height: 100%; background: var(--primary); border-radius: 2px; transition: width .4s var(--ease); }
 .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -359,7 +336,6 @@ button.cell:active { background: var(--surface-2); }
 .upload i { display: block; height: 100%; background: var(--primary); animation: upload 1.4s var(--ease) infinite; width: 40%; }
 @keyframes upload { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 
-/* ---------------------------------------------------------------- done, empty, toast, sheet, info */
 .done { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 48px 12px 24px; gap: 10px; }
 .done .ok { width: 76px; height: 76px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; animation: pop .55s cubic-bezier(.2, 1.4, .4, 1); }
 .done .ok svg path, .done .ok svg polyline { stroke-dasharray: 30; animation: draw .5s .15s ease both; }
@@ -390,7 +366,6 @@ button.cell:active { background: var(--surface-2); }
 .mt { margin-top: 16px; }
 .mt-s { margin-top: 10px; }
 
-/* success overlay: green circle, check draws, the amount counts up */
 .success { position: fixed; inset: 0; z-index: 90; background: rgb(0 0 0 / .82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; animation: fade .25s; text-align: center; padding: 24px; }
 .success .ok { width: 92px; height: 92px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; animation: pop .6s cubic-bezier(.2, 1.4, .4, 1); }
 .success .ok path { stroke-dasharray: 40; animation: draw2 .5s .25s ease both; }
@@ -401,7 +376,6 @@ button.cell:active { background: var(--surface-2); }
 .success .sum small { font-family: var(--display); font-weight: 600; color: var(--muted); }
 .success p { margin: 0; color: var(--muted); max-width: 30ch; font-weight: 500; }
 
-/* waiting for payment: an arc runs round the ₮ */
 .waitpay { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 0 6px; }
 .waitpay .ringbox { position: relative; width: 104px; height: 104px; }
 .waitpay svg { position: absolute; inset: 0; }
@@ -412,7 +386,6 @@ button.cell:active { background: var(--surface-2); }
 .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
 
-/* ---------------------------------------------------------------- role switch */
 .roles { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .role { display: flex; align-items: center; gap: 12px; padding: 15px 16px; border-radius: var(--r); background: var(--surface); border: 1.5px solid transparent; text-align: left; width: 100%; transition: border-color .15s, background-color .15s; }
 .sheet .role { background: #1b1c1f; }
@@ -424,7 +397,6 @@ button.cell:active { background: var(--surface-2); }
 .role.on .role-check { background: var(--primary); border-color: var(--primary); }
 button.note { font: inherit; width: 100%; text-align: left; }
 
-/* ---------------------------------------------------------------- onboarding */
 .ob { position: fixed; inset: 0; background: var(--bg); overflow: hidden; display: flex; flex-direction: column; animation: fade .35s; }
 .ob-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 0; min-height: 44px; max-width: 560px; width: 100%; margin: 0 auto; }
 .ob-dots { display: flex; gap: 6px; }
@@ -465,7 +437,6 @@ button.note { font: inherit; width: 100%; text-align: left; }
 .ob-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--online); display: inline-block; }
 @keyframes ob-in { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
 
-/* ---------------------------------------------------------------- deal */
 .deal-head { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 6px 0 4px; }
 .deal-head .t { color: var(--muted); font-weight: 600; font-size: 14px; max-width: 90%; }
 .deal-head .sum { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 14px; }
@@ -496,7 +467,6 @@ button.note { font: inherit; width: 100%; text-align: left; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
-/* ---------------------------------------------------------------- levels, Pro */
 .pill.lvl-verified { background: var(--surface-2); color: var(--ink); }
 .pill.lvl-top { background: var(--primary); color: #fff; }
 .pro-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 6px; background: var(--ink); color: var(--bg); font: 800 10.5px var(--display); letter-spacing: .04em; flex: none; }
@@ -504,7 +474,6 @@ button.note { font: inherit; width: 100%; text-align: left; }
 .ladder .ic { padding-top: 2px; }
 .ladder .on .cell-title { color: var(--green-text); }
 
-/* ---------------------------------------------------------------- files in chat */
 .att-grid { display: grid; gap: 4px; margin: -3px -7px 6px; border-radius: 16px; overflow: hidden; }
 .att-grid.n1 { grid-template-columns: 1fr; } .att-grid.n2, .att-grid.n4 { grid-template-columns: 1fr 1fr; } .att-grid.n3 { grid-template-columns: 1fr 1fr 1fr; }
 .att-grid button { display: block; aspect-ratio: 4 / 3; background: #0b0c0e; }
@@ -526,7 +495,6 @@ button.note { font: inherit; width: 100%; text-align: left; }
 .lightbox img { flex: 1; min-height: 0; object-fit: contain; width: 100%; animation: fade .25s; }
 .lightbox .row { display: flex; gap: 8px; padding: 12px 16px calc(16px + var(--safe-b)); }
 
-/* ---------------------------------------------------------------- portfolio */
 .works { display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; }
 .works::-webkit-scrollbar { display: none; }
 .work { flex: 0 0 240px; background: var(--surface); border-radius: 18px; overflow: hidden; text-align: left; display: flex; flex-direction: column; }
@@ -539,7 +507,6 @@ button.note { font: inherit; width: 100%; text-align: left; }
 .pic-drop { aspect-ratio: 16 / 10; border-radius: 16px; border: 1.5px dashed var(--dim); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-weight: 700; font-size: 13px; overflow: hidden; position: relative; width: 100%; }
 .pic-drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-/* ---------------------------------------------------------------- share card, Pro */
 .share-pic { border-radius: 16px; overflow: hidden; aspect-ratio: 1200 / 630; background: #111214; }
 .share-pic img { width: 100%; height: 100%; object-fit: cover; }
 .pro-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 10px 0 18px; }
@@ -558,7 +525,6 @@ button.note { font: inherit; width: 100%; text-align: left; }
 .pro-banner b { display: block; font-size: 14.5px; }
 .pro-banner span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
-/* ---------------------------------------------------------------- coach marks over the real screen */
 .coach { position: fixed; inset: 0; z-index: 85; }
 .coach-hole { position: fixed; border-radius: 20px; box-shadow: 0 0 0 9999px rgb(0 0 0 / .78); transition: top .35s var(--ease), left .35s var(--ease), width .35s var(--ease), height .35s var(--ease); pointer-events: none; }
 .coach-hole::after { content: ''; position: absolute; inset: -4px; border-radius: 24px; border: 2px solid var(--green-text); animation: coach-pulse 1.6s ease-out infinite; }
@@ -602,6 +568,5 @@ button.note { font: inherit; width: 100%; text-align: left; }
 
 .pro-badge.big { height: 34px; padding: 0 14px; border-radius: 12px; font-size: 17px; background: var(--primary); color: #fff; letter-spacing: .08em; }
 .plan .p svg { color: #f5c451; }
-/* pictures always fill their frame, whatever the original proportions */
 .work .pic, .att-grid button, .share-pic { position: relative; overflow: hidden; }
 .work .pic img, .att-grid:not(.n1) img, .share-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

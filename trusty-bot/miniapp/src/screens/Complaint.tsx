@@ -1,4 +1,3 @@
-// Complaint with evidence (screenshots) against a developer or a client.
 import { useState } from 'react';
 import { REASONS, type ComplaintReason } from '../data';
 import { Icon } from '../icons';
@@ -36,12 +35,12 @@ export default function Complaint({ against, name, deal }: { against: string; na
     try {
       setId(await addComplaint({ againstId: against, againstName: title, dealId: deal, reason, text: text.trim(),
         files: shots.map((s) => s.file), previews: shots.map((s) => s.url) }));
-    } catch { /* toast shown */ } finally { setBusy(false); }
+    } catch {} finally { setBusy(false); }
   };
 
   return (
     <div className="screen no-tabs">
-      <Top title="Жалоба" sub="Нужны доказательства: без них арбитр не сможет принять решение" />
+      <Top title="Жалоба" />
       <div className="group">
         <Cell avatar lead={<Avatar name={title} hue={who?.hue ?? 0} />} title={title}
           sub={`${who?.handle ? `@${who.handle}` : ''}${deal ? `${who?.handle ? ' · ' : ''}сделка #${deal}` : ''}` || undefined} />
@@ -83,10 +82,10 @@ export default function Complaint({ against, name, deal }: { against: string; na
             </label>
           )}
         </div>
-        <p className="hint mt-s">Скриншоты переписки, условий, переводов. До 8 МБ каждый. Переписку из чата IT Trusty арбитр увидит сам.</p>
+        <p className="hint mt-s">До 8 МБ каждый</p>
       </Section>
 
-      <div className="mt"><Note tone="amber">За заведомо ложные жалобы блокируют так же, как за обман.</Note></div>
+      <div className="mt"><Note tone="amber">За ложные жалобы блокируют.</Note></div>
       <Actions primary={{ label: busy ? 'Отправляем…' : 'Отправить жалобу', disabled: !ok || busy, onClick: submit }} />
     </div>
   );

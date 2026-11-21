@@ -38,8 +38,7 @@ export default function Home() {
         <div style={{ marginBottom: 14 }}>
           <button className="note" onClick={() => nav.open('profile', 'dev-form')}>
             <span style={{ display: 'flex' }}><Mark size={18} /></span>
-            <div><b style={{ color: 'var(--ink)' }}>{devForm === 'review' ? 'Анкета на проверке' : 'Заполните анкету исполнителя'}</b><br />
-              {devForm === 'review' ? 'После проверки профиль появится в каталоге.' : 'Без неё нельзя брать сделки. Это 4 коротких шага.'}</div>
+            <div><b style={{ color: 'var(--ink)' }}>{devForm === 'review' ? 'Анкета на проверке' : 'Заполните анкету исполнителя'}</b></div>
           </button>
         </div>
       )}
@@ -54,8 +53,6 @@ export default function Home() {
         ) : (
           <div className="empty-cta">
             <b>{tab === 'active' ? 'Активных сделок нет' : 'Архив пуст'}</b>
-            <span>{role === 'client' ? 'Найдите исполнителя и договоритесь о цене в чате: сделка появится здесь.'
-              : 'Откликайтесь на проекты или договоритесь с заказчиком в чате.'}</span>
             {tab === 'active' && (
               <button className="btn primary sm" style={{ marginTop: 4 }} onClick={() => nav.setTab(role === 'client' ? 'devs' : 'projects')}>
                 {role === 'client' ? 'Найти исполнителя' : 'Найти проект'}
@@ -66,7 +63,6 @@ export default function Home() {
       </div>
 
       <Sheet open={roleSheet} onClose={() => setRoleSheet(false)} title="Кто вы сейчас?">
-        <p className="muted small" style={{ margin: '0 0 14px' }}>Профиль, сделки и чаты сохраняются при смене роли.</p>
         <RolePicker value={role} onChange={(r) => {
           setRoleSheet(false);
           if (r !== role) setRole(r).then(() => showToast(`Режим: ${ROLE_INFO[r].title.toLowerCase()}`)).catch(() => {});

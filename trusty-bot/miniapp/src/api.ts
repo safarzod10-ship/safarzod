@@ -1,4 +1,3 @@
-// API client. Inside Telegram every request is signed with initData; outside Telegram the app runs on demo data.
 import { inTelegram } from './tg';
 
 export const live = inTelegram;
@@ -43,7 +42,6 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
   try {
     detail = (await res.json()).detail;
   } catch {
-    /* not json */
   }
   if (res.status === 403 && detail && typeof detail === 'object' && 'banned' in (detail as object)) {
     throw new ApiError(403, 'Аккаунт заблокирован', detail as { until: string | null });
