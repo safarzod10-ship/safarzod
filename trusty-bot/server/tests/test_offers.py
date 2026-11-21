@@ -1,4 +1,5 @@
-"""Offers in chats: propose, counter from both sides, accept (creates the deal), decline, withdraw, expiry, typing.
+"""Offers in chats: always about the client's open project; counter from both sides, accept (creates the deal and
+closes other offers on that project), decline, withdraw, expiry, typing, deleting chats.
 
 Run:  TRUSTY_DB_URL=postgresql+asyncpg://... python -m tests.test_offers
 """
@@ -51,9 +52,18 @@ async def main() -> None:
                 "about": "Делаю лендинги и Mini App на React, адаптив, анимации, формы заявок с интеграцией в CRM."}
         ok(await h.put("/api/dev-profile", json=form, headers=B))
 
+        async def project(title: str) -> int:
+            return ok(await h.post("/api/projects", headers=A, json={
+                "title": title, "category": "web", "text": "Адаптивная вёрстка, форма заявки, анимации, подключение к CRM заказчика.",
+                "budgetMin": 50, "budgetMax": 100, "days": 7}))["id"]
+        p1, p2, p3 = await project("Лендинг для кофейни"), await project("Правки по лендингу"), await project("Поддержка сайта")
+
         chat = ok(await h.post("/api/chats/open", json={"userId": 2002}, headers=A))
         cid = chat["id"]
-        offer = {"title": "Лендинг для кофейни", "amount": 90, "days": 7, "ttlHours": 48, "asRole": "client"}
+        assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=A)))  # empty chats are not listed
+        assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=B)))
+        offer = {"projectId": p1, "amount": 90, "days": 7, "ttlHours": 48, "asRole": "client"}
+        ok(await h.post(f"/api/chats/{cid}/offers", json={k: v for k, v in offer.items() if k != "projectId"}, headers=A), 422)
         r = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A), 400)
         assert "проверку анкеты" in r["detail"], r  # the developer is not verified yet
         ok(await h.post("/api/admin/profiles/2002/approve", headers=ADM))
@@ -62,6 +72,7 @@ async def main() -> None:
         chat = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A))
         o1 = offer_cards(chat)[-1]
         assert o1["mine"] and o1["status"] == "pending" and o1["myRole"] == "client" and o1["total"] == "94.50", o1
+        assert o1["title"] == "Лендинг для кофейни"  # the title comes from the project
         assert chat["messages"][-1]["from"] == "me" and chat["unread"] == 0
         b_chat = ok(await h.get(f"/api/chats/{cid}", headers=B))
         assert b_chat["offersWaiting"] == 1 and not offer_cards(b_chat)[-1]["mine"] and b_chat["unread"] == 1
@@ -85,6 +96,9 @@ async def main() -> None:
         assert r["chat"]["deal"]["id"] == deal["id"] and r["chat"]["offersWaiting"] == 0
         assert any(m["from"] == "system" and f"Сделка #{deal['id']} создана" in m["text"] for m in r["chat"]["messages"])
         ok(await h.post(f"/api/offers/{o3['id']}/accept", headers=B), 400)
+        r = ok(await h.post(f"/api/chats/{cid}/offers", json=offer, headers=A), 400)  # the project already has an executor
+        assert "уже выбран" in r["detail"]
+        offer = {**offer, "projectId": p2}
 
         # 2. limits: a new developer cannot take more than the new-dev limit
         big = {**offer, "amount": settings.new_dev_limit + 1}
@@ -92,11 +106,11 @@ async def main() -> None:
         assert "ограничена" in r["detail"]
 
         # 3. decline and withdraw
-        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "title": "Правки по лендингу", "amount": 30}, headers=A))
+        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 30}, headers=A))
         o4 = offer_cards(chat)[-1]
         chat = ok(await h.post(f"/api/offers/{o4['id']}/decline", headers=B))
         assert offer_cards(chat)[-1]["status"] == "declined"
-        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "title": "Ещё правки", "amount": 40}, headers=A))
+        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 40}, headers=A))
         o5 = offer_cards(chat)[-1]
         ok(await h.post(f"/api/offers/{o5['id']}/withdraw", headers=B), 400)  # not his
         chat = ok(await h.post(f"/api/offers/{o5['id']}/withdraw", headers=A))
@@ -104,7 +118,7 @@ async def main() -> None:
         ok(await h.post(f"/api/offers/{o5['id']}/accept", headers=B), 400)
 
         # 4. a developer offers to a client (sender is the dev), and expiry
-        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "title": "Поддержка сайта", "amount": 25, "asRole": "dev", "ttlHours": 24}, headers=B))
+        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 25, "asRole": "dev", "ttlHours": 24}, headers=B))
         o6 = offer_cards(chat)[-1]
         assert o6["myRole"] == "dev" and o6["mine"]
         async with Session() as s:
@@ -117,6 +131,16 @@ async def main() -> None:
         async with Session() as s:
             await offers.expire_due(s)
             assert (await s.get(Offer, o6["id"])).status == "expired"
+
+        # 4b. two offers on one project: accepting one closes the other; nobody can offer on someone else's project
+        ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p3, "amount": 20}, headers=A))
+        chat = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p3, "amount": 22}, headers=A))
+        first, second = offer_cards(chat)[-2:]
+        chat = ok(await h.post(f"/api/offers/{second['id']}/accept", headers=B))["chat"]
+        statuses = {o["id"]: o["status"] for o in offer_cards(chat)}
+        assert statuses[first["id"]] == "withdrawn" and statuses[second["id"]] == "accepted", statuses
+        r = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "projectId": p2, "asRole": "dev"}, headers=A), 400)  # Anna as "dev": the project is not Boris's
+        assert "Выберите открытый проект" in r["detail"]
 
         # 5. strangers cannot touch offers; typing indicator
         c_chat = ok(await h.post("/api/chats/open", json={"userId": 2001}, headers=C))
@@ -132,6 +156,9 @@ async def main() -> None:
         assert any(c["id"] == cid for c in ok(await h.get("/api/chats", headers=B)))
         assert ok(await h.get(f"/api/chats/{cid}", headers=A))["messages"] == []
         ok(await h.post(f"/api/chats/{cid}/delete", headers=C), 404)
+        # an empty chat someone opened with me is not listed; deleting it keeps it away
+        ok(await h.post(f"/api/chats/{c_chat['id']}/delete", headers=A))
+        assert all(c["id"] != c_chat["id"] for c in ok(await h.get("/api/chats", headers=A)))
         ok(await h.post(f"/api/chats/{cid}/messages", json={"text": "Вы тут?"}, headers=B))
         back = [c for c in ok(await h.get("/api/chats", headers=A)) if c["id"] == cid]
         assert back and back[0]["unread"] == 1 and [m["text"] for m in ok(await h.get(f"/api/chats/{cid}", headers=A))["messages"]] == ["Вы тут?"]

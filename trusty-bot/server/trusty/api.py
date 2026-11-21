@@ -348,12 +348,11 @@ async def typing(cid: int, me: User = Depends(current_user), s: AsyncSession = D
 
 
 class OfferIn(BaseModel):
-    title: str = Field(min_length=3, max_length=120)
+    projectId: int  # the client's open project the offer is about
     amount: int = Field(gt=0, le=1_000_000)
     days: int = Field(gt=0, le=365)
     ttlHours: int = Field(default=48, ge=1, le=72)
     asRole: str | None = Field(default=None, pattern="^(client|dev)$")
-    projectId: int | None = None
 
 
 class CounterIn(BaseModel):
@@ -377,7 +376,7 @@ async def _chat_out(s: AsyncSession, c: Chat, me: User) -> dict:
 @router.post("/chats/{cid}/offers")
 async def create_offer(cid: int, body: OfferIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
     c = await my_chat(s, cid, me)
-    await _run(s, offers.propose(s, c, me, title=body.title, amount=body.amount, days=body.days, ttl_hours=body.ttlHours,
+    await _run(s, offers.propose(s, c, me, amount=body.amount, days=body.days, ttl_hours=body.ttlHours,
                                  as_role=body.asRole, project_id=body.projectId))
     await s.commit()
     return await _chat_out(s, c, me)

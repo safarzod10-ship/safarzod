@@ -3,7 +3,6 @@ import { CATEGORIES, bidCount, budget, plural, type Client, type Project } from 
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { Chips, Pill, Seg, Top } from '../ui';
-import { SearchSwitch } from './Devs';
 
 export function ProjectCell({ p, onClick, badge }: { p: Project; onClick(): void; badge?: ReactNode; client?: Client }) {
   return (
@@ -20,23 +19,46 @@ export function ProjectCell({ p, onClick, badge }: { p: Project; onClick(): void
   );
 }
 
+/** A client sees only their own projects; an executor sees the feed of open projects and their own bids. */
 export default function Projects() {
   const nav = useNav();
   const { projects, role, isMe, myBidFor } = useStore();
   const [view, setView] = useState<'feed' | 'mine'>('feed');
   const [cat, setCat] = useState('all');
+  const root = nav.depth === 1;
 
-  const mineClient = projects.filter((p) => isMe(p.clientId));
+  if (role === 'client') {
+    const mine = projects.filter((p) => isMe(p.clientId));
+    return (
+      <div className={`screen ${root ? 'root' : ''}`}>
+        <Top title="Мои проекты" />
+        {mine.length ? (
+          <div className="group stagger">
+            {mine.map((p) => (
+              <ProjectCell key={p.id} p={p} onClick={() => nav.push('project', { id: p.id })}
+                badge={p.status === 'open' ? <Pill tone="green">Приём откликов</Pill> : <Pill>В работе</Pill>} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-cta">
+            <b>Проектов пока нет</b>
+            <span>Опубликуйте задачу с бюджетом и сроком: исполнители пришлют отклики, а в чате можно предложить цену по ней.</span>
+          </div>
+        )}
+        <button className="btn primary mt" onClick={() => nav.push('project-new')}>Опубликовать проект</button>
+      </div>
+    );
+  }
+
   const mineDev = projects.filter((p) => !!myBidFor(p.id));
   const feed = projects.filter((p) => p.status === 'open' && !isMe(p.clientId) && (cat === 'all' || p.category === cat));
-  const list = view === 'feed' ? feed : role === 'client' ? mineClient : mineDev;
+  const list = view === 'feed' ? feed : mineDev;
 
   return (
-    <div className="screen root">
-      <div style={{ paddingTop: 10 }}><SearchSwitch value="projects" /></div>
+    <div className={`screen ${root ? 'root' : ''}`}>
       <Top title="Проекты" />
       <Seg value={view} onChange={(v) => setView(v)}
-        items={[{ key: 'feed', label: 'Лента' }, { key: 'mine', label: role === 'client' ? 'Мои проекты' : 'Мои отклики', count: role === 'client' ? mineClient.length : mineDev.length }]} />
+        items={[{ key: 'feed', label: 'Лента' }, { key: 'mine', label: 'Мои отклики', count: mineDev.length }]} />
       {view === 'feed' && (
         <div className="mt-s">
           <Chips value={cat} onChange={setCat} items={[{ key: 'all', label: 'Все' }, ...CATEGORIES.map((c) => ({ key: c.key, label: c.label }))]} />
@@ -47,14 +69,11 @@ export default function Projects() {
           <div className="group stagger" key={`${view}-${cat}`}>
             {list.map((p) => (
               <ProjectCell key={p.id} p={p} onClick={() => nav.push('project', { id: p.id })}
-                badge={p.status === 'in_work' ? <Pill tone="green">В работе</Pill>
-                  : view === 'mine' && role === 'dev' ? <Pill>Отклик отправлен</Pill> : undefined} />
+                badge={p.status === 'in_work' ? <Pill>В работе</Pill> : view === 'mine' ? <Pill tone="green">Отклик отправлен</Pill> : undefined} />
             ))}
           </div>
         ) : (
-          <div className="empty">
-            {view === 'mine' && role === 'client' ? 'У вас пока нет проектов. Нажмите «+» внизу, чтобы опубликовать.' : view === 'mine' ? 'Вы ещё не откликались на проекты.' : 'В этой категории пока нет открытых проектов.'}
-          </div>
+          <div className="empty">{view === 'mine' ? 'Вы ещё не откликались на проекты.' : 'В этой категории пока нет открытых проектов.'}</div>
         )}
       </div>
     </div>

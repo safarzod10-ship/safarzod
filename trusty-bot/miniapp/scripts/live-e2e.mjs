@@ -87,7 +87,7 @@ fs.mkdirSync(outDir, { recursive: true });
 let n = 0;
 const shot = async (p, name, full = false) => { await p.waitForTimeout(600); await p.screenshot({ path: path.join(outDir, `${String(++n).padStart(2, '0')}-${name}.png`), fullPage: full }); };
 const tab = async (p, label) => { await p.waitForSelector('#tl-splash', { state: 'detached' }); await p.locator(`.island .tab[aria-label="${label}"]`).click({ force: true }); };
-const projects = async (p) => { await tab(p, 'Поиск'); await p.locator('.seg button', { hasText: 'Проекты' }).first().click(); };
+const projects = (p) => tab(p, 'Проекты'); // an executor's second section
 const main = (p) => p.locator('.bar .bar-row .btn').last().click();
 const step = (label) => console.log('•', label);
 
@@ -172,8 +172,8 @@ step('bid sent');
 
 // client picks the developer
 await anna.reload(); await anna.waitForSelector('.island');
-await projects(anna);
-await anna.getByRole('tab', { name: /Мои проекты/ }).click();
+await tab(anna, 'Профиль');
+await anna.getByText('Мои проекты').click();
 await anna.getByText('Бот для записи в студию маникюра').click();
 await shot(anna, 'anna-bids', true);
 await anna.getByRole('button', { name: 'Выбрать' }).click();
@@ -246,13 +246,26 @@ await anna.getByLabel('Сообщение').fill('Спасибо! Есть ещ�
 await anna.getByLabel('Отправить').click();
 await shot(anna, 'anna-deal-chat');
 
-// offers: the client proposes a price in the chat, the developer answers with his own, the client accepts
+// offers are about a published project: with none open, the sheet sends the client to publish one
 await anna.getByLabel('Предложить цену').click();
-await anna.getByPlaceholder('Например: лендинг для кофейни').fill('Доработка админки');
+await anna.locator('.sheet', { hasText: 'Сначала проект' }).waitFor();
+await shot(anna, 'anna-offer-needs-project');
+await anna.locator('.sheet').getByRole('button', { name: 'Опубликовать проект' }).click();
+await anna.getByPlaceholder('Например, бот для записи в салон').fill('Доработка админки для студии');
+await anna.getByPlaceholder('Бот должен…').fill('Добавить в админку отчёты по мастерам, выгрузку в Excel и роли сотрудников.');
+await anna.getByPlaceholder('от', { exact: true }).fill('40');
+await anna.getByPlaceholder('до', { exact: true }).fill('60');
+await main(anna);
+await anna.getByText('Проект опубликован').waitFor();
+await main(anna); // "Предложить цену": back to the chat with the sheet open and the new project chosen
+// the client proposes a price on the project, the developer answers with his own, the client accepts
+await anna.getByRole('radio', { name: /Доработка админки для студии/ }).waitFor();
+if (await anna.getByRole('radio', { name: /Доработка админки для студии/ }).getAttribute('aria-checked') !== 'true') throw new Error('the new project is not preselected');
+await anna.getByLabel('Изменить сумму').click();
 await anna.getByLabel('Сумма', { exact: true }).fill('40');
-await anna.waitForTimeout(4000); // the chat refreshes every 3 s: the typed title and amount must survive it
-if (await anna.getByPlaceholder('Например: лендинг для кофейни').inputValue() !== 'Доработка админки') throw new Error('offer title was reset');
+await anna.waitForTimeout(4000); // the chat refreshes every 3 s: the chosen project and the amount must survive it
 if (await anna.getByLabel('Сумма', { exact: true }).inputValue() !== '40') throw new Error('offer amount was reset');
+if (await anna.getByRole('radio', { name: /Доработка админки для студии/ }).getAttribute('aria-checked') !== 'true') throw new Error('offer project was reset');
 await shot(anna, 'anna-offer-sheet');
 await anna.getByRole('button', { name: 'Отправить оффер' }).click();
 await anna.locator('.offer-card', { hasText: 'Вы предлагаете' }).waitFor();

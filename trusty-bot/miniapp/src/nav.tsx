@@ -16,6 +16,8 @@ interface Nav {
   push(name: string, params?: Record<string, unknown>): void;
   replace(name: string, params?: Record<string, unknown>): void;
   pop(): void;
+  /** go back one screen and hand it new params (it opens again with them) */
+  popWith(params: Record<string, unknown>): void;
   setTab(t: Tab): void;
   /** switch tab and open a screen on top of its root */
   open(t: Tab, name: string, params?: Record<string, unknown>): void;
@@ -49,6 +51,16 @@ export function NavProvider({ children }: { children: ReactNode }) {
     setStacks((s) => (s[tab].length > 1 ? { ...s, [tab]: s[tab].slice(0, -1) } : s));
   }, [tab]);
 
+  const popWith = useCallback((params: Record<string, unknown>) => {
+    setStacks((s) => {
+      if (s[tab].length < 2) return s;
+      const st = s[tab].slice(0, -1);
+      const top = st[st.length - 1];
+      st[st.length - 1] = mk(top.name, { ...top.params, ...params });
+      return { ...s, [tab]: st };
+    });
+  }, [tab]);
+
   const setTab = useCallback((t: Tab) => {
     haptic.select();
     if (t === tab) setStacks((s) => ({ ...s, [t]: [s[t][0]] })); // tapping the active tab returns to its root
@@ -74,8 +86,8 @@ export function NavProvider({ children }: { children: ReactNode }) {
     tg.BackButton.hide();
   }, [stack.length, pop]);
 
-  const value = useMemo<Nav>(() => ({ tab, route: stack[stack.length - 1], depth: stack.length, push, replace, pop, setTab, open }),
-    [tab, stack, push, replace, pop, setTab, open]);
+  const value = useMemo<Nav>(() => ({ tab, route: stack[stack.length - 1], depth: stack.length, push, replace, pop, popWith, setTab, open }),
+    [tab, stack, push, replace, pop, popWith, setTab, open]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

@@ -215,15 +215,16 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
     for c in chats:
         pid = c.b_id if c.a_id == me.id else c.a_id
         read = c.a_read if c.a_id == me.id else c.b_read
-        hidden = (c.a_hidden if c.a_id == me.id else c.b_hidden) or 0
+        hidden_at = c.a_hidden if c.a_id == me.id else c.b_hidden  # None: never deleted; 0: deleted while empty
+        hidden = hidden_at or 0
         peer = peers.get(pid)
         unread = (await s.execute(select(func.count()).where(Message.chat_id == c.id, Message.id > max(read, hidden),
                                                              or_(Message.sender_id != me.id, Message.sender_id.is_(None))))).scalar_one()
         q = (select(Message).where(Message.chat_id == c.id, Message.id > hidden).order_by(Message.id.desc())
              .limit(300 if full else 1))
         msgs = list(reversed((await s.execute(q)).scalars().all()))
-        if skip_hidden and hidden and not msgs:
-            continue  # deleted by me and nothing new since
+        if skip_hidden and not msgs:
+            continue  # lists show only chats with something in them: not empty ones, not ones I deleted with nothing new
         offer_cards = await _offers_for(s, msgs, me.id) if full else {}
         waiting = (await s.execute(select(func.count()).where(Offer.chat_id == c.id, Offer.to_id == me.id,
                                                               Offer.status == "pending", Offer.expires_at > utcnow()))).scalar_one()

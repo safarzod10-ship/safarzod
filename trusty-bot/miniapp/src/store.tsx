@@ -19,7 +19,7 @@ interface Bootstrap { me: Me; devs: Dev[]; projects: Project[]; chats: Chat[]; m
 export interface FinancePayment { id: number; dealId: number; kind: 'invoice' | 'payout' | 'refund'; amount: string; status: string; user: string; error?: string | null; attempts: number; at: string }
 export interface Finance { enabled: boolean; asset: string; feePercent: number; balance: { asset: string; available: string; onhold: string }[]; error?: string | null; held: string; disputes: Deal[]; payments: FinancePayment[] }
 export type DealAction = 'submit' | 'accept' | 'dispute' | 'cancel' | 'review';
-export interface OfferDraft { title: string; amount: number; days: number; ttlHours: number; asRole?: Role; projectId?: number }
+export interface OfferDraft { projectId?: number; amount: number; days: number; ttlHours: number; asRole?: Role }
 export interface CounterDraft { amount: number; days: number; ttlHours: number }
 interface Overview { members: Member[]; complaints: Complaint[]; profiles: Dev[]; admins: { name: string; handle: string }[] }
 
@@ -522,16 +522,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const proposeOffer = useCallback(async (chatId: string, d: OfferDraft) => {
     if (live) {
-      putChat(await call(() => api<Chat>(`/chats/${chatId}/offers`, { body: { ...d, projectId: d.projectId ?? null, asRole: d.asRole ?? null } })));
+      putChat(await call(() => api<Chat>(`/chats/${chatId}/offers`, { body: { ...d, asRole: d.asRole ?? null } })));
       haptic.success();
       return;
     }
-    const o = mkOffer({ id: Date.now(), title: d.title, amount: d.amount, days: d.days, status: 'pending', mine: true, myRole: d.asRole ?? roleDemo, prevAmount: null, ttlHours: d.ttlHours });
+    const title = projects.find((p) => p.id === d.projectId)?.title ?? 'Проект';
+    const o = mkOffer({ id: Date.now(), title, amount: d.amount, days: d.days, status: 'pending', mine: true, myRole: d.asRole ?? roleDemo, prevAmount: null, ttlHours: d.ttlHours });
     const m: Msg = { id: Date.now(), from: 'me', text: `Оффер: ${d.amount} USDT`, time: now(), offer: o };
     patchChat(chatId, (c) => ({ ...c, messages: [...c.messages, m] }));
     haptic.success();
     demoReply(chatId, o);
-  }, [call, mkOffer, roleDemo, demoReply]);
+  }, [call, mkOffer, roleDemo, demoReply, projects]);
 
   const counterOffer = useCallback(async (chatId: string, offerId: number, d: CounterDraft) => {
     if (live) {

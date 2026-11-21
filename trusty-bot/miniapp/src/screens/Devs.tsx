@@ -3,7 +3,7 @@ import { CATEGORIES, categoryLabel, plural, seen, type Dev } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Avatar, Chips, Pill, Rating, Seg, Sheet, Toggle, Top, Verified } from '../ui';
+import { Avatar, Chips, Pill, Rating, Sheet, Toggle, Top, Verified } from '../ui';
 
 type Filter = 'all' | 'online' | string;
 type Sort = 'rating' | 'deals' | 'seen';
@@ -29,15 +29,6 @@ export function DevCell({ d, onClick }: { d: Dev; onClick(): void }) {
         {d.deals > 0 && <span className="muted num" style={{ fontSize: 12, fontWeight: 600 }}>{d.deals} {plural(d.deals, 'сделка', 'сделки', 'сделок')}</span>}
       </div>
     </button>
-  );
-}
-
-/** "Исполнители | Проекты" at the top of the search tab */
-export function SearchSwitch({ value }: { value: 'devs' | 'projects' }) {
-  const nav = useNav();
-  return (
-    <Seg value={value} onChange={(v) => nav.setTab(v)}
-      items={[{ key: 'devs', label: 'Исполнители' }, { key: 'projects', label: 'Проекты' }]} />
   );
 }
 
@@ -68,7 +59,6 @@ export default function Devs({ cat }: { cat?: string }) {
 
   return (
     <div className={`screen ${root ? 'root' : ''}`}>
-      {root && <div style={{ paddingTop: 10 }}><SearchSwitch value="devs" /></div>}
       <Top title="Исполнители" />
       <label className="search">
         <Icon name="search" size={19} strokeWidth={2} />

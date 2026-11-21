@@ -27,9 +27,11 @@ const SCREENS: Record<string, ComponentType<any>> = {
   'my-complaints': MyComplaints, 'profile-review': ProfileReview, deal: DealView, deals: DealsList, finance: Finance,
 };
 
-const TABS: { key: Tab; label: string; icon: IconName }[] = [
+type TabItem = { key: Tab; label: string; icon: IconName };
+/** the second section depends on the role: a client looks for executors, an executor looks for projects */
+const tabsFor = (role: 'client' | 'dev'): TabItem[] => [
   { key: 'home', label: 'Главная', icon: 'home' },
-  { key: 'devs', label: 'Поиск', icon: 'search' },
+  role === 'client' ? { key: 'devs', label: 'Исполнители', icon: 'search' } : { key: 'projects', label: 'Проекты', icon: 'projects' },
   { key: 'chats', label: 'Чаты', icon: 'chats' },
   { key: 'profile', label: 'Профиль', icon: 'profile' },
 ];
@@ -43,7 +45,8 @@ function Island() {
   const [drag, setDrag] = useState<number | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const unread = chats.reduce((n, c) => n + c.unread + (c.offersWaiting ?? 0), 0);
-  const active = nav.tab === 'projects' ? 1 : TABS.findIndex((t) => t.key === nav.tab);
+  const TABS = tabsFor(role);
+  const active = nav.tab === 'devs' || nav.tab === 'projects' ? 1 : TABS.findIndex((t) => t.key === nav.tab);
   const shown = drag ?? active;
   const go = (fn: () => void) => { setMenu(false); fn(); };
   const at = (x: number) => {
@@ -51,7 +54,7 @@ function Island() {
     return Math.max(0, Math.min(TABS.length - 1, Math.floor(((x - r.left - 6) / (r.width - 12)) * TABS.length)));
   };
   // the search tab holds both executors and projects: coming back to it keeps whichever was open
-  const open = (i: number) => nav.setTab(i === 1 && nav.tab === 'projects' ? 'projects' : TABS[i].key);
+  const open = (i: number) => nav.setTab(TABS[i].key);
   return (
     <>
       <nav className="nav" aria-label="Разделы">
@@ -80,7 +83,7 @@ function Island() {
           {role === 'client' ? (
             <>
               <Cell icon lead={<IconTile name="projects" />} title="Опубликовать проект" sub="Исполнители пришлют отклики с ценой" chevron
-                onClick={() => go(() => nav.open('projects', 'project-new'))} />
+                onClick={() => go(() => nav.open('home', 'project-new'))} />
               <Cell icon lead={<IconTile name="search" />} title="Найти исполнителя" sub="По отзывам и сделкам, потом оффер в чате" chevron
                 onClick={() => go(() => nav.setTab('devs'))} />
             </>
@@ -228,8 +231,12 @@ function Gate() {
 }
 
 function Screen() {
-  const { route, depth, tab } = useNav();
-  const { reload, refreshChats } = useStore();
+  const { route, depth, tab, setTab } = useNav();
+  const { reload, refreshChats, role } = useStore();
+  useEffect(() => {
+    if (role === 'dev' && tab === 'devs' && depth === 1) setTab('projects');
+    if (role === 'client' && tab === 'projects' && depth === 1) setTab('devs');
+  }, [role]); // eslint-disable-line react-hooks/exhaustive-deps
   const C = SCREENS[route.name] ?? Home;
   const refresh = useCallback(() => (tab === 'chats' ? refreshChats() : reload()), [tab, reload, refreshChats]);
   const { pull, busy } = usePull(depth === 1 && tab !== 'profile', refresh);

@@ -88,10 +88,12 @@ async def main():
         s.add(User(id=43, first_name="Дев", username="dev"))
         await s.flush()
         s.add(DevProfile(user_id=43, title="Боты", categories=["bots"], stack=["Python"], about="x" * 60, moderation="published"))
+        from trusty.models import Project
+        pr = Project(client_id=42, title="Бот для записи", category="bots", text="x" * 40, budget_min=50, budget_max=80, days=5)
         chat = Chat(a_id=42, b_id=43)
-        s.add(chat)
+        s.add_all([pr, chat])
         await s.flush()
-        o = await offers.propose(s, chat, await s.get(User, 43), title="Бот для записи", amount=60, days=5, as_role="dev")
+        o = await offers.propose(s, chat, await s.get(User, 43), amount=60, days=5, as_role="dev", project_id=pr.id)
         await s.commit()
         oid = o.id
     cq = {"id": "77", "from": user(), "chat_instance": "x", "data": f"o:acc:{oid}",

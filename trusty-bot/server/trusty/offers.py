@@ -1,6 +1,7 @@
 """Price offers inside chats.
 
-Anyone in a chat can send an offer: a title, a price and a term. The other side accepts, declines or answers with
+An offer is always about a published project of the client: the client picks one of their open projects, an executor
+picks one of the client's. Anyone in the chat can send an offer: the project, a price and a term. The other side accepts, declines or answers with
 its own price (a counter-offer), and so on until someone accepts. Accepting creates the deal with the offer's terms.
 An unanswered offer expires after 24, 48 or 72 hours.
 """
@@ -54,22 +55,29 @@ async def _lock(s: AsyncSession, offer_id: int) -> Offer:
     return o
 
 
-async def propose(s: AsyncSession, chat: Chat, me: User, *, title: str, amount: int, days: int, ttl_hours: int = 48,
-                  as_role: str | None = None, project_id: int | None = None, parent: Offer | None = None) -> Offer:
+async def open_project(s: AsyncSession, project_id: int | None, client_id: int) -> Project:
+    """The project an offer is about: it must belong to the client and still take offers."""
+    p = await s.get(Project, project_id) if project_id else None
+    if p is None or p.client_id != client_id:
+        raise EscrowError("Выберите открытый проект заказчика: оффер делается на опубликованную задачу")
+    if p.status != "open":
+        raise EscrowError("По этому проекту исполнитель уже выбран")
+    return p
+
+
+async def propose(s: AsyncSession, chat: Chat, me: User, *, amount: int, days: int, project_id: int | None,
+                  ttl_hours: int = 48, as_role: str | None = None, parent: Offer | None = None) -> Offer:
     peer_id = chat.b_id if chat.a_id == me.id else chat.a_id
     peer = await s.get(User, peer_id)
     if peer is None or peer.banned():
         raise EscrowError("Пользователь заблокирован, предложить сделку нельзя")
     role = as_role or me.role
     client_id, dev_id = (me.id, peer_id) if role == "client" else (peer_id, me.id)
+    p = await open_project(s, project_id, client_id)
     await _dev_ready(s, dev_id, amount)
-    if project_id is not None:
-        p = await s.get(Project, project_id)
-        if p is None or p.client_id != client_id or p.status != "open":
-            project_id = None
     ttl = ttl_hours if ttl_hours in TTL_HOURS else 48
-    o = Offer(chat_id=chat.id, from_id=me.id, to_id=peer_id, client_id=client_id, dev_id=dev_id, project_id=project_id,
-              parent_id=parent.id if parent else None, title=title.strip()[:120], amount=amount, days=days,
+    o = Offer(chat_id=chat.id, from_id=me.id, to_id=peer_id, client_id=client_id, dev_id=dev_id, project_id=p.id,
+              parent_id=parent.id if parent else None, title=p.title[:120], amount=amount, days=days,
               expires_at=utcnow() + timedelta(hours=ttl))
     s.add(o)
     await s.flush()
@@ -92,7 +100,7 @@ async def counter(s: AsyncSession, offer_id: int, me: User, amount: int, days: i
         raise EscrowError("Ответить своей ценой может только тот, кому пришёл оффер")
     o.status, o.decided_at = "countered", utcnow()
     chat = await s.get(Chat, o.chat_id)
-    return await propose(s, chat, me, title=o.title, amount=amount, days=days, ttl_hours=ttl_hours,
+    return await propose(s, chat, me, amount=amount, days=days, ttl_hours=ttl_hours,
                          as_role="client" if me.id == o.client_id else "dev", project_id=o.project_id, parent=o)
 
 
@@ -104,12 +112,13 @@ async def accept(s: AsyncSession, offer_id: int, me: User) -> tuple[Offer, Deal]
     if sender is None or sender.banned():
         raise EscrowError("Пользователь заблокирован, сделку оформить нельзя")
     await _dev_ready(s, o.dev_id, o.amount)
-    category = ""
-    if o.project_id:
-        p = await s.get(Project, o.project_id)
-        category = CATEGORY_LABEL.get(p.category, "") if p else ""
-    d = await open_deal(s, o.client_id, o.dev_id, o.title, o.amount, o.days, o.project_id, category)
+    p = await open_project(s, o.project_id, o.client_id)
+    d = await open_deal(s, o.client_id, o.dev_id, o.title, o.amount, o.days, p.id, CATEGORY_LABEL.get(p.category, ""))
     o.status, o.decided_at, o.deal_id = "accepted", utcnow(), d.id
+    # the project now has an executor: other open offers about it are closed
+    for other in (await s.execute(select(Offer).where(Offer.project_id == p.id, Offer.status == "pending",
+                                                      Offer.id != o.id))).scalars():
+        other.status, other.decided_at = "withdrawn", utcnow()
     notify.send_deal(o.client_id, d, f"Оффер принят: «{d.title}», {d.amount} {settings.asset}. "
                                      f"Оплатите {fmt(d.total)} {settings.asset}: деньги будут у гаранта до приёмки работы.",
                      "Оплатить")

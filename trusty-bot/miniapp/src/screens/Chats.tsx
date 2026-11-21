@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEAL_STATUS, OFFSITE, amt, msgTime, seen, type Chat, type Offer } from '../data';
+import { DEAL_STATUS, OFFSITE, amt, budget, msgTime, seen, type Chat, type Offer } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore, type Role } from '../store';
@@ -150,41 +150,80 @@ function OfferCard({ o, peer, onAccept, onDecline, onCounter, onWithdraw, onDeal
 }
 
 /** "Своя цена" / new offer: the amount rolls like an odometer, the rest is a few taps */
-function OfferSheet({ open, onClose, base, chat, onSend }: {
-  open: boolean; onClose(): void; base: Offer | null; chat: Chat;
-  onSend(d: { title: string; amount: number; days: number; ttlHours: number; asRole: Role }): Promise<void>;
+/** New offer: first the project (the client's published task), then the price and the term. "Своя цена": only price and term. */
+function OfferSheet({ open, onClose, base, chat, onSend, preselect }: {
+  open: boolean; onClose(): void; base: Offer | null; chat: Chat; preselect?: number;
+  onSend(d: { projectId?: number; amount: number; days: number; ttlHours: number; asRole: Role }): Promise<void>;
 }) {
-  const { role, payCfg } = useStore();
-  const [title, setTitle] = useState('');
+  const nav = useNav();
+  const { role, payCfg, projects, isMe } = useStore();
+  const [projectId, setProjectId] = useState<number | null>(null);
   const [amount, setAmount] = useState(100);
   const [days, setDays] = useState(7);
   const [ttl, setTtl] = useState('48');
-  const [asRole, setAsRole] = useState<Role>(role);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const myRole: Role = base ? base.myRole : role;
+  // a client offers on one of their open projects, an executor on one of the client's
+  const choices = projects.filter((p) => p.status === 'open' && (myRole === 'client' ? isMe(p.clientId) : p.clientId === chat.peer.refId));
+  const pick = (id: number) => {
+    const p = projects.find((x) => x.id === id);
+    haptic.select();
+    setProjectId(id);
+    if (p) { setAmount(p.budgetMax); setDays(p.days); }
+  };
   // fill the fields once when the sheet opens: the chat itself refreshes every few seconds and must not reset them
   useEffect(() => {
     if (!open) return;
-    setTitle(base?.title ?? chat.deal?.title ?? '');
     setAmount(base ? base.amount : 100);
     setDays(base?.days ?? 7);
     setTtl('48');
-    setAsRole(base ? base.myRole : (chat.peer.role === 'dev' ? 'client' : role));
     setEditing(false);
+    setProjectId(null);
+    if (!base && preselect && choices.some((p) => p.id === preselect)) pick(preselect);
+    else if (!base && choices.length === 1) pick(choices[0].id);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const myRole = base ? base.myRole : asRole;
   const fee = Math.round(amount * payCfg.feePercent) / 100;
-  const ok = amount > 0 && days > 0 && (base || title.trim().length >= 3);
+  const ok = amount > 0 && days > 0 && (!!base || projectId !== null);
   const step = (n: number) => { haptic.select(); setAmount((a) => Math.max(1, a + n)); };
   const send = async () => {
     if (!ok || busy) return;
     setBusy(true);
-    try { await onSend({ title: title.trim(), amount, days, ttlHours: Number(ttl), asRole: myRole }); onClose(); } catch { /* toast shown */ } finally { setBusy(false); }
+    try { await onSend({ projectId: projectId ?? undefined, amount, days, ttlHours: Number(ttl), asRole: myRole }); onClose(); } catch { /* toast shown */ } finally { setBusy(false); }
   };
+  const peer = chat.peer.name.split(' ')[0];
+
+  if (!base && choices.length === 0) {
+    return (
+      <Sheet open={open} onClose={onClose} title="Сначала проект">
+        <p className="muted" style={{ margin: '0 0 18px', fontWeight: 500, lineHeight: 1.5 }}>
+          {myRole === 'client'
+            ? 'Оффер делается на опубликованный проект: в нём задача, бюджет и срок. Опубликуйте проект, потом предложите исполнителю цену.'
+            : `У ${peer} нет открытых проектов. Оффер можно отправить только на опубликованную задачу заказчика: попросите его опубликовать проект.`}
+        </p>
+        {myRole === 'client' && <button className="btn primary" onClick={() => { onClose(); nav.push('project-new', { forOffer: true }); }}>Опубликовать проект</button>}
+      </Sheet>
+    );
+  }
+
   return (
     <Sheet open={open} onClose={onClose} title={base ? 'Своя цена' : 'Оффер'}>
-      <p className="muted small" style={{ margin: 0 }}>{base ? `Сейчас в оффере ${amt(base.amount)} ${payCfg.asset}. Назовите свою цену.` : 'Сумма, срок и что нужно сделать. Собеседник примет, отклонит или ответит своей ценой.'}</p>
+      <p className="muted small" style={{ margin: 0 }}>{base ? `Сейчас в оффере ${amt(base.amount)} ${payCfg.asset}. Назовите свою цену.`
+        : myRole === 'client' ? 'Выберите проект и цену. Исполнитель примет, отклонит или ответит своей.' : `Выберите проект ${peer} и назовите цену.`}</p>
+      {!base && (
+        <div className="group mt" role="radiogroup" aria-label="Проект">
+          {choices.map((p) => (
+            <button key={p.id} role="radio" aria-checked={projectId === p.id} className={`radio ${projectId === p.id ? 'on' : ''}`} onClick={() => pick(p.id)}>
+              <i />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</span>
+                <span className="muted num" style={{ fontSize: 12.5, fontWeight: 500 }}>{budget(p)} · {p.days} дн.</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="amount-big">
         {editing ? null : (
           <button onClick={() => { setEditing(true); window.setTimeout(() => input.current?.focus(), 0); }} aria-label="Изменить сумму"
@@ -202,12 +241,6 @@ function OfferSheet({ open, onClose, base, chat, onSend }: {
         <button onClick={() => step(1)}>+1</button>
         <button onClick={() => step(10)}>+10</button>
       </div>
-      {!base && (
-        <div className="mt">
-          <Field2 label="Что сделать"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Например: лендинг для кофейни" maxLength={120} /></Field2>
-          <div className="mt-s"><Seg<Role> value={asRole} onChange={setAsRole} items={[{ key: 'client', label: 'Я заказчик' }, { key: 'dev', label: 'Я исполнитель' }]} /></div>
-        </div>
-      )}
       <div className="group mt">
         <div className="cell">
           <div className="cell-body"><div className="cell-title">Срок</div></div>
@@ -229,17 +262,17 @@ function OfferSheet({ open, onClose, base, chat, onSend }: {
           <b className="num">{amt(myRole === 'client' ? amount + fee : amount)} {payCfg.asset}</b>
         </div>
       </div>
-      <button className="btn primary mt" disabled={!ok || busy} onClick={send}>{busy ? <span className="spin" /> : base ? 'Отправить свою цену' : 'Отправить оффер'}</button>
+      <button className="btn primary mt" disabled={!ok || busy} onClick={send}>{busy ? <span className="spin" /> : base ? 'Отправить свою цену' : projectId === null ? 'Выберите проект' : 'Отправить оффер'}</button>
     </Sheet>
   );
 }
 
-function Field2({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="field"><label>{label}</label>{children}</div>;
-}
+/** routes whose "open the offer sheet" request was already used: coming back to the chat must not open it again */
+const offerOpened = new Set<number>();
 
-export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean }) {
+export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: string; offer?: boolean; projectId?: number }) {
   const nav = useNav();
+  const routeKey = nav.route.key;
   const { chats, send, readChat, loadChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, showToast, deleteChat } = useStore();
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
@@ -247,7 +280,9 @@ export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean
   const c = chats.find((x) => x.id === id);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
-  const [sheet, setSheet] = useState<{ base: Offer | null } | null>(openOffer ? { base: null } : null);
+  const [sheet, setSheet] = useState<{ base: Offer | null; projectId?: number } | null>(
+    openOffer && !offerOpened.has(routeKey) ? { base: null, projectId: newProject } : null);
+  useEffect(() => { if (openOffer) offerOpened.add(routeKey); }, [openOffer, routeKey]);
   const [busyOffer, setBusyOffer] = useState<number | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const lastTyping = useRef(0);
@@ -348,7 +383,7 @@ export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean
       </Sheet>
       <DeleteChat chat={del ? c : null} busy={deleting} onClose={() => setDel(false)}
         onDelete={async () => { setDeleting(true); try { await deleteChat(c.id); setDel(false); nav.pop(); } catch { /* toast */ } finally { setDeleting(false); } }} />
-      <OfferSheet open={!!sheet} base={sheet?.base ?? null} chat={c} onClose={() => setSheet(null)}
+      <OfferSheet open={!!sheet} base={sheet?.base ?? null} preselect={sheet?.projectId} chat={c} onClose={() => setSheet(null)}
         onSend={async (d) => {
           if (sheet?.base) await counterOffer(id, sheet.base.id, { amount: d.amount, days: d.days, ttlHours: d.ttlHours });
           else await proposeOffer(id, d);

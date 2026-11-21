@@ -33,7 +33,7 @@ export default function Profile() {
       <div className="group mt">
         <Cell lead={<IconTile name="shield" />} title="Мои сделки" trail={s.deals.length || undefined} chevron onClick={() => nav.push('deals')} />
         {s.role === 'client' ? (
-          <Cell lead={<IconTile name="projects" />} title="Мои проекты" trail={myProjects || undefined} chevron onClick={() => nav.setTab('projects')} />
+          <Cell lead={<IconTile name="projects" />} title="Мои проекты" trail={myProjects || undefined} chevron onClick={() => nav.push('projects')} />
         ) : (
           <>
             <Cell lead={<IconTile name="doc" />} title="Анкета исполнителя" trail={<Pill tone={FORM_TONE[s.devForm]}>{FORM_LABEL[s.devForm]}</Pill>}

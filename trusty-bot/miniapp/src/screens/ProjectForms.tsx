@@ -8,7 +8,8 @@ import { Actions, Avatar, Cell, Chips, Done, Field, Note, Rating, Section, Top }
 
 const STACK_HINTS = ['Python', 'aiogram', 'Node.js', 'React', 'Next.js', 'PostgreSQL', 'Mini Apps', 'Figma', 'Flutter', 'Docker', 'TON'];
 
-export function ProjectNew() {
+/** forOffer: opened from the offer sheet in a chat; after publishing, go back there with this project chosen */
+export function ProjectNew({ forOffer }: { forOffer?: boolean }) {
   const nav = useNav();
   const { addProject, showToast } = useStore();
   const [title, setTitle] = useState('');
@@ -47,9 +48,12 @@ export function ProjectNew() {
   if (done) {
     return (
       <div className="screen no-tabs">
-        <Done title="Проект опубликован" text="Разработчики увидят его в ленте. Мы пришлём уведомление в бот, когда придут отклики." />
-        <Actions secondary={{ label: 'К проектам', onClick: () => nav.pop() }}
-          primary={{ label: 'Открыть проект', onClick: () => nav.replace('project', { id: done }) }} />
+        <Done title="Проект опубликован" text={forOffer ? 'Теперь можно предложить исполнителю цену по этому проекту.'
+          : 'Исполнители увидят его в ленте. Мы пришлём уведомление в бот, когда придут отклики.'} />
+        {forOffer
+          ? <Actions primary={{ label: 'Предложить цену', onClick: () => nav.popWith({ offer: true, projectId: done }) }} />
+          : <Actions secondary={{ label: 'Назад', onClick: () => nav.pop() }}
+              primary={{ label: 'Открыть проект', onClick: () => nav.replace('project', { id: done }) }} />}
       </div>
     );
   }
