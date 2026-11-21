@@ -129,7 +129,7 @@ function OfferSheet({ open, onClose, base, chat, onSend }: {
   };
   return (
     <Sheet open={open} onClose={onClose} title={base ? 'Своя цена' : 'Оффер'}>
-      <p className="muted small" style={{ margin: 0 }}>{base ? `${chat.peer.name.split(' ')[0]} предложил ${amt(base.amount)} ${payCfg.asset}` : 'Сумма, срок и что нужно сделать. Собеседник примет, отклонит или ответит своей ценой.'}</p>
+      <p className="muted small" style={{ margin: 0 }}>{base ? `Сейчас в оффере ${amt(base.amount)} ${payCfg.asset}. Назовите свою цену.` : 'Сумма, срок и что нужно сделать. Собеседник примет, отклонит или ответит своей ценой.'}</p>
       <button className="amount-big" onClick={() => input.current?.focus()} aria-label="Изменить сумму" style={{ width: '100%' }}>
         <Odometer value={amount} /><small>{payCfg.asset}</small>
       </button>
