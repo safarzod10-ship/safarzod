@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware, Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject, CommandStart
-from aiogram.types import (BufferedInputFile, CallbackQuery, InlineKeyboardButton, InputMediaPhoto,
+from aiogram.types import (BufferedInputFile, CallbackQuery, InlineKeyboardButton, InlineQuery, InputMediaPhoto,
                            MenuButtonWebApp, Message, PreCheckoutQuery, TelegramObject, WebAppInfo)
 from sqlalchemy import desc, func, or_, select
 
@@ -121,6 +121,14 @@ async def admin(m: Message, command: CommandObject):
         await m.delete()
     except Exception:
         pass
+
+
+@router.inline_query()
+async def inline(q: InlineQuery):
+    from .share import inline_answer
+    async with Session() as s:
+        results, button = await inline_answer(s, q.query, q.from_user.id)
+    await q.answer(results, cache_time=30, is_personal=True, button=button)
 
 
 @router.pre_checkout_query()
@@ -270,6 +278,7 @@ async def configure(bot: Bot) -> bool:
         await bot.delete_my_commands()
         me = await bot.get_me()
         notify.bot_username, notify.main_app = me.username, bool(me.has_main_web_app)
+        notify.inline = bool(me.supports_inline_queries)
         if not notify.main_app:
             log.warning("no Main Mini App for @%s: share links open the bot chat. Enable it in @BotFather -> Bot Settings -> "
                         "Configure Mini App", me.username)

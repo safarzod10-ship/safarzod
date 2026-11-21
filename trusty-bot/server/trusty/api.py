@@ -102,7 +102,7 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
         "deals": await deal_payloads(s, list(deals), me),
         "payments": {"enabled": pay.enabled, "asset": settings.asset, "feePercent": settings.fee_percent,
                      "reviewDays": settings.review_days},
-        "share": {"base": share.base(), "bot": share.bot_name()},
+        "share": {"base": share.base(), "bot": share.bot_name(), "inline": notify.inline},
         "me": await me_payload(s, me),
         "devs": devs,
         "projects": await project_payloads(s, list(projects), me),
@@ -486,13 +486,27 @@ async def _public_dev(s: AsyncSession, uid: int) -> dict:
     return (await dev_payloads(s, rows))[0]
 
 
+_cards: dict[tuple[int, int, str], tuple[float, bytes]] = {}
+
+
 @router.get("/share/dev/{uid}.jpg", include_in_schema=False)
-async def share_card(uid: int, s: AsyncSession = Depends(get_session)):
+async def share_card(uid: int, w: int = 1200, v: str = "", s: AsyncSession = Depends(get_session)):
+    import time
+    w = max(160, min(1200, w))
+    key = (uid, w, v)
+    hit = _cards.get(key)
+    if hit and time.monotonic() - hit[0] < 600:
+        return Response(hit[1], media_type="image/jpeg", headers={"Cache-Control": "public, max-age=600"})
     d = await _public_dev(s, uid)
     from .serial import LEVELS
     img = cards.dev_card(d["name"], d["title"], LEVELS[d["level"]], d["rating"], d["deals"], d["onTime"], d["stack"], d["pro"],
                          share.bot_name())
-    return Response(img, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
+    if w < 1200:
+        img = cards.shrink(img, w)
+    if len(_cards) > 500:
+        _cards.clear()
+    _cards[key] = (time.monotonic(), img)
+    return Response(img, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=600"})
 
 
 @router.post("/share/dev/{uid}")

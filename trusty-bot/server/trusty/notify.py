@@ -12,6 +12,7 @@ log = logging.getLogger("trusty.notify")
 bot: Bot | None = None
 bot_username: str | None = None
 main_app = False
+inline = False
 _tasks: set[asyncio.Task] = set()
 
 OK, NO, OPEN = "success", "danger", "primary"

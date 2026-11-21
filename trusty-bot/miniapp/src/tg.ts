@@ -25,6 +25,7 @@ interface WebApp {
   openInvoice?(url: string, cb?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
   shareToStory?(mediaUrl: string, params?: { text?: string; widget_link?: { url: string; name?: string } }): void;
   shareMessage?(msgId: string, cb?: (sent: boolean) => void): void;
+  switchInlineQuery?(query: string, chooseChatTypes?: string[]): void;
   downloadFile?(params: { url: string; file_name: string }, cb?: (accepted: boolean) => void): void;
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   MainButton: NativeButton;
@@ -116,7 +117,20 @@ export function hideSplash(): Promise<void> {
   return Promise.resolve();
 }
 
-export function sharePrepared(id: string): Promise<boolean> | null {
-  if (!tg?.shareMessage || !tg.isVersionAtLeast('8.0')) return null;
-  return new Promise((resolve) => { try { tg.shareMessage!(id, (sent) => resolve(!!sent)); } catch { resolve(false); } });
+export function sharePrepared(id: string, done?: (sent: boolean) => void): boolean {
+  if (!tg?.shareMessage || !tg.isVersionAtLeast('8.0')) return false;
+  let fired = false;
+  const onSent = () => finish(true);
+  const onFailed = () => finish(false);
+  const off = () => { tg?.offEvent?.('shareMessageSent', onSent); tg?.offEvent?.('shareMessageFailed', onFailed); };
+  function finish(sent: boolean) { if (fired) return; fired = true; off(); done?.(sent); }
+  tg.onEvent('shareMessageSent', onSent);
+  tg.onEvent('shareMessageFailed', onFailed);
+  try { tg.shareMessage(id, (sent) => finish(!!sent)); } catch { off(); return false; }
+  return true;
+}
+
+export function shareInline(query: string): boolean {
+  if (!tg?.switchInlineQuery || !tg.isVersionAtLeast('6.7')) return false;
+  try { tg.switchInlineQuery(query, ['users', 'groups', 'channels']); return true; } catch { return false; }
 }

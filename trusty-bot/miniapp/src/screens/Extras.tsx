@@ -3,7 +3,7 @@ import { LEVEL_LABEL, LEVEL_RULES, budget, levelOf, plural, type Dev, type Level
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { absUrl, haptic, openTg, sharePrepared, tg } from '../tg';
+import { absUrl, haptic, openTg, shareInline, sharePrepared, tg } from '../tg';
 import { Avatar, Info, LevelBadge, Mark, ProBadge, Sheet, Skeleton } from '../ui';
 
 export function LevelInfo({ d }: { d: Dev }) {
@@ -67,7 +67,7 @@ export function Works({ items }: { items: Work[] }) {
 }
 
 export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(): void; d: Dev; self?: boolean }) {
-  const { live, showToast, shareBase, shareDev } = useStore();
+  const { live, showToast, shareBase, shareDev, shareInlineOn } = useStore();
   const [broken, setBroken] = useState(false);
   const [busy, setBusy] = useState(false);
   const link = `${shareBase}${d.id}`;
@@ -79,11 +79,8 @@ export function ShareSheet({ open, onClose, d, self }: { open: boolean; onClose(
     setBusy(true);
     try {
       const r = await shareDev(d.id);
-      const sent = r.prepared ? sharePrepared(r.prepared) : null;
-      if (sent) {
-        if (await sent) { haptic.success(); showToast('Карточка отправлена'); onClose(); }
-        return;
-      }
+      if (r.prepared && sharePrepared(r.prepared, (sent) => { if (sent) { haptic.success(); showToast('Отправлено'); onClose(); } })) return;
+      if (shareInlineOn && shareInline(`dev_${d.id}`)) { onClose(); return; }
       openTg(`https://t.me/share/url?url=${encodeURIComponent(r.link)}&text=${encodeURIComponent(text)}`);
       onClose();
     } catch { showToast('Не получилось, попробуйте ещё раз'); } finally { setBusy(false); }

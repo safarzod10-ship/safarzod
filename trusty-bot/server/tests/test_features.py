@@ -207,6 +207,8 @@ async def main() -> None:
 
         r = ok(await h.get("/api/share/dev/5002.jpg"))
         assert r.headers["content-type"] == "image/jpeg" and len(r.content) > 5000
+        from PIL import Image
+        assert Image.open(io.BytesIO(ok(await h.get("/api/share/dev/5002.jpg?w=320&v=1")).content)).size == (320, 168)
         sh = ok(await h.post("/api/share/dev/5002", headers=A))
         assert sh["link"] == "https://t.me/itrusty_bot?start=dev_5002" and sh["prepared"] is None
         assert sh["card"].startswith("/api/share/dev/5002.jpg?v=")

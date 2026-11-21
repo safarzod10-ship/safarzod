@@ -140,6 +140,20 @@ async def main():
     await dp.feed_update(bot, Update.model_validate({"update_id": 62, "message": paid}))
     async with Session() as s:
         assert (await s.get(User, 42)).pro() and (await s.get(Subscription, sid)).status == "paid"
+    async def inline(query, uid):
+        await dp.feed_update(bot, Update.model_validate({"update_id": uid, "inline_query": {"id": f"iq{uid}", "from": user(), "query": query, "offset": ""}}))
+        name, kw = CALLS[-1]
+        assert name == "AnswerInlineQuery" and kw["is_personal"], CALLS[-1]
+        return kw
+    kw = await inline("dev", 70)
+    r = kw["results"][0]
+    assert r["type"] == "photo" and r["photo_url"].startswith("https://trusty.example/api/share/dev/43.jpg?v=") and r["thumbnail_url"].endswith("&w=320"), r
+    assert r["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://t.me/itrusty_bot?start=dev_43" and "Дев" in r["caption"], r
+    assert [x["id"] for x in (await inline("@dev", 71))["results"]] == ["dev43"]
+    assert [x["id"] for x in (await inline("dev_43", 72))["results"]] == ["dev43"]
+    assert [x["id"] for x in (await inline("python", 73))["results"]] == ["dev43"]
+    kw = await inline("nobody_here", 74)
+    assert kw["results"] == [] and "Никого" in kw["button"]["text"] and kw["button"]["web_app"]["url"].startswith("https://trusty.example/"), kw
     print("bot OK:", ", ".join(sorted({c[0] for c in CALLS})))
     await engine.dispose()
 

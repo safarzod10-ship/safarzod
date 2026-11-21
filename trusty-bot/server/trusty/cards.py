@@ -229,3 +229,11 @@ def project_card(title: str, budget: str, days: int, category: str, note: str = 
     d.text((X0, 440), budget, font=unb(72, 700), fill=WHITE, anchor="ls")
     d.text((X0, 548), f"{category} · срок {days} дн." if category else f"срок {days} дн.", font=man(30, 600), fill=MUTED, anchor="lm")
     return _jpeg(img)
+
+
+def shrink(jpeg: bytes, width: int) -> bytes:
+    im = Image.open(io.BytesIO(jpeg))
+    im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+    out = io.BytesIO()
+    im.save(out, "JPEG", quality=82)
+    return out.getvalue()
