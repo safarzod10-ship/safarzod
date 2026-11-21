@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { CATEGORIES, bidCount, budget, plural, type Client, type Project } from '../data';
 import { useNav } from '../nav';
 import { useStore } from '../store';
+import { Icon } from '../icons';
 import { Chips, Pill, Seg, Top } from '../ui';
 
 export function ProjectCell({ p, onClick, badge }: { p: Project; onClick(): void; badge?: ReactNode; client?: Client }) {
@@ -22,7 +23,7 @@ export function ProjectCell({ p, onClick, badge }: { p: Project; onClick(): void
 /** A client sees only their own projects; an executor sees the feed of open projects and their own bids. */
 export default function Projects() {
   const nav = useNav();
-  const { projects, role, isMe, myBidFor } = useStore();
+  const { projects, role, isMe, myBidFor, proInfo, clientOf } = useStore();
   const [view, setView] = useState<'feed' | 'mine'>('feed');
   const [cat, setCat] = useState('all');
   const root = nav.depth === 1;
@@ -51,7 +52,9 @@ export default function Projects() {
   }
 
   const mineDev = projects.filter((p) => !!myBidFor(p.id));
-  const feed = projects.filter((p) => p.status === 'open' && !isMe(p.clientId) && (cat === 'all' || p.category === cat));
+  // projects I was invited to go first
+  const feed = projects.filter((p) => p.status === 'open' && !isMe(p.clientId) && (cat === 'all' || p.category === cat))
+    .sort((a, b) => Number(!!b.invited) - Number(!!a.invited));
   const list = view === 'feed' ? feed : mineDev;
 
   return (
@@ -64,12 +67,20 @@ export default function Projects() {
           <Chips value={cat} onChange={setCat} items={[{ key: 'all', label: 'Все' }, ...CATEGORIES.map((c) => ({ key: c.key, label: c.label }))]} />
         </div>
       )}
+      {view === 'feed' && !proInfo.active && (
+        <button className="pro-banner" onClick={() => nav.open('profile', 'pro')}>
+          <span className="pro-badge">PRO</span>
+          <span style={{ flex: 1, minWidth: 0 }}><b>Новые проекты сразу в бот</b><span>И ваш профиль первым в каталоге</span></span>
+          <Icon name="chevron" size={18} style={{ color: 'var(--faint)' }} />
+        </button>
+      )}
       <div className="mt">
         {list.length ? (
           <div className="group stagger" key={`${view}-${cat}`}>
             {list.map((p) => (
               <ProjectCell key={p.id} p={p} onClick={() => nav.push('project', { id: p.id })}
-                badge={p.status === 'in_work' ? <Pill>В работе</Pill> : view === 'mine' ? <Pill tone="green">Отклик отправлен</Pill> : undefined} />
+                badge={p.status === 'in_work' ? <Pill>В работе</Pill> : view === 'mine' ? <Pill tone="green">Отклик отправлен</Pill>
+                  : p.invited ? <Pill tone="green">Вас пригласили</Pill> : clientOf(p)?.fastPay ? <Pill>Платит быстро</Pill> : undefined} />
             ))}
           </div>
         ) : (

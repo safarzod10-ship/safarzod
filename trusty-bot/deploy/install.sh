@@ -136,6 +136,12 @@ if [ -n "$CP_TOKEN" ]; then
   fi
 fi
 FEE=$(get TRUSTY_FEE_PERCENT); [ -n "$FEE" ] || FEE=5
+# IT Trusty Pro for executors: price of one month in Telegram Stars and in USDT (change with: trusty pro <stars> <usdt>)
+PRO_STARS=$(get TRUSTY_PRO_STARS); [ -n "$PRO_STARS" ] || PRO_STARS=300
+PRO_USDT=$(get TRUSTY_PRO_USDT); [ -n "$PRO_USDT" ] || PRO_USDT=5
+BOT_USERNAME=$(curl -4 -s -m 15 "https://api.telegram.org/bot$TOKEN/getMe" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])' 2>/dev/null || true)
+[ -n "$BOT_USERNAME" ] || BOT_USERNAME=$(get TRUSTY_BOT_USERNAME)
+[ -n "$BOT_USERNAME" ] || BOT_USERNAME=itrusty_bot
 [ -n "$CP_TOKEN" ] || echo "ВНИМАНИЕ: без токена Crypto Pay оплата в IT Trusty выключена. Запустите trusty update ещё раз и введите токен."
 umask 077
 cat > $ENVF <<EOF
@@ -147,6 +153,9 @@ TRUSTY_UPLOAD_DIR=/var/lib/trusty/uploads
 TRUSTY_BOT_MODE=polling
 TRUSTY_CRYPTOPAY_TOKEN=$CP_TOKEN
 TRUSTY_FEE_PERCENT=$FEE
+TRUSTY_PRO_STARS=$PRO_STARS
+TRUSTY_PRO_USDT=$PRO_USDT
+TRUSTY_BOT_USERNAME=$BOT_USERNAME
 EOF
 umask 022
 chmod 600 $ENVF
@@ -171,8 +180,14 @@ WantedBy=timers.target
 EOF
 cat > /usr/local/bin/trusty <<EOF
 #!/bin/bash
-# trusty admins | admin-remove <id> | unban <id> | stats | logs | restart | update | token
+# trusty admins | admin-remove <id> | unban <id> | stats | logs | restart | update | token | pro <stars> <usdt>
 case "\$1" in
+  pro)
+    [[ "\$2" =~ ^[0-9]+\$ && "\$3" =~ ^[0-9]+([.][0-9]{1,2})?\$ ]] || { echo "Пример: trusty pro 300 5  (цена Pro за месяц: звёзды и USDT)"; exit 1; }
+    sed -i "s|^TRUSTY_PRO_STARS=.*|TRUSTY_PRO_STARS=\$2|; s|^TRUSTY_PRO_USDT=.*|TRUSTY_PRO_USDT=\$3|" $ENVF
+    systemctl restart trusty
+    echo "Pro за месяц: \$2 звёзд или \$3 USDT (за 3 месяца скидка 15%)"
+    exit 0 ;;
   logs) exec journalctl -u trusty -n 100 -f ;;
   restart) exec systemctl restart trusty ;;
   token)
@@ -254,4 +269,4 @@ if [ -n "$CP_TOKEN" ]; then
   echo "                 https://$DOMAIN/api/cryptopay/webhook"
   echo "                 (без него оплата тоже проходит, но подтверждается до 20 секунд)"
 fi
-echo "Команды:         trusty logs | trusty stats | trusty admins | trusty update | trusty token"
+echo "Команды:         trusty logs | trusty stats | trusty admins | trusty update | trusty token | trusty pro <звёзды> <usdt>"

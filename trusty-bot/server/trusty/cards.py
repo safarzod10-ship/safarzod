@@ -182,3 +182,62 @@ def banner(kind: str) -> bytes:
         d.text((X0 + 80, y + 42), t, font=man(26, 500), fill=MUTED, anchor="lt")
         y += 104
     return _jpeg(img)
+
+
+def _plate(d: ImageDraw.ImageDraw, x: int, y: int, text: str, bg: str = EMERALD, fg: str = WHITE, size: int = 24) -> int:
+    f = man(size, 800)
+    w = int(d.textlength(text, font=f)) + 44
+    d.rounded_rectangle((x, y, x + w, y + size + 26), radius=(size + 26) // 2, fill=bg)
+    d.text((x + w / 2, y + (size + 26) / 2), text, font=f, fill=fg, anchor="mm")
+    return w
+
+
+def dev_card(name: str, title: str, level: str, rating: float, deals: int, on_time: int, stack: list[str], pro: bool,
+             bot: str) -> bytes:
+    """The executor's public card for sharing: link previews and stories."""
+    img = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(img)
+    _header(img, d, right="исполнитель")
+    initials = "".join(w[0] for w in name.split()[:2]).upper() or "?"
+    d.ellipse((X0, 160, X0 + 150, 310), fill="#1C1D20")
+    d.text((X0 + 75, 235), initials, font=unb(54, 700), fill=WHITE, anchor="mm")
+    x = X0 + 186
+    d.text((x, 196), _fit(d, name, man(54, 800), W - x - X0), font=man(54, 800), fill=WHITE, anchor="ls")
+    d.text((x, 248), _fit(d, title, man(30, 600), W - x - X0), font=man(30, 600), fill=MUTED, anchor="ls")
+    px = x
+    px += _plate(d, px, 272, level) + 12
+    if pro:
+        _plate(d, px, 272, "PRO", bg=WHITE, fg="#0B0C0E")
+    stats = [(f"{rating:.1f}" if deals else "—", "рейтинг"), (str(deals), "сделок"), (f"{on_time}%" if deals else "—", "в срок")]
+    sx = X0
+    for value, label in stats:
+        d.text((sx, 420), value, font=unb(64, 700), fill=WHITE, anchor="ls")
+        d.text((sx, 462), label, font=man(26, 600), fill=MUTED, anchor="ls")
+        sx += 300
+    d.text((X0, 560), _fit(d, " · ".join(stack[:5]), man(28, 600), 640), font=man(28, 600), fill=MUTED, anchor="lm")
+    d.text((W - X0, 560), f"t.me/{bot}", font=man(28, 700), fill=WHITE, anchor="rm")
+    return _jpeg(img)
+
+
+def project_card(title: str, budget: str, days: int, category: str, note: str = "ПРОЕКТ") -> bytes:
+    """A project in the bot: alerts for Pro executors, invitations, picks for the client."""
+    img = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(img)
+    _header(img, d, plate=note)
+    words, lines, cur = title.split(), [], ""
+    f = man(56, 800)
+    for w in words:
+        t = f"{cur} {w}".strip()
+        if d.textlength(t, font=f) <= W - 2 * X0:
+            cur = t
+        else:
+            lines.append(cur)
+            cur = w
+    lines.append(cur)
+    if len(lines) > 2:
+        lines = [lines[0], _fit(d, " ".join(lines[1:]), f, W - 2 * X0)]
+    for i, line in enumerate(lines):
+        d.text((X0, 230 + i * 70), line, font=f, fill=WHITE, anchor="ls")
+    d.text((X0, 440), budget, font=unb(72, 700), fill=WHITE, anchor="ls")
+    d.text((X0, 548), f"{category} · срок {days} дн." if category else f"срок {days} дн.", font=man(30, 600), fill=MUTED, anchor="lm")
+    return _jpeg(img)

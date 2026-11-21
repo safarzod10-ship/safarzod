@@ -1,7 +1,7 @@
 // Line icons (Lucide): thin strokes, no background tiles.
 import type { CSSProperties } from 'react';
 import {
-  ArrowLeftRight, Ban, BadgeCheck, Bell, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDot,
+  ArrowLeftRight, Ban, Copy, Crown, Download, ExternalLink, Image, Lightbulb, Share2, UserPlus, BadgeCheck, Bell, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDot,
   CircleX, Clock3, Coins, Ellipsis, Eye, FileText, Flag, Github, Hammer, Handshake, House, Info, Link, Lock, MessageCircle, Minus,
   Paperclip, Plus, Scale, Search, SendHorizontal, ShieldAlert, ShieldCheck, SlidersHorizontal, Star, Trash2, Undo2, UserRound, Wallet, X, Zap,
   type LucideIcon,
@@ -14,6 +14,7 @@ const I = {
   bolt: Zap, coin: Coins, doc: FileText, filter: SlidersHorizontal, admin: ShieldAlert, github: Github, info: Info,
   swap: ArrowLeftRight, handshake: Handshake, hammer: Hammer, eye: Eye, wallet: Wallet, done: CircleCheck, current: CircleDot,
   todo: Circle, failed: CircleX, undo: Undo2, scale: Scale, bell: Bell, lock: Lock, badge: BadgeCheck, trash: Trash2,
+  copy: Copy, crown: Crown, download: Download, external: ExternalLink, image: Image, tips: Lightbulb, share: Share2, invite: UserPlus,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof I;

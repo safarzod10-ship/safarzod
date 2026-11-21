@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
+import Coach, { tipsSeen } from './Coach';
 import { Icon, type IconName } from './icons';
 import { NavProvider, useNav, type Tab } from './nav';
 import Admin, { ComplaintAdmin, MemberAdmin, MyComplaints, ProfileReview } from './screens/Admin';
@@ -11,6 +12,8 @@ import Devs from './screens/Devs';
 import Guide from './screens/Guide';
 import Home from './screens/Home';
 import Onboarding from './screens/Onboarding';
+import Portfolio from './screens/Portfolio';
+import Pro from './screens/Pro';
 import Profile from './screens/Profile';
 import { BidForm, Choose, ProjectNew } from './screens/ProjectForms';
 import Projects from './screens/Projects';
@@ -25,6 +28,7 @@ const SCREENS: Record<string, ComponentType<any>> = {
   bid: BidForm, choose: Choose, chats: Chats, chat: ChatView, profile: Profile, 'dev-form': DevForm,
   complaint: Complaint, guide: Guide, admin: Admin, 'complaint-admin': ComplaintAdmin, member: MemberAdmin,
   'my-complaints': MyComplaints, 'profile-review': ProfileReview, deal: DealView, deals: DealsList, finance: Finance,
+  portfolio: Portfolio, pro: Pro,
 };
 
 type TabItem = { key: Tab; label: string; icon: IconName };
@@ -93,6 +97,8 @@ function Island() {
                 onClick={() => go(() => nav.setTab('projects'))} />
               <Cell icon lead={<IconTile name="doc" />} title="Моя анкета" sub="Без неё нельзя брать сделки" chevron
                 onClick={() => go(() => nav.open('profile', 'dev-form'))} />
+              <Cell icon lead={<IconTile name="crown" />} title="IT Trusty Pro" sub="Проекты сразу в бот и первые места" chevron
+                onClick={() => go(() => nav.open('profile', 'pro'))} />
             </>
           )}
           <Cell icon lead={<IconTile name="shield" />} title="Как работает гарант" chevron onClick={() => go(() => nav.open('home', 'guide'))} />
@@ -195,6 +201,8 @@ function useDeepLink(ready: boolean) {
     else if (screen === 'deal' && id) nav.open('home', 'deal', { id: Number(id) });
     else if (screen === 'deals') nav.open('home', 'deals');
     else if (screen === 'finance') nav.open('profile', 'finance');
+    else if (screen === 'pro') nav.open('profile', 'pro');
+    else if (screen === 'portfolio') nav.open('profile', 'portfolio');
   }, [ready, nav]);
 }
 
@@ -238,6 +246,16 @@ function Screen() {
     if (role === 'client' && tab === 'projects' && depth === 1) setTab('devs');
   }, [role]); // eslint-disable-line react-hooks/exhaustive-deps
   const C = SCREENS[route.name] ?? Home;
+  // first-run tips over the real home screen, once per role (replayed from the profile)
+  const [tips, setTips] = useState(false);
+  useEffect(() => {
+    if (depth === 1 && tab === 'home' && !tipsSeen(role)) { const t = window.setTimeout(() => setTips(true), 500); return () => window.clearTimeout(t); }
+  }, [role, tab, depth]);
+  useEffect(() => {
+    const on = () => { setTab('home'); window.setTimeout(() => setTips(true), 400); };
+    window.addEventListener('trusty:tips', on);
+    return () => window.removeEventListener('trusty:tips', on);
+  }, [setTab]);
   const refresh = useCallback(() => (tab === 'chats' ? refreshChats() : reload()), [tab, reload, refreshChats]);
   const { pull, busy } = usePull(depth === 1 && tab !== 'profile', refresh);
   return (
@@ -247,6 +265,7 @@ function Screen() {
         <C key={route.key} {...route.params} />
       </div>
       {depth === 1 && <Island />}
+      {tips && depth === 1 && <Coach key={role} role={role} onClose={() => setTips(false)} />}
       <Toast />
     </>
   );

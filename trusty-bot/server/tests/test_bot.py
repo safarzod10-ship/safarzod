@@ -128,6 +128,25 @@ async def main():
     await dp.feed_update(bot, Update.model_validate({"update_id": 51, "callback_query": rq}))
     answer = [c for c in CALLS if c[0] == "AnswerCallbackQuery"][-1][1]
     assert answer.get("show_alert") and "уже" in answer["text"], answer
+    # Pro in Telegram Stars: pre-checkout is confirmed, the successful payment switches Pro on
+    from decimal import Decimal
+    from trusty.models import Subscription
+    async with Session() as s:
+        sub = Subscription(user_id=42, method="stars", amount=Decimal(300), currency="XTR", days=30)
+        s.add(sub)
+        await s.commit()
+        sid = sub.id
+    pq = {"id": "pq1", "from": user(), "currency": "XTR", "total_amount": 300, "invoice_payload": f"pro:{sid}"}
+    await dp.feed_update(bot, Update.model_validate({"update_id": 60, "pre_checkout_query": pq}))
+    assert CALLS[-1][0] == "AnswerPreCheckoutQuery" and CALLS[-1][1]["ok"] is True, CALLS[-1]
+    await dp.feed_update(bot, Update.model_validate({"update_id": 61, "pre_checkout_query": {**pq, "id": "pq2", "total_amount": 1}}))
+    assert CALLS[-1][1]["ok"] is False and CALLS[-1][1]["error_message"], CALLS[-1]
+    paid = {**msg("x"), "successful_payment": {"currency": "XTR", "total_amount": 300, "invoice_payload": f"pro:{sid}",
+                                               "telegram_payment_charge_id": "tg-1", "provider_payment_charge_id": ""}}
+    paid.pop("text")
+    await dp.feed_update(bot, Update.model_validate({"update_id": 62, "message": paid}))
+    async with Session() as s:
+        assert (await s.get(User, 42)).pro() and (await s.get(Subscription, sid)).status == "paid"
     print("bot OK:", ", ".join(sorted({c[0] for c in CALLS})))
     await engine.dispose()
 

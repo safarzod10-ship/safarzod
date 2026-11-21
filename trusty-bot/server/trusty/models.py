@@ -29,12 +29,20 @@ class User(Base):
     ban_permanent: Mapped[bool] = mapped_column(Boolean, default=False)
     bot_started: Mapped[bool] = mapped_column(Boolean, default=False)  # pressed /start, can get notifications
     onboarded: Mapped[bool] = mapped_column(Boolean, default=False)  # saw the intro and picked a role
+    pro_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # IT Trusty Pro (executors)
+    alerts: Mapped[bool] = mapped_column(Boolean, default=True)  # Pro: send new matching projects to the bot
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     @property
     def name(self) -> str:
         return " ".join(x for x in (self.first_name, self.last_name) if x) or (self.username or f"id{self.id}")
+
+    def pro(self, now: datetime | None = None) -> bool:
+        until = self.pro_until
+        if until is not None and until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        return until is not None and until > (now or utcnow())
 
     def banned(self, now: datetime | None = None) -> bool:
         now = now or utcnow()
@@ -211,6 +219,45 @@ class Offer(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Attachment(Base):
+    """A file sent in a chat (screenshots, archives, documents), e.g. when work is handed over."""
+    __tablename__ = "attachments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), index=True)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), index=True)
+    path: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(160))
+    mime: Mapped[str] = mapped_column(String(80))
+    size: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Invite(Base):
+    """A client invited an executor to a project (once per pair)."""
+    __tablename__ = "invites"
+    __table_args__ = (UniqueConstraint("project_id", "dev_id"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    dev_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Subscription(Base):
+    """A paid period of IT Trusty Pro: Telegram Stars (XTR) through the bot or USDT through Crypto Pay."""
+    __tablename__ = "subscriptions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
+    method: Mapped[str] = mapped_column(String(8))  # stars | crypto
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(8))  # XTR | USDT
+    days: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending | paid | expired
+    external_id: Mapped[str | None] = mapped_column(String(128))  # Crypto Pay invoice id / Telegram charge id
+    url: Mapped[str | None] = mapped_column(String(512))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Complaint(Base):

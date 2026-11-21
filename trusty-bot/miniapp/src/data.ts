@@ -40,13 +40,32 @@ export interface Dev {
   isNew?: boolean;
   joined: string;
   about: string;
-  portfolio: { title: string; text: string }[];
+  portfolio: Work[];
   history: PastDeal[];
   links?: string[];
   years?: number;
   moderation?: 'review' | 'published' | 'rejected';
   banned?: { until: string | null } | null;
+  pro?: boolean; // IT Trusty Pro: shown first
+  level?: Level;
+  levelNext?: { name: string; left: string[] } | null;
 }
+
+export type Level = 'new' | 'verified' | 'top';
+export const LEVEL_LABEL: Record<Level, string> = { new: 'Новый', verified: 'Проверенный', top: 'Топ' };
+export const LEVEL_RULES: { key: Level; title: string; rule: string }[] = [
+  { key: 'new', title: 'Новый', rule: 'Анкета одобрена. Сумма одной сделки до 100 USDT.' },
+  { key: 'verified', title: 'Проверенный', rule: '3+ сделки, рейтинг от 4.5, не больше одного проигранного спора.' },
+  { key: 'top', title: 'Топ', rule: '15+ сделок, рейтинг от 4.8, сдача в срок от 90%, без проигранных споров.' },
+];
+/** level for the browser demo, where examples have no level from the server */
+export function levelOf(d: Dev): Level {
+  if (d.level) return d.level;
+  if (d.verified && d.deals >= 15 && d.rating >= 4.8 && d.onTime >= 90 && !d.disputesLost) return 'top';
+  if (d.verified && d.deals >= 3 && d.rating >= 4.5 && d.disputesLost <= 1) return 'verified';
+  return 'new';
+}
+export interface Work { title: string; text: string; url?: string | null; image?: string | null; imageId?: string | null }
 
 export interface Client {
   id: string;
@@ -56,6 +75,7 @@ export interface Client {
   rating: number;
   deals: number;
   lastSeenMin: number;
+  fastPay?: boolean; // pays quickly after the deal is created
 }
 
 export interface Bid {
@@ -83,6 +103,8 @@ export interface Project {
   client?: Client | null; // live API embeds the client
   bidsCount?: number; // live API: total bids (the list itself is only sent to the owner)
   myBid?: { projectId: number; price: number; days: number; text: string } | null;
+  invited?: boolean; // the client invited me (executor) to this project
+  invitedIds?: string[]; // the owner: executors already invited
 }
 
 export type DealStatus = 'awaiting_payment' | 'in_work' | 'review' | 'done' | 'dispute' | 'cancelled' | 'refunded';
@@ -131,11 +153,18 @@ export interface Msg {
   at?: string; // ISO time from the API
   file?: string;
   offer?: Offer;
+  files?: Attachment[];
+}
+export interface Attachment { id: number; name: string; size: number; mime: string; image: boolean; url: string }
+export function fileSize(n: number): string {
+  if (n < 1024) return `${n} Б`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} КБ`;
+  return `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} МБ`;
 }
 
 export interface Chat {
   id: string;
-  peer: { name: string; hue: number; lastSeenMin: number; role: 'dev' | 'client'; refId: string };
+  peer: { name: string; hue: number; lastSeenMin: number; role: 'dev' | 'client'; refId: string; rating?: number; deals?: number; fastPay?: boolean };
   deal?: { id: number; title: string; amount: number; status: DealStatus; due: string; clientId?: string; devId?: string } | null;
   unread: number;
   offersWaiting?: number; // offers to me that wait for an answer
@@ -188,7 +217,7 @@ export const DEVS: Dev[] = [
     id: 'timur', name: 'Тимур Исмаилов', handle: 'timur_dev', hue: 0, title: 'Telegram-боты и Mini Apps',
     categories: ['bots', 'web'], stack: ['Python', 'aiogram 3', 'PostgreSQL', 'Redis', 'Mini Apps'],
     rating: 4.9, deals: 48, volume: 18400, onTime: 96, disputes: 1, disputesLost: 0, lastSeenMin: 2, responseMin: 15,
-    status: 'free', rate: 25, verified: true, github: 'timur-dev', deposit: 200, joined: 'марта 2025',
+    status: 'free', rate: 25, verified: true, github: 'timur-dev', deposit: 200, joined: 'марта 2025', pro: true,
     about: 'Пишу ботов и Mini Apps под ключ: от ТЗ до деплоя на сервер заказчика. Оплаты, админки, рассылки, интеграции с CRM. Сдаю с инструкцией и месяцем бесплатных правок.',
     portfolio: [
       { title: 'Бот записи для сети барбершопов', text: '3 филиала, онлайн-оплата, напоминания. 2 400 записей в месяц.' },
@@ -273,7 +302,7 @@ export const DEVS: Dev[] = [
 ];
 
 export const CLIENTS: Client[] = [
-  { id: 'anna', name: 'Анна Соколова', handle: 'anna_barber', hue: 2, rating: 5.0, deals: 4, lastSeenMin: 3 },
+  { id: 'anna', name: 'Анна Соколова', handle: 'anna_barber', hue: 2, rating: 5.0, deals: 4, lastSeenMin: 3, fastPay: true },
   { id: 'kirill', name: 'Кирилл Н.', handle: 'kirill_shop', hue: 5, rating: 4.8, deals: 9, lastSeenMin: 60 },
   { id: 'school', name: 'Онлайн-школа «Код»', handle: 'kod_school', hue: 1, rating: 4.9, deals: 12, lastSeenMin: 20 },
   { id: 'me', name: 'Вы', handle: 'you', hue: 0, rating: 5.0, deals: 4, lastSeenMin: 0 },
@@ -293,7 +322,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: 309, title: 'Парсер Wildberries с выгрузкой в Google Sheets', category: 'parsers', budgetMin: 80, budgetMax: 120, days: 5,
-    stack: ['Python', 'Google Sheets'], clientId: 'kirill', ago: '5 ч назад', status: 'open',
+    stack: ['Python', 'Google Sheets'], clientId: 'kirill', ago: '5 ч назад', status: 'open', invited: true,
     text: 'Собирать цены и остатки по 500 артикулам конкурентов раз в час. Выгрузка в таблицу, подсветка изменений цены больше 5 %.',
     files: [], bids: [{ devId: 'sergey', price: 100, days: 4, text: 'Есть готовое решение под WB, адаптирую под ваш список.', ago: '3 ч назад' }],
   },

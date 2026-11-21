@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,12 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
 
-from . import escrow, notify, offers, presence
+from . import cards, escrow, matching, notify, offers, presence, pro
+from . import files as storage
 from .auth import admin_user, current_user
 from .config import settings
 from .cryptopay import CryptoPayError, check_signature, pay
 from .db import get_session
-from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Offer, Payment, Project, User, utcnow
+from .models import (Attachment, Bid, Chat, Complaint, Deal, DevProfile, Evidence, Invite, Message, Offer, Payment, Project,
+                     User, utcnow)
 from .serial import (aware, chat_payloads, complaint_payloads, deal_payloads, dev_payloads, member_payload,
                      project_payloads, short_date)
 
@@ -69,7 +71,7 @@ async def me_payload(s: AsyncSession, me: User) -> dict:
     p = await s.get(DevProfile, me.id)
     profile = (await dev_payloads(s, [(p, me)]))[0] if p else None
     return {"id": str(me.id), "name": me.name, "username": me.username, "role": me.role, "isAdmin": me.is_admin,
-            "onboarded": me.onboarded,
+            "onboarded": me.onboarded, "pro": pro.info(me),
             "devForm": p.moderation if p else "none", "profile": profile,
             "moderationNote": p.moderation_note if p else None}
 
@@ -116,6 +118,7 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
 class MePatch(BaseModel):
     role: str | None = Field(default=None, pattern="^(client|dev)$")
     onboarded: bool | None = None
+    alerts: bool | None = None  # Pro: new projects to the bot
 
 
 @router.patch("/me")
@@ -124,6 +127,8 @@ async def patch_me(body: MePatch, me: User = Depends(current_user), s: AsyncSess
         me.role = body.role
     if body.onboarded is not None:
         me.onboarded = body.onboarded
+    if body.alerts is not None:
+        me.alerts = body.alerts
     await s.commit()
     return await me_payload(s, me)
 
@@ -192,6 +197,10 @@ async def create_project(body: ProjectIn, me: User = Depends(current_user), s: A
                 stack=[x[:30] for x in body.stack], files=[{"name": f[:120], "size": "—"} for f in body.files])
     s.add(p)
     await s.commit()
+    try:  # picks for the client and instant alerts for Pro executors; never fails the publishing itself
+        await matching.after_publish(s, p)
+    except Exception as e:  # noqa: BLE001
+        log.warning("after publish %s: %s", p.id, e)
     return (await project_payloads(s, [p], me))[0]
 
 
@@ -310,7 +319,6 @@ class MessageIn(BaseModel):
 @router.post("/chats/{cid}/messages")
 async def post_message(cid: int, body: MessageIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
     c = await my_chat(s, cid, me)
-    peer_id = c.b_id if c.a_id == me.id else c.a_id
     flagged = bool(OFFSITE.search(body.text))
     m = Message(chat_id=c.id, sender_id=me.id, text=body.text.strip(), flagged=flagged)
     s.add(m)
@@ -320,6 +328,13 @@ async def post_message(cid: int, body: MessageIn, me: User = Depends(current_use
         if not warned:
             s.add(Message(chat_id=c.id, sender_id=None,
                           text="Внимание: договорённости и оплата вне IT Trusty не защищены гарантом."))
+    await _delivered(s, c, me, m, body.text)
+    await s.commit()
+    return (await chat_payloads(s, [c], me, full=True))[0]
+
+
+async def _delivered(s: AsyncSession, c: Chat, me: User, m: Message, preview: str) -> None:
+    """After my message: it is read by me, and the peer gets a bot notice if they are away (at most every 10 min)."""
     now = utcnow()
     c.updated_at = now
     await s.flush()
@@ -327,7 +342,7 @@ async def post_message(cid: int, body: MessageIn, me: User = Depends(current_use
         c.a_read = m.id
     else:
         c.b_read = m.id
-    peer = await s.get(User, peer_id)
+    peer = await s.get(User, c.b_id if c.a_id == me.id else c.a_id)
     last_note = aware(c.b_notified_at if c.a_id == me.id else c.a_notified_at)
     away = peer is not None and now - aware(peer.last_seen_at) > timedelta(minutes=2)
     if peer and away and (last_note is None or now - last_note > timedelta(minutes=10)):
@@ -335,9 +350,183 @@ async def post_message(cid: int, body: MessageIn, me: User = Depends(current_use
             c.b_notified_at = now
         else:
             c.a_notified_at = now
-        notify.send(peer.id, f"Новое сообщение от {me.name}: {body.text[:120]}", "Ответить", screen="chat", id=c.id)
+        notify.send(peer.id, f"Новое сообщение от {me.name}: {preview[:120]}", "Ответить", screen="chat", id=c.id)
+
+
+@router.post("/chats/{cid}/files")
+async def send_files(cid: int, text: str = Form(default=""), files: list[UploadFile] = File(...),
+                     me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    """Screenshots, archives and documents in a chat, with an optional caption (e.g. when handing over work)."""
+    c = await my_chat(s, cid, me)
+    if not 1 <= len(files) <= 10:
+        bad("Можно прикрепить от 1 до 10 файлов")
+    text = text.strip()[:4000]
+    m = Message(chat_id=c.id, sender_id=me.id, text=text, flagged=bool(text and OFFSITE.search(text)))
+    s.add(m)
+    await s.flush()
+    names = []
+    for f in files:
+        path, name, mime, size = await storage.save_attachment(f, c.id)
+        s.add(Attachment(message_id=m.id, chat_id=c.id, path=path, name=name, mime=mime, size=size))
+        names.append(name)
+    await _delivered(s, c, me, m, text or "файлы: " + ", ".join(names))
     await s.commit()
     return (await chat_payloads(s, [c], me, full=True))[0]
+
+
+@router.get("/f/a/{aid}", include_in_schema=False)
+async def get_attachment(aid: int, sig: str, s: AsyncSession = Depends(get_session)):
+    storage.check("a", aid, sig)
+    a = await s.get(Attachment, aid)
+    if a is None or not os.path.exists(a.path):
+        bad("Файл не найден", 404)
+    return FileResponse(a.path, media_type=a.mime, filename=a.name,
+                        content_disposition_type="inline" if a.mime in storage.IMAGES else "attachment",
+                        headers={"Cache-Control": "private, max-age=86400"})
+
+
+@router.get("/f/p/{ident}", include_in_schema=False)
+async def get_picture(ident: str, sig: str):
+    storage.check("p", ident, sig)
+    path = storage.picture_path(ident)
+    if not os.path.exists(path):
+        bad("Картинка не найдена", 404)
+    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})
+
+
+# ---------------------------------------------------------------- portfolio
+@router.post("/portfolio/image")
+async def portfolio_image(file: UploadFile = File(...), me: User = Depends(current_user)):
+    ident = await storage.save_picture(file, me.id)
+    return {"imageId": ident, "url": storage.link("p", ident)}
+
+
+class Work(BaseModel):
+    title: str = Field(min_length=2, max_length=80)
+    text: str = Field(default="", max_length=300)
+    url: str | None = Field(default=None, max_length=300)
+    imageId: str | None = Field(default=None, max_length=40)
+
+
+class PortfolioIn(BaseModel):
+    items: list[Work] = Field(default_factory=list, max_length=12)
+
+
+@router.put("/portfolio")
+async def put_portfolio(body: PortfolioIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    """Works with a picture and a link to the live project; saved at once, without a new moderation."""
+    p = await s.get(DevProfile, me.id)
+    if p is None:
+        bad("Сначала заполните анкету исполнителя")
+    items = []
+    for w in body.items:
+        url = (w.url or "").strip()
+        if url and not url.startswith(("https://", "http://", "t.me/")):
+            bad(f"Ссылка в работе «{w.title}» должна начинаться с https://")
+        if w.imageId and not w.imageId.startswith(f"{me.id}-"):
+            bad("Картинка не найдена")
+        items.append({"title": w.title.strip(), "text": w.text.strip(), "url": url or None, "image": w.imageId or None})
+    p.portfolio = items
+    await s.commit()
+    return await me_payload(s, me)
+
+
+# ---------------------------------------------------------------- invitations and picks
+class InviteIn(BaseModel):
+    devId: int
+
+
+@router.post("/projects/{pid}/invite")
+async def invite(pid: int, body: InviteIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    p = await s.get(Project, pid)
+    if p is None or p.client_id != me.id:
+        bad("Проект не найден", 404)
+    if p.status != "open":
+        bad("По этому проекту исполнитель уже выбран")
+    prof, dev = await s.get(DevProfile, body.devId), await s.get(User, body.devId)
+    if prof is None or dev is None or prof.moderation != "published" or dev.banned():
+        bad("Пригласить можно исполнителя с одобренной анкетой")
+    if (await s.execute(select(Invite).where(Invite.project_id == pid, Invite.dev_id == dev.id))).scalar_one_or_none():
+        bad("Вы уже пригласили этого исполнителя в проект")
+    s.add(Invite(project_id=pid, dev_id=dev.id))
+    await s.commit()
+    notify.send_project(dev.id, p, f"{me.name} приглашает вас в проект. Откликнитесь со своей ценой:", "ПРИГЛАШЕНИЕ")
+    return (await project_payloads(s, [p], me))[0]
+
+
+@router.get("/projects/{pid}/matches")
+async def project_matches(pid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    p = await s.get(Project, pid)
+    if p is None or p.client_id != me.id:
+        bad("Проект не найден", 404)
+    return await matching.matches(s, p, 8)
+
+
+# ---------------------------------------------------------------- IT Trusty Pro
+class PlanIn(BaseModel):
+    plan: str = Field(default="1m", pattern="^(1m|3m)$")
+
+
+@router.get("/pro")
+async def pro_info(me: User = Depends(current_user)):
+    return pro.info(me)
+
+
+@router.post("/pro/stars")
+async def pro_stars(body: PlanIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    return {"url": await _run(s, pro.stars_link(s, me, body.plan))}
+
+
+@router.post("/pro/crypto")
+async def pro_crypto(body: PlanIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    return {"url": await _run(s, pro.crypto_invoice(s, me, body.plan))}
+
+
+@router.post("/pro/check")
+async def pro_check(me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    """Called when the user comes back from paying: picks up a USDT payment before the webhook."""
+    try:
+        await pro.sync_crypto(s)
+    except CryptoPayError as e:
+        log.warning("pro check: %s", e)
+    await s.refresh(me)
+    return pro.info(me)
+
+
+# ---------------------------------------------------------------- public card for sharing
+async def _public_dev(s: AsyncSession, uid: int) -> dict:
+    rows = await dev_rows(s, DevProfile.user_id == uid)
+    if not rows or rows[0][0].moderation != "published" or rows[0][1].banned():
+        raise HTTPException(404, "Профиль не найден")
+    return (await dev_payloads(s, rows))[0]
+
+
+@router.get("/share/dev/{uid}.jpg", include_in_schema=False)
+async def share_card(uid: int, s: AsyncSession = Depends(get_session)):
+    d = await _public_dev(s, uid)
+    from .serial import LEVELS
+    img = cards.dev_card(d["name"], d["title"], LEVELS[d["level"]], d["rating"], d["deals"], d["onTime"], d["stack"], d["pro"],
+                         settings.bot_username)
+    return Response(img, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@router.get("/u/{uid}", include_in_schema=False)
+async def share_page(uid: int, s: AsyncSession = Depends(get_session)):
+    """A link that shows the executor's card as a preview in Telegram and other apps, then opens the bot."""
+    from html import escape
+    d = await _public_dev(s, uid)
+    bot_link = f"https://t.me/{settings.bot_username}?start=dev_{uid}"
+    stats = f"{d['rating']:.1f} ★ · {d['deals']} сделок · " if d["deals"] else ""
+    desc = escape(f"{stats}{', '.join(d['stack'][:4])}. Сделка через гаранта IT Trusty: оплата в USDT после приёмки работы.")
+    title = escape(f"{d['name']} — исполнитель IT Trusty")
+    img = f"{settings.public_url}/api/share/dev/{uid}.jpg"
+    return HTMLResponse(f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>{title}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta property="og:type" content="profile">
+<meta property="og:title" content="{title}"><meta property="og:description" content="{desc}">
+<meta property="og:image" content="{img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta http-equiv="refresh" content="0;url={bot_link}"></head>
+<body style="background:#000;color:#fff;font-family:system-ui;text-align:center;padding:40px">
+<p>{title}</p><p><a style="color:#4fb98c" href="{bot_link}">Открыть в Telegram</a></p></body></html>""")
 
 
 @router.post("/chats/{cid}/typing")
@@ -735,7 +924,11 @@ async def cryptopay_webhook(request: Request, s: AsyncSession = Depends(get_sess
     except ValueError:
         raise HTTPException(400, "bad json") from None
     if update.get("update_type") == "invoice_paid" and isinstance(update.get("payload"), dict):
-        await escrow.handle_paid_invoice(s, update["payload"])
+        inv = update["payload"]
+        if str(inv.get("payload") or "").startswith("pro:"):
+            await pro.handle_crypto(s, inv)
+        else:
+            await escrow.handle_paid_invoice(s, inv)
     return PlainTextResponse("ok")
 
 

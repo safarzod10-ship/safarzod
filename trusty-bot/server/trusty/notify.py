@@ -106,3 +106,33 @@ def send_offer(chat_id: int, offer, sender_name: str, prev_amount: int | None, l
     text = (f"<b>{escape(sender_name)}</b> {verb}: <b>{offer.amount} {settings.asset}</b> за «{escape(offer.title)}». "
             f"Срок {offer.days} дн.\nПредложение действует ещё {left}.")
     _spawn(_send(chat_id, text, offer_markup(offer.id, offer.chat_id), photo))
+
+
+def _budget(p) -> str:
+    return f"{p.budget_min} {settings.asset}" if p.budget_min == p.budget_max else f"{p.budget_min}–{p.budget_max} {settings.asset}"
+
+
+def send_project(chat_id: int, p, text: str, note: str = "НОВЫЙ ПРОЕКТ") -> None:
+    """A project as a card with a button into it: alerts for Pro executors and invitations."""
+    from .cards import project_card
+    from .offers import CATEGORY_LABEL
+    try:
+        photo = project_card(p.title, _budget(p), p.days, CATEGORY_LABEL.get(p.category, ""), note)
+    except Exception as e:  # noqa: BLE001
+        log.warning("project card failed: %s", e)
+        photo = None
+    caption = f"{escape(text)}\n<b>{escape(p.title)}</b>\n{_budget(p)} · {p.days} дн."
+    _spawn(_send(chat_id, caption, open_button("Открыть проект", OPEN, screen="project", id=p.id), photo))
+
+
+def send_matches(chat_id: int, p, devs: list[dict]) -> None:
+    """After publishing: the executors who fit the project best, each with a button to their profile."""
+    lines = [f"Подобрали исполнителей для «{escape(p.title)}»:\n"]
+    rows = []
+    for i, d in enumerate(devs, 1):
+        tag = " · PRO" if d.get("pro") else ""
+        stats = f"{d['rating']:.1f} ★ · {d['deals']} сделок" if d["deals"] else "новый исполнитель"
+        lines.append(f"{i}. <b>{escape(d['name'])}</b>{tag}\n{escape(d['title'])} · {stats}")
+        rows.append([app_button(f"{d['name']} · профиль", screen="dev", id=d["id"])])
+    lines.append("\nПригласите подходящего в проект или напишите ему: оффер с ценой отправляется прямо в чате.")
+    _spawn(_send(chat_id, "\n".join(lines)[:4096], keyboard(*rows, [app_button("Открыть проект", OPEN, screen="project", id=p.id)])))

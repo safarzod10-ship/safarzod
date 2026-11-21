@@ -12,10 +12,10 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import (BufferedInputFile, CallbackQuery, InlineKeyboardButton, InputMediaPhoto,
-                           MenuButtonWebApp, Message, TelegramObject, WebAppInfo)
+                           MenuButtonWebApp, Message, PreCheckoutQuery, TelegramObject, WebAppInfo)
 from sqlalchemy import desc, func, or_, select
 
-from . import cards, escrow, notify, offers
+from . import cards, escrow, notify, offers, pro
 from .auth import upsert_user
 from .config import settings
 from .db import Session
@@ -128,6 +128,23 @@ async def admin(m: Message, command: CommandObject):
         await m.delete()  # remove the message with the code from the chat
     except Exception:  # noqa: BLE001
         pass
+
+
+@router.pre_checkout_query()
+async def pre_checkout(q: PreCheckoutQuery):
+    """Telegram Stars: confirm the Pro invoice is still valid right before the payment."""
+    async with Session() as s:
+        problem = await pro.check_stars(s, q.invoice_payload, q.from_user.id, q.total_amount, q.currency)
+        await s.rollback()
+    await q.answer(ok=problem is None, error_message=problem)
+
+
+@router.message(F.successful_payment)
+async def paid(m: Message):
+    sp = m.successful_payment
+    async with Session() as s:
+        if sp.invoice_payload.startswith("pro:"):
+            await pro.paid_stars(s, sp.invoice_payload, m.from_user.id, sp.telegram_payment_charge_id)
 
 
 @router.message()

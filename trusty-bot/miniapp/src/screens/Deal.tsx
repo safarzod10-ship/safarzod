@@ -4,6 +4,7 @@ import { DEAL_STATUS, amt, dateTime, type Deal } from '../data';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { onReturn, openTg } from '../tg';
+import { PendingFiles, chooseFiles } from './Chats';
 import { Actions, Amount, Avatar, Cell, Field, IconTile, Info, Loader, Note, Pill, Section, Sheet, Skeleton, Success, Top, WaitPay } from '../ui';
 import { Icon, type IconName } from '../icons';
 
@@ -100,7 +101,8 @@ function Stars({ value, onChange }: { value: number; onChange(v: number): void }
 
 export default function DealView({ id }: { id: number }) {
   const nav = useNav();
-  const { deals, loadDeal, checkDeal, payDeal, dealAct, resolveDeal, payCfg, showToast, live } = useStore();
+  const { deals, loadDeal, checkDeal, payDeal, dealAct, resolveDeal, payCfg, showToast, live, sendFiles } = useStore();
+  const [files, setFiles] = useState<File[]>([]);
   const [sheet, setSheet] = useState<null | 'submit' | 'accept' | 'dispute' | 'cancel' | 'review' | 'resolve'>(null);
   const [text, setText] = useState('');
   const [rating, setRating] = useState(5);
@@ -229,9 +231,19 @@ export default function DealView({ id }: { id: number }) {
       <Actions primary={primary ? { ...primary, disabled: busy } : chat} secondary={primary ? chat : undefined} link={link} />
 
       <Sheet open={sheet === 'submit'} onClose={() => setSheet(null)} title="Сдать работу">
-        <p className="muted small" style={{ marginTop: 0 }}>Файлы и ссылки отправьте в чат сделки. У заказчика будет {payCfg.reviewDays} дн. на проверку, потом работа примется автоматически.</p>
+        <p className="muted small" style={{ marginTop: 0 }}>Приложите файлы или скриншоты: они придут в чат сделки. У заказчика будет {payCfg.reviewDays} дн. на проверку, потом работа примется автоматически.</p>
         <Field label="Комментарий"><textarea className="textarea" style={{ minHeight: 90 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Что сделано, где посмотреть" /></Field>
-        <button className="btn primary mt" disabled={busy} onClick={() => run(() => dealAct(d.id, 'submit', { note: text }), 'Работа сдана')}>{busy ? <span className="spin" /> : 'Сдать работу'}</button>
+        <PendingFiles files={files} onRemove={(i) => setFiles((fs) => fs.filter((_, j) => j !== i))} />
+        {d.chatId && (
+          <button className="btn secondary" onClick={async () => setFiles(await chooseFiles(files, showToast))}>
+            <Icon name="clip" size={19} />{files.length ? 'Добавить ещё' : 'Приложить файлы'}
+          </button>
+        )}
+        <button className="btn primary mt" disabled={busy} onClick={() => run(async () => {
+          if (files.length && d.chatId) await sendFiles(d.chatId, files, text.trim() ? `Сдача работы: ${text.trim()}` : 'Сдача работы');
+          await dealAct(d.id, 'submit', { note: text });
+          setFiles([]);
+        }, 'Работа сдана')}>{busy ? <span className="spin" /> : files.length ? `Сдать работу · ${files.length} ${files.length === 1 ? 'файл' : files.length < 5 ? 'файла' : 'файлов'}` : 'Сдать работу'}</button>
       </Sheet>
       <Sheet open={sheet === 'accept'} onClose={() => setSheet(null)} title="Принять работу?">
         <p className="muted small" style={{ marginTop: 0 }}>Гарант сразу переведёт {amt(d.amount)} {asset} исполнителю. Отменить это будет нельзя.</p>

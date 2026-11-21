@@ -3,8 +3,9 @@ import { RESULT_LABEL, plural, responseTime, seen, type DealResult } from '../da
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Actions, Avatar, Cell, IconTile, Info, Note, Pill, Rating, Section, Sheet, Loader, Top, Verified } from '../ui';
+import { Actions, Avatar, Cell, IconTile, Note, Pill, ProBadge, Rating, Section, Sheet, Loader, Top, Verified } from '../ui';
 import { DevStatus } from './Devs';
+import { InviteSheet, LevelInfo, ShareSheet, Works } from './Extras';
 
 const RESULT_TONE: Record<DealResult, 'green' | 'amber' | 'blue' | 'red'> = {
   ontime: 'green', late: 'amber', dispute_won: 'blue', dispute_lost: 'red',
@@ -14,6 +15,8 @@ export default function DevProfile({ id }: { id: string }) {
   const nav = useNav();
   const { role, members, openChat, devById, fetchDev, isMe, live } = useStore();
   const [menu, setMenu] = useState(false);
+  const [share, setShare] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [missing, setMissing] = useState(false);
   const d = devById(id);
   useEffect(() => { if (!d) fetchDev(id).then((x) => { if (!x) setMissing(true); }); }, [id, d, fetchDev]);
@@ -38,9 +41,10 @@ export default function DevProfile({ id }: { id: string }) {
 
       <div className="hero">
         <Avatar name={d.name} size={88} online={online} />
-        <h1>{d.name}{d.verified && <Verified />}</h1>
+        <h1>{d.name}{d.verified && <Verified />}{d.pro && <ProBadge />}</h1>
         <div className="handle">@{d.handle} · {d.title}</div>
         <div className="line">
+          <LevelInfo d={d} />
           <DevStatus d={d} />
           <Pill><Icon name="clock" size={13} />{seen(d.lastSeenMin)}</Pill>
           {d.responseMin > 0 && <Pill>отвечает {responseTime(d.responseMin)}</Pill>}
@@ -56,10 +60,6 @@ export default function DevProfile({ id }: { id: string }) {
         <div className="mt-s"><Note tone={d.moderation === 'rejected' ? 'red' : 'amber'} icon="clock">
           {d.moderation === 'rejected' ? 'Анкета не прошла проверку. Исправьте её в профиле.' : 'Анкета на проверке. Так профиль будет выглядеть в каталоге.'}
         </Note></div>
-      )}
-      {d.isNew && (
-        <div className="summary" style={{ justifyContent: 'center', margin: '0 0 6px' }}>Новый исполнитель
-          <Info label="Что это значит">Пока нет трёх успешных сделок, сумма одной сделки ограничена 100 USDT.</Info></div>
       )}
 
       {d.deals > 0 && (
@@ -79,9 +79,7 @@ export default function DevProfile({ id }: { id: string }) {
 
       {d.portfolio.length > 0 && (
         <Section title="Портфолио">
-          <div className="group">
-            {d.portfolio.map((p) => <Cell key={p.title} icon lead={<IconTile name="doc" />} title={p.title} sub={p.text} />)}
-          </div>
+          <Works items={d.portfolio} />
         </Section>
       )}
 
@@ -106,17 +104,22 @@ export default function DevProfile({ id }: { id: string }) {
 
       {!banned && !self && (
         <Actions secondary={{ label: 'Написать', onClick: () => write() }}
-          primary={role === 'client' ? { label: 'Предложить цену', onClick: () => write(true) } : undefined} />
+          primary={role === 'client' ? { label: 'Предложить цену', onClick: () => write(true) } : undefined}
+          link={role === 'client' ? { label: 'Пригласить в проект', onClick: () => setInviting(true) } : undefined} />
       )}
 
       <Sheet open={menu} onClose={() => setMenu(false)}>
         <div className="group">
-          <Cell icon lead={<IconTile name="link" />} title="Скопировать ссылку на профиль"
-            onClick={() => { navigator.clipboard?.writeText(`https://t.me/itrusty_bot?start=dev_${d.id}`).catch(() => {}); setMenu(false); }} />
-          <Cell icon lead={<IconTile name="flag" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Пожаловаться</span>}
-            onClick={() => { setMenu(false); nav.push('complaint', { against: d.id, name: d.name }); }} />
+          <Cell icon lead={<IconTile name="share" />} title={self ? 'Поделиться профилем' : 'Поделиться'} chevron
+            onClick={() => { setMenu(false); setShare(true); }} />
+          {role === 'client' && !self && <Cell icon lead={<IconTile name="invite" />} title="Пригласить в проект" chevron
+            onClick={() => { setMenu(false); setInviting(true); }} />}
+          {!self && <Cell icon lead={<IconTile name="flag" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Пожаловаться</span>}
+            onClick={() => { setMenu(false); nav.push('complaint', { against: d.id, name: d.name }); }} />}
         </div>
       </Sheet>
+      <ShareSheet open={share} onClose={() => setShare(false)} d={d} self={self} />
+      {role === 'client' && !self && <InviteSheet open={inviting} onClose={() => setInviting(false)} d={d} />}
 
     </div>
   );

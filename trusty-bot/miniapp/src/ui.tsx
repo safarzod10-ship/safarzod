@@ -348,3 +348,26 @@ export function Timer({ from, to }: { from?: string; to: string }) {
     </span>
   );
 }
+
+/** executor level: Новый / Проверенный / Топ */
+export function LevelBadge({ level }: { level: 'new' | 'verified' | 'top' }) {
+  const label = level === 'top' ? 'Топ' : level === 'verified' ? 'Проверенный' : 'Новый';
+  return <span className={`pill lvl-${level}`}>{level !== 'new' && <Icon name="badge" size={13} strokeWidth={2.2} />}{label}</span>;
+}
+
+/** IT Trusty Pro mark */
+export function ProBadge() {
+  return <span className="pro-badge" title="IT Trusty Pro">PRO</span>;
+}
+
+/** a hidden file input behind any button: returns the picked files */
+export function pickFiles(opts: { multiple?: boolean; accept?: string } = {}): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = !!opts.multiple;
+    if (opts.accept) input.accept = opts.accept;
+    input.onchange = () => resolve(Array.from(input.files ?? []));
+    input.click();
+  });
+}

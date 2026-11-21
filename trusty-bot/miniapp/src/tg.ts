@@ -24,6 +24,9 @@ interface WebApp {
   offEvent?(e: string, cb: () => void): void;
   openTelegramLink?(url: string): void;
   openLink?(url: string): void;
+  openInvoice?(url: string, cb?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
+  shareToStory?(mediaUrl: string, params?: { text?: string; widget_link?: { url: string; name?: string } }): void;
+  downloadFile?(params: { url: string; file_name: string }, cb?: (accepted: boolean) => void): void;
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   MainButton: NativeButton;
   SecondaryButton?: NativeButton & { setParams(p: BtnParams & { position?: string }): void };
@@ -88,6 +91,24 @@ export function openTg(url: string) {
   if (tg?.openTelegramLink && /^https:\/\/t\.me\//.test(url)) tg.openTelegramLink(url);
   else if (tg?.openLink) tg.openLink(url);
   else window.open(url, '_blank', 'noopener');
+}
+
+/** pays a Telegram Stars invoice inside Telegram; resolves with the final status */
+export function payInvoice(url: string): Promise<'paid' | 'cancelled' | 'failed' | 'pending'> {
+  return new Promise((resolve) => {
+    if (tg?.openInvoice && tg.isVersionAtLeast('6.1')) tg.openInvoice(url, (st) => resolve(st));
+    else { openTg(url); resolve('pending'); }
+  });
+}
+
+/** an absolute URL for a server path like /api/f/a/1?sig=... */
+export const absUrl = (path: string) => (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:') ? path : `${location.origin}${path}`);
+
+/** saves a file: Telegram's own download dialog when available, else a new tab */
+export function downloadFile(path: string, name: string) {
+  const url = absUrl(path);
+  if (tg?.downloadFile && tg.isVersionAtLeast('8.0')) { try { tg.downloadFile({ url, file_name: name }); return; } catch { /* fall back */ } }
+  if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank', 'noopener');
 }
 
 /** calls fn when the user comes back to the Mini App (e.g. after paying in @CryptoBot) */

@@ -6,7 +6,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import presence
-from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Offer, Project, Review, User, utcnow
+from .models import (Attachment, Bid, Chat, Complaint, Deal, DevProfile, Evidence, Invite, Message, Offer, Project, Review,
+                     User, utcnow)
 
 MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября",
               "ноября", "декабря"]
@@ -68,13 +69,25 @@ def hue(uid: int) -> int:
 def client_brief(u: User, stats: dict | None = None) -> dict:
     st = stats or {}
     return {"id": str(u.id), "name": u.name, "handle": u.username or "", "hue": hue(u.id),
-            "rating": st.get("rating", 0), "deals": st.get("deals", 0), "lastSeenMin": minutes_since(u.last_seen_at)}
+            "rating": st.get("rating", 0), "deals": st.get("deals", 0), "fastPay": st.get("fastPay", False),
+            "lastSeenMin": minutes_since(u.last_seen_at)}
+
+
+FAST_PAY_HOURS = 2
 
 
 async def client_stats(s: AsyncSession, ids: list[int]) -> dict[int, dict]:
-    out: dict[int, dict] = defaultdict(lambda: {"rating": 0, "deals": 0})
+    """A client's rating from executors, finished deals and "платит быстро": at least two deals paid, on average
+    within two hours after the deal was created."""
+    out: dict[int, dict] = defaultdict(lambda: {"rating": 0, "deals": 0, "fastPay": False})
     if not ids:
         return out
+    waits: dict[int, list[float]] = defaultdict(list)
+    for cid, created, paid in await s.execute(select(Deal.client_id, Deal.created_at, Deal.paid_at)
+                                              .where(Deal.client_id.in_(ids), Deal.paid_at.is_not(None))):
+        waits[cid].append((aware(paid) - aware(created)).total_seconds() / 3600)
+    for cid, w in waits.items():
+        out[cid]["fastPay"] = len(w) >= 2 and sum(w) / len(w) <= FAST_PAY_HOURS
     rows = await s.execute(select(Deal.client_id, func.count()).where(Deal.client_id.in_(ids), Deal.status == "done")
                            .group_by(Deal.client_id))
     for cid, n in rows:
@@ -83,6 +96,48 @@ async def client_stats(s: AsyncSession, ids: list[int]) -> dict[int, dict]:
                            .where(Review.target_id.in_(ids), Deal.client_id == Review.target_id).group_by(Review.target_id))
     for tid, avg in rows:
         out[tid]["rating"] = round(float(avg), 1)
+    return out
+
+
+LEVELS = {"new": "Новый", "verified": "Проверенный", "top": "Топ"}
+
+
+def level_of(verified: bool, done: int, rating: float, on_time: int, lost: int) -> str:
+    """Новый: анкета одобрена. Проверенный: 3+ сделки, рейтинг от 4.5, не больше одного проигранного спора.
+    Топ: 15+ сделок, рейтинг от 4.8, сдача в срок от 90%, ни одного проигранного спора."""
+    if verified and done >= 15 and rating >= 4.8 and on_time >= 90 and lost == 0:
+        return "top"
+    if verified and done >= 3 and rating >= 4.5 and lost <= 1:
+        return "verified"
+    return "new"
+
+
+def level_next(level: str, done: int, rating: float, on_time: int, lost: int) -> dict | None:
+    """What is left to reach the next level, in plain words."""
+    if level == "top":
+        return None
+    goal = {"deals": 3, "rating": 4.5, "onTime": 0, "lost": 1} if level == "new" else {"deals": 15, "rating": 4.8, "onTime": 90, "lost": 0}
+    left = []
+    if done < goal["deals"]:
+        n = goal["deals"] - done
+        left.append(f"ещё {n} {plural(n, 'сделка', 'сделки', 'сделок')}")
+    if done and rating < goal["rating"]:
+        left.append(f"рейтинг от {goal['rating']:g}")
+    if goal["onTime"] and done and on_time < goal["onTime"]:
+        left.append(f"сдача в срок от {goal['onTime']}%")
+    if lost > goal["lost"]:
+        left.append("без проигранных споров" if goal["lost"] == 0 else "не больше одного проигранного спора")
+    return {"name": LEVELS["verified" if level == "new" else "top"], "left": left}
+
+
+def portfolio_payload(items: list) -> list[dict]:
+    from .files import link
+    out = []
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        out.append({"title": it.get("title") or "", "text": it.get("text") or "", "url": it.get("url") or None,
+                    "image": link("p", it["image"]) if it.get("image") else None, "imageId": it.get("image") or None})
     return out
 
 
@@ -118,6 +173,9 @@ async def dev_payloads(s: AsyncSession, profiles: list[tuple[DevProfile, User]])
                 "author": authors[r.author_id].first_name if r and r.author_id in authors else None,
             })
         created = aware(u.created_at)
+        rating = round(sum(ratings) / len(ratings), 1) if ratings else 0
+        on_time = round(100 * len(ontime) / len(done)) if done else 0
+        lvl = level_of(p.moderation == "published", len(done), rating, on_time, len(lost))
         out.append({
             "id": str(u.id), "name": u.name, "handle": u.username or "", "hue": hue(u.id), "title": p.title,
             "categories": p.categories, "stack": p.stack,
@@ -129,7 +187,8 @@ async def dev_payloads(s: AsyncSession, profiles: list[tuple[DevProfile, User]])
             "status": p.status, "busyUntil": p.busy_until, "rate": p.rate,
             "verified": p.moderation == "published", "github": p.github or None, "deposit": p.deposit or None,
             "isNew": len(done) < 3, "joined": f"{MONTHS_GEN[created.month - 1]} {created.year}",
-            "about": p.about, "portfolio": p.portfolio or [], "links": p.links or [], "history": history,
+            "about": p.about, "portfolio": portfolio_payload(p.portfolio), "links": p.links or [], "history": history,
+            "pro": u.pro(), "level": lvl, "levelNext": level_next(lvl, len(done), rating, on_time, len(lost)),
             "moderation": p.moderation, "years": p.years,
             "banned": (None if not u.banned() else {"until": None if u.ban_permanent else short_date(u.ban_until)}),
         })
@@ -146,6 +205,7 @@ async def project_payloads(s: AsyncSession, projects: list[Project], me: User) -
     counts = dict((await s.execute(select(Bid.project_id, func.count()).where(Bid.project_id.in_(pids))
                                    .group_by(Bid.project_id))).all())
     owned = [p.id for p in projects if p.client_id == me.id]
+    invites = (await s.execute(select(Invite).where(Invite.project_id.in_(pids)))).scalars().all()
     bids: dict[int, list[Bid]] = defaultdict(list)
     mine: dict[int, Bid] = {}
     for b in (await s.execute(select(Bid).where(Bid.project_id.in_(pids)))).scalars():
@@ -165,6 +225,8 @@ async def project_payloads(s: AsyncSession, projects: list[Project], me: User) -
                      for b in sorted(bids.get(p.id, []), key=lambda b: b.price)],
             "myBid": ({"projectId": p.id, "price": mine[p.id].price, "days": mine[p.id].days, "text": mine[p.id].text}
                       if p.id in mine else None),
+            "invited": any(i.project_id == p.id and i.dev_id == me.id for i in invites),
+            "invitedIds": [str(i.dev_id) for i in invites if i.project_id == p.id] if p.client_id == me.id else [],
         })
     return out
 
@@ -181,11 +243,15 @@ def offer_payload(o: Offer, me_id: int, prev_amount: int | None) -> dict:
             "fee": str(fee), "total": str(Decimal(o.amount) + fee)}
 
 
-def message_payload(m: Message, me_id: int, offer: dict | None = None) -> dict:
+def message_payload(m: Message, me_id: int, offer: dict | None = None, files: list | None = None) -> dict:
     out = {"id": m.id, "from": "system" if m.sender_id is None else ("me" if m.sender_id == me_id else "peer"),
            "text": m.text, "at": aware(m.created_at).isoformat()}
     if offer:
         out["offer"] = offer
+    if files:
+        from .files import IMAGES, link
+        out["files"] = [{"id": a.id, "name": a.name, "size": a.size, "mime": a.mime, "image": a.mime in IMAGES,
+                         "url": link("a", a.id)} for a in files]
     return out
 
 
@@ -207,6 +273,7 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
     peer_ids = [c.b_id if c.a_id == me.id else c.a_id for c in chats]
     peers = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(peer_ids)))).scalars()}
     dev_ids = set((await s.execute(select(DevProfile.user_id).where(DevProfile.user_id.in_(peer_ids)))).scalars())
+    cstats = await client_stats(s, [x for x in peer_ids if x not in dev_ids])
     deals = {}
     deal_ids = [c.deal_id for c in chats if c.deal_id]
     if deal_ids:
@@ -226,6 +293,11 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
         if skip_hidden and not msgs:
             continue  # lists show only chats with something in them: not empty ones, not ones I deleted with nothing new
         offer_cards = await _offers_for(s, msgs, me.id) if full else {}
+        files: dict[int, list] = defaultdict(list)
+        if msgs:
+            for a in (await s.execute(select(Attachment).where(Attachment.message_id.in_([m.id for m in msgs]))
+                                      .order_by(Attachment.id))).scalars():
+                files[a.message_id].append(a)
         waiting = (await s.execute(select(func.count()).where(Offer.chat_id == c.id, Offer.to_id == me.id,
                                                               Offer.status == "pending", Offer.expires_at > utcnow()))).scalar_one()
         d = deals.get(c.deal_id) if c.deal_id else None
@@ -233,13 +305,15 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
             "id": str(c.id),
             "peer": {"name": peer.name if peer else "Пользователь", "hue": hue(pid),
                      "lastSeenMin": minutes_since(peer.last_seen_at) if peer else 10 ** 6,
-                     "role": "dev" if pid in dev_ids else "client", "refId": str(pid)},
+                     "role": "dev" if pid in dev_ids else "client", "refId": str(pid),
+                     **({} if pid in dev_ids else {"rating": cstats[pid]["rating"], "deals": cstats[pid]["deals"],
+                                                   "fastPay": cstats[pid]["fastPay"]})},
             "deal": ({"id": d.id, "title": d.title, "amount": d.amount, "status": d.status, "due": short_date(d.due_at),
                       "clientId": str(d.client_id), "devId": str(d.dev_id)} if d else None),
             "unread": unread,
             "offersWaiting": waiting,
             "peerTyping": presence.is_typing(c.id, pid),
-            "messages": [message_payload(m, me.id, offer_cards.get(m.offer_id)) for m in msgs],
+            "messages": [message_payload(m, me.id, offer_cards.get(m.offer_id), files.get(m.id)) for m in msgs],
         })
     return out
 

@@ -27,6 +27,11 @@ class Settings:
     fee_percent: float = field(default_factory=lambda: float(_env("TRUSTY_FEE_PERCENT", "5")))
     review_days: float = field(default_factory=lambda: float(_env("TRUSTY_REVIEW_DAYS", "3")))
     new_dev_limit: int = field(default_factory=lambda: int(_env("TRUSTY_NEW_DEV_LIMIT", "100")))
+    # IT Trusty Pro for executors: new projects straight to the bot and first places; paid in Telegram Stars or USDT
+    pro_days: int = field(default_factory=lambda: int(_env("TRUSTY_PRO_DAYS", "30")))
+    pro_stars: int = field(default_factory=lambda: int(_env("TRUSTY_PRO_STARS", "300")))
+    pro_usdt: float = field(default_factory=lambda: float(_env("TRUSTY_PRO_USDT", "5")))
+    bot_username: str = field(default_factory=lambda: _env("TRUSTY_BOT_USERNAME", "itrusty_bot").lstrip("@"))
 
     @property
     def secret(self) -> bytes:

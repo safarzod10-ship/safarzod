@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEAL_STATUS, OFFSITE, amt, budget, msgTime, seen, type Chat, type Offer } from '../data';
+import { DEAL_STATUS, OFFSITE, amt, budget, fileSize, msgTime, plural, seen, type Attachment, type Chat, type Offer } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore, type Role } from '../store';
-import { haptic, inTelegram } from '../tg';
-import { Avatar, Cell, IconTile, Info, Loader, Note, Odometer, Pill, Seg, Sheet, Timer, Top } from '../ui';
+import { absUrl, downloadFile, haptic, inTelegram } from '../tg';
+import { Avatar, Cell, IconTile, Info, Loader, Note, Odometer, Pill, Seg, Sheet, Timer, Top, pickFiles } from '../ui';
 
 /** a chat row that slides left to show "Удалить", like in Telegram */
 function SwipeRow({ onOpen, onDelete, children }: { onOpen(): void; onDelete(): void; children: React.ReactNode }) {
@@ -57,7 +57,7 @@ export default function Chats() {
           {chats.map((c) => {
             const last = c.messages[c.messages.length - 1];
             const preview = !last ? 'Нет сообщений' : last.offer ? `Оффер: ${amt(last.offer.amount)} USDT · ${last.offer.title}`
-              : `${last.from === 'me' ? 'Вы: ' : ''}${last.text}`;
+              : `${last.from === 'me' ? 'Вы: ' : ''}${last.text || filesLabel(last.files)}`;
             return (
               <SwipeRow key={c.id} onOpen={() => nav.push('chat', { id: c.id })} onDelete={() => setDel(c)}>
               <div className="cell has-avatar">
@@ -98,6 +98,77 @@ function DeleteChat({ chat, busy, onClose, onDelete }: { chat: Chat | null; busy
       <button className="btn danger" disabled={busy} onClick={onDelete}>{busy ? <span className="spin" /> : 'Удалить'}</button>
     </Sheet>
   );
+}
+
+function filesLabel(files?: Attachment[]): string {
+  if (!files?.length) return '';
+  const pics = files.filter((f) => f.image).length;
+  if (pics === files.length) return pics === 1 ? 'Фото' : `Фото: ${pics}`;
+  return files.length === 1 ? files[0].name : `Файлы: ${files.length}`;
+}
+
+/** pictures as a grid (tap opens full screen), other files as rows that download */
+export function Files({ files, onOpen }: { files: Attachment[]; onOpen(f: Attachment): void }) {
+  const pics = files.filter((f) => f.image);
+  const docs = files.filter((f) => !f.image);
+  return (
+    <>
+      {pics.length > 0 && (
+        <div className={`att-grid n${Math.min(pics.length, 4) === 4 ? 4 : pics.length > 4 ? 3 : pics.length}`}>
+          {pics.map((f) => <button key={f.id} onClick={() => onOpen(f)} aria-label={`Открыть ${f.name}`}><img src={absUrl(f.url)} alt={f.name} loading="lazy" /></button>)}
+        </div>
+      )}
+      {docs.map((f) => (
+        <button key={f.id} className="att-file" onClick={() => downloadFile(f.url, f.name)} aria-label={`Скачать ${f.name}`}>
+          <span className="ext">{f.name.split('.').pop()?.slice(0, 4) || 'file'}</span>
+          <span style={{ minWidth: 0, flex: 1 }}><b>{f.name}</b><small>{fileSize(f.size)} · скачать</small></span>
+          <Icon name="download" size={18} />
+        </button>
+      ))}
+    </>
+  );
+}
+
+export function Lightbox({ file, onClose }: { file: Attachment | null; onClose(): void }) {
+  if (!file) return null;
+  return (
+    <div className="lightbox" onClick={onClose} role="dialog" aria-label={file.name}>
+      <img src={absUrl(file.url)} alt={file.name} />
+      <div className="row" onClick={(e) => e.stopPropagation()}>
+        <button className="btn secondary" onClick={onClose}>Закрыть</button>
+        <button className="btn primary" onClick={() => downloadFile(file.url, file.name)}><Icon name="download" size={18} />Сохранить</button>
+      </div>
+    </div>
+  );
+}
+
+/** files picked for sending: small previews with a cross */
+export function PendingFiles({ files, onRemove }: { files: File[]; onRemove(i: number): void }) {
+  const urls = useRef(new Map<File, string>());
+  useEffect(() => () => { urls.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
+  const url = (f: File) => { if (!urls.current.has(f)) urls.current.set(f, URL.createObjectURL(f)); return urls.current.get(f)!; };
+  if (!files.length) return null;
+  return (
+    <div className="pending-files">
+      {files.map((f, i) => (
+        <div key={`${f.name}-${i}`} className="pf">
+          {f.type.startsWith('image/') ? <img src={url(f)} alt="" /> : <><Icon name="doc" size={20} /><span>{f.name}</span></>}
+          <button onClick={() => onRemove(i)} aria-label={`Убрать ${f.name}`}><Icon name="x" size={13} strokeWidth={2.4} /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const MAX_FILES = 10, MAX_SIZE = 20 * 1024 * 1024;
+/** picks files for a message, rejecting too big ones with a toast */
+export async function chooseFiles(have: File[], toast: (t: string) => void): Promise<File[]> {
+  const picked = await pickFiles({ multiple: true });
+  const big = picked.filter((f) => f.size > MAX_SIZE);
+  if (big.length) toast(`Файл больше 20 МБ: ${big[0].name}`);
+  const ok = picked.filter((f) => f.size <= MAX_SIZE);
+  if (have.length + ok.length > MAX_FILES) toast(`Не больше ${MAX_FILES} файлов за раз`);
+  return [...have, ...ok].slice(0, MAX_FILES);
 }
 
 const STATE_TEXT: Record<Offer['status'], string> = {
@@ -273,12 +344,14 @@ const offerOpened = new Set<number>();
 export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: string; offer?: boolean; projectId?: number }) {
   const nav = useNav();
   const routeKey = nav.route.key;
-  const { chats, send, readChat, loadChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, showToast, deleteChat } = useStore();
+  const { chats, send, sendFiles, readChat, loadChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, showToast, deleteChat } = useStore();
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const c = chats.find((x) => x.id === id);
   const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [view, setView] = useState<Attachment | null>(null);
   const [sending, setSending] = useState(false);
   const [sheet, setSheet] = useState<{ base: Offer | null; projectId?: number } | null>(
     openOffer && !offerOpened.has(routeKey) ? { base: null, projectId: newProject } : null);
@@ -301,11 +374,17 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
 
   const submit = async () => {
     const t = text.trim();
-    if (!t || sending) return;
+    if ((!t && !files.length) || sending) return;
     if (risky) haptic.warning(); else haptic.tap();
     setSending(true);
-    try { await send(id, t); setText(''); } catch { /* toast shown */ } finally { setSending(false); }
+    try {
+      if (files.length) await sendFiles(id, files, t); else await send(id, t);
+      setText('');
+      setFiles([]);
+    } catch { /* toast shown */ } finally { setSending(false); }
   };
+  const ready = !!text.trim() || files.length > 0;
+  const peer = c.peer;
   const onText = (v: string) => {
     setText(v);
     if (Date.now() - lastTyping.current > 3000) { lastTyping.current = Date.now(); typing(id); }
@@ -324,7 +403,13 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
           <button style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textAlign: 'left' }}
             onClick={() => c.peer.role === 'dev' && nav.push('dev', { id: c.peer.refId })}>
             <Avatar name={c.peer.name} size={40} online={c.peer.lastSeenMin <= 5} />
-            <div style={{ minWidth: 0 }}><b>{c.peer.name}</b><span className={c.peerTyping ? 'typing-now' : ''}>{c.peerTyping ? 'печатает…' : seen(c.peer.lastSeenMin)}</span></div>
+            <div style={{ minWidth: 0 }}>
+              <b>{c.peer.name}</b>
+              <span className={c.peerTyping ? 'typing-now' : ''}>{c.peerTyping ? 'печатает…' : peer.role === 'client'
+                ? (peer.deals ? `заказчик · ★ ${peer.rating?.toFixed(1)} · ${peer.deals} ${plural(peer.deals, 'сделка', 'сделки', 'сделок')}` : `заказчик · ${seen(peer.lastSeenMin)}`)
+                : seen(peer.lastSeenMin)}</span>
+            </div>
+            {peer.role === 'client' && peer.fastPay && <Pill tone="green">Платит быстро</Pill>}
           </button>
           <button className="icon-btn" aria-label="Ещё" onClick={() => setMenu(true)}><Icon name="dots" size={22} /></button>
         </div>
@@ -341,7 +426,7 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
       </div>
 
       <div className="msgs">
-        {c.messages.length === 0 && <div className="empty">Напишите первое сообщение. Цену и срок предложите оффером: кнопка слева от поля ввода.</div>}
+        {c.messages.length === 0 && <div className="empty">Напишите первое сообщение. Цену и срок предложите оффером: зелёная кнопка справа от поля ввода.</div>}
         {c.messages.map((m) => (m.offer ? (
           <OfferCard key={m.id} o={m.offer} peer={c.peer.name} busy={busyOffer === m.offer.id}
             onAccept={() => act(m.offer!.id, async () => { const dealId = await acceptOffer(id, m.offer!.id); showToast(`Сделка #${dealId} создана`); nav.push('deal', { id: dealId }); })}
@@ -350,8 +435,9 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
             onCounter={() => setSheet({ base: m.offer! })}
             onDeal={(dealId) => nav.push('deal', { id: dealId })} />
         ) : (
-          <div key={m.id} className={`msg ${m.from}`}>
+          <div key={m.id} className={`msg ${m.from}${m.files?.length && !m.text ? ' only-files' : ''}`}>
             {m.file && <div className="att"><Icon name="doc" size={18} />{m.file}</div>}
+            {m.files?.length ? <Files files={m.files} onOpen={setView} /> : null}
             {m.text}
             <time>{msgTime(m)}</time>
           </div>
@@ -364,17 +450,23 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
         {risky && (
           <div className="warn"><Note tone="red" icon="ban">Похоже на попытку договориться вне IT Trusty. Такие сделки не защищены, а за это блокируют.</Note></div>
         )}
+        <PendingFiles files={files} onRemove={(i) => setFiles((fs) => fs.filter((_, j) => j !== i))} />
         <div className="composer-row">
-          <button className="icon-btn" aria-label="Предложить цену" onClick={() => setSheet({ base: null })}><Icon name="handshake" size={24} /></button>
-          <textarea rows={1} value={text} placeholder="Сообщение" aria-label="Сообщение"
+          <button className="icon-btn" aria-label="Прикрепить файл" onClick={async () => setFiles(await chooseFiles(files, showToast))}><Icon name="clip" size={23} /></button>
+          <textarea rows={1} value={text} placeholder={files.length ? 'Подпись' : 'Сообщение'} aria-label="Сообщение"
             onChange={(e) => onText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }} />
-          <button className="send" disabled={!text.trim() || sending} onClick={submit} aria-label="Отправить"><Icon name="send" size={20} strokeWidth={2} /></button>
+          {ready || sending
+            ? <button className="send" disabled={sending} onClick={submit} aria-label="Отправить">{sending ? <span className="spin" /> : <Icon name="send" size={20} strokeWidth={2} />}</button>
+            : <button className="send offer-btn" onClick={() => setSheet({ base: null })} aria-label="Предложить цену"><Icon name="handshake" size={21} strokeWidth={2} /></button>}
         </div>
       </div>
 
+      <Lightbox file={view} onClose={() => setView(null)} />
       <Sheet open={menu} onClose={() => setMenu(false)}>
         <div className="group">
+          <Cell lead={<IconTile name="handshake" />} title="Предложить цену" sub="Оффер на проект заказчика" chevron
+            onClick={() => { setMenu(false); setSheet({ base: null }); }} />
           <Cell lead={<IconTile name="flag" />} title="Пожаловаться" chevron
             onClick={() => { setMenu(false); nav.push('complaint', { against: c.peer.refId, name: c.peer.name, deal: c.deal?.id }); }} />
           <Cell lead={<IconTile name="trash" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Удалить чат</span>}
@@ -391,3 +483,4 @@ export function ChatView({ id, offer: openOffer, projectId: newProject }: { id: 
     </div>
   );
 }
+

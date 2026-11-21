@@ -28,6 +28,8 @@ MIGRATIONS = [
     ("messages", "offer_id", "INTEGER"),
     ("chats", "a_hidden", "INTEGER"),
     ("chats", "b_hidden", "INTEGER"),
+    ("users", "pro_until", TS),
+    ("users", "alerts", "BOOLEAN NOT NULL DEFAULT TRUE"),
 ]
 
 # Constraint changes for PostgreSQL databases created by earlier versions (each statement is idempotent).

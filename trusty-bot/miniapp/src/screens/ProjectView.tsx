@@ -3,7 +3,8 @@ import { bidCount, budget, categoryLabel, plural, seen, usdt } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Actions, Avatar, Cell, IconTile, Loader, Note, Pill, Rating, Section, Top, Verified } from '../ui';
+import { Actions, Avatar, Cell, IconTile, Loader, Note, Pill, ProBadge, Rating, Section, Top, Verified } from '../ui';
+import { Matches } from './Extras';
 
 export default function ProjectView({ id }: { id: number }) {
   const nav = useNav();
@@ -21,7 +22,7 @@ export default function ProjectView({ id }: { id: number }) {
   // what the bottom button does for this person: respond, fill the profile, wait for approval or switch role
   let action: { label: string; onClick(): void } | undefined;
   let note: string | null = null;
-  if (own) note = 'Это ваш проект. Отклики исполнителей появятся ниже.';
+  if (own) note = null;
   else if (!open) note = 'Исполнитель уже выбран, отклики закрыты.';
   else if (role === 'client') action = { label: 'Откликнуться как исполнитель', onClick: () => { setRole('dev').catch(() => {}); } };
   else if (form === 'published') action = { label: myBid ? 'Изменить отклик' : 'Откликнуться', onClick: () => nav.push('bid', { id: p.id }) };
@@ -33,7 +34,8 @@ export default function ProjectView({ id }: { id: number }) {
     <div className="screen no-tabs">
       <Top title={p.title} small />
       <div className="summary" style={{ margin: '-6px 0 18px', flexWrap: 'wrap' }}>
-        <Pill tone={open ? 'green' : undefined}>{open ? 'Приём откликов' : 'В работе'}</Pill>
+        {p.invited && !own && <Pill tone="green"><Icon name="invite" size={13} />Вас пригласили</Pill>}
+        <Pill tone={open && !p.invited ? 'green' : undefined}>{open ? 'Приём откликов' : 'В работе'}</Pill>
         <span>{categoryLabel(p.category)} · {p.ago}</span>
       </div>
 
@@ -60,7 +62,8 @@ export default function ProjectView({ id }: { id: number }) {
         <Section title="Заказчик">
           <div className="group">
             <Cell avatar lead={<Avatar name={c.name} online={c.lastSeenMin <= 5} />} title={c.name}
-              sub={c.deals ? `${c.rating.toFixed(1)} ★ · ${c.deals} ${plural(c.deals, 'сделка', 'сделки', 'сделок')}` : seen(c.lastSeenMin)} />
+              sub={c.deals ? `${c.rating.toFixed(1)} ★ · ${c.deals} ${plural(c.deals, 'сделка', 'сделки', 'сделок')} через гаранта` : `Новый заказчик · ${seen(c.lastSeenMin)}`}
+              trail={c.fastPay ? <Pill tone="green">Платит быстро</Pill> : undefined} />
           </div>
         </Section>
       )}
@@ -77,7 +80,7 @@ export default function ProjectView({ id }: { id: number }) {
                     <button className="bid-h" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push('dev', { id: d.id })}>
                       <Avatar name={d.name} size={42} online={d.lastSeenMin <= 5} />
                       <div className="cell-body">
-                        <div className="cell-title"><span className="t">{d.name}</span>{d.verified && <Verified />}</div>
+                        <div className="cell-title"><span className="t">{d.name}</span>{d.verified && <Verified />}{d.pro && <ProBadge />}</div>
                         <div className="cell-meta num" style={{ marginTop: 2 }}>
                           {d.deals ? <><Rating value={d.rating} /><span>{d.deals} {plural(d.deals, 'сделка', 'сделки', 'сделок')}</span></> : <span>Новый исполнитель</span>}
                         </div>
@@ -97,6 +100,13 @@ export default function ProjectView({ id }: { id: number }) {
               })}
             </div>
           ) : <div className="text muted small">Откликов пока нет. Обычно первые приходят в течение часа.</div>}
+        </Section>
+      )}
+
+      {own && open && (
+        <Section title="Подходящие исполнители">
+          <p className="muted small" style={{ margin: '-4px 0 10px' }}>Подобрали по категории и стеку. Приглашённый получит проект в боте.</p>
+          <Matches projectId={p.id} invited={p.invitedIds ?? []} />
         </Section>
       )}
 

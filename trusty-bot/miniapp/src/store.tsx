@@ -3,14 +3,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ApiError, live } from './api';
 import {
   ADMINS, CHATS, CLIENTS, COMPLAINTS, DEMO_DEALS, DEVS, MEMBERS, PROJECTS,
-  type Chat, type Client, type Complaint, type ComplaintReason, type Deal, type Dev, type Member, type Msg, type Offer, type PayConfig, type Project,
+  type Chat, type Client, type Complaint, type ComplaintReason, type Deal, type Dev, type Member, type Msg, type Offer, type PayConfig, type Project, type Work,
 } from './data';
-import { haptic, openTg, tgUser } from './tg';
+import { haptic, onReturn, openTg, payInvoice, tgUser } from './tg';
 
 export type Role = 'client' | 'dev';
 export type FormState = 'none' | 'review' | 'published' | 'rejected';
 export interface MyBid { projectId: number; price: number; days: number; text: string }
-export interface Me { id: string; name: string; username?: string | null; role: Role; isAdmin: boolean; devForm: FormState; profile: Dev | null; moderationNote?: string | null; onboarded?: boolean }
+export interface ProPlan { key: '1m' | '3m'; days: number; stars: number; usdt: string; discount: number }
+export interface ProInfo { active: boolean; until: string | null; alerts: boolean; plans: ProPlan[]; crypto: boolean; stars: boolean }
+export interface Me { id: string; name: string; username?: string | null; role: Role; isAdmin: boolean; devForm: FormState; profile: Dev | null; moderationNote?: string | null; onboarded?: boolean; pro?: ProInfo }
 export interface DevFormData { categories: string[]; years: number; stack: string[]; rate: number; status: 'free' | 'busy'; about: string; github: string; links: string[] }
 export interface NewComplaint { againstId: string; againstName?: string; dealId?: number; reason: ComplaintReason; text: string; files: File[]; previews: string[] }
 type NewProject = Omit<Project, 'id' | 'ago' | 'bids' | 'status' | 'clientId'>;
@@ -92,6 +94,17 @@ interface Store {
   typing(chatId: string): void;
   /** removes the chat from my list (the other side keeps it) */
   deleteChat(chatId: string): Promise<void>;
+  /** files (and an optional caption) into a chat */
+  sendFiles(chatId: string, files: File[], text?: string): Promise<void>;
+  uploadWorkImage(file: File): Promise<{ imageId: string; url: string }>;
+  savePortfolio(items: Work[]): Promise<void>;
+  invite(projectId: number, devId: string): Promise<void>;
+  loadMatches(projectId: number): Promise<Dev[]>;
+  proInfo: ProInfo;
+  /** pays for Pro; resolves true when Pro is on */
+  buyPro(method: 'stars' | 'crypto', plan: '1m' | '3m'): Promise<boolean>;
+  checkPro(): Promise<boolean>;
+  setAlerts(on: boolean): Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -138,11 +151,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [payCfg, setPayCfg] = useState<PayConfig>({ enabled: !live, asset: 'USDT', feePercent: 5, reviewDays: 3 });
   const [finance, setFinance] = useState<Finance | null>(null);
   const timer = useRef<number>();
+  const [demoWorks, setDemoWorks] = useState<Work[] | null>(null);
+  const [proDemo, setProDemo] = useState<ProInfo>({ active: false, until: null, alerts: true, crypto: true, stars: true,
+    plans: [{ key: '1m', days: 30, stars: 300, usdt: '5.00', discount: 0 }, { key: '3m', days: 90, stars: 765, usdt: '12.75', discount: 15 }] });
 
   const me: Me = useMemo(() => meLive ?? {
     id: 'me', name: demoName, username: tgUser?.username, role: roleDemo, isAdmin: adminDemo, devForm: devFormDemo,
-    profile: roleDemo === 'dev' ? DEVS[0] : null,
-  }, [meLive, roleDemo, adminDemo, devFormDemo]);
+    profile: roleDemo === 'dev' ? { ...DEVS[0], portfolio: demoWorks ?? DEVS[0].portfolio, pro: proDemo.active } : null,
+    pro: proDemo,
+  }, [meLive, roleDemo, adminDemo, devFormDemo, demoWorks, proDemo]);
 
   const showToast = useCallback((t: string) => {
     setToast(t);
@@ -592,6 +609,91 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (live) api(`/chats/${chatId}/typing`, { method: 'POST' }).catch(() => {});
   }, []);
 
+  // ---------------------------------------------------------------- files, portfolio, invitations, Pro
+  const sendFiles = useCallback(async (chatId: string, files: File[], text = '') => {
+    if (live) {
+      const f = new FormData();
+      f.append('text', text);
+      files.forEach((x) => f.append('files', x));
+      putChat(await call(() => api<Chat>(`/chats/${chatId}/files`, { form: f })));
+      return;
+    }
+    const att = files.map((x, i) => ({ id: Date.now() + i, name: x.name, size: x.size, mime: x.type, image: x.type.startsWith('image/'), url: URL.createObjectURL(x) }));
+    patchChat(chatId, (c) => ({ ...c, messages: [...c.messages, { id: Date.now(), from: 'me', text, time: now(), files: att }] }));
+  }, [call]);
+
+  const uploadWorkImage = useCallback(async (file: File) => {
+    if (live) {
+      const f = new FormData();
+      f.append('file', file);
+      return call(() => api<{ imageId: string; url: string }>('/portfolio/image', { form: f }));
+    }
+    return { imageId: `demo-${Date.now()}`, url: URL.createObjectURL(file) };
+  }, [call]);
+
+  const savePortfolio = useCallback(async (items: Work[]) => {
+    if (live) {
+      setMeLive(await call(() => api<Me>('/portfolio', { method: 'PUT', body: { items: items.map((w) => ({ title: w.title, text: w.text, url: w.url || null, imageId: w.imageId || null })) } })));
+    } else setDemoWorks(items);
+    haptic.success();
+  }, [call]);
+
+  const invite = useCallback(async (projectId: number, devId: string) => {
+    if (live) replaceProject(await call(() => api<Project>(`/projects/${projectId}/invite`, { body: { devId: Number(devId) } })));
+    else setProjects((ps) => ps.map((p) => (p.id === projectId ? { ...p, invitedIds: [...(p.invitedIds ?? []), devId] } : p)));
+    haptic.success();
+    showToast('Приглашение отправлено');
+  }, [call, showToast]);
+
+  const loadMatches = useCallback(async (projectId: number) => {
+    if (!live) {
+      const p = projects.find((x) => x.id === projectId);
+      return DEVS.filter((d) => p && (d.categories.includes(p.category) || d.stack.some((s) => p.stack.includes(s)))).slice(0, 5)
+        .sort((a, b) => Number(!!b.pro) - Number(!!a.pro));
+    }
+    try { return await api<Dev[]>(`/projects/${projectId}/matches`); } catch { return []; }
+  }, [projects]);
+
+  const proInfo: ProInfo = (live ? meLive?.pro : proDemo) ?? proDemo;
+
+  const checkPro = useCallback(async () => {
+    if (!live) return proDemo.active;
+    const info = await api<ProInfo>('/pro/check', { method: 'POST' }).catch(() => null);
+    if (info) setMeLive((m) => (m ? { ...m, pro: info } : m));
+    return !!info?.active;
+  }, [proDemo]);
+
+  const buyPro = useCallback(async (method: 'stars' | 'crypto', plan: '1m' | '3m') => {
+    if (!live) {
+      const days = plan === '3m' ? 90 : 30;
+      setProDemo((p) => ({ ...p, active: true, until: new Date(Date.now() + days * 864e5).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '') }));
+      showToast(`Демо: Pro подключён, в Telegram откроется оплата ${method === 'stars' ? 'звёздами' : 'в USDT'}`);
+      return true;
+    }
+    const { url } = await call(() => api<{ url: string }>(`/pro/${method}`, { body: { plan } }));
+    if (method === 'stars') {
+      const st = await payInvoice(url);
+      if (st === 'paid') {
+        // the bot confirms the payment a moment later
+        for (let i = 0; i < 10; i++) { await new Promise((r) => setTimeout(r, 1200)); if (await checkPro()) return true; }
+      }
+      return false;
+    }
+    openTg(url);
+    return new Promise<boolean>((resolve) => {
+      let n = 0;
+      const stop = onReturn(async () => { if (await checkPro()) { stop(); window.clearInterval(t); resolve(true); } });
+      const t = window.setInterval(async () => {
+        if (++n > 60 || await checkPro()) { stop(); window.clearInterval(t); resolve(n <= 60); }
+      }, 3000);
+    });
+  }, [call, checkPro, showToast]);
+
+  const setAlerts = useCallback(async (on: boolean) => {
+    if (!live) { setProDemo((p) => ({ ...p, alerts: on })); return; }
+    setMeLive(await call(() => api<Me>('/me', { method: 'PATCH', body: { alerts: on } })));
+  }, [call]);
+
   const deleteChat = useCallback(async (chatId: string) => {
     if (live) await call(() => api(`/chats/${chatId}/delete`, { method: 'POST' }));
     setChats((cs) => cs.filter((c) => c.id !== chatId));
@@ -606,7 +708,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addBid, startDeal, openChat, loadChat, refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint,
     takeComplaint, moderate, fetchDev, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment,
     proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deleteChat,
-  }), [deleteChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
+    sendFiles, uploadWorkImage, savePortfolio, invite, loadMatches, proInfo, buyPro, checkPro, setAlerts,
+  }), [sendFiles, uploadWorkImage, savePortfolio, invite, loadMatches, proInfo, buyPro, checkPro, setAlerts, deleteChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
     devById, myBidFor, reload, setRole, submitDevForm, showToast, addProject, loadProject, addBid, startDeal, openChat, loadChat,
     refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint, takeComplaint, moderate, fetchDev]);
 

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { CATEGORIES, categoryLabel, plural, seen, type Dev } from '../data';
+import { CATEGORIES, LEVEL_LABEL, categoryLabel, levelOf, plural, seen, type Dev } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Avatar, Chips, Pill, Rating, Sheet, Toggle, Top, Verified } from '../ui';
+import { Avatar, Chips, Pill, ProBadge, Rating, Sheet, Toggle, Top, Verified } from '../ui';
 
 type Filter = 'all' | 'online' | string;
 type Sort = 'rating' | 'deals' | 'seen';
@@ -21,8 +21,8 @@ export function DevCell({ d, onClick }: { d: Dev; onClick(): void }) {
     <button className="cell has-avatar" onClick={onClick}>
       <Avatar name={d.name} size={44} online={online} />
       <div className="cell-body">
-        <div className="cell-title"><span className="t">{d.name}</span>{d.verified && <Verified />}</div>
-        <div className="cell-sub">{categoryLabel(d.categories[0] ?? '')} · {online ? 'в сети' : seen(d.lastSeenMin)}</div>
+        <div className="cell-title"><span className="t">{d.name}</span>{d.verified && <Verified />}{d.pro && <ProBadge />}</div>
+        <div className="cell-sub">{levelOf(d) !== 'new' && <b className={`lvl-t lvl-${levelOf(d)}`}>{LEVEL_LABEL[levelOf(d)]} · </b>}{categoryLabel(d.categories[0] ?? '')} · {online ? 'в сети' : seen(d.lastSeenMin)}</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flex: 'none' }}>
         {d.deals ? <Rating value={d.rating} /> : <span className="pill">Новый</span>}
@@ -49,7 +49,8 @@ export default function Devs({ cat }: { cat?: string }) {
       if (!['all', 'online'].includes(filter) && !d.categories.includes(filter)) return false;
       if (s && ![d.name, d.title, d.handle, ...d.stack].some((x) => x.toLowerCase().includes(s))) return false;
       return true;
-    }).sort((a, b) => (sort === 'rating' ? b.rating - a.rating : sort === 'deals' ? b.deals - a.deals : a.lastSeenMin - b.lastSeenMin));
+    }).sort((a, b) => Number(!!b.pro) - Number(!!a.pro)
+      || (sort === 'rating' ? b.rating - a.rating : sort === 'deals' ? b.deals - a.deals : a.lastSeenMin - b.lastSeenMin));
   }, [q, filter, sort, devs, freeOnly]);
 
   const sorts: { key: Sort; label: string }[] = [
