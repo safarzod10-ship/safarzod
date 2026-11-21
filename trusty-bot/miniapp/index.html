@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <title>IT Trusty</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon-180.png" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>html,body{background:#000;margin:0}</style>
+  </head>
+  <body>
+    <style>
+      #tl-splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#000;transition:opacity .35s ease,transform .35s ease}
+      #tl-splash.out{opacity:0;transform:scale(1.04)}
+      #tl-splash svg{width:84px;height:96px;overflow:visible}
+      #tl-splash .up,#tl-splash .lo{fill:#fff;fill-opacity:0;stroke:#fff;stroke-width:12;stroke-linejoin:round;stroke-dasharray:var(--len,3000);stroke-dashoffset:var(--len,3000);
+        animation:tl-draw 1.05s cubic-bezier(.6,0,.2,1) forwards,tl-fill .45s .85s ease forwards}
+      #tl-splash .lo{animation-delay:.1s,.95s}
+      #tl-splash.idle .up,#tl-splash.idle .lo{fill-opacity:1;stroke-width:0;stroke-dashoffset:0}
+      #tl-splash .w{font:600 15px/1 'Unbounded','Manrope',system-ui,sans-serif;color:#fff;letter-spacing:.4em;opacity:0;animation:tl-word .6s 1s cubic-bezier(.2,.8,.2,1) forwards}
+      #tl-splash .wv{fill:none;stroke:#2b9a6c;stroke-width:28;stroke-linecap:round;stroke-dasharray:770;stroke-dashoffset:770;animation:none}
+      #tl-splash.idle .up{animation:tl-up 1.5s cubic-bezier(.2,.8,.2,1) infinite}
+      #tl-splash.idle .lo{animation:tl-lo 1.5s cubic-bezier(.2,.8,.2,1) infinite}
+      #tl-splash.idle .wv{animation:tl-wv 1.5s ease-in-out infinite}
+      @keyframes tl-up{0%,100%{transform:translateY(0)}28%,62%{transform:translateY(-72px)}}
+      @keyframes tl-lo{0%,100%{transform:translateY(0)}28%,62%{transform:translateY(72px)}}
+      @keyframes tl-wv{0%,12%{stroke-dashoffset:770}50%{stroke-dashoffset:0}88%,100%{stroke-dashoffset:-770}}
+      @keyframes tl-draw{to{stroke-dashoffset:0}}
+      @keyframes tl-fill{to{fill-opacity:1;stroke-width:0}}
+      @keyframes tl-word{to{opacity:1;letter-spacing:.08em}}
+
+      @media (prefers-reduced-motion:reduce){#tl-splash .up,#tl-splash .lo{animation:none;fill-opacity:1;stroke-width:0}#tl-splash .w{animation:none;opacity:1;letter-spacing:.08em}#tl-splash.idle .up,#tl-splash.idle .lo,#tl-splash.idle .wv{animation:none}}
+    </style>
+    <div id="tl-splash" role="status" aria-label="Загрузка IT Trusty">
+      <svg viewBox="285 268 684 778" aria-hidden="true">
+        <path class="up" d="M285 468C285 432 300 412 338 401C360.8 393.5 452.9 366.4 597 280C615 269 638 269 656 280C800.1 366.4 892.2 393.5 915 401C953 412 968 432 968 468L968 492C945 476 920 470 890 470C706 470 548 704 372 704C325 704 285 685 285 635Z"/>
+        <path class="lo" d="M325.3 766C338 777 370 783 400 783C608 783 738 547 890 547C935 547 968 560 968 600C968 880 640 1038 640 1038C632 1044 621 1044 613 1038C613 1038 412.9 941.6 325.3 766Z"/>
+        <path class="wv" d="M975 546C960 520 935 508 890 508C722 508 578 743 386 743C340 743 310 730 296 712"/>
+      </svg>
+      <div class="w">IT TRUSTY</div>
+    </div>
+    <script>
+      (function () {
+        var root = document.getElementById('tl-splash');
+        if (!root) return;
+        [].forEach.call(root.querySelectorAll('.up,.lo'), function (p) { p.style.setProperty('--len', Math.ceil(p.getTotalLength())); });
+        var t0 = Date.now(), INTRO = 1500;
+        var idle = setTimeout(function () { root.classList.add('idle'); }, INTRO + 150);
+        window.__tlSplash = {
+          finish: function () {
+            return new Promise(function (resolve) {
+              setTimeout(function () {
+                clearTimeout(idle);
+                root.classList.add('out');
+                setTimeout(function () { root.remove(); resolve(); }, 360);
+              }, Math.max(0, INTRO - (Date.now() - t0)));
+            });
+          },
+        };
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

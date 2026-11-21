@@ -1,0 +1,126 @@
+import { useEffect, useState } from 'react';
+import { RESULT_LABEL, plural, responseTime, seen, type DealResult } from '../data';
+import { Icon } from '../icons';
+import { useNav } from '../nav';
+import { useStore } from '../store';
+import { Actions, Avatar, Cell, IconTile, Note, Pill, ProBadge, Rating, Section, Sheet, Loader, Top, Verified } from '../ui';
+import { DevStatus } from './Devs';
+import { InviteSheet, LevelInfo, ShareSheet, Works } from './Extras';
+
+const RESULT_TONE: Record<DealResult, 'green' | 'amber' | 'blue' | 'red'> = {
+  ontime: 'green', late: 'amber', dispute_won: 'blue', dispute_lost: 'red',
+};
+
+export default function DevProfile({ id }: { id: string }) {
+  const nav = useNav();
+  const { role, members, openChat, devById, fetchDev, isMe, live } = useStore();
+  const [menu, setMenu] = useState(false);
+  const [share, setShare] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [missing, setMissing] = useState(false);
+  const d = devById(id);
+  useEffect(() => { if (!d) fetchDev(id).then((x) => { if (!x) setMissing(true); }); }, [id, d, fetchDev]);
+  if (!d) {
+    return (
+      <div className="screen no-tabs"><Top title="" small />
+        {missing ? <div className="empty">Профиль не найден или ещё на проверке.</div> : <Loader label="Загружаем профиль" />}</div>
+    );
+  }
+  const banned = live ? d.banned : members.find((m) => m.id === id)?.ban;
+  const self = isMe(d.id);
+  const online = d.lastSeenMin <= 5;
+
+  const write = async (offer = false) => {
+    try { nav.open('chats', 'chat', { id: await openChat(d.id), offer }); } catch {}
+  };
+
+  return (
+    <div className="screen no-tabs">
+      <Top title="" small right={
+        <button className="icon-btn" aria-label="Ещё" onClick={() => setMenu(true)}><Icon name="dots" /></button>} />
+
+      <div className="hero">
+        <Avatar name={d.name} size={88} online={online} />
+        <h1>{d.name}{d.verified && <Verified />}{d.pro && <ProBadge />}</h1>
+        <div className="handle">@{d.handle} · {d.title}</div>
+        <div className="line">
+          <LevelInfo d={d} />
+          <DevStatus d={d} />
+          <Pill><Icon name="clock" size={13} />{seen(d.lastSeenMin)}</Pill>
+          {d.responseMin > 0 && <Pill>отвечает {responseTime(d.responseMin)}</Pill>}
+        </div>
+      </div>
+
+      {banned && (
+        <Note tone="red" icon="ban">
+          Аккаунт заблокирован {banned.until ? `до ${banned.until}` : 'навсегда'} за нарушение правил. Сделки с ним недоступны.
+        </Note>
+      )}
+      {self && d.moderation && d.moderation !== 'published' && (
+        <div className="mt-s"><Note tone={d.moderation === 'rejected' ? 'red' : 'amber'} icon="clock">
+          {d.moderation === 'rejected' ? 'Анкета не прошла проверку. Исправьте её в профиле.' : 'Анкета на проверке. Так профиль будет выглядеть в каталоге.'}
+        </Note></div>
+      )}
+
+      {d.deals > 0 && (
+        <div className="stats mt">
+          <div className="stat"><b>{d.rating.toFixed(1)}</b><span>рейтинг</span></div>
+          <div className="stat"><b>{d.deals}</b><span>{plural(d.deals, 'сделка', 'сделки', 'сделок')}</span></div>
+          <div className="stat"><b>{d.onTime}%</b><span>в срок</span></div>
+          <div className="stat"><b>{d.disputes}</b><span>{plural(d.disputes, 'спор', 'спора', 'споров')}</span></div>
+        </div>
+      )}
+
+      <Section title="О себе">
+        <div className="text">{d.about}</div>
+        <div className="tags mt-s">{d.stack.map((s) => <span className="tag" key={s}>{s}</span>)}
+          {d.github && <a className="tag" href={`https://github.com/${d.github}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>GitHub ↗</a>}</div>
+      </Section>
+
+      {d.portfolio.length > 0 && (
+        <Section title="Портфолио">
+          <Works items={d.portfolio} />
+        </Section>
+      )}
+
+      <Section title={d.history.length ? 'Последние сделки' : 'Сделки'}>
+        {d.history.length ? (
+          <div className="group">
+            {d.history.map((h) => (
+              <div className="deal-row" key={h.id}>
+                <div className="h"><span>{h.title}</span>{h.rating && <Rating value={h.rating} size={13} />}</div>
+                <div className="m num">
+                  <span>#{h.id}</span><span>{h.category}</span><span>{h.amount} USDT</span><span>{h.date}</span>
+                  <Pill tone={RESULT_TONE[h.result]}>{RESULT_LABEL[h.result]}</Pill>
+                </div>
+                {h.review && <><q>«{h.review}»</q><small>{h.author}, заказчик</small></>}
+              </div>
+            ))}
+          </div>
+        ) : <div className="text muted small">Сделок через IT Trusty пока не было.</div>}
+      </Section>
+
+      <div className="small muted center mt">В IT Trusty с {d.joined}</div>
+
+      {!banned && !self && (
+        <Actions secondary={{ label: 'Написать', onClick: () => write() }}
+          primary={role === 'client' ? { label: 'Предложить цену', onClick: () => write(true) } : undefined}
+          link={role === 'client' ? { label: 'Пригласить в проект', onClick: () => setInviting(true) } : undefined} />
+      )}
+
+      <Sheet open={menu} onClose={() => setMenu(false)}>
+        <div className="group">
+          <Cell icon lead={<IconTile name="share" />} title={self ? 'Поделиться профилем' : 'Поделиться'} chevron
+            onClick={() => { setMenu(false); setShare(true); }} />
+          {role === 'client' && !self && <Cell icon lead={<IconTile name="invite" />} title="Пригласить в проект" chevron
+            onClick={() => { setMenu(false); setInviting(true); }} />}
+          {!self && <Cell icon lead={<IconTile name="flag" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Пожаловаться</span>}
+            onClick={() => { setMenu(false); nav.push('complaint', { against: d.id, name: d.name }); }} />}
+        </div>
+      </Sheet>
+      <ShareSheet open={share} onClose={() => setShare(false)} d={d} self={self} />
+      {role === 'client' && !self && <InviteSheet open={inviting} onClose={() => setInviting(false)} d={d} />}
+
+    </div>
+  );
+}

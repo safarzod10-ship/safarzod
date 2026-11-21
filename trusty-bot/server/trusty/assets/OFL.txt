@@ -1,0 +1,5 @@
+Manrope.ttf — Manrope by Mikhail Sharanda (https://github.com/sharanda/manrope)
+Unbounded.ttf — Unbounded by NaN (https://github.com/googlefonts/unbounded)
+
+Both fonts are subsets of the Google Fonts releases and are licensed under the SIL Open Font License,
+Version 1.1: https://openfontlicense.org/open-font-license-official-text/
