@@ -1,4 +1,4 @@
-"""Applies Trusty's public profile to the bot: avatar, descriptions, command menu.
+"""Applies the IT Trusty public profile to the bot: avatar, descriptions, command menu.
 
 Usage:
     TRUSTY_BOT_TOKEN=123:abc python3 setup_profile.py            # everything
@@ -6,7 +6,7 @@ Usage:
 
 The token is read from the environment only and is never written to disk.
 The picture/animation of the "What can this bot do?" block has no Bot API method:
-upload brand/logo/animation/trusty-description-640x360.mp4 in @BotFather -> Edit Bot -> Edit Description Picture.
+upload brand/logo/png/it-trusty-description-640x360.jpg in @BotFather -> Edit Bot -> Edit Description Picture.
 """
 import json
 import os
@@ -19,8 +19,9 @@ import uuid
 HERE = os.path.dirname(os.path.abspath(__file__))
 AVATAR = os.path.join(HERE, "..", "brand", "logo", "png", "telegram-avatar-640.jpg")
 
-DESCRIPTION = "Безопасные сделки с разработчиками. Выберите исполнителя по отзывам и оплатите в USDT — деньги хранятся у гаранта, пока вы не примете работу."
-SHORT_DESCRIPTION = "Гарант сделок и поиск разработчиков. Оплата в USDT после приёмки работы."
+DESCRIPTION = ("Безопасный сервис для проведения сделок. Простой и удобный инструмент для прозрачного сотрудничества, "
+               "фиксации договорённостей и комфортной работы на каждом этапе.")
+SHORT_DESCRIPTION = "Безопасные сделки с разработчиками. Оплата в USDT через гаранта, после приёмки работы."
 def call(token, method, params=None, files=None, retries=4):
     url = f"https://api.telegram.org/bot{token}/{method}"
     if files:

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
-from . import escrow, notify
+from . import escrow, notify, offers
 from .api import admin, router
 from .config import settings
 from .cryptopay import pay
@@ -40,7 +40,8 @@ async def escrow_jobs() -> None:
     while True:
         await asyncio.sleep(20)
         tick += 1
-        for job, every in ((escrow.sync_invoices, 1), (escrow.auto_accept_due, 3), (escrow.retry_failed_payouts, 15)):
+        for job, every in ((escrow.sync_invoices, 1), (escrow.auto_accept_due, 3), (offers.expire_due, 3),
+                           (escrow.retry_failed_payouts, 15)):
             if tick % every:
                 continue
             try:

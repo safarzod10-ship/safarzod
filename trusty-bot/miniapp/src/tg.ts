@@ -43,21 +43,18 @@ export const tg = inTelegram ? wa : undefined;
 
 export const tgUser = tg?.initDataUnsafe.user;
 
-const SURFACES = { light: '#F2F5F3', dark: '#071C19' };
+const BG = '#000000';
 
+/** IT Trusty is always dark: black ground, whatever the Telegram theme is */
 export function applyTheme() {
-  // in a browser an explicit data-theme on <html> (set by some embedding pages) wins over the OS setting
-  const forced = document.documentElement.dataset.theme;
-  const dark = inTelegram ? wa!.colorScheme === 'dark' : forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   const root = document.documentElement;
-  root.classList.toggle('dark', dark);
-  root.classList.toggle('light', !dark);
+  root.classList.add('dark');
+  root.classList.remove('light');
   if (tg) {
-    const c = dark ? SURFACES.dark : SURFACES.light;
     try {
-      tg.setHeaderColor(c);
-      tg.setBackgroundColor(c);
-      tg.setBottomBarColor?.(c);
+      tg.setHeaderColor(BG);
+      tg.setBackgroundColor(BG);
+      tg.setBottomBarColor?.(BG);
     } catch {
       /* older clients accept only keywords */
     }
@@ -75,9 +72,6 @@ export function initTelegram() {
       /* not supported */
     }
     tg.onEvent('themeChanged', applyTheme);
-  } else {
-    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-    new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
 }
 
@@ -104,7 +98,7 @@ export function onReturn(fn: () => void): () => void {
   return () => { document.removeEventListener('visibilitychange', vis); tg?.offEvent?.('activated', fn); };
 }
 
-/** plays the splash exit once its intro has finished (see brand/tools/splash.py) */
+/** plays the splash exit once its intro has finished (the splash lives in index.html) */
 export function hideSplash(): Promise<void> {
   const sp = (window as unknown as { __tlSplash?: { finish(): Promise<void> } }).__tlSplash;
   if (sp) return sp.finish();

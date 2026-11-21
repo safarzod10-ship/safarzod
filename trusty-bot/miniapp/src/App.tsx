@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import { Icon, type IconName } from './icons';
 import { NavProvider, useNav, type Tab } from './nav';
 import Admin, { ComplaintAdmin, MemberAdmin, MyComplaints, ProfileReview } from './screens/Admin';
@@ -16,8 +16,8 @@ import { BidForm, Choose, ProjectNew } from './screens/ProjectForms';
 import Projects from './screens/Projects';
 import ProjectView from './screens/ProjectView';
 import { StoreProvider, useStore } from './store';
-import { hideSplash, tg } from './tg';
-import { Done } from './ui';
+import { haptic, hideSplash, tg } from './tg';
+import { Cell, Done, IconTile, MARK_LO, MARK_UP, Sheet } from './ui';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SCREENS: Record<string, ComponentType<any>> = {
@@ -29,39 +29,128 @@ const SCREENS: Record<string, ComponentType<any>> = {
 
 const TABS: { key: Tab; label: string; icon: IconName }[] = [
   { key: 'home', label: 'Главная', icon: 'home' },
-  { key: 'devs', label: 'Разработчики', icon: 'devs' },
-  { key: 'projects', label: 'Проекты', icon: 'projects' },
+  { key: 'devs', label: 'Поиск', icon: 'search' },
   { key: 'chats', label: 'Чаты', icon: 'chats' },
   { key: 'profile', label: 'Профиль', icon: 'profile' },
 ];
 
-function TabBar() {
+/** floating island with four sections and a separate green "+" */
+function Island() {
   const nav = useNav();
-  const { chats } = useStore();
+  const { chats, role } = useStore();
+  const [menu, setMenu] = useState(false);
   const unread = chats.reduce((n, c) => n + c.unread, 0);
+  const active = nav.tab === 'projects' ? 1 : TABS.findIndex((t) => t.key === nav.tab);
+  const go = (fn: () => void) => { setMenu(false); fn(); };
   return (
-    <nav className="tabbar" aria-label="Разделы">
-      <div className="tabbar-in">
-        {TABS.map((t) => (
-          <button key={t.key} className={`tab ${nav.tab === t.key ? 'on' : ''}`} onClick={() => nav.setTab(t.key)}
-            aria-current={nav.tab === t.key ? 'page' : undefined}>
-            <Icon name={t.icon} size={24} />
-            {t.label}
-            {t.key === 'chats' && unread > 0 && <span className="badge num">{unread}</span>}
+    <>
+      <nav className="nav" aria-label="Разделы">
+        <div className="nav-in">
+          <div className="island">
+            <span className="glow" style={{ left: `calc(6px + (100% - 12px) / 4 * ${active} + ((100% - 12px) / 4 - 48px) / 2)` }} />
+            {TABS.map((t, i) => (
+              <button key={t.key} className={`tab ${i === active ? 'on' : ''}`} onClick={() => nav.setTab(t.key)}
+                aria-current={i === active ? 'page' : undefined} aria-label={t.label}>
+                <Icon name={t.icon} size={23} strokeWidth={i === active ? 2.1 : 1.75} />
+                {t.key === 'chats' && unread > 0 && <span className="badge num">{unread}</span>}
+              </button>
+            ))}
+          </div>
+          <button className={`fab ${menu ? 'open' : ''}`} aria-label="Создать" aria-expanded={menu} onClick={() => { haptic.tap(); setMenu((m) => !m); }}>
+            <Icon name="plus" size={28} strokeWidth={2.2} />
           </button>
-        ))}
-      </div>
-    </nav>
+        </div>
+      </nav>
+      <Sheet open={menu} onClose={() => setMenu(false)} title="Что сделать?">
+        <div className="group mt-s">
+          {role === 'client' ? (
+            <>
+              <Cell icon lead={<IconTile name="projects" />} title="Опубликовать проект" sub="Исполнители пришлют отклики с ценой" chevron
+                onClick={() => go(() => nav.open('projects', 'project-new'))} />
+              <Cell icon lead={<IconTile name="search" />} title="Найти исполнителя" sub="По отзывам и сделкам, потом оффер в чате" chevron
+                onClick={() => go(() => nav.setTab('devs'))} />
+            </>
+          ) : (
+            <>
+              <Cell icon lead={<IconTile name="projects" />} title="Найти проект" sub="Откликнитесь со своей ценой" chevron
+                onClick={() => go(() => nav.setTab('projects'))} />
+              <Cell icon lead={<IconTile name="doc" />} title="Моя анкета" sub="Без неё нельзя брать сделки" chevron
+                onClick={() => go(() => nav.open('profile', 'dev-form'))} />
+            </>
+          )}
+          <Cell icon lead={<IconTile name="shield" />} title="Как работает гарант" chevron onClick={() => go(() => nav.open('home', 'guide'))} />
+        </div>
+      </Sheet>
+    </>
   );
 }
 
 function Toast() {
   const { toast } = useStore();
-  const nav = useNav();
-  if (!toast) return null;
+  const [shown, setShown] = useState<string | null>(null);
+  const [out, setOut] = useState(false);
+  useEffect(() => {
+    if (toast) { setShown(toast); setOut(false); return; }
+    if (!shown) return;
+    setOut(true);
+    const t = window.setTimeout(() => setShown(null), 300);
+    return () => window.clearTimeout(t);
+  }, [toast]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!shown) return null;
   return (
-    <div className="toast" role="status" style={nav.depth > 1 ? { bottom: 'calc(84px + var(--safe-b))' } : undefined}>
-      <Icon name="check" size={18} />{toast}
+    <div className={`toast ${out ? 'out' : ''}`} role="status">
+      <span className="tick"><Icon name="check" size={16} strokeWidth={3} /></span>{shown}
+    </div>
+  );
+}
+
+/** pull down on a root screen: the shield fills with green, release to refresh */
+function usePull(enabled: boolean, onRefresh: () => Promise<unknown>) {
+  const [pull, setPull] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const start = useRef<number | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const down = (e: TouchEvent) => { start.current = window.scrollY <= 0 && !busy ? e.touches[0].clientY : null; };
+    const move = (e: TouchEvent) => {
+      if (start.current === null) return;
+      const dy = e.touches[0].clientY - start.current;
+      setPull(dy > 0 ? Math.min(120, dy * 0.5) : 0);
+    };
+    const up = () => {
+      if (start.current === null) return;
+      start.current = null;
+      setPull((p) => {
+        if (p >= 70) {
+          setBusy(true);
+          haptic.tap();
+          onRefresh().finally(() => { setBusy(false); haptic.success(); });
+          return 56;
+        }
+        return 0;
+      });
+    };
+    window.addEventListener('touchstart', down, { passive: true });
+    window.addEventListener('touchmove', move, { passive: true });
+    window.addEventListener('touchend', up);
+    return () => { window.removeEventListener('touchstart', down); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', up); };
+  }, [enabled, onRefresh, busy]);
+  useEffect(() => { if (!busy && pull === 56) setPull(0); }, [busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { pull, busy };
+}
+
+function PullMark({ pull, busy }: { pull: number; busy: boolean }) {
+  if (!pull && !busy) return null;
+  const p = busy ? 1 : Math.min(1, pull / 70);
+  return (
+    <div className={`ptr ${busy ? 'busy' : ''}`} aria-hidden="true" style={{ opacity: Math.min(1, pull / 30 + (busy ? 1 : 0)) }}>
+      <div className="ptr-mark">
+        <svg viewBox="285 268 684 778" width="36" height="41"><path d={MARK_UP} fill="#1c1d20" /><path d={MARK_LO} fill="#1c1d20" /></svg>
+        <svg viewBox="285 268 684 778" width="36" height="41">
+          <defs><clipPath id="ptr-clip"><path d={MARK_UP} /><path d={MARK_LO} /></clipPath></defs>
+          <g clipPath="url(#ptr-clip)"><rect className="ptr-fill" x="285" y={268 + 778 * (1 - p)} width="684" height="778" fill="#2b9a6c" /></g>
+        </svg>
+      </div>
     </div>
   );
 }
@@ -87,8 +176,8 @@ function useDeepLink(ready: boolean) {
     else if (screen === 'admin') nav.open('profile', 'admin');
     else if (screen === 'complaint-admin' && id) nav.open('profile', 'complaint-admin', { id: Number(id) });
     else if (screen === 'dev-form') nav.open('profile', 'dev-form');
-    else if (screen === 'deal' && id) nav.open('chats', 'deal', { id: Number(id) });
-    else if (screen === 'deals') nav.open('profile', 'deals');
+    else if (screen === 'deal' && id) nav.open('home', 'deal', { id: Number(id) });
+    else if (screen === 'deals') nav.open('home', 'deals');
     else if (screen === 'finance') nav.open('profile', 'finance');
   }, [ready, nav]);
 }
@@ -117,7 +206,7 @@ function Gate() {
   if (s.error) {
     return (
       <div className="screen no-tabs">
-        <div className="done"><h1>Не удалось загрузить Trusty</h1><p>{s.error}</p>
+        <div className="done"><h1>Не удалось загрузить IT Trusty</h1><p>{s.error}</p>
           <button className="btn primary mt" style={{ width: 'auto' }} onClick={() => s.reload()}>Повторить</button></div>
       </div>
     );
@@ -126,12 +215,18 @@ function Gate() {
 }
 
 function Screen() {
-  const { route, depth } = useNav();
+  const { route, depth, tab } = useNav();
+  const { reload, refreshChats } = useStore();
   const C = SCREENS[route.name] ?? Home;
+  const refresh = useCallback(() => (tab === 'chats' ? refreshChats() : reload()), [tab, reload, refreshChats]);
+  const { pull, busy } = usePull(depth === 1 && tab !== 'profile', refresh);
   return (
     <>
-      <C key={route.key} {...route.params} />
-      {depth === 1 && <TabBar />}
+      <PullMark pull={pull} busy={busy} />
+      <div style={pull ? { transform: `translateY(${pull}px)`, transition: busy ? 'transform .3s' : undefined } : { transition: 'transform .3s' }}>
+        <C key={route.key} {...route.params} />
+      </div>
+      {depth === 1 && <Island />}
       <Toast />
     </>
   );

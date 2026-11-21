@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ApiError, live } from './api';
 import {
   ADMINS, CHATS, CLIENTS, COMPLAINTS, DEMO_DEALS, DEVS, MEMBERS, PROJECTS,
-  type Chat, type Client, type Complaint, type ComplaintReason, type Deal, type Dev, type Member, type PayConfig, type Project,
+  type Chat, type Client, type Complaint, type ComplaintReason, type Deal, type Dev, type Member, type Msg, type Offer, type PayConfig, type Project,
 } from './data';
 import { haptic, openTg, tgUser } from './tg';
 
@@ -19,6 +19,8 @@ interface Bootstrap { me: Me; devs: Dev[]; projects: Project[]; chats: Chat[]; m
 export interface FinancePayment { id: number; dealId: number; kind: 'invoice' | 'payout' | 'refund'; amount: string; status: string; user: string; error?: string | null; attempts: number; at: string }
 export interface Finance { enabled: boolean; asset: string; feePercent: number; balance: { asset: string; available: string; onhold: string }[]; error?: string | null; held: string; disputes: Deal[]; payments: FinancePayment[] }
 export type DealAction = 'submit' | 'accept' | 'dispute' | 'cancel' | 'review';
+export interface OfferDraft { title: string; amount: number; days: number; ttlHours: number; asRole?: Role; projectId?: number }
+export interface CounterDraft { amount: number; days: number; ttlHours: number }
 interface Overview { members: Member[]; complaints: Complaint[]; profiles: Dev[]; admins: { name: string; handle: string }[] }
 
 interface Store {
@@ -81,6 +83,13 @@ interface Store {
   loadFinance(): Promise<void>;
   resolveDeal(id: number, devShare: number, note: string): Promise<Deal>;
   retryPayment(id: number): Promise<void>;
+  proposeOffer(chatId: string, d: OfferDraft): Promise<void>;
+  counterOffer(chatId: string, offerId: number, d: CounterDraft): Promise<void>;
+  /** accepts an offer and returns the id of the new deal */
+  acceptOffer(chatId: string, offerId: number): Promise<number>;
+  declineOffer(chatId: string, offerId: number): Promise<void>;
+  withdrawOffer(chatId: string, offerId: number): Promise<void>;
+  typing(chatId: string): void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -468,13 +477,122 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await Promise.all([loadAdmin(), reload()]);
   }, [call, loadAdmin, reload]);
 
+
+  // ---------------------------------------------------------------- offers
+  const putChat = (c: Chat) => setChats((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs]));
+  const feeOf = useCallback((amount: number) => {
+    const fee = Math.round(amount * payCfg.feePercent) / 100;
+    return { fee: fee.toFixed(2), total: (amount + fee).toFixed(2) };
+  }, [payCfg]);
+  const mkOffer = useCallback((o: Omit<Offer, 'fee' | 'total' | 'createdAt' | 'expiresAt'> & { ttlHours: number }): Offer => ({
+    ...o, ...feeOf(o.amount), createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + o.ttlHours * 3600e3).toISOString(),
+  }), [feeOf]);
+  /** demo: patch one chat's messages */
+  const patchChat = (chatId: string, fn: (c: Chat) => Chat) => setChats((cs) => cs.map((c) => (c.id === chatId ? fn(c) : c)));
+  const setOfferStatus = (chatId: string, offerId: number, status: Offer['status'], extra: Partial<Offer> = {}) =>
+    patchChat(chatId, (c) => ({ ...c, offersWaiting: 0, messages: c.messages.map((m) => (m.offer?.id === offerId ? { ...m, offer: { ...m.offer, status, ...extra } } : m)) }));
+  const demoTimer = useRef<number>();
+
+  /** demo only: the other side types for a moment, then answers (accepts a fair price or meets halfway) */
+  const demoReply = useCallback((chatId: string, mine: Offer) => {
+    window.clearTimeout(demoTimer.current);
+    patchChat(chatId, (c) => ({ ...c, peerTyping: true }));
+    demoTimer.current = window.setTimeout(() => {
+      setChats((cs) => cs.map((c) => {
+        if (c.id !== chatId) return c;
+        const ask = mine.prevAmount ?? mine.amount;
+        const fair = mine.myRole === 'client' ? mine.amount >= ask * 0.9 : mine.amount <= ask * 1.1;
+        if (fair || !mine.prevAmount) {
+          const msgs = c.messages.map((m) => (m.offer?.id === mine.id ? { ...m, offer: { ...m.offer, status: 'accepted' as const, dealId: 1100 + (mine.id % 50) } } : m));
+          return { ...c, peerTyping: false, messages: [...msgs, { id: Date.now(), from: 'system' as const, text: `Сделка #${1100 + (mine.id % 50)} создана. Условия зафиксированы: ${mine.amount} USDT, срок ${mine.days} дн. Ожидаем оплату от заказчика.`, time: now() }] };
+        }
+        const mid = Math.round((mine.amount + ask) / 2 / 5) * 5;
+        const reply = mkOffer({ id: Date.now(), title: mine.title, amount: mid, days: mine.days, status: 'pending', mine: false, myRole: mine.myRole, prevAmount: mine.amount, ttlHours: 48 });
+        const msgs = c.messages.map((m) => (m.offer?.id === mine.id ? { ...m, offer: { ...m.offer, status: 'countered' as const } } : m));
+        return { ...c, peerTyping: false, offersWaiting: 1, messages: [...msgs, { id: Date.now(), from: 'peer' as const, text: `Оффер: ${mid} USDT`, time: now(), offer: reply }] };
+      }));
+    }, 2600);
+  }, [mkOffer]);
+
+  const proposeOffer = useCallback(async (chatId: string, d: OfferDraft) => {
+    if (live) {
+      putChat(await call(() => api<Chat>(`/chats/${chatId}/offers`, { body: { ...d, projectId: d.projectId ?? null, asRole: d.asRole ?? null } })));
+      haptic.success();
+      return;
+    }
+    const o = mkOffer({ id: Date.now(), title: d.title, amount: d.amount, days: d.days, status: 'pending', mine: true, myRole: d.asRole ?? roleDemo, prevAmount: null, ttlHours: d.ttlHours });
+    const m: Msg = { id: Date.now(), from: 'me', text: `Оффер: ${d.amount} USDT`, time: now(), offer: o };
+    patchChat(chatId, (c) => ({ ...c, messages: [...c.messages, m] }));
+    haptic.success();
+    demoReply(chatId, o);
+  }, [call, mkOffer, roleDemo, demoReply]);
+
+  const counterOffer = useCallback(async (chatId: string, offerId: number, d: CounterDraft) => {
+    if (live) {
+      putChat(await call(() => api<Chat>(`/offers/${offerId}/counter`, { body: d })));
+      haptic.success();
+      return;
+    }
+    const prev = chats.find((c) => c.id === chatId)?.messages.find((m) => m.offer?.id === offerId)?.offer;
+    if (!prev) return;
+    const o = mkOffer({ id: Date.now(), title: prev.title, amount: d.amount, days: d.days, status: 'pending', mine: true, myRole: prev.myRole, prevAmount: prev.amount, ttlHours: d.ttlHours });
+    setOfferStatus(chatId, offerId, 'countered');
+    patchChat(chatId, (c) => ({ ...c, messages: [...c.messages, { id: Date.now(), from: 'me', text: `Оффер: ${d.amount} USDT`, time: now(), offer: o }] }));
+    haptic.success();
+    demoReply(chatId, o);
+  }, [call, chats, mkOffer, demoReply]);
+
+  const acceptOffer = useCallback(async (chatId: string, offerId: number) => {
+    if (live) {
+      const r = await call(() => api<{ chat: Chat; deal: Deal }>(`/offers/${offerId}/accept`, { method: 'POST' }));
+      putChat(r.chat);
+      replaceDeal(r.deal);
+      haptic.success();
+      return r.deal.id;
+    }
+    const c = chats.find((x) => x.id === chatId)!;
+    const o = c.messages.find((m) => m.offer?.id === offerId)!.offer!;
+    const dealId = 1060 + (offerId % 30);
+    setOfferStatus(chatId, offerId, 'accepted', { dealId });
+    patchChat(chatId, (x) => ({ ...x, deal: { id: dealId, title: o.title, amount: o.amount, status: 'awaiting_payment', due: shortDate(Date.now() + o.days * 864e5) },
+      messages: [...x.messages, { id: Date.now(), from: 'system', text: `Сделка #${dealId} создана. Условия зафиксированы: ${o.amount} USDT, срок ${o.days} дн. Ожидаем оплату от заказчика.`, time: now() }] }));
+    const d = DEVS.find((x) => x.id === c.peer.refId) ?? DEVS[0];
+    const client = o.myRole === 'client';
+    setDeals((ds) => [{
+      id: dealId, title: o.title, category: '', amount: o.amount, fee: o.fee, total: o.total, status: 'awaiting_payment', role: o.myRole,
+      client: client ? { id: 'me', name: 'Вы', handle: 'you', hue: 0, lastSeenMin: 0 } : { id: c.peer.refId, name: c.peer.name, handle: '', hue: c.peer.hue, lastSeenMin: c.peer.lastSeenMin },
+      dev: client ? { id: d.id, name: d.name, handle: d.handle, hue: d.hue, lastSeenMin: d.lastSeenMin } : { id: 'me', name: 'Вы', handle: 'you', hue: 0, lastSeenMin: 0 },
+      days: o.days, due: shortDate(Date.now() + o.days * 864e5), dueAt: new Date(Date.now() + o.days * 864e5).toISOString(), createdAt: new Date().toISOString(),
+      chatId, payments: [], actions: demoActions('awaiting_payment', o.myRole, false),
+    }, ...ds.filter((x) => x.id !== dealId)]);
+    haptic.success();
+    return dealId;
+  }, [call, chats]);
+
+  const declineOffer = useCallback(async (chatId: string, offerId: number) => {
+    if (live) { putChat(await call(() => api<Chat>(`/offers/${offerId}/decline`, { method: 'POST' }))); return; }
+    setOfferStatus(chatId, offerId, 'declined');
+  }, [call]);
+
+  const withdrawOffer = useCallback(async (chatId: string, offerId: number) => {
+    if (live) { putChat(await call(() => api<Chat>(`/offers/${offerId}/withdraw`, { method: 'POST' }))); return; }
+    window.clearTimeout(demoTimer.current);
+    patchChat(chatId, (c) => ({ ...c, peerTyping: false }));
+    setOfferStatus(chatId, offerId, 'withdrawn');
+  }, [call]);
+
+  const typing = useCallback((chatId: string) => {
+    if (live) api(`/chats/${chatId}/typing`, { method: 'POST' }).catch(() => {});
+  }, []);
+
   const value = useMemo<Store>(() => ({
     live, ready, error, banned, me, role: me.role, admin: me.isAdmin, onboarded: live ? !!me.onboarded : obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members,
     profiles, admins, devForm: me.devForm, toast,
     isMe, clientOf, devById, myBidFor, reload, setRole, setAdmin: setAdminDemo, submitDevForm, showToast, addProject, loadProject,
     addBid, startDeal, openChat, loadChat, refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint,
     takeComplaint, moderate, fetchDev, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment,
-  }), [deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
+    proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing,
+  }), [proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
     devById, myBidFor, reload, setRole, submitDevForm, showToast, addProject, loadProject, addBid, startDeal, openChat, loadChat,
     refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint, takeComplaint, moderate, fetchDev]);
 

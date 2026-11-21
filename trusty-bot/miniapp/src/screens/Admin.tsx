@@ -132,7 +132,7 @@ export function ComplaintAdmin({ id }: { id: number }) {
           trail={m.ban ? <Pill tone="red">{m.ban.until ? `бан до ${m.ban.until}` : 'бан навсегда'}</Pill> : undefined}
           chevron onClick={() => nav.push('member', { id: m.id })} />
         <Cell lead={<IconTile name="profile" tone="blue" />} title={`Заявитель: ${c.fromName}`} sub={c.ago} />
-        {c.dealId && <Cell lead={<IconTile name="shield" />} title={`Сделка #${c.dealId}`} sub="Переписка сделки сохранена в Trusty" />}
+        {c.dealId && <Cell lead={<IconTile name="shield" />} title={`Сделка #${c.dealId}`} sub="Переписка сделки сохранена в IT Trusty" />}
       </div>
 
       <Section title="Причина">

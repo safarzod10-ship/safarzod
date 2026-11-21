@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Project, Review, User, utcnow
+from . import presence
+from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Offer, Project, Review, User, utcnow
 
 MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября",
               "ноября", "декабря"]
@@ -168,9 +169,36 @@ async def project_payloads(s: AsyncSession, projects: list[Project], me: User) -
     return out
 
 
-def message_payload(m: Message, me_id: int) -> dict:
-    return {"id": m.id, "from": "system" if m.sender_id is None else ("me" if m.sender_id == me_id else "peer"),
-            "text": m.text, "at": aware(m.created_at).isoformat()}
+def offer_payload(o: Offer, me_id: int, prev_amount: int | None) -> dict:
+    from decimal import ROUND_HALF_UP, Decimal
+    from .config import settings
+    status = "expired" if o.status == "pending" and aware(o.expires_at) <= utcnow() else o.status
+    fee = (Decimal(o.amount) * Decimal(str(settings.fee_percent)) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return {"id": o.id, "title": o.title, "amount": o.amount, "days": o.days, "status": status,
+            "mine": o.from_id == me_id, "myRole": "client" if o.client_id == me_id else "dev",
+            "prevAmount": prev_amount, "expiresAt": aware(o.expires_at).isoformat(), "createdAt": aware(o.created_at).isoformat(),
+            "dealId": o.deal_id,
+            "fee": str(fee), "total": str(Decimal(o.amount) + fee)}
+
+
+def message_payload(m: Message, me_id: int, offer: dict | None = None) -> dict:
+    out = {"id": m.id, "from": "system" if m.sender_id is None else ("me" if m.sender_id == me_id else "peer"),
+           "text": m.text, "at": aware(m.created_at).isoformat()}
+    if offer:
+        out["offer"] = offer
+    return out
+
+
+async def _offers_for(s: AsyncSession, msgs: list[Message], me_id: int) -> dict[int, dict]:
+    ids = [m.offer_id for m in msgs if m.offer_id]
+    if not ids:
+        return {}
+    rows = {o.id: o for o in (await s.execute(select(Offer).where(Offer.id.in_(ids)))).scalars()}
+    parent_ids = [o.parent_id for o in rows.values() if o.parent_id and o.parent_id not in rows]
+    parents = {o.id: o for o in (await s.execute(select(Offer).where(Offer.id.in_(parent_ids)))).scalars()} if parent_ids else {}
+    parents.update(rows)
+    return {oid: offer_payload(o, me_id, parents[o.parent_id].amount if o.parent_id in parents else None)
+            for oid, o in rows.items()}
 
 
 async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool = False) -> list[dict]:
@@ -192,6 +220,9 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
                                                              or_(Message.sender_id != me.id, Message.sender_id.is_(None))))).scalar_one()
         q = select(Message).where(Message.chat_id == c.id).order_by(Message.id.desc()).limit(300 if full else 1)
         msgs = list(reversed((await s.execute(q)).scalars().all()))
+        offer_cards = await _offers_for(s, msgs, me.id) if full else {}
+        waiting = (await s.execute(select(func.count()).where(Offer.chat_id == c.id, Offer.to_id == me.id,
+                                                              Offer.status == "pending", Offer.expires_at > utcnow()))).scalar_one()
         d = deals.get(c.deal_id) if c.deal_id else None
         out.append({
             "id": str(c.id),
@@ -201,7 +232,9 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
             "deal": ({"id": d.id, "title": d.title, "amount": d.amount, "status": d.status, "due": short_date(d.due_at),
                       "clientId": str(d.client_id), "devId": str(d.dev_id)} if d else None),
             "unread": unread,
-            "messages": [message_payload(m, me.id) for m in msgs],
+            "offersWaiting": waiting,
+            "peerTyping": presence.is_typing(c.id, pid),
+            "messages": [message_payload(m, me.id, offer_cards.get(m.offer_id)) for m in msgs],
         })
     return out
 

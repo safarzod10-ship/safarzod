@@ -70,6 +70,30 @@ def notify_deal(user_id: int, d: Deal, text: str, button: str = "Открыть 
     notify.send_deal(user_id, d, text, button)
 
 
+async def open_deal(s: AsyncSession, client_id: int, dev_id: int, title: str, amount: int, days: int,
+                    project_id: int | None = None, category: str = "") -> Deal:
+    """Creates a deal awaiting payment, attaches it to the pair's chat and posts the terms there."""
+    d = Deal(project_id=project_id, client_id=client_id, dev_id=dev_id, title=title, category=category,
+             amount=amount, days=days, due_at=utcnow() + timedelta(days=days), fee=fee_for(amount))
+    s.add(d)
+    if project_id:
+        p = await s.get(Project, project_id)
+        if p is not None and p.status == "open":
+            p.status = "in_work"
+    await s.flush()
+    a, b = sorted((client_id, dev_id))
+    c = (await s.execute(select(Chat).where(Chat.a_id == a, Chat.b_id == b))).scalar_one_or_none()
+    if c is None:
+        c = Chat(a_id=a, b_id=b)
+        s.add(c)
+        await s.flush()
+    c.deal_id, c.updated_at = d.id, utcnow()
+    s.add(Message(chat_id=c.id, sender_id=None,
+                  text=f"Сделка #{d.id} создана. Условия зафиксированы: {d.amount} {settings.asset}, срок {d.days} дн. "
+                       f"Ожидаем оплату от заказчика: {fmt(d.total)} {settings.asset} с комиссией гаранта."))
+    return d
+
+
 # ---------------------------------------------------------------- payment in
 async def invoice_for(s: AsyncSession, deal_id: int, me: User) -> dict:
     """Returns an active invoice for the deal (creates one if needed)."""
@@ -93,8 +117,8 @@ async def invoice_for(s: AsyncSession, deal_id: int, me: User) -> dict:
         d.fee = fee_for(d.amount)
     inv = await pay.create_invoice(
         amount=d.total, payload=f"deal:{d.id}",
-        description=f"Trusty, сделка #{d.id}: {d.title}. Деньги хранятся у гаранта до приёмки работы.",
-        hidden_message="Оплата получена гарантом Trusty. Вернитесь в приложение: исполнитель уже знает об оплате.",
+        description=f"IT Trusty, сделка #{d.id}: {d.title}. Деньги хранятся у гаранта до приёмки работы.",
+        hidden_message="Оплата получена гарантом IT Trusty. Вернитесь в приложение: исполнитель уже знает об оплате.",
         paid_btn_url=f"{settings.public_url}/?screen=deal&id={d.id}" if settings.public_url.startswith("https://") else None)
     d.invoice_id, d.invoice_url = int(inv["invoice_id"]), inv.get("bot_invoice_url")
     s.add(Payment(deal_id=d.id, kind="invoice", user_id=me.id, amount=d.total, asset=settings.asset, status="active",
@@ -212,7 +236,7 @@ async def retry_failed_payouts(s: AsyncSession) -> None:
     for p in rows:
         d = await s.get(Deal, p.deal_id)
         if d:
-            await payout(s, d, p.user_id, p.amount, p.kind, f"Trusty, сделка #{d.id}")
+            await payout(s, d, p.user_id, p.amount, p.kind, f"IT Trusty, сделка #{d.id}")
 
 
 # ---------------------------------------------------------------- transitions
@@ -247,7 +271,7 @@ async def accept(s: AsyncSession, deal_id: int, me: User | None) -> Deal:
     how = "автоматически: заказчик не ответил вовремя" if me is None else "заказчиком"
     await system_message(s, d, f"Работа принята {how}. Гарант переводит {fmt(d.amount)} {settings.asset} исполнителю.")
     await s.commit()
-    await payout(s, d, d.dev_id, Decimal(d.amount), "payout", f"Trusty, сделка #{d.id}: {d.title}")
+    await payout(s, d, d.dev_id, Decimal(d.amount), "payout", f"IT Trusty, сделка #{d.id}: {d.title}")
     notify_deal(d.client_id, d, f"Сделка #{d.id} завершена. Оцените исполнителя: отзыв увидят другие заказчики.", "Оставить отзыв")
     return d
 
@@ -285,9 +309,9 @@ async def resolve(s: AsyncSession, deal_id: int, admin: User, dev_share: int, no
     await system_message(s, d, f"Спор решён. {d.resolution}")
     await s.commit()
     if dev_amount > 0:
-        await payout(s, d, d.dev_id, dev_amount, "payout", f"Trusty, сделка #{d.id}: решение арбитра")
+        await payout(s, d, d.dev_id, dev_amount, "payout", f"IT Trusty, сделка #{d.id}: решение арбитра")
     if client_amount > 0:
-        await payout(s, d, d.client_id, client_amount, "refund", f"Trusty, сделка #{d.id}: решение арбитра")
+        await payout(s, d, d.client_id, client_amount, "refund", f"IT Trusty, сделка #{d.id}: решение арбитра")
     for uid in (d.client_id, d.dev_id):
         notify_deal(uid, d, f"Спор по сделке #{d.id} решён. {d.resolution}")
     return d
@@ -322,7 +346,7 @@ async def cancel(s: AsyncSession, deal_id: int, me: User) -> Deal:
     await system_message(s, d, text)
     await s.commit()
     if d.status == "refunded":
-        await payout(s, d, d.client_id, d.total, "refund", f"Trusty, возврат по сделке #{d.id}")
+        await payout(s, d, d.client_id, d.total, "refund", f"IT Trusty, возврат по сделке #{d.id}")
     other = d.dev_id if me.id == d.client_id else d.client_id
     notify_deal(other, d, f"Сделка #{d.id}: {text}")
     return d

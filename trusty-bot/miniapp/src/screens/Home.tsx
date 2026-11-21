@@ -1,114 +1,110 @@
-import { CATEGORIES, bidCount, budget, plural, seen } from '../data';
-import { Icon } from '../icons';
+import { useState } from 'react';
+import { amt } from '../data';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { tgUser } from '../tg';
-import { useState } from 'react';
-import { Avatar, Cell, Rating, Section, Sheet } from '../ui';
+import { Avatar, Info, Mark, Note, Rating, Section, Seg, Sheet, Top } from '../ui';
+import { DealRow, isActive } from './Deal';
 import { RolePicker, ROLE_INFO } from './Onboarding';
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 5) return 'Доброй ночи';
-  if (h < 12) return 'Доброе утро';
-  if (h < 18) return 'Добрый день';
-  return 'Добрый вечер';
-}
 
 export default function Home() {
   const nav = useNav();
-  const { projects, role, devs, clientOf, isMe, setRole, showToast, me, devForm } = useStore();
+  const { deals, role, setRole, showToast, me, devForm, chats, devById, projects, isMe, payCfg } = useStore();
+  const [tab, setTab] = useState<'active' | 'archive'>('active');
   const [roleSheet, setRoleSheet] = useState(false);
-  const online = devs.filter((d) => d.lastSeenMin <= 5);
+  const active = deals.filter((d) => isActive(d.status));
+  const archive = deals.filter((d) => !isActive(d.status));
+  const list = tab === 'active' ? active : archive;
+  const held = active.filter((d) => d.paidAt).reduce((n, d) => n + Number(d.role === 'dev' ? d.amount : d.total), 0);
+  const recent = chats.filter((c) => c.peer.role === 'dev').slice(0, 8);
   const fresh = projects.filter((p) => p.status === 'open' && !isMe(p.clientId)).slice(0, 3);
 
   return (
     <div className="screen root">
-      <div className="hello">
-        <div className="hello-row">
-          <h1>{greeting()}{tgUser?.first_name ? `, ${tgUser.first_name}` : ''}</h1>
-          <button className="role-pill" onClick={() => setRoleSheet(true)} aria-label="Сменить роль">
-            {ROLE_INFO[role].title}<Icon name="swap" size={15} />
-          </button>
-        </div>
-        <p>{role === 'client' ? 'Найдите исполнителя и проведите сделку через гаранта.' : 'Новые проекты ждут откликов.'}</p>
+      <div className="brandbar">
+        <span className="mark"><Mark size={24} /></span>
+        <button onClick={() => setRoleSheet(true)} aria-label="Сменить роль" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="pill">{ROLE_INFO[role].title}</span>
+          <Avatar name={me.name} size={36} />
+        </button>
       </div>
+      <Top title="Сделки" />
+      <div className="summary">
+        <span><b className="num">{amt(held)} {payCfg.asset}</b> у гаранта</span>
+        <Info label="Что значит «у гаранта»">
+          Деньги оплаченных сделок заморожены у гаранта, пока заказчик не примет работу. Исполнитель получает сумму сделки,
+          комиссию {payCfg.feePercent}% платит заказчик.
+        </Info>
+      </div>
+
       {role === 'dev' && !me.profile && (
         <div style={{ marginBottom: 14 }}>
-          <button className="note blue" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.open('profile', 'dev-form')}>
-            <Icon name="doc" size={18} />
-            <div><b>{devForm === 'review' ? 'Анкета на проверке' : 'Заполните анкету исполнителя'}</b><br />
-              {devForm === 'review' ? 'После проверки профиль появится в каталоге.' : 'Без неё нельзя откликаться на проекты. Это 4 коротких шага.'}</div>
+          <button className="note" onClick={() => nav.open('profile', 'dev-form')}>
+            <span style={{ display: 'flex' }}><Mark size={18} /></span>
+            <div><b style={{ color: 'var(--ink)' }}>{devForm === 'review' ? 'Анкета на проверке' : 'Заполните анкету исполнителя'}</b><br />
+              {devForm === 'review' ? 'После проверки профиль появится в каталоге.' : 'Без неё нельзя брать сделки. Это 4 коротких шага.'}</div>
           </button>
         </div>
       )}
 
-      <button className="search" onClick={() => nav.setTab('devs')}>
-        <Icon name="search" size={19} />
-        <span>Стек, задача или имя разработчика</span>
-      </button>
+      <Seg<'active' | 'archive'> value={tab} onChange={setTab} items={[{ key: 'active', label: 'Активные', count: active.length }, { key: 'archive', label: 'Архив', count: archive.length }]} />
 
-      <div className="quick">
-        {role === 'client' ? (
-          <button className="main" onClick={() => nav.open('projects', 'project-new')}>
-            <span className="ic"><Icon name="plus" size={19} /></span>
-            <div><b>Создать проект</b><br /><span>Опишите задачу и получите отклики</span></div>
-          </button>
+      <div className="mt">
+        {list.length ? (
+          <div className="group stagger" key={tab}>
+            {list.map((d) => <DealRow key={d.id} d={d} onClick={() => nav.push('deal', { id: d.id })} />)}
+          </div>
         ) : (
-          <button className="main" onClick={() => nav.setTab('projects')}>
-            <span className="ic"><Icon name="projects" size={19} /></span>
-            <div><b>Лента проектов</b><br /><span>{fresh.length} {plural(fresh.length, 'новый', 'новых', 'новых')} сегодня</span></div>
-          </button>
+          <div className="empty-cta">
+            <b>{tab === 'active' ? 'Активных сделок нет' : 'Архив пуст'}</b>
+            <span>{role === 'client' ? 'Найдите исполнителя и договоритесь о цене в чате: сделка появится здесь.'
+              : 'Откликайтесь на проекты или договоритесь с заказчиком в чате.'}</span>
+            {tab === 'active' && (
+              <button className="btn primary sm" style={{ marginTop: 4 }} onClick={() => nav.setTab(role === 'client' ? 'devs' : 'projects')}>
+                {role === 'client' ? 'Найти исполнителя' : 'Найти проект'}
+              </button>
+            )}
+          </div>
         )}
-        <button onClick={() => nav.push('guide')}>
-          <span className="ic"><Icon name="shield" size={19} /></span>
-          <div><b>Как работает гарант</b><br /><span>4 шага и арбитраж</span></div>
-        </button>
       </div>
 
-      <Section title="Направления">
-        <div className="chips">
-          {CATEGORIES.map((c) => (
-            <button key={c.key} className="chip" onClick={() => nav.open('devs', 'devs', { cat: c.key })}>
-              {c.label}<small className="num">{devs.filter((d) => d.categories.includes(c.key)).length}</small>
-            </button>
-          ))}
-        </div>
-      </Section>
+      {role === 'client' && recent.length > 0 && (
+        <Section title="Недавние исполнители">
+          <div className="hs">
+            {recent.map((c) => {
+              const d = devById(c.peer.refId);
+              return (
+                <button key={c.id} className="person" onClick={() => nav.open('devs', 'dev', { id: c.peer.refId })}>
+                  <Avatar name={c.peer.name} size={56} online={c.peer.lastSeenMin <= 5} />
+                  <span>{c.peer.name.split(' ')[0]}</span>
+                  {d && d.deals > 0 && <Rating value={d.rating} size={11} />}
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
-      {online.length > 0 && <Section title={`Сейчас в сети · ${online.length}`} action={{ label: 'Все', onClick: () => nav.setTab('devs') }}>
-        <div className="hs">
-          {online.map((d) => (
-            <button key={d.id} className="mini" onClick={() => nav.open('devs', 'dev', { id: d.id })}>
-              <Avatar name={d.name} hue={d.hue} size={44} online />
-              <b>{d.name}</b>
-              <span>{d.title}</span>
-              {d.deals ? <Rating value={d.rating} size={13} /> : <span className="pill blue">Новый</span>}
-            </button>
-          ))}
-        </div>
-      </Section>}
+      {role === 'dev' && fresh.length > 0 && (
+        <Section title="Новые проекты" action={{ label: 'Все', onClick: () => nav.setTab('projects') }}>
+          <div className="group">
+            {fresh.map((p) => (
+              <button key={p.id} className="cell" onClick={() => nav.open('projects', 'project', { id: p.id })}>
+                <div className="cell-body"><div className="cell-title"><span className="t">{p.title}</span></div>
+                  <div className="cell-sub num">{p.budgetMin === p.budgetMax ? p.budgetMin : `${p.budgetMin}–${p.budgetMax}`} USDT · {p.days} дн.</div></div>
+                <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>{p.ago}</span>
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
 
-      <Section title="Новые проекты" action={{ label: 'Все', onClick: () => nav.setTab('projects') }}>
-        {fresh.length === 0 && <div className="empty">Пока нет открытых проектов. {role === 'client' ? 'Опубликуйте первый.' : 'Загляните позже.'}</div>}
-        {fresh.length > 0 && <div className="group">
-          {fresh.map((p) => {
-            const c = clientOf(p);
-            return (
-              <Cell key={p.id} onClick={() => nav.open('projects', 'project', { id: p.id })} chevron
-                title={<span className="t">{p.title}</span>}
-                sub={<span className="num">{budget(p)} · {p.days} дн.</span>}
-                meta={<>{bidCount(p)} {plural(bidCount(p), 'отклик', 'отклика', 'откликов')}<span>·</span>{p.ago}{c && <><span>·</span>{seen(c.lastSeenMin)}</>}</>} />
-            );
-          })}
-        </div>}
-      </Section>
       <Sheet open={roleSheet} onClose={() => setRoleSheet(false)} title="Кто вы сейчас?">
+        <p className="muted small" style={{ margin: '0 0 14px' }}>Профиль, сделки и чаты сохраняются при смене роли.</p>
         <RolePicker value={role} onChange={(r) => {
           setRoleSheet(false);
           if (r !== role) setRole(r).then(() => showToast(`Режим: ${ROLE_INFO[r].title.toLowerCase()}`)).catch(() => {});
         }} />
-        <p className="hint mt-s">Профиль, сделки и чаты сохраняются при смене роли.</p>
+        <Note tone="blue" icon="info"><span>Справка: <button style={{ color: 'var(--ink)', fontWeight: 700 }} onClick={() => { setRoleSheet(false); nav.push('guide'); }}>как работает гарант</button></span></Note>
       </Sheet>
     </div>
   );

@@ -1,7 +1,7 @@
 // Live end-to-end check: the built Mini App against a running Trusty API, with three simulated Telegram users.
 // node scripts/live-e2e.mjs <outDir> <apiOrigin> <botToken>
-// The Telegram SDK is replaced by a stub that signs initData with the given token and exposes the native
-// MainButton/BackButton as window.__tgMain() / window.__tgBack() (and draws the MainButton for screenshots).
+// The Telegram SDK is replaced by a stub that signs initData with the given token; the BackButton is window.__tgBack().
+// main(p) presses the screen's main (green) button in the bottom bar.
 import { execSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -86,8 +86,9 @@ for (const [k, u] of Object.entries(USERS)) {
 fs.mkdirSync(outDir, { recursive: true });
 let n = 0;
 const shot = async (p, name, full = false) => { await p.waitForTimeout(600); await p.screenshot({ path: path.join(outDir, `${String(++n).padStart(2, '0')}-${name}.png`), fullPage: full }); };
-const tab = (p, label) => p.locator('.tabbar .tab', { hasText: label }).click();
-const main = (p) => p.evaluate(() => window.__tgMain());
+const tab = (p, label) => p.locator(`.island .tab[aria-label="${label}"]`).click();
+const projects = async (p) => { await tab(p, 'Поиск'); await p.locator('.seg button', { hasText: 'Проекты' }).first().click(); };
+const main = (p) => p.locator('.bar .bar-row .btn').last().click();
 const step = (label) => console.log('•', label);
 
 const { anna, boris, admin } = pages;
@@ -103,10 +104,10 @@ const onboard = async (p, role, name) => {
   await main(p);
 };
 await onboard(anna, 'Заказчик', 'anna-onboarding');
-await anna.waitForSelector('.tabbar');
+await anna.waitForSelector('.island');
 await shot(anna, 'anna-home-empty');
 await onboard(admin, 'Заказчик');
-await admin.waitForSelector('.tabbar');
+await admin.waitForSelector('.island');
 await onboard(boris, 'Исполнитель');
 await boris.getByText('Шаг 1 из 4').waitFor(); // an executor without a questionnaire goes straight to it
 step('users onboarded');
@@ -131,7 +132,7 @@ await shot(boris, 'boris-form-sent');
 step('questionnaire sent');
 
 // admin publishes it
-await admin.reload(); await admin.waitForSelector('.tabbar');
+await admin.reload(); await admin.waitForSelector('.island');
 await tab(admin, 'Профиль');
 await admin.getByText('Админ-панель').click();
 await admin.getByRole('tab', { name: /Анкеты/ }).click();
@@ -143,10 +144,10 @@ await admin.getByText('Новых анкет нет').waitFor();
 step('profile published');
 
 // client creates a project (a reload must not show the intro again)
-await anna.reload(); await anna.waitForSelector('.tabbar');
+await anna.reload(); await anna.waitForSelector('.island');
 if (await anna.locator('.ob').count()) throw new Error('intro shown again after reload');
-await tab(anna, 'Проекты');
-await anna.getByLabel('Создать проект').click();
+await anna.getByLabel('Создать').click();
+await anna.getByText('Опубликовать проект').click();
 await anna.getByPlaceholder('Например, бот для записи в салон').fill('Бот для записи в студию маникюра');
 await anna.getByPlaceholder('Бот должен…').fill('Запись к мастеру, выбор услуги и времени, напоминание за 2 часа, отмена записи, админка расписания.');
 await anna.getByPlaceholder('от', { exact: true }).fill('60');
@@ -157,8 +158,8 @@ await shot(anna, 'anna-project-published');
 step('project published');
 
 // developer responds
-await boris.reload(); await boris.waitForSelector('.tabbar');
-await tab(boris, 'Проекты');
+await boris.reload(); await boris.waitForSelector('.island');
+await projects(boris);
 await boris.getByText('Бот для записи в студию маникюра').click();
 await shot(boris, 'boris-project-view', true);
 await main(boris);
@@ -170,9 +171,9 @@ await shot(boris, 'boris-bid-sent');
 step('bid sent');
 
 // client picks the developer
-await anna.reload(); await anna.waitForSelector('.tabbar');
-await tab(anna, 'Проекты');
-await anna.getByRole('tab', { name: 'Мои проекты' }).click();
+await anna.reload(); await anna.waitForSelector('.island');
+await projects(anna);
+await anna.getByRole('tab', { name: /Мои проекты/ }).click();
 await anna.getByText('Бот для записи в студию маникюра').click();
 await shot(anna, 'anna-bids', true);
 await anna.getByRole('button', { name: 'Выбрать' }).click();
@@ -193,7 +194,7 @@ await shot(anna, 'anna-deal-paid', true);
 step('deal paid');
 
 // developer submits the work from the deal screen
-await boris.reload(); await boris.waitForSelector('.tabbar');
+await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
 await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
 await boris.locator('.deal-card').click();
@@ -207,7 +208,7 @@ await shot(boris, 'boris-deal-submitted');
 step('work submitted');
 
 // client accepts: the developer is paid from the app balance
-await anna.reload(); await anna.waitForSelector('.tabbar');
+await anna.reload(); await anna.waitForSelector('.island');
 await tab(anna, 'Профиль');
 await anna.getByText('Мои сделки').click();
 await shot(anna, 'anna-deals-list');
@@ -232,8 +233,34 @@ await anna.getByLabel('Сообщение').fill('Спасибо! Есть ещ�
 await anna.getByLabel('Отправить').click();
 await shot(anna, 'anna-deal-chat');
 
+// offers: the client proposes a price in the chat, the developer answers with his own, the client accepts
+await anna.getByLabel('Предложить цену').click();
+await anna.getByPlaceholder('Например: лендинг для кофейни').fill('Доработка админки');
+await anna.getByLabel('Сумма', { exact: true }).fill('40');
+await shot(anna, 'anna-offer-sheet');
+await anna.getByRole('button', { name: 'Отправить оффер' }).click();
+await anna.locator('.offer-card', { hasText: 'Вы предлагаете' }).waitFor();
+await boris.reload(); await boris.waitForSelector('.island');
+await tab(boris, 'Чаты');
+await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
+await boris.locator('.offer-card', { hasText: 'предлагает' }).waitFor();
+await shot(boris, 'boris-offer-received');
+await boris.getByRole('button', { name: 'Предложить свою цену' }).click();
+await boris.getByLabel('Сумма', { exact: true }).fill('50');
+await boris.getByRole('button', { name: 'Отправить свою цену' }).click();
+await boris.locator('.offer-card', { hasText: 'ВСТРЕЧНАЯ ЦЕНА' }).waitFor();
+await anna.locator('.offer-card', { hasText: 'ВСТРЕЧНАЯ ЦЕНА' }).waitFor({ timeout: 15000 });
+await shot(anna, 'anna-counter-received');
+await anna.locator('.offer-acts .btn.primary').last().click();
+await anna.getByText('Сделка #2').first().waitFor();
+await shot(anna, 'anna-offer-deal', true);
+const deal2 = await anna.evaluate(() => document.querySelector('.deal-head .sum b')?.textContent);
+if (deal2 !== '50') throw new Error('deal from the offer has amount ' + deal2);
+step('offer -> counter -> accepted -> deal #2');
+await anna.evaluate(() => window.__tgBack()); await anna.waitForTimeout(400);
+
 // developer sees the deal chat and tries to go off-platform
-await boris.reload(); await boris.waitForSelector('.tabbar');
+await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
 await shot(boris, 'boris-chats');
 await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
@@ -246,6 +273,7 @@ step('messages exchanged');
 // client complains with a screenshot
 await anna.waitForTimeout(4500);
 await shot(anna, 'anna-chat-updated');
+await anna.locator('.chat').waitFor();
 await anna.getByLabel('Пожаловаться').click();
 await anna.getByText('Просит оплату вне гаранта').click();
 await anna.locator('textarea').fill('Предлагает перейти в личку и работать без гаранта, это против правил.');
@@ -257,7 +285,7 @@ step('complaint sent');
 
 // admin bans for 30 days
 await admin.evaluate(() => window.__tgBack()); await admin.waitForTimeout(300);
-await admin.reload(); await admin.waitForSelector('.tabbar');
+await admin.reload(); await admin.waitForSelector('.island');
 await tab(admin, 'Профиль');
 await admin.getByText('Админ-панель').click();
 await admin.locator('.cell', { hasText: 'Борис Ким' }).first().click();
@@ -273,7 +301,7 @@ await shot(boris, 'boris-banned-screen');
 step('ban enforced');
 
 await tab(admin, 'Профиль').catch(() => {});
-await admin.reload(); await admin.waitForSelector('.tabbar');
+await admin.reload(); await admin.waitForSelector('.island');
 await tab(admin, 'Профиль');
 await admin.getByText('Финансы и споры').click();
 await admin.getByText('Последние операции').waitFor();

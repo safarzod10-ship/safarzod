@@ -112,6 +112,15 @@ export function dateTime(iso?: string | null): string {
   return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '');
 }
 
+export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'countered' | 'withdrawn' | 'expired';
+export interface Offer {
+  id: number; title: string; amount: number; days: number; status: OfferStatus;
+  mine: boolean; // I sent it
+  myRole: 'client' | 'dev';
+  prevAmount?: number | null; // the price this offer answers
+  expiresAt: string; createdAt?: string; dealId?: number | null; fee: string; total: string;
+}
+
 export interface Msg {
   id: number;
   from: 'me' | 'peer' | 'system';
@@ -119,6 +128,7 @@ export interface Msg {
   time?: string;
   at?: string; // ISO time from the API
   file?: string;
+  offer?: Offer;
 }
 
 export interface Chat {
@@ -126,6 +136,8 @@ export interface Chat {
   peer: { name: string; hue: number; lastSeenMin: number; role: 'dev' | 'client'; refId: string };
   deal?: { id: number; title: string; amount: number; status: DealStatus; due: string; clientId?: string; devId?: string } | null;
   unread: number;
+  offersWaiting?: number; // offers to me that wait for an answer
+  peerTyping?: boolean;
   messages: Msg[];
 }
 
@@ -321,17 +333,20 @@ export const CHATS: Chat[] = [
     ],
   },
   {
-    id: 'c-alina', peer: { name: 'Алина Ковалёва', hue: 1, lastSeenMin: 1, role: 'dev', refId: 'alina' }, unread: 0,
+    id: 'c-alina', peer: { name: 'Алина Ковалёва', hue: 1, lastSeenMin: 1, role: 'dev', refId: 'alina' }, unread: 1, offersWaiting: 1,
     messages: [
-      { id: 1, from: 'peer', text: 'Здравствуйте! Видела ваш проект кофейни. Могу показать примеры похожих интерфейсов.', time: 'вчера' },
-      { id: 2, from: 'me', text: 'Спасибо, уже выбрала исполнителя. Напишу по следующему проекту.', time: 'вчера' },
+      { id: 1, from: 'peer', text: 'Посмотрела ТЗ лендинга. Сделаю за 7 дней: адаптив, анимации и форма заявки.', time: '14:02' },
+      { id: 2, from: 'me', text: 'Сколько возьмёте?', time: '14:03' },
+      { id: 3, from: 'peer', text: 'Оффер: 250 USDT за «Лендинг для кофейни», срок 7 дн.', time: '14:05',
+        offer: { id: 901, title: 'Лендинг для кофейни', amount: 250, days: 7, status: 'pending', mine: false, myRole: 'client', prevAmount: null,
+          createdAt: new Date(Date.now() - 2 * 60e3).toISOString(), expiresAt: new Date(Date.now() + (47 * 60 + 58) * 60e3).toISOString(), fee: '12.50', total: '262.50' } },
     ],
   },
   {
     id: 'c-ilya', peer: { name: 'Илья Гордеев', hue: 7, lastSeenMin: 12, role: 'dev', refId: 'ilya' }, unread: 1,
     messages: [
       { id: 1, from: 'peer', text: 'Можем обсудить детали напрямую? Напишите мне в лс @ilya_g, так будет быстрее и без комиссии.', time: '12:03' },
-      { id: 2, from: 'system', text: 'Внимание: договорённости и оплата вне Trusty не защищены гарантом.', time: '12:03' },
+      { id: 2, from: 'system', text: 'Внимание: договорённости и оплата вне IT Trusty не защищены гарантом.', time: '12:03' },
     ],
   },
 ];
@@ -347,7 +362,7 @@ const shot = (title: string, lines: string[], hue: number) => {
 export const COMPLAINTS: Complaint[] = [
   {
     id: 52, fromName: 'Павел К.', againstId: 'ilya', againstName: 'Илья Гордеев', reason: 'offsite_payment',
-    text: 'Попросил перевести предоплату на карту, минуя Trusty. После отказа перестал отвечать.',
+    text: 'Попросил перевести предоплату на карту, минуя IT Trusty. После отказа перестал отвечать.',
     evidence: [shot('Илья Гордеев', ['Давайте напрямую', 'Скинь 50% на карту', 'Так без комиссии'], 140)], status: 'new', ago: '35 мин назад',
   },
   {

@@ -95,7 +95,7 @@ export default function DevForm() {
           <Field label="Сейчас">
             <Seg value={status} onChange={(v) => setStatus(v)} items={[{ key: 'free', label: 'Свободен' }, { key: 'busy', label: 'Занят' }]} />
           </Field>
-          <div className="mt"><Note tone="blue" icon="clock">В профиле будет видно, когда вы последний раз заходили в Trusty и как быстро отвечаете на сообщения.</Note></div>
+          <div className="mt"><Note tone="blue" icon="clock">В профиле будет видно, когда вы последний раз заходили в IT Trusty и как быстро отвечаете на сообщения.</Note></div>
         </>
       )}
 

@@ -136,7 +136,7 @@ if [ -n "$CP_TOKEN" ]; then
   fi
 fi
 FEE=$(get TRUSTY_FEE_PERCENT); [ -n "$FEE" ] || FEE=5
-[ -n "$CP_TOKEN" ] || echo "ВНИМАНИЕ: без токена Crypto Pay оплата в Trusty выключена. Запустите trusty update ещё раз и введите токен."
+[ -n "$CP_TOKEN" ] || echo "ВНИМАНИЕ: без токена Crypto Pay оплата в IT Trusty выключена. Запустите trusty update ещё раз и введите токен."
 umask 077
 cat > $ENVF <<EOF
 TRUSTY_BOT_TOKEN=$TOKEN
@@ -171,10 +171,19 @@ WantedBy=timers.target
 EOF
 cat > /usr/local/bin/trusty <<EOF
 #!/bin/bash
-# trusty admins | admin-remove <id> | unban <id> | stats | logs | restart | update
+# trusty admins | admin-remove <id> | unban <id> | stats | logs | restart | update | token
 case "\$1" in
   logs) exec journalctl -u trusty -n 100 -f ;;
   restart) exec systemctl restart trusty ;;
+  token)
+    read -rsp "Новый токен бота из @BotFather (ввод скрыт): " T </dev/tty; echo
+    [[ "\$T" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}\$ ]] || { echo "Токен выглядит неправильно"; exit 1; }
+    R=\$(curl -4 -s -m 15 "https://api.telegram.org/bot\$T/getMe")
+    echo "\$R" | grep -q '"ok":true' || { echo "Telegram не принял токен: \$R"; exit 1; }
+    sed -i "s|^TRUSTY_BOT_TOKEN=.*|TRUSTY_BOT_TOKEN=\$T|" $ENVF
+    systemctl restart trusty
+    echo "Готово, бот: @\$(echo "\$R" | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["username"])')"
+    exit 0 ;;
   update)
     echo "Скачиваю обновление с GitHub…"
     if timeout 180 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 -C $APP/src fetch -4 -q --depth 1 origin "$BRANCH" \\
@@ -245,4 +254,4 @@ if [ -n "$CP_TOKEN" ]; then
   echo "                 https://$DOMAIN/api/cryptopay/webhook"
   echo "                 (без него оплата тоже проходит, но подтверждается до 20 секунд)"
 fi
-echo "Команды:         trusty logs | trusty stats | trusty admins | trusty update"
+echo "Команды:         trusty logs | trusty stats | trusty admins | trusty update | trusty token"

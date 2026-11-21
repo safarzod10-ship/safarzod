@@ -83,7 +83,7 @@ export default function Complaint({ against, name, deal }: { against: string; na
             </label>
           )}
         </div>
-        <p className="hint mt-s">Скриншоты переписки, условий, переводов. До 8 МБ каждый. Переписку из чата Trusty арбитр увидит сам.</p>
+        <p className="hint mt-s">Скриншоты переписки, условий, переводов. До 8 МБ каждый. Переписку из чата IT Trusty арбитр увидит сам.</p>
       </Section>
 
       <div className="mt"><Note tone="amber">За заведомо ложные жалобы блокируют так же, как за обман.</Note></div>

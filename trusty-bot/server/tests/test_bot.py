@@ -61,9 +61,10 @@ async def main():
 
     await dp.feed_update(bot, Update.model_validate({"update_id": 1, "message": msg("/start")}))
     name, kw = CALLS[-1]
-    assert name == "SendPhoto" and "гарант сделок" in kw["caption"], CALLS[-1]
+    assert name == "SendPhoto" and "Деньги у гаранта" in kw["caption"], CALLS[-1]
     bs = buttons(kw)
     assert bs[0]["web_app"]["url"] == "https://trusty.example/" and any(b.get("callback_data") == "m:deals" for b in bs), bs
+    assert bs[0]["style"] == "primary", bs[0]  # the main button is blue, the rest stay neutral
 
     for i, data in enumerate(("m:how", "m:deals", "m:help", "m:home")):
         cq = {"id": str(i), "from": user(), "chat_instance": "x", "data": data,
@@ -79,6 +80,33 @@ async def main():
     assert CALLS[before][0] == "SendPhoto"  # any text brings back the main card
     await dp.feed_update(bot, Update.model_validate({"update_id": 31, "message": msg("/admin wrong-code")}))
     assert CALLS[-1][0] == "SendPhoto"  # a wrong code looks like any other message
+    # an offer card: Accept in the bot creates the deal and updates the card
+    from trusty import offers
+    from trusty.models import Chat, Deal, DevProfile, User
+    from trusty.db import Session
+    async with Session() as s:
+        s.add(User(id=43, first_name="Дев", username="dev"))
+        await s.flush()
+        s.add(DevProfile(user_id=43, title="Боты", categories=["bots"], stack=["Python"], about="x" * 60, moderation="published"))
+        chat = Chat(a_id=42, b_id=43)
+        s.add(chat)
+        await s.flush()
+        o = await offers.propose(s, chat, await s.get(User, 43), title="Бот для записи", amount=60, days=5, as_role="dev")
+        await s.commit()
+        oid = o.id
+    cq = {"id": "77", "from": user(), "chat_instance": "x", "data": f"o:acc:{oid}",
+          "message": {"message_id": 9, "date": 0, "chat": {"id": 42, "type": "private"}, "caption": "Дев предлагает 60 USDT",
+                      "photo": [{"file_id": "F", "file_unique_id": "u", "width": 1, "height": 1}]}}
+    await dp.feed_update(bot, Update.model_validate({"update_id": 40, "callback_query": cq}))
+    edit = [c for c in CALLS if c[0] == "EditMessageCaption"][-1][1]
+    assert "Принято" in edit["caption"] and "Дев предлагает" in edit["caption"], edit
+    async with Session() as s:
+        d = (await s.execute(__import__("sqlalchemy").select(Deal))).scalar_one()
+        assert d.amount == 60 and d.client_id == 42 and d.dev_id == 43 and d.status == "awaiting_payment"
+    cq["id"], cq["data"] = "78", f"o:dec:{oid}"
+    await dp.feed_update(bot, Update.model_validate({"update_id": 41, "callback_query": cq}))
+    answer = [c for c in CALLS if c[0] == "AnswerCallbackQuery"][-1][1]
+    assert answer.get("show_alert") and "уже принят" in answer["text"], answer
     print("bot OK:", ", ".join(sorted({c[0] for c in CALLS})))
     await engine.dispose()
 

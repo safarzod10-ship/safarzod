@@ -1,7 +1,8 @@
 """Telegram bot: picture cards with inline buttons, no slash-command menu.
 
-Everything goes through the main card (/start or any message): open the Mini App, find an executor, projects,
-my deals, how the escrow works, rules and support. The hidden /admin <code> grants admin rights (max 2 admins).
+Everything goes through the main card (/start or any message): open the Mini App, find an executor, my deals,
+how the escrow works, rules and support. Offers arrive as cards with Accept / Decline right in the bot.
+The hidden /admin <code> grants admin rights (max 2 admins).
 """
 import hmac
 import logging
@@ -14,37 +15,31 @@ from aiogram.types import (BufferedInputFile, CallbackQuery, InlineKeyboardButto
                            MenuButtonWebApp, Message, TelegramObject, WebAppInfo)
 from sqlalchemy import desc, func, or_, select
 
-from . import cards, notify
+from . import cards, notify, offers
 from .auth import upsert_user
 from .config import settings
 from .db import Session
-from .escrow import STATUS_LABEL, fmt
+from .escrow import STATUS_LABEL, EscrowError, fmt
 from .models import Deal, User
-from .notify import app_button, keyboard
+from .notify import OK, OPEN, app_button, cb, keyboard
 from .serial import short_date
 
 log = logging.getLogger("trusty.bot")
 router = Router()
 _file_ids: dict[str, str] = {}  # banner -> Telegram file_id, so each picture is uploaded once
 
-
-def cb(text: str, data: str) -> InlineKeyboardButton:
-    return InlineKeyboardButton(text=text, callback_data=data)
-
-
 BACK = cb("‹ Назад", "m:home")
 
-WELCOME = ("<b>Trusty</b> — гарант сделок с разработчиками.\n\n"
-           "Выберите исполнителя по отзывам и реальным сделкам или опубликуйте проект. "
-           "Оплата в USDT хранится у гаранта, пока вы не примете работу.")
+WELCOME = ("Выберите исполнителя по отзывам и сделкам, договоритесь о цене и оплатите в USDT. "
+           "Деньги у гаранта, пока вы не примете работу.")
 HOW = ("<b>Как работает гарант</b>\n\n"
-       "1. Условия, сумма и срок фиксируются в сделке.\n"
+       "1. Договоритесь о цене в чате: оффер с суммой и сроком, можно торговаться.\n"
        "2. Заказчик оплачивает счёт в @CryptoBot, деньги хранятся у гаранта.\n"
        "3. Исполнитель сдаёт работу в чате сделки.\n"
-       f"4. Заказчик принимает работу, и исполнитель получает оплату. Без ответа работа принимается через {settings.review_days:g} дн.\n\n"
+       f"4. Заказчик принимает работу, исполнитель получает оплату. Без ответа работа принимается через {settings.review_days:g} дн.\n\n"
        f"Комиссия гаранта {settings.fee_percent:g}%, её платит заказчик. Если что-то пошло не так, спор решает арбитр.")
 HELP = ("<b>Правила</b>\n\n"
-        "• Договаривайтесь и платите только через Trusty: сделки мимо гаранта не защищены.\n"
+        "• Договаривайтесь и платите только через IT Trusty: сделки мимо гаранта не защищены.\n"
         "• Спор открывается в сделке, арбитр решает по переписке и доказательствам.\n"
         "• За обман и попытку увести сделку: блокировка на 30 дней, при повторе навсегда.\n\n"
         "Вопрос или проблема? Напишите администратору.")
@@ -52,10 +47,9 @@ HELP = ("<b>Правила</b>\n\n"
 
 def main_keyboard(**first):
     return keyboard(
-        [app_button(first.pop("label", "Открыть Trusty"), **first)],
-        [app_button("Найти исполнителя", screen="devs"), app_button("Проекты", screen="projects")],
-        [cb("Мои сделки", "m:deals"), cb("Как это работает", "m:how")],
-        [cb("Правила и поддержка", "m:help")],
+        [app_button(first.pop("label", "Открыть IT Trusty"), OPEN, **first)],
+        [app_button("Исполнители", screen="devs"), cb("Мои сделки", "m:deals")],
+        [cb("Как это работает", "m:how"), cb("Правила", "m:help")],
     )
 
 
@@ -83,7 +77,7 @@ class Activity(BaseMiddleware):
             banned = u.banned()
             until = None if u.ban_permanent else (short_date(u.ban_until) if u.ban_until else None)
         if banned:
-            text = ("Ваш аккаунт в Trusty заблокирован " + (f"до {until}." if until else "навсегда.")
+            text = ("Ваш аккаунт в IT Trusty заблокирован " + (f"до {until}." if until else "навсегда.")
                     + "\nЕсли считаете это ошибкой, напишите администратору.")
             if isinstance(event, Message):
                 await event.answer(text)
@@ -115,7 +109,7 @@ async def admin(m: Message, command: CommandObject):
     async with Session() as s:
         u = await s.get(User, m.from_user.id)
         if u.is_admin:
-            await m.answer("Вы администратор Trusty.", reply_markup=notify.open_button("Админ-панель", screen="admin"))
+            await m.answer("Вы администратор IT Trusty.", reply_markup=notify.open_button("Админ-панель", screen="admin"))
             return
         code = (command.args or "").strip()
         if not settings.admin_code or not code or not hmac.compare_digest(code, settings.admin_code):
@@ -160,7 +154,7 @@ async def cb_home(cq: CallbackQuery):
 
 @router.callback_query(F.data == "m:how")
 async def cb_how(cq: CallbackQuery):
-    await show(cq, "how", HOW, keyboard([app_button("Открыть Trusty")], [BACK]))
+    await show(cq, "how", HOW, keyboard([app_button("Открыть IT Trusty", OPEN)], [BACK]))
 
 
 @router.callback_query(F.data == "m:help")
@@ -178,9 +172,9 @@ async def cb_deals(cq: CallbackQuery):
         deals = (await s.execute(select(Deal).where(or_(Deal.client_id == uid, Deal.dev_id == uid))
                                  .order_by(desc(Deal.created_at)).limit(6))).scalars().all()
     if not deals:
-        caption = ("<b>Мои сделки</b>\n\nСделок пока нет. Найдите исполнителя или опубликуйте проект, "
-                   "а когда договоритесь, сделка появится здесь.")
-        markup = keyboard([app_button("Найти исполнителя", screen="devs"), app_button("Проекты", screen="projects")], [BACK])
+        caption = ("<b>Мои сделки</b>\n\nСделок пока нет. Найдите исполнителя и договоритесь о цене в чате: "
+                   "когда оффер примут, сделка появится здесь.")
+        markup = keyboard([app_button("Найти исполнителя", OPEN, screen="devs")], [BACK])
         await show(cq, "deals", caption, markup, cards.banner("deals"))
         return
     lines = ["<b>Мои сделки</b>\n"]
@@ -188,11 +182,46 @@ async def cb_deals(cq: CallbackQuery):
     for d in deals:
         role = "заказчик" if d.client_id == uid else "исполнитель"
         lines.append(f"<b>#{d.id}</b> {d.title[:40]}\n{fmt(d.amount)} {settings.asset} · {STATUS_LABEL.get(d.status, d.status)} · вы {role}")
-        action = "Оплатить" if d.status == "awaiting_payment" and d.client_id == uid else "Открыть"
-        rows.append([app_button(f"#{d.id} · {action}", screen="deal", id=d.id)])
+        to_pay = d.status == "awaiting_payment" and d.client_id == uid
+        rows.append([app_button(f"#{d.id} · {'Оплатить' if to_pay else 'Открыть'}", OK if to_pay else None, screen="deal", id=d.id)])
     top = deals[0]
-    card = cards.deal_card(top.id, top.title, top.amount, top.total, top.status, short_date(top.due_at), settings.asset)
+    card = cards.deal_card(top.id, top.title, top.amount, top.total, top.status, settings.asset)
     await show(cq, "deals", "\n\n".join(lines)[:1024], keyboard(*rows, [BACK]), card)
+
+
+@router.callback_query(F.data.startswith("o:"))
+async def cb_offer(cq: CallbackQuery):
+    """Accept / decline an offer from its card in the bot."""
+    parts = cq.data.split(":")
+    if len(parts) != 3 or not parts[2].isdigit() or parts[1] not in ("acc", "dec"):
+        await cq.answer()
+        return
+    act, oid = parts[1], int(parts[2])
+    async with Session() as s:
+        me = await s.get(User, cq.from_user.id)
+        try:
+            if act == "acc":
+                o, d = await offers.accept(s, oid, me)
+                note, markup = (f"✓ Принято. Сделка #{d.id} создана.",
+                                keyboard([app_button("Открыть сделку", OK if d.client_id == me.id else OPEN, screen="deal", id=d.id)]))
+            else:
+                o = await offers.decline(s, oid, me)
+                note, markup = "✕ Оффер отклонён.", keyboard([app_button("Открыть чат", screen="chat", id=o.chat_id)])
+            await s.commit()
+        except EscrowError as e:
+            await s.rollback()
+            await cq.answer(str(e), show_alert=True)
+            return
+    try:
+        base = cq.message.html_text if cq.message and (cq.message.caption or cq.message.text) else ""
+        text = f"{base}\n\n<b>{note}</b>" if base else f"<b>{note}</b>"
+        if cq.message.photo:
+            await cq.message.edit_caption(caption=text[:1024], reply_markup=markup)
+        else:
+            await cq.message.edit_text(text[:4096], reply_markup=markup)
+    except Exception as e:  # noqa: BLE001 - the answer is recorded anyway
+        log.info("offer card edit failed: %s", e)
+    await cq.answer(note)
 
 
 def build() -> tuple[Bot, Dispatcher]:
@@ -216,3 +245,4 @@ async def configure(bot: Bot) -> bool:
     except Exception as e:  # noqa: BLE001
         log.warning("bot configuration skipped: %s", e)
         return False
+

@@ -25,6 +25,7 @@ MIGRATIONS = [
     ("deals", "dispute_reason", "TEXT"),
     ("deals", "dev_share", "INTEGER"),
     ("deals", "resolution", "TEXT"),
+    ("messages", "offer_id", "INTEGER"),
 ]
 
 

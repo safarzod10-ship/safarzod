@@ -181,6 +181,30 @@ class Message(Base):
     sender_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))  # None = system message
     text: Mapped[str] = mapped_column(Text)
     flagged: Mapped[bool] = mapped_column(Boolean, default=False)  # looked like an attempt to go off-platform
+    offer_id: Mapped[int | None] = mapped_column(Integer)  # the message is a price offer (shown as a card)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Offer(Base):
+    """A price offer inside a chat. Either side can answer with a counter-offer until someone accepts;
+    accepting creates the deal with the offer's terms."""
+    __tablename__ = "offers"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), index=True)
+    from_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    to_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
+    client_id: Mapped[int] = mapped_column(BigInteger)
+    dev_id: Mapped[int] = mapped_column(BigInteger)
+    project_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("projects.id", ondelete="SET NULL"))
+    parent_id: Mapped[int | None] = mapped_column(Integer)  # the offer this one answers
+    title: Mapped[str] = mapped_column(String(120))
+    amount: Mapped[int] = mapped_column(Integer)
+    days: Mapped[int] = mapped_column(Integer)
+    # pending | accepted | declined | countered | withdrawn | expired
+    status: Mapped[str] = mapped_column(String(10), default="pending", index=True)
+    deal_id: Mapped[int | None] = mapped_column(Integer)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

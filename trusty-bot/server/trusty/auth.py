@@ -84,7 +84,7 @@ async def current_user(authorization: str = Header(default=""), s: AsyncSession 
         if not tg:
             raise HTTPException(401, "no user in init data")
     else:
-        raise HTTPException(401, "Open Trusty from Telegram")
+        raise HTTPException(401, "Open IT Trusty from Telegram")
     u = await upsert_user(s, tg)
     if u.banned():
         until = None if u.ban_permanent else u.ban_until.isoformat()

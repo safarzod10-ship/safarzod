@@ -14,12 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import json
 import logging
 
-from . import escrow, notify
+from . import escrow, notify, offers, presence
 from .auth import admin_user, current_user
 from .config import settings
 from .cryptopay import CryptoPayError, check_signature, pay
 from .db import get_session
-from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Payment, Project, User, utcnow
+from .models import Bid, Chat, Complaint, Deal, DevProfile, Evidence, Message, Offer, Payment, Project, User, utcnow
 from .serial import (aware, chat_payloads, complaint_payloads, deal_payloads, dev_payloads, member_payload,
                      project_payloads, short_date)
 
@@ -251,16 +251,8 @@ async def choose(pid: int, body: ChooseIn, me: User = Depends(current_user), s: 
     done = (await dev_payloads(s, await dev_rows(s, DevProfile.user_id == dev.id)))[0]["deals"]
     if done < 3 and b.price > settings.new_dev_limit:
         bad(f"У нового исполнителя сумма сделки ограничена {settings.new_dev_limit} USDT, пока нет трёх успешных сделок")
-    d = Deal(project_id=p.id, client_id=me.id, dev_id=dev.id, title=p.title, category=CATEGORIES.get(p.category, ""),
-             amount=b.price, days=b.days, due_at=utcnow() + timedelta(days=b.days), fee=escrow.fee_for(b.price))
-    s.add(d)
-    p.status = "in_work"
-    await s.flush()
+    d = await escrow.open_deal(s, me.id, dev.id, p.title, b.price, b.days, p.id, CATEGORIES.get(p.category, ""))
     c = await get_or_create_chat(s, me.id, dev.id)
-    c.deal_id, c.updated_at = d.id, utcnow()
-    s.add(Message(chat_id=c.id, sender_id=None,
-                  text=f"Сделка #{d.id} создана. Условия зафиксированы: {d.amount} {settings.asset}, срок {d.days} дн. "
-                       f"Ожидаем оплату от заказчика: {escrow.fmt(d.total)} {settings.asset} с комиссией гаранта."))
     await s.commit()
     notify.send_deal(dev.id, d, f"Вас выбрали исполнителем: «{p.title}», {d.amount} {settings.asset}. "
                                 f"Начинайте после оплаты: мы пришлём уведомление.")
@@ -313,7 +305,7 @@ async def post_message(cid: int, body: MessageIn, me: User = Depends(current_use
                                                            Message.text.like("Внимание:%")).limit(1))).first()
         if not warned:
             s.add(Message(chat_id=c.id, sender_id=None,
-                          text="Внимание: договорённости и оплата вне Trusty не защищены гарантом."))
+                          text="Внимание: договорённости и оплата вне IT Trusty не защищены гарантом."))
     now = utcnow()
     c.updated_at = now
     await s.flush()
@@ -332,6 +324,81 @@ async def post_message(cid: int, body: MessageIn, me: User = Depends(current_use
         notify.send(peer.id, f"Новое сообщение от {me.name}: {body.text[:120]}", "Ответить", screen="chat", id=c.id)
     await s.commit()
     return (await chat_payloads(s, [c], me, full=True))[0]
+
+
+@router.post("/chats/{cid}/typing")
+async def typing(cid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    c = await my_chat(s, cid, me)
+    presence.typed(c.id, me.id)
+    return {"ok": True}
+
+
+class OfferIn(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    amount: int = Field(gt=0, le=1_000_000)
+    days: int = Field(gt=0, le=365)
+    ttlHours: int = Field(default=48, ge=1, le=72)
+    asRole: str | None = Field(default=None, pattern="^(client|dev)$")
+    projectId: int | None = None
+
+
+class CounterIn(BaseModel):
+    amount: int = Field(gt=0, le=1_000_000)
+    days: int = Field(gt=0, le=365)
+    ttlHours: int = Field(default=48, ge=1, le=72)
+
+
+async def _offer_chat(s: AsyncSession, offer_id: int, me: User) -> Chat:
+    o = await s.get(Offer, offer_id)
+    if o is None or me.id not in (o.from_id, o.to_id):
+        bad("Оффер не найден", 404)
+    return await s.get(Chat, o.chat_id)
+
+
+async def _chat_out(s: AsyncSession, c: Chat, me: User) -> dict:
+    await s.refresh(c)
+    return (await chat_payloads(s, [c], me, full=True))[0]
+
+
+@router.post("/chats/{cid}/offers")
+async def create_offer(cid: int, body: OfferIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    c = await my_chat(s, cid, me)
+    await _run(s, offers.propose(s, c, me, title=body.title, amount=body.amount, days=body.days, ttl_hours=body.ttlHours,
+                                 as_role=body.asRole, project_id=body.projectId))
+    await s.commit()
+    return await _chat_out(s, c, me)
+
+
+@router.post("/offers/{oid}/counter")
+async def counter_offer(oid: int, body: CounterIn, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    c = await _offer_chat(s, oid, me)
+    await _run(s, offers.counter(s, oid, me, body.amount, body.days, body.ttlHours))
+    await s.commit()
+    return await _chat_out(s, c, me)
+
+
+@router.post("/offers/{oid}/accept")
+async def accept_offer(oid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    c = await _offer_chat(s, oid, me)
+    _, d = await _run(s, offers.accept(s, oid, me))
+    await s.commit()
+    return {"chat": await _chat_out(s, c, me), "deal": (await deal_payloads(s, [d], me))[0]}
+
+
+@router.post("/offers/{oid}/decline")
+async def decline_offer(oid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    c = await _offer_chat(s, oid, me)
+    await _run(s, offers.decline(s, oid, me))
+    await s.commit()
+    return await _chat_out(s, c, me)
+
+
+@router.post("/offers/{oid}/withdraw")
+async def withdraw_offer(oid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    c = await _offer_chat(s, oid, me)
+    await _run(s, offers.withdraw(s, oid, me))
+    await s.commit()
+    return await _chat_out(s, c, me)
 
 
 @router.post("/chats/{cid}/read")
@@ -446,7 +513,7 @@ async def ban_by_complaint(cid: int, me: User = Depends(admin_user), s: AsyncSes
     c.status, c.handled_by, c.decision = "resolved", me.id, decision
     await s.commit()
     notify.send(c.from_id, f"Жалоба #{c.id} рассмотрена. {decision}")
-    notify.send(u.id, f"Ваш аккаунт в Trusty заблокирован по жалобе #{c.id}. {decision}")
+    notify.send(u.id, f"Ваш аккаунт в IT Trusty заблокирован по жалобе #{c.id}. {decision}")
     return {"complaint": (await complaint_payloads(s, [c], settings.secret))[0], "message": decision}
 
 
@@ -457,7 +524,7 @@ async def ban(uid: int, me: User = Depends(admin_user), s: AsyncSession = Depend
         bad("Администратора заблокировать нельзя")
     decision = ban_user(u)
     await s.commit()
-    notify.send(u.id, f"Ваш аккаунт в Trusty заблокирован. {decision}")
+    notify.send(u.id, f"Ваш аккаунт в IT Trusty заблокирован. {decision}")
     return {"member": member_payload(u, await s.get(DevProfile, u.id) is not None), "message": decision}
 
 
@@ -468,7 +535,7 @@ async def unban(uid: int, me: User = Depends(admin_user), s: AsyncSession = Depe
         bad("Пользователь не найден", 404)
     u.ban_permanent, u.ban_until = False, None
     await s.commit()
-    notify.send(u.id, "Блокировка аккаунта в Trusty снята.")
+    notify.send(u.id, "Блокировка аккаунта в IT Trusty снята.")
     return {"member": member_payload(u, await s.get(DevProfile, u.id) is not None)}
 
 
@@ -483,7 +550,7 @@ async def approve(uid: int, me: User = Depends(admin_user), s: AsyncSession = De
         bad("Анкета не найдена", 404)
     p.moderation, p.moderation_note = "published", None
     await s.commit()
-    notify.send(uid, "Анкета проверена: ваш профиль опубликован в каталоге Trusty.", "Открыть профиль", screen="dev", id=uid)
+    notify.send(uid, "Анкета проверена: ваш профиль опубликован в каталоге IT Trusty.", "Открыть профиль", screen="dev", id=uid)
     return {"ok": True}
 
 
@@ -640,7 +707,7 @@ async def retry_payment(payment_id: int, me: User = Depends(admin_user), s: Asyn
     if p is None or p.kind == "invoice" or p.status in ("sent", "check"):
         bad("Повторять нечего")
     d = await s.get(Deal, p.deal_id)
-    p = await _run(s, escrow.payout(s, d, p.user_id, p.amount, p.kind, f"Trusty, сделка #{d.id}"))
+    p = await _run(s, escrow.payout(s, d, p.user_id, p.amount, p.kind, f"IT Trusty, сделка #{d.id}"))
     return {"status": p.status, "error": p.error}
 
 

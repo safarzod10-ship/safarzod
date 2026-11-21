@@ -1,126 +1,60 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
-    <title>Trusty</title>
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <title>IT Trusty</title>
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon-180.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-      // theme before first paint: Telegram colour scheme, else the OS
-      (function () {
-        var tg = window.Telegram && window.Telegram.WebApp;
-        var forced = document.documentElement.getAttribute('data-theme');
-        var dark = tg && tg.initData ? tg.colorScheme === 'dark' : forced ? forced === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.classList.add(dark ? 'dark' : 'light');
-      })();
-    </script>
+    <style>html,body{background:#000;margin:0}</style>
   </head>
   <body>
-    <!-- splash:start -->
-    <style>#tl-splash{--tl-bg:#F2F5F3;--tl-mark:#0D2C27;--tl-coin:#26A17B;--tl-sym:#FFFFFF;--tl-ring:#26A17B; position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tl-bg); transition:background-color .2s} @media (prefers-color-scheme:dark){html:not(.light) #tl-splash{--tl-bg:#071C19;--tl-mark:#E8F5EF}} html.dark #tl-splash{--tl-bg:#071C19;--tl-mark:#E8F5EF} #tl-splash svg{width:min(46vw,190px);height:auto;overflow:visible;will-change:transform,opacity} #tl-splash .tl-half{fill:none;stroke:var(--tl-mark);stroke-width:7.5;stroke-linecap:round;stroke-linejoin:round} #tl-splash .tl-nib,#tl-splash .tl-w{fill:var(--tl-mark)} #tl-splash .tl-body{fill:var(--tl-coin)}#tl-splash .tl-sym{fill:var(--tl-sym)}#tl-splash .tl-symr{fill:none;stroke:var(--tl-sym)} #tl-splash #tl-ring{fill:none;stroke:var(--tl-ring)}</style>
-    <div id="tl-splash" role="status" aria-label="Загрузка Trusty"><svg viewBox="2.32 5.25 95.35 115" aria-hidden="true"><defs><clipPath id="tl-clip"><circle r="14.5"/></clipPath><linearGradient id="tl-sg" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><g id="tl-hl" style="opacity:0"><path id="tl-pl" class="tl-half" d="M43.5 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43.5 85.5" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path class="tl-nib" d="M19.75 40.92H18.25C18.25 45.17 17.25 46.08 15.58 46.29A1.71 1.71 0 0 0 15.58 49.71C17.25 49.92 18.25 50.83 18.25 55.08H19.75Z" style="opacity:0"/></g><g id="tl-hr" style="opacity:0"><g transform="matrix(-1 0 0 1 100 0)"><path id="tl-pr" class="tl-half" d="M43.5 15L27.5 20.6Q22 22.6 22 28.4V58C22 70 30.8 79.4 43.5 85.5" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path class="tl-nib" d="M19.75 40.92H18.25C18.25 45.17 17.25 46.08 15.58 46.29A1.71 1.71 0 0 0 15.58 49.71C17.25 49.92 18.25 50.83 18.25 55.08H19.75Z" style="opacity:0"/></g></g><circle id="tl-ring" cx="50" cy="48" r="14.5" style="opacity:0"/><g id="tl-coin" style="opacity:0"><g id="tl-spin"><circle class="tl-body" r="14.5"/><circle id="tl-shade" r="14.5" fill="#000" opacity="0"/><path d="M-7.61 -8.1H7.61V-4.89H2.11V8.58H-2.11V-4.89H-7.61Z" class="tl-sym"/><ellipse cx="0" cy="-1.15" rx="8.82" ry="2.6" class="tl-symr" stroke-width="1.63"/><g clip-path="url(#tl-clip)"><rect id="tl-sheen" x="-4" y="-30" width="8" height="60" fill="url(#tl-sg)" opacity="0"/></g></g></g><g transform="translate(6.32 116.25)"><g class="tl-l" style="opacity:0"><g class="tl-li" transform="translate(0 0) scale(0.02119)"><path d="M220 0V-558H7V-708H597V-558H382V0Z" class="tl-w"/></g></g><g class="tl-l" style="opacity:0"><g class="tl-li" transform="translate(0 0) scale(0.02119)"><path d="M697.984375 0V-708H989.984375Q1039.984375 -708 1089.484375 -698.5Q1138.984375 -689 1179.984375 -664.0Q1220.984375 -639 1245.484375 -593.5Q1269.984375 -548 1269.984375 -477Q1269.984375 -429 1253.984375 -388.0Q1237.984375 -347 1206.484375 -317.0Q1174.984375 -287 1126.984375 -270L1287.984375 0H1103.984375L966.984375 -244H859.984375V0ZM859.984375 -387H984.984375Q1013.984375 -387 1036.484375 -392.5Q1058.984375 -398 1074.984375 -408.5Q1090.984375 -419 1099.484375 -436.0Q1107.984375 -453 1108.984375 -477Q1108.984375 -510 1093.484375 -527.0Q1077.984375 -544 1051.984375 -551.0Q1025.984375 -558 991.984375 -558H859.984375Z" class="tl-w"/></g></g><g class="tl-l" style="opacity:0"><g class="tl-li" transform="translate(0 0) scale(0.02119)"><path d="M1722.984375 8Q1617.984375 8 1549.984375 -30.0Q1481.984375 -68 1449.484375 -142.0Q1416.984375 -216 1416.984375 -322V-708H1578.984375V-313Q1578.984375 -270 1591.984375 -231.0Q1604.984375 -192 1636.984375 -167.5Q1668.984375 -143 1724.984375 -143Q1781.984375 -143 1811.484375 -168.0Q1840.984375 -193 1852.484375 -232.0Q1863.984375 -271 1863.984375 -313V-708H2025.984375V-322Q2025.984375 -217 1993.984375 -143.0Q1961.984375 -69 1894.984375 -30.5Q1827.984375 8 1722.984375 8Z" class="tl-w"/></g></g><g class="tl-l" style="opacity:0"><g class="tl-li" transform="translate(0 0) scale(0.02119)"><path d="M2457.984375 8Q2381.984375 8 2316.984375 -16.5Q2251.984375 -41 2209.484375 -93.5Q2166.984375 -146 2156.984375 -228H2320.984375Q2328.984375 -197 2350.484375 -178.0Q2371.984375 -159 2402.984375 -150.5Q2433.984375 -142 2468.984375 -142Q2492.984375 -142 2516.984375 -147.5Q2540.984375 -153 2556.984375 -167.0Q2572.984375 -181 2572.984375 -206Q2572.984375 -225 2563.984375 -236.5Q2554.984375 -248 2538.484375 -255.5Q2521.984375 -263 2497.984375 -269Q2482.984375 -273 2466.984375 -276.0Q2450.984375 -279 2435.984375 -283.0Q2420.984375 -287 2405.984375 -292Q2360.984375 -303 2319.984375 -317.5Q2278.984375 -332 2247.484375 -355.0Q2215.984375 -378 2197.984375 -415.0Q2179.984375 -452 2179.984375 -507Q2179.984375 -560 2198.484375 -597.5Q2216.984375 -635 2248.484375 -658.5Q2279.984375 -682 2317.484375 -694.5Q2354.984375 -707 2392.484375 -712.0Q2429.984375 -717 2461.984375 -717Q2532.984375 -717 2588.484375 -691.0Q2643.984375 -665 2678.484375 -614.5Q2712.984375 -564 2719.984375 -490H2562.984375Q2558.984375 -516 2542.484375 -533.0Q2525.984375 -550 2500.484375 -559.0Q2474.984375 -568 2441.984375 -568Q2421.984375 -568 2403.484375 -564.5Q2384.984375 -561 2371.484375 -554.0Q2357.984375 -547 2349.484375 -535.5Q2340.984375 -524 2340.984375 -507Q2340.984375 -489 2352.984375 -476.5Q2364.984375 -464 2387.484375 -455.0Q2409.984375 -446 2442.984375 -437Q2465.984375 -429 2490.484375 -424.5Q2514.984375 -420 2537.984375 -413Q2579.984375 -403 2615.484375 -389.5Q2650.984375 -376 2677.984375 -355.5Q2704.984375 -335 2720.484375 -301.5Q2735.984375 -268 2735.984375 -217Q2735.984375 -155 2712.984375 -112.5Q2689.984375 -70 2649.984375 -43.0Q2609.984375 -16 2560.484375 -4.0Q2510.984375 8 2457.984375 8Z" class="tl-w"/></g></g><g class="tl-l" style="opacity:0"><g class="tl-li" transform="translate(0 0) scale(0.02119)"><path d="M3011.984375 0V-558H2798.984375V-708H3388.984375V-558H3173.984375V0Z" class="tl-w"/></g></g><g class="tl-l" style="opacity:0"><g class="tl-li" transform="translate(0 0) scale(0.02119)"><path d="M3688.984375 0V-263L3421.984375 -708H3608.984375L3770.984375 -412L3936.984375 -708H4120.984375L3851.984375 -264V0Z" class="tl-w"/></g></g></g></svg></div>
-    <script>(function () {
-  var $ = function (id) { return document.getElementById(id); };
-  var root = $('tl-splash');
-  if (!root) return;
-  var clamp = function (x) { return Math.min(1, Math.max(0, x)); };
-  var prog = function (t, a, b) { return clamp((t - a) / (b - a)); };
-  var outCubic = function (p) { return 1 - Math.pow(1 - p, 3); };
-  var outQuart = function (p) { return 1 - Math.pow(1 - p, 4); };
-  var inQuad = function (p) { return p * p; };
-  var inOut = function (p) { return p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; };
-  var spring = function (tau, z, w) {
-    if (tau <= 0) return 1;
-    var wd = w * Math.sqrt(1 - z * z);
-    return Math.exp(-z * w * tau) * (Math.cos(wd * tau) + (z * w / wd) * Math.sin(wd * tau));
-  };
-  var letters = [].slice.call(root.querySelectorAll('.tl-l'));
-  var nibs = [].slice.call(root.querySelectorAll('.tl-nib'));
-  var INTRO = 1.4, LAND = .45, CYCLE = 1.7;
-  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  function render(t) {
-    // coin: falls in spinning, lands face-on with a small squash
-    var pf = prog(t, .04, LAND), y = -95 * (1 - inQuad(pf)), sx = Math.cos(2 * Math.PI * 1.5 * outQuart(pf)), sy = 1, shade = 0;
-    shade = .38 * (1 - Math.abs(sx));
-    if (t > LAND) {
-      var tau = t - LAND;
-      y = -3.6 * Math.exp(-8 * tau) * Math.abs(Math.sin(10 * tau));
-      var sq = .12 * Math.exp(-7 * tau) * Math.cos(16 * tau);
-      sx = 1 + sq; sy = 1 - sq; shade = 0;
-    }
-    // idle: while the app keeps loading, the coin turns over now and then
-    if (t > INTRO + .25) {
-      var c = ((t - INTRO - .25) % CYCLE) / CYCLE, p = inOut(clamp(c / .55));
-      sx = Math.cos(2 * Math.PI * p); shade = .34 * (1 - Math.abs(sx)); y = 0; sy = 1;
-    }
-    $('tl-coin').setAttribute('transform', 'translate(50 ' + (48 + y) + ')');
-    $('tl-spin').setAttribute('transform', 'scale(' + (Math.max(Math.abs(sx), .04) * (sx < 0 ? -1 : 1)) + ' ' + sy + ')');
-    $('tl-shade').style.opacity = shade;
-    $('tl-coin').style.opacity = t < .04 ? 0 : 1;
-    // braces spring in from both sides and draw themselves; a short pinch when they lock
-    var tb = t - .28, s = spring(tb, .5, 11), dx = tb < 0 ? 30 : 30 * s, rot = tb < 0 ? 12 : 12 * s;
-    var pc = prog(t, .8, .98);
-    if (pc > 0 && pc < 1) dx += 1.4 * Math.sin(Math.PI * pc);
-    $('tl-hl').setAttribute('transform', 'translate(' + (-dx) + ' 0) rotate(' + (-rot) + ' 22 ' + 48 + ')');
-    $('tl-hr').setAttribute('transform', 'translate(' + dx + ' 0) rotate(' + rot + ' 78 ' + 48 + ')');
-    var pd = outCubic(prog(t, .28, .78));
-    $('tl-pl').style.strokeDashoffset = $('tl-pr').style.strokeDashoffset = 1 - pd;
-    $('tl-hl').style.opacity = $('tl-hr').style.opacity = outCubic(prog(t, .28, .38));
-    var pn = outCubic(prog(t, .5, .7));
-    nibs.forEach(function (n) { n.style.opacity = pn; });
-    // ring wave and sheen at the lock moment
-    var pr = prog(t, .82, 1.5);
-    $('tl-ring').setAttribute('r', 14.5 + 20 * outCubic(pr));
-    $('tl-ring').style.strokeWidth = 2.4 * (1 - outCubic(pr));
-    $('tl-ring').style.opacity = pr > 0 && pr < 1 ? .8 * (1 - inQuad(pr)) : 0;
-    var ps = prog(t, .86, 1.35);
-    $('tl-sheen').setAttribute('transform', 'translate(' + (-30 + 60 * outCubic(ps)) + ' 0) rotate(22)');
-    $('tl-sheen').style.opacity = ps > 0 && ps < 1 ? 1 : 0;
-    // wordmark letters rise on a spring
-    letters.forEach(function (el, i) {
-      var tl = t - (.92 + i * .045), yy = tl < 0 ? 16 : 16 * spring(tl, .62, 13);
-      el.setAttribute('transform', 'translate(0 ' + yy + ')');
-      el.style.opacity = outCubic(prog(tl, 0, .2));
-    });
-  }
-
-  var t0 = performance.now(), raf = 0, exiting = null;
-  var frame = function (now) { render(reduce ? INTRO : (now - t0) / 1000); raf = requestAnimationFrame(frame); };
-  if (/capture/.test(location.search)) render(0); else raf = requestAnimationFrame(frame);
-
-  function exit() {
-    return new Promise(function (resolve) {
-      var svg = root.querySelector('svg'), a = performance.now();
-      var step = function (now) {
-        var p = clamp((now - a) / 380), e = inOut(p);
-        svg.style.transform = 'scale(' + (1 + .07 * e) + ')';
-        svg.style.opacity = 1 - e;
-        root.style.opacity = 1 - inQuad(p);
-        if (p < 1) requestAnimationFrame(step);
-        else { cancelAnimationFrame(raf); root.remove(); resolve(); }
-      };
-      requestAnimationFrame(step);
-    });
-  }
-
-  window.__tlSplash = {
-    render: render, DURATION: 3.2,
-    finish: function () {
-      if (exiting) return exiting;
-      var left = reduce ? 0 : Math.max(0, INTRO * 1000 - (performance.now() - t0));
-      exiting = new Promise(function (r) { setTimeout(r, left); }).then(exit);
-      return exiting;
-    },
-  };
-})();</script>
-    <!-- splash:end -->
+    <!-- splash: the shield draws itself, fills, the name appears; while the app loads the shield breathes -->
+    <style>
+      #tl-splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#000;transition:opacity .35s ease,transform .35s ease}
+      #tl-splash.out{opacity:0;transform:scale(1.04)}
+      #tl-splash svg{width:84px;height:96px;overflow:visible}
+      #tl-splash path{fill:#fff;fill-opacity:0;stroke:#fff;stroke-width:12;stroke-linejoin:round;stroke-dasharray:var(--len,3000);stroke-dashoffset:var(--len,3000);
+        animation:tl-draw 1.05s cubic-bezier(.6,0,.2,1) forwards,tl-fill .45s .85s ease forwards}
+      #tl-splash path+path{animation-delay:.1s,.95s}
+      #tl-splash .w{font:600 15px/1 'Unbounded','Manrope',system-ui,sans-serif;color:#fff;letter-spacing:.4em;opacity:0;animation:tl-word .6s 1s cubic-bezier(.2,.8,.2,1) forwards}
+      #tl-splash.idle svg{animation:tl-breathe 1.3s ease-in-out infinite}
+      @keyframes tl-draw{to{stroke-dashoffset:0}}
+      @keyframes tl-fill{to{fill-opacity:1;stroke-width:0}}
+      @keyframes tl-word{to{opacity:1;letter-spacing:.08em}}
+      @keyframes tl-breathe{50%{transform:scale(.92)}}
+      @media (prefers-reduced-motion:reduce){#tl-splash path{animation:none;fill-opacity:1;stroke-width:0}#tl-splash .w{animation:none;opacity:1;letter-spacing:.08em}#tl-splash.idle svg{animation:none}}
+    </style>
+    <div id="tl-splash" role="status" aria-label="Загрузка IT Trusty">
+      <svg viewBox="285 268 684 778" aria-hidden="true">
+        <path d="M285 468C285 432 300 412 338 401C360.8 393.5 452.9 366.4 597 280C615 269 638 269 656 280C800.1 366.4 892.2 393.5 915 401C953 412 968 432 968 468L968 492C945 476 920 470 890 470C706 470 548 704 372 704C325 704 285 685 285 635Z"/>
+        <path d="M325.3 766C338 777 370 783 400 783C608 783 738 547 890 547C935 547 968 560 968 600C968 880 640 1038 640 1038C632 1044 621 1044 613 1038C613 1038 412.9 941.6 325.3 766Z"/>
+      </svg>
+      <div class="w">IT TRUSTY</div>
+    </div>
+    <script>
+      (function () {
+        var root = document.getElementById('tl-splash');
+        if (!root) return;
+        [].forEach.call(root.querySelectorAll('path'), function (p) { p.style.setProperty('--len', Math.ceil(p.getTotalLength())); });
+        var t0 = Date.now(), INTRO = 1500;
+        var idle = setTimeout(function () { root.classList.add('idle'); }, INTRO + 150);
+        window.__tlSplash = {
+          finish: function () {
+            return new Promise(function (resolve) {
+              setTimeout(function () {
+                clearTimeout(idle);
+                root.classList.add('out');
+                setTimeout(function () { root.remove(); resolve(); }, 360);
+              }, Math.max(0, INTRO - (Date.now() - t0)));
+            });
+          },
+        };
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,4 +1,8 @@
-"""Picture cards for the bot (Pillow): menu banners and per-deal cards in the Trusty style."""
+"""Picture cards for the bot (Pillow), 1200×630: the green welcome banner and dark cards for deals and offers.
+
+Style: graphite background, white text, one green (#176345) for plates. Unbounded for amounts and headings,
+Manrope for text, the shield-with-a-wave mark.
+"""
 import io
 import os
 from functools import lru_cache
@@ -7,22 +11,20 @@ from PIL import Image, ImageDraw, ImageFont
 
 ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 W, H = 1200, 630
-EMERALD, TETHER, INK, MUTED, BG, LINE, WHITE = "#178A66", "#26A17B", "#0D2C27", "#5E7A72", "#F2F5F3", "#DCE6E1", "#FFFFFF"
-AMBER, RED, BLUE = "#A8701A", "#C4472B", "#2F6DB5"
+BG, WHITE, MUTED, FAINT, LINE = "#111214", "#F2F3F5", "#8E9299", "#5E636B", "#26282C"
+EMERALD, BRAND_BG = "#176345", "#176345"
+RED_BG, RED_FG = "#3A1E1C", "#FF8A80"
+X0 = 72  # left margin
 
-STEPS = ["Оплата", "Работа", "Приёмка", "Выплата"]
+STEPS = ["Оплата", "Работа", "Проверка", "Выплата"]
 STEP_OF = {"awaiting_payment": 0, "in_work": 1, "review": 2, "dispute": 2, "done": 4, "refunded": 4, "cancelled": -1}
-STATUS = {
-    "awaiting_payment": ("Ожидает оплаты", AMBER, "#FBF1DF"), "in_work": ("В работе", BLUE, "#E5EEF9"),
-    "review": ("На приёмке", AMBER, "#FBF1DF"), "done": ("Завершена", EMERALD, "#E3F3EC"),
-    "dispute": ("Спор у арбитра", RED, "#FBE9E4"), "cancelled": ("Отменена", MUTED, "#ECF0EE"),
-    "refunded": ("Возврат заказчику", MUTED, "#ECF0EE"),
-}
+STATUS = {"awaiting_payment": "Ждёт оплаты", "in_work": "В работе", "review": "На проверке", "done": "Завершена",
+          "dispute": "Спор у арбитра", "cancelled": "Отменена", "refunded": "Возврат"}
 
 
-@lru_cache(maxsize=32)
-def font(size: int, weight: int = 400) -> ImageFont.FreeTypeFont:
-    f = ImageFont.truetype(os.path.join(ASSETS, "Onest.ttf"), size)
+@lru_cache(maxsize=48)
+def font(family: str, size: int, weight: int) -> ImageFont.FreeTypeFont:
+    f = ImageFont.truetype(os.path.join(ASSETS, f"{family}.ttf"), size)
     try:
         f.set_variation_by_axes([weight])
     except OSError:
@@ -30,10 +32,18 @@ def font(size: int, weight: int = 400) -> ImageFont.FreeTypeFont:
     return f
 
 
-@lru_cache(maxsize=4)
-def mark(size: int, light: bool) -> Image.Image:
-    name = "mark-light.png" if light else "mark-dark.png"
-    return Image.open(os.path.join(ASSETS, name)).convert("RGBA").resize((size, size), Image.LANCZOS)
+def man(size: int, weight: int = 500):
+    return font("Manrope", size, weight)
+
+
+def unb(size: int, weight: int = 700):
+    return font("Unbounded", size, weight)
+
+
+@lru_cache(maxsize=8)
+def mark(height: int) -> Image.Image:
+    m = Image.open(os.path.join(ASSETS, "mark.png")).convert("RGBA")
+    return m.resize((round(m.width * height / m.height), height), Image.LANCZOS)
 
 
 def _jpeg(img: Image.Image) -> bytes:
@@ -42,127 +52,133 @@ def _jpeg(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
-def _wrap(d: ImageDraw.ImageDraw, text: str, f, width: int, lines: int) -> list[str]:
-    words, out, cur = text.split(), [], ""
-    for w in words:
-        t = f"{cur} {w}".strip()
-        if d.textlength(t, font=f) <= width:
-            cur = t
-        else:
-            if cur:
-                out.append(cur)
-            cur = w
-        if len(out) == lines:
-            break
-    if cur and len(out) < lines:
-        out.append(cur)
-    if len(out) == lines and " ".join(out) != " ".join(words):
-        last = out[-1]
-        while last and d.textlength(last + "…", font=f) > width:
-            last = last[:-1]
-        out[-1] = last.rstrip() + "…"
-    return out
-
-
-def _pill(d: ImageDraw.ImageDraw, x: int, y: int, text: str, fg: str, bg: str, size: int = 26) -> int:
-    f = font(size, 600)
-    w = int(d.textlength(text, font=f)) + 32
-    d.rounded_rectangle((x, y, x + w, y + size + 22), radius=12, fill=bg)
-    d.text((x + 16, y + 9), text, font=f, fill=fg)
-    return w
-
-
-def _side(img: Image.Image, d: ImageDraw.ImageDraw, label: str) -> None:
-    d.rectangle((0, 0, 380, H), fill=EMERALD)
-    m = mark(210, True)
-    img.paste(m, (85, 150), m)
-    f = font(30, 700)
-    tw = d.textlength("TRUSTY", font=f)
-    d.text(((380 - tw) / 2, 392), "TRUSTY", font=f, fill=WHITE)
-    f2 = font(22, 500)
-    tw = d.textlength(label, font=f2)
-    d.text(((380 - tw) / 2, 440), label, font=f2, fill="#CFEDE2")
-
-
 def amount_text(x) -> str:
     s = f"{float(x):,.2f}".replace(",", " ").replace(".", ",")
     return s[:-3] if s.endswith(",00") else s
 
 
-def deal_card(deal_id: int, title: str, amount, total, status: str, due: str, asset: str = "USDT") -> bytes:
+def _fit(d: ImageDraw.ImageDraw, text: str, f, width: int) -> str:
+    if d.textlength(text, font=f) <= width:
+        return text
+    while text and d.textlength(text + "…", font=f) > width:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
+def _header(img: Image.Image, d: ImageDraw.ImageDraw, right: str | None = None, plate: str | None = None) -> None:
+    m = mark(52)
+    img.paste(m, (X0, 62), m)
+    d.text((X0 + m.width + 18, 88), "IT TRUSTY", font=unb(26, 600), fill=WHITE, anchor="lm")
+    if plate:
+        f = man(24, 800)
+        w = int(d.textlength(plate, font=f)) + 52
+        d.rounded_rectangle((W - X0 - w, 60, W - X0, 116), radius=28, fill=EMERALD)
+        d.text((W - X0 - w / 2, 88), plate, font=f, fill=WHITE, anchor="mm")
+    elif right:
+        d.text((W - X0, 88), right, font=man(28, 700), fill=MUTED, anchor="rm")
+
+
+def _amount(d: ImageDraw.ImageDraw, amount, asset: str, strike=None, y: int = 300) -> None:
+    """Big number on the baseline y, the currency after it, an old price crossed out."""
+    big, cur = unb(160, 700), unb(42, 600)
+    text = amount_text(amount)
+    d.text((X0, y), text, font=big, fill=WHITE, anchor="ls")
+    x = X0 + d.textlength(text, font=big) + 22
+    d.text((x, y), asset, font=cur, fill=MUTED, anchor="ls")
+    if strike is not None:
+        x += d.textlength(asset, font=cur) + 28
+        old = amount_text(strike)
+        f = man(46, 600)
+        d.text((x, y), old, font=f, fill=FAINT, anchor="ls")
+        w = d.textlength(old, font=f)
+        d.line((x - 2, y - 17, x + w + 2, y - 17), fill=FAINT, width=4)
+
+
+def _clock(d: ImageDraw.ImageDraw, cx: int, cy: int, r: int, color: str) -> None:
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=color, width=4)
+    d.line((cx, cy, cx, cy - r + 8), fill=color, width=4)
+    d.line((cx, cy, cx + r - 9, cy + 4), fill=color, width=4)
+
+
+def deal_card(deal_id: int, title: str, amount, total, status: str, asset: str = "USDT") -> bytes:
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
-    _side(img, d, "гарант сделок")
-    x = 440
-    d.text((x, 62), f"СДЕЛКА #{deal_id}", font=font(26, 600), fill=MUTED)
-    y = 106
-    for line in _wrap(d, title, font(50, 700), W - x - 60, 2):
-        d.text((x, y), line, font=font(50, 700), fill=INK)
-        y += 62
-    y += 14
-    d.text((x, y), f"{amount_text(amount)} {asset}", font=font(76, 700), fill=INK)
-    y += 100
-    label, fg, bg = STATUS.get(status, (status, MUTED, "#ECF0EE"))
-    w = _pill(d, x, y, label, fg, bg)
+    _header(img, d, right=f"Сделка #{deal_id}")
+    _amount(d, amount, asset)
+    # status plate + title
+    label = STATUS.get(status, status)
+    f = man(26, 800)
+    w = int(d.textlength(label, font=f)) + 52
+    bg, fg = (RED_BG, RED_FG) if status == "dispute" else (LINE, WHITE) if status in ("cancelled", "refunded") else (EMERALD, WHITE)
+    d.rounded_rectangle((X0, 354, X0 + w, 410), radius=28, fill=bg)
+    d.text((X0 + w / 2, 382), label, font=f, fill=fg, anchor="mm")
+    d.text((X0 + w + 24, 382), _fit(d, title, man(34, 700), W - X0 - (X0 + w + 24)), font=man(34, 700), fill=WHITE, anchor="lm")
     if status == "awaiting_payment" and total:
-        d.text((x + w + 18, y + 12), f"к оплате {amount_text(total)} {asset}", font=font(26, 500), fill=MUTED)
-    elif due and status in ("in_work", "review"):
-        d.text((x + w + 18, y + 12), f"срок до {due}", font=font(26, 500), fill=MUTED)
-    # progress: payment -> work -> acceptance -> payout
+        d.text((X0, 452), f"К оплате {amount_text(total)} {asset} с комиссией гаранта", font=man(26, 600), fill=MUTED, anchor="lm")
+    # progress: four bars with names
     step = STEP_OF.get(status, 0)
-    y0, x0, x1 = 520, x + 14, W - 80
-    gap = (x1 - x0) / (len(STEPS) - 1)
-    d.line((x0, y0, x1, y0), fill=LINE, width=4)
-    if step > 0:
-        d.line((x0, y0, x0 + gap * min(step, len(STEPS) - 1), y0), fill=EMERALD, width=4)
-    for i, name in enumerate(STEPS):
-        cx = x0 + gap * i
-        done, cur = i < step, i == step
-        r = 13 if cur else 10
-        d.ellipse((cx - r, y0 - r, cx + r, y0 + r), fill=EMERALD if done or cur else WHITE,
-                  outline=EMERALD if done or cur else LINE, width=4)
-        f = font(23, 600 if cur else 500)
-        tw = d.textlength(name, font=f)
-        d.text((cx - tw / 2, y0 + 24), name, font=f, fill=INK if (done or cur) else MUTED)
+    if step >= 0:
+        gap, y = 16, 520
+        bw = (W - 2 * X0 - gap * 3) / 4
+        for i, name in enumerate(STEPS):
+            x = X0 + i * (bw + gap)
+            on = i < step or (i == step and status != "dispute")
+            color = RED_FG if (status == "dispute" and i == step) else EMERALD if on else LINE
+            d.rounded_rectangle((x, y, x + bw, y + 10), radius=5, fill=color)
+            d.text((x, y + 30), name, font=man(25, 700), fill=WHITE if i <= step else FAINT, anchor="lt")
     return _jpeg(img)
+
+
+def offer_card(amount: int, prev_amount: int | None, title: str, sender: str, days: int, left: str, asset: str = "USDT") -> bytes:
+    img = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(img)
+    _header(img, d, plate="ВСТРЕЧНАЯ ЦЕНА" if prev_amount else "ОФФЕР")
+    _amount(d, amount, asset, strike=prev_amount)
+    d.text((X0, 382), _fit(d, title, man(40, 700), W - 2 * X0), font=man(40, 700), fill=WHITE, anchor="lm")
+    d.text((X0, 548), _fit(d, f"{sender} · срок {days} дн.", man(30, 600), 700), font=man(30, 600), fill=MUTED, anchor="lm")
+    f = man(32, 700)
+    tw = d.textlength(left, font=f)
+    d.text((W - X0, 548), left, font=f, fill=WHITE, anchor="rm")
+    _clock(d, int(W - X0 - tw - 34), 548, 17, WHITE)
+    return _jpeg(img)
+
+
+# The welcome banner copies the brand banner: green field, white shield, "IT TRUSTY" and the four lines under it.
+BANNER_LINES = ["Безопасный сервис для проведения сделок.", "Простой и удобный инструмент для прозрачного",
+                "сотрудничества, фиксации договорённостей", "и комфортной работы на каждом этапе."]
 
 
 @lru_cache(maxsize=8)
 def banner(kind: str) -> bytes:
-    """Static menu pictures: welcome | how | help | deals."""
+    """Menu pictures: welcome (the green banner) | how | help | deals."""
+    if kind == "welcome":
+        img = Image.new("RGB", (W, H), BRAND_BG)
+        d = ImageDraw.Draw(img)
+        k = 0.946  # the brand banner is 1230×666
+        ox = (W - 855 * k) / 2 - 222 * k
+        m = mark(round(244 * k))
+        img.paste(m, (round(ox + 222 * k), round(222 * k)), m)
+        d.text((ox + 482 * k, 270 * k), "IT TRUSTY", font=man(round(66 * k), 600), fill=WHITE, anchor="ls")
+        for i, line in enumerate(BANNER_LINES):
+            d.text((ox + 482 * k, (364 + i * 33.5) * k), line, font=man(round(26 * k), 500), fill=WHITE, anchor="ls")
+        return _jpeg(img)
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
-    if kind == "welcome":
-        img.paste(Image.new("RGB", (W, H), EMERALD))
-        d = ImageDraw.Draw(img)
-        m = mark(250, True)
-        img.paste(m, (120, 190), m)
-        d.text((430, 200), "TRUSTY", font=font(96, 700), fill=WHITE)
-        d.text((434, 320), "Гарант сделок с разработчиками", font=font(40, 500), fill="#DDF3EA")
-        d.text((434, 378), "Оплата в USDT хранится у гаранта до приёмки", font=font(30, 400), fill="#BFE6D7")
-        return _jpeg(img)
-    titles = {"how": ("Как работает гарант", "4 шага, деньги под защитой"), "help": ("Правила и поддержка", "чтобы сделки проходили спокойно"),
-              "deals": ("Мои сделки", "оплата, работа, приёмка, выплата")}
-    title, sub = titles.get(kind, ("Trusty", ""))
-    _side(img, d, "гарант сделок")
-    d.text((440, 70), title, font=font(54, 700), fill=INK)
-    d.text((442, 140), sub, font=font(28, 500), fill=MUTED)
-    if kind == "how":
-        items = [("Условия", "сумма, срок и ТЗ фиксируются"), ("Оплата", "USDT хранятся у гаранта"),
-                 ("Работа", "исполнитель сдаёт в чате"), ("Выплата", "после приёмки или через 3 дня")]
-    elif kind == "help":
-        items = [("Только через Trusty", "оплата мимо гаранта не защищена"), ("Спор", "арбитр решает по переписке"),
-                 ("Блокировка", "30 дней, при повторе навсегда")]
-    else:
-        items = [("Оплата", "через @CryptoBot, в USDT"), ("Приёмка", "или спор, если что-то не так"),
-                 ("Выплата", "исполнителю после приёмки")]
-    y = 222
+    titles = {"how": ("Как работает гарант", [("Договоритесь о цене", "оффер с суммой и сроком, можно торговаться"),
+                                               ("Оплатите в гарант", "USDT в @CryptoBot, деньги заморожены"),
+                                               ("Примите работу", "исполнитель получает оплату")]),
+              "help": ("Правила", [("Только через IT Trusty", "сделки мимо гаранта не защищены"),
+                                   ("Спор", "арбитр решает по переписке и доказательствам"),
+                                   ("Блокировка", "30 дней, при повторе навсегда")]),
+              "deals": ("Мои сделки", [("Оплата", "через @CryptoBot, в USDT"), ("Проверка", "или спор, если что-то не так"),
+                                       ("Выплата", "исполнителю после приёмки")])}
+    title, items = titles.get(kind, ("IT Trusty", []))
+    _header(img, d)
+    d.text((X0, 215), title, font=unb(50, 700), fill=WHITE, anchor="ls")
+    y = 300
     for i, (h, t) in enumerate(items):
-        d.ellipse((442, y + 2, 490, y + 50), fill=EMERALD)
-        n = str(i + 1)
-        f = font(26, 700)
-        d.text((466 - d.textlength(n, font=f) / 2, y + 9), n, font=f, fill=WHITE)
-        d.text((512, y - 2), h, font=font(32, 700), fill=INK)
-        d.text((512, y + 38), t, font=font(25, 400), fill=MUTED)
-        y += 96
+        d.text((X0, y), f"{i + 1:02d}", font=unb(28, 600), fill=FAINT, anchor="lt")
+        d.text((X0 + 80, y - 4), h, font=man(34, 700), fill=WHITE, anchor="lt")
+        d.text((X0 + 80, y + 42), t, font=man(26, 500), fill=MUTED, anchor="lt")
+        y += 104
     return _jpeg(img)
