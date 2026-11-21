@@ -123,7 +123,13 @@ async def main() -> None:
         assert t["amount"] == "90.00" and t["user_id"] == 3002 and len(mock.transfers) == 1
         ok(await h.post(f"/api/deals/{d1}/accept", headers=A), 400)
         ok(await h.post(f"/api/deals/{d1}/review", headers=A, json={"rating": 5, "text": "Отлично"}))
-        ok(await h.post(f"/api/deals/{d1}/review", headers=A, json={"rating": 4}), 400)
+        ok(await h.post(f"/api/deals/{d1}/review", headers=A, json={"rating": 4}), 400)  # once per side
+        deal = ok(await h.get(f"/api/deals/{d1}", headers=B))
+        assert deal["actions"]["review"] and deal["review"]["rating"] == 5 and deal["clientReview"] is None
+        # the developer rates the client too; it does not change the developer's own rating
+        deal = ok(await h.post(f"/api/deals/{d1}/review", headers=B, json={"rating": 3, "text": "Долго отвечал"}))
+        assert deal["clientReview"]["rating"] == 3 and not deal["actions"]["review"]
+        ok(await h.post(f"/api/deals/{d1}/review", headers=ADM, json={"rating": 1}), 400)  # not a party
         dev = ok(await h.get("/api/devs/3002", headers=A))
         assert dev["deals"] == 1 and dev["rating"] == 5 and dev["volume"] == 90
 

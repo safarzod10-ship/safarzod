@@ -17,7 +17,7 @@ import Projects from './screens/Projects';
 import ProjectView from './screens/ProjectView';
 import { StoreProvider, useStore } from './store';
 import { haptic, hideSplash, tg } from './tg';
-import { Cell, Done, IconTile, MARK_LO, MARK_UP, Sheet } from './ui';
+import { Cell, Done, IconTile, MARK_LO, MARK_UP, MARK_WAVE, Sheet } from './ui';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SCREENS: Record<string, ComponentType<any>> = {
@@ -34,24 +34,38 @@ const TABS: { key: Tab; label: string; icon: IconName }[] = [
   { key: 'profile', label: 'Профиль', icon: 'profile' },
 ];
 
-/** floating island with four sections and a separate green "+" */
+/** floating island with four sections and a separate green "+".
+ *  Like Telegram: press anywhere on it and slide the finger; the section under the finger opens on release. */
 function Island() {
   const nav = useNav();
   const { chats, role } = useStore();
   const [menu, setMenu] = useState(false);
-  const unread = chats.reduce((n, c) => n + c.unread, 0);
+  const [drag, setDrag] = useState<number | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const unread = chats.reduce((n, c) => n + c.unread + (c.offersWaiting ?? 0), 0);
   const active = nav.tab === 'projects' ? 1 : TABS.findIndex((t) => t.key === nav.tab);
+  const shown = drag ?? active;
   const go = (fn: () => void) => { setMenu(false); fn(); };
+  const at = (x: number) => {
+    const r = box.current!.getBoundingClientRect();
+    return Math.max(0, Math.min(TABS.length - 1, Math.floor(((x - r.left - 6) / (r.width - 12)) * TABS.length)));
+  };
+  // the search tab holds both executors and projects: coming back to it keeps whichever was open
+  const open = (i: number) => nav.setTab(i === 1 && nav.tab === 'projects' ? 'projects' : TABS[i].key);
   return (
     <>
       <nav className="nav" aria-label="Разделы">
         <div className="nav-in">
-          <div className="island">
-            <span className="glow" style={{ left: `calc(6px + (100% - 12px) / 4 * ${active} + ((100% - 12px) / 4 - 48px) / 2)` }} />
+          <div ref={box} className={`island ${drag !== null ? 'dragging' : ''}`}
+            onPointerDown={(e) => { box.current!.setPointerCapture(e.pointerId); setDrag(at(e.clientX)); }}
+            onPointerMove={(e) => { if (drag === null) return; const i = at(e.clientX); if (i !== drag) { haptic.select(); setDrag(i); } }}
+            onPointerUp={(e) => { if (drag === null) return; const i = at(e.clientX); setDrag(null); open(i); }}
+            onPointerCancel={() => setDrag(null)}>
+            <span className="glow" style={{ left: `calc(6px + (100% - 12px) / 4 * ${shown} + ((100% - 12px) / 4 - 48px) / 2)` }} />
             {TABS.map((t, i) => (
-              <button key={t.key} className={`tab ${i === active ? 'on' : ''}`} onClick={() => nav.setTab(t.key)}
+              <button key={t.key} className={`tab ${i === shown ? 'on' : ''}`} onClick={(e) => { if (e.detail === 0) open(i); }}
                 aria-current={i === active ? 'page' : undefined} aria-label={t.label}>
-                <Icon name={t.icon} size={23} strokeWidth={i === active ? 2.1 : 1.75} />
+                <Icon name={t.icon} size={23} strokeWidth={i === shown ? 2.1 : 1.75} />
                 {t.key === 'chats' && unread > 0 && <span className="badge num">{unread}</span>}
               </button>
             ))}
@@ -139,18 +153,17 @@ function usePull(enabled: boolean, onRefresh: () => Promise<unknown>) {
   return { pull, busy };
 }
 
+/** pulling opens the shield along its wave and draws the green line; while refreshing it keeps splitting and closing */
 function PullMark({ pull, busy }: { pull: number; busy: boolean }) {
   if (!pull && !busy) return null;
-  const p = busy ? 1 : Math.min(1, pull / 70);
+  const p = busy ? 0 : Math.min(1, pull / 70);
   return (
-    <div className={`ptr ${busy ? 'busy' : ''}`} aria-hidden="true" style={{ opacity: Math.min(1, pull / 30 + (busy ? 1 : 0)) }}>
-      <div className="ptr-mark">
-        <svg viewBox="285 268 684 778" width="36" height="41"><path d={MARK_UP} fill="#1c1d20" /><path d={MARK_LO} fill="#1c1d20" /></svg>
-        <svg viewBox="285 268 684 778" width="36" height="41">
-          <defs><clipPath id="ptr-clip"><path d={MARK_UP} /><path d={MARK_LO} /></clipPath></defs>
-          <g clipPath="url(#ptr-clip)"><rect className="ptr-fill" x="285" y={268 + 778 * (1 - p)} width="684" height="778" fill="#2b9a6c" /></g>
-        </svg>
-      </div>
+    <div className="ptr" aria-hidden="true" style={{ opacity: busy ? 1 : Math.min(1, pull / 30) }}>
+      <svg viewBox="250 200 760 900" width="38" height="45" className={`split ${busy ? 'run' : ''}`}>
+        <path className="up" fill="#f2f3f5" d={MARK_UP} style={busy ? undefined : { transform: `translateY(${-72 * p}px)` }} />
+        <path className="lo" fill="#f2f3f5" d={MARK_LO} style={busy ? undefined : { transform: `translateY(${72 * p}px)` }} />
+        <path className="wave" d={MARK_WAVE} style={busy ? undefined : { strokeDashoffset: 770 * (1 - p) }} />
+      </svg>
     </div>
   );
 }

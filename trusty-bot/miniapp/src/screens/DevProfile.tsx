@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { RESULT_LABEL, plural, responseTime, seen, usdt, type DealResult } from '../data';
+import { RESULT_LABEL, plural, responseTime, seen, type DealResult } from '../data';
 import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Actions, Avatar, Cell, IconTile, Info, Note, Pill, Rating, Section, Sheet, Skeleton, Top, Verified } from '../ui';
+import { Actions, Avatar, Cell, IconTile, Info, Note, Pill, Rating, Section, Sheet, Loader, Top, Verified } from '../ui';
 import { DevStatus } from './Devs';
 
 const RESULT_TONE: Record<DealResult, 'green' | 'amber' | 'blue' | 'red'> = {
@@ -20,13 +20,12 @@ export default function DevProfile({ id }: { id: string }) {
   if (!d) {
     return (
       <div className="screen no-tabs"><Top title="" small />
-        {missing ? <div className="empty">Профиль не найден или ещё на проверке.</div> : <Skeleton rows={4} />}</div>
+        {missing ? <div className="empty">Профиль не найден или ещё на проверке.</div> : <Loader label="Загружаем профиль" />}</div>
     );
   }
   const banned = live ? d.banned : members.find((m) => m.id === id)?.ban;
   const self = isMe(d.id);
   const online = d.lastSeenMin <= 5;
-  const vol = d.volume >= 1000 ? `${(d.volume / 1000).toFixed(1)}k` : String(d.volume);
 
   const write = async (offer = false) => {
     try { nav.open('chats', 'chat', { id: await openChat(d.id), offer }); } catch { /* toast shown */ }
@@ -68,23 +67,14 @@ export default function DevProfile({ id }: { id: string }) {
           <div className="stat"><b>{d.rating.toFixed(1)}</b><span>рейтинг</span></div>
           <div className="stat"><b>{d.deals}</b><span>{plural(d.deals, 'сделка', 'сделки', 'сделок')}</span></div>
           <div className="stat"><b>{d.onTime}%</b><span>в срок</span></div>
-          <div className="stat"><b>{vol}</b><span>USDT оборот</span></div>
+          <div className="stat"><b>{d.disputes}</b><span>{plural(d.disputes, 'спор', 'спора', 'споров')}</span></div>
         </div>
       )}
 
-      <Section title="Гарантии">
-        <div className="group">
-          <Cell icon lead={<IconTile name="shield" />} title={d.verified ? 'Анкета проверена' : 'Анкета не проверена'} sub={d.verified ? 'Модератор IT Trusty проверил профиль' : 'Профиль ещё не прошёл модерацию'} />
-          {d.github && <Cell icon lead={<IconTile name="github" />} title="GitHub" sub={`github.com/${d.github}`} />}
-          {d.deposit && <Cell icon lead={<IconTile name="coin" />} title={`Залог ${usdt(d.deposit)}`} sub="Списывается в пользу заказчика при обмане" />}
-          <Cell icon lead={<IconTile name="flag" />} title={`Споры: ${d.disputes}`}
-            sub={d.disputes ? `проиграно ${d.disputesLost} из ${d.disputes}` : 'ни одного спора'} />
-        </div>
-      </Section>
-
       <Section title="О себе">
         <div className="text">{d.about}</div>
-        <div className="tags mt-s">{d.stack.map((s) => <span className="tag" key={s}>{s}</span>)}</div>
+        <div className="tags mt-s">{d.stack.map((s) => <span className="tag" key={s}>{s}</span>)}
+          {d.github && <a className="tag" href={`https://github.com/${d.github}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>GitHub ↗</a>}</div>
       </Section>
 
       {d.portfolio.length > 0 && (
@@ -110,7 +100,6 @@ export default function DevProfile({ id }: { id: string }) {
             ))}
           </div>
         ) : <div className="text muted small">Сделок через IT Trusty пока не было.</div>}
-        <p className="hint mt-s">Суммы показаны диапазоном, имена заказчиков сокращены.</p>
       </Section>
 
       <div className="small muted center mt">В IT Trusty с {d.joined}</div>

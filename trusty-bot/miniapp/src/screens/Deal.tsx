@@ -4,7 +4,7 @@ import { DEAL_STATUS, amt, dateTime, type Deal } from '../data';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { onReturn, openTg } from '../tg';
-import { Actions, Amount, Avatar, Cell, Field, IconTile, Info, Note, Pill, Section, Sheet, Skeleton, Success, Top, WaitPay } from '../ui';
+import { Actions, Amount, Avatar, Cell, Field, IconTile, Info, Loader, Note, Pill, Section, Sheet, Skeleton, Success, Top, WaitPay } from '../ui';
 import { Icon, type IconName } from '../icons';
 
 const PAY_LABEL: Record<string, string> = { sent: 'Отправлено', check: 'Чек', pending: 'В обработке', failed: 'Повторяем', paid: 'Оплачено', active: 'Ожидает', expired: 'Истёк' };
@@ -108,7 +108,8 @@ export default function DealView({ id }: { id: number }) {
   const [busy, setBusy] = useState(false);
   const [paying, setPaying] = useState(false);
   const [waiting, setWaiting] = useState(false);
-  const [success, setSuccess] = useState<null | { title: string; amount: number; text: string }>(null);
+  const [success, setSuccess] = useState<null | { title: string; amount: number; text: string; then?: 'review' }>(null);
+  const [menu, setMenu] = useState(false);
   const d = deals.find((x) => x.id === id);
   const prev = useRef(d?.status);
 
@@ -130,7 +131,7 @@ export default function DealView({ id }: { id: number }) {
     prev.current = d.status;
   }, [d]);
 
-  if (!d) return <div className="screen no-tabs"><Top title="Сделка" small /><Skeleton rows={4} avatar={false} /></div>;
+  if (!d) return <div className="screen no-tabs"><Top title="Сделка" small /><Loader label="Загружаем сделку" /></div>;
   const a = d.actions;
   const asset = payCfg.asset;
   const other = d.role === 'dev' ? d.client : d.dev;
@@ -147,15 +148,22 @@ export default function DealView({ id }: { id: number }) {
     setPaying(true);
     try { await payDeal(d.id); setWaiting(true); } catch { /* toast shown */ } finally { setPaying(false); }
   };
+  // after accepting, the success screen leads straight into rating the executor
   const accept = () => run(async () => {
     await dealAct(d.id, 'accept');
-    setSuccess({ title: 'Работа принята', amount: d.amount, text: `Гарант отправил ${amt(d.amount)} ${asset} исполнителю.` });
+    setSuccess({ title: 'Работа принята', amount: d.amount, text: `Гарант отправил ${amt(d.amount)} ${asset} исполнителю.`, then: 'review' });
   });
+  const rateLabel = d.role === 'dev' ? 'Оценить заказчика' : 'Оценить исполнителя';
+  const extra = [
+    a.accept && d.status === 'in_work' && { label: 'Принять работу досрочно', icon: 'done' as const, onClick: () => setSheet('accept') },
+    a.dispute && a.cancel && { label: 'Отказаться от сделки', icon: 'failed' as const, onClick: () => setSheet('cancel'), danger: true },
+    d.role !== 'admin' && { label: 'Пожаловаться', icon: 'flag' as const, onClick: () => nav.push('complaint', { against: other.id, name: other.name, deal: d.id }) },
+  ].filter(Boolean) as { label: string; icon: IconName; onClick(): void; danger?: boolean }[];
 
   const primary = a.pay ? { label: `Оплатить ${amt(d.total)} ${asset}`, onClick: pay, loading: paying }
     : a.submit ? { label: 'Сдать работу', onClick: () => setSheet('submit') }
       : a.accept && d.status === 'review' ? { label: 'Принять работу', onClick: () => setSheet('accept') }
-        : a.review ? { label: 'Оставить отзыв', onClick: () => setSheet('review') }
+        : a.review ? { label: rateLabel, onClick: () => setSheet('review') }
           : a.resolve ? { label: 'Решить спор', onClick: () => setSheet('resolve') }
             : undefined;
   const chat = d.chatId ? { label: 'Чат', onClick: () => nav.push('chat', { id: d.chatId }) } : undefined;
@@ -165,7 +173,7 @@ export default function DealView({ id }: { id: number }) {
 
   return (
     <div className="screen no-tabs" style={{ paddingBottom: 'calc(150px + var(--safe-b))' }}>
-      <Top title={`Сделка #${d.id}`} small />
+      <Top title={`Сделка #${d.id}`} small right={extra.length ? <button className="icon-btn" aria-label="Ещё" onClick={() => setMenu(true)}><Icon name="dots" /></button> : undefined} />
       <div className="deal-head">
         <div className="t">{d.title}</div>
         <div className="sum num"><b>{amt(d.amount)}</b><small>{asset}</small></div>
@@ -200,17 +208,23 @@ export default function DealView({ id }: { id: number }) {
       </Section>
 
       {d.workNote && <Section title="Комментарий к сдаче"><div className="text">{d.workNote}</div></Section>}
-      {d.review && (
-        <Section title="Отзыв заказчика">
-          <div className="text"><span className="rating">{d.review.rating}.0 <Icon name="star" size={13} strokeWidth={0} /></span>{d.review.text && <div className="mt-s">{d.review.text}</div>}</div>
+      {(d.review || d.clientReview) && (
+        <Section title="Отзывы">
+          <div className="group">
+            {d.review && <Cell title={<>Заказчик об исполнителе <span className="rating">{d.review.rating}.0<Icon name="star" size={12} strokeWidth={0} /></span></>} sub={d.review.text || 'Без комментария'} />}
+            {d.clientReview && <Cell title={<>Исполнитель о заказчике <span className="rating">{d.clientReview.rating}.0<Icon name="star" size={12} strokeWidth={0} /></span></>} sub={d.clientReview.text || 'Без комментария'} />}
+          </div>
         </Section>
       )}
-
-      <div className="deal-links">
-        {a.accept && d.status === 'in_work' && <button onClick={() => setSheet('accept')}>Принять досрочно</button>}
-        {a.dispute && a.cancel && <button className="danger" onClick={() => setSheet('cancel')}>Отказаться</button>}
-        {d.role !== 'admin' && <button onClick={() => nav.push('complaint', { against: other.id, name: other.name, deal: d.id })}>Пожаловаться</button>}
-      </div>
+      <Sheet open={menu} onClose={() => setMenu(false)}>
+        <div className="group">
+          {extra.map((x) => (
+            <Cell key={x.label} lead={<IconTile name={x.icon} tone={x.danger ? 'red' : undefined} />}
+              title={<span style={x.danger ? { color: 'var(--red)' } : undefined}>{x.label}</span>}
+              onClick={() => { setMenu(false); x.onClick(); }} />
+          ))}
+        </div>
+      </Sheet>
 
       <Actions primary={primary ? { ...primary, disabled: busy } : chat} secondary={primary ? chat : undefined} link={link} />
 
@@ -233,7 +247,8 @@ export default function DealView({ id }: { id: number }) {
           : `Заказчику вернутся все ${amt(d.total)} ${asset}.`}</p>
         <button className="btn danger" disabled={busy} onClick={() => run(() => dealAct(d.id, 'cancel'), 'Сделка закрыта')}>Да, {d.status === 'awaiting_payment' ? 'отменить' : 'отказаться'}</button>
       </Sheet>
-      <Sheet open={sheet === 'review'} onClose={() => setSheet(null)} title="Отзыв об исполнителе">
+      <Sheet open={sheet === 'review'} onClose={() => setSheet(null)} title={rateLabel}>
+        <p className="muted small" style={{ margin: '0 0 4px' }}>Как прошла сделка с {other.name}? Отзыв увидят другие {d.role === 'dev' ? 'исполнители' : 'заказчики'}.</p>
         <Stars value={rating} onChange={setRating} />
         <Field label="Комментарий"><textarea className="textarea" style={{ minHeight: 80 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Что понравилось" /></Field>
         <button className="btn primary mt" disabled={busy} onClick={() => run(() => dealAct(d.id, 'review', { rating, text }), 'Спасибо за отзыв')}>Отправить</button>
@@ -249,7 +264,8 @@ export default function DealView({ id }: { id: number }) {
         <p className="hint">Комиссия гаранта остаётся у IT Trusty. Деньги уйдут сразу после решения.</p>
         <button className="btn primary mt" disabled={busy} onClick={() => run(() => resolveDeal(d.id, share, text), 'Спор решён')}>Решить и выплатить</button>
       </Sheet>
-      {success && <Success {...success} cur={asset} onDone={() => setSuccess(null)} />}
+      {success && <Success title={success.title} amount={success.amount} text={success.text} cur={asset}
+        onDone={() => { const next = success.then; setSuccess(null); if (next === 'review') setSheet('review'); }} />}
     </div>
   );
 }

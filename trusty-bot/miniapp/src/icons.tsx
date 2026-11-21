@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import {
   ArrowLeftRight, Ban, BadgeCheck, Bell, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, Circle, CircleCheck, CircleDot,
   CircleX, Clock3, Coins, Ellipsis, Eye, FileText, Flag, Github, Hammer, Handshake, House, Info, Link, Lock, MessageCircle, Minus,
-  Paperclip, Plus, Scale, Search, SendHorizontal, ShieldAlert, ShieldCheck, SlidersHorizontal, Star, Undo2, UserRound, Wallet, X, Zap,
+  Paperclip, Plus, Scale, Search, SendHorizontal, ShieldAlert, ShieldCheck, SlidersHorizontal, Star, Trash2, Undo2, UserRound, Wallet, X, Zap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -13,7 +13,7 @@ const I = {
   clock: Clock3, clip: Paperclip, send: SendHorizontal, flag: Flag, ban: Ban, check: Check, x: X, dots: Ellipsis, link: Link,
   bolt: Zap, coin: Coins, doc: FileText, filter: SlidersHorizontal, admin: ShieldAlert, github: Github, info: Info,
   swap: ArrowLeftRight, handshake: Handshake, hammer: Hammer, eye: Eye, wallet: Wallet, done: CircleCheck, current: CircleDot,
-  todo: Circle, failed: CircleX, undo: Undo2, scale: Scale, bell: Bell, lock: Lock, badge: BadgeCheck,
+  todo: Circle, failed: CircleX, undo: Undo2, scale: Scale, bell: Bell, lock: Lock, badge: BadgeCheck, trash: Trash2,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof I;

@@ -10,44 +10,9 @@ function Shield({ size = 120, float }: { size?: number; float?: boolean }) {
   return <span className={float ? 'ob-float' : undefined} style={{ display: 'inline-flex', color: 'var(--ink)' }}><Mark size={size} /></span>;
 }
 
-function FlowArt() {
-  return (
-    <div className="ob-flow" aria-hidden="true">
-      <div className="ob-node"><span className="ob-who">З</span><small>Заказчик</small></div>
-      <div className="ob-line"><i className="ob-move" /></div>
-      <div className="ob-node mid"><Shield size={56} /><small>Гарант</small></div>
-      <div className="ob-line"><i className="ob-move late" /></div>
-      <div className="ob-node"><span className="ob-who dev">И</span><small>Исполнитель</small></div>
-    </div>
-  );
-}
-
-function SafetyArt() {
-  return (
-    <div className="ob-cards" aria-hidden="true">
-      <div className="ob-card c1">
-        <b><Icon name="star" size={14} strokeWidth={0} /> 5.0 · сделка #1042</b>
-        <span>«Сделал за 5 дней вместо 7»</span>
-      </div>
-      <div className="ob-card c2">
-        <b><i className="ob-dot" /> Тимур · в сети</b>
-        <span>отвечает примерно за 15 минут</span>
-      </div>
-      <div className="ob-card c3">
-        <b><Icon name="ban" size={15} /> «Напиши мне в лс»</b>
-        <span>предупреждение и жалоба арбитру</span>
-      </div>
-    </div>
-  );
-}
-
 const SLIDES: { art: ReactNode; title: string; text: string }[] = [
-  { art: <Shield size={140} float />, title: 'Сделки с разработчиками без риска',
-    text: 'Оплата в USDT хранится у гаранта, пока заказчик не примет работу. Исполнитель видит, что деньги внесены, и спокойно работает.' },
-  { art: <FlowArt />, title: 'Как проходит сделка',
-    text: 'Цену и срок согласуете оффером в чате, можно торговаться. Заказчик вносит USDT, исполнитель сдаёт работу, после приёмки гарант переводит оплату.' },
-  { art: <SafetyArt />, title: 'Защита от обмана',
-    text: 'Отзывы только по сделкам через IT Trusty, видно, кто недавно был в сети. Споры решает арбитр по переписке, за обман аккаунт блокируют.' },
+  { art: <Shield size={140} float />, title: 'Сделки с исполнителями без риска',
+    text: 'Договоритесь о цене в чате и оплатите в USDT. Деньги у гаранта, пока вы не примете работу. Если что-то пошло не так, спор решает арбитр.' },
 ];
 
 export const ROLE_INFO: Record<Role, { title: string; text: string; icon: 'projects' | 'devs' }> = {

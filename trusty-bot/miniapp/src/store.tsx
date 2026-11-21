@@ -90,6 +90,8 @@ interface Store {
   declineOffer(chatId: string, offerId: number): Promise<void>;
   withdrawOffer(chatId: string, offerId: number): Promise<void>;
   typing(chatId: string): void;
+  /** removes the chat from my list (the other side keeps it) */
+  deleteChat(chatId: string): Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -100,13 +102,14 @@ const readOb = () => { try { return localStorage.getItem(OB_KEY) === '1'; } catc
 const demoName = tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Гость';
 
 function demoActions(status: Deal['status'], role: Deal['role'], reviewed: boolean): Deal['actions'] {
+  // both sides rate each other at the end; `reviewed` means I already did
   return {
     pay: role === 'client' && status === 'awaiting_payment',
     submit: role === 'dev' && status === 'in_work',
     accept: role === 'client' && (status === 'in_work' || status === 'review'),
     dispute: role !== 'admin' && (status === 'in_work' || status === 'review'),
     cancel: status === 'awaiting_payment' || (role === 'dev' && status === 'in_work'),
-    review: role === 'client' && status === 'done' && !reviewed,
+    review: role !== 'admin' && status === 'done' && !reviewed,
     resolve: role === 'admin' && status === 'dispute',
   };
 }
@@ -292,12 +295,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (action === 'accept') n = { ...d, status: 'done', finishedAt: t, result: 'ontime', payments: [{ id: Date.now(), kind: 'payout', amount: String(d.amount), status: 'sent', userId: d.dev.id, at: t }] };
       if (action === 'dispute') n = { ...d, status: 'dispute', disputeReason: String(body?.reason ?? ''), disputeBy: d.role === 'dev' ? 'dev' : 'client' };
       if (action === 'cancel') n = { ...d, status: d.status === 'awaiting_payment' ? 'cancelled' : 'refunded', finishedAt: t };
-      if (action === 'review') n = { ...d, review: { rating: Number(body?.rating ?? 5), text: String(body?.text ?? '') } };
+      if (action === 'review') {
+        const r = { rating: Number(body?.rating ?? 5), text: String(body?.text ?? '') };
+        n = d.role === 'dev' ? { ...d, clientReview: r } : { ...d, review: r };
+      }
       if (action === 'resolve') {
         const share = Number(body?.devShare ?? 50);
         n = { ...d, status: share > 0 ? 'done' : 'refunded', devShare: share, finishedAt: t, resolution: `Арбитр: исполнителю ${share}%, заказчику ${100 - share}%.` };
       }
-      n = { ...n, actions: demoActions(n.status, n.role, !!n.review) };
+      n = { ...n, actions: demoActions(n.status, n.role, !!(n.role === 'dev' ? n.clientReview : n.review)) };
       out = n;
       return n;
     }));
@@ -585,14 +591,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (live) api(`/chats/${chatId}/typing`, { method: 'POST' }).catch(() => {});
   }, []);
 
+  const deleteChat = useCallback(async (chatId: string) => {
+    if (live) await call(() => api(`/chats/${chatId}/delete`, { method: 'POST' }));
+    setChats((cs) => cs.filter((c) => c.id !== chatId));
+    haptic.success();
+    showToast('Чат удалён');
+  }, [call, showToast]);
+
   const value = useMemo<Store>(() => ({
     live, ready, error, banned, me, role: me.role, admin: me.isAdmin, onboarded: live ? !!me.onboarded : obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members,
     profiles, admins, devForm: me.devForm, toast,
     isMe, clientOf, devById, myBidFor, reload, setRole, setAdmin: setAdminDemo, submitDevForm, showToast, addProject, loadProject,
     addBid, startDeal, openChat, loadChat, refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint,
     takeComplaint, moderate, fetchDev, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment,
-    proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing,
-  }), [proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
+    proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deleteChat,
+  }), [deleteChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, deals, payCfg, finance, loadDeal, dealAct, payDeal, checkDeal, loadFinance, resolveDeal, retryPayment, ready, error, banned, me, obDemo, completeOnboarding, devs, projects, chats, complaints, myComplaints, members, profiles, admins, toast, isMe, clientOf,
     devById, myBidFor, reload, setRole, submitDevForm, showToast, addProject, loadProject, addBid, startDeal, openChat, loadChat,
     refreshChats, send, readChat, addComplaint, loadAdmin, ban, unban, rejectComplaint, takeComplaint, moderate, fetchDev]);
 

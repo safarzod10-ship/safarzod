@@ -95,7 +95,9 @@ export interface Deal {
   paidAt?: string | null; submittedAt?: string | null; reviewUntil?: string | null; finishedAt?: string | null;
   workNote?: string | null; disputeReason?: string | null; disputeBy?: 'client' | 'dev' | null; resolution?: string | null;
   devShare?: number | null; result?: string | null; projectId?: number | null; chatId?: string | null;
-  review?: { rating: number; text: string } | null; payments: DealPayment[];
+  review?: { rating: number; text: string } | null; // the client about the developer
+  clientReview?: { rating: number; text: string } | null; // the developer about the client
+  payments: DealPayment[];
   actions: { pay: boolean; submit: boolean; accept: boolean; dispute: boolean; cancel: boolean; review: boolean; resolve: boolean };
 }
 export interface PayConfig { enabled: boolean; asset: string; feePercent: number; reviewDays: number }

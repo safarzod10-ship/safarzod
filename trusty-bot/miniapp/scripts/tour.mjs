@@ -28,7 +28,7 @@ const shot = async (name, full = true) => {
   await page.screenshot({ path: path.join(outDir, `${String(++n).padStart(2, '0')}-${name}.png`), fullPage: full });
 };
 const tap = async (text, opts = {}) => { await page.getByText(text, { exact: false, ...opts }).first().click(); };
-const tab = async (label) => { await page.locator(`.island .tab[aria-label="${label}"]`).click(); };
+const tab = async (label) => { await page.waitForSelector('#tl-splash', { state: 'detached' }); await page.locator(`.island .tab[aria-label="${label}"]`).click({ force: true }); };
 const back = async () => { await page.getByLabel('Назад').first().click(); };
 const closeSheet = async () => { await page.locator('.backdrop').click({ position: { x: 10, y: 10 } }); await page.waitForTimeout(250); };
 
@@ -37,7 +37,6 @@ await page.waitForTimeout(600);
 await shot('splash', false);
 await page.waitForSelector('.ob');
 await shot('onboarding-1', false);
-for (const n of [2, 3]) { await page.getByRole('button', { name: 'Дальше' }).click(); await page.waitForTimeout(500); await shot(`onboarding-${n}`, false); }
 await page.getByRole('button', { name: 'Дальше' }).click();
 await shot('onboarding-role', false);
 await page.getByRole('radio', { name: /Заказчик/ }).click();
@@ -52,10 +51,13 @@ await tab('Поиск'); await shot('developers', false);
 await tap('Тимур Исмаилов'); await shot('developer-profile');
 await back();
 await page.locator('.seg button', { hasText: 'Проекты' }).first().click(); await shot('projects', false);
-await tap('Telegram-бот для записи в барбершоп'); await shot('project-view'); await back();
+await tap('Telegram-бот для записи в барбершоп'); await shot('project-view', false); await back();
 await tap('Мои проекты'); await tap('Mini App для заказов в кофейне'); await shot('my-project-bids');
 await back();
 await tab('Чаты'); await shot('chats', false);
+{ const r = await page.locator('.swipe-body').first().boundingBox(); await page.mouse.move(r.x + r.width - 40, r.y + r.height / 2); await page.mouse.down();
+  for (let dx = 0; dx <= 130; dx += 13) await page.mouse.move(r.x + r.width - 40 - dx, r.y + r.height / 2); await page.mouse.up(); await shot('chat-swipe', false);
+  await page.locator('.swipe-body').first().click(); await page.waitForTimeout(300); }
 await tap('Алина Ковалёва'); await page.waitForTimeout(300); await shot('chat-offer', false);
 await tap('Предложить свою цену'); await page.waitForTimeout(400); await shot('counter-sheet', false);
 await page.getByRole('button', { name: '+10' }).click(); await page.getByRole('button', { name: '+10' }).click(); await page.waitForTimeout(500); await shot('counter-odometer', false);
@@ -74,7 +76,7 @@ await back(); await back();
 await tab('Главная'); await page.getByLabel('Создать').click(); await tap('Опубликовать проект'); await shot('project-new');
 await back(); await page.getByLabel('Создать').click(); await tap('Как работает гарант'); await shot('guide');
 await back(); await tab('Профиль'); await tap('Я исполнитель'); await page.waitForTimeout(300); await shot('profile-dev');
-await page.getByText('Анкета', { exact: true }).first().click(); await page.waitForTimeout(300); await shot('dev-form-1');
+await page.getByText('Анкета исполнителя', { exact: true }).first().click(); await page.waitForTimeout(300); await shot('dev-form-1');
 
 console.log(JSON.stringify({ shots: n, errors }));
 await b.close();

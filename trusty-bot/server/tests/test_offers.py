@@ -126,7 +126,17 @@ async def main() -> None:
         assert ok(await h.get(f"/api/chats/{cid}", headers=B))["peerTyping"] is True
         assert ok(await h.get(f"/api/chats/{cid}", headers=A))["peerTyping"] is False
 
-        # 6. a banned peer cannot receive offers
+        # 6. delete a chat: gone from my list and its history hidden from me; the other side keeps it; a new message brings it back
+        ok(await h.post(f"/api/chats/{cid}/delete", headers=A))
+        assert all(c["id"] != cid for c in ok(await h.get("/api/chats", headers=A)))
+        assert any(c["id"] == cid for c in ok(await h.get("/api/chats", headers=B)))
+        assert ok(await h.get(f"/api/chats/{cid}", headers=A))["messages"] == []
+        ok(await h.post(f"/api/chats/{cid}/delete", headers=C), 404)
+        ok(await h.post(f"/api/chats/{cid}/messages", json={"text": "Вы тут?"}, headers=B))
+        back = [c for c in ok(await h.get("/api/chats", headers=A)) if c["id"] == cid]
+        assert back and back[0]["unread"] == 1 and [m["text"] for m in ok(await h.get(f"/api/chats/{cid}", headers=A))["messages"]] == ["Вы тут?"]
+
+        # 7. a banned peer cannot receive offers
         ok(await h.post("/api/admin/users/2002/ban", headers=ADM))
         r = ok(await h.post(f"/api/chats/{cid}/offers", json={**offer, "amount": 20}, headers=A), 400)
         assert "заблокирован" in r["detail"]

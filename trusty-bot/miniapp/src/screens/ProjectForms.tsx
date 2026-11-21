@@ -108,14 +108,18 @@ export function ProjectNew() {
 export function BidForm({ id }: { id: number }) {
   const nav = useNav();
   const { projects, myBidFor, addBid, showToast } = useStore();
-  const p = projects.find((x) => x.id === id)!;
+  const p = projects.find((x) => x.id === id);
   const prev = myBidFor(id);
   const [busy, setBusy] = useState(false);
-  const [price, setPrice] = useState(String(prev?.price ?? p.budgetMax));
-  const [days, setDays] = useState(String(prev?.days ?? p.days));
+  const [price, setPrice] = useState(String(prev?.price ?? p?.budgetMax ?? ''));
+  const [days, setDays] = useState(String(prev?.days ?? p?.days ?? 7));
   const [text, setText] = useState(prev?.text ?? '');
   const [sent, setSent] = useState(false);
-  const ok = +price > 0 && +days > 0 && text.trim().length >= 20;
+  const [tried, setTried] = useState(false);
+  const left = Math.max(0, 20 - text.trim().length);
+  const errs = { price: !(+price > 0) && 'Укажите цену', days: !(+days > 0) && 'Укажите срок', text: left > 0 && `Напишите ещё ${left} ${plural(left, 'символ', 'символа', 'символов')}` };
+  const ok = !Object.values(errs).some(Boolean);
+  if (!p) return <div className="screen no-tabs"><Top title="Отклик" small /><div className="empty">Проект не найден.</div></div>;
 
   if (sent) {
     return (
@@ -128,26 +132,25 @@ export function BidForm({ id }: { id: number }) {
 
   return (
     <div className="screen no-tabs">
-      <Top title="Отклик" sub={p.title} />
-      <Note tone="blue">Бюджет заказчика: {budget(p)}, срок {p.days} дн.</Note>
-      <div className="mt">
-        <div className="row2">
-          <Field label="Ваша цена"><div className="suffix"><input className="input num" inputMode="numeric" value={price}
-            onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))} /><span>USDT</span></div></Field>
-          <Field label="Срок"><div className="suffix"><input className="input num" inputMode="numeric" value={days}
-            onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))} /><span>дн.</span></div></Field>
-        </div>
+      <Top title="Отклик" sub={`${p.title} · бюджет ${budget(p)}, ${p.days} дн.`} />
+      <div className="row2">
+        <Field label="Ваша цена" error={tried && errs.price}><div className="suffix"><input className={`input num ${tried && errs.price ? 'bad' : ''}`} inputMode="numeric" value={price}
+          onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))} /><span>USDT</span></div></Field>
+        <Field label="Срок" error={tried && errs.days}><div className="suffix"><input className={`input num ${tried && errs.days ? 'bad' : ''}`} inputMode="numeric" value={days}
+          onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))} /><span>дн.</span></div></Field>
       </div>
       <div className="mt">
-        <Field label="Сопроводительное сообщение" hint="Почему вы подходите: похожие проекты, как будете делать.">
-          <textarea className="textarea" value={text} onChange={(e) => setText(e.target.value)}
+        <Field label="Сообщение заказчику" error={tried && errs.text} hint={left ? `Почему вы подходите. Ещё ${left} ${plural(left, 'символ', 'символа', 'символов')}` : 'Почему вы подходите: похожие проекты, как будете делать.'}>
+          <textarea className={`textarea ${tried && errs.text ? 'bad' : ''}`} value={text} onChange={(e) => setText(e.target.value)}
             placeholder="Делал похожий проект для…" />
         </Field>
       </div>
       <Actions primary={{
-        label: prev ? 'Обновить отклик' : 'Отправить отклик', disabled: !ok || busy,
+        label: prev ? 'Обновить отклик' : 'Отправить отклик', loading: busy,
         onClick: async () => {
-          if (!ok || busy) return;
+          setTried(true);
+          if (!ok) { showToast('Заполните выделенные поля'); return; }
+          if (busy) return;
           setBusy(true);
           try { await addBid({ projectId: id, price: +price, days: +days, text: text.trim() }); showToast('Отклик отправлен'); setSent(true); } catch { /* toast shown */ } finally { setBusy(false); }
         },

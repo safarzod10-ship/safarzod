@@ -148,9 +148,11 @@ class Payment(Base):
 
 
 class Review(Base):
+    """After a deal both sides rate each other once: the client rates the developer and the other way round."""
     __tablename__ = "reviews"
+    __table_args__ = (UniqueConstraint("deal_id", "author_id", name="uq_reviews_deal_author"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    deal_id: Mapped[int] = mapped_column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), unique=True)
+    deal_id: Mapped[int] = mapped_column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), index=True)
     author_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
     target_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     rating: Mapped[int] = mapped_column(Integer)
@@ -170,6 +172,9 @@ class Chat(Base):
     b_read: Mapped[int] = mapped_column(Integer, default=0)
     a_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     b_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "delete chat" for one side: messages up to this id are hidden from a (or b); new messages bring the chat back
+    a_hidden: Mapped[int | None] = mapped_column(Integer)
+    b_hidden: Mapped[int | None] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 

@@ -15,7 +15,7 @@ from aiogram.types import (BufferedInputFile, CallbackQuery, InlineKeyboardButto
                            MenuButtonWebApp, Message, TelegramObject, WebAppInfo)
 from sqlalchemy import desc, func, or_, select
 
-from . import cards, notify, offers
+from . import cards, escrow, notify, offers
 from .auth import upsert_user
 from .config import settings
 from .db import Session
@@ -187,6 +187,31 @@ async def cb_deals(cq: CallbackQuery):
     top = deals[0]
     card = cards.deal_card(top.id, top.title, top.amount, top.total, top.status, settings.asset)
     await show(cq, "deals", "\n\n".join(lines)[:1024], keyboard(*rows, [BACK]), card)
+
+
+@router.callback_query(F.data.startswith("r:"))
+async def cb_rate(cq: CallbackQuery):
+    """Stars under the "deal finished" message: the rating is saved at once, a comment can be added in the app."""
+    parts = cq.data.split(":")
+    if len(parts) != 3 or not parts[1].isdigit() or parts[2] not in ("1", "2", "3", "4", "5"):
+        await cq.answer()
+        return
+    deal_id, rating = int(parts[1]), int(parts[2])
+    async with Session() as s:
+        me = await s.get(User, cq.from_user.id)
+        try:
+            await escrow.review(s, deal_id, me, rating, "")
+        except EscrowError as e:
+            await s.rollback()
+            await cq.answer(str(e), show_alert=True)
+            return
+    try:
+        base = cq.message.html_text if cq.message and cq.message.text else ""
+        await cq.message.edit_text(f"{base}\n\n<b>Ваша оценка: {'★' * rating}{'☆' * (5 - rating)}</b>"[:4096],
+                                   reply_markup=keyboard([app_button("Добавить комментарий", screen="deal", id=deal_id)]))
+    except Exception as e:  # noqa: BLE001
+        log.info("rate edit failed: %s", e)
+    await cq.answer("Спасибо за оценку!")
 
 
 @router.callback_query(F.data.startswith("o:"))

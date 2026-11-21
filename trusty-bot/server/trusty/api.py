@@ -107,7 +107,7 @@ async def bootstrap(me: User = Depends(current_user), s: AsyncSession = Depends(
         "me": await me_payload(s, me),
         "devs": devs,
         "projects": await project_payloads(s, list(projects), me),
-        "chats": await chat_payloads(s, list(chats), me),
+        "chats": await chat_payloads(s, list(chats), me, skip_hidden=True),
         "myComplaints": await complaint_payloads(s, list(complaints), settings.secret),
         "admins": [{"name": a.name, "handle": a.username or ""} for a in await admins(s)],
     }
@@ -264,7 +264,21 @@ async def choose(pid: int, body: ChooseIn, me: User = Depends(current_user), s: 
 async def list_chats(me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
     chats = (await s.execute(select(Chat).where(or_(Chat.a_id == me.id, Chat.b_id == me.id))
                              .order_by(desc(Chat.updated_at)).limit(100))).scalars().all()
-    return await chat_payloads(s, list(chats), me)
+    return await chat_payloads(s, list(chats), me, skip_hidden=True)
+
+
+@router.post("/chats/{cid}/delete")
+async def delete_chat(cid: int, me: User = Depends(current_user), s: AsyncSession = Depends(get_session)):
+    """Removes the chat from my list and hides its history from me. The other side keeps it, and the messages stay
+    on the server for the arbiter. A new message brings the chat back."""
+    c = await my_chat(s, cid, me)
+    last = (await s.execute(select(Message.id).where(Message.chat_id == c.id).order_by(desc(Message.id)).limit(1))).scalar() or 0
+    if c.a_id == me.id:
+        c.a_hidden, c.a_read = last, max(c.a_read, last)
+    else:
+        c.b_hidden, c.b_read = last, max(c.b_read, last)
+    await s.commit()
+    return {"ok": True}
 
 
 class OpenChat(BaseModel):

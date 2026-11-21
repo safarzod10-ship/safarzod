@@ -26,6 +26,15 @@ MIGRATIONS = [
     ("deals", "dev_share", "INTEGER"),
     ("deals", "resolution", "TEXT"),
     ("messages", "offer_id", "INTEGER"),
+    ("chats", "a_hidden", "INTEGER"),
+    ("chats", "b_hidden", "INTEGER"),
+]
+
+# Constraint changes for PostgreSQL databases created by earlier versions (each statement is idempotent).
+PG_FIXES = [
+    # reviews: one per deal -> one per deal and author (both sides rate each other)
+    "ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_deal_id_key",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_reviews_deal_author ON reviews (deal_id, author_id)",
 ]
 
 
@@ -40,6 +49,9 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_add_missing_columns)
+        if engine.dialect.name == "postgresql":
+            for sql in PG_FIXES:
+                await conn.exec_driver_sql(sql)
 
 
 async def get_session():

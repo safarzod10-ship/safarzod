@@ -2,21 +2,19 @@ import { useState } from 'react';
 import { amt } from '../data';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Avatar, Info, Mark, Note, Rating, Section, Seg, Sheet, Top } from '../ui';
+import { Avatar, Info, Mark, Seg, Sheet, Top } from '../ui';
 import { DealRow, isActive } from './Deal';
 import { RolePicker, ROLE_INFO } from './Onboarding';
 
 export default function Home() {
   const nav = useNav();
-  const { deals, role, setRole, showToast, me, devForm, chats, devById, projects, isMe, payCfg } = useStore();
+  const { deals, role, setRole, showToast, me, devForm, payCfg } = useStore();
   const [tab, setTab] = useState<'active' | 'archive'>('active');
   const [roleSheet, setRoleSheet] = useState(false);
   const active = deals.filter((d) => isActive(d.status));
   const archive = deals.filter((d) => !isActive(d.status));
   const list = tab === 'active' ? active : archive;
   const held = active.filter((d) => d.paidAt).reduce((n, d) => n + Number(d.role === 'dev' ? d.amount : d.total), 0);
-  const recent = chats.filter((c) => c.peer.role === 'dev').slice(0, 8);
-  const fresh = projects.filter((p) => p.status === 'open' && !isMe(p.clientId)).slice(0, 3);
 
   return (
     <div className="screen root">
@@ -67,44 +65,13 @@ export default function Home() {
         )}
       </div>
 
-      {role === 'client' && recent.length > 0 && (
-        <Section title="Недавние исполнители">
-          <div className="hs">
-            {recent.map((c) => {
-              const d = devById(c.peer.refId);
-              return (
-                <button key={c.id} className="person" onClick={() => nav.open('devs', 'dev', { id: c.peer.refId })}>
-                  <Avatar name={c.peer.name} size={56} online={c.peer.lastSeenMin <= 5} />
-                  <span>{c.peer.name.split(' ')[0]}</span>
-                  {d && d.deals > 0 && <Rating value={d.rating} size={11} />}
-                </button>
-              );
-            })}
-          </div>
-        </Section>
-      )}
-
-      {role === 'dev' && fresh.length > 0 && (
-        <Section title="Новые проекты" action={{ label: 'Все', onClick: () => nav.setTab('projects') }}>
-          <div className="group">
-            {fresh.map((p) => (
-              <button key={p.id} className="cell" onClick={() => nav.open('projects', 'project', { id: p.id })}>
-                <div className="cell-body"><div className="cell-title"><span className="t">{p.title}</span></div>
-                  <div className="cell-sub num">{p.budgetMin === p.budgetMax ? p.budgetMin : `${p.budgetMin}–${p.budgetMax}`} USDT · {p.days} дн.</div></div>
-                <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>{p.ago}</span>
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
-
       <Sheet open={roleSheet} onClose={() => setRoleSheet(false)} title="Кто вы сейчас?">
         <p className="muted small" style={{ margin: '0 0 14px' }}>Профиль, сделки и чаты сохраняются при смене роли.</p>
         <RolePicker value={role} onChange={(r) => {
           setRoleSheet(false);
           if (r !== role) setRole(r).then(() => showToast(`Режим: ${ROLE_INFO[r].title.toLowerCase()}`)).catch(() => {});
         }} />
-        <Note tone="blue" icon="info"><span>Справка: <button style={{ color: 'var(--ink)', fontWeight: 700 }} onClick={() => { setRoleSheet(false); nav.push('guide'); }}>как работает гарант</button></span></Note>
+
       </Sheet>
     </div>
   );

@@ -4,11 +4,46 @@ import { Icon } from '../icons';
 import { useNav } from '../nav';
 import { useStore, type Role } from '../store';
 import { haptic, inTelegram } from '../tg';
-import { Avatar, Info, Note, Odometer, Pill, Seg, Sheet, Skeleton, Timer, Top } from '../ui';
+import { Avatar, Cell, IconTile, Info, Loader, Note, Odometer, Pill, Seg, Sheet, Timer, Top } from '../ui';
+
+/** a chat row that slides left to show "Удалить", like in Telegram */
+function SwipeRow({ onOpen, onDelete, children }: { onOpen(): void; onDelete(): void; children: React.ReactNode }) {
+  const [x, setX] = useState(0);
+  const start = useRef<{ x: number; y: number; base: number; swiping: boolean | null } | null>(null);
+  const W = 92;
+  return (
+    <div className="swipe">
+      <button className="swipe-del" onClick={onDelete} aria-label="Удалить чат" tabIndex={x ? 0 : -1}>
+        <Icon name="trash" size={21} />Удалить
+      </button>
+      <div className="swipe-body" style={{ transform: `translateX(${x}px)`, transition: start.current?.swiping ? 'none' : undefined }}
+        onPointerDown={(e) => { start.current = { x: e.clientX, y: e.clientY, base: x, swiping: null }; }}
+        onPointerMove={(e) => {
+          const s = start.current;
+          if (!s) return;
+          const dx = e.clientX - s.x, dy = e.clientY - s.y;
+          if (s.swiping === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) s.swiping = Math.abs(dx) > Math.abs(dy);
+          if (s.swiping) { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); setX(Math.max(-W - 20, Math.min(0, s.base + dx))); }
+        }}
+        onPointerUp={() => {
+          const s = start.current;
+          start.current = null;
+          if (s?.swiping) { const open = x < -W / 2; setX(open ? -W : 0); if (open) haptic.select(); return; }
+          if (x) { setX(0); return; }
+          onOpen();
+        }}
+        onPointerCancel={() => { start.current = null; setX((v) => (v < -W / 2 ? -W : 0)); }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function Chats() {
   const nav = useNav();
-  const { chats, refreshChats } = useStore();
+  const { chats, refreshChats, deleteChat } = useStore();
+  const [del, setDel] = useState<Chat | null>(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     refreshChats();
     const t = window.setInterval(refreshChats, 15000);
@@ -18,13 +53,14 @@ export default function Chats() {
     <div className="screen root">
       <Top title="Чаты" />
       {chats.length ? (
-        <div className="group stagger">
+        <div className="group stagger chat-list">
           {chats.map((c) => {
             const last = c.messages[c.messages.length - 1];
             const preview = !last ? 'Нет сообщений' : last.offer ? `Оффер: ${amt(last.offer.amount)} USDT · ${last.offer.title}`
               : `${last.from === 'me' ? 'Вы: ' : ''}${last.text}`;
             return (
-              <button key={c.id} className="cell has-avatar" onClick={() => nav.push('chat', { id: c.id })}>
+              <SwipeRow key={c.id} onOpen={() => nav.push('chat', { id: c.id })} onDelete={() => setDel(c)}>
+              <div className="cell has-avatar">
                 <Avatar name={c.peer.name} size={50} online={c.peer.lastSeenMin <= 5} />
                 <div className="cell-body">
                   <div className="cell-title" style={{ justifyContent: 'space-between' }}>
@@ -39,12 +75,28 @@ export default function Chats() {
                     {c.unread > 0 && !c.offersWaiting && <span className="pill num" style={{ background: 'var(--ink)', color: 'var(--bg)', height: 20, padding: '0 7px' }}>{c.unread}</span>}
                   </div>
                 </div>
-              </button>
+              </div>
+              </SwipeRow>
             );
           })}
         </div>
       ) : <div className="empty">Здесь появятся чаты с исполнителями и заказчиками. Цену и сроки договаривайтесь офферами прямо в чате.</div>}
+      {chats.length > 0 && <p className="hint center mt">Чтобы удалить чат, сдвиньте его влево.</p>}
+      <DeleteChat chat={del} busy={busy} onClose={() => setDel(null)}
+        onDelete={async () => { if (!del) return; setBusy(true); try { await deleteChat(del.id); setDel(null); } catch { /* toast */ } finally { setBusy(false); } }} />
     </div>
+  );
+}
+
+function DeleteChat({ chat, busy, onClose, onDelete }: { chat: Chat | null; busy: boolean; onClose(): void; onDelete(): void }) {
+  return (
+    <Sheet open={!!chat} onClose={onClose} title="Удалить чат?">
+      <p className="muted small" style={{ margin: '0 0 16px' }}>
+        Переписка с {chat?.peer.name} исчезнет у вас. У собеседника она останется, а арбитр сохранит её на случай спора.
+        Если он напишет снова, чат вернётся.
+      </p>
+      <button className="btn danger" disabled={busy} onClick={onDelete}>{busy ? <span className="spin" /> : 'Удалить'}</button>
+    </Sheet>
   );
 }
 
@@ -109,7 +161,9 @@ function OfferSheet({ open, onClose, base, chat, onSend }: {
   const [ttl, setTtl] = useState('48');
   const [asRole, setAsRole] = useState<Role>(role);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  // fill the fields once when the sheet opens: the chat itself refreshes every few seconds and must not reset them
   useEffect(() => {
     if (!open) return;
     setTitle(base?.title ?? chat.deal?.title ?? '');
@@ -117,7 +171,8 @@ function OfferSheet({ open, onClose, base, chat, onSend }: {
     setDays(base?.days ?? 7);
     setTtl('48');
     setAsRole(base ? base.myRole : (chat.peer.role === 'dev' ? 'client' : role));
-  }, [open, base, chat, role]);
+    setEditing(false);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const myRole = base ? base.myRole : asRole;
   const fee = Math.round(amount * payCfg.feePercent) / 100;
   const ok = amount > 0 && days > 0 && (base || title.trim().length >= 3);
@@ -130,11 +185,17 @@ function OfferSheet({ open, onClose, base, chat, onSend }: {
   return (
     <Sheet open={open} onClose={onClose} title={base ? 'Своя цена' : 'Оффер'}>
       <p className="muted small" style={{ margin: 0 }}>{base ? `Сейчас в оффере ${amt(base.amount)} ${payCfg.asset}. Назовите свою цену.` : 'Сумма, срок и что нужно сделать. Собеседник примет, отклонит или ответит своей ценой.'}</p>
-      <button className="amount-big" onClick={() => input.current?.focus()} aria-label="Изменить сумму" style={{ width: '100%' }}>
-        <Odometer value={amount} /><small>{payCfg.asset}</small>
-      </button>
-      <input ref={input} className="vh" inputMode="numeric" value={amount} aria-label="Сумма"
-        onChange={(e) => setAmount(Math.min(1_000_000, Number(e.target.value.replace(/\D/g, '')) || 0))} />
+      <div className="amount-big">
+        {editing ? null : (
+          <button onClick={() => { setEditing(true); window.setTimeout(() => input.current?.focus(), 0); }} aria-label="Изменить сумму"
+            style={{ display: 'inline-flex', alignItems: 'baseline' }}><Odometer value={amount} /></button>
+        )}
+        <input ref={input} className={editing ? 'amount-input num' : 'vh'} inputMode="numeric" value={amount || ''} aria-label="Сумма"
+          placeholder="0" size={Math.max(2, String(amount || '').length)}
+          onFocus={() => setEditing(true)} onBlur={() => setEditing(false)}
+          onChange={(e) => setAmount(Math.min(1_000_000, Number(e.target.value.replace(/\D/g, '')) || 0))} />
+        <small>{payCfg.asset}</small>
+      </div>
       <div className="steppers">
         <button onClick={() => step(-10)}>−10</button>
         <button onClick={() => step(-1)}>−1</button>
@@ -179,7 +240,10 @@ function Field2({ label, children }: { label: string; children: React.ReactNode 
 
 export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean }) {
   const nav = useNav();
-  const { chats, send, readChat, loadChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, showToast } = useStore();
+  const { chats, send, readChat, loadChat, proposeOffer, counterOffer, acceptOffer, declineOffer, withdrawOffer, typing, showToast, deleteChat } = useStore();
+  const [menu, setMenu] = useState(false);
+  const [del, setDel] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const c = chats.find((x) => x.id === id);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -198,7 +262,7 @@ export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean
   useEffect(() => { if (c?.unread) readChat(id); }, [c?.unread, id, readChat]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }); }, [count]);
 
-  if (!c) return <div className="screen no-tabs"><Top title="Чат" small /><Skeleton rows={5} /></div>;
+  if (!c) return <div className="screen no-tabs"><Top title="Чат" small /><Loader label="Загружаем переписку" /></div>;
 
   const submit = async () => {
     const t = text.trim();
@@ -227,9 +291,7 @@ export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean
             <Avatar name={c.peer.name} size={40} online={c.peer.lastSeenMin <= 5} />
             <div style={{ minWidth: 0 }}><b>{c.peer.name}</b><span className={c.peerTyping ? 'typing-now' : ''}>{c.peerTyping ? 'печатает…' : seen(c.peer.lastSeenMin)}</span></div>
           </button>
-          <button className="icon-btn" aria-label="Пожаловаться" onClick={() => nav.push('complaint', { against: c.peer.refId, name: c.peer.name, deal: c.deal?.id })}>
-            <Icon name="flag" size={20} />
-          </button>
+          <button className="icon-btn" aria-label="Ещё" onClick={() => setMenu(true)}><Icon name="dots" size={22} /></button>
         </div>
         {c.deal && (
           <button className="deal-card" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push('deal', { id: c.deal!.id })}>
@@ -276,6 +338,16 @@ export function ChatView({ id, offer: openOffer }: { id: string; offer?: boolean
         </div>
       </div>
 
+      <Sheet open={menu} onClose={() => setMenu(false)}>
+        <div className="group">
+          <Cell lead={<IconTile name="flag" />} title="Пожаловаться" chevron
+            onClick={() => { setMenu(false); nav.push('complaint', { against: c.peer.refId, name: c.peer.name, deal: c.deal?.id }); }} />
+          <Cell lead={<IconTile name="trash" tone="red" />} title={<span style={{ color: 'var(--red)' }}>Удалить чат</span>}
+            onClick={() => { setMenu(false); setDel(true); }} />
+        </div>
+      </Sheet>
+      <DeleteChat chat={del ? c : null} busy={deleting} onClose={() => setDel(false)}
+        onDelete={async () => { setDeleting(true); try { await deleteChat(c.id); setDel(false); nav.pop(); } catch { /* toast */ } finally { setDeleting(false); } }} />
       <OfferSheet open={!!sheet} base={sheet?.base ?? null} chat={c} onClose={() => setSheet(null)}
         onSend={async (d) => {
           if (sheet?.base) await counterOffer(id, sheet.base.id, { amount: d.amount, days: d.days, ttlHours: d.ttlHours });

@@ -82,6 +82,13 @@ def send_deal(chat_id: int, deal, text: str, button: str = "Открыть сд�
     _spawn(_send(chat_id, escape(text), open_button(button, style, screen="deal", id=deal.id), photo))
 
 
+def send_rate(chat_id: int, deal, text: str) -> None:
+    """End of a deal: five star buttons right in the bot, a comment can be added in the Mini App."""
+    stars = [cb("★" * n, f"r:{deal.id}:{n}", OK if n == 5 else None) for n in (1, 2, 3, 4, 5)]
+    markup = keyboard(stars[:3], stars[3:], [app_button("Отзыв с комментарием", screen="deal", id=deal.id)])
+    _spawn(_send(chat_id, escape(text), markup))
+
+
 def offer_markup(offer_id: int, chat_id: int) -> InlineKeyboardMarkup | None:
     return keyboard([cb("Отклонить", f"o:dec:{offer_id}", NO), cb("Принять", f"o:acc:{offer_id}", OK)],
                     [app_button("Своя цена", screen="chat", id=chat_id), app_button("Открыть чат", screen="chat", id=chat_id)])

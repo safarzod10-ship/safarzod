@@ -7,6 +7,22 @@ import { haptic, inTelegram } from './tg';
 export const MARK_UP = 'M285 468C285 432 300 412 338 401C360.8 393.5 452.9 366.4 597 280C615 269 638 269 656 280C800.1 366.4 892.2 393.5 915 401C953 412 968 432 968 468L968 492C945 476 920 470 890 470C706 470 548 704 372 704C325 704 285 685 285 635Z';
 export const MARK_LO = 'M325.3 766C338 777 370 783 400 783C608 783 738 547 890 547C935 547 968 560 968 600C968 880 640 1038 640 1038C632 1044 621 1044 613 1038C613 1038 412.9 941.6 325.3 766Z';
 
+/** the green line that runs through the cut of the shield in the loaders */
+export const MARK_WAVE = 'M975 546C960 520 935 508 890 508C722 508 578 743 386 743C340 743 310 730 296 712';
+
+/** loading: the shield splits along its wave, a green line runs through the cut, the halves close again */
+export function Loader({ size = 56, label }: { size?: number; label?: string }) {
+  return (
+    <div className="loader" role="status" aria-label={label ?? 'Загрузка'}>
+      <svg viewBox="250 200 760 900" width={Math.round(size * 760 / 900)} height={size} className="split" aria-hidden="true">
+        <path className="up" fill="var(--ink)" d={MARK_UP} /><path className="lo" fill="var(--ink)" d={MARK_LO} />
+        <path className="wave" d={MARK_WAVE} />
+      </svg>
+      {label && <span>{label}</span>}
+    </div>
+  );
+}
+
 /** the IT Trusty shield with the wave */
 export function Mark({ size = 22, color = 'currentColor' }: { size?: number; color?: string }) {
   return (

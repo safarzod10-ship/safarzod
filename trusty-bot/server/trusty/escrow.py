@@ -272,8 +272,17 @@ async def accept(s: AsyncSession, deal_id: int, me: User | None) -> Deal:
     await system_message(s, d, f"Работа принята {how}. Гарант переводит {fmt(d.amount)} {settings.asset} исполнителю.")
     await s.commit()
     await payout(s, d, d.dev_id, Decimal(d.amount), "payout", f"IT Trusty, сделка #{d.id}: {d.title}")
-    notify_deal(d.client_id, d, f"Сделка #{d.id} завершена. Оцените исполнителя: отзыв увидят другие заказчики.", "Оставить отзыв")
+    await ask_reviews(s, d)
     return d
+
+
+async def ask_reviews(s: AsyncSession, d: Deal) -> None:
+    """At the end of a deal each side gets a card with stars to rate the other one."""
+    users = {u.id: u for u in (await s.execute(select(User).where(User.id.in_((d.client_id, d.dev_id))))).scalars()}
+    for me_id, other_id, who in ((d.client_id, d.dev_id, "исполнителя"), (d.dev_id, d.client_id, "заказчика")):
+        other = users.get(other_id)
+        notify.send_rate(me_id, d, f"Сделка #{d.id} «{d.title}» завершена. Оцените {who} {other.name if other else ''}: "
+                                   f"отзыв увидят другие пользователи.")
 
 
 async def dispute(s: AsyncSession, deal_id: int, me: User, reason: str) -> Deal:
@@ -314,6 +323,7 @@ async def resolve(s: AsyncSession, deal_id: int, admin: User, dev_share: int, no
         await payout(s, d, d.client_id, client_amount, "refund", f"IT Trusty, сделка #{d.id}: решение арбитра")
     for uid in (d.client_id, d.dev_id):
         notify_deal(uid, d, f"Спор по сделке #{d.id} решён. {d.resolution}")
+    await ask_reviews(s, d)
     return d
 
 
@@ -352,18 +362,29 @@ async def cancel(s: AsyncSession, deal_id: int, me: User) -> Deal:
     return d
 
 
+def can_review(d: Deal) -> bool:
+    """Reviews are left at the end: after acceptance, or after a dispute or refund of a paid deal."""
+    return d.status == "done" or (d.status == "refunded" and d.paid_at is not None)
+
+
 async def review(s: AsyncSession, deal_id: int, me: User, rating: int, text: str) -> None:
+    """The client rates the developer, the developer rates the client; once each."""
     d = await s.get(Deal, deal_id)
-    if d is None or d.client_id != me.id:
-        raise EscrowError("Отзыв оставляет заказчик сделки")
-    if d.status != "done":
+    if d is None or me.id not in (d.client_id, d.dev_id):
+        raise EscrowError("Отзыв оставляют участники сделки")
+    if not can_review(d):
         raise EscrowError("Отзыв можно оставить после завершения сделки")
-    if (await s.execute(select(Review).where(Review.deal_id == d.id))).scalar_one_or_none():
-        raise EscrowError("Отзыв уже оставлен")
-    s.add(Review(deal_id=d.id, author_id=me.id, target_id=d.dev_id, rating=rating, text=text.strip()))
-    await system_message(s, d, f"Заказчик оставил отзыв: {'★' * rating}")
+    if not 1 <= rating <= 5:
+        raise EscrowError("Оценка от 1 до 5")
+    if (await s.execute(select(Review).where(Review.deal_id == d.id, Review.author_id == me.id))).scalar_one_or_none():
+        raise EscrowError("Вы уже оставили отзыв")
+    client = me.id == d.client_id
+    target = d.dev_id if client else d.client_id
+    s.add(Review(deal_id=d.id, author_id=me.id, target_id=target, rating=rating, text=text.strip()))
+    await system_message(s, d, f"{'Заказчик' if client else 'Исполнитель'} оставил отзыв: {'★' * rating}")
     await s.commit()
-    notify.send(d.dev_id, f"Новый отзыв по сделке #{d.id}: {'★' * rating}{(' «' + text.strip()[:200] + '»') if text.strip() else ''}")
+    notify.send(target, f"Новый отзыв по сделке #{d.id}: {'★' * rating}{(' «' + text.strip()[:200] + '»') if text.strip() else ''}",
+                "Открыть сделку", screen="deal", id=d.id)
 
 
 async def auto_accept_due(s: AsyncSession) -> None:

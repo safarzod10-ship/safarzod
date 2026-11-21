@@ -86,7 +86,7 @@ for (const [k, u] of Object.entries(USERS)) {
 fs.mkdirSync(outDir, { recursive: true });
 let n = 0;
 const shot = async (p, name, full = false) => { await p.waitForTimeout(600); await p.screenshot({ path: path.join(outDir, `${String(++n).padStart(2, '0')}-${name}.png`), fullPage: full }); };
-const tab = (p, label) => p.locator(`.island .tab[aria-label="${label}"]`).click();
+const tab = async (p, label) => { await p.waitForSelector('#tl-splash', { state: 'detached' }); await p.locator(`.island .tab[aria-label="${label}"]`).click({ force: true }); };
 const projects = async (p) => { await tab(p, 'Поиск'); await p.locator('.seg button', { hasText: 'Проекты' }).first().click(); };
 const main = (p) => p.locator('.bar .bar-row .btn').last().click();
 const step = (label) => console.log('•', label);
@@ -196,9 +196,8 @@ step('deal paid');
 // developer submits the work from the deal screen
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
-await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
+await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
 await boris.locator('.deal-card').click();
-await boris.getByText('Сдать работу досрочно').count();
 await shot(boris, 'boris-deal-in-work', true);
 await main(boris);
 await boris.locator('.sheet textarea').fill('Бот готов: репозиторий и инструкция в чате.');
@@ -219,13 +218,27 @@ await anna.getByText('Завершена').first().waitFor();
 const state = await (await fetch(MOCK + '/_mock/state')).json();
 const payout = state.transfers['trusty-1-payout-2002'];
 if (!payout || payout.amount !== '90.00') throw new Error('payout missing: ' + JSON.stringify(state.transfers));
-await main(anna);
+// the rating opens by itself after the success screen
+await anna.locator('.sheet', { hasText: 'Оценить исполнителя' }).waitFor({ timeout: 8000 });
 await anna.locator('.stars button').nth(4).click();
 await anna.locator('.sheet textarea').fill('Всё сделано в срок');
 await anna.locator('.sheet .btn.primary').click();
-await anna.getByText('Отзыв заказчика').waitFor();
+await anna.getByText('Заказчик об исполнителе').waitFor();
 await shot(anna, 'anna-deal-done', true);
-step('accepted, paid out, reviewed');
+step('accepted, paid out, client rated the executor');
+// the executor rates the client
+await boris.reload(); await boris.waitForSelector('.island');
+await tab(boris, 'Чаты');
+await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
+await boris.locator('.deal-card').click();
+await main(boris);
+await boris.locator('.sheet', { hasText: 'Оценить заказчика' }).waitFor();
+await boris.locator('.stars button').nth(3).click();
+await boris.locator('.sheet .btn.primary').click();
+await boris.getByText('Исполнитель о заказчике').waitFor();
+step('executor rated the client');
+await boris.evaluate(() => window.__tgBack()); await boris.waitForTimeout(300);
+await boris.evaluate(() => window.__tgBack()); await boris.waitForTimeout(300);
 
 await main(anna); // the deal chat
 await anna.waitForSelector('.chat');
@@ -237,12 +250,15 @@ await shot(anna, 'anna-deal-chat');
 await anna.getByLabel('Предложить цену').click();
 await anna.getByPlaceholder('Например: лендинг для кофейни').fill('Доработка админки');
 await anna.getByLabel('Сумма', { exact: true }).fill('40');
+await anna.waitForTimeout(4000); // the chat refreshes every 3 s: the typed title and amount must survive it
+if (await anna.getByPlaceholder('Например: лендинг для кофейни').inputValue() !== 'Доработка админки') throw new Error('offer title was reset');
+if (await anna.getByLabel('Сумма', { exact: true }).inputValue() !== '40') throw new Error('offer amount was reset');
 await shot(anna, 'anna-offer-sheet');
 await anna.getByRole('button', { name: 'Отправить оффер' }).click();
 await anna.locator('.offer-card', { hasText: 'Вы предлагаете' }).waitFor();
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
-await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
+await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
 await boris.locator('.offer-card', { hasText: 'предлагает' }).waitFor();
 await shot(boris, 'boris-offer-received');
 await boris.getByRole('button', { name: 'Предложить свою цену' }).click();
@@ -263,7 +279,7 @@ await anna.evaluate(() => window.__tgBack()); await anna.waitForTimeout(400);
 await boris.reload(); await boris.waitForSelector('.island');
 await tab(boris, 'Чаты');
 await shot(boris, 'boris-chats');
-await boris.locator('.cell', { hasText: 'Анна Соколова' }).click();
+await boris.locator('.swipe-body', { hasText: 'Анна Соколова' }).click();
 await boris.getByLabel('Сообщение').fill('Давайте без гаранта, напишите мне в лс');
 await shot(boris, 'boris-offsite-warning');
 await boris.getByLabel('Отправить').click();
@@ -274,7 +290,8 @@ step('messages exchanged');
 await anna.waitForTimeout(4500);
 await shot(anna, 'anna-chat-updated');
 await anna.locator('.chat').waitFor();
-await anna.getByLabel('Пожаловаться').click();
+await anna.getByLabel('Ещё').click();
+await anna.locator('.sheet').getByText('Пожаловаться').click();
 await anna.getByText('Просит оплату вне гаранта').click();
 await anna.locator('textarea').fill('Предлагает перейти в личку и работать без гаранта, это против правил.');
 await anna.locator('input[type=file]').setInputFiles({ name: 'chat.png', mimeType: 'image/png', buffer: fs.readFileSync(path.join(outDir, '03-anna-home-empty.png')) });
@@ -307,6 +324,19 @@ await admin.getByText('Финансы и споры').click();
 await admin.getByText('Последние операции').waitFor();
 await shot(admin, 'admin-finance', true);
 step('finance');
+
+// the client deletes the chat: it disappears from her list (the history stays on the server for the arbiter)
+await anna.reload(); await anna.waitForSelector('.island');
+await tab(anna, 'Чаты');
+await anna.locator('.swipe-body', { hasText: 'Борис Ким' }).click();
+await anna.getByLabel('Ещё').click();
+await anna.locator('.sheet').getByText('Удалить чат').click();
+await anna.locator('.sheet .btn.danger').click();
+await anna.getByText('Чат удалён').waitFor();
+await anna.waitForSelector('.island');
+if (await anna.locator('.swipe-body', { hasText: 'Борис Ким' }).count()) throw new Error('deleted chat is still listed');
+await shot(anna, 'anna-chat-deleted');
+step('chat deleted');
 
 } catch (e) {
   for (const [k, p] of Object.entries(pages)) await p.screenshot({ path: path.join(outDir, `fail-${k}.png`), fullPage: true }).catch(() => {});

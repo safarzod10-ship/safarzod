@@ -24,7 +24,7 @@ class FakeSession(BaseSession):
     async def make_request(self, bot, method: TelegramMethod, timeout=None):
         name = type(method).__name__
         CALLS.append((name, method.model_dump(exclude_none=True)))
-        if name in ("SendPhoto", "SendMessage", "EditMessageMedia"):
+        if name in ("SendPhoto", "SendMessage", "EditMessageMedia", "EditMessageText"):
             return method.__returning__.model_validate({
                 "message_id": len(CALLS), "date": 0, "chat": {"id": 42, "type": "private"},
                 "photo": [{"file_id": f"F{len(CALLS)}", "file_unique_id": "u", "width": 1200, "height": 630}]})
@@ -107,6 +107,25 @@ async def main():
     await dp.feed_update(bot, Update.model_validate({"update_id": 41, "callback_query": cq}))
     answer = [c for c in CALLS if c[0] == "AnswerCallbackQuery"][-1][1]
     assert answer.get("show_alert") and "уже принят" in answer["text"], answer
+    # end of the deal: stars in the bot save the rating; a second tap is refused
+    async with Session() as s:
+        d = (await s.execute(__import__("sqlalchemy").select(Deal))).scalar_one()
+        d.status = "done"
+        await s.commit()
+        did = d.id
+    rq = {"id": "80", "from": user(), "chat_instance": "x", "data": f"r:{did}:4",
+          "message": {"message_id": 11, "date": 0, "chat": {"id": 42, "type": "private"}, "text": "Сделка завершена. Оцените исполнителя"}}
+    await dp.feed_update(bot, Update.model_validate({"update_id": 50, "callback_query": rq}))
+    edit = [c for c in CALLS if c[0] == "EditMessageText"][-1][1]
+    assert "★★★★☆" in edit["text"], edit
+    from trusty.models import Review
+    async with Session() as s:
+        r = (await s.execute(__import__("sqlalchemy").select(Review))).scalar_one()
+        assert r.rating == 4 and r.author_id == 42 and r.target_id == 43
+    rq["id"] = "81"
+    await dp.feed_update(bot, Update.model_validate({"update_id": 51, "callback_query": rq}))
+    answer = [c for c in CALLS if c[0] == "AnswerCallbackQuery"][-1][1]
+    assert answer.get("show_alert") and "уже" in answer["text"], answer
     print("bot OK:", ", ".join(sorted({c[0] for c in CALLS})))
     await engine.dispose()
 

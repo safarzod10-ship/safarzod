@@ -79,8 +79,8 @@ async def client_stats(s: AsyncSession, ids: list[int]) -> dict[int, dict]:
                            .group_by(Deal.client_id))
     for cid, n in rows:
         out[cid]["deals"] = n
-    rows = await s.execute(select(Review.target_id, func.avg(Review.rating)).where(Review.target_id.in_(ids))
-                           .group_by(Review.target_id))
+    rows = await s.execute(select(Review.target_id, func.avg(Review.rating)).join(Deal, Deal.id == Review.deal_id)
+                           .where(Review.target_id.in_(ids), Deal.client_id == Review.target_id).group_by(Review.target_id))
     for tid, avg in rows:
         out[tid]["rating"] = round(float(avg), 1)
     return out
@@ -92,7 +92,7 @@ async def dev_payloads(s: AsyncSession, profiles: list[tuple[DevProfile, User]])
     if not ids:
         return []
     deals = (await s.execute(select(Deal).where(Deal.dev_id.in_(ids)).order_by(Deal.finished_at.desc()))).scalars().all()
-    reviews = {r.deal_id: r for r in (await s.execute(select(Review).where(Review.target_id.in_(ids)))).scalars()}
+    reviews = {(r.deal_id, r.target_id): r for r in (await s.execute(select(Review).where(Review.target_id.in_(ids)))).scalars()}
     authors = {}
     if reviews:
         a_ids = list({r.author_id for r in reviews.values()})
@@ -107,10 +107,10 @@ async def dev_payloads(s: AsyncSession, profiles: list[tuple[DevProfile, User]])
         disputes = [d for d in mine if d.status == "dispute" or (d.result or "").startswith("dispute")]
         lost = [d for d in mine if d.result == "dispute_lost"]
         ontime = [d for d in done if d.result == "ontime"]
-        ratings = [reviews[d.id].rating for d in done if d.id in reviews]
+        ratings = [reviews[(d.id, u.id)].rating for d in done if (d.id, u.id) in reviews]
         history = []
         for d in done[:6]:
-            r = reviews.get(d.id)
+            r = reviews.get((d.id, u.id))
             history.append({
                 "id": d.id, "title": d.title, "category": d.category, "amount": amount_range(d.amount),
                 "date": short_date(d.finished_at or d.created_at), "result": d.result or "ontime",
@@ -201,7 +201,7 @@ async def _offers_for(s: AsyncSession, msgs: list[Message], me_id: int) -> dict[
             for oid, o in rows.items()}
 
 
-async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool = False) -> list[dict]:
+async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool = False, skip_hidden: bool = False) -> list[dict]:
     if not chats:
         return []
     peer_ids = [c.b_id if c.a_id == me.id else c.a_id for c in chats]
@@ -215,11 +215,15 @@ async def chat_payloads(s: AsyncSession, chats: list[Chat], me: User, full: bool
     for c in chats:
         pid = c.b_id if c.a_id == me.id else c.a_id
         read = c.a_read if c.a_id == me.id else c.b_read
+        hidden = (c.a_hidden if c.a_id == me.id else c.b_hidden) or 0
         peer = peers.get(pid)
-        unread = (await s.execute(select(func.count()).where(Message.chat_id == c.id, Message.id > read,
+        unread = (await s.execute(select(func.count()).where(Message.chat_id == c.id, Message.id > max(read, hidden),
                                                              or_(Message.sender_id != me.id, Message.sender_id.is_(None))))).scalar_one()
-        q = select(Message).where(Message.chat_id == c.id).order_by(Message.id.desc()).limit(300 if full else 1)
+        q = (select(Message).where(Message.chat_id == c.id, Message.id > hidden).order_by(Message.id.desc())
+             .limit(300 if full else 1))
         msgs = list(reversed((await s.execute(q)).scalars().all()))
+        if skip_hidden and hidden and not msgs:
+            continue  # deleted by me and nothing new since
         offer_cards = await _offers_for(s, msgs, me.id) if full else {}
         waiting = (await s.execute(select(func.count()).where(Offer.chat_id == c.id, Offer.to_id == me.id,
                                                               Offer.status == "pending", Offer.expires_at > utcnow()))).scalar_one()
@@ -283,7 +287,7 @@ async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
     ids = [d.id for d in deals]
     uids = list({d.client_id for d in deals} | {d.dev_id for d in deals})
     users = {u.id: u for u in (await s.execute(select(User).where(User.id.in_(uids)))).scalars()}
-    reviews = {r.deal_id: r for r in (await s.execute(select(Review).where(Review.deal_id.in_(ids)))).scalars()}
+    reviews = {(r.deal_id, r.author_id): r for r in (await s.execute(select(Review).where(Review.deal_id.in_(ids)))).scalars()}
     pays = defaultdict(list)
     for p in (await s.execute(select(Payment).where(Payment.deal_id.in_(ids)).order_by(Payment.id))).scalars():
         pays[p.deal_id].append(p)
@@ -293,7 +297,10 @@ async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
     out = []
     for d in deals:
         role = "client" if d.client_id == me.id else "dev" if d.dev_id == me.id else "admin"
-        r = reviews.get(d.id)
+        r = reviews.get((d.id, d.client_id))  # the client about the developer
+        rc = reviews.get((d.id, d.dev_id))  # the developer about the client
+        mine = reviews.get((d.id, me.id))
+        final = d.status == "done" or (d.status == "refunded" and d.paid_at is not None)
         visible = [p for p in pays[d.id] if role == "admin" or p.user_id == me.id]
         out.append({
             "id": d.id, "title": d.title, "category": d.category, "amount": d.amount,
@@ -309,6 +316,7 @@ async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
             "resolution": d.resolution, "devShare": d.dev_share, "result": d.result, "projectId": d.project_id,
             "chatId": str(chats[tuple(sorted((d.client_id, d.dev_id)))]) if tuple(sorted((d.client_id, d.dev_id))) in chats else None,
             "review": {"rating": r.rating, "text": r.text} if r else None,
+            "clientReview": {"rating": rc.rating, "text": rc.text} if rc else None,
             "payments": [{"id": p.id, "kind": p.kind, "amount": str(p.amount), "status": p.status, "userId": str(p.user_id),
                           "url": p.url if (p.kind != "invoice" and (p.user_id == me.id or role == "admin")) else None,
                           "error": p.error if role == "admin" else None, "at": aware(p.updated_at).isoformat()} for p in visible],
@@ -318,7 +326,7 @@ async def deal_payloads(s: AsyncSession, deals: list, me: User) -> list[dict]:
                 "accept": role == "client" and d.status in ("in_work", "review"),
                 "dispute": role in ("client", "dev") and d.status in ("in_work", "review"),
                 "cancel": (role in ("client", "dev") and d.status == "awaiting_payment") or (role == "dev" and d.status == "in_work"),
-                "review": role == "client" and d.status == "done" and r is None,
+                "review": role in ("client", "dev") and final and mine is None,
                 "resolve": role == "admin" and d.status == "dispute",
             },
         })
