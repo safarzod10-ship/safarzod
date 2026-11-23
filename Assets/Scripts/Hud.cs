@@ -49,8 +49,31 @@ public class Hud : MonoBehaviour
             if (args[i] == "-autohost") Invoke(nameof(Host), 0.5f);
             if (args[i] == "-autojoin" && i + 1 < args.Length) { autoIp = args[i + 1]; Invoke(nameof(AutoJoin), 1f); }
             if (args[i] == "-shots" && i + 1 < args.Length) { shotDir = args[i + 1]; }
+            if (args[i] == "-mapshots" && i + 1 < args.Length) { shotDir = args[i + 1]; StartCoroutine(MapShots()); }
             if (args[i] == "-autohost" || args[i] == "-autojoin") InvokeRepeating(nameof(Report), 5f, 5f);
         }
+    }
+
+    System.Collections.IEnumerator MapShots()
+    {
+        root.gameObject.SetActive(false);
+        var cam = Camera.main.transform;
+        // x, y, z, pitch, yaw
+        float[,] v = {
+            {0, 62, -6, 86, 0}, {0, 30, -52, 34, 0}, {0, 1.7f, -13.5f, 2, 0}, {0, 1.7f, 12f, 2, 180},
+            {20.5f, 1.7f, 4.5f, 3, 80}, {38f, 6f, -4f, 22, 285}, {-19.5f, 1.7f, 4.5f, 3, 275}, {-38f, 6f, -4f, 22, 75},
+            {0, 1.7f, -27f, 0, 0}, {0, 1.7f, 27f, 0, 180}, {-30f, 1.7f, -24f, 2, 0}, {30f, 1.7f, -20f, 2, 0}, {-10f, 1.7f, 4.4f, 3, 270},
+        };
+        yield return new WaitForSeconds(1.5f);
+        for (int i = 0; i < v.GetLength(0); i++)
+        {
+            cam.position = new Vector3(v[i, 0], v[i, 1], v[i, 2]); cam.rotation = Quaternion.Euler(v[i, 3], v[i, 4], 0);
+            yield return null; yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shotDir, $"map{i:00}.png"));
+            yield return new WaitForSeconds(0.6f);
+        }
+        Debug.Log("MAPSHOTS_DONE");
+        Application.Quit();
     }
 
     string autoIp, shotDir; int shotN;

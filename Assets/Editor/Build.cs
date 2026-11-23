@@ -24,7 +24,7 @@ public static class Build
         if (urp == null)
         {
             var mi = typeof(UniversalRenderPipelineAsset).GetMethod("CreateRendererAsset", BindingFlags.NonPublic | BindingFlags.Static);
-            var rd = (ScriptableRendererData)mi.Invoke(null, new object[] { "Assets/Settings/URP.asset", RendererType.UniversalRenderer, false, "Renderer" });
+            var rd = (ScriptableRendererData)mi.Invoke(null, new object[] { "Assets/Settings/URP_Renderer.asset", RendererType.UniversalRenderer, false, "Renderer" });
             urp = UniversalRenderPipelineAsset.Create(rd);
             AssetDatabase.CreateAsset(urp, "Assets/Settings/URP.asset");
         }
