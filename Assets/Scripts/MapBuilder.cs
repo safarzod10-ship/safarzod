@@ -41,16 +41,19 @@ public class MapBuilder : MonoBehaviour
     float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
 
     // ---------------------------------------------------------------- materials
-    Material Mat(string key, Color baseCol, float contrast, float scale, float smooth = 0.08f, int style = 0)
+    Material Mat(string key, Color baseCol, float contrast, float scale, float smooth = 0.08f, int style = 0, string texKey = null, Color? tint = null)
     {
         if (mats.TryGetValue(key, out var m)) return m;
-        m = new Material(Tpl.Lit); m.SetColor("_BaseColor", Color.white);
-        var tex = Resources.Load<Texture2D>("Textures/" + key);
+        texKey = texKey ?? key;
+        var tex = Resources.Load<Texture2D>("Textures/" + texKey);
+        var nrm = Resources.Load<Texture2D>("Textures/" + texKey + "_n");
+        m = new Material(nrm != null && Tpl.LitN != null ? Tpl.LitN : Tpl.Lit);
+        Color col = Color.white;
         if (tex == null) tex = MakeTex(baseCol, contrast, style, key.GetHashCode());
-        else m.color = Color.white;
+        else if (tint.HasValue) col = tint.Value;
+        m.SetColor("_BaseColor", col); m.color = col;
         m.mainTexture = tex; m.SetTexture("_BaseMap", tex);
-        var nrm = Resources.Load<Texture2D>("Textures/" + key + "_n");
-        if (nrm != null) { m.SetTexture("_BumpMap", nrm); m.EnableKeyword("_NORMALMAP"); }
+        if (nrm != null) { m.SetTexture("_BumpMap", nrm); m.SetFloat("_BumpScale", 1.2f); m.EnableKeyword("_NORMALMAP"); }
         m.SetFloat("_Smoothness", smooth);
         m.mainTextureScale = Vector2.one / scale; m.SetTextureScale("_BaseMap", Vector2.one / scale);
         m.enableInstancing = true;
@@ -120,9 +123,14 @@ public class MapBuilder : MonoBehaviour
     Material Dirt => Mat("dirt", new Color(0.5f, 0.42f, 0.32f), 0.35f, 4f);
     Material Paving => Mat("paving", new Color(0.55f, 0.52f, 0.48f), 0.25f, 3f, 0.1f, 3);
     Material Concrete => Mat("concrete", new Color(0.5f, 0.5f, 0.5f), 0.25f, 4f);
+    Material Peeling => Mat("peeling", new Color(0.7f, 0.68f, 0.6f), 0.3f, 3f);
+    Material Plinth => Mat("plinth", new Color(0.35f, 0.33f, 0.3f), 0.3f, 2.5f, 0.1f, 0, "concrete", new Color(0.55f, 0.52f, 0.48f));
+    Material Shutter => Mat("shutter", new Color(0.3f, 0.4f, 0.45f), 0.2f, 2.4f, 0.3f);
+    Material Sheet => Mat("iron", new Color(0.4f, 0.3f, 0.25f), 0.3f, 2f, 0.3f);
+    Material Leaves => Mat("leaves", new Color(0.2f, 0.36f, 0.14f), 0.7f, 0.8f);
     Material Glass => Mat("glass", new Color(0.08f, 0.12f, 0.16f), 0.1f, 1f, 0.9f);
     Material Clay => Mat("clay", new Color(0.63f, 0.38f, 0.24f), 0.3f, 1f);
-    Material Iron => Mat("iron", new Color(0.1f, 0.1f, 0.1f), 0.2f, 1f, 0.4f);
+    Material Iron => Mat("blackiron", new Color(0.1f, 0.1f, 0.1f), 0.2f, 1f, 0.4f);
     Material Melon => Mat("melon", new Color(0.16f, 0.36f, 0.12f), 0.6f, 0.3f, 0.5f, 5);
     Material YellowMelon => Mat("dynya", new Color(0.82f, 0.7f, 0.25f), 0.3f, 0.3f, 0.3f);
     Material Sack => Mat("sack", new Color(0.62f, 0.55f, 0.4f), 0.35f, 0.5f);
@@ -210,29 +218,74 @@ public class MapBuilder : MonoBehaviour
     void Lighting()
     {
         var sun = new GameObject("Sun").AddComponent<Light>();
-        sun.type = LightType.Directional; sun.color = new Color(1f, 0.93f, 0.8f); sun.intensity = 1.5f;
+        sun.type = LightType.Directional; sun.color = new Color(1f, 0.92f, 0.78f); sun.intensity = 2.1f;
         sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.85f;
-        sun.transform.rotation = Quaternion.Euler(48f, 215f, 0);
+        sun.transform.rotation = Quaternion.Euler(42f, 205f, 0);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.55f, 0.63f, 0.75f);
-        RenderSettings.ambientEquatorColor = new Color(0.5f, 0.46f, 0.4f);
+        RenderSettings.ambientSkyColor = new Color(0.62f, 0.72f, 0.88f);
+        RenderSettings.ambientEquatorColor = new Color(0.58f, 0.54f, 0.48f);
         RenderSettings.ambientGroundColor = new Color(0.3f, 0.25f, 0.2f);
         RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear; RenderSettings.fogColor = new Color(0.72f, 0.76f, 0.8f);
-        RenderSettings.fogStartDistance = 60f; RenderSettings.fogEndDistance = 260f;
+        RenderSettings.fogStartDistance = 70f; RenderSettings.fogEndDistance = 900f;
         var sky = new Material(Tpl.Sky);
         sky.SetFloat("_SunSize", 0.035f); sky.SetFloat("_AtmosphereThickness", 0.9f); sky.SetFloat("_Exposure", 1.15f);
         sky.SetColor("_GroundColor", new Color(0.55f, 0.5f, 0.42f));
         RenderSettings.skybox = sky; RenderSettings.sun = sun;
-        // distant mountains
-        var rock = Mat("rock", new Color(0.42f, 0.44f, 0.5f), 0.3f, 30f);
-        var snow = Mat("snow", new Color(0.9f, 0.92f, 0.95f), 0.1f, 30f);
-        for (int i = 0; i < 14; i++)
+        Mountains();
+        PostFx();
+    }
+
+    void Mountains()
+    {
+        const int N = 120, Rows = 6;
+        float[] prof = { 0f, 0.3f, 0.75f, 1f, 0.7f, 0.35f };
+        var v = new Vector3[(N + 1) * Rows]; var uv = new Vector2[v.Length]; var tr = new List<int>();
+        for (int i = 0; i <= N; i++)
         {
-            float a = i / 14f * Mathf.PI * 2f + R(-0.1f, 0.1f); float d = R(170f, 230f), h = R(45f, 95f);
-            var pos = new Vector3(Mathf.Cos(a) * d, -5f, Mathf.Sin(a) * d);
-            var m = Prim(PrimitiveType.Sphere, pos, new Vector3(R(90f, 150f), h * 2f, R(90f, 150f)), rock, false);
-            m.transform.rotation = Quaternion.Euler(0, R(0, 180), 0);
-            if (h > 65f) Prim(PrimitiveType.Sphere, pos + Vector3.up * h * 0.62f, new Vector3(h * 0.55f, h * 0.8f, h * 0.55f), snow, false);
+            float a = i / (float)N * Mathf.PI * 2f; float wrap = i % N / (float)N;
+            float h = 55f + 85f * Mathf.PerlinNoise(Mathf.Cos(a) * 1.7f + 5f, Mathf.Sin(a) * 1.7f + 5f) + 30f * Mathf.PerlinNoise(Mathf.Cos(a) * 6f + 9f, Mathf.Sin(a) * 6f + 9f);
+            for (int r = 0; r < Rows; r++)
+            {
+                float rad = 230f + r * 70f + 25f * Mathf.PerlinNoise(wrap * 40f, r * 3.3f);
+                float y = h * prof[r] * (0.75f + 0.5f * Mathf.PerlinNoise(Mathf.Cos(a) * 9f + r, Mathf.Sin(a) * 9f + r)) - 6f;
+                v[i * Rows + r] = new Vector3(Mathf.Cos(a) * rad, y, Mathf.Sin(a) * rad);
+                uv[i * Rows + r] = new Vector2(i * 0.35f + r * 0.6f, Mathf.Clamp01(y / 150f));
+                if (i < N && r < Rows - 1) { int k = i * Rows + r; tr.AddRange(new[] { k, k + 1, k + Rows, k + 1, k + Rows + 1, k + Rows }); }
+            }
+        }
+        var m = new Mesh(); m.vertices = v; m.uv = uv; m.triangles = tr.ToArray(); m.RecalculateNormals(); m.RecalculateBounds();
+        var grad = new Texture2D(8, 128, TextureFormat.RGB24, true) { wrapMode = TextureWrapMode.Clamp };
+        for (int y = 0; y < 128; y++) for (int x = 0; x < 8; x++)
+        {
+            float t = y / 127f; float n = Mathf.PerlinNoise(x * 0.9f, y * 0.35f);
+            Color c = Color.Lerp(new Color(0.45f, 0.4f, 0.33f), new Color(0.4f, 0.42f, 0.48f), Mathf.Clamp01(t * 3f));
+            if (t + (n - 0.5f) * 0.18f > 0.52f) c = new Color(0.93f, 0.95f, 0.98f);
+            grad.SetPixel(x, y, c * (0.9f + n * 0.2f));
+        }
+        grad.Apply();
+        var mat = new Material(Tpl.Lit); mat.SetTexture("_BaseMap", grad); mat.mainTexture = grad; mat.SetColor("_BaseColor", Color.white); mat.SetFloat("_Smoothness", 0.05f);
+        var go = new GameObject("Mountains"); go.transform.SetParent(root, false);
+        go.AddComponent<MeshFilter>().sharedMesh = m; var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+    }
+
+    void PostFx()
+    {
+        var vol = new GameObject("PostFx").AddComponent<UnityEngine.Rendering.Volume>();
+        vol.isGlobal = true;
+        var p = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+        vol.profile = p;
+        var tm = p.Add<UnityEngine.Rendering.Universal.Tonemapping>(); tm.mode.Override(UnityEngine.Rendering.Universal.TonemappingMode.ACES);
+        var bl = p.Add<UnityEngine.Rendering.Universal.Bloom>(); bl.intensity.Override(0.35f); bl.threshold.Override(1.05f); bl.scatter.Override(0.6f);
+        var ca = p.Add<UnityEngine.Rendering.Universal.ColorAdjustments>(); ca.postExposure.Override(0.55f); ca.contrast.Override(14f); ca.saturation.Override(6f);
+        ca.colorFilter.Override(new Color(1f, 0.97f, 0.92f));
+        var vg = p.Add<UnityEngine.Rendering.Universal.Vignette>(); vg.intensity.Override(0.24f); vg.smoothness.Override(0.4f);
+        var cam = Camera.main;
+        if (cam != null)
+        {
+            var data = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+            if (data != null) { data.renderPostProcessing = true; data.antialiasing = UnityEngine.Rendering.Universal.AntialiasingMode.FastApproximateAntialiasing; }
+            cam.allowHDR = true;
         }
     }
 
@@ -267,7 +320,7 @@ public class MapBuilder : MonoBehaviour
     {
         int w = walk.GetLength(0), h = walk.GetLength(1);
         var used = new bool[w, h];
-        Material[] wallMats = { Mud, Mud, Mud2, White, White, Brick };
+        Material[] wallMats = { Mud, Mud, Mud, Mud2, White, White, Peeling, Brick };
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
@@ -292,6 +345,13 @@ public class MapBuilder : MonoBehaviour
                 Box(c, size, mat);
                 // flat roof parapet
                 Box(c + Vector3.up * (height / 2f + 0.12f), new Vector3(size.x + 0.16f, 0.24f, size.z + 0.16f), mat == White ? Mud : mat, false);
+                Box(new Vector3(c.x, 0.3f, c.z), new Vector3(size.x + 0.1f, 0.6f, size.z + 0.1f), Plinth, false);
+                // things on the roof
+                double roof = rng.NextDouble();
+                Vector3 top = new Vector3(c.x + R(-0.25f, 0.25f) * size.x, height, c.z + R(-0.25f, 0.25f) * size.z);
+                if (roof < 0.25 && bw > 5 && bh > 5) Prim(PrimitiveType.Cylinder, top + Vector3.up * 0.75f, new Vector3(1.1f, 0.6f, 1.1f), Sheet, false);
+                else if (roof < 0.45 && bw > 6 && bh > 6) { Box(top + Vector3.up * 1.1f, new Vector3(2.2f, 2.2f, 1.8f), White, false); Box(top + Vector3.up * 2.25f, new Vector3(2.6f, 0.08f, 2.2f), Sheet, false); }
+                else if (roof < 0.6) Box(top + Vector3.up * 0.5f, new Vector3(0.5f, 1f, 0.5f), Brick, false);
                 Decorate(x, y, bw, bh, height);
             }
     }
@@ -302,7 +362,16 @@ public class MapBuilder : MonoBehaviour
         for (int side = 0; side < 4; side++)
         {
             bool alongX = side < 2; int len = alongX ? bw : bh;
-            bool door = false;
+            bool door = false, balcony = false;
+            Vector3 sn = alongX ? new Vector3(0, 0, side == 0 ? 1 : -1) : new Vector3(side == 2 ? -1 : 1, 0, 0);
+            // wooden roof beams sticking out of the wall
+            for (int i = 0; i < len; i += 2)
+            {
+                int ox = alongX ? x + i : (side == 2 ? x - 1 : x + bw), oy = alongX ? (side == 0 ? y - 1 : y + bh) : y + i;
+                if (!W(ox, oy)) continue;
+                Vector3 bp = CellPos(alongX ? x + i + 0.5f : (side == 2 ? x : x + bw), alongX ? (side == 0 ? y : y + bh) : y + i + 0.5f, height - 0.42f) + sn * 0.22f;
+                Box(bp, alongX ? new Vector3(0.13f, 0.13f, 0.5f) : new Vector3(0.5f, 0.13f, 0.13f), Wood, false);
+            }
             for (int i = 1; i < len - 1; i += 4)
             {
                 int cx = alongX ? x + i : (side == 2 ? x - 1 : x + bw);
@@ -314,11 +383,29 @@ public class MapBuilder : MonoBehaviour
                 Vector3 p = CellPos(gx, gy) + n * 0.03f;
                 float yaw = alongX ? 0 : 90;
                 double roll = rng.NextDouble();
-                if (!door && roll < 0.3)
+                if (!balcony && height > 5.6f && roll > 0.45 && roll < 0.62 && i + 4 < len)
+                {   // wooden balcony (aivan) on the upper floor
+                    balcony = true;
+                    Vector3 bc = p + n * 0.62f;
+                    Box(bc + Vector3.up * 3.05f, new Vector3(3.2f, 0.12f, 1.25f), Wood, false, yaw);
+                    Box(bc + n * 0.58f + Vector3.up * 3.55f, new Vector3(3.2f, 0.07f, 0.06f), BlueWood, false, yaw);
+                    for (int k = -3; k <= 3; k++) Box(bc + n * 0.58f + (alongX ? Vector3.right : Vector3.forward) * k * 0.5f + Vector3.up * 3.33f, new Vector3(0.05f, 0.45f, 0.05f), BlueWood, false, yaw);
+                    foreach (float s in new[] { -1.5f, 1.5f }) Box(bc + n * 0.55f + (alongX ? Vector3.right : Vector3.forward) * s + Vector3.up * 4.1f, new Vector3(0.11f, 2.1f, 0.11f), Wood, false, yaw);
+                    Box(bc + Vector3.up * 5.2f, new Vector3(3.5f, 0.07f, 1.5f), Sheet, false, yaw);
+                    Box(p + Vector3.up * 4.05f, new Vector3(0.95f, 1.9f, 0.08f), BlueWood, false, yaw);
+                }
+                else if (!door && roll < 0.3)
                 {
                     door = true;
                     Box(p + Vector3.up * 1.05f, new Vector3(1.15f, 2.1f, 0.1f), roll < 0.2 ? BlueWood : Wood, false, yaw);
                     Box(p + Vector3.up * 2.2f, new Vector3(1.45f, 0.16f, 0.16f), Wood, false, yaw);
+                    Box(p + n * 0.2f + Vector3.up * 0.08f, new Vector3(1.5f, 0.16f, 0.5f), Plinth, false, yaw);
+                    if (roll < 0.12) { var aw = Box(p + n * 0.55f + Vector3.up * 2.55f, new Vector3(1.9f, 0.04f, 1.2f), Cloth(rng.Next(4)), false, yaw); aw.transform.Rotate(alongX ? (side == 0 ? 14f : -14f) : 0, 0, alongX ? 0 : (side == 2 ? 14f : -14f), Space.World); }
+                }
+                else if (roll > 0.8 && roll < 0.87 && height > 3f)
+                {   // garage / shop shutter
+                    Box(p + Vector3.up * 1.2f, new Vector3(2.3f, 2.4f, 0.08f), Shutter, false, yaw);
+                    Box(p + Vector3.up * 2.48f + n * 0.03f, new Vector3(2.5f, 0.18f, 0.14f), Plinth, false, yaw);
                 }
                 else if (roll < 0.72 && height > 3.2f)
                 {
@@ -415,12 +502,29 @@ public class MapBuilder : MonoBehaviour
         Box(P(1230, 470, 0.55f), new Vector3(3.6f, 1.1f, 0.45f), Mud);
         Prim(PrimitiveType.Cylinder, P(1180, 500, 0.45f), new Vector3(1.5f, 0.45f, 1.5f), Brick);
         // shade tree
-        Vector3 tr = P(1290, 470);
-        Prim(PrimitiveType.Cylinder, tr + Vector3.up * 1.8f, new Vector3(0.4f, 1.8f, 0.4f), Wood);
-        var leaf = Mat("leaves", new Color(0.2f, 0.36f, 0.14f), 0.6f, 1f);
-        Prim(PrimitiveType.Sphere, tr + Vector3.up * 4.6f, new Vector3(4.6f, 3.2f, 4.6f), leaf, false);
-        Prim(PrimitiveType.Sphere, tr + new Vector3(1.2f, 4f, 0.8f), new Vector3(3f, 2.4f, 3f), leaf, false);
+        Tree(P(1290, 470), 6.5f);
+        Prop("carpet1", P(1150, 470, 0.02f), 20, 3f, false);
         for (int i = 0; i < 4; i++) if (!Prop("pots", P(1090 + i * 9, 350), R(0, 360), 0.9f, false)) Prim(PrimitiveType.Sphere, P(1090 + i * 9, 350, 0.25f), Vector3.one * 0.5f, Clay, false);
+    }
+
+    void Tree(Vector3 pos, float h)
+    {
+        var trunk = Prim(PrimitiveType.Cylinder, pos + Vector3.up * h * 0.3f, new Vector3(0.38f, h * 0.3f, 0.38f), Wood);
+        for (int i = 0; i < 9; i++)
+        {
+            Vector3 o = new Vector3(R(-1.6f, 1.6f), h * R(0.55f, 0.95f), R(-1.6f, 1.6f));
+            float s = R(1.6f, 2.8f);
+            Prim(PrimitiveType.Sphere, pos + o, new Vector3(s, s * 0.75f, s), Leaves, false);
+        }
+        for (int i = 0; i < 3; i++) { var b = Prim(PrimitiveType.Cylinder, pos + Vector3.up * h * 0.6f, new Vector3(0.14f, h * 0.22f, 0.14f), Wood, false); b.transform.rotation = Quaternion.Euler(R(25f, 45f), i * 120f + R(-20, 20), 0); b.transform.position += b.transform.up * h * 0.18f; }
+    }
+
+    void Wire(Vector3 a, Vector3 b)
+    {
+        var go = new GameObject("wire"); go.transform.SetParent(root, false);
+        var lr = go.AddComponent<LineRenderer>(); lr.positionCount = 9; lr.startWidth = lr.endWidth = 0.025f; lr.sharedMaterial = Iron;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        for (int i = 0; i < 9; i++) { float t = i / 8f; lr.SetPosition(i, Vector3.Lerp(a, b, t) + Vector3.down * Mathf.Sin(t * Mathf.PI) * 0.9f); }
     }
 
     void SiteB()
@@ -456,8 +560,12 @@ public class MapBuilder : MonoBehaviour
     {
         Car("vaz", P(1080, 925), 82, new Color(0.2f, 0.25f, 0.5f));
         Car("nexia", P(1230, 915), 100, new Color(0.45f, 0.45f, 0.47f));
-        Car("uaz", P(640, 110), 95, new Color(0.25f, 0.3f, 0.22f));
+        Car("nexia", P(640, 110), 95, new Color(0.25f, 0.3f, 0.22f));
         Car("vaz", P(1100, 125), 270, new Color(0.7f, 0.68f, 0.6f));
+        Tree(P(880, 92), 7f); Tree(P(590, 1005), 6f); Tree(P(905, 1005), 7.5f); Tree(P(130, 350), 6f);
+        Wire(P(600, 95, 6.6f), P(900, 95, 6.6f)); Wire(P(215, 700, 6.6f), P(600, 95, 6.6f)); Wire(P(1285, 700, 6.6f), P(900, 95, 6.6f));
+        Prop("carpet2", P(520, 470, 0.02f), 90, 3.2f, false); Prop("carpet1", P(600, 478, 0.02f), 80, 2.6f, false);
+        for (int i = 0; i < 6; i++) Prop("bread", P(690 + (i % 2) * 90 + R(-6, 6), 375 + (i / 2) * 170 + R(-10, 10), 1.07f), R(0, 360), 0.32f, false);
         Crates(P(255, 760), 2, 0.4f); Crates(P(1245, 700), 2, 0.4f); Crates(P(330, 915), 2, 0.5f);
         Box(P(430, 140, 0.5f), new Vector3(0.5f, 1f, 3f), Concrete);            // road block
         Box(P(255, 250, 0.6f), new Vector3(2.6f, 1.2f, 0.4f), Mud);

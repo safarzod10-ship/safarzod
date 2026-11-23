@@ -28,8 +28,23 @@ public static class Build
             urp = UniversalRenderPipelineAsset.Create(rd);
             AssetDatabase.CreateAsset(urp, "Assets/Settings/URP.asset");
         }
-        urp.shadowDistance = 45f; urp.msaaSampleCount = 2; urp.supportsHDR = false; urp.renderScale = 1f;
-        urp.shadowCascadeCount = 2; urp.mainLightShadowmapResolution = 2048;
+        urp.shadowDistance = 70f; urp.msaaSampleCount = 2; urp.supportsHDR = true; urp.renderScale = 1f;
+        urp.shadowCascadeCount = 3; urp.mainLightShadowmapResolution = 4096;
+        try
+        {   // ambient occlusion gives depth to corners and under roofs
+            var rdata = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>("Assets/Settings/URP_Renderer.asset");
+            var ssaoType = typeof(UniversalRendererData).Assembly.GetType("UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion");
+            if (rdata != null && ssaoType != null && !rdata.rendererFeatures.Any(f => f != null && f.GetType() == ssaoType))
+            {
+                var feat = (ScriptableRendererFeature)ScriptableObject.CreateInstance(ssaoType);
+                feat.name = "SSAO";
+                AssetDatabase.AddObjectToAsset(feat, rdata);
+                rdata.rendererFeatures.Add(feat);
+                EditorUtility.SetDirty(rdata);
+                Debug.Log("SSAO_ADDED");
+            }
+        }
+        catch (System.Exception e) { Debug.LogWarning("SSAO skipped: " + e.Message); }
         EditorUtility.SetDirty(urp);
         GraphicsSettings.defaultRenderPipeline = urp;
         for (int i = 0; i < QualitySettings.names.Length; i++) { QualitySettings.SetQualityLevel(i, false); QualitySettings.renderPipeline = urp; }
@@ -37,6 +52,10 @@ public static class Build
         // --- material templates (keeps the shaders in builds)
         var lit = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         AssetDatabase.CreateAsset(lit, "Assets/Resources/Mat/Lit.mat");
+        var litn = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        var anyNormal = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Textures/mud_n.jpg");
+        if (anyNormal != null) { litn.SetTexture("_BumpMap", anyNormal); litn.EnableKeyword("_NORMALMAP"); }
+        AssetDatabase.CreateAsset(litn, "Assets/Resources/Mat/LitN.mat");
         var fx = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
         fx.SetFloat("_Surface", 1); fx.SetFloat("_Blend", 2);
         fx.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha); fx.SetInt("_DstBlend", (int)BlendMode.One); fx.SetInt("_ZWrite", 0);
@@ -100,7 +119,7 @@ public static class Build
     public static void Linux()
     {
         Dir("Builds/linux");
-        var r = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { ScenePath }, locationPathName = "Builds/linux/bazar.x86_64", target = BuildTarget.StandaloneLinux64, options = BuildOptions.Development });
+        var r = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { ScenePath }, locationPathName = "Builds/linux/bazar.x86_64", target = BuildTarget.StandaloneLinux64, options = BuildOptions.None });
         Debug.Log("BUILD_RESULT " + r.summary.result + " errors=" + r.summary.totalErrors);
         EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
     }

@@ -13,7 +13,8 @@ public class InputState
 /// Material templates saved as assets so their shaders are included in builds.
 public static class Tpl
 {
-    static Material lit, fx, sky;
+    static Material lit, litN, fx, sky;
+    public static Material LitN => litN != null ? litN : litN = Resources.Load<Material>("Mat/LitN");
     public static Material Lit => lit != null ? lit : lit = Resources.Load<Material>("Mat/Lit");
     public static Material Fx => fx != null ? fx : fx = Resources.Load<Material>("Mat/Fx");
     public static Material Sky => sky != null ? sky : sky = Resources.Load<Material>("Mat/Sky");

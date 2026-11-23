@@ -50,8 +50,47 @@ public class Hud : MonoBehaviour
             if (args[i] == "-autojoin" && i + 1 < args.Length) { autoIp = args[i + 1]; Invoke(nameof(AutoJoin), 1f); }
             if (args[i] == "-shots" && i + 1 < args.Length) { shotDir = args[i + 1]; }
             if (args[i] == "-mapshots" && i + 1 < args.Length) { shotDir = args[i + 1]; StartCoroutine(MapShots()); }
+            if (args[i] == "-walk" && i + 1 < args.Length) { shotDir = args[i + 1]; StartCoroutine(Walk()); }
             if (args[i] == "-autohost" || args[i] == "-autojoin") InvokeRepeating(nameof(Report), 5f, 5f);
         }
+    }
+
+    /// Records a first-person walk through the map as numbered frames (24 per second of game time).
+    System.Collections.IEnumerator Walk()
+    {
+        root.gameObject.SetActive(false);
+        var cam = Camera.main.transform;
+        float[,] w = {
+            {0,-26},{0,-14.5f},{0,-2},{0,4.5f},{8,4.5f},{20,4.5f},{25,1.5f},{31,0},{34,6},{30,12},{29.7f,22},{20,24.5f},{6,25},
+            {1.6f,21},{1.6f,15.5f},{0,10},{0,4.5f},{-8,4.5f},{-20,4.5f},{-26,1},{-31,3},{-33,8},
+        };
+        Time.captureFramerate = 24;
+        yield return new WaitForSeconds(1f);
+        Vector3 pos = new Vector3(w[0, 0], 0, w[0, 1]); float yaw = 0, bob = 0; int frame = 0;
+        for (int i = 1; i < w.GetLength(0); i++)
+        {
+            Vector3 target = new Vector3(w[i, 0], 0, w[i, 1]);
+            while ((target - pos).sqrMagnitude > 0.04f)
+            {
+                float dt = 1f / 24f;
+                Vector3 dir = (target - pos).normalized;
+                float wantYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+                float off = Mathf.Abs(Mathf.DeltaAngle(yaw, wantYaw));
+                yaw = Mathf.MoveTowardsAngle(yaw, wantYaw, 110f * dt);
+                float speed = off > 40f ? 1.2f : 3.6f;
+                pos = Vector3.MoveTowards(pos, target, speed * dt);
+                bob += speed * dt * 2.1f;
+                float look = Mathf.Sin(frame * 0.035f) * 16f;
+                cam.position = pos + Vector3.up * (1.66f + Mathf.Sin(bob * 2f) * 0.03f) + cam.right * Mathf.Cos(bob) * 0.02f;
+                cam.rotation = Quaternion.Euler(1.5f + Mathf.Sin(frame * 0.02f) * 4f, yaw + look, Mathf.Cos(bob) * 0.4f);
+                yield return new WaitForEndOfFrame();
+                ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shotDir, $"f{frame++:00000}.png"));
+                yield return null;
+            }
+        }
+        Debug.Log("WALK_DONE frames=" + frame);
+        yield return new WaitForSeconds(0.5f);
+        Application.Quit();
     }
 
     System.Collections.IEnumerator MapShots()
