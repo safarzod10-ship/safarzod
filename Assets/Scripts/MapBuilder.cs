@@ -219,12 +219,12 @@ public class MapBuilder : MonoBehaviour
     {
         var sun = new GameObject("Sun").AddComponent<Light>();
         sun.type = LightType.Directional; sun.color = new Color(1f, 0.92f, 0.78f); sun.intensity = 2.1f;
-        sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.85f;
+        sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.72f;
         sun.transform.rotation = Quaternion.Euler(42f, 205f, 0);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.62f, 0.72f, 0.88f);
-        RenderSettings.ambientEquatorColor = new Color(0.58f, 0.54f, 0.48f);
-        RenderSettings.ambientGroundColor = new Color(0.3f, 0.25f, 0.2f);
+        RenderSettings.ambientSkyColor = new Color(0.95f, 1.08f, 1.3f);
+        RenderSettings.ambientEquatorColor = new Color(0.9f, 0.84f, 0.76f);
+        RenderSettings.ambientGroundColor = new Color(0.55f, 0.46f, 0.38f);
         RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear; RenderSettings.fogColor = new Color(0.72f, 0.76f, 0.8f);
         RenderSettings.fogStartDistance = 70f; RenderSettings.fogEndDistance = 900f;
         var sky = new Material(Tpl.Sky);
@@ -250,7 +250,7 @@ public class MapBuilder : MonoBehaviour
                 float y = h * prof[r] * (0.75f + 0.5f * Mathf.PerlinNoise(Mathf.Cos(a) * 9f + r, Mathf.Sin(a) * 9f + r)) - 6f;
                 v[i * Rows + r] = new Vector3(Mathf.Cos(a) * rad, y, Mathf.Sin(a) * rad);
                 uv[i * Rows + r] = new Vector2(i * 0.35f + r * 0.6f, Mathf.Clamp01(y / 150f));
-                if (i < N && r < Rows - 1) { int k = i * Rows + r; tr.AddRange(new[] { k, k + 1, k + Rows, k + 1, k + Rows + 1, k + Rows }); }
+                if (i < N && r < Rows - 1) { int k = i * Rows + r; tr.AddRange(new[] { k, k + Rows, k + 1, k + 1, k + Rows, k + Rows + 1 }); }
             }
         }
         var m = new Mesh(); m.vertices = v; m.uv = uv; m.triangles = tr.ToArray(); m.RecalculateNormals(); m.RecalculateBounds();
