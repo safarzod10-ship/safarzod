@@ -23,6 +23,7 @@ PerformanceMonitor="*res://scripts/managers/performance_monitor.gd"
 InputManager="*res://scripts/managers/input_manager.gd"
 SceneLoader="*res://scripts/managers/scene_loader.gd"
 GameManager="*res://scripts/core/game_manager.gd"
+CombatState="*res://scripts/combat/combat_state.gd"
 
 [debug]
 

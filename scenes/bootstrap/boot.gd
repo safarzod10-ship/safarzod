@@ -1,7 +1,7 @@
 extends Control
 ## Boot scene: verifies core systems, then loads the diagnostics scene.
 
-const NEXT_SCENE := "res://scenes/world/dushanbe_environment.tscn"
+const NEXT_SCENE := "res://scenes/combat/main_menu.tscn"
 
 @onready var _status: Label = $Center/VBox/Status
 @onready var _bar: ProgressBar = $Center/VBox/Progress

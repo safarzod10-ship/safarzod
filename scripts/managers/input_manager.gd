@@ -70,6 +70,11 @@ func consume_look_delta() -> Vector2:
 	return d
 
 
+## For UI widgets that own a touch but still want it to turn the camera.
+func add_look_delta(pixels: Vector2) -> void:
+	_look_delta += pixels * LOOK_SENSITIVITY
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		_set_touch_mode(true)
