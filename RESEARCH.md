@@ -16,3 +16,8 @@
 
 ## Agent harness guidance applied
 - Persistent state files (FEATURES.json, PROGRESS.md, NEXT_TASK.md) so a new session can resume; one feature at a time; verify before marking passing; commit after each step.
+
+## 2026-11-24 — asset search for Tajik identity (Sketchfab, commercial licences only)
+Found usable (CC BY): Samovar (hellotaia f428aa16, tomich516 83499690), Post-Soviet retro dining pack (mariakrasinska acee1702), fruit bowl / fruit pack with pomegranates (meerschaumdigital 373c679b, 105da0b0), pomegranate (mauricesvay 62ac29fe).
+Not found in usable quality: carved Central-Asian doors and columns, aivan, painted ceilings, suzani, tapchan, Tajik majolica.
+Decision: model the architectural identity ourselves — Blender (headless, Python) for carved doors/columns/aivan/lattice windows; ornaments (girih, islimi rosettes) generated as vector patterns in Python and baked into height/normal maps; majolica tile panels from the same pattern generator with a glaze colour palette (turquoise, cobalt, white, ochre).
