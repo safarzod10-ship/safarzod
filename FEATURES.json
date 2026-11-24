@@ -186,8 +186,8 @@
   "description": "Phone-ready rendering: quality presets Low/Medium/High; shadows, SSAO, post-processing per preset; LOD groups; texture sizes capped.",
   "acceptance": "3 presets switch at runtime; settings saved; triangle count per frame < 300k on High.",
   "test": "Play-mode test + frame stats log.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: GameSettings presets Low/Medium/High (render scale, MSAA, shadows, SSAO, HDR, post, texture mip limit, LOD bias, 60 fps cap) + PlayerPrefs; compiles; runtime switch not yet verified; settings UI pending."
  },
  {
   "id": "GFX-02",
@@ -206,8 +206,8 @@
   "description": "Stable 60 FPS on a mid-range phone (target: Snapdragon 7-series / Mali-G68 class) on Medium preset; 30 FPS on Low-end on Low.",
   "acceptance": "On-device FPS overlay readings reported by owner; CPU main-thread time measured in headless run <8 ms.",
   "test": "On-device measurement + headless profiling.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: on-screen FPS + worst frame overlay (FpsOverlay) for on-device measurement; PERF log lines in batch/dev builds."
  },
  {
   "id": "PERF-02",
