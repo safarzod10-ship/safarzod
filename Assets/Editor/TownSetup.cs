@@ -71,14 +71,15 @@ public static class TownSetup
     static readonly Vector3 DirToSun = new Vector3(-0.554f, 0.742f, 0.378f);   // matches the HDRI sun with the skybox rotated 180 deg
     const float SkyRotation = 180f;
     static readonly Color SunColor = new Color(1f, 0.95f, 0.86f);
-    const float SunIntensity = 3.0f;
-    const float SkyScale = 1.0f, BounceScale = 1.0f;
+    const float SunIntensity = 2.1f;        // sun : sky ratio measured in the HDRI is about 1.4-2 : 1 (Unity units)
+    const float SkyScale = 1.0f, BounceScale = 1.3f;
     const float FogDensity = 0.0045f;
-    const float PostExposure = 0.0f, Contrast = 6f, Saturation = 2f, Temperature = 0f;
+    const float ReflectionIntensity = 0.7f;   // the courtyards see well under a full hemisphere of sky
+    const float PostExposure = 0.7f, Contrast = 8f, Saturation = 2f, Temperature = 0f;
     const int ToneMode = 2;                 // 1 = Neutral, 2 = ACES
     const float Lift = 0f, Gamma = 0f;
     const float BloomIntensity = 0.18f, VignetteIntensity = 0.22f, GrainIntensity = 0.12f;
-    const float SsaoIntensity = 1.2f, SsaoRadius = 0.45f, SsaoDirect = 0.15f;
+    const float SsaoIntensity = 1.5f, SsaoRadius = 0.35f, SsaoDirect = 0.2f;
 
     [Serializable] class GeoView { public string name; public string kind; public float[] pos_unity; public float[] look_at_unity; public float fov_vertical_deg; }
     [Serializable] class GeoSpawn { public float yaw_unity_deg; }
@@ -117,6 +118,7 @@ public static class TownSetup
             mr.reflectionProbeUsage = ReflectionProbeUsage.BlendProbes;
             mr.gameObject.isStatic = true;
             var mesh = mf != null ? mf.sharedMesh : null;
+            if (mesh != null && mname == "cloth") { mesh = TrimCloth(mesh); mf.sharedMesh = mesh; }
             if (mesh != null)
             {
                 tris += (int)(mesh.GetIndexCount(0) / 3);
@@ -173,7 +175,7 @@ public static class TownSetup
         var refl = AssetDatabase.LoadAssetAtPath<Cubemap>(ReflTex);
         RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
         RenderSettings.customReflectionTexture = refl;
-        RenderSettings.reflectionIntensity = 1f;
+        RenderSettings.reflectionIntensity = ReflectionIntensity;
         var hz = TownSkyData.Horizon;
         RenderSettings.fog = true; RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogDensity = FogDensity;
         RenderSettings.fogColor = new Color(hz[0], hz[1], hz[2], 1f).gamma;
@@ -201,6 +203,9 @@ public static class TownSetup
             }
         shots.Add(new TownShots.View { name = "alley_wall_closeup", pos = new Vector3(-2.6f, 1.65f, 21.5f), target = new Vector3(1.0f, 1.3f, 19.0f), fov = 55f });
         shots.Add(new TownShots.View { name = "bombsite_crates_close", pos = new Vector3(-2.6f, 1.65f, -0.5f), target = new Vector3(3f, 0.8f, -3.5f), fov = 60f });
+        shots.Add(new TownShots.View { name = "portal_long_lens", pos = new Vector3(-4.0f, 1.7f, 3.0f), target = new Vector3(0.6f, 4.6f, -12.2f), fov = 40f });
+        shots.Add(new TownShots.View { name = "drone_south_east_low", pos = new Vector3(-16f, 15f, 18f), target = new Vector3(2f, 3f, -6f), fov = 45f, shadowDistance = 120f });
+        shots.Add(new TownShots.View { name = "drone_west_over_house", pos = new Vector3(17f, 13f, 6f), target = new Vector3(-3f, 3.5f, -7f), fov = 42f, shadowDistance = 120f });
 
         var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
         camGo.tag = "MainCamera";
@@ -219,6 +224,27 @@ public static class TownSetup
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();
         Debug.Log("TOWNSETUP_OK views=" + ts.views.Length + " renderer=" + rendererIndex);
+    }
+
+    /// The source model has two pink cloth sheets hanging in mid-air above the roofs (7.3-9.8 m up, nothing below
+    /// them). All real awnings end below 5.6 m, so everything of the cloth mesh above 6.5 m is dropped.
+    static Mesh TrimCloth(Mesh src)
+    {
+        const string path = "Assets/Town/cloth_trimmed.asset";
+        var m = Object.Instantiate(src);
+        m.name = "map_cloth_trimmed";
+        var v = m.vertices; var t = m.triangles; var keep = new List<int>(t.Length);
+        for (int i = 0; i < t.Length; i += 3)
+        {
+            if (Mathf.Min(v[t[i]].y, Mathf.Min(v[t[i + 1]].y, v[t[i + 2]].y)) > 6.5f) continue;
+            keep.Add(t[i]); keep.Add(t[i + 1]); keep.Add(t[i + 2]);
+        }
+        Debug.Log("TOWN cloth trimmed: removed " + (t.Length - keep.Count) / 3 + " of " + t.Length / 3 + " triangles");
+        m.triangles = keep.ToArray();
+        m.RecalculateBounds();
+        AssetDatabase.DeleteAsset(path);
+        AssetDatabase.CreateAsset(m, path);
+        return m;
     }
 
     static void MakeSpawn(Transform parent, Transform[] all, string name, float yaw)
@@ -250,7 +276,10 @@ public static class TownSetup
             so.FindProperty("m_Settings.AOMethod").intValue = 1;          // interleaved gradient noise
             so.FindProperty("m_Settings.Downsample").boolValue = false;
             so.FindProperty("m_Settings.AfterOpaque").boolValue = false;
-            so.FindProperty("m_Settings.Source").intValue = 1;            // depth + normals
+            // normals reconstructed from depth: the DepthNormals source gave garbage AO with the glTFast shader graph
+            // (large black patches in shade) and would cost an extra geometry pass on phones anyway
+            so.FindProperty("m_Settings.Source").intValue = 0;
+            so.FindProperty("m_Settings.NormalSamples").intValue = 2;     // high
             so.FindProperty("m_Settings.Intensity").floatValue = SsaoIntensity;
             so.FindProperty("m_Settings.DirectLightingStrength").floatValue = SsaoDirect;
             so.FindProperty("m_Settings.Radius").floatValue = SsaoRadius;
@@ -445,6 +474,24 @@ public static class TownSetup
         for (int n = 0; n < variants.Length; n++)
         {
             ts.ApplyTweaks(variants[n]);
+            // editor-only switches for tuning the SSAO feature: ssao=0/1, ssaoSrc=0/1, ssaoR=<radius>, ssaoI=<intensity>, ssaoD=<direct>
+            foreach (var f in AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(TownRenderer).rendererFeatures)
+            {
+                if (f == null) continue;
+                var so = new SerializedObject(f);
+                foreach (var kv in variants[n].Split(';'))
+                {
+                    var p = kv.Split('=');
+                    if (p.Length != 2 || !p[0].StartsWith("ssao")) continue;
+                    float val = float.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture);
+                    if (p[0] == "ssao") f.SetActive(val > 0f);
+                    if (p[0] == "ssaoSrc") so.FindProperty("m_Settings.Source").intValue = (int)val;
+                    if (p[0] == "ssaoR") so.FindProperty("m_Settings.Radius").floatValue = val;
+                    if (p[0] == "ssaoI") so.FindProperty("m_Settings.Intensity").floatValue = val;
+                    if (p[0] == "ssaoD") so.FindProperty("m_Settings.DirectLightingStrength").floatValue = val;
+                }
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
             for (int i = 0; i < ts.views.Length; i++)
             {
                 if (!TownShots.Selected(only, i + 1)) continue;
