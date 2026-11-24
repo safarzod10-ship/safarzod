@@ -16,8 +16,8 @@
   "description": "Bots move, take cover, fight both teams fairly; attackers carry and plant the bomb; defenders defuse.",
   "acceptance": "In 10 headless rounds: bomb planted in >=3 rounds, at least one defuse, win rate per team between 30% and 70%.",
   "test": "Headless match with counters for plants/defuses/wins per team.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: team plan (defender holds, two attacker routes, staged execute, escorts) implemented; compiles; awaiting headless verification."
  },
  {
   "id": "GP-03",
@@ -36,8 +36,8 @@
   "description": "Economy: start money, kill rewards by weapon, win/loss income, max money, buy time and buy menu restrictions.",
   "acceptance": "Money values in logs follow the table for 5 rounds.",
   "test": "Headless match log check.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: loss-streak economy, plant bonus, halftime swap implemented; compiles; awaiting headless verification."
  },
  {
   "id": "GP-05",
@@ -216,8 +216,8 @@
   "description": "Character models <= 15k triangles each with LODs; draw calls < 250 on Medium.",
   "acceptance": "Editor report of mesh stats.",
   "test": "Editor test.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: ct1 106k->32k, ct2 72k->19k source (gltfpack -si, seams preserved; aggressive mode rejected: holes on legs). Rebuild of prefabs pending."
  },
  {
   "id": "UI-01",

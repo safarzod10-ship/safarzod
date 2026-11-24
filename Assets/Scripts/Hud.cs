@@ -466,7 +466,7 @@ public class Hud : MonoBehaviour
         useBar.sizeDelta = new Vector2(500 * p.useProgress, 18);
         bool plant = g.CanPlant(p), defuse = g.CanDefuse(p);
         tHint.text = plant ? "Удерживайте «БОМБА», чтобы заложить" : defuse ? "Удерживайте «БОМБА», чтобы обезвредить"
-            : g.Phase == Phase.Freeze ? "Закупка: откройте МАГАЗИН" : p.HasBomb.Value ? "Несите бомбу на точку A или B" : "";
+            : g.Phase == Phase.Freeze ? "Закупка: откройте МАГАЗИН" : p.HasBomb.Value ? (g.sites.Count > 1 ? "Несите бомбу на точку A или B" : "Несите бомбу на точку закладки") : "";
         if (mobile)
         {
             btn["use"].gameObject.SetActive(plant || defuse);

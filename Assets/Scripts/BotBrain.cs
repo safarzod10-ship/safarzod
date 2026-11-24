@@ -11,6 +11,17 @@ public class BotBrain : MonoBehaviour
     Vector3 goal; bool hasGoal; int strafeDir = 1;
     float skill;
 
+    // ---- team plan for levels with one bomb site (Town). Unity coordinates, y ignored.
+    // Defenders hold angles on the entries; attackers split over two routes, stage, then execute together.
+    static readonly Vector3[] HoldCT = { new Vector3(-3.5f, 0, -1.0f), new Vector3(-6.0f, 0, -3.0f), new Vector3(2.5f, 0, -1.5f), new Vector3(-5.0f, 0, 2.0f), new Vector3(-0.6f, 0, -5.6f) };
+    static readonly Vector3[] WatchCT = { new Vector3(1.2f, 0, 9.2f), new Vector3(-12.7f, 0, 5.6f), new Vector3(1.2f, 0, 9.2f), new Vector3(-12.7f, 0, 5.6f), new Vector3(-0.6f, 0, 8f) };
+    static readonly Vector3[][] RouteT =
+    {
+        new[] { new Vector3(-1.5f, 0, 17.0f), new Vector3(-0.5f, 0, 14.0f), new Vector3(1.2f, 0, 11.5f), new Vector3(1.2f, 0, 7.5f) },                        // south gate
+        new[] { new Vector3(-6.0f, 0, 14.0f), new Vector3(-17.0f, 0, 13.0f), new Vector3(-17.0f, 0, 8.0f), new Vector3(-12.7f, 0, 5.6f), new Vector3(-9.0f, 0, 3.5f) }, // east lane + arch
+    };
+    int rank, group, wp; float executeAt; bool planMode; Vector3 watch; bool holding;
+
     void Awake()
     {
         p = GetComponent<Player>();
@@ -33,6 +44,12 @@ public class BotBrain : MonoBehaviour
     {
         target = null; lastAttacker = null; hasGoal = false; workTime = 0; holdUntil = 0;
         Invoke(nameof(Buy), Random.Range(0.3f, 2f));
+        planMode = GameObject.Find("BombSite") != null;
+        rank = 0;
+        foreach (var o in Player.All) if (o != p && o.Team.Value == p.Team.Value && o.NetworkObjectId < p.NetworkObjectId) rank++;
+        group = rank % 2; wp = 0; holding = false;
+        executeAt = Random.Range(16f, 22f);              // seconds after the round goes live
+        watch = Vector3.zero;
     }
 
     public void OnHurt(Player attacker) { lastAttacker = attacker; hurtTime = Time.time; }
@@ -68,6 +85,11 @@ public class BotBrain : MonoBehaviour
             agent.isStopped = Time.time < holdUntil || workTime > 0;
             Vector3 v = agent.desiredVelocity; v.y = 0;
             if (v.sqrMagnitude > 0.3f) Turn(Mathf.Atan2(v.x, v.z) * Mathf.Rad2Deg, 0, 420f);
+            else if (holding && watch != Vector3.zero)
+            {
+                Vector3 w = watch - transform.position; w.y = 0;
+                Turn(Mathf.Atan2(w.x, w.z) * Mathf.Rad2Deg + Mathf.Sin(Time.time * 0.6f + rank) * 12f, 0, 200f);
+            }
             else Turn(p.yaw + Mathf.Sin(Time.time * 0.7f + GetInstanceID()) * 40f * Time.deltaTime, 0, 200f);
             p.zoomed = false;
             if (p.Def.slot != Slot.Knife && p.mag[p.cur] < p.Def.mag / 2 && !p.Reloading) p.Reload();
@@ -151,9 +173,77 @@ public class BotBrain : MonoBehaviour
         if (Game.NavPoint(center, radius, out goal)) { hasGoal = true; agent.SetDestination(goal); }
     }
 
+    bool Reach(Vector3 p0, float tol)
+    {
+        if (!hasGoal || (goal - p0).sqrMagnitude > 1f)
+        {
+            if (!NavMesh.SamplePosition(p0, out var h, 3f, NavMesh.AllAreas)) return true;   // unreachable point: skip it
+            goal = h.position; hasGoal = true; agent.SetDestination(goal);
+        }
+        Vector3 d = goal - transform.position; d.y = 0;
+        return d.sqrMagnitude < tol * tol || (!agent.pathPending && agent.remainingDistance < tol);
+    }
+
+    void PlanObjective(Game g)
+    {
+        Vector3 site = g.sites[0].center; site.y = 0;
+        float live = g.Now - g.PhaseStart.Value;
+        holding = false;
+        if (p.Team.Value == 2)
+        {   // defenders: take a hold spot and keep the angle; on plant everybody goes to the bomb
+            if (g.Phase == Phase.Planted) { workTime = 0; DefuseRun(g); return; }
+            int i = rank % HoldCT.Length;
+            watch = WatchCT[i];
+            if (Reach(HoldCT[i], 0.7f)) { agent.isStopped = true; holding = true; p.crouch = rank % 3 == 2; }
+            return;
+        }
+        // attackers
+        p.crouch = false;
+        if (g.Phase == Phase.Planted)
+        {
+            watch = WatchCT[rank % WatchCT.Length];
+            if (Reach(g.BombPos.Value + new Vector3(Mathf.Sin(rank * 2.1f), 0, Mathf.Cos(rank * 2.1f)) * 5f, 1.2f)) { agent.isStopped = true; holding = true; }
+            return;
+        }
+        var route = RouteT[group];
+        if (wp < route.Length)
+        {
+            bool staging = wp == route.Length - 1 && live < executeAt;
+            if (staging) { watch = route[wp]; holding = true; agent.isStopped = true; return; }
+            if (Reach(route[wp], 1.5f)) { wp++; hasGoal = false; }
+            return;
+        }
+        if (p.HasBomb.Value)
+        {
+            if (g.CanPlant(p) && (transform.position - site).sqrMagnitude < 9f)
+            {
+                workTime += Time.deltaTime; agent.isStopped = true; p.crouch = true;
+                if (workTime >= 3.2f) { g.PlantRpc(p.NetworkObject, transform.position); workTime = 0; p.crouch = false; }
+                return;
+            }
+            workTime = 0; Reach(site, 0.8f); return;
+        }
+        // escorts: cover the carrier from points around the site
+        watch = WatchCT[(rank + 1) % WatchCT.Length];
+        if (Reach(site + new Vector3(Mathf.Sin(rank * 2.4f), 0, Mathf.Cos(rank * 2.4f)) * 4.5f, 1.2f)) { agent.isStopped = true; holding = true; }
+    }
+
+    void DefuseRun(Game g)
+    {
+        Vector3 b = g.BombPos.Value;
+        if (g.CanDefuse(p))
+        {
+            workTime += Time.deltaTime; agent.isStopped = true; p.crouch = true;
+            if (workTime >= 7f) { g.DefuseRpc(p.NetworkObject); workTime = 0; p.crouch = false; }
+            return;
+        }
+        workTime = 0; Reach(b, 1.2f);
+    }
+
     void Objective(Game g)
     {
         if (g.sites.Count == 0) return;
+        if (planMode) { PlanObjective(g); return; }
         Vector3 site = g.sites[Mathf.Clamp(g.botSite, 0, g.sites.Count - 1)].center; site.y = 0;
         if (p.Team.Value == 1)
         {

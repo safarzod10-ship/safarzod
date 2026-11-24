@@ -14,7 +14,9 @@ public class Game : NetworkBehaviour
     public static int TeamSize = 5;          // fighters per team, bots fill the free places
     public static float BotSkill = 0.5f;     // 0 easy .. 1 hard
     public const int WinRounds = 13, MaxMoney = 16000;
-    const float FreezeTime = 6f, RoundTime = 115f, BombTime = 40f, EndTime = 5f, BuyTime = 20f;
+    const float FreezeTime = 6f, RoundTime = 115f, BombTime = 40f, EndTime = 5f, MatchEndTime = 12f, BuyTime = 20f;
+    readonly int[] lossStreak = new int[3];
+    bool plantedThisRound;
 
     public GameObject playerPrefab;
 
@@ -136,7 +138,7 @@ public class Game : NetworkBehaviour
 
     void StartRound(bool first)
     {
-        BombDown.Value = false;
+        BombDown.Value = false; plantedThisRound = false;
         botSite = Random.Range(0, Mathf.Max(1, sites.Count));
         var ts = new List<Player>();
         foreach (var p in Player.All)
@@ -189,8 +191,17 @@ public class Game : NetworkBehaviour
                 {
                     if (ScoreT.Value >= WinRounds || ScoreCT.Value >= WinRounds)
                     {
-                        ScoreT.Value = 0; ScoreCT.Value = 0; survivors.Clear();
+                        Debug.Log($"MATCH_END score={ScoreT.Value}:{ScoreCT.Value}");
+                        ScoreT.Value = 0; ScoreCT.Value = 0; survivors.Clear(); lossStreak[1] = lossStreak[2] = 0;
                         foreach (var p in Player.All) { p.Money.Value = 800; p.Kills.Value = 0; p.Deaths.Value = 0; }
+                    }
+                    else if (ScoreT.Value + ScoreCT.Value == WinRounds - 1)
+                    {   // half time: sides swap, players keep their score, economy restarts
+                        Debug.Log($"HALFTIME score={ScoreT.Value}:{ScoreCT.Value}");
+                        int t = ScoreT.Value; ScoreT.Value = ScoreCT.Value; ScoreCT.Value = t;
+                        survivors.Clear(); lossStreak[1] = lossStreak[2] = 0;
+                        foreach (var p in Player.All) { p.Team.Value = 3 - p.Team.Value; p.Money.Value = 800; p.Armor.Value = 0; }
+                        NoticeRpc("Смена сторон");
                     }
                     StartRound(false);
                 }
@@ -201,15 +212,25 @@ public class Game : NetworkBehaviour
     void EndRound(int winner, string reason)
     {
         if (Phase == Phase.End) return;
+        Debug.Log($"ROUND_END winner={(winner == 1 ? "T" : "CT")} reason={reason} t={Now - PhaseStart.Value:0.0}");
         if (winner == 1) ScoreT.Value++; else ScoreCT.Value++;
+        // economy (classic rules): winners 3250, losers 1400 + 500 per consecutive loss (max 3400);
+        // the band gets +800 each when the bomb was planted, even if they lost
+        int loser = 3 - winner;
+        lossStreak[winner] = 0; lossStreak[loser] = Mathf.Min(lossStreak[loser] + 1, 5);
+        int lossBonus = Mathf.Min(1400 + 500 * (lossStreak[loser] - 1), 3400);
         foreach (var p in Player.All)
         {
             if (p.Alive) survivors.Add(p);
-            p.Money.Value = Mathf.Min(MaxMoney, p.Money.Value + (p.Team.Value == winner ? 3250 : 1900));
+            int add = p.Team.Value == winner ? 3250 : lossBonus;
+            if (p.Team.Value == 1 && plantedThisRound && winner != 1) add += 800;
+            p.Money.Value = Mathf.Min(MaxMoney, p.Money.Value + add);
         }
-        SetPhase(Phase.End, EndTime);
         bool match = ScoreT.Value >= WinRounds || ScoreCT.Value >= WinRounds;
-        BannerRpc((winner == 1 ? "Победа банды" : "Победа спецназа") + " — " + reason + (match ? "\nМАТЧ ОКОНЧЕН" : ""), winner);
+        SetPhase(Phase.End, match ? MatchEndTime : EndTime);
+        string mvp = "";
+        if (match) { Player best = null; foreach (var p in Player.All) if (best == null || p.Kills.Value > best.Kills.Value) best = p; if (best != null) mvp = $"\nЛучший игрок: {best.Nick.Value} ({best.Kills.Value} убийств)"; }
+        BannerRpc((winner == 1 ? "Победа банды" : "Победа спецназа") + " — " + reason + (match ? "\nМАТЧ ОКОНЧЕН" + mvp : ""), winner);
     }
 
     [Rpc(SendTo.Everyone)]
@@ -279,7 +300,8 @@ public class Game : NetworkBehaviour
         if (p == null || !p.HasBomb.Value || Phase != Phase.Live || SiteIndex(pos) < 0) return;
         if (Physics.Raycast(pos + Vector3.up, Vector3.down, out var hit, 3f, ~0, QueryTriggerInteraction.Ignore)) pos = hit.point;
         p.HasBomb.Value = false; p.Money.Value = Mathf.Min(MaxMoney, p.Money.Value + 300);
-        BombPos.Value = pos; BombDown.Value = true;
+        BombPos.Value = pos; BombDown.Value = true; plantedThisRound = true;
+        Debug.Log($"BOMB_PLANTED by={p.Nick.Value} t={Now - PhaseStart.Value:0.0}");
         SetPhase(Phase.Planted, BombTime);
         NoticeRpc("Бомба заложена!");
     }
@@ -290,6 +312,7 @@ public class Game : NetworkBehaviour
         if (!who.TryGet(out var no)) return;
         var p = no.GetComponent<Player>();
         if (p == null || !CanDefuse(p)) return;
+        Debug.Log($"BOMB_DEFUSED by={p.Nick.Value}");
         BombDown.Value = false; p.Money.Value = Mathf.Min(MaxMoney, p.Money.Value + 300);
         EndRound(2, "Бомба обезврежена");
     }
