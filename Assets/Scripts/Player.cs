@@ -179,9 +179,11 @@ public class Player : NetworkBehaviour
     void ThrowRpc(Vector3 from, Vector3 vel) { Game.I.ThrowGrenade(this, from, vel); }
 
     // ---------------------------------------------------------------- weapons
+    bool hasSelected;
     public void Select(int id)
     {
-        if (id < 0 || id == cur && shownVm == id) { if (id >= 0) cur = id; return; }
+        if (id < 0 || (id == cur && hasSelected)) return;   // already in hands: no new draw delay
+        hasSelected = true;
         cur = id; zoomed = false; reloadEnd = 0; nextFire = Time.time + 0.35f;
         if (IsOwner) NetWeapon.Value = id;
     }

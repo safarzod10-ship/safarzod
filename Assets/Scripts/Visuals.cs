@@ -45,6 +45,12 @@ public static class WeaponModels
     {
         var d = Weapons.Get(id);
         var prefab = Resources.Load<GameObject>("Weapons/" + d.key);
+        if (prefab == null)
+        {   // weapons whose own model is not prepared yet borrow the closest finished one instead of a box
+            bool sniper = d.zoomFov > 0 && d.zoomFov < 30;
+            string stand = d.slot == Slot.Pistol ? "usp" : d.slot == Slot.Primary ? (sniper ? "awp" : "ak") : null;
+            if (stand != null) prefab = Resources.Load<GameObject>("Weapons/" + stand);
+        }
         GameObject go;
         if (prefab != null) go = Object.Instantiate(prefab);
         else go = Placeholder(d);

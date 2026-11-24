@@ -123,6 +123,29 @@ public class Hud : MonoBehaviour
         int a1 = 0, a2 = 0; foreach (var p in Player.All) { if (p.Alive && p.Team.Value == 1) a1++; if (p.Alive && p.Team.Value == 2) a2++; }
         var l = Player.Local;
         Debug.Log($"REPORT t={Time.time:0} phase={g.Phase} left={g.TimeLeft:0} score={g.ScoreT.Value}:{g.ScoreCT.Value} players={Player.All.Count} aliveT={a1} aliveCT={a2} bomb={g.BombDown.Value} local={(l ? l.Nick.Value + " hp" + l.Health.Value + " team" + l.Team.Value + " pos" + l.transform.position : "none")}");
+        var tri = UnityEngine.AI.NavMesh.CalculateTriangulation();
+        var sb = new System.Text.StringBuilder("BOTS navVerts=" + tri.vertices.Length + " sites=" + g.sites.Count);
+        int shown = 0;
+        foreach (var p in Player.All)
+        {
+            if (!p.IsBot.Value || shown++ >= 4) continue;
+            var ag = p.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            sb.Append($" | {p.Nick.Value} t{p.Team.Value} pos{p.transform.position} agent={(ag != null)} onNav={(ag != null && ag.isOnNavMesh)} path={(ag != null && ag.isOnNavMesh && ag.hasPath)} vel={(ag != null ? ag.velocity.magnitude : 0):0.0} w={p.cur} mag={p.mag[p.cur]}");
+        }
+        if (g.sites.Count > 0)
+        {
+            Vector3 site = g.sites[0].center; site.y = 0;
+            foreach (var nm in new[] { "SpawnA", "SpawnB" })
+            {
+                var sp = GameObject.Find(nm); if (sp == null) continue;
+                var path = new UnityEngine.AI.NavMeshPath();
+                bool q1 = UnityEngine.AI.NavMesh.SamplePosition(sp.transform.position, out var h1, 3f, UnityEngine.AI.NavMesh.AllAreas);
+                bool q2 = UnityEngine.AI.NavMesh.SamplePosition(site, out var h2, 3f, UnityEngine.AI.NavMesh.AllAreas);
+                bool ok = q1 && q2 && UnityEngine.AI.NavMesh.CalculatePath(h1.position, h2.position, UnityEngine.AI.NavMesh.AllAreas, path);
+                sb.Append($" || path {nm}->site from={(q1 ? h1.position.ToString() : "none")} to={(q2 ? h2.position.ToString() : "none")} ok={ok} status={path.status} corners={path.corners.Length} end={(path.corners.Length > 0 ? path.corners[path.corners.Length - 1].ToString() : "-")}");
+            }
+        }
+        Debug.Log(sb.ToString());
         if (!string.IsNullOrEmpty(shotDir)) ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shotDir, $"shot{shotN++:00}.png"));
     }
 
