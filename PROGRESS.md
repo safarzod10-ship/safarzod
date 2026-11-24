@@ -18,3 +18,8 @@
 - Bots: team plan for one-site levels — defenders hold angles on the two entries, attackers split over south gate and east lane/arch, stage, execute together, carrier plants under escort; round/bomb events logged (ROUND_END, BOMB_PLANTED, BOMB_DEFUSED, HALFTIME, MATCH_END).
 - Rules: classic economy (win 3250, loss 1400+500/streak max 3400, +800 band on plant), half-time side swap after 12 rounds, 12 s match-end with MVP.
 - Characters: simplified special-forces sources prepared (ct1 106k->32k, ct2 72k->19k incl. carried gun).
+
+## 2026-11-24 (afternoon)
+- Tajik kit finished by the Blender worker: door, column, aivan section, panjara window, majolica panel, tandoor, tapchan, grape trellis (all original, CC0 Poly Haven base textures). Added to Assets/Town/Kit, scripts in tools/tjkit, sheet docs/kit/kit_sheet.png.
+- TownKit.Apply editor tool: snaps wall pieces to real wall surfaces, stands them on the ground, skips floor props that overlap geometry or are near starts/bomb site, adds colliders.
+- UI redesign (UiKit.cs + Hud.cs rewrite): menu over the live map with bots and Wi-Fi pages, settings modal (graphics/controls/sound) wired to GameSettings, loading screen, new HUD, buy menu with prices and affordability, pause, scoreboard, match-end screen with MVP. Fonts Russo One + PT Sans Narrow (OFL). Compile-checked only; screenshots pending until Unity is free.

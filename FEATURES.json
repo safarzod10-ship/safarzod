@@ -166,8 +166,8 @@
   "description": "Tajik architecture identity: ornamented carved wooden doors and columns (Pamiri/ Khujand style), painted ceilings in an aivan, ornament tiles, bazaar stalls, mountains backdrop.",
   "acceptance": "Screenshot review: at least 6 distinct Tajik features visible.",
   "test": "Visual review.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: 8 original kit pieces (tools/tjkit, Assets/Town/Kit, docs/kit/kit_sheet.png); TownKit.Apply placement tool written; in-level placement not yet run."
  },
  {
   "id": "MAP-03",
@@ -226,8 +226,8 @@
   "description": "Designed main menu with play vs bots, LAN host/join, settings, credits; consistent typography and palette.",
   "acceptance": "Screenshots at 16:9, 19.5:9 and 4:3 reviewed.",
   "test": "Visual review.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: Hud.cs/UiKit.cs rewritten (menu over live map, bots/Wi-Fi pages); compile-checked, screenshots pending (-uishots)."
  },
  {
   "id": "UI-02",
@@ -236,8 +236,8 @@
   "description": "Settings screens: graphics, controls, sound; saved.",
   "acceptance": "Change, restart, persisted.",
   "test": "PlayerPrefs test.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: settings modal with graphics/controls/sound tabs wired to GameSettings (preset, post-fx, FPS, sensitivity, invert Y, button size, master volume); screenshots pending."
  },
  {
   "id": "UI-03",
@@ -246,8 +246,8 @@
   "description": "HUD: health, armour, ammo, money, timer, score, kill feed, crosshair, hit marker, bomb indicator; readable on phone.",
   "acceptance": "Screenshot review on 2 resolutions.",
   "test": "Visual review.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: new HUD (health/armour bars, ammo, money, timer, score + alive pips, kill feed with team colours, crosshair, hit marker, damage vignette, scope mask); screenshots pending."
  },
  {
   "id": "UI-04",
@@ -256,8 +256,8 @@
   "description": "Loading screen, pause menu, scoreboard (hold button), match end screen with MVP.",
   "acceptance": "Screenshots of each.",
   "test": "Visual review.",
-  "status": "failing",
-  "evidence": ""
+  "status": "in_progress",
+  "evidence": "2026-11-24: loading screen, pause, scoreboard (Tab / СЧЁТ), match end with MVP built; screenshots pending."
  },
  {
   "id": "NET-01",

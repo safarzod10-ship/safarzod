@@ -1,7 +1,13 @@
 # Next task
 
-**FP-01 / BUG-001 — first-person hands.** Owner rejected procedural IK holding. Replace with artist-animated first-person arm+weapon packs.
-Waiting for owner's choice from docs/fp_candidates.md (sheet sent 2026-11-24). Recommendation: DuqueCD7 AK-47 + Pistol packs (same arms, 11 animations each: idle, walk, run, fire, reload, draw...) plus ccransh sniper and a knife pack.
-Then: import GLB (glTFast), extract clips, play idle/fire/reload/draw in FpView by weapon family, keep the view-model camera (FpView.Layer, FOV 52).
-Running now (worker): FP-01 artist-animated arms. Done this session without Unity, awaiting verification: bot team tactics, economy/halftime/match end, graphics presets + FPS overlay, simplified ct1/ct2 sources (run tools/chars/conv_chars.py then CharSetup.BuildChars after the worker finishes).
-Queue after that: GP-02/BUG-003 -> PERF-02/BUG-007 -> GFX-01 -> UI-01..04 -> MAP-01/02 -> WPN-01.
+**Blocked on Unity being free** — the FP-01 worker (artist-animated arms) owns Unity and was waiting for the owner's permission to run its proof-sheet render.
+
+When Unity is free, in this order (one Unity process at a time):
+1. `-executeMethod TownKit.Apply` (places the Tajik kit; read KIT_PLACED / KIT_SKIP lines), then `TownSetup.Preview` / `-mapshots` to check every placed piece looks right and blocks no route.
+2. `python3 -I tools/chars/conv_chars.py` + `CharSetup.BuildChars` (simplified ct1/ct2), check sheets.
+3. `Build.LinuxTown`; graphical run with `-uishots <dir>` (12 screens: menu bots/LAN, 3 settings tabs, loading, HUD freeze/live, buy, scoreboard, pause, match end) — review each screen at 1920x1080 and a 20:9 phone size (2400x1080).
+4. Headless 10-minute match (`-autohost -batchmode -nographics`): count ROUND_END / BOMB_PLANTED / BOMB_DEFUSED / HALFTIME; expect ≥3 plants in 10 rounds, win share 30–70%.
+5. Update FEATURES/BUGS/QUALITY_REPORT/PROGRESS; commit; new APK for the owner (FPS overlay on) to measure on a phone.
+
+Not yet wired: field-of-view setting (Player.fovBase is fixed at 68), SFX/voice volume split (only master volume is offered in settings).
+Queue after that: MAP-01 (bigger level for 5v5) -> WPN-01 (remaining weapon models) -> BUG-002/005 -> NET-01 two-process LAN test.
