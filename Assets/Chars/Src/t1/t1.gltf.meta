@@ -1,0 +1,65 @@
+fileFormatVersion: 2
+guid: a410b393c8b339b14a0875ca94233df1
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/Chars/Src/t1/t1.bin
+    assetPath: Assets/Chars/Src/t1/t1.bin
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_00_n.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_00_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_01.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_01.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_02_l.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_02_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_03_n.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_03_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_04_l.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_04_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_05.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_05.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_06_n.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_06_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_07_n.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_07_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_08_l.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_08_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/t1/t1_tex/t1_09.png
+    assetPath: Assets/Chars/Src/t1/t1_tex/t1_09.png
+  reportItems:
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_specular

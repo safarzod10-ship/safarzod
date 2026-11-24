@@ -1,0 +1,138 @@
+fileFormatVersion: 2
+guid: b09a57ff2b6b187feaedf3b7a6f8cb39
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/Chars/Src/ct1/ct1.bin
+    assetPath: Assets/Chars/Src/ct1/ct1.bin
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_00_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_00_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_01.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_01.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_02_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_02_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_03_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_03_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_04.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_04.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_05_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_05_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_06_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_06_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_07.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_07.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_08_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_08_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_09.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_09.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_10.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_10.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_11_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_11_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_12.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_12.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_13_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_13_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_14_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_14_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_15.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_15.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_16_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_16_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_17.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_17.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_18_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_18_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_19.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_19.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_20_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_20_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_21_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_21_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_22.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_22.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_23_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_23_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_24_n.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_24_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_25.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_25.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_26_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_26_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_27_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_27_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_28.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_28.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_29_l.png
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_29_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_30_n.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_30_n.jpg
+  - type: 1
+    originalUri: Assets/Chars/Src/ct1/ct1_tex/ct1_31.jpg
+    assetPath: Assets/Chars/Src/ct1/ct1_tex/ct1_31.jpg
+  reportItems:
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_specular
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_emissive_strength
+  - type: 2
+    code: 31
+    messages: []

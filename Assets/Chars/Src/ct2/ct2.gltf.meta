@@ -1,0 +1,63 @@
+fileFormatVersion: 2
+guid: 063c8834760d7ce8794de0c5b3d9ca12
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/Chars/Src/ct2/ct2.bin
+    assetPath: Assets/Chars/Src/ct2/ct2.bin
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_00_n.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_00_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_01_l.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_01_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_02.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_02.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_03.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_03.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_04_n.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_04_n.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_05_l.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_05_l.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_06.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_06.png
+  - type: 1
+    originalUri: Assets/Chars/Src/ct2/ct2_tex/ct2_07.png
+    assetPath: Assets/Chars/Src/ct2/ct2_tex/ct2_07.png
+  reportItems:
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_specular
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_emissive_strength
