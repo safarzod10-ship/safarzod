@@ -132,6 +132,16 @@ public static class Build
         EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
     }
 
+    public static void AndroidTown()
+    {
+        Dir("Builds/android");
+        EditorUserBuildSettings.buildAppBundle = false;
+        PlayerSettings.productName = "Bazar Town";
+        var r = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { "Assets/Scenes/Town.unity" }, locationPathName = "Builds/android/town.apk", target = BuildTarget.Android, options = BuildOptions.None });
+        Debug.Log("BUILD_RESULT " + r.summary.result + " errors=" + r.summary.totalErrors + " size=" + r.summary.totalSize);
+        EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+    }
+
     public static void Android()
     {
         Dir("Builds/android");
