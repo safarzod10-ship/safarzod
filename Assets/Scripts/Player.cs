@@ -432,6 +432,7 @@ public class Player : NetworkBehaviour
             weapon = cur,
             charKey = (Team.Value == 1 ? "t" : "ct") + (1 + Mathf.Abs(Skin.Value) % 2),
             reloadU = Reloading ? 1f - Mathf.Clamp01((reloadEnd - Time.time) / Mathf.Max(0.1f, Def.reload)) : -1f,
+            magEmpty = mag[cur] <= 0,
             sinceShot = Time.time - lastShotTime,
             speed = NetSpeed.Value, bob = viewBob,
             look = new Vector2(Mathf.DeltaAngle(fpYaw, yaw), Mathf.DeltaAngle(fpPitch, pitch)),

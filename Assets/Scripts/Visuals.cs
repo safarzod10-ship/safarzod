@@ -238,7 +238,9 @@ public static class Fx
         var go = new GameObject("tracer");
         var lr = go.AddComponent<LineRenderer>();
         lr.sharedMaterial = tracerMat; lr.positionCount = 2;
-        Vector3 start = firstPerson && Camera.main ? Camera.main.transform.TransformPoint(0.17f, -0.14f, 0.9f) : from;
+        Vector3 start = from;
+        if (firstPerson && Camera.main)
+            start = FpView.Local != null && FpView.Local.TryMuzzle(out var mz) ? mz : Camera.main.transform.TransformPoint(0.17f, -0.14f, 0.9f);
         lr.SetPosition(0, start); lr.SetPosition(1, to);
         lr.startWidth = 0.012f; lr.endWidth = 0.004f;
         lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

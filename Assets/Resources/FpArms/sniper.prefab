@@ -817,7 +817,6 @@ MonoBehaviour:
   muzzle: {fileID: 1903083995557854927}
   weaponBone: {fileID: 1587372163093993020}
   weaponRenderers:
-  - {fileID: 5977809470893861839}
   - {fileID: 1091511182938564833}
   - {fileID: 6222904617908472063}
   handR: {fileID: 937064035988482223}

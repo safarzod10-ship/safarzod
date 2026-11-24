@@ -10,16 +10,16 @@ public static class FpPackSetup
 {
     class Cfg
     {
-        public string key, eye, weaponBone, handR; public float scale = 1f;
+        public string key, eye, weaponBone, handR; public string[] weaponMeshes; public float scale = 1f;
     }
 
     static readonly Cfg[] Packs =
     {
         // eye: the pack's authored camera (AK, sniper, knife) or the head bone the AK camera sits on (pistol: same rig, no camera)
-        new Cfg { key = "ak", eye = "Camera", weaponBone = "Grip_01", handR = "DEF-hand.R" },
-        new Cfg { key = "pistol", eye = "DEF-spine.006", weaponBone = "DEF_Cuerpo", handR = "DEF-hand.R", scale = 1f / (1.9637157f * 1.505f) },   // file is 2.955x too large (root * armature scale)
-        new Cfg { key = "sniper", eye = "Camera", weaponBone = "Body_057", handR = "Hand_R_037" },
-        new Cfg { key = "knife", eye = "A_Camera", weaponBone = "Base_076", handR = "Hand.R_04" },
+        new Cfg { key = "ak", eye = "Camera", weaponBone = "Grip_01", handR = "DEF-hand.R", weaponMeshes = new[] { "Object_14", "Object_15", "Object_17", "Object_18" } },
+        new Cfg { key = "pistol", eye = "DEF-spine.006", weaponBone = "DEF_Cuerpo", handR = "DEF-hand.R", weaponMeshes = new[] { "Object_20" }, scale = 1f / (1.9637157f * 1.505f) },   // file is 2.955x too large (root * armature scale)
+        new Cfg { key = "sniper", eye = "Camera", weaponBone = "Body_057", handR = "Hand_R_037", weaponMeshes = new[] { "Object_89", "Object_90" } },
+        new Cfg { key = "knife", eye = "A_Camera", weaponBone = "Base_076", handR = "Hand.R_04", weaponMeshes = new[] { "Object_122" } },
     };
 
     static Transform Find(Transform root, string prefix) =>
@@ -78,7 +78,7 @@ public static class FpPackSetup
         pack.handR = Find(inst.transform, c.handR);
 
         var smrs = inst.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-        var weaponR = smrs.Where(r => r.bones.Contains(pack.weaponBone)).ToArray();
+        var weaponR = smrs.Where(r => c.weaponMeshes.Contains(r.name)).ToArray();
         pack.weaponRenderers = weaponR;
         foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
         {

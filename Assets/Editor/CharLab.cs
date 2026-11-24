@@ -296,6 +296,71 @@ public static partial class CharLab
         }
     }
 
+    /// First-person arm packs (FpView): one 1280x720 PNG per family x moment (idle, mid-fire, reload 25/50/75 %, mid-draw;
+    /// knife: idle, two swings, draw) with the crosshair drawn in, plus a contact sheet fp_packs.png.
+    /// -fam knife,pistol,rifle,sniper  -tw 1280
+    public static void SheetFpPacks()
+    {
+        var cam = NewLabScene();
+        cam.transform.position = new Vector3(0, 1.6f, 0); cam.transform.rotation = Quaternion.Euler(2f, 0, 0); cam.fieldOfView = 68f; cam.nearClipPlane = 0.05f;
+        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube); wall.name = "Wall"; wall.transform.position = new Vector3(0, 2f, 9f); wall.transform.localScale = new Vector3(30f, 4f, 0.5f);
+        wall.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Chars/Gen/LabGround.mat");
+        var fams = new (string name, int id)[] { ("knife", 0), ("pistol", 1), ("rifle", 16), ("sniper", 21), ("grenade", Weapons.Grenade) };
+        string only = CharSetup.Arg("-fam") ?? "knife,pistol,rifle,sniper";
+        fams = fams.Where(f => only.Split(',').Contains(f.name)).ToArray();
+        string[] cols = { "idle", "fire", "reload25", "reload50", "reload75", "draw" };
+        int tw = int.Parse(CharSetup.Arg("-tw") ?? "1280"), th = tw * 9 / 16, sw = 4;
+        var rt = new RenderTexture(tw, th, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        var tile = new Texture2D(tw, th, TextureFormat.RGB24, false);
+        var sheet = new Texture2D(cols.Length * tw / sw, fams.Length * th / sw, TextureFormat.RGB24, false);
+        string dir = CharSetup.Arg("-labout") ?? "/tmp/claude-0/-home-user-safarzod/c42128fe-0193-50cc-948b-d4f4ab93dd76/scratchpad/fparms/out";
+        Directory.CreateDirectory(dir);
+        for (int r = 0; r < fams.Length; r++)
+            for (int c = 0; c < cols.Length; c++)
+            {
+                int id = fams[r].id; var d = Weapons.Get(id);
+                var fp = FpView.Create(cam.transform); fp.gameObject.name = "Holder_fp";
+                var st = new FpView.State { weapon = id, charKey = "ct1", reloadU = -1f, sinceShot = 9f };
+                void Step(float t) { for (float x = 0; x < t - 1e-4f; x += Dt) fp.Tick(st, Dt); }
+                string label = cols[c];
+                if (c == 5) { st.weapon = id == 16 ? 1 : 16; Step(1.5f); st.weapon = id; Step(FpTuneLower(fp) + 0.5f * FpTuneDraw(id)); }
+                else
+                {
+                    Step(2.5f);    // the first show plays the draw: let it finish
+                    if (c == 1) { fp.Fire(); Step(0.1f); }
+                    if (c >= 2 && c <= 4)
+                    {
+                        if (d.slot == Slot.Knife) { float[] at = { 0.12f, 0.25f, 0.45f }; fp.Fire(); Step(1.2f); fp.Fire(); Step(at[c - 2]); label = "swing2_" + at[c - 2].ToString("0.00", System.Globalization.CultureInfo.InvariantCulture); }
+                        else
+                        {
+                            float u = (c - 1) * 0.25f, rl = Mathf.Max(0.1f, d.reload);
+                            for (float t = 0; t <= u * rl; t += Dt) { st.reloadU = t / rl; fp.Tick(st, Dt); }
+                        }
+                    }
+                }
+                Debug.Log($"LAB fp {fams[r].name} {label}: {fp.Debug()}");
+                BakeSkins();
+                var sun = GameObject.Find("Sun"); if (sun) sun.transform.rotation = cam.transform.rotation * Quaternion.Euler(38f, 28f, 0);
+                cam.aspect = tw / (float)th; cam.targetTexture = rt; cam.Render(); cam.Render();
+                RenderTexture.active = rt; tile.ReadPixels(new Rect(0, 0, tw, th), 0, 0); RenderTexture.active = null; cam.targetTexture = null;
+                for (int k = -12; k <= 12; k++)     // crosshair
+                    if (Mathf.Abs(k) > 3) { tile.SetPixel(tw / 2 + k, th / 2, Color.green); tile.SetPixel(tw / 2, th / 2 + k, Color.green); }
+                tile.Apply();
+                File.WriteAllBytes(Path.Combine(dir, $"fp_{fams[r].name}_{c}_{label}.png"), tile.EncodeToPNG());
+                var px = tile.GetPixels();
+                for (int y = 0; y < th / sw; y++)
+                    for (int x = 0; x < tw / sw; x++)
+                        sheet.SetPixel(c * tw / sw + x, (fams.Length - 1 - r) * th / sw + y, px[(y * sw + sw / 2) * tw + x * sw + sw / 2]);
+                Object.DestroyImmediate(fp.gameObject);
+                Clear();
+            }
+        sheet.Apply();
+        File.WriteAllBytes(Path.Combine(dir, "fp_packs.png"), sheet.EncodeToPNG());
+        Debug.Log("LAB saved " + dir);
+    }
+    static float FpTuneLower(FpView fp) => 0.2f;
+    static float FpTuneDraw(int id) { var p = FpView.PackFor(id); return p == "ak" ? 0.75f : p == "pistol" ? 0.6f : p == "sniper" ? 0.4f : 0.5f; }
+
     /// (d) every prepared weapon from the right side and from above with its markers drawn (GripR red, GripL green, Muzzle yellow, MagGrip blue, SlideGrip magenta)
     public static void SheetWeapons()
     {

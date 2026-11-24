@@ -57,6 +57,42 @@ def simplify(js, binc, prim, target):
     prim['indices'] = add_acc(js, binc, remap.reshape(-1, 1).astype(np.uint32), ia)
     return len(idx) // 3, n // 3
 
+def rot_between(a, b):
+    a = a / np.linalg.norm(a); b = b / np.linalg.norm(b); v = np.cross(a, b); c = float(a @ b)
+    K = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    return np.eye(3) + K + K @ K / (1 + c)
+
+def fix_knife(js, binc):
+    # The knife mesh of the knife pack is stored in a far-away, unscaled space that its inverse bind matrix does not undo
+    # (it renders kilometres away). Re-express it in bind space: handle centred on the Base bone, blade along the bone's +Y.
+    W, par = glbinfo.world(js); nodes = js['nodes']
+    sk = js['skins'][0]; J = sk['joints']
+    IBM = glbinfo.acc(js, bytes(binc), sk['inverseBindMatrices']).reshape(-1, 4, 4).transpose(0, 2, 1)
+    k = [i for i, j in enumerate(J) if nodes[j]['name'].startswith('Base')][0]
+    bind = np.linalg.inv(IBM[k])
+    kl = [i for i, x in enumerate(nodes) if x.get('name') == 'Knife_low'][0]
+    M = W[kl] @ np.diag([.01, .01, .01, 1])
+    R0 = M[:3, :3] / np.linalg.norm(M[:3, :3], axis=0)
+    mesh = [x for x in nodes if x.get('name') == 'Object_122'][0]
+    prim = js['meshes'][mesh['mesh']]['primitives'][0]
+    P = glbinfo.acc(js, bytes(binc), prim['attributes']['POSITION']).astype(float)
+    Q = (M @ np.c_[P, np.ones(len(P))].T).T[:, :3]
+    c = Q.mean(0); V = np.linalg.svd(Q - c, full_matrices=False)[2]; ax = V[0]
+    t = (Q - c) @ ax
+    size = lambda m: np.ptp((Q - c)[m] @ V[1]) + np.ptp((Q - c)[m] @ V[2])
+    if size(t > t.max() - 0.03) < size(t < t.min() + 0.03): ax = -ax; t = -t
+    # now +ax points to the (thick) handle end; blade = -ax
+    R = rot_between(-ax, bind[:3, 1])
+    hc = c + ax * (t.max() - 0.055)
+    Pn = (R @ (Q - hc).T).T + bind[:3, 3]
+    prim['attributes']['POSITION'] = add_acc(js, binc, Pn, js['accessors'][prim['attributes']['POSITION']])
+    for key in ('NORMAL', 'TANGENT'):
+        if key not in prim['attributes']: continue
+        A = glbinfo.acc(js, bytes(binc), prim['attributes'][key]).astype(float)
+        A[:, :3] = (R @ R0 @ A[:, :3].T).T
+        prim['attributes'][key] = add_acc(js, binc, A, js['accessors'][prim['attributes'][key]])
+    print('  knife mesh re-bound: length %.3f m, handle at Base bone' % np.ptp(t))
+
 def jpegify(outdir, name):
     gl = os.path.join(outdir, name + '.gltf'); J = json.load(open(gl))
     for im in J.get('images', []):
@@ -78,6 +114,7 @@ def main(src_dir, root):
             if n.get('name') in cfg['simplify'] and 'mesh' in n:
                 for p in js['meshes'][n['mesh']]['primitives']:
                     print('  simplify %s %s: %d -> %d tris' % (name, n['name'], *simplify(js, binc, p, cfg['simplify'][n['name']])))
+        if name == 'knife': fix_knife(js, binc)
         drop = tuple(i for i, n in enumerate(js['nodes']) if n.get('name') in cfg['drop'])
         js['buffers'] = [{'byteLength': len(binc)}]
         outdir = os.path.join(root, 'Assets', 'FpArms', name)
