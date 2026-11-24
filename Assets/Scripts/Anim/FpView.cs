@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 /// First-person view model: the weapon in camera space (sway, bob, recoil, reload, switch) held by the fighter's own arms
 /// (Resources/Chars/<key>_fp: the character skeleton with only the arm geometry), which are placed by two-bone IK on the
@@ -15,16 +16,51 @@ public class FpView : MonoBehaviour
 
     public WeaponRig weapon; public CharRig arms;
     public int Shown => shown;
+    public string Debug() => $"shown={shown} pending={pending} kind={kind} switchT={switchT:0.00} kick={kick:0.00} sway={sway} arms={armsKey} wpos={(weapon ? weapon.transform.localPosition : Vector3.zero)} wrot={(weapon ? weapon.transform.localEulerAngles : Vector3.zero)} self={transform.localPosition}/{transform.localEulerAngles} vmFov={(vmCam ? vmCam.fieldOfView : 0)}";
     Transform cam; string armsKey; int shown = -1, pending = -1; HoldKind kind;
     float switchT = -1f, kick, attackT = 9f; Vector2 sway;
     Quaternion[] armRest; Transform[] armBones;
     const float SwitchDur = 0.45f;
 
+    /// Layer of the first-person arms and weapon. They are drawn by a separate overlay camera with its own narrower
+    /// field of view (like the view-model of classic shooters): the weapon is not stretched by the wide world FOV and
+    /// never pokes into walls, because the overlay camera only sees this layer and starts from a clean depth buffer.
+    public const int Layer = 30;
+    public const float ViewModelFov = 52f;
+    public Camera vmCam;
+
     public static FpView Create(Transform cam)
     {
         var go = new GameObject("FpView"); go.transform.SetParent(cam, false);
-        var v = go.AddComponent<FpView>(); v.cam = cam; return v;
+        go.layer = Layer;
+        var v = go.AddComponent<FpView>(); v.cam = cam;
+        var main = cam.GetComponent<Camera>();
+        if (main != null)
+        {
+            main.cullingMask &= ~(1 << Layer);
+            var cgo = new GameObject("ViewModelCamera"); cgo.transform.SetParent(cam, false);
+            var vc = cgo.AddComponent<Camera>();
+            vc.cullingMask = 1 << Layer; vc.fieldOfView = ViewModelFov; vc.nearClipPlane = 0.01f; vc.farClipPlane = 3f;
+            vc.clearFlags = CameraClearFlags.Depth; vc.allowHDR = main.allowHDR; vc.allowMSAA = main.allowMSAA;
+            var vd = vc.GetUniversalAdditionalCameraData();
+            vd.renderType = UnityEngine.Rendering.Universal.CameraRenderType.Overlay;
+            vd.renderShadows = false; vd.renderPostProcessing = true;
+            var md = main.GetUniversalAdditionalCameraData();
+            if (!md.cameraStack.Contains(vc)) md.cameraStack.Add(vc);
+            v.vmCam = vc;
+        }
+        return v;
     }
+
+    void OnDestroy()
+    {
+        if (vmCam == null || cam == null) return;
+        var main = cam.GetComponent<Camera>();
+        if (main != null) main.GetUniversalAdditionalCameraData().cameraStack.Remove(vmCam);
+        Kill(vmCam.gameObject);
+    }
+
+    static void SetLayer(GameObject g) { foreach (var t in g.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = Layer; }
 
     public void Fire() { kick = 1f; attackT = 0f; }
 
@@ -44,6 +80,7 @@ public class FpView : MonoBehaviour
         armRest = new Quaternion[armBones.Length];
         for (int i = 0; i < armBones.Length; i++) armRest[i] = armBones[i].localRotation;
         foreach (var r in go.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        SetLayer(go);
     }
 
     void Swap(int id)
@@ -54,6 +91,7 @@ public class FpView : MonoBehaviour
         var go = WeaponModels.Create(id, true);
         go.transform.SetParent(transform, false);
         weapon = WeaponRig.Ensure(go, d); kind = WeaponRig.Kind(d);
+        SetLayer(go);
     }
 
     static float Hump(float u, float a, float b) { return Mathf.SmoothStep(0, 1, Mathf.Clamp01(u / a)) * Mathf.SmoothStep(0, 1, Mathf.Clamp01((1f - u) / b)); }
@@ -82,12 +120,12 @@ public class FpView : MonoBehaviour
         switch (kind)
         {
             case HoldKind.Rifle:
-                pos = sniper ? new Vector3(0.14f, -0.22f, 0.33f) : new Vector3(0.155f, -0.155f, 0.36f); rot = Quaternion.Euler(-1.5f, -1f, 0f);
+                pos = sniper ? new Vector3(0.17f, -0.20f, 0.40f) : new Vector3(0.175f, -0.17f, 0.43f); rot = Quaternion.Euler(-1.0f, -4f, -4f);
                 pos += new Vector3(0, 0, -0.04f * k); rot *= Quaternion.Euler(-(sniper ? 5f : 1.8f) * k, 0, 0);
                 pos += new Vector3(-0.015f, sniper ? 0.13f : 0.09f, 0f) * rl; rot *= Quaternion.Euler(-10f * rl, 6f * rl, -40f * rl * (1f - 0.7f * rk));
                 break;
             case HoldKind.Pistol:
-                pos = new Vector3(0.12f, -0.135f, 0.44f); rot = Quaternion.Euler(-1f, -1.5f, 0f);
+                pos = new Vector3(0.14f, -0.16f, 0.50f); rot = Quaternion.Euler(-0.5f, -5f, -3f);
                 pos += new Vector3(0, 0.006f * k, -0.025f * k); rot *= Quaternion.Euler(-10f * k, 0, 0);
                 pos += new Vector3(-0.04f, 0.04f, -0.06f) * rl; rot *= Quaternion.Euler(-30f * rl * (1f - 0.6f * rk), 0f, -38f * rl * (1f - 0.8f * rk));
                 break;
@@ -113,7 +151,7 @@ public class FpView : MonoBehaviour
         if (arms == null) return;
 
         for (int i = 0; i < armBones.Length; i++) armBones[i].localRotation = armRest[i];
-        Vector3 sR = cam.TransformPoint(0.22f, -0.28f, -0.10f), sL = cam.TransformPoint(-0.18f, -0.30f, -0.04f);
+        Vector3 sR = cam.TransformPoint(0.21f, -0.30f, -0.05f), sL = cam.TransformPoint(-0.17f, -0.31f, 0.00f);
         Place(arms.right, sR, weapon.rPos, weapon.rRot, sR + cam.TransformVector(0.30f, -0.25f, 0.10f));
         if (kind == HoldKind.Rifle || kind == HoldKind.Pistol)
             Place(arms.left, sL, weapon.lPos, weapon.lRot, sL + cam.TransformVector(-0.25f, -0.30f, 0.10f));

@@ -146,6 +146,19 @@ public class Hud : MonoBehaviour
             }
         }
         Debug.Log(sb.ToString());
+        if (Camera.main != null)
+        {
+            var cp = Camera.main.transform.position; var near = new System.Text.StringBuilder("NEARCAM mainMask=" + Camera.main.cullingMask + " stack=" + Camera.main.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>().cameraStack.Count);
+            foreach (var r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (!r.enabled || !r.gameObject.activeInHierarchy || r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly) continue;
+                if (r.bounds.SqrDistance(cp) > 1.0f) continue;
+                var t = r.transform; string path = t.name; for (int i = 0; i < 4 && t.parent != null; i++) { t = t.parent; path = t.name + "/" + path; }
+                near.Append(" | L" + r.gameObject.layer + " " + path);
+            }
+            Debug.Log(near.ToString());
+            var fpv = FindFirstObjectByType<FpView>(); if (fpv != null) Debug.Log("FPV " + fpv.Debug() + " reloading=" + (Player.Local != null && Player.Local.Reloading) + " cur=" + (Player.Local != null ? Player.Local.cur : -1));
+        }
         if (!string.IsNullOrEmpty(shotDir)) ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shotDir, $"shot{shotN++:00}.png"));
     }
 
