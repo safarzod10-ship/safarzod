@@ -51,6 +51,7 @@ public static class WeaponModels
         foreach (var c in go.GetComponentsInChildren<Collider>()) Object.Destroy(c);
         foreach (var r in go.GetComponentsInChildren<Renderer>())
             r.shadowCastingMode = firstPerson ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
+        WeaponRig.Ensure(go, d);       // hand markers (GripR / GripL / Muzzle): baked on prepared prefabs, defaults on placeholders
         return go;
     }
 
@@ -96,40 +97,38 @@ public static class WeaponModels
     }
 }
 
-/// Third-person body of a fighter: character model, weapon in hands, death pose.
+/// Third-person body of a fighter. The real work is in CharBody (Assets/Scripts/Anim); this wrapper feeds it from the Player
+/// and keeps the old capsule placeholder for characters whose prefab is missing.
 public class CharView : MonoBehaviour
 {
     Player p;
+    CharBody body;
     GameObject model, weapon;
-    Animator anim;
-    Transform hand, spine;
-    bool alive = true, built;
-    float fall, shotKick;
+    Transform hand;
+    bool alive = true;
+    float fall, shotKick, lastY, airT = 9f;
     int weaponId = -1;
 
     public void Init(Player player) { p = player; Rebuild(); }
 
     public void Rebuild()
     {
+        if (body) Destroy(body.gameObject);
         if (model) Destroy(model);
-        built = false;
+        body = null; model = null; weapon = null;
         if (p.Team.Value == 0) return;
         string key = (p.Team.Value == 1 ? "t" : "ct") + (1 + Mathf.Abs(p.Skin.Value) % 2);
-        var prefab = Resources.Load<GameObject>("Chars/" + key);
-        if (prefab != null)
+        body = CharBody.Create(transform, key);
+        if (body != null)
         {
-            model = Instantiate(prefab, transform);
-            anim = model.GetComponentInChildren<Animator>();
-            if (anim != null && anim.isHuman)
-            {
-                hand = anim.GetBoneTransform(HumanBodyBones.RightHand);
-                spine = anim.GetBoneTransform(HumanBodyBones.Chest) ?? anim.GetBoneTransform(HumanBodyBones.Spine);
-            }
+            body.SetWeapon(weaponId < 0 ? 0 : weaponId, true);
+            if (!alive) body.Die();
         }
-        else model = Placeholder(p.Team.Value == 1 ? new Color(0.45f, 0.33f, 0.2f) : new Color(0.16f, 0.22f, 0.32f));
-        foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
-        built = true;
-        int w = weaponId; weaponId = -1; SetWeapon(w < 0 ? 0 : w);
+        else
+        {
+            model = Placeholder(p.Team.Value == 1 ? new Color(0.45f, 0.33f, 0.2f) : new Color(0.16f, 0.22f, 0.32f));
+            int w = weaponId; weaponId = -1; SetWeapon(w < 0 ? 0 : w);
+        }
         ApplyVisibility();
     }
 
@@ -148,48 +147,52 @@ public class CharView : MonoBehaviour
         var hd = new GameObject("Hand").transform;
         hd.SetParent(root.transform, false); hd.localPosition = new Vector3(0.2f, 1.28f, 0.3f);
         hand = hd;
+        foreach (var col in root.GetComponentsInChildren<Collider>()) Destroy(col);
         return root;
     }
 
     void ApplyVisibility()
     {
-        if (!built) return;
         bool hideForOwner = p.IsHumanOwner && alive;
-        foreach (var r in model.GetComponentsInChildren<Renderer>(true))
-            r.shadowCastingMode = hideForOwner ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
+        if (body) { body.shadowsOnly = hideForOwner; body.ApplyVisibility(); }
+        if (model)
+            foreach (var r in model.GetComponentsInChildren<Renderer>(true))
+                r.shadowCastingMode = hideForOwner ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
     }
 
     public void SetAlive(bool a)
     {
+        if (alive == a) { ApplyVisibility(); return; }
         alive = a;
+        if (body) { if (a) body.Revive(); else { body.crouch = p.crouch; body.Die(); } }
         if (a) { fall = 0; transform.localRotation = Quaternion.identity; transform.localPosition = Vector3.zero; }
-        if (anim) anim.enabled = a;
         ApplyVisibility();
     }
 
     public void SetWeapon(int id)
     {
-        if (id == weaponId || !built) { weaponId = id; return; }
+        if (body) { weaponId = id; body.SetWeapon(id); return; }
+        if (id == weaponId || model == null) { weaponId = id; return; }
         weaponId = id;
         if (weapon) Destroy(weapon);
         weapon = WeaponModels.Create(id, false);
-        if (anim != null && anim.isHuman && hand != null)
-        {
-            weapon.transform.SetParent(hand, false);
-            weapon.transform.localScale = Vector3.one / Mathf.Max(0.0001f, hand.lossyScale.x);
-        }
-        else
-        {
-            weapon.transform.SetParent(hand != null ? hand : model.transform, false);
-        }
+        weapon.transform.SetParent(hand != null ? hand : model.transform, false);
         ApplyVisibility();
     }
 
-    public void OnShot() { shotKick = 1f; }
+    public void OnShot() { shotKick = 1f; if (body) body.Shot(); }
+    public void OnReload(float duration) { if (body) body.Reload(duration); }
 
     public void Tick(float speed, float pitch, bool crouch)
     {
-        if (!built) return;
+        if (body)
+        {
+            float y = transform.position.y, vy = (y - lastY) / Mathf.Max(Time.deltaTime, 1e-4f); lastY = y;
+            airT = Mathf.Abs(vy) > 3f && Mathf.Abs(vy) < 30f ? 0f : airT + Time.deltaTime;
+            body.speed = speed; body.pitch = pitch; body.crouch = crouch; body.airborne = alive && airT < 0.22f;
+            return;
+        }
+        if (model == null) return;
         if (!alive)
         {
             fall = Mathf.MoveTowards(fall, 1f, Time.deltaTime * 2.8f);
@@ -199,34 +202,8 @@ public class CharView : MonoBehaviour
             return;
         }
         shotKick = Mathf.MoveTowards(shotKick, 0, Time.deltaTime * 8f);
-        if (anim != null && anim.runtimeAnimatorController != null)
-        {
-            anim.SetFloat("Speed", speed, 0.1f, Time.deltaTime);
-            anim.SetBool("Crouch", crouch);
-        }
-        else
-        {
-            model.transform.localScale = new Vector3(1, crouch ? 0.68f : 1f, 1);
-        }
-    }
-
-    void LateUpdate()
-    {
-        if (!built || !alive || p == null) return;
-        if (anim != null && anim.isHuman)
-        {
-            if (spine != null) spine.rotation = Quaternion.AngleAxis(p.NetLook.Value.y * 0.6f, transform.right) * spine.rotation;
-            if (weapon != null && hand != null)
-            {
-                // keep the gun pointing where the fighter looks, gripped in the right hand
-                weapon.transform.rotation = Quaternion.Euler(p.NetLook.Value.y - shotKick * 4f, p.NetLook.Value.x, 0);
-                weapon.transform.position = hand.position + weapon.transform.forward * 0.05f;
-            }
-        }
-        else if (weapon != null)
-        {
-            weapon.transform.rotation = Quaternion.Euler(p.NetLook.Value.y - shotKick * 4f, p.NetLook.Value.x, 0);
-        }
+        model.transform.localScale = new Vector3(1, crouch ? 0.68f : 1f, 1);
+        if (weapon != null) weapon.transform.rotation = Quaternion.Euler(p.NetLook.Value.y - shotKick * 4f, p.NetLook.Value.x, 0);
     }
 }
 

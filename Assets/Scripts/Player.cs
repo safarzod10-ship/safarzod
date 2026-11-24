@@ -50,6 +50,7 @@ public class Player : NetworkBehaviour
     SphereCollider head;
     Transform body, cam, viewModel, handWeapon;
     CharView view;
+    FpView fp;                         // first-person arms + weapon (Assets/Scripts/Anim/FpView.cs)
     float vy, stepTimer, viewBob, viewKick, fovBase = 68f;
     int shownWeapon = -1, shownVm = -1;
     bool wasAlive, triggerHeld;
@@ -170,6 +171,9 @@ public class Player : NetworkBehaviour
         if (view) view.OnShot();
     }
 
+    [Rpc(SendTo.NotOwner)]
+    void ReloadFxRpc(float duration) { if (view) view.OnReload(duration); }
+
     [Rpc(SendTo.Server)]
     void ThrowRpc(Vector3 from, Vector3 vel) { Game.I.ThrowGrenade(this, from, vel); }
 
@@ -204,6 +208,8 @@ public class Player : NetworkBehaviour
         if (d.slot == Slot.Knife || d.slot == Slot.Grenade || Reloading || mag[cur] >= d.mag || res[cur] <= 0) return;
         reloadEnd = Time.time + d.reload; zoomed = false;
         Fx.Sound("reload", transform.position, 0.5f);
+        if (view) view.OnReload(d.reload);
+        ReloadFxRpc(d.reload);
         Invoke(nameof(FinishReload), d.reload);
     }
 
@@ -267,6 +273,7 @@ public class Player : NetworkBehaviour
         if (view) view.OnShot();
         recoilKick = Mathf.Min(recoilKick + d.recoil, 9f);
         lastShotTime = Time.time; viewKick = 1f;
+        if (fp) fp.Fire();
         if (d.zoomFov > 0 && d.zoomFov < 30) zoomed = false;
         if (d.slot != Slot.Knife && mag[cur] == 0 && res[cur] > 0) Invoke(nameof(Reload), 0.25f);
         return true;
@@ -408,29 +415,26 @@ public class Player : NetworkBehaviour
     [Rpc(SendTo.NotOwner, Delivery = RpcDelivery.Unreliable)]
     void StepRpc() { Fx.Sound("step", transform.position, 0.35f); }
 
+    // First-person view: arms + weapon are handled by FpView; this only feeds it the player's state.
+    float fpYaw, fpPitch;
     void UpdateViewModel()
     {
-        if (viewModel == null)
-        {
-            viewModel = new GameObject("ViewModel").transform;
-            viewModel.SetParent(cam, false);
-        }
-        if (shownVm != cur)
-        {
-            shownVm = cur;
-            for (int i = viewModel.childCount - 1; i >= 0; i--) Destroy(viewModel.GetChild(i).gameObject);
-            var m = WeaponModels.Create(cur, true);
-            m.transform.SetParent(viewModel, false);
-        }
+        if (fp == null) { fp = FpView.Create(cam); viewModel = fp.transform; fpYaw = yaw; fpPitch = pitch; }
+        shownVm = cur;
         viewKick = Mathf.MoveTowards(viewKick, 0, Time.deltaTime * 9f);
-        float dip = Reloading ? Mathf.Sin(Mathf.Clamp01((reloadEnd - Time.time) / Def.reload) * Mathf.PI) : 0f;
-        float draw = Mathf.Clamp01((nextFire - Time.time) / 0.35f) * (Time.time - lastShotTime > 0.4f ? 1f : 0f);
-        Vector3 basePos = new Vector3(0.17f, -0.17f, 0.42f);
-        Vector3 bob = new Vector3(Mathf.Cos(viewBob * 0.5f) * 0.006f, Mathf.Sin(viewBob) * 0.005f, 0);
-        viewModel.localPosition = basePos + bob + new Vector3(0, -0.25f * dip - 0.2f * draw, -0.07f * viewKick);
-        viewModel.localRotation = Quaternion.Euler(-6f * viewKick + 35f * dip + 30f * draw, 0, 0);
         bool hide = zoomed && Def.zoomFov < 30;
         if (viewModel.gameObject.activeSelf == hide) viewModel.gameObject.SetActive(!hide);
+        var st = new FpView.State
+        {
+            weapon = cur,
+            charKey = (Team.Value == 1 ? "t" : "ct") + (1 + Mathf.Abs(Skin.Value) % 2),
+            reloadU = Reloading ? 1f - Mathf.Clamp01((reloadEnd - Time.time) / Mathf.Max(0.1f, Def.reload)) : -1f,
+            sinceShot = Time.time - lastShotTime,
+            speed = NetSpeed.Value, bob = viewBob,
+            look = new Vector2(Mathf.DeltaAngle(fpYaw, yaw), Mathf.DeltaAngle(fpPitch, pitch)),
+        };
+        fpYaw = yaw; fpPitch = pitch;
+        if (!hide) fp.Tick(st, Time.deltaTime);
     }
 
     void SpectateCamera()

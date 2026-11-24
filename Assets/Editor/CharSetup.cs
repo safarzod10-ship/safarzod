@@ -283,7 +283,7 @@ public static partial class CharSetup
         for (int k = 0; k < n; k++)
         {
             times[k] = (t1 - t0) * k / (n - 1);
-            src.SampleAnimation(sm.s.model, t0 + times[k]);
+            src.SampleAnimation(sm.s.model, Mathf.Min(t0 + times[k], src.length - 0.0005f));   // sampling exactly at the end wraps to frame 0
             sm.Apply();
             hp[k] = sm.t["Hips"].localPosition;
             for (int i = 0; i < bones.Length; i++)
