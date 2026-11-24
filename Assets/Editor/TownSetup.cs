@@ -71,11 +71,11 @@ public static class TownSetup
     static readonly Vector3 DirToSun = new Vector3(-0.554f, 0.742f, 0.378f);   // matches the HDRI sun with the skybox rotated 180 deg
     const float SkyRotation = 180f;
     static readonly Color SunColor = new Color(1f, 0.95f, 0.86f);
-    const float SunIntensity = 2.1f;        // sun : sky ratio measured in the HDRI is about 1.4-2 : 1 (Unity units)
+    const float SunIntensity = 2.4f;        // sun : sky ratio measured in the HDRI is about 1.4-2 : 1 (Unity units)
     const float SkyScale = 1.0f, BounceScale = 1.3f;
     const float FogDensity = 0.0045f;
     const float ReflectionIntensity = 0.7f;   // the courtyards see well under a full hemisphere of sky
-    const float PostExposure = 0.7f, Contrast = 8f, Saturation = 2f, Temperature = 0f;
+    const float PostExposure = 0.6f, Contrast = 12f, Saturation = -6f, Temperature = 0f;
     const int ToneMode = 2;                 // 1 = Neutral, 2 = ACES
     const float Lift = 0f, Gamma = 0f;
     const float BloomIntensity = 0.18f, VignetteIntensity = 0.22f, GrainIntensity = 0.12f;
@@ -203,9 +203,9 @@ public static class TownSetup
             }
         shots.Add(new TownShots.View { name = "alley_wall_closeup", pos = new Vector3(-2.6f, 1.65f, 21.5f), target = new Vector3(1.0f, 1.3f, 19.0f), fov = 55f });
         shots.Add(new TownShots.View { name = "bombsite_crates_close", pos = new Vector3(-2.6f, 1.65f, -0.5f), target = new Vector3(3f, 0.8f, -3.5f), fov = 60f });
-        shots.Add(new TownShots.View { name = "portal_long_lens", pos = new Vector3(-4.0f, 1.7f, 3.0f), target = new Vector3(0.6f, 4.6f, -12.2f), fov = 40f });
-        shots.Add(new TownShots.View { name = "drone_south_east_low", pos = new Vector3(-16f, 15f, 18f), target = new Vector3(2f, 3f, -6f), fov = 45f, shadowDistance = 120f });
-        shots.Add(new TownShots.View { name = "drone_west_over_house", pos = new Vector3(17f, 13f, 6f), target = new Vector3(-3f, 3.5f, -7f), fov = 42f, shadowDistance = 120f });
+        shots.Add(new TownShots.View { name = "portal_long_lens", pos = new Vector3(-1.0f, 1.7f, 2.5f), target = new Vector3(0.8f, 4.8f, -12.2f), fov = 40f });
+        shots.Add(new TownShots.View { name = "drone_south_east_low", pos = new Vector3(-15f, 17f, 17f), target = new Vector3(2f, 1f, -4f), fov = 45f, shadowDistance = 120f });
+        shots.Add(new TownShots.View { name = "crates_low_angle", pos = new Vector3(-3.5f, 0.7f, 2.5f), target = new Vector3(1.5f, 3.0f, -8f), fov = 50f });
 
         var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
         camGo.tag = "MainCamera";
