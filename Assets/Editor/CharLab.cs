@@ -75,9 +75,13 @@ public static partial class CharLab
         var l = new GameObject("Sun").AddComponent<Light>(); l.type = LightType.Directional; l.intensity = 1.7f;
         l.transform.rotation = Quaternion.Euler(48f, -35f, 0); l.shadows = LightShadows.Soft;
         var g = GameObject.CreatePrimitive(PrimitiveType.Plane); g.name = "Ground"; g.transform.localScale = Vector3.one * 6f;
-        var m = new Material(AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Mat/Lit.mat")); m.SetColor("_BaseColor", new Color(0.42f, 0.44f, 0.42f)); m.name = "LabGround";
-        if (!AssetDatabase.IsValidFolder("Assets/Chars/Gen")) AssetDatabase.CreateFolder("Assets/Chars", "Gen");
-        AssetDatabase.DeleteAsset("Assets/Chars/Gen/LabGround.mat"); AssetDatabase.CreateAsset(m, "Assets/Chars/Gen/LabGround.mat");
+        var m = AssetDatabase.LoadAssetAtPath<Material>("Assets/Chars/Gen/LabGround.mat");
+        if (m == null)
+        {
+            m = new Material(AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Mat/Lit.mat")) { name = "LabGround" };
+            m.SetColor("_BaseColor", new Color(0.42f, 0.44f, 0.42f));
+            AssetDatabase.CreateAsset(m, "Assets/Chars/Gen/LabGround.mat");
+        }
         g.GetComponent<Renderer>().sharedMaterial = m;
         var cam = new GameObject("LabCamera").AddComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.62f, 0.68f, 0.74f); cam.nearClipPlane = 0.03f; cam.farClipPlane = 60f;
@@ -129,15 +133,18 @@ public static partial class CharLab
         return b;
     }
     static void Run(CharBody b, int steps) { for (int i = 0; i < steps; i++) b.Step(Dt); }
-    public static void DebugDeath()
+    public static void DebugPitch()
     {
         NewLabScene();
-        var b = Spawn("ct1", 16, Vector3.zero);
-        Run(b, 20); Debug.Log($"LAB alive hips {b.rig.hips.position} head {b.rig.head.position}");
-        b.Die(0);
-        for (int i = 0; i < 6; i++) { Run(b, 25); Debug.Log($"LAB dead step {(i + 1) * 25} hips {b.rig.hips.position} head {b.rig.head.position} info {b.DebugInfo()}"); }
-        var clip = b.rig.clips.death;
-        foreach (float t in new[] { 0f, 1f, 2f, 3f, 3.4f }) { clip.SampleAnimation(b.gameObject, t); Debug.Log($"LAB sample {t} hips {b.rig.hips.position} len {clip.length}"); }
+        foreach (int wid in new[] { 16, 1 })
+            foreach (float pitch in new[] { 0f, -40f, 40f })
+            {
+                var b = Spawn("t1", wid, Vector3.zero);
+                b.pitch = pitch; Run(b, 30);
+                Vector3 f = b.weapon.transform.forward;
+                Debug.Log($"LAB w{wid} pitch {pitch}: weapon elev {Mathf.Asin(f.y) * Mathf.Rad2Deg:F1} yaw {Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg:F1} grip {b.weapon.gripR.position} head {b.rig.head.position} rShoulder {b.rig.right.upper.position} rHand {b.rig.right.hand.position} lHand {b.rig.left.hand.position} gripL {(b.weapon.gripL ? b.weapon.gripL.position : Vector3.zero)}");
+                Clear();
+            }
     }
     static void Clear() { foreach (var g in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)) if (g != null && g.name.StartsWith("Holder_")) Object.DestroyImmediate(g); baked.Clear(); }
 

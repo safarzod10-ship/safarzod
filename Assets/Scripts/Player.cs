@@ -93,6 +93,7 @@ public class Player : NetworkBehaviour
     void OnHealth(int before, int now)
     {
         if (now < before && IsHumanOwner) damageFlash = 1f;
+        if (now < before) Fx.Sound(now <= 0 ? "death" : "pain", Chest, now <= 0 ? 1f : 0.7f, 35f);
         if ((before > 0) != (now > 0)) ApplyAliveState();
     }
 

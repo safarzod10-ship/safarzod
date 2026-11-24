@@ -214,9 +214,12 @@ public class CharBody : MonoBehaviour
             float runF = Mathf.Clamp01((moveS - 2.5f) / 1.5f) * (1f - crouchW) * Mathf.Clamp01((sinceShot - 0.4f) / 0.4f);
             float aimW = live * Mathf.Lerp(1f, 0.4f, runF) * Mathf.Lerp(1f, 0.45f, reloadW) * (1f - 0.5f * airW);
             Quaternion delta = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(q * Vector3.forward, aim * Vector3.forward), aimW);
-            BendSpine(delta);
+            Vector3 wantFwd = delta * (q * Vector3.forward);
+            // the spine takes a bit more than half of the correction, the arms (IK onto the weapon) the rest
+            BendSpine(Quaternion.Slerp(Quaternion.identity, delta, 0.6f));
             wr = R.hand.rotation * R.animRot;
             if (live * (1f - reloadW) > 0f) wr = Quaternion.Slerp(wr, Quaternion.FromToRotation(wr * rig.animGripDir, (L.GripPoint - R.GripPoint).normalized) * wr, live * (1f - reloadW));
+            wr = Quaternion.FromToRotation(wr * Vector3.forward, wantFwd) * wr;
             if (reloadW > 0f && live > 0f)
             {
                 // while reloading the weapon follows the right hand only; keep the muzzle within 45 degrees of the aim
@@ -234,7 +237,7 @@ public class CharBody : MonoBehaviour
         }
         else if (kind == HoldKind.Pistol)
         {
-            BendSpine(Quaternion.AngleAxis(pitch * live, right));
+            BendSpine(Quaternion.AngleAxis(pitch * 0.55f * live, right));
             lowW = Mathf.MoveTowards(lowW, moveS > 3.2f && sinceShot > 0.6f && !crouch ? 1f : 0f, dt * 4f);
             float low = Mathf.SmoothStep(0, 1, lowW);
             Vector3 anchor = rig.head.position;

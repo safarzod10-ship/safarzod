@@ -207,7 +207,7 @@ public class CharView : MonoBehaviour
     }
 }
 
-/// Pooled-free simple effects: tracers, flashes, impacts, blood, explosions and synthesized sounds.
+/// Simple effects: tracers, flashes, impacts, blood, explosions and recorded sounds.
 public static class Fx
 {
     static readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
@@ -247,7 +247,7 @@ public static class Fx
         var l = f.AddComponent<Light>(); l.color = new Color(1f, 0.75f, 0.4f); l.range = 7f; l.intensity = 2.5f;
         Object.Destroy(f, 0.04f);
 
-        string clip = d.zoomFov > 0 && d.zoomFov < 30 ? "sniper" : d.slot == Slot.Pistol ? "pistol" : d.pellets > 1 ? "shotgun" : "rifle";
+        string clip = ShotSound(d);
         Sound(clip, from, 1f, 60f);
     }
 
@@ -261,7 +261,8 @@ public static class Fx
         var r = h.GetComponent<Renderer>(); r.sharedMaterial = holeMat; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         Object.Destroy(h, 12f);
         Burst(p + n * 0.03f, n, sparkMat, 7, 2.2f, 0.035f, 0.35f);
-        if (Random.value < 0.35f) Sound("ricochet", p, 0.35f, 25f);
+        Sound("stone", p, 0.5f, 22f);
+        if (Random.value < 0.3f) Sound("ricochet", p, 0.45f, 30f);
     }
 
     public static void Blood(Vector3 p, Vector3 n)
@@ -319,51 +320,44 @@ public static class Fx
         AudioSource.PlayClipAtPoint(clip, Camera.main.transform.position, vol);
     }
 
+    static readonly Dictionary<string, AudioClip[]> variants = new Dictionary<string, AudioClip[]>();
+    static readonly Dictionary<string, string> alias = new Dictionary<string, string>
+    {
+        { "flesh", "hit_flesh" }, { "knife", "knife_swing" }, { "rifle", "rifle_ak" }, { "stone", "hit_stone" },
+    };
+
+    /// Picks one of the recorded variants of a sound (name_1, name_2, ...) at random. Only real recordings from
+    /// Resources/Sounds are used; a missing sound simply stays silent.
     static AudioClip Clip(string name)
     {
-        if (clips.TryGetValue(name, out var c)) return c;
-        c = Resources.Load<AudioClip>("Sounds/" + name);
-        if (c == null) c = Synth(name);
-        clips[name] = c; return c;
+        if (alias.TryGetValue(name, out var real)) name = real;
+        if (!variants.TryGetValue(name, out var arr))
+        {
+            var list = new List<AudioClip>();
+            for (int i = 1; i <= 8; i++)
+            {
+                var v = Resources.Load<AudioClip>("Sounds/" + name + "_" + i);
+                if (v == null) break;
+                list.Add(v);
+            }
+            if (list.Count == 0) { var one = Resources.Load<AudioClip>("Sounds/" + name); if (one != null) list.Add(one); }
+            arr = list.ToArray(); variants[name] = arr;
+        }
+        return arr.Length == 0 ? null : arr[Random.Range(0, arr.Length)];
     }
 
-    // Fallback sounds generated in code, used until recorded sounds are placed in Resources/Sounds.
-    static AudioClip Synth(string name)
+    /// Recorded gunshot family for a weapon.
+    public static string ShotSound(WeaponDef d)
     {
-        const int sr = 22050;
-        float len = 0.3f, decay = 18f, tone = 0, noise = 1f, lowpass = 0.5f;
-        switch (name)
+        switch (d.key)
         {
-            case "pistol": len = 0.28f; decay = 22f; lowpass = 0.55f; break;
-            case "rifle": len = 0.34f; decay = 17f; lowpass = 0.42f; break;
-            case "shotgun": len = 0.5f; decay = 11f; lowpass = 0.3f; break;
-            case "sniper": len = 0.75f; decay = 7f; lowpass = 0.25f; break;
-            case "explosion": len = 1.4f; decay = 3.5f; lowpass = 0.08f; break;
-            case "step": len = 0.09f; decay = 50f; lowpass = 0.12f; break;
-            case "flesh": len = 0.08f; decay = 45f; lowpass = 0.2f; break;
-            case "knife": len = 0.14f; decay = 25f; lowpass = 0.8f; break;
-            case "ricochet": len = 0.2f; decay = 14f; tone = 2600f; noise = 0.15f; break;
-            case "reload": len = 0.12f; decay = 40f; tone = 900f; noise = 0.6f; lowpass = 0.7f; break;
-            case "click": len = 0.04f; decay = 90f; tone = 1800f; noise = 0.5f; lowpass = 0.9f; break;
-            case "beep": len = 0.09f; decay = 6f; tone = 2100f; noise = 0f; break;
-            case "plant": len = 0.3f; decay = 5f; tone = 1200f; noise = 0f; break;
-            default: return null;
+            case "deagle": return "pistol_heavy";
+            case "mac10": case "mp9": case "mp5": case "ump": case "p90": return "smg";
+            case "m4": case "famas": case "aug": return "rifle_m4";
+            case "m249": return "lmg";
+            case "m3": case "xm1014": return "shotgun";
+            case "scout": case "awp": case "g3": return "sniper";
         }
-        int n = (int)(sr * len);
-        var data = new float[n];
-        float lp = 0; var rng = new System.Random(name.GetHashCode());
-        for (int i = 0; i < n; i++)
-        {
-            float t = i / (float)sr;
-            float env = Mathf.Exp(-decay * t);
-            float w = (float)(rng.NextDouble() * 2 - 1) * noise;
-            lp += (w - lp) * lowpass;
-            float s = lp * (noise > 0 ? 1.6f : 0f);
-            if (tone > 0) s += Mathf.Sin(2 * Mathf.PI * tone * t * (name == "ricochet" ? 1f - t * 1.5f : 1f)) * 0.6f;
-            data[i] = Mathf.Clamp(s * env, -1f, 1f);
-        }
-        var clip = AudioClip.Create(name, n, 1, sr, false);
-        clip.SetData(data, 0);
-        return clip;
+        return d.slot == Slot.Pistol ? "pistol" : "rifle_ak";
     }
 }

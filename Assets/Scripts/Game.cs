@@ -47,6 +47,11 @@ public class Game : NetworkBehaviour
         I = this;
         foreach (var n in new[] { "SiteA", "SiteB" }) { var s = GameObject.Find(n); if (s) sites.Add(new Bounds(s.transform.position, s.GetComponent<BoxCollider>().size)); }
         Collect("SpawnsT", spawnsT); Collect("SpawnsCT", spawnsCT);
+        // Town level: one bomb site and the two team starts come from the level's marker objects
+        var bs = GameObject.Find("BombSite");
+        if (bs != null && sites.Count == 0) { var bc = bs.GetComponent<BoxCollider>(); sites.Add(new Bounds(bs.transform.position, bc != null ? bc.size : new Vector3(4, 2.5f, 6))); }
+        if (spawnsT.Count == 0) Collect("SpawnA", spawnsT);
+        if (spawnsCT.Count == 0) Collect("SpawnB", spawnsCT);
     }
 
     static void Collect(string root, List<Transform> list)

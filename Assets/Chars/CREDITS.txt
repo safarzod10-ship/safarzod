@@ -1,0 +1,12 @@
+3D model credits (all Sketchfab, licence CC Attribution 4.0 - https://creativecommons.org/licenses/by/4.0/)
+Models were modified: props removed, textures downscaled to 1K, skeletons retargeted, weapons re-oriented and split into parts.
+
+- CT skin 1 (ct1): "S.W.A.T. Operator" by jeandiz, CC Attribution, https://sketchfab.com/3d-models/none-9e82fabf26194896b5ad4a364d864eab
+- CT skin 2 (ct2): "S.W.A.T. Operator- 4k Followers Special Remaster" by jeandiz, CC Attribution, https://sketchfab.com/3d-models/none-f6923917c8014578b1c1cb2b4c249268
+- T skins 1 and 2 (t1, t2): "Thugs" by bumstrum, CC Attribution, https://sketchfab.com/3d-models/none-ee6139403e5c4840a93c63b66340a781
+- usp: "Heckler & Koch USP Pistol" by Urpo, CC Attribution, https://sketchfab.com/3d-models/none-972e3643000246e8959a6df509557bcc
+- deagle: "Desert Eagle" by ELIZION, CC Attribution, https://sketchfab.com/3d-models/none-cabde59f5cf24effaf80536e35d04e95
+- ak: "AKM Assault Rifle | Game Ready Model" by kennethtzh, CC Attribution, https://sketchfab.com/3d-models/none-8b6ce77441f8446786e0680d61d327db
+- awp: "ArcticWarfareMagnum(AWM)" by Lolik123654, CC Attribution, https://sketchfab.com/3d-models/none-5e985383734243a5bc453db86e01eb6f
+- knife: "Fighting Ka-Bar knifes" by vitvitskyi, CC Attribution, https://sketchfab.com/3d-models/none-b3c3a8c7c28349268f6631567cf01d8a
+- animations: "Modern Army Soldier with +24 pro Animations" by abdlilah ben, CC Attribution, https://sketchfab.com/3d-models/modern-army-soldier-with-24-pro-animations-37566d930fa7404f87847b7fca8dca97

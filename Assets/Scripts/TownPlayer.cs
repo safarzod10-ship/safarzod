@@ -21,6 +21,7 @@ public class TownPlayer : MonoBehaviour
     {
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Town") return;
         foreach (var a in Environment.GetCommandLineArgs()) if (a == "-townshots" || a == "-townwalk") return;
+        if (UnityEngine.Object.FindFirstObjectByType<Game>() != null) return;   // a real match runs here; no free-walk
         new GameObject("TownPlayer").AddComponent<TownPlayer>();
     }
 
