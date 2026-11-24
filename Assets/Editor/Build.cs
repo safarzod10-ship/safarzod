@@ -124,6 +124,14 @@ public static class Build
         EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
     }
 
+    public static void LinuxTown()
+    {
+        Dir("Builds/linux_town");
+        var r = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { "Assets/Scenes/Town.unity" }, locationPathName = "Builds/linux_town/town.x86_64", target = BuildTarget.StandaloneLinux64, options = BuildOptions.None });
+        Debug.Log("BUILD_RESULT " + r.summary.result + " errors=" + r.summary.totalErrors + " size=" + r.summary.totalSize);
+        EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+    }
+
     public static void Android()
     {
         Dir("Builds/android");

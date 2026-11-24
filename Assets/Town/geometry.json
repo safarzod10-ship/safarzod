@@ -1,0 +1,954 @@
+{
+ "file": "map_fixed.glb",
+ "source": "map.glb (Tripo, 47726 tris, no UVs)",
+ "scale_m_per_source_unit": 28.0,
+ "source_floor_y_units": 0.0246,
+ "transform_from_source": "x_m = 28*x ; y_m = 28*(y-0.0246) ; z_m = 28*z",
+ "axes": "glTF space: right-handed, Y up, metres, +X = east, +Z = south, courtyard floor at y = 0 (ground undulates +-3 cm), model centred on the origin. glTFast inverts X on import (documented in its UpgradeGuides.md), so Unity position = (-x, y, z); all *_unity fields below already contain that.",
+ "yaw_pitch_convention": "Unity Euler angles: yaw about +Y (0 = looking along +Z, 90 = +X), pitch about X (positive = looking down). Eye height 1.65 m.",
+ "bounds_m_gltf": {
+  "all_geometry": {
+   "min": [
+    -420.0,
+    -0.689,
+    -420.0
+   ],
+   "max": [
+    426.0,
+    17.187,
+    431.0
+   ]
+  },
+  "original_model_footprint": {
+   "min": [
+    -13.83,
+    0,
+    -14.0
+   ],
+   "max": [
+    13.84,
+    10.5,
+    13.5
+   ]
+  },
+  "playable_area": {
+   "min": [
+    -13.5,
+    0,
+    -13.0
+   ],
+   "max": [
+    20.5,
+    3.0,
+    25.5
+   ],
+   "note": "courtyard (x -13.5..13.4, z -13..10) + south street (x -7.3..20.5, z 10.4..17.6) + east lane (x 13.4..20.5, z -13..17.6) + attackers alley (x -1.0..4.0, z 17.6..25.5)"
+  },
+  "backdrop_ring": {
+   "min": [
+    -27,
+    0,
+    -28
+   ],
+   "max": [
+    40,
+    16.6,
+    38
+   ]
+  },
+  "ground": {
+   "min": [
+    -420,
+    0,
+    -420
+   ],
+   "max": [
+    426,
+    0,
+    431
+   ],
+   "fine_1m_grid": {
+    "min": [
+     -20,
+     -20
+    ],
+    "max": [
+     26,
+     31
+    ]
+   }
+  }
+ },
+ "tris_total": 65087,
+ "verts_total": 77643,
+ "tri_counts_per_material": {
+  "ground_main": 2352,
+  "ground_outer": 5956,
+  "wall_a": 2129,
+  "wall_b": 1359,
+  "wall_c": 2186,
+  "wall_d": 7889,
+  "roof": 533,
+  "dome": 2812,
+  "wood": 9136,
+  "wood_dark": 2769,
+  "cloth": 565,
+  "palm_trunk": 1385,
+  "palm_leaf": 17001,
+  "stone": 4167,
+  "metal": 4848
+ },
+ "tri_origin": {
+  "original": 44171,
+  "caps": 1654,
+  "backface_duplicates": 878,
+  "ground": 8308,
+  "added_buildings": 5164,
+  "copied": 4610,
+  "prop_fixes": 302
+ },
+ "materials": {
+  "double_sided": [
+   "cloth",
+   "palm_leaf"
+  ],
+  "ground_main": "paving of courtyard, south street, east lane, alley (1 m grid)",
+  "ground_outer": "everything outside the play area, under and beyond the backdrop buildings",
+  "wall_a": "plaster A: hip-roof house, NW range, east block south part, backdrop BD1 BD6 N1 N3 S5 E4",
+  "wall_b": "plaster B (lightest): SW building, east block north part, backdrop BD3 BD7 W1",
+  "wall_c": "plaster C (darker/mud): west range, west arch block, kiosk, roof clutter, backdrop BD2 BD6b BD8 N2 W3 S4 E5 NW",
+  "wall_d": "fired brick: portal, minaret shafts, wall behind the portal, SE gateway, all low cover walls, S2 gate wall, backdrop BD4 BD5 BD9 W2 S6 tower bases",
+  "roof": "flat roofs of all buildings AND the one hip roof of the house (source component 57, 159 tris)",
+  "dome": "glazed tile: big dome + drum, minaret caps, backdrop domes",
+  "wood": "crates, pallets, doors, gates, misc small props",
+  "wood_dark": "beam ends, lintels, shutters, railing, pergola, canopy frame, poles",
+  "cloth": "awnings, parasol, rope",
+  "palm_trunk": "3 palm trunks",
+  "palm_leaf": "palm fronds and potted bushes (thin sheets)",
+  "stone": "steps, terraces, plinths, sills, thresholds, clay pots/jars, pallet feet",
+  "metal": "pipes, finials, wall units"
+ },
+ "uv": {
+  "TEXCOORD_0": "box projection in world metres, 1 UV unit = 1 m (dominant axis of the face normal; domes, drum and minarets use cylindrical u = angle*R, v = height, seam on the side facing away from the map centre; their near-horizontal faces use the top projection). V is negated for glTF (v_gltf = -height) so images appear upright.",
+  "TEXCOORD_1": "non-overlapping atlas from xatlas (all meshes share ONE 0..1 atlas, packed for 4096 px, 3 px padding)"
+ },
+ "normals": "recomputed, area weighted, hard edge where the angle between face normals exceeds 44 deg",
+ "spawn_a_attackers": {
+  "positions_gltf": [
+   [
+    1.5,
+    0.05,
+    23.0
+   ],
+   [
+    0.2,
+    0.05,
+    22.0
+   ],
+   [
+    2.8,
+    0.05,
+    22.0
+   ],
+   [
+    0.6,
+    0.05,
+    24.2
+   ],
+   [
+    2.4,
+    0.05,
+    24.2
+   ]
+  ],
+  "positions_unity": [
+   [
+    -1.5,
+    0.05,
+    23.0
+   ],
+   [
+    -0.2,
+    0.05,
+    22.0
+   ],
+   [
+    -2.8,
+    0.05,
+    22.0
+   ],
+   [
+    -0.6,
+    0.05,
+    24.2
+   ],
+   [
+    -2.4,
+    0.05,
+    24.2
+   ]
+  ],
+  "centre_gltf": [
+   1.5,
+   0.05,
+   23.0
+  ],
+  "centre_unity": [
+   -1.5,
+   0.05,
+   23.0
+  ],
+  "facing_gltf": [
+   0,
+   0,
+   -1
+  ],
+  "yaw_unity_deg": 180.0
+ },
+ "spawn_b_defenders": {
+  "positions_gltf": [
+   [
+    17.2,
+    0.05,
+    -6.0
+   ],
+   [
+    15.6,
+    0.05,
+    -7.5
+   ],
+   [
+    18.8,
+    0.05,
+    -7.5
+   ],
+   [
+    15.8,
+    0.05,
+    -9.6
+   ],
+   [
+    18.6,
+    0.05,
+    -9.6
+   ]
+  ],
+  "positions_unity": [
+   [
+    -17.2,
+    0.05,
+    -6.0
+   ],
+   [
+    -15.6,
+    0.05,
+    -7.5
+   ],
+   [
+    -18.8,
+    0.05,
+    -7.5
+   ],
+   [
+    -15.8,
+    0.05,
+    -9.6
+   ],
+   [
+    -18.6,
+    0.05,
+    -9.6
+   ]
+  ],
+  "centre_gltf": [
+   17.2,
+   0.05,
+   -6.0
+  ],
+  "centre_unity": [
+   -17.2,
+   0.05,
+   -6.0
+  ],
+  "facing_gltf": [
+   0,
+   0,
+   1
+  ],
+  "yaw_unity_deg": 0.0
+ },
+ "bomb_site": {
+  "centre_gltf": [
+   0.6,
+   0.03,
+   -2.8
+  ],
+  "centre_unity": [
+   -0.6,
+   0.03,
+   -2.8
+  ],
+  "size_x_m": 4.0,
+  "size_z_m": 6.0,
+  "walkable_fraction_of_zone": 1.0,
+  "note": "open paving between the crate stack (west), kiosk (north) and the low wall (south-west)"
+ },
+ "routes": {
+  "attackers": "alley -> south street -> S1 gap (5.9 m wide, x -4.2..1.7, z 9.2) -> bomb, about 27 m; flank: street east -> east lane north -> SE gateway arch (x 11.6..13.8, z 3.5..7.7)",
+  "defenders": "east lane -> SE gateway arch -> bomb, about 25 m",
+  "closed": "S2 gap is closed by a 3.45 m wall with a wooden double gate; alley end closed by a 4.3 m wall with a wooden gate; north end of lane and west end of street closed by buildings"
+ },
+ "backdrop_buildings": [
+  {
+   "name": "BD1_south_west",
+   "x": [
+    -15.5,
+    -1.0
+   ],
+   "z": [
+    17.6,
+    27.0
+   ],
+   "h": 5.9,
+   "mat": "wall_a"
+  },
+  {
+   "name": "BD2_south_mid",
+   "x": [
+    4.0,
+    13.5
+   ],
+   "z": [
+    17.6,
+    26.0
+   ],
+   "h": 7.0,
+   "mat": "wall_c"
+  },
+  {
+   "name": "BD3_south_east",
+   "x": [
+    13.5,
+    29.0
+   ],
+   "z": [
+    17.6,
+    25.0
+   ],
+   "h": 5.0,
+   "mat": "wall_b"
+  },
+  {
+   "name": "BD4_alley_gate",
+   "x": [
+    -1.6,
+    4.6
+   ],
+   "z": [
+    25.5,
+    26.4
+   ],
+   "h": 4.3,
+   "mat": "wall_d"
+  },
+  {
+   "name": "BD5_east_s",
+   "x": [
+    20.5,
+    29.0
+   ],
+   "z": [
+    6.5,
+    18.0
+   ],
+   "h": 6.4,
+   "mat": "wall_d"
+  },
+  {
+   "name": "BD6_east_mid",
+   "x": [
+    20.5,
+    26.5
+   ],
+   "z": [
+    -4.5,
+    6.5
+   ],
+   "h": 4.5,
+   "mat": "wall_a"
+  },
+  {
+   "name": "BD6b_setback",
+   "x": [
+    22.5,
+    29.5
+   ],
+   "z": [
+    -3.0,
+    5.0
+   ],
+   "h": 8.2,
+   "mat": "wall_c"
+  },
+  {
+   "name": "BD7_east_n",
+   "x": [
+    20.5,
+    29.0
+   ],
+   "z": [
+    -17.0,
+    -4.5
+   ],
+   "h": 7.6,
+   "mat": "wall_b"
+  },
+  {
+   "name": "BD8_lane_end",
+   "x": [
+    12.8,
+    21.0
+   ],
+   "z": [
+    -21.0,
+    -13.0
+   ],
+   "h": 5.6,
+   "mat": "wall_c"
+  },
+  {
+   "name": "BD9_street_west",
+   "x": [
+    -15.5,
+    -7.3
+   ],
+   "z": [
+    11.0,
+    18.0
+   ],
+   "h": 4.2,
+   "mat": "wall_d"
+  },
+  {
+   "name": "N1",
+   "x": [
+    -15.0,
+    -3.0
+   ],
+   "z": [
+    -25.0,
+    -15.2
+   ],
+   "h": 6.4,
+   "mat": "wall_a"
+  },
+  {
+   "name": "N2",
+   "x": [
+    -1.5,
+    11.0
+   ],
+   "z": [
+    -27.0,
+    -16.0
+   ],
+   "h": 8.6,
+   "mat": "wall_c"
+  },
+  {
+   "name": "N3",
+   "x": [
+    21.5,
+    31.0
+   ],
+   "z": [
+    -28.0,
+    -18.5
+   ],
+   "h": 6.0,
+   "mat": "wall_a"
+  },
+  {
+   "name": "W1",
+   "x": [
+    -24.0,
+    -15.2
+   ],
+   "z": [
+    -14.5,
+    -3.5
+   ],
+   "h": 5.6,
+   "mat": "wall_b"
+  },
+  {
+   "name": "W2",
+   "x": [
+    -27.0,
+    -15.6
+   ],
+   "z": [
+    -2.0,
+    9.0
+   ],
+   "h": 7.8,
+   "mat": "wall_d"
+  },
+  {
+   "name": "W3",
+   "x": [
+    -23.5,
+    -16.5
+   ],
+   "z": [
+    10.5,
+    17.0
+   ],
+   "h": 4.8,
+   "mat": "wall_c"
+  },
+  {
+   "name": "S4",
+   "x": [
+    -13.0,
+    2.5
+   ],
+   "z": [
+    29.0,
+    38.0
+   ],
+   "h": 7.2,
+   "mat": "wall_c"
+  },
+  {
+   "name": "S5",
+   "x": [
+    6.5,
+    20.0
+   ],
+   "z": [
+    27.5,
+    36.5
+   ],
+   "h": 9.4,
+   "mat": "wall_a"
+  },
+  {
+   "name": "E4",
+   "x": [
+    31.0,
+    40.0
+   ],
+   "z": [
+    -14.0,
+    -2.0
+   ],
+   "h": 9.0,
+   "mat": "wall_a"
+  },
+  {
+   "name": "E5",
+   "x": [
+    30.5,
+    39.0
+   ],
+   "z": [
+    2.0,
+    13.0
+   ],
+   "h": 6.6,
+   "mat": "wall_c"
+  },
+  {
+   "name": "S6",
+   "x": [
+    22.0,
+    33.0
+   ],
+   "z": [
+    27.0,
+    35.0
+   ],
+   "h": 6.2,
+   "mat": "wall_d"
+  },
+  {
+   "name": "NW",
+   "x": [
+    -25.0,
+    -16.0
+   ],
+   "z": [
+    -26.0,
+    -16.5
+   ],
+   "h": 7.0,
+   "mat": "wall_c"
+  },
+  {
+   "name": "T1_base",
+   "x": [
+    22.0,
+    26.0
+   ],
+   "z": [
+    20.0,
+    24.0
+   ],
+   "h": 7.5,
+   "mat": "wall_d"
+  },
+  {
+   "name": "T2_base",
+   "x": [
+    -21.0,
+    -17.5
+   ],
+   "z": [
+    -21.0,
+    -17.5
+   ],
+   "h": 6.5,
+   "mat": "wall_d"
+  }
+ ],
+ "camera_viewpoints": [
+  {
+   "name": "courtyard_centre_to_portal",
+   "kind": "eye",
+   "pos_gltf": [
+    0.77,
+    1.65,
+    -0.49
+   ],
+   "look_at_gltf": [
+    0,
+    3,
+    -12
+   ],
+   "pos_unity": [
+    -0.77,
+    1.65,
+    -0.49
+   ],
+   "look_at_unity": [
+    0,
+    3,
+    -12
+   ],
+   "yaw_unity_deg": 176.2,
+   "pitch_unity_deg": -6.7,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_01_courtyard_centre_to_portal.png"
+  },
+  {
+   "name": "courtyard_crates_and_house",
+   "kind": "eye",
+   "pos_gltf": [
+    3.27,
+    1.65,
+    2.01
+   ],
+   "look_at_gltf": [
+    -8,
+    3,
+    -3
+   ],
+   "pos_unity": [
+    -3.27,
+    1.65,
+    2.01
+   ],
+   "look_at_unity": [
+    8,
+    3,
+    -3
+   ],
+   "yaw_unity_deg": 114.0,
+   "pitch_unity_deg": -6.2,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_02_courtyard_crates_and_house.png"
+  },
+  {
+   "name": "southwest_corner_to_house",
+   "kind": "eye",
+   "pos_gltf": [
+    -5.48,
+    1.65,
+    7.0
+   ],
+   "look_at_gltf": [
+    -7,
+    3.5,
+    -3
+   ],
+   "pos_unity": [
+    5.48,
+    1.65,
+    7.0
+   ],
+   "look_at_unity": [
+    7,
+    3.5,
+    -3
+   ],
+   "yaw_unity_deg": 171.4,
+   "pitch_unity_deg": -10.4,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_03_southwest_corner_to_house.png"
+  },
+  {
+   "name": "southeast_corner_north",
+   "kind": "eye",
+   "pos_gltf": [
+    9.5,
+    1.65,
+    7.0
+   ],
+   "look_at_gltf": [
+    8,
+    3,
+    -6
+   ],
+   "pos_unity": [
+    -9.5,
+    1.65,
+    7.0
+   ],
+   "look_at_unity": [
+    -8,
+    3,
+    -6
+   ],
+   "yaw_unity_deg": 173.4,
+   "pitch_unity_deg": -5.9,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_04_southeast_corner_north.png"
+  },
+  {
+   "name": "west_side_to_east_gate",
+   "kind": "eye",
+   "pos_gltf": [
+    -5.48,
+    1.65,
+    0.76
+   ],
+   "look_at_gltf": [
+    8,
+    2.5,
+    0
+   ],
+   "pos_unity": [
+    5.48,
+    1.65,
+    0.76
+   ],
+   "look_at_unity": [
+    -8,
+    2.5,
+    0
+   ],
+   "yaw_unity_deg": -93.2,
+   "pitch_unity_deg": -3.6,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_05_west_side_to_east_gate.png"
+  },
+  {
+   "name": "east_gate_from_lane",
+   "kind": "eye",
+   "pos_gltf": [
+    18.0,
+    1.65,
+    5.6
+   ],
+   "look_at_gltf": [
+    6,
+    2,
+    4
+   ],
+   "pos_unity": [
+    -18.0,
+    1.65,
+    5.6
+   ],
+   "look_at_unity": [
+    -6,
+    2,
+    4
+   ],
+   "yaw_unity_deg": 97.6,
+   "pitch_unity_deg": -1.7,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_06_east_gate_from_lane.png"
+  },
+  {
+   "name": "east_lane_north",
+   "kind": "eye",
+   "pos_gltf": [
+    17.0,
+    1.65,
+    13.0
+   ],
+   "look_at_gltf": [
+    16.5,
+    2.5,
+    -13
+   ],
+   "pos_unity": [
+    -17.0,
+    1.65,
+    13.0
+   ],
+   "look_at_unity": [
+    -16.5,
+    2.5,
+    -13
+   ],
+   "yaw_unity_deg": 178.9,
+   "pitch_unity_deg": -1.9,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_07_east_lane_north.png"
+  },
+  {
+   "name": "south_street_west",
+   "kind": "eye",
+   "pos_gltf": [
+    14.0,
+    1.65,
+    14.5
+   ],
+   "look_at_gltf": [
+    -8,
+    2,
+    13.5
+   ],
+   "pos_unity": [
+    -14.0,
+    1.65,
+    14.5
+   ],
+   "look_at_unity": [
+    8,
+    2,
+    13.5
+   ],
+   "yaw_unity_deg": 92.6,
+   "pitch_unity_deg": -0.9,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_08_south_street_west.png"
+  },
+  {
+   "name": "attackers_alley_north",
+   "kind": "eye",
+   "pos_gltf": [
+    1.5,
+    1.65,
+    24.0
+   ],
+   "look_at_gltf": [
+    0,
+    2.5,
+    5
+   ],
+   "pos_unity": [
+    -1.5,
+    1.65,
+    24.0
+   ],
+   "look_at_unity": [
+    0,
+    2.5,
+    5
+   ],
+   "yaw_unity_deg": 175.5,
+   "pitch_unity_deg": -2.6,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_09_attackers_alley_north.png"
+  },
+  {
+   "name": "south_gate_into_courtyard",
+   "kind": "eye",
+   "pos_gltf": [
+    -1.0,
+    1.65,
+    13.0
+   ],
+   "look_at_gltf": [
+    -1.5,
+    2.3,
+    0
+   ],
+   "pos_unity": [
+    1.0,
+    1.65,
+    13.0
+   ],
+   "look_at_unity": [
+    1.5,
+    2.3,
+    0
+   ],
+   "yaw_unity_deg": 177.8,
+   "pitch_unity_deg": -2.9,
+   "fov_vertical_deg": 75,
+   "preview": "geo_views/view_10_south_gate_into_courtyard.png"
+  },
+  {
+   "name": "aerial_south_east",
+   "kind": "aerial",
+   "pos_gltf": [
+    40,
+    32,
+    44
+   ],
+   "look_at_gltf": [
+    2,
+    2,
+    2
+   ],
+   "pos_unity": [
+    -40,
+    32,
+    44
+   ],
+   "look_at_unity": [
+    -2,
+    2,
+    2
+   ],
+   "yaw_unity_deg": 137.9,
+   "pitch_unity_deg": 27.9,
+   "fov_vertical_deg": 48,
+   "preview": "geo_views/view_11_aerial_south_east.png"
+  },
+  {
+   "name": "aerial_north_west",
+   "kind": "aerial",
+   "pos_gltf": [
+    -34,
+    30,
+    -38
+   ],
+   "look_at_gltf": [
+    2,
+    2,
+    2
+   ],
+   "pos_unity": [
+    34,
+    30,
+    -38
+   ],
+   "look_at_unity": [
+    -2,
+    2,
+    2
+   ],
+   "yaw_unity_deg": -42.0,
+   "pitch_unity_deg": 27.5,
+   "fov_vertical_deg": 48,
+   "preview": "geo_views/view_12_aerial_north_west.png"
+  }
+ ],
+ "marker_nodes_in_glb": "empty nodes under \"Markers\": SpawnA_0..4, SpawnB_0..4, BombSite, View_01..12 (positions only, glTF space)"
+}
