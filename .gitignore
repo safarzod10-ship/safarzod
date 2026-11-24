@@ -21,3 +21,4 @@
 *.jks
 sysinfo.txt
 crashlytics-build.properties
+/.utmp/
