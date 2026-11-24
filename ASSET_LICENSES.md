@@ -1,0 +1,30 @@
+# Asset licences
+
+Every third-party asset used in the game. No NonCommercial or NoDerivatives assets are allowed.
+
+## 3D models (Sketchfab, CC Attribution 4.0)
+
+| Asset | Author | Licence | Source |
+|---|---|---|---|
+| S.W.A.T. Operator (ct1) | jeandiz | CC BY 4.0 | https://sketchfab.com/3d-models/9e82fabf26194896b5ad4a364d864eab |
+| S.W.A.T. Operator remaster (ct2) | jeandiz | CC BY 4.0 | https://sketchfab.com/3d-models/f6923917c8014578b1c1cb2b4c249268 |
+| Thugs (t1, t2) | bumstrum | CC BY 4.0 | https://sketchfab.com/3d-models/ee6139403e5c4840a93c63b66340a781 |
+| Modern Army Soldier +24 animations (animation clips) | abdlilah ben | CC BY 4.0 | https://sketchfab.com/3d-models/37566d930fa7404f87847b7fca8dca97 |
+| Heckler & Koch USP Pistol | Urpo | CC BY 4.0 | https://sketchfab.com/3d-models/972e3643000246e8959a6df509557bcc |
+| Desert Eagle | ELIZION | CC BY 4.0 | https://sketchfab.com/3d-models/cabde59f5cf24effaf80536e35d04e95 |
+| AKM Assault Rifle | kennethtzh | CC BY 4.0 | https://sketchfab.com/3d-models/8b6ce77441f8446786e0680d61d327db |
+| ArcticWarfareMagnum (AWM) | Lolik123654 | CC BY 4.0 | https://sketchfab.com/3d-models/5e985383734243a5bc453db86e01eb6f |
+| Fighting Ka-Bar knifes | vitvitskyi | CC BY 4.0 | https://sketchfab.com/3d-models/b3c3a8c7c28349268f6631567cf01d8a |
+| Kazan, pots, carpets, bread, VAZ-2104, Daewoo Nexia (legacy Bazaar scene props) | various | CC BY 4.0 | https://sketchfab.com/3d-models/see /opt/models/credits.json |
+
+## Level
+
+| Asset | Author | Licence | Source |
+|---|---|---|---|
+| Town map base mesh | supplied by the owner (generated with Tripo by the owner's friend) | owner's own | — |
+| PBR textures (brick_floor_003, dirt_floor, sandy_gravel_02, clay_plaster, yellow_plaster, patterned_clay_plaster, rough_plaster_brick_02, rough_plaster_broken, yellow_brick, clay_floor_001, blue_plaster_weathered, weathered_brown_planks, dark_wooden_planks, hessian_380, quatrefoil_jacquard_fabric, palm_bark, leafy_grass, mixed_stone_tiles, rusty_metal_04) and HDRI sky | Poly Haven contributors | CC0 | https://polyhaven.com |
+| Graffiti font Rubik Wet Paint | Hubert & Fischer, Meir Sadan, Cyreal | SIL OFL 1.1 | https://github.com/google/fonts/tree/main/ofl/rubikwetpaint |
+
+## Sounds
+
+Full per-file table: Assets/Resources/Sounds/CREDITS.md (73 files). Gunshots: The Free Firearm Sound Library (CC0, OpenGameArt). Others: Freesound CC0 and CC BY 4.0/3.0 (Baelphazoar, Benboncan, CGEffex, DrinkingWindGames, InspectorJ, Nanashi, NoiseCollector must be credited).

@@ -1,0 +1,66 @@
+[
+ {
+  "id": "BUG-001",
+  "severity": "high",
+  "status": "open",
+  "title": "First-person weapon points left/up and sits too low",
+  "found": "2026-11-24 CharLab c_fp_ct1.png and in-game shot02",
+  "feature": "FP-01"
+ },
+ {
+  "id": "BUG-002",
+  "severity": "medium",
+  "status": "open",
+  "title": "Third-person reload holds rifle muzzle-up in front of the face",
+  "found": "2026-11-24 a_states_ak.png",
+  "feature": "TP-01"
+ },
+ {
+  "id": "BUG-003",
+  "severity": "medium",
+  "status": "open",
+  "title": "Bots never plant the bomb; rounds end in 20 s by elimination",
+  "found": "2026-11-24 headless match",
+  "feature": "GP-02"
+ },
+ {
+  "id": "BUG-004",
+  "severity": "medium",
+  "status": "open",
+  "title": "Team balance: attackers won 6 of 7 rounds",
+  "found": "2026-11-24 headless match",
+  "feature": "GP-02"
+ },
+ {
+  "id": "BUG-005",
+  "severity": "medium",
+  "status": "open",
+  "title": "Death animation travels ~1 m and can enter walls",
+  "found": "agent report 2026-11-24",
+  "feature": "TP-02"
+ },
+ {
+  "id": "BUG-006",
+  "severity": "medium",
+  "status": "open",
+  "title": "Cloth fragments on the courtyard wall look like spikes; dashed line in the sky (wire/antenna)",
+  "found": "2026-11-24 town shots",
+  "feature": "MAP-01"
+ },
+ {
+  "id": "BUG-007",
+  "severity": "high",
+  "status": "open",
+  "title": "SWAT characters ~50k triangles each: too heavy for phones",
+  "found": "agent report",
+  "feature": "PERF-02"
+ },
+ {
+  "id": "BUG-008",
+  "severity": "medium",
+  "status": "open",
+  "title": "UI uses default legacy Text and grey boxes; no designed menus",
+  "found": "audit",
+  "feature": "UI-01"
+ }
+]
