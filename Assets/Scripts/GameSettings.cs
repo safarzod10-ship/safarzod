@@ -109,9 +109,9 @@ public class FpsOverlay : MonoBehaviour
         var go = new GameObject("Fps", typeof(RectTransform));
         go.transform.SetParent(cgo.transform, false);
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1, 1); rt.anchoredPosition = new Vector2(-24, -64); rt.sizeDelta = new Vector2(420, 40);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1, 1); rt.anchoredPosition = new Vector2(-30, -16); rt.sizeDelta = new Vector2(520, 36);
         label = go.AddComponent<Text>();
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); label.fontSize = 26; label.alignment = TextAnchor.UpperRight;
+        UiKit.Init(); label.font = UiKit.Body; label.fontSize = 24; label.alignment = TextAnchor.UpperRight;
         label.color = new Color(1, 1, 1, 0.85f); label.raycastTarget = false;
         var o = go.AddComponent<Outline>(); o.effectColor = new Color(0, 0, 0, 0.8f);
     }

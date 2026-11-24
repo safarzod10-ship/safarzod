@@ -30,3 +30,10 @@ Every third-party asset used in the game. No NonCommercial or NoDerivatives asse
 ## Sounds
 
 Full per-file table: Assets/Resources/Sounds/CREDITS.md (73 files). Gunshots: The Free Firearm Sound Library (CC0, OpenGameArt). Others: Freesound CC0 and CC BY 4.0/3.0 (Baelphazoar, Benboncan, CGEffex, DrinkingWindGames, InspectorJ, Nanashi, NoiseCollector must be credited).
+
+## Fonts (UI)
+
+| Asset | Author | Licence | Source |
+|---|---|---|---|
+| Russo One (titles) — Assets/Resources/Fonts/RussoOne.ttf | Jovanny Lemonad | SIL OFL 1.1 (OFL_RussoOne.txt) | https://github.com/google/fonts/tree/main/ofl/russoone |
+| PT Sans Narrow Regular/Bold (body) — Assets/Resources/Fonts/PTSansNarrow*.ttf | ParaType | SIL OFL 1.1 (OFL_PTSansNarrow.txt) | https://github.com/google/fonts/tree/main/ofl/ptsansnarrow |
