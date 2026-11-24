@@ -1,2 +1,68 @@
 fileFormatVersion: 2
 guid: 418a3943df8b06f2e8eed82fdd7a32a3
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/FpArms/pistol/pistol.bin
+    assetPath: Assets/FpArms/pistol/pistol.bin
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_00.png
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_00.png
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_01_n.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_01_n.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_02_l.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_02_l.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_03.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_03.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_04_n.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_04_n.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_05.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_05.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_06_l.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_06_l.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_07.png
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_07.png
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_08_n.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_08_n.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_09.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_09.jpg
+  - type: 1
+    originalUri: Assets/FpArms/pistol/pistol_tex/pistol_10_l.jpg
+    assetPath: Assets/FpArms/pistol/pistol_tex/pistol_10_l.jpg
+  reportItems:
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_specular

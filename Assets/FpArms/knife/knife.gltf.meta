@@ -1,2 +1,46 @@
 fileFormatVersion: 2
 guid: f91b0c879a6bd2637b493e5305e68216
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/FpArms/knife/knife.bin
+    assetPath: Assets/FpArms/knife/knife.bin
+  - type: 1
+    originalUri: Assets/FpArms/knife/knife_tex/knife_00_n.jpg
+    assetPath: Assets/FpArms/knife/knife_tex/knife_00_n.jpg
+  - type: 1
+    originalUri: Assets/FpArms/knife/knife_tex/knife_01.jpg
+    assetPath: Assets/FpArms/knife/knife_tex/knife_01.jpg
+  - type: 1
+    originalUri: Assets/FpArms/knife/knife_tex/knife_02_n.jpg
+    assetPath: Assets/FpArms/knife/knife_tex/knife_02_n.jpg
+  - type: 1
+    originalUri: Assets/FpArms/knife/knife_tex/knife_03.jpg
+    assetPath: Assets/FpArms/knife/knife_tex/knife_03.jpg
+  - type: 1
+    originalUri: Assets/FpArms/knife/knife_tex/knife_04_l.jpg
+    assetPath: Assets/FpArms/knife/knife_tex/knife_04_l.jpg
+  reportItems: []
