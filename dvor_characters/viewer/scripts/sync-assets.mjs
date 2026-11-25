@@ -7,7 +7,7 @@ const pub = path.join(here, '..', 'public');
 const dist = path.join(here, '..', '..', 'dist');
 fs.mkdirSync(path.join(pub, 'models'), { recursive: true });
 fs.mkdirSync(path.join(pub, 'basis'), { recursive: true });
-for (const f of fs.readdirSync(dist).filter((f) => f.endsWith('.glb') || f === 'report.json')) {
+for (const f of fs.readdirSync(dist).filter((f) => f.endsWith('.glb') || f.endsWith('.colliders.json') || f.endsWith('report.json'))) {
   fs.copyFileSync(path.join(dist, f), path.join(pub, 'models', f));
 }
 const basis = path.join(here, '..', 'node_modules', 'three', 'examples', 'jsm', 'libs', 'basis');

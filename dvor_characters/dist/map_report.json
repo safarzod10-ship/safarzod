@@ -1,0 +1,83 @@
+{
+  "map": "MAP_Dvor",
+  "triangles": 976,
+  "drawCalls": 4,
+  "primitives": [
+    {
+      "material": "MAP_Pavement",
+      "triangles": 2,
+      "vertices": 4
+    },
+    {
+      "material": "MAP_Atlas",
+      "triangles": 914,
+      "vertices": 1986
+    },
+    {
+      "material": "MAP_ChainLink",
+      "triangles": 18,
+      "vertices": 36
+    },
+    {
+      "material": "MAP_Roof",
+      "triangles": 42,
+      "vertices": 84
+    }
+  ],
+  "textures": [
+    {
+      "name": "MAP_pavement_256",
+      "mime": "image/jpeg",
+      "size": [
+        256,
+        256
+      ],
+      "bytes": 8632
+    },
+    {
+      "name": "MAP_atlas_2048",
+      "mime": "image/jpeg",
+      "size": [
+        2048,
+        2048
+      ],
+      "bytes": 658765
+    },
+    {
+      "name": "MAP_chainlink_256",
+      "mime": "image/png",
+      "size": [
+        256,
+        176
+      ],
+      "bytes": 49370
+    },
+    {
+      "name": "MAP_roof_256",
+      "mime": "image/jpeg",
+      "size": [
+        256,
+        256
+      ],
+      "bytes": 6376
+    }
+  ],
+  "files": {
+    "glb": {
+      "bytes": 751088,
+      "gzip": 639432,
+      "brotli": 612069
+    },
+    "ktx2": {
+      "bytes": 647712,
+      "gzip": 586128,
+      "brotli": 583274
+    },
+    "raw": {
+      "bytes": 840004,
+      "gzip": 645841,
+      "brotli": 614565
+    }
+  },
+  "generated": "2026-11-25T13:29:58.353Z"
+}

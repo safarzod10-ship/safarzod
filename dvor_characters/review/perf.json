@@ -3,15 +3,15 @@
   "runs": [
     {
       "name": "3 chars, no throttle",
-      "query": "count=3&tex=png",
+      "query": "map=0&cam=fixed&count=3&tex=png",
       "cpuThrottle": 1,
       "network": "none",
-      "readyMs": 804,
-      "transferredBytes": 1084636,
-      "fps": 17.8,
-      "frameMsAvg": 56.21,
-      "frameMsP95": 63.7,
-      "cpuMsAvg": 0.85,
+      "readyMs": 681,
+      "transferredBytes": 1085534,
+      "fps": 24.8,
+      "frameMsAvg": 40.4,
+      "frameMsP95": 46.6,
+      "cpuMsAvg": 0.62,
       "calls": 7,
       "triangles": 3391,
       "lods": [
@@ -21,22 +21,22 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 525,
+          "ms": 445,
           "bytes": 297440,
           "ktx2": false
         },
         "USER_CH_Tank": {
-          "ms": 569,
+          "ms": 478,
           "bytes": 272580,
           "ktx2": false
         },
         "USER_CH_Sprinter": {
-          "ms": 573,
+          "ms": 483,
           "bytes": 318020,
           "ktx2": false
         },
         "total": {
-          "ms": 575,
+          "ms": 484,
           "bytes": 888040,
           "ktx2": false
         }
@@ -44,15 +44,15 @@
     },
     {
       "name": "3 chars, CPU x4",
-      "query": "count=3&tex=png",
+      "query": "map=0&cam=fixed&count=3&tex=png",
       "cpuThrottle": 4,
       "network": "none",
-      "readyMs": 1936,
-      "transferredBytes": 1084636,
-      "fps": 15,
-      "frameMsAvg": 66.67,
+      "readyMs": 1387,
+      "transferredBytes": 1085534,
+      "fps": 16.3,
+      "frameMsAvg": 61.53,
       "frameMsP95": 66.67,
-      "cpuMsAvg": 4.38,
+      "cpuMsAvg": 3.08,
       "calls": 7,
       "triangles": 3391,
       "lods": [
@@ -62,22 +62,22 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 1176,
+          "ms": 822,
           "bytes": 297440,
           "ktx2": false
         },
         "USER_CH_Tank": {
-          "ms": 1288,
+          "ms": 834,
           "bytes": 272580,
           "ktx2": false
         },
         "USER_CH_Sprinter": {
-          "ms": 1264,
+          "ms": 896,
           "bytes": 318020,
           "ktx2": false
         },
         "total": {
-          "ms": 1300,
+          "ms": 902,
           "bytes": 888040,
           "ktx2": false
         }
@@ -85,15 +85,15 @@
     },
     {
       "name": "3 chars, CPU x6, lambert, dpr1",
-      "query": "count=3&tex=png&lambert=1&dpr=1",
+      "query": "map=0&cam=fixed&count=3&tex=png&lambert=1&dpr=1",
       "cpuThrottle": 6,
       "network": "none",
-      "readyMs": 1753,
-      "transferredBytes": 1084636,
-      "fps": 21.8,
-      "frameMsAvg": 45.9,
-      "frameMsP95": 58.8,
-      "cpuMsAvg": 5.7,
+      "readyMs": 1587,
+      "transferredBytes": 1085534,
+      "fps": 24.7,
+      "frameMsAvg": 40.45,
+      "frameMsP95": 47.7,
+      "cpuMsAvg": 3.74,
       "calls": 7,
       "triangles": 3391,
       "lods": [
@@ -103,22 +103,22 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 987,
+          "ms": 877,
           "bytes": 297440,
           "ktx2": false
         },
         "USER_CH_Tank": {
-          "ms": 952,
+          "ms": 898,
           "bytes": 272580,
           "ktx2": false
         },
         "USER_CH_Sprinter": {
-          "ms": 1037,
+          "ms": 953,
           "bytes": 318020,
           "ktx2": false
         },
         "total": {
-          "ms": 1046,
+          "ms": 966,
           "bytes": 888040,
           "ktx2": false
         }
@@ -126,15 +126,15 @@
     },
     {
       "name": "9 chars, CPU x4",
-      "query": "count=9&tex=png",
+      "query": "map=0&cam=fixed&count=9&tex=png",
       "cpuThrottle": 4,
       "network": "none",
-      "readyMs": 1702,
-      "transferredBytes": 1084636,
+      "readyMs": 1469,
+      "transferredBytes": 1085534,
       "fps": 15,
       "frameMsAvg": 66.67,
       "frameMsP95": 66.67,
-      "cpuMsAvg": 7.67,
+      "cpuMsAvg": 4.44,
       "calls": 19,
       "triangles": 10169,
       "lods": [
@@ -150,22 +150,22 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 1047,
+          "ms": 906,
           "bytes": 297440,
           "ktx2": false
         },
         "USER_CH_Tank": {
-          "ms": 1024,
+          "ms": 969,
           "bytes": 272580,
           "ktx2": false
         },
         "USER_CH_Sprinter": {
-          "ms": 1132,
+          "ms": 985,
           "bytes": 318020,
           "ktx2": false
         },
         "total": {
-          "ms": 1138,
+          "ms": 994,
           "bytes": 888040,
           "ktx2": false
         }
@@ -173,15 +173,15 @@
     },
     {
       "name": "3 chars, KTX2, CPU x4",
-      "query": "count=3&tex=ktx2",
+      "query": "map=0&cam=fixed&count=3&tex=ktx2",
       "cpuThrottle": 4,
       "network": "none",
-      "readyMs": 2091,
-      "transferredBytes": 1645414,
-      "fps": 15.2,
-      "frameMsAvg": 65.88,
+      "readyMs": 1494,
+      "transferredBytes": 1646312,
+      "fps": 16.2,
+      "frameMsAvg": 61.71,
       "frameMsP95": 66.67,
-      "cpuMsAvg": 5.09,
+      "cpuMsAvg": 2.81,
       "calls": 7,
       "triangles": 3391,
       "lods": [
@@ -191,22 +191,22 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 1467,
+          "ms": 1035,
           "bytes": 297752,
           "ktx2": true
         },
         "USER_CH_Tank": {
-          "ms": 1465,
+          "ms": 1095,
           "bytes": 286724,
           "ktx2": true
         },
         "USER_CH_Sprinter": {
-          "ms": 1528,
+          "ms": 1095,
           "bytes": 321244,
           "ktx2": true
         },
         "total": {
-          "ms": 1539,
+          "ms": 1100,
           "bytes": 905720,
           "ktx2": true
         }
@@ -214,15 +214,15 @@
     },
     {
       "name": "cold load Fast 3G (1.6 Mbit/s)",
-      "query": "count=3&tex=png",
+      "query": "map=0&cam=fixed&count=3&tex=png",
       "cpuThrottle": 1,
       "network": "1600 kbit/s, 150 ms",
-      "readyMs": 6378,
-      "transferredBytes": 1084636,
-      "fps": 19.9,
-      "frameMsAvg": 50.36,
-      "frameMsP95": 64.2,
-      "cpuMsAvg": 1.19,
+      "readyMs": 6312,
+      "transferredBytes": 1085534,
+      "fps": 24.6,
+      "frameMsAvg": 40.57,
+      "frameMsP95": 44.2,
+      "cpuMsAvg": 0.94,
       "calls": 7,
       "triangles": 3391,
       "lods": [
@@ -232,22 +232,22 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 4820,
+          "ms": 4785,
           "bytes": 297440,
           "ktx2": false
         },
         "USER_CH_Tank": {
-          "ms": 4566,
+          "ms": 4552,
           "bytes": 272580,
           "ktx2": false
         },
         "USER_CH_Sprinter": {
-          "ms": 4901,
+          "ms": 4886,
           "bytes": 318020,
           "ktx2": false
         },
         "total": {
-          "ms": 4905,
+          "ms": 4888,
           "bytes": 888040,
           "ktx2": false
         }
@@ -255,15 +255,15 @@
     },
     {
       "name": "cold load Slow 3G (400 kbit/s)",
-      "query": "count=3&tex=png",
+      "query": "map=0&cam=fixed&count=3&tex=png",
       "cpuThrottle": 1,
       "network": "400 kbit/s, 400 ms",
-      "readyMs": 23335,
-      "transferredBytes": 1084636,
-      "fps": 19.5,
-      "frameMsAvg": 51.33,
-      "frameMsP95": 62.3,
-      "cpuMsAvg": 0.86,
+      "readyMs": 23358,
+      "transferredBytes": 1085534,
+      "fps": 25.4,
+      "frameMsAvg": 39.38,
+      "frameMsP95": 44.8,
+      "cpuMsAvg": 0.65,
       "calls": 7,
       "triangles": 3391,
       "lods": [
@@ -273,27 +273,257 @@
       ],
       "load": {
         "USER_CH_Technik": {
-          "ms": 18086,
+          "ms": 18013,
           "bytes": 297440,
           "ktx2": false
         },
         "USER_CH_Tank": {
-          "ms": 16990,
+          "ms": 17000,
           "bytes": 272580,
           "ktx2": false
         },
         "USER_CH_Sprinter": {
-          "ms": 18441,
+          "ms": 18468,
           "bytes": 318020,
           "ktx2": false
         },
         "total": {
-          "ms": 18443,
+          "ms": 18469,
+          "bytes": 888040,
+          "ktx2": false
+        }
+      }
+    },
+    {
+      "name": "MAP + 3 chars",
+      "query": "count=3&tex=png",
+      "cpuThrottle": 1,
+      "network": "none",
+      "readyMs": 427,
+      "transferredBytes": 1837817,
+      "fps": 15.1,
+      "frameMsAvg": 66.34,
+      "frameMsP95": 66.67,
+      "cpuMsAvg": 0.89,
+      "calls": 8,
+      "triangles": 4361,
+      "lods": [
+        0,
+        0,
+        0
+      ],
+      "load": {
+        "MAP_Dvor": {
+          "ms": 175,
+          "bytes": 751088,
+          "ktx2": false
+        },
+        "USER_CH_Technik": {
+          "ms": 149,
+          "bytes": 297440,
+          "ktx2": false
+        },
+        "USER_CH_Tank": {
+          "ms": 145,
+          "bytes": 272580,
+          "ktx2": false
+        },
+        "USER_CH_Sprinter": {
+          "ms": 152,
+          "bytes": 318020,
+          "ktx2": false
+        },
+        "total": {
+          "ms": 175,
+          "bytes": 888040,
+          "ktx2": false
+        }
+      }
+    },
+    {
+      "name": "MAP + 3 chars, CPU x6, lambert, dpr1",
+      "query": "count=3&tex=png&lambert=1&dpr=1",
+      "cpuThrottle": 6,
+      "network": "none",
+      "readyMs": 1586,
+      "transferredBytes": 1837817,
+      "fps": 18,
+      "frameMsAvg": 55.55,
+      "frameMsP95": 63.1,
+      "cpuMsAvg": 4.44,
+      "calls": 10,
+      "triangles": 4365,
+      "lods": [
+        0,
+        0,
+        0
+      ],
+      "load": {
+        "MAP_Dvor": {
+          "ms": 783,
+          "bytes": 751088,
+          "ktx2": false
+        },
+        "USER_CH_Technik": {
+          "ms": 665,
+          "bytes": 297440,
+          "ktx2": false
+        },
+        "USER_CH_Tank": {
+          "ms": 673,
+          "bytes": 272580,
+          "ktx2": false
+        },
+        "USER_CH_Sprinter": {
+          "ms": 694,
+          "bytes": 318020,
+          "ktx2": false
+        },
+        "total": {
+          "ms": 784,
+          "bytes": 888040,
+          "ktx2": false
+        }
+      }
+    },
+    {
+      "name": "MAP + 3 chars, KTX2, CPU x4",
+      "query": "count=3&tex=ktx2",
+      "cpuThrottle": 4,
+      "network": "none",
+      "readyMs": 1339,
+      "transferredBytes": 2295219,
+      "fps": 15,
+      "frameMsAvg": 66.67,
+      "frameMsP95": 66.67,
+      "cpuMsAvg": 3.17,
+      "calls": 9,
+      "triangles": 4363,
+      "lods": [
+        0,
+        0,
+        0
+      ],
+      "load": {
+        "MAP_Dvor": {
+          "ms": 766,
+          "bytes": 647712,
+          "ktx2": true
+        },
+        "USER_CH_Technik": {
+          "ms": 816,
+          "bytes": 297752,
+          "ktx2": true
+        },
+        "USER_CH_Tank": {
+          "ms": 790,
+          "bytes": 286724,
+          "ktx2": true
+        },
+        "USER_CH_Sprinter": {
+          "ms": 794,
+          "bytes": 321244,
+          "ktx2": true
+        },
+        "total": {
+          "ms": 826,
+          "bytes": 905720,
+          "ktx2": true
+        }
+      }
+    },
+    {
+      "name": "MAP cold load Fast 3G (1.6 Mbit/s)",
+      "query": "count=3&tex=png",
+      "cpuThrottle": 1,
+      "network": "1600 kbit/s, 150 ms",
+      "readyMs": 9962,
+      "transferredBytes": 1837817,
+      "fps": 15.7,
+      "frameMsAvg": 63.72,
+      "frameMsP95": 66.67,
+      "cpuMsAvg": 1.07,
+      "calls": 10,
+      "triangles": 4365,
+      "lods": [
+        0,
+        0,
+        0
+      ],
+      "load": {
+        "MAP_Dvor": {
+          "ms": 8434,
+          "bytes": 751088,
+          "ktx2": false
+        },
+        "USER_CH_Technik": {
+          "ms": 6029,
+          "bytes": 297440,
+          "ktx2": false
+        },
+        "USER_CH_Tank": {
+          "ms": 5662,
+          "bytes": 272580,
+          "ktx2": false
+        },
+        "USER_CH_Sprinter": {
+          "ms": 6240,
+          "bytes": 318020,
+          "ktx2": false
+        },
+        "total": {
+          "ms": 8434,
+          "bytes": 888040,
+          "ktx2": false
+        }
+      }
+    },
+    {
+      "name": "MAP cold load Slow 3G (400 kbit/s)",
+      "query": "count=3&tex=png",
+      "cpuThrottle": 1,
+      "network": "400 kbit/s, 400 ms",
+      "readyMs": 38288,
+      "transferredBytes": 1837817,
+      "fps": 15.4,
+      "frameMsAvg": 64.92,
+      "frameMsP95": 66.67,
+      "cpuMsAvg": 1.31,
+      "calls": 10,
+      "triangles": 4365,
+      "lods": [
+        0,
+        0,
+        0
+      ],
+      "load": {
+        "MAP_Dvor": {
+          "ms": 33340,
+          "bytes": 751088,
+          "ktx2": false
+        },
+        "USER_CH_Technik": {
+          "ms": 23788,
+          "bytes": 297440,
+          "ktx2": false
+        },
+        "USER_CH_Tank": {
+          "ms": 22277,
+          "bytes": 272580,
+          "ktx2": false
+        },
+        "USER_CH_Sprinter": {
+          "ms": 24658,
+          "bytes": 318020,
+          "ktx2": false
+        },
+        "total": {
+          "ms": 33340,
           "bytes": 888040,
           "ktx2": false
         }
       }
     }
   ],
-  "generated": "2026-11-25T11:45:30.001Z"
+  "generated": "2026-11-25T13:29:08.041Z"
 }

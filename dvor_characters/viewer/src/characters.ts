@@ -84,6 +84,16 @@ export class CharacterLibrary {
     return p;
   }
 
+  /** Static scenery (the arena map) through the same Meshopt / KTX2 setup. */
+  loadStatic(id: string): Promise<{ gltf: GLTF; bytes: number; loadMs: number; usedKtx2: boolean }> {
+    const url = `${this.opts.baseUrl}${id}${this.useKtx2 ? '.ktx2' : ''}.glb`;
+    const t0 = performance.now();
+    let bytes = 0;
+    return this.loader
+      .loadAsync(url, (e) => (bytes = e.loaded))
+      .then((gltf) => ({ gltf, bytes, loadMs: performance.now() - t0, usedKtx2: this.useKtx2 }));
+  }
+
   dispose(): void {
     this.ktx2?.dispose();
   }

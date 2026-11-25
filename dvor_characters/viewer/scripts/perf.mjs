@@ -48,15 +48,24 @@ async function run({ name, query, cpu = 1, net = null, seconds = 6, shot = null 
 }
 
 const out = path.join(here, '..', '..', 'review');
-await run({ name: '3 chars, no throttle', query: 'count=3&tex=png', shot: path.join(out, 'test_scene_phone.png') });
-await run({ name: '3 chars, CPU x4', query: 'count=3&tex=png', cpu: 4 });
-await run({ name: '3 chars, CPU x6, lambert, dpr1', query: 'count=3&tex=png&lambert=1&dpr=1', cpu: 6 });
-await run({ name: '9 chars, CPU x4', query: 'count=9&tex=png', cpu: 4 });
-await run({ name: '3 chars, KTX2, CPU x4', query: 'count=3&tex=ktx2', cpu: 4 });
+fs.mkdirSync(path.join(out, 'map'), { recursive: true });
+// characters only, as in the character report (neutral grid floor, fixed camera)
+const CH = 'map=0&cam=fixed&';
+await run({ name: '3 chars, no throttle', query: CH + 'count=3&tex=png', shot: path.join(out, 'test_scene_phone.png') });
+await run({ name: '3 chars, CPU x4', query: CH + 'count=3&tex=png', cpu: 4 });
+await run({ name: '3 chars, CPU x6, lambert, dpr1', query: CH + 'count=3&tex=png&lambert=1&dpr=1', cpu: 6 });
+await run({ name: '9 chars, CPU x4', query: CH + 'count=9&tex=png', cpu: 4 });
+await run({ name: '3 chars, KTX2, CPU x4', query: CH + 'count=3&tex=ktx2', cpu: 4 });
 const fast3g = { latency: 150, downloadThroughput: (1.6 * 1e6) / 8, uploadThroughput: (750 * 1e3) / 8 };
 const slow3g = { latency: 400, downloadThroughput: (400 * 1e3) / 8, uploadThroughput: (400 * 1e3) / 8 };
-await run({ name: 'cold load Fast 3G (1.6 Mbit/s)', query: 'count=3&tex=png', net: fast3g, seconds: 2 });
-await run({ name: 'cold load Slow 3G (400 kbit/s)', query: 'count=3&tex=png', net: slow3g, seconds: 2 });
+await run({ name: 'cold load Fast 3G (1.6 Mbit/s)', query: CH + 'count=3&tex=png', net: fast3g, seconds: 2 });
+await run({ name: 'cold load Slow 3G (400 kbit/s)', query: CH + 'count=3&tex=png', net: slow3g, seconds: 2 });
+// arena map + 3 characters, game-like follow camera
+await run({ name: 'MAP + 3 chars', query: 'count=3&tex=png', shot: path.join(out, 'map', 'map_test_scene_phone.png') /* converted to .jpg for the repo */ });
+await run({ name: 'MAP + 3 chars, CPU x6, lambert, dpr1', query: 'count=3&tex=png&lambert=1&dpr=1', cpu: 6 });
+await run({ name: 'MAP + 3 chars, KTX2, CPU x4', query: 'count=3&tex=ktx2', cpu: 4 });
+await run({ name: 'MAP cold load Fast 3G (1.6 Mbit/s)', query: 'count=3&tex=png', net: fast3g, seconds: 2 });
+await run({ name: 'MAP cold load Slow 3G (400 kbit/s)', query: 'count=3&tex=png', net: slow3g, seconds: 2 });
 results.generated = new Date().toISOString();
 fs.writeFileSync(path.join(out, 'perf.json'), JSON.stringify(results, null, 2));
 await browser.close();

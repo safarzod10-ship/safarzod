@@ -11,6 +11,11 @@
  *   lambert=1      MeshLambertMaterial instead of MeshStandardMaterial (weak GPUs)
  *   dpr=1.5        max device pixel ratio;  aa=0  disable MSAA
  *   ui=0           hide the test overlay
+ *   map=1|0        1 = the "ДВОР" arena map (default), 0 = neutral grid floor
+ *   cam=follow|fixed|top|persp   follow = game-like camera that follows character #1 (default with
+ *                  the map); top / persp = review shots of the whole map, framed like the two references
+ *   spot=n|s|e|w|nw|ne|sw|se   park character #1 at that edge / corner of the courtyard (edge check)
+ *   bg=void        magenta background: any magenta pixel on screen = a hole in the scenery
  */
 import * as THREE from 'three';
 import {
@@ -20,6 +25,7 @@ import {
   CharacterLibrary,
   type ClipName,
 } from './characters';
+import { COURTYARD, hitsCollider, insideCourtyard, loadArena, type Collider } from './arena';
 
 const q = new URLSearchParams(location.search);
 const COUNT = Math.max(1, Number(q.get('count') ?? 3));
@@ -29,7 +35,15 @@ const LOD_PX = Number(q.get('lodpx') ?? 150);
 const LAMBERT = q.get('lambert') === '1';
 const DPR = Math.min(devicePixelRatio, Number(q.get('dpr') ?? 1.5));
 const SHOW_UI = q.get('ui') !== '0';
-const ARENA = 7; // half size in metres
+const MAP = q.get('map') !== '0';
+const CAM = q.get('cam') ?? (MAP ? 'follow' : 'fixed');
+const SPOT = q.get('spot');
+const VOID_BG = q.get('bg') === 'void';
+const ARENA = 7; // half size in metres of the neutral grid floor (map=0)
+// walkable half sizes (map: courtyard minus 0.6 m from the fence)
+const HALF_X = MAP ? COURTYARD.halfX - 0.6 : ARENA - 1;
+const HALF_Z = MAP ? COURTYARD.halfZ - 0.6 : ARENA - 1;
+let colliders: Collider[] = [];
 
 // ------------------------------------------------------------------ renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias: q.get('aa') !== '0', powerPreference: 'high-performance' });
@@ -40,7 +54,7 @@ renderer.info.autoReset = false;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xd9d4cc);
+scene.background = new THREE.Color(VOID_BG ? 0xff00ff : MAP ? 0x5d5560 : 0xd9d4cc);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xb4a796, 2.3));
 const sun = new THREE.DirectionalLight(0xfff8f0, 1.9);
 sun.position.set(4, 10, 6);
@@ -66,7 +80,7 @@ const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(ARENA * 2, ARENA * 2).rotateX(-Math.PI / 2),
   new THREE.MeshLambertMaterial({ map: gridTexture() }),
 );
-scene.add(ground);
+if (!MAP) scene.add(ground);
 
 // cheap blob shadow: one shared texture, one quad per character
 function blobTexture(): THREE.CanvasTexture {
@@ -84,13 +98,24 @@ const blobMat = new THREE.MeshBasicMaterial({ map: blobTexture(), transparent: t
 const blobGeo = new THREE.PlaneGeometry(1.1, 1.1).rotateX(-Math.PI / 2);
 
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 80);
+const camTarget = new THREE.Vector3();
 function placeCamera(): void {
-  // top-down arena camera at 55 degrees; distance fits the arena on portrait phones too
   const aspect = innerWidth / innerHeight;
+  if (CAM === 'top' || CAM === 'persp') {
+    // review framings: near top-down (like map_top.png) and 3/4 from the south (like map_persp.png)
+    if (CAM === 'top') camera.position.set(0, 30, 6.5);
+    else camera.position.set(0, 21, 21);
+    camera.lookAt(0, 0, CAM === 'top' ? 0.4 : -0.5);
+    camera.far = 120;
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+    return;
+  }
+  // arena camera at 55 degrees from the south; `follow` keeps camTarget (character #1) centred
   const dist = aspect < 1 ? 16 : 15;
   const el = THREE.MathUtils.degToRad(55);
-  camera.position.set(0, Math.sin(el) * dist, Math.cos(el) * dist);
-  camera.lookAt(0, 0, 0.6);
+  camera.position.set(camTarget.x, Math.sin(el) * dist, camTarget.z + Math.cos(el) * dist);
+  camera.lookAt(camTarget.x, 0, camTarget.z + 0.6);
   camera.aspect = aspect;
   camera.updateProjectionMatrix();
 }
@@ -140,10 +165,22 @@ function onScreen(x: number, z: number): boolean {
   }
   return true;
 }
+function walkable(x: number, z: number): boolean {
+  return MAP ? insideCourtyard(x, z, 0.6) && !hitsCollider(colliders, x, z) : true;
+}
+function pathClear(from: THREE.Vector3, to: THREE.Vector3): boolean {
+  const n = Math.ceil(from.distanceTo(to) / 0.3);
+  for (let i = 1; i <= n; i++) {
+    const t = i / n;
+    if (!walkable(from.x + (to.x - from.x) * t, from.z + (to.z - from.z) * t)) return false;
+  }
+  return true;
+}
 function pickTarget(a: Actor): void {
-  for (let i = 0; i < 50; i++) {
-    a.target.set(rand(-ARENA + 1, ARENA - 1), 0, rand(-ARENA + 1, ARENA - 1));
-    if (onScreen(a.target.x, a.target.z)) break;
+  for (let i = 0; i < 200; i++) {
+    a.target.set(rand(-HALF_X, HALF_X), 0, rand(-HALF_Z, HALF_Z));
+    if (!walkable(a.target.x, a.target.z) || !pathClear(a.inst.root.position, a.target)) continue;
+    if (CAM === 'follow' || onScreen(a.target.x, a.target.z)) break;
   }
   a.state = 'move';
   a.inst.play('Run', 0.15);
@@ -162,7 +199,14 @@ async function spawn(): Promise<void> {
   const ids = Array.from({ length: COUNT }, (_, i) => PREFIX + CHARACTER_IDS[i % CHARACTER_IDS.length]);
   const unique = [...new Set(ids)];
   const t0 = performance.now();
+  const arenaP = MAP ? loadArena(lib, './models/') : null;
   const assets = await Promise.all(unique.map((id) => lib.load(id)));
+  if (arenaP) {
+    const arena = await arenaP;
+    scene.add(arena.root);
+    colliders = arena.colliders;
+    loadInfo.MAP_Dvor = { ms: Math.round(arena.loadMs), bytes: arena.bytes, ktx2: arena.usedKtx2 };
+  }
   for (const a of assets) loadInfo[a.id] = { ms: Math.round(a.loadMs), bytes: a.bytes, ktx2: a.usedKtx2 };
   loadInfo.total = { ms: Math.round(performance.now() - t0), bytes: assets.reduce((s, a) => s + a.bytes, 0), ktx2: lib.ktx2Enabled };
 
@@ -172,7 +216,7 @@ async function spawn(): Promise<void> {
     if (LOD_MODE !== 'auto') inst.setLod(Number(LOD_MODE));
     else inst.setLod(null);
     const ang = (i / COUNT) * Math.PI * 2;
-    inst.root.position.set(Math.cos(ang) * 1.6, 0, Math.sin(ang) * 1.6 + 0.8);
+    inst.root.position.set(Math.cos(ang) * 1.6, 0, Math.sin(ang) * 1.6 + (MAP ? 2.2 : 0.8));
     scene.add(inst.root);
     const shadow = new THREE.Mesh(blobGeo, blobMat);
     shadow.position.y = 0.01;
@@ -187,6 +231,7 @@ async function spawn(): Promise<void> {
     pickTarget(actor);
     actors.push(actor);
   });
+  if (SPOT && actors.length) parkAtSpot(actors[0], SPOT);
 
   for (const clip of CLIP_NAMES) {
     const b = document.createElement('button');
@@ -207,6 +252,28 @@ async function spawn(): Promise<void> {
   goBtn.textContent = 'Run';
   goBtn.onclick = () => actors.forEach(pickTarget);
   buttons.appendChild(goBtn);
+}
+
+// Edge check: put character #1 at an edge / corner of the courtyard and keep it there (Idle).
+const SPOTS: Record<string, [number, number]> = {
+  n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0], nw: [-1, -1], ne: [1, -1], sw: [-1, 1], se: [1, 1],
+};
+function parkAtSpot(a: Actor, spot: string): void {
+  const d = SPOTS[spot];
+  if (!d) return;
+  // start at the fence (0.6 m in), slide towards the centre until the spot is walkable
+  let x = d[0] * HALF_X, z = d[1] * HALF_Z;
+  for (let i = 0; i < 400 && !walkable(x, z); i++) {
+    x -= Math.sign(x) * 0.05;
+    z -= Math.sign(z) * 0.05;
+  }
+  a.inst.root.position.set(x, 0, z);
+  a.inst.root.rotation.y = Math.atan2(-x, -z); // face the centre
+  a.state = 'act';
+  a.timer = Infinity;
+  a.inst.play('Idle', 0);
+  a.inst.onFinished(() => undefined);
+  (window as any).__dvor.spot = { name: spot, x: +x.toFixed(2), z: +z.toFixed(2) };
 }
 
 // ------------------------------------------------------------------ loop + metrics
@@ -242,6 +309,10 @@ function update(dt: number): void {
     a.inst.updateLod(camera, innerHeight);
     a.shadow.position.x = r.position.x;
     a.shadow.position.z = r.position.z;
+  }
+  if (CAM === 'follow' && actors.length) {
+    camTarget.set(actors[0].inst.root.position.x, 0, actors[0].inst.root.position.z);
+    placeCamera();
   }
 }
 

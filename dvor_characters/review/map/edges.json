@@ -1,0 +1,392 @@
+{
+  "control_without_map_void_pixels": 18587,
+  "camera": "follow character #1, 55° pitch, fov 40°, distance 16 (portrait) / 15 (landscape)",
+  "holes": 0,
+  "runs": [
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "n",
+      "at": {
+        "name": "n",
+        "x": 0,
+        "z": -7.7
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "s",
+      "at": {
+        "name": "s",
+        "x": 0,
+        "z": 8.65
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "w",
+      "at": {
+        "name": "w",
+        "x": -9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "e",
+      "at": {
+        "name": "e",
+        "x": 9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "nw",
+      "at": {
+        "name": "nw",
+        "x": -9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "ne",
+      "at": {
+        "name": "ne",
+        "x": 9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "sw",
+      "at": {
+        "name": "sw",
+        "x": -9.15,
+        "z": 7.9
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone",
+      "size": "390x844",
+      "spot": "se",
+      "at": {
+        "name": "se",
+        "x": 8.3,
+        "z": 7.05
+      },
+      "voidPixels": 0,
+      "pixels": 329160
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "n",
+      "at": {
+        "name": "n",
+        "x": 0,
+        "z": -7.7
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "s",
+      "at": {
+        "name": "s",
+        "x": 0,
+        "z": 8.65
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "w",
+      "at": {
+        "name": "w",
+        "x": -9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "e",
+      "at": {
+        "name": "e",
+        "x": 9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "nw",
+      "at": {
+        "name": "nw",
+        "x": -9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "ne",
+      "at": {
+        "name": "ne",
+        "x": 9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "sw",
+      "at": {
+        "name": "sw",
+        "x": -9.15,
+        "z": 7.9
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "phone_small",
+      "size": "360x640",
+      "spot": "se",
+      "at": {
+        "name": "se",
+        "x": 8.3,
+        "z": 7.05
+      },
+      "voidPixels": 0,
+      "pixels": 230400
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "n",
+      "at": {
+        "name": "n",
+        "x": 0,
+        "z": -7.7
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "s",
+      "at": {
+        "name": "s",
+        "x": 0,
+        "z": 8.65
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "w",
+      "at": {
+        "name": "w",
+        "x": -9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "e",
+      "at": {
+        "name": "e",
+        "x": 9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "nw",
+      "at": {
+        "name": "nw",
+        "x": -9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "ne",
+      "at": {
+        "name": "ne",
+        "x": 9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "sw",
+      "at": {
+        "name": "sw",
+        "x": -9.15,
+        "z": 7.9
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "tablet",
+      "size": "820x1180",
+      "spot": "se",
+      "at": {
+        "name": "se",
+        "x": 8.3,
+        "z": 7.05
+      },
+      "voidPixels": 0,
+      "pixels": 967600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "n",
+      "at": {
+        "name": "n",
+        "x": 0,
+        "z": -7.7
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "s",
+      "at": {
+        "name": "s",
+        "x": 0,
+        "z": 8.65
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "w",
+      "at": {
+        "name": "w",
+        "x": -9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "e",
+      "at": {
+        "name": "e",
+        "x": 9.9,
+        "z": 0
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "nw",
+      "at": {
+        "name": "nw",
+        "x": -9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "ne",
+      "at": {
+        "name": "ne",
+        "x": 9.15,
+        "z": -7.9
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "sw",
+      "at": {
+        "name": "sw",
+        "x": -9.15,
+        "z": 7.9
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    },
+    {
+      "screen": "desktop",
+      "size": "1280x720",
+      "spot": "se",
+      "at": {
+        "name": "se",
+        "x": 8.3,
+        "z": 7.05
+      },
+      "voidPixels": 0,
+      "pixels": 921600
+    }
+  ],
+  "generated": "2026-11-25T13:32:13.229Z"
+}

@@ -4,3 +4,7 @@ viewer/dist/
 review/poses/
 review/*/poses/
 review/shots_*.json
+review/map/edge_*.png
+review/map/void_*.png
+review/map/*.png
+map/source/*.blend1

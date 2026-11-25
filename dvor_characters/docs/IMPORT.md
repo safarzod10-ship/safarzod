@@ -48,14 +48,31 @@ hero.update(dt);
   - момент способности (`event_cast_s`): Техник 0,40 с, Танк 0,20 с, Спринтер 0,30 с.
 - `frustumCulled = false` стоит у мешей персонажей. Поза Defeat выходит за исходные границы, а камера арены и так видит всех.
 
-## 3. Для слабых устройств
+## 3. Карта арены
+
+Скопировать:
+- `dist/MAP_Dvor.glb` или `MAP_Dvor.ktx2.glb` и `dist/MAP_Dvor.colliders.json` → `public/models/`;
+- `viewer/src/arena.ts` → `src/characters/arena.ts`.
+
+```ts
+import { loadArena, insideCourtyard, hitsCollider } from './characters/arena';
+
+const arena = await loadArena(lib, '/models/');   // тот же CharacterLibrary: Meshopt + KTX2
+scene.add(arena.root);                            // unlit, свет запечён; 4 draw calls, 976 треугольников
+// можно ли стоять в точке: внутри забора и не в ящике/блоке
+const ok = insideCourtyard(x, z, 0.6) && !hitsCollider(arena.colliders, x, z);
+```
+
+Координаты карты: двор x от −10,5 до 10,5, z от −9,25 до 9,25 (+Z — юг), углы срезаны на 1,8 м. Камера в тестовой сцене (`viewer/src/main.ts`, `placeCamera`) держит персонажа в центре: угол 55°, fov 40°, расстояние 16 м. На этой камере проверено, что за краями карты нигде нет пустоты (`docs/MAP.md`). Если в игре будет другая камера (ниже угол, шире fov), прогоните `node scripts/edges.mjs`.
+
+## 4. Для слабых устройств
 
 - `lambert: true` — `MeshLambertMaterial` вместо `MeshStandardMaterial`. Текстура и так содержит запечённый свет.
 - `renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5))`.
 - Тени — пятном (как в `viewer/src/main.ts`), а не shadow map.
 - Отдавать `.glb` с gzip или brotli.
 
-## 4. Пересборка из исходников
+## 5. Пересборка из исходников
 
 ```bash
 # один раз
