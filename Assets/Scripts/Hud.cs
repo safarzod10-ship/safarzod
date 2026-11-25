@@ -87,7 +87,29 @@ public class Hud : MonoBehaviour
             if (args[i] == "-mapshots" && i + 1 < args.Length) { shotDir = args[i + 1]; StartCoroutine(MapShots()); }
             if (args[i] == "-walk" && i + 1 < args.Length) { shotDir = args[i + 1]; StartCoroutine(Walk()); }
             if (args[i] == "-autohost" || args[i] == "-autojoin") InvokeRepeating(nameof(Report), 5f, 5f);
+            if (args[i] == "-settest" && i + 1 < args.Length) StartCoroutine(SettingsTest(args[i + 1]));
         }
+    }
+
+    /// Persistence test for the settings screen (UI-02): "set" moves every slider of the settings screen through the UI
+    /// (same callbacks as a finger), closes it (saves) and quits; "check" in a new process loads and prints the values;
+    /// "reset" clears the stored preferences.
+    System.Collections.IEnumerator SettingsTest(string mode)
+    {
+        yield return null;
+        string Dump() => $"sens={GameSettings.Sensitivity:0.###} fov={GameSettings.Fov:0.#} btn={GameSettings.ButtonScale:0.###} vol={GameSettings.MasterVolume:0.###} sfx={GameSettings.SfxVolume:0.###} voice={GameSettings.VoiceVolume:0.###}";
+        if (mode == "set")
+        {
+            OpenSettings();
+            var sliders = settings.GetComponentsInChildren<Slider>(true);
+            for (int k = 0; k < sliders.Length; k++) sliders[k].value = Mathf.Lerp(sliders[k].minValue, sliders[k].maxValue, 0.2f + 0.1f * k);
+            CloseSettings();
+            Debug.Log($"SETTEST_SET sliders={sliders.Length} " + Dump());
+        }
+        else if (mode == "check") { GameSettings.Load(); Debug.Log("SETTEST_CHECK " + Dump()); }
+        else if (mode == "reset") { PlayerPrefs.DeleteAll(); Debug.Log("SETTEST_RESET"); }
+        PlayerPrefs.Save();
+        Application.Quit();
     }
 
     // ================================================================ automated checks
