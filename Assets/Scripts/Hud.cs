@@ -220,9 +220,10 @@ public class Hud : MonoBehaviour
         int shown = 0;
         foreach (var p in Player.All)
         {
-            if (!p.IsBot.Value || shown++ >= 4) continue;
+            if (!p.IsBot.Value || !p.Alive || shown++ >= 10) continue;
             var ag = p.GetComponent<UnityEngine.AI.NavMeshAgent>();
-            sb.Append($" | {p.Nick.Value} t{p.Team.Value} pos{p.transform.position} agent={(ag != null)} onNav={(ag != null && ag.isOnNavMesh)} path={(ag != null && ag.isOnNavMesh && ag.hasPath)} vel={(ag != null ? ag.velocity.magnitude : 0):0.0} w={p.cur} mag={p.mag[p.cur]}");
+            var bb = p.GetComponent<BotBrain>();
+            sb.Append($" | {p.Nick.Value} t{p.Team.Value} pos({p.transform.position.x:0.0},{p.transform.position.z:0.0}) vel={(ag != null ? ag.velocity.magnitude : 0):0.0} {(bb != null ? bb.DebugState() : "")}{(p.HasBomb.Value ? " BOMB" : "")}");
         }
         Debug.Log(sb.ToString());
         if (Camera.main != null)

@@ -22,6 +22,12 @@ public class BotBrain : MonoBehaviour
     };
     int rank, group, wp; float executeAt; bool planMode; Vector3 watch; bool holding;
 
+    public string DebugState()
+    {
+        string path = agent != null && agent.isOnNavMesh ? $"{agent.pathStatus} rem={(agent.hasPath ? agent.remainingDistance : -1f):0.0} stop={agent.isStopped}" : "noagent";
+        return $"plan={planMode} g{group} wp={wp} hold={holding} tgt={(target != null ? target.Nick.Value : "-")} goal=({goal.x:0.0},{goal.z:0.0}) {path} work={workTime:0.0}";
+    }
+
     void Awake()
     {
         p = GetComponent<Player>();
