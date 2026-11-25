@@ -418,7 +418,18 @@ public class Hud : MonoBehaviour
     {
         loading = Stretch(root, "Loading");
         Img(loading, new Color(0.03f, 0.035f, 0.04f, 1f), null, true);
-        var glow = Stretch(loading, "glow"); Img(glow, new Color(Accent.r, Accent.g, Accent.b, 0.10f), GradV);
+        // map art (an in-engine render of the level, Assets/Resources/UI/loading_town.jpg), darkened where the text sits
+        var art = Resources.Load<Texture2D>("UI/loading_town");
+        if (art != null)
+        {
+            var ar = Stretch(loading, "art");
+            var ri = ar.gameObject.AddComponent<RawImage>(); ri.texture = art; ri.raycastTarget = false;
+            var fit = ar.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent; fit.aspectRatio = art.width / (float)art.height;
+            Img(Stretch(loading, "shadeL"), new Color(0.02f, 0.025f, 0.03f, 0.88f), GradH);
+            Img(Stretch(loading, "shadeB"), new Color(0.02f, 0.025f, 0.03f, 0.9f), GradV).rectTransform.localScale = new Vector3(1, -1, 1);
+        }
+        else { var glow = Stretch(loading, "glow"); Img(glow, new Color(Accent.r, Accent.g, Accent.b, 0.10f), GradV); }
         Label(loading, "map", new Vector2(0, 0.5f), new Vector2(140, 120), new Vector2(1400, 140), 120, TextAnchor.MiddleLeft, "СТАРЫЙ ГОРОД", Title).rectTransform.pivot = new Vector2(0, 0.5f);
         Label(loading, "mode", new Vector2(0, 0.5f), new Vector2(146, 20), new Vector2(1400, 50), 34, TextAnchor.MiddleLeft, "ЗАКЛАДКА БОМБЫ  ·  СПЕЦНАЗ ПРОТИВ БАНДЫ  ·  ДО 13 ПОБЕД", Body, Accent).rectTransform.pivot = new Vector2(0, 0.5f);
         var tip = Node(loading, "tip", new Vector2(0, 0), new Vector2(140, 170), new Vector2(1100, 110), new Vector2(0, 0));
