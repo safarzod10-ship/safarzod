@@ -107,8 +107,7 @@ public class Hud : MonoBehaviour
         for (int t = 0; t < 3; t++) { OpenSettings(); ShowTab(t); yield return Shot("ui0" + (3 + t) + "_settings_" + t); }
         CloseSettings();
         ShowPage(0);
-        Host();
-        yield return null; yield return null;
+        Host();                                    // the host starts two frames later: capture the loading screen before that
         yield return Shot("ui06_loading");
         while (Player.Local == null || Game.I == null || Game.I.Phase == Phase.Lobby) yield return null;
         yield return new WaitForSeconds(1.5f);
@@ -317,9 +316,9 @@ public class Hud : MonoBehaviour
     void BuildSettings()
     {
         settings = Stretch(root, "Settings");
-        Img(settings, new Color(0, 0, 0, 0.72f), null, true);
+        Img(settings, new Color(0, 0, 0, 0.86f), null, true);
         var card = Node(settings, "card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1240, 900));
-        PanelImg(card, new Color(0.04f, 0.045f, 0.055f, 0.96f));
+        PanelImg(card, new Color(0.04f, 0.045f, 0.055f, 1f));
         Img(Node(card, "top", new Vector2(0.5f, 1), Vector2.zero, new Vector2(1240, 6), new Vector2(0.5f, 1)), Accent);
         Label(card, "title", new Vector2(0, 1), new Vector2(50, -36), new Vector2(600, 60), 50, TextAnchor.UpperLeft, "НАСТРОЙКИ", Title).rectTransform.pivot = new Vector2(0, 1);
 
@@ -579,8 +578,8 @@ public class Hud : MonoBehaviour
     void BuildBuy()
     {
         buy = Stretch(root, "Buy");
-        Img(buy, new Color(0, 0, 0, 0.72f), null, true);
-        var card = Node(buy, "card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1820, 1000)); PanelImg(card, new Color(0.04f, 0.045f, 0.055f, 0.96f));
+        Img(buy, new Color(0, 0, 0, 0.86f), null, true);
+        var card = Node(buy, "card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1820, 1000)); PanelImg(card, new Color(0.04f, 0.045f, 0.055f, 1f));
         Img(Node(card, "top", new Vector2(0.5f, 1), Vector2.zero, new Vector2(1820, 6), new Vector2(0.5f, 1)), Accent);
         Label(card, "title", new Vector2(0, 1), new Vector2(50, -30), new Vector2(600, 60), 50, TextAnchor.UpperLeft, "МАГАЗИН", Title).rectTransform.pivot = new Vector2(0, 1);
         tBuyMoney = Label(card, "money", new Vector2(1, 1), new Vector2(-50, -34), new Vector2(700, 60), 44, TextAnchor.UpperRight, "", Title, Money);
@@ -596,11 +595,11 @@ public class Hud : MonoBehaviour
                 int id = ids[g][i];
                 string name = id == 100 ? "Бронежилет" : Weapons.Get(id).title;
                 int price = id == 100 ? 650 : Weapons.Get(id).price;
-                var b = Btn(card, "", new Vector2(0, 1), new Vector2(x, -170 - i * 104), new Vector2(420, 92), () => { InputState.I.buy = id; }, Style.Secondary, 30);
+                var b = Btn(card, "", new Vector2(0, 1), new Vector2(x, -170 - i * 96), new Vector2(420, 86), () => { InputState.I.buy = id; }, Style.Secondary, 30);
                 b.GetComponent<RectTransform>().pivot = new Vector2(0, 1);
                 var t = b.GetComponentInChildren<Text>(); t.alignment = TextAnchor.MiddleLeft; t.font = Body; t.fontSize = 32; t.text = name;
-                t.rectTransform.sizeDelta = new Vector2(380, 92);
-                var pr = Label(b.transform, "price", new Vector2(1, 0.5f), new Vector2(-22, 0), new Vector2(160, 92), 30, TextAnchor.MiddleRight, price.ToString(), Title, Money, false);
+                t.rectTransform.sizeDelta = new Vector2(380, 86);
+                var pr = Label(b.transform, "price", new Vector2(1, 0.5f), new Vector2(-22, 0), new Vector2(160, 86), 30, TextAnchor.MiddleRight, price.ToString(), Title, Money, false);
                 pr.rectTransform.pivot = new Vector2(1, 0.5f);
                 buyButtons.Add(b); buyPrices.Add(price);
             }
@@ -614,8 +613,8 @@ public class Hud : MonoBehaviour
     void BuildPause()
     {
         pause = Stretch(root, "Pause");
-        Img(pause, new Color(0, 0, 0, 0.7f), null, true);
-        var card = Node(pause, "card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 720)); PanelImg(card, new Color(0.04f, 0.045f, 0.055f, 0.96f));
+        Img(pause, new Color(0, 0, 0, 0.86f), null, true);
+        var card = Node(pause, "card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 720)); PanelImg(card, new Color(0.04f, 0.045f, 0.055f, 1f));
         Img(Node(card, "top", new Vector2(0.5f, 1), Vector2.zero, new Vector2(760, 6), new Vector2(0.5f, 1)), Accent);
         Label(card, "title", new Vector2(0.5f, 1), new Vector2(0, -40), new Vector2(700, 60), 52, TextAnchor.UpperCenter, "МЕНЮ", Title);
         tInfo = Label(card, "info", new Vector2(0.5f, 1), new Vector2(0, -120), new Vector2(680, 90), 28, TextAnchor.UpperCenter, "", BodyReg, Muted, false);
@@ -715,15 +714,15 @@ public class Hud : MonoBehaviour
     void BuildMatchEnd()
     {
         matchEnd = Stretch(root, "MatchEnd");
-        Img(matchEnd, new Color(0.02f, 0.025f, 0.03f, 0.82f), null, true);
+        Img(matchEnd, new Color(0.02f, 0.025f, 0.03f, 0.94f), null, true);
         endGlow = Img(Stretch(matchEnd, "glow"), new Color(Accent.r, Accent.g, Accent.b, 0.16f), GradV);
         endGlow.rectTransform.localScale = new Vector3(1, -1, 1);
         tEndTitle = Label(matchEnd, "title", new Vector2(0.5f, 1), new Vector2(0, -40), new Vector2(1600, 120), 104, TextAnchor.UpperCenter, "", Title);
         tEndScore = Label(matchEnd, "score", new Vector2(0.5f, 1), new Vector2(0, -160), new Vector2(1600, 70), 56, TextAnchor.UpperCenter, "", Title);
         tEndMvp = Label(matchEnd, "mvp", new Vector2(0.5f, 1), new Vector2(0, -236), new Vector2(1600, 40), 32, TextAnchor.UpperCenter, "", Body, Accent);
-        tEndNext = Label(matchEnd, "next", new Vector2(0.5f, 0), new Vector2(0, 36), new Vector2(1200, 40), 28, TextAnchor.LowerCenter, "", Body, Muted);
-        Btn(matchEnd, "ВЫЙТИ В МЕНЮ", new Vector2(1, 0), new Vector2(-60, 30), new Vector2(420, 88), Leave, Style.Secondary, 32, IconExit)
-            .GetComponent<RectTransform>().pivot = new Vector2(1, 0);
+        tEndNext = Label(matchEnd, "next", new Vector2(0.5f, 0), new Vector2(0, 22), new Vector2(1200, 36), 28, TextAnchor.LowerCenter, "", Body, Muted);
+        Btn(matchEnd, "ВЫЙТИ В МЕНЮ", new Vector2(0.5f, 0), new Vector2(0, 66), new Vector2(420, 84), Leave, Style.Secondary, 32, IconExit)
+            .GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0);
         matchEnd.gameObject.SetActive(false);
     }
 
@@ -860,7 +859,7 @@ public class Hud : MonoBehaviour
         }
 
         if (menu.gameObject.activeSelf == inGame) menu.gameObject.SetActive(!inGame);
-        bool showHud = inGame && !loadingActive;
+        bool showHud = inGame && !loadingActive && !(g != null && MatchOver(g));   // the match-end screen replaces the HUD
         if (hud.gameObject.activeSelf != showHud) hud.gameObject.SetActive(showHud);
         if (!inGame)
         {
@@ -887,7 +886,13 @@ public class Hud : MonoBehaviour
             else if (p != null)
             {
                 tBuyMoney.text = p.Money.Value + " сомони";
-                for (int i = 0; i < buyButtons.Count; i++) buyButtons[i].interactable = p.Money.Value >= buyPrices[i];
+                for (int i = 0; i < buyButtons.Count; i++)
+                {
+                    bool can = p.Money.Value >= buyPrices[i];
+                    if (buyButtons[i].interactable == can) continue;
+                    buyButtons[i].interactable = can;
+                    foreach (var t in buyButtons[i].GetComponentsInChildren<Text>()) { var c = t.color; c.a = can ? 1f : 0.32f; t.color = c; }
+                }
             }
         }
         if (pause.gameObject.activeSelf)
@@ -898,7 +903,7 @@ public class Hud : MonoBehaviour
         board.gameObject.SetActive(showBoard);
         if (over)
         {
-            board.anchoredPosition = new Vector2(0, -110); board.localScale = Vector3.one * 0.8f;
+            board.anchoredPosition = new Vector2(0, -60); board.localScale = Vector3.one * 0.75f;
             DrawMatchEnd(g); matchEnd.SetAsLastSibling(); board.SetAsLastSibling();
         }
         else { board.anchoredPosition = Vector2.zero; board.localScale = Vector3.one; }
@@ -914,9 +919,15 @@ public class Hud : MonoBehaviour
         Vector3 c = g != null && g.sites.Count > 0 ? g.sites[0].center : Vector3.zero; c.y = 0;
         menuAngle += Time.unscaledDeltaTime * 3f;
         float a = menuAngle * Mathf.Deg2Rad;
-        cam.transform.position = c + new Vector3(Mathf.Sin(a) * 19f, 7.5f, Mathf.Cos(a) * 19f);
-        cam.transform.LookAt(c + Vector3.up * 1.5f);
+        // orbit above the roofs; when a building is between the camera and the site, come in front of it (smoothly)
+        Vector3 look = c + Vector3.up * 1.5f, want = c + new Vector3(Mathf.Sin(a) * 18f, 12f, Mathf.Cos(a) * 18f);
+        Vector3 dir = want - look; float dist = dir.magnitude; dir /= dist;
+        if (Physics.SphereCast(look, 0.6f, dir, out var hit, dist, ~0, QueryTriggerInteraction.Ignore)) dist = Mathf.Max(6f, hit.distance - 0.5f);
+        menuDist = menuDist <= 0f ? dist : Mathf.Lerp(menuDist, dist, 1f - Mathf.Exp(-Time.unscaledDeltaTime * (dist < menuDist ? 6f : 1.5f)));
+        cam.transform.position = look + dir * menuDist;
+        cam.transform.LookAt(look);
     }
+    float menuDist;
 
     void DrawHud(Player p, Game g)
     {

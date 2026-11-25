@@ -195,7 +195,7 @@ public static class UiKit
         cb.normalColor = Color.white;
         cb.highlightedColor = style == Style.Primary ? new Color(1.08f, 1.08f, 1.08f) : new Color(1.6f, 1.6f, 1.6f, 1f);
         cb.pressedColor = style == Style.Primary ? new Color(0.85f, 0.85f, 0.85f) : new Color(2.2f, 2.0f, 1.6f, 1f);
-        cb.selectedColor = Color.white; cb.fadeDuration = 0.08f; b.colors = cb;
+        cb.selectedColor = Color.white; cb.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.6f); cb.fadeDuration = 0.08f; b.colors = cb;
         if (style == Style.Ghost) { img.color = new Color(1, 1, 1, 0.001f); }
         if (onClick != null) b.onClick.AddListener(onClick);
         b.onClick.AddListener(() => Fx.Sound2D("click", 0.5f));
@@ -266,7 +266,7 @@ public static class UiKit
         fill.anchorMin = new Vector2(0, 0); fill.anchorMax = new Vector2(0, 1); fill.sizeDelta = Vector2.zero;
         Img(fill, Accent, RoundSmall);
         var handleArea = Node(track, "handleArea", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(w - 150, 40));
-        var handle = Node(handleArea, "handle", new Vector2(0, 0.5f), Vector2.zero, new Vector2(34, 34));
+        var handle = Node(handleArea, "handle", new Vector2(0, 0.5f), Vector2.zero, new Vector2(34, -6));   // the slider stretches the handle over the 40-high area: 40 - 6 = 34
         var himg = Img(handle, Fg, Circle, true);
         var s = track.gameObject.AddComponent<UnityEngine.UI.Slider>();
         s.fillRect = fill; s.handleRect = handle; s.targetGraphic = himg; s.direction = UnityEngine.UI.Slider.Direction.LeftToRight;
