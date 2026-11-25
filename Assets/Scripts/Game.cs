@@ -98,6 +98,10 @@ public class Game : NetworkBehaviour
         if (Count(team) >= TeamSize)
             foreach (var p in Player.All) if (p.IsBot.Value && p.Team.Value == team) { p.NetworkObject.Despawn(true); break; }
         var pl = Create(team, false, id);
+        // test switch: "-botself" lets a bot brain play the host's own fighter, so unattended matches are not held up
+        // by an idle human (the last living attacker standing at spawn made every round run to the clock)
+        if (id == NetworkManager.ServerClientId && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-botself") >= 0)
+        { pl.IsBot.Value = true; pl.gameObject.AddComponent<BotBrain>(); }
         if (Phase != Phase.Lobby) SpawnAt(pl, false);
     }
 
