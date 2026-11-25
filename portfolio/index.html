@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bob Proger — сайты, Telegram-боты и приложения</title>
+  <meta name="description" content="Портфолио Bob Proger: разрабатываю сайты, Telegram-ботов, Mini Apps и игры. Кислород, Гранат, Тоннель, First VPN, Зуба-Руба.">
+  <meta name="theme-color" content="#111216">
+  <meta property="og:title" content="Bob Proger — сайты, боты и приложения">
+  <meta property="og:description" content="Разрабатываю сайты, Telegram-ботов, Mini Apps и игры. Пишите в Telegram: @bob_proger">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script>document.documentElement.classList.add("js");</script>
+</head>
+<body class="is-loading">
+
+  <!-- ============ PRELOADER ============ -->
+  <div class="loader" aria-hidden="true">
+    <div class="loader__cols">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="loader__inner">
+      <ul class="loader__log">
+        <li>git pull origin main</li>
+        <li>npm run build</li>
+        <li>deploy: lasertattoo-kislorod.com</li>
+        <li>webhook: @itrustybot — ok</li>
+        <li>webhook: @thisvpnobot — ok</li>
+        <li>mini app: firstvpn_app — ok</li>
+        <li>game: @zuba_ruba_bot — ok</li>
+        <li>готово.</li>
+      </ul>
+      <div class="loader__count"><span class="loader__num">0</span><sup>%</sup></div>
+      <div class="loader__bar"><i></i></div>
+    </div>
+  </div>
+
+  <!-- ============ CURSOR ============ -->
+  <div class="cursor" aria-hidden="true"><span class="cursor__label"></span></div>
+  <div class="cursor-dot" aria-hidden="true"></div>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <a href="#top" class="nav__logo" data-magnetic aria-label="Bob Proger — наверх">
+      <span class="nav__logo-mark">b</span><span class="nav__logo-text">bob.proger</span>
+    </a>
+    <nav class="nav__links" aria-label="Разделы">
+      <a href="#works" data-scramble>Работы</a>
+      <a href="#services" data-scramble>Что делаю</a>
+      <a href="#process" data-scramble>Процесс</a>
+      <a href="#reviews" data-scramble>Отзывы</a>
+    </nav>
+    <a class="nav__cta" href="https://t.me/bob_proger" target="_blank" rel="noopener" data-magnetic data-cursor="Написать">
+      <span class="nav__cta-dot"></span><span>Свободен для проектов</span>
+    </a>
+    <button class="nav__burger" aria-label="Меню" aria-expanded="false"><i></i><i></i></button>
+  </header>
+
+  <div class="menu" aria-hidden="true">
+    <nav class="menu__links">
+      <a href="#works">Работы</a>
+      <a href="#services">Что делаю</a>
+      <a href="#process">Процесс</a>
+      <a href="#reviews">Отзывы</a>
+      <a href="https://t.me/bob_proger" target="_blank" rel="noopener">Telegram</a>
+    </nav>
+  </div>
+
+  <main id="top">
+
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <canvas class="hero__gl" aria-hidden="true"></canvas>
+      <div class="hero__shade" aria-hidden="true"></div>
+
+      <div class="hero__top">
+        <p class="hero__kicker reveal-line">Разработчик из Telegram&#8209;эпохи</p>
+        <p class="hero__meta reveal-line">Сайты, боты, Mini&nbsp;Apps и&nbsp;игры —<br>от идеи до запуска</p>
+      </div>
+
+      <h1 class="hero__title" aria-label="Bob Proger">
+        <span class="hero__row hero__row--1" aria-hidden="true">BOB</span>
+        <span class="hero__row hero__row--2" aria-hidden="true">PROGER</span>
+      </h1>
+
+      <div class="hero__bottom">
+        <p class="hero__lead">
+          Делаю
+          <span class="rotator" aria-live="polite">
+            <span class="rotator__word is-active">сайты</span>
+            <span class="rotator__word">Telegram-ботов</span>
+            <span class="rotator__word">Mini Apps</span>
+            <span class="rotator__word">игры</span>
+          </span>,<br>
+          которые работают, пока вы спите.
+        </p>
+        <a href="#works" class="hero__scroll" data-cursor="Листать" aria-label="К работам">
+          <svg viewBox="0 0 120 120" class="hero__scroll-ring" aria-hidden="true">
+            <defs><path id="circ" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>
+            <text><textPath href="#circ">листайте вниз • листайте вниз • листайте вниз • </textPath></text>
+          </svg>
+          <span class="hero__scroll-arrow">↓</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============ MANIFESTO ============ -->
+    <section class="manifesto" aria-label="О себе">
+      <p class="manifesto__label">Коротко обо мне</p>
+      <p class="manifesto__text" data-words>
+        Я пишу код, который зарабатывает. Сайты, которые продают с первого экрана. Ботов, которые отвечают клиентам ночью, принимают оплату и не устают. Приложения прямо в Telegram, куда хочется возвращаться. Без шаблонов и без «потом доделаем».
+      </p>
+      <div class="manifesto__facts">
+        <div class="fact"><b data-count="5">0</b><span>живых проектов<br>в этом портфолио</span></div>
+        <div class="fact"><b>24/7</b><span>боты работают<br>без выходных</span></div>
+        <div class="fact"><b>1</b><span>человек отвечает<br>за весь результат</span></div>
+      </div>
+    </section>
+
+    <!-- ============ MARQUEE ============ -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        <span>Сайты</span><i>✦</i><span>Telegram-боты</span><i>✦</i><span>Mini Apps</span><i>✦</i><span>Игры</span><i>✦</i><span>Оплата в боте</span><i>✦</i><span>Лендинги</span><i>✦</i>
+      </div>
+    </div>
+
+    <!-- ============ WORKS ============ -->
+    <section class="works" id="works">
+      <header class="works__head">
+        <h2 class="section-title" data-split>Избранные<br>работы</h2>
+        <p class="works__intro">Пять проектов, которые сейчас в&nbsp;работе у&nbsp;реальных людей. Каждый можно открыть и&nbsp;потрогать.</p>
+      </header>
+
+      <div class="works__stack">
+
+        <!-- 1. Кислород -->
+        <article class="work" data-color="#BFE6DF" data-ink="#0D2A26" style="--c:#BFE6DF;--ink:#0D2A26">
+          <div class="work__card">
+            <div class="work__info">
+              <div class="work__top">
+                <span class="work__index">01/05</span>
+                <span class="work__type">Сайт</span>
+              </div>
+              <h3 class="work__name">Кислород</h3>
+              <p class="work__desc">Сайт студии лазерного удаления татуировок. Спокойная, «воздушная» подача, которая снимает страх перед процедурой и ведёт к записи.</p>
+              <ul class="work__tags"><li>Лендинг</li><li>Адаптив</li><li>Запись онлайн</li><li>SEO</li></ul>
+              <a class="work__link" href="https://lasertattoo-kislorod.com" target="_blank" rel="noopener" data-cursor="Открыть" data-magnetic>
+                <span>lasertattoo-kislorod.com</span><b>↗</b>
+              </a>
+            </div>
+            <div class="work__visual">
+              <div class="mock-browser">
+                <div class="mock-browser__bar"><i></i><i></i><i></i><span>lasertattoo-kislorod.com</span></div>
+                <div class="mock-browser__body kislorod">
+                  <div class="kislorod__nav"><b>O₂ Кислород</b><span>Услуги</span><span>Цены</span><span>Запись</span></div>
+                  <div class="kislorod__hero">
+                    <div>
+                      <p class="kislorod__h">Удалим тату.<br>Оставим лёгкость.</p>
+                      <span class="kislorod__btn">Записаться</span>
+                    </div>
+                    <div class="kislorod__skin">
+                      <svg class="kislorod__tattoo" viewBox="0 0 100 100" aria-hidden="true">
+                        <path d="M50 12 C 62 30, 86 34, 82 56 C 78 78, 58 86, 50 88 C 42 86, 22 78, 18 56 C 14 34, 38 30, 50 12 Z" fill="none" stroke="currentColor" stroke-width="4"/>
+                        <path d="M50 30 L50 74 M34 50 L66 50" stroke="currentColor" stroke-width="4"/>
+                        <circle cx="50" cy="50" r="9" fill="none" stroke="currentColor" stroke-width="3"/>
+                      </svg>
+                      <span class="kislorod__laser"></span>
+                      <span class="kislorod__bubbles"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                    </div>
+                  </div>
+                  <div class="kislorod__cards"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2. Гранат -->
+        <article class="work" data-color="#8F1D30" data-ink="#FFE9EC" style="--c:#8F1D30;--ink:#FFE9EC">
+          <div class="work__card">
+            <div class="work__info">
+              <div class="work__top">
+                <span class="work__index">02/05</span>
+                <span class="work__type">Telegram-бот</span>
+              </div>
+              <h3 class="work__name">Гранат</h3>
+              <p class="work__desc">Бот, в котором каждая кнопка на своём месте. Сценарии продуманы так, что человек доходит до результата за пару касаний и не пишет «а как?» в поддержку.</p>
+              <ul class="work__tags"><li>Telegram Bot API</li><li>Сценарии</li><li>Админка</li></ul>
+              <a class="work__link" href="https://t.me/itrustybot" target="_blank" rel="noopener" data-cursor="Открыть" data-magnetic>
+                <span>@itrustybot</span><b>↗</b>
+              </a>
+            </div>
+            <div class="work__visual">
+              <div class="phone">
+                <div class="phone__notch"></div>
+                <div class="tg">
+                  <div class="tg__head"><span class="tg__ava" style="--a:#C2223F">Г</span><div><b>Гранат</b><small>бот</small></div></div>
+                  <div class="tg__chat" data-chat>
+                    <div class="msg msg--me">/start</div>
+                    <div class="msg">Привет! Я <b>Гранат</b> 💎<br>Выберите, что нужно:</div>
+                    <div class="msg-kb"><span>Каталог</span><span>Мой профиль</span><span>Поддержка</span></div>
+                    <div class="msg msg--me">Каталог</div>
+                    <div class="msg msg--typing"><i></i><i></i><i></i></div>
+                    <div class="msg">Готово ✅ Всё собрано в одном месте.</div>
+                  </div>
+                  <div class="tg__input"><span>Сообщение</span><i></i></div>
+                </div>
+                <div class="seeds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3. Тоннель -->
+        <article class="work" data-color="#1A2342" data-ink="#DDE4FF" style="--c:#1A2342;--ink:#DDE4FF">
+          <div class="work__card">
+            <div class="work__info">
+              <div class="work__top">
+                <span class="work__index">03/05</span>
+                <span class="work__type">Telegram-бот</span>
+              </div>
+              <h3 class="work__name">Тоннель</h3>
+              <p class="work__desc">VPN-бот: подписка, ключ доступа и понятная инструкция по подключению приходят прямо в чат. Без сайтов, форм и лишних регистраций.</p>
+              <ul class="work__tags"><li>VPN</li><li>Подписки</li><li>Оплата</li><li>Автовыдача ключей</li></ul>
+              <a class="work__link" href="https://t.me/thisvpnobot" target="_blank" rel="noopener" data-cursor="Открыть" data-magnetic>
+                <span>@thisvpnobot</span><b>↗</b>
+              </a>
+            </div>
+            <div class="work__visual">
+              <div class="phone phone--dark">
+                <div class="phone__notch"></div>
+                <div class="tg tg--dark">
+                  <div class="tg__head"><span class="tg__ava" style="--a:#4C63FF">Т</span><div><b>Тоннель VPN</b><small>бот</small></div></div>
+                  <div class="tg__chat" data-chat>
+                    <div class="msg msg--me">/start</div>
+                    <div class="msg">🛡 Защищённое подключение за минуту.</div>
+                    <div class="msg-kb"><span>Получить доступ</span><span>Инструкция</span></div>
+                    <div class="msg msg--me">Получить доступ</div>
+                    <div class="msg msg--typing"><i></i><i></i><i></i></div>
+                    <div class="msg msg--key">🔑 Ваш ключ:<code>vless://••••••••••</code></div>
+                  </div>
+                  <div class="tg__input"><span>Сообщение</span><i></i></div>
+                </div>
+              </div>
+              <div class="tunnel" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4. First VPN -->
+        <article class="work" data-color="#FF6B3D" data-ink="#1D0A03" style="--c:#FF6B3D;--ink:#1D0A03">
+          <div class="work__card">
+            <div class="work__info">
+              <div class="work__top">
+                <span class="work__index">04/05</span>
+                <span class="work__type">Приложение · Mini App</span>
+              </div>
+              <h3 class="work__name">First VPN</h3>
+              <p class="work__desc">Приложение внутри Telegram: одна большая кнопка, статус соединения и тариф — без установки из магазина. Открывается за секунду прямо из чата.</p>
+              <ul class="work__tags"><li>Telegram Mini App</li><li>Web App</li><li>UI/UX</li></ul>
+              <a class="work__link" href="https://t.me/firstvpn_app" target="_blank" rel="noopener" data-cursor="Открыть" data-magnetic>
+                <span>@firstvpn_app</span><b>↗</b>
+              </a>
+            </div>
+            <div class="work__visual">
+              <div class="phone phone--app">
+                <div class="phone__notch"></div>
+                <div class="vpnapp">
+                  <div class="vpnapp__top"><b>First VPN</b><span class="vpnapp__plan">Premium</span></div>
+                  <div class="vpnapp__status">Отключено</div>
+                  <button class="vpnapp__power" type="button" aria-label="Демонстрация кнопки подключения" data-cursor="Нажми">
+                    <span class="vpnapp__ring"></span><span class="vpnapp__ring"></span><span class="vpnapp__ring"></span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                  </button>
+                  <div class="vpnapp__timer">00:00:00</div>
+                  <div class="vpnapp__stats"><div><small>Загрузка</small><b data-dl>0.0</b><small>Мбит/с</small></div><div><small>Отдача</small><b data-ul>0.0</b><small>Мбит/с</small></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5. Зуба-Руба -->
+        <article class="work" data-color="#FFD23F" data-ink="#1F1600" style="--c:#FFD23F;--ink:#1F1600">
+          <div class="work__card">
+            <div class="work__info">
+              <div class="work__top">
+                <span class="work__index">05/05</span>
+                <span class="work__type">Игра в Telegram</span>
+              </div>
+              <h3 class="work__name">Зуба&#8209;Руба</h3>
+              <p class="work__desc">Игра прямо в Telegram: открыл бота — и уже играешь. Рекорды, азарт и желание «ещё один раз». Справа можно попрыгать: кликните по экрану.</p>
+              <ul class="work__tags"><li>Игра</li><li>Canvas</li><li>Рекорды</li></ul>
+              <a class="work__link" href="https://t.me/zuba_ruba_bot" target="_blank" rel="noopener" data-cursor="Играть" data-magnetic>
+                <span>@zuba_ruba_bot</span><b>↗</b>
+              </a>
+            </div>
+            <div class="work__visual">
+              <div class="phone phone--game">
+                <div class="phone__notch"></div>
+                <canvas class="game" width="300" height="560" data-cursor="Прыжок" aria-label="Демо-игра: нажмите, чтобы прыгнуть"></canvas>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ============ SERVICES ============ -->
+    <section class="services" id="services">
+      <h2 class="section-title" data-split>Что я<br>делаю</h2>
+      <div class="services__list">
+        <details class="service" data-cursor="Подробнее">
+          <summary>
+            <span class="service__name">Сайты</span>
+            <span class="service__hint">лендинги, сайты услуг, магазины</span>
+            <span class="service__plus" aria-hidden="true"></span>
+          </summary>
+          <div class="service__body">
+            <p>Сайт, который понятен с первого экрана и доводит человека до заявки. Адаптив под телефоны, быстрая загрузка, анимации там, где они помогают, базовое SEO и подключение аналитики.</p>
+            <ul><li>Дизайн под ваш бренд</li><li>Вёрстка и анимации</li><li>Формы, заявки в Telegram</li><li>Домен, хостинг, запуск</li></ul>
+          </div>
+        </details>
+        <details class="service" data-cursor="Подробнее">
+          <summary>
+            <span class="service__name">Telegram-боты</span>
+            <span class="service__hint">продажи, подписки, автоматизация</span>
+            <span class="service__plus" aria-hidden="true"></span>
+          </summary>
+          <div class="service__body">
+            <p>Бот, который принимает заказы, оплату и выдаёт доступ без вашего участия. Продуманные сценарии, понятные кнопки, админ-панель и рассылки.</p>
+            <ul><li>Оплата и подписки</li><li>Автовыдача товаров и ключей</li><li>Админка и статистика</li><li>Рассылки и уведомления</li></ul>
+          </div>
+        </details>
+        <details class="service" data-cursor="Подробнее">
+          <summary>
+            <span class="service__name">Приложения</span>
+            <span class="service__hint">Telegram Mini Apps, веб-приложения</span>
+            <span class="service__plus" aria-hidden="true"></span>
+          </summary>
+          <div class="service__body">
+            <p>Полноценное приложение, которое открывается прямо в Telegram — без установки из магазина. Красивый интерфейс, авторизация через Telegram и оплата внутри.</p>
+            <ul><li>Mini App под ключ</li><li>Интерфейс и анимации</li><li>Бэкенд и база данных</li><li>Авторизация через Telegram</li></ul>
+          </div>
+        </details>
+        <details class="service" data-cursor="Подробнее">
+          <summary>
+            <span class="service__name">Игры</span>
+            <span class="service__hint">браузерные и Telegram-игры</span>
+            <span class="service__plus" aria-hidden="true"></span>
+          </summary>
+          <div class="service__body">
+            <p>Небольшие игры, которые запускаются в браузере и в Telegram: механика, рекорды, рефералы. Хороший способ развлечь аудиторию и вернуть её снова.</p>
+            <ul><li>Игровая механика</li><li>Таблица рекордов</li><li>Реферальная система</li><li>Интеграция с ботом</li></ul>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============ PROCESS ============ -->
+    <section class="process" id="process">
+      <div class="process__pin">
+        <div class="process__head">
+          <h2 class="section-title">Как идёт<br>работа</h2>
+          <div class="process__progress" aria-hidden="true"><i></i></div>
+        </div>
+        <ol class="process__track">
+          <li class="step">
+            <span class="step__num">1</span>
+            <h3>Разговор</h3>
+            <p>Пишете в Telegram. Обсуждаем задачу, аудиторию и сроки. Отвечаю на вопросы и честно говорю, что нужно, а что лишнее.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">2</span>
+            <h3>Прототип и дизайн</h3>
+            <p>Собираю структуру и дизайн. Вы видите, как всё будет выглядеть и работать, ещё до того, как написана первая строка кода.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">3</span>
+            <h3>Разработка</h3>
+            <p>Пишу код и показываю промежуточные версии. Можно потрогать бота или сайт на тестовом адресе и поправить по ходу.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">4</span>
+            <h3>Запуск</h3>
+            <p>Домен, сервер, вебхуки, оплата — подключаю всё сам. Проект запускается в бой, а вы получаете инструкцию и доступы.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">5</span>
+            <h3>Поддержка</h3>
+            <p>После запуска остаюсь на связи: правки, новые функции и помощь, если что-то пошло не по плану.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ REVIEWS ============ -->
+    <section class="reviews" id="reviews">
+      <h2 class="section-title" data-split>Отзывы</h2>
+      <div class="reviews__list" data-reviews></div>
+      <a class="reviews__cta" href="https://t.me/bob_proger" target="_blank" rel="noopener" data-cursor="Читать">
+        <span class="reviews__cta-label">Все отзывы клиентов — в моём Telegram</span>
+        <span class="reviews__cta-big">Читать отзывы</span>
+        <span class="reviews__cta-arrow" aria-hidden="true">↗</span>
+      </a>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOTER (curtain reveal) ============ -->
+  <div class="footer-wrap">
+    <footer class="footer" id="contact">
+      <div class="footer__top">
+        <p class="footer__ask">Есть идея?<br>Давайте её запустим.</p>
+        <a class="footer__btn" href="https://t.me/bob_proger" target="_blank" rel="noopener" data-magnetic data-magnetic-strength="0.5" data-cursor="Telegram">
+          <span class="footer__btn-fill"></span>
+          <span class="footer__btn-text">Написать<br>@bob_proger</span>
+        </a>
+      </div>
+      <div class="footer__mid">
+        <a href="https://t.me/bob_proger" target="_blank" rel="noopener" data-scramble>Telegram</a>
+        <a href="https://lasertattoo-kislorod.com" target="_blank" rel="noopener" data-scramble>Кислород</a>
+        <a href="https://t.me/itrustybot" target="_blank" rel="noopener" data-scramble>Гранат</a>
+        <a href="https://t.me/thisvpnobot" target="_blank" rel="noopener" data-scramble>Тоннель</a>
+        <a href="https://t.me/firstvpn_app" target="_blank" rel="noopener" data-scramble>First VPN</a>
+        <a href="https://t.me/zuba_ruba_bot" target="_blank" rel="noopener" data-scramble>Зуба-Руба</a>
+      </div>
+      <div class="footer__giant" aria-hidden="true">
+        <span>BOB</span><span>PROGER</span>
+      </div>
+      <div class="footer__bottom">
+        <span>© <span data-year>2026</span> Bob Proger</span>
+        <span class="footer__time">Сейчас у вас <b data-clock>--:--</b></span>
+        <a href="#top" data-scramble>Наверх ↑</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="grain" aria-hidden="true"></div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script src="assets/vendor/ScrollTrigger.min.js"></script>
+  <script src="assets/vendor/SplitText.min.js"></script>
+  <script src="assets/vendor/CustomEase.min.js"></script>
+  <script src="assets/vendor/lenis.min.js"></script>
+  <script src="assets/js/reviews.js"></script>
+  <script src="assets/js/gl.js"></script>
+  <script src="assets/js/game.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
