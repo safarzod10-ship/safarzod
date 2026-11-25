@@ -271,6 +271,8 @@ public class Game : NetworkBehaviour
                 if (p.Alive && p.Team.Value == 1) { float d = (p.transform.position - v.transform.position).sqrMagnitude; if (d < bd) { bd = d; best = p; } }
             if (best) best.HasBomb.Value = true;
         }
+        if (attacker != null)
+            Debug.Log($"KILL t={Now - PhaseStart.Value:0.0} {attacker.Nick.Value}/t{attacker.Team.Value} at({attacker.transform.position.x:0.0},{attacker.transform.position.z:0.0}) -> {v.Nick.Value}/t{v.Team.Value} at({v.transform.position.x:0.0},{v.transform.position.z:0.0}) w={weaponId} head={head} d={Vector3.Distance(attacker.transform.position, v.transform.position):0.0}");
         KillRpc(attacker ? attacker.Nick.Value : default, v.Nick.Value, weaponId, head, attacker ? attacker.Team.Value : 0);
     }
 
