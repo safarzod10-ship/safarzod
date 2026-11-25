@@ -272,7 +272,7 @@ public class Game : NetworkBehaviour
             if (best) best.HasBomb.Value = true;
         }
         if (attacker != null)
-            Debug.Log($"KILL t={Now - PhaseStart.Value:0.0} {attacker.Nick.Value}/t{attacker.Team.Value} at({attacker.transform.position.x:0.0},{attacker.transform.position.z:0.0}) -> {v.Nick.Value}/t{v.Team.Value} at({v.transform.position.x:0.0},{v.transform.position.z:0.0}) w={weaponId} head={head} d={Vector3.Distance(attacker.transform.position, v.transform.position):0.0}");
+            Debug.Log($"KILL t={Now - PhaseStart.Value:0.0} {attacker.Nick.Value}/t{attacker.Team.Value} at({attacker.transform.position.x:0.0},{attacker.transform.position.z:0.0}) -> {v.Nick.Value}/t{v.Team.Value} at({v.transform.position.x:0.0},{v.transform.position.z:0.0}) w={weaponId} head={head} d={Vector3.Distance(attacker.transform.position, v.transform.position):0.0} vsee={v.CanSee(attacker)} asee={attacker.CanSee(v)} vstate=[{(brain ? brain.DebugState() : "-")}] vyaw={v.yaw:0} toA={Mathf.Atan2(attacker.transform.position.x - v.transform.position.x, attacker.transform.position.z - v.transform.position.z) * Mathf.Rad2Deg:0} vcrouch={v.crouch}");
         KillRpc(attacker ? attacker.Nick.Value : default, v.Nick.Value, weaponId, head, attacker ? attacker.Team.Value : 0);
     }
 
