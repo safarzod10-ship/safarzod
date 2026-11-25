@@ -313,6 +313,8 @@ public static class Fx
     {
         var clip = Clip(name);
         if (clip == null || AudioListener.pause) return;
+        vol *= Channel(name);
+        if (vol <= 0.001f) return;
         var go = new GameObject("snd"); go.transform.position = pos;
         var a = go.AddComponent<AudioSource>();
         a.clip = clip; a.volume = vol; a.spatialBlend = 1f; a.rolloffMode = AudioRolloffMode.Linear;
@@ -325,8 +327,15 @@ public static class Fx
     {
         var clip = Clip(name);
         if (clip == null || Camera.main == null) return;
+        vol *= Channel(name);
+        if (vol <= 0.001f) return;
         AudioSource.PlayClipAtPoint(clip, Camera.main.transform.position, vol);
     }
+
+    /// Settings volume channel of a sound: human voices (pain, death) follow the voice slider, everything else the effects slider.
+    /// The master slider is applied globally through AudioListener.volume.
+    static float Channel(string name) =>
+        name.StartsWith("pain") || name.StartsWith("death") ? GameSettings.VoiceVolume : GameSettings.SfxVolume;
 
     static readonly Dictionary<string, AudioClip[]> variants = new Dictionary<string, AudioClip[]>();
     static readonly Dictionary<string, string> alias = new Dictionary<string, string>

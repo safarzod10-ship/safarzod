@@ -51,7 +51,8 @@ public class Player : NetworkBehaviour
     Transform body, cam, viewModel, handWeapon;
     CharView view;
     FpView fp;                         // first-person arms + weapon (Assets/Scripts/Anim/FpView.cs)
-    float vy, stepTimer, viewBob, viewKick, fovBase = 68f;
+    float vy, stepTimer, viewBob, viewKick;
+    static float fovBase => Mathf.Clamp(GameSettings.Fov, 60f, 90f);
     int shownWeapon = -1, shownVm = -1;
     bool wasAlive, triggerHeld;
     static readonly RaycastHit[] hits = new RaycastHit[24];

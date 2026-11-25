@@ -355,6 +355,8 @@ public class Hud : MonoBehaviour
         p = settingsPages[1]; y = 0;
         c = SetRow(p, "Чувствительность обзора", y, RW, out _);
         settingsRefresh.Add(SliderCtl(c, 0.3f, 3f, () => GameSettings.Sensitivity, v => { GameSettings.Sensitivity = v; GameSettings.Save(); }, v => v.ToString("0.00")));
+        y -= 92; c = SetRow(p, "Поле зрения", y, RW, out _);
+        settingsRefresh.Add(SliderCtl(c, 60f, 90f, () => GameSettings.Fov, v => { GameSettings.Fov = Mathf.Round(v); GameSettings.Save(); }, v => Mathf.RoundToInt(v) + "°"));
         y -= 92; c = SetRow(p, "Инверсия по вертикали", y, RW, out _);
         settingsRefresh.Add(SwitchCtl(c, () => GameSettings.InvertY, v => { GameSettings.InvertY = v; GameSettings.Save(); }));
         y -= 92; c = SetRow(p, "Размер сенсорных кнопок", y, RW, out _);
@@ -368,6 +370,10 @@ public class Hud : MonoBehaviour
         p = settingsPages[2]; y = 0;
         c = SetRow(p, "Общая громкость", y, RW, out _);
         settingsRefresh.Add(SliderCtl(c, 0f, 1f, () => GameSettings.MasterVolume, v => { GameSettings.MasterVolume = v; GameSettings.Save(); AudioListener.volume = v; }, v => Mathf.RoundToInt(v * 100) + "%"));
+        y -= 92; c = SetRow(p, "Выстрелы и эффекты", y, RW, out _);
+        settingsRefresh.Add(SliderCtl(c, 0f, 1f, () => GameSettings.SfxVolume, v => { GameSettings.SfxVolume = v; GameSettings.Save(); }, v => Mathf.RoundToInt(v * 100) + "%"));
+        y -= 92; c = SetRow(p, "Голоса (крики, ранения)", y, RW, out _);
+        settingsRefresh.Add(SliderCtl(c, 0f, 1f, () => GameSettings.VoiceVolume, v => { GameSettings.VoiceVolume = v; GameSettings.Save(); }, v => Mathf.RoundToInt(v * 100) + "%"));
         y -= 110;
         var snd = Label(p, "sndInfo", new Vector2(0.5f, 1), new Vector2(0, y), new Vector2(RW - 16, 120), 26, TextAnchor.UpperLeft,
             "Все звуки игры — настоящие записи (выстрелы, шаги, попадания), без синтеза. Авторы указаны в списке лицензий.", BodyReg, Muted, false);
