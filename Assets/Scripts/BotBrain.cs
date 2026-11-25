@@ -94,7 +94,9 @@ public class BotBrain : MonoBehaviour
 
         if (Time.time >= nextThink) { nextThink = Time.time + 0.2f; Think(g); }
 
-        if (target != null && target.Alive) Fight();
+        // the bomb carrier standing in the plant zone plants instead of trading shots, unless an enemy is right on him
+        bool planting = p.HasBomb.Value && g.CanPlant(p) && (target == null || (target.transform.position - transform.position).sqrMagnitude > 25f);
+        if (target != null && target.Alive && !planting) Fight();
         else
         {
             target = null;
@@ -182,7 +184,7 @@ public class BotBrain : MonoBehaviour
             burstEnd = Time.time + Random.Range(0.25f, 0.8f);
             pauseEnd = burstEnd + Random.Range(0.15f, 0.5f) * (p.Def.auto ? 1f : 0.3f);
         }
-        float err = Mathf.Lerp(4.2f, 1.1f, skill) * (1f + d / 40f) * (p.Def.zoomFov > 0 ? 0.6f : 1f);
+        float err = Mathf.Lerp(4.2f, 1.1f, skill) * (1f + d / 40f) * (p.Def.zoomFov > 0 ? 0.6f : 1f) * (holding ? 0.75f : 1f);   // holding an angle: steadier aim
         Vector2 e = Random.insideUnitCircle * err;
         Vector3 dir = Quaternion.Euler(p.pitch + e.y, p.yaw + e.x, 0) * Vector3.forward;
         p.zoomed = p.Def.zoomFov > 0;
