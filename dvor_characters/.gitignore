@@ -1,0 +1,6 @@
+viewer/public/models/
+viewer/public/basis/
+viewer/dist/
+review/poses/
+review/*/poses/
+review/shots_*.json
