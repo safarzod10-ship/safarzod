@@ -34,7 +34,7 @@ public class BotBrain : MonoBehaviour
     void Awake()
     {
         p = GetComponent<Player>();
-        skill = Mathf.Clamp01(Game.BotSkill + Random.Range(-0.15f, 0.15f));
+        skill = Mathf.Clamp01(Game.BotSkill + Random.Range(-0.05f, 0.05f));   // same difficulty = nearly equal bots (±0.15 decided matches by luck)
     }
 
     void EnsureAgent()
@@ -96,6 +96,9 @@ public class BotBrain : MonoBehaviour
 
         // the bomb carrier standing in the plant zone plants instead of trading shots, unless an enemy is right on him
         bool planting = p.HasBomb.Value && g.CanPlant(p) && (target == null || (target.transform.position - transform.position).sqrMagnitude > 25f);
+        // during the execute the carrier keeps walking to the site past enemies further than 8 m: the escorts take those fights
+        bool executing = planMode && p.Team.Value == 1 && g.Phase == Phase.Live && g.Now - g.PhaseStart.Value >= executeAt;
+        if (p.HasBomb.Value && executing && target != null && (target.transform.position - transform.position).sqrMagnitude > 64f) planting = true;
         if (target != null && target.Alive && !planting) Fight();
         else
         {
