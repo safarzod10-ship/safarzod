@@ -14,6 +14,8 @@ public static class NavProbe
         return def;
     }
 
+    static string Path(Transform t) { string r = t.name; while (t.parent != null) { t = t.parent; r = t.name + "/" + r; } return r; }
+
     public static void Run()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Town.unity", OpenSceneMode.Single);
@@ -36,6 +38,9 @@ public static class NavProbe
             }
             Debug.Log($"NAVPROBE corner {i} {c}{blocked}");
         }
+        foreach (float hgt in new[] { 0.3f, 1.0f, 1.7f })
+            foreach (var h in Physics.RaycastAll(a + Vector3.up * hgt, (b - a).normalized, Vector3.Distance(a, b), ~0, QueryTriggerInteraction.Ignore))
+                Debug.Log($"NAVPROBE line h={hgt} hit {h.collider.name} path={Path(h.collider.transform)} at {h.point}");
         foreach (var c in Physics.OverlapSphere(ha.position + Vector3.up, 1.2f)) Debug.Log($"NAVPROBE near-from {c.name} {c.GetType().Name} {c.bounds.center} {c.bounds.size}");
     }
 }

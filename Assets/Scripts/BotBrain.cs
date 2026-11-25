@@ -175,7 +175,7 @@ public class BotBrain : MonoBehaviour
         if (holding && watch != Vector3.zero)
         {
             Vector3 w = watch - transform.position; w.y = 0;
-            if (Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(w.x, w.z) * Mathf.Rad2Deg, wantYaw)) < 30f) reaction *= 0.55f;
+            if (Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(w.x, w.z) * Mathf.Rad2Deg, wantYaw)) < 30f) reaction *= 0.8f;
         }
         float off = Mathf.Abs(Mathf.DeltaAngle(p.yaw, wantYaw)) + Mathf.Abs(p.pitch - wantPitch);
         if (Time.time - seenSince < reaction || off > 9f) return;
@@ -187,7 +187,7 @@ public class BotBrain : MonoBehaviour
             burstEnd = Time.time + Random.Range(0.25f, 0.8f);
             pauseEnd = burstEnd + Random.Range(0.15f, 0.5f) * (p.Def.auto ? 1f : 0.3f);
         }
-        float err = Mathf.Lerp(4.2f, 1.1f, skill) * (1f + d / 40f) * (p.Def.zoomFov > 0 ? 0.6f : 1f) * (holding ? 0.75f : 1f);   // holding an angle: steadier aim
+        float err = Mathf.Lerp(4.2f, 1.1f, skill) * (1f + d / 40f) * (p.Def.zoomFov > 0 ? 0.6f : 1f);
         Vector2 e = Random.insideUnitCircle * err;
         Vector3 dir = Quaternion.Euler(p.pitch + e.y, p.yaw + e.x, 0) * Vector3.forward;
         p.zoomed = p.Def.zoomFov > 0;
