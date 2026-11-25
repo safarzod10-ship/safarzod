@@ -23,3 +23,11 @@
 - Tajik kit finished by the Blender worker: door, column, aivan section, panjara window, majolica panel, tandoor, tapchan, grape trellis (all original, CC0 Poly Haven base textures). Added to Assets/Town/Kit, scripts in tools/tjkit, sheet docs/kit/kit_sheet.png.
 - TownKit.Apply editor tool: snaps wall pieces to real wall surfaces, stands them on the ground, skips floor props that overlap geometry or are near starts/bomb site, adds colliders.
 - UI redesign (UiKit.cs + Hud.cs rewrite): menu over the live map with bots and Wi-Fi pages, settings modal (graphics/controls/sound) wired to GameSettings, loading screen, new HUD, buy menu with prices and affordability, pause, scoreboard, match-end screen with MVP. Fonts Russo One + PT Sans Narrow (OFL). Compile-checked only; screenshots pending until Unity is free.
+
+## 2026-11-25
+- First-person arm packs finished by the worker (knife in fist, sniper framing, pistol reload offset, in-game -fpshots check); in-game frames sent to owner. Knife arm material named "DMC5_Nero_BareArm" flagged in ASSET_LICENSES.md (replace before release unless cleared).
+- TownKit.Apply run: 13 kit pieces placed in Town.unity (3 carved doors, 4 panjara windows, 2 majolica panels, 2 tapchans, tandoor, trellis); one panel removed (overlapped a window), south door moved over the mesh's plain door. Renders docs/kit/kit_on_map.jpg.
+- Characters rebuilt from simplified SWAT sources (ct1 19.4k, ct2 11.9k tris).
+- Settings: FOV slider (60–90°) drives the player camera; effects/voice volume sliders (pain/death sounds = voice).
+- BUG-005: corpse hips travel clamped (0.35 m, shorter near walls).
+- UI review of 12 screens at 1920x1080 (Low preset, CPU renderer: High took ~83 s per frame): fixed translucent modals (linear blending showed 4 % of the menu through), stretched slider knobs, buy list colliding with Close, unaffordable items not dimmed, match-end title over the HUD, menu camera inside a wall, loading screen not captured. `-gfx 0|1|2` test switch added.

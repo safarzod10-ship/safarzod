@@ -38,7 +38,8 @@
   "status": "open",
   "title": "Death animation travels ~1 m and can enter walls",
   "found": "agent report 2026-11-24",
-  "feature": "TP-02"
+  "feature": "TP-02",
+  "notes": "2026-11-25: CharBody.KeepCorpseInPlace limits horizontal hips travel to 0.35 m and shorter when a sphere cast finds a wall within 0.35+0.9 m. Compile-checked; visual check in a match pending."
  },
  {
   "id": "BUG-006",
@@ -54,7 +55,8 @@
   "status": "open",
   "title": "SWAT characters ~50k triangles each: too heavy for phones",
   "found": "agent report",
-  "feature": "PERF-02"
+  "feature": "PERF-02",
+  "notes": "2026-11-25: simplified sources rebuilt with CharSetup.BuildChars (converter counts: ct1 19.4k, ct2 11.9k, t1 8.3k, t2 7.8k triangles). Proof sheet a_states_ak ok. On-device frame time still unmeasured."
  },
  {
   "id": "BUG-008",
@@ -62,6 +64,7 @@
   "status": "open",
   "title": "UI uses default legacy Text and grey boxes; no designed menus",
   "found": "audit",
-  "feature": "UI-01"
+  "feature": "UI-01",
+  "notes": "2026-11-25: UiKit + Hud rewrite; 12 screens captured with -uishots at 1920x1080, review fixes applied (opaque modals, slider knobs, buy spacing, match-end layout). Re-capture at 1920x1080 and 2400x1080 running; owner review pending."
  }
 ]
