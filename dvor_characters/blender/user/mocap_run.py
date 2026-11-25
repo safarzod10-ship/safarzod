@@ -48,13 +48,17 @@ import loop_check  # noqa: E402  (blender-animation skill)
 CMU_UNIT = 0.0254 / 0.45
 MOCAP = os.path.join(ROOT, "mocap", "cmu")
 NAMES = {"technik": "CH_Technik", "sprinter": "CH_Sprinter", "tank": "CH_Tank"}
-# take, cadence factor (>1 = quicker steps than the actor), arm tilt away from the body (deg),
-# crouch = hips lowered by this share of the hip height while the feet are pinned
+# take, cadence factor (>1 = quicker steps than the actor), crouch = hips lowered by this share of the
+# hip height while the feet are pinned, lane = min. foot distance from the centre / hip half-width
 PLAN = {
-    # cycle times match the earlier procedural Run (0.67 / 0.53 / 0.80 s) so the game feel stays
-    "technik": dict(take="09_01", tempo=1.1, arm_out=14, crouch=0.05, hand_r=0.07),     # run
-    "sprinter": dict(take="09_05", tempo=1.4, arm_out=10, crouch=0.05, hand_r=0.07),    # run, quicker steps
-    "tank": dict(take="35_17", tempo=0.93, arm_out=24, crouch=0.06, hand_r=0.12),       # jog, heavier
+    # cycle times match the earlier procedural Run (0.67 / 0.53 / 0.80 s) so the game feel stays.
+    # arms: keyed pump (see stylize_arms) -- abd/off/amp/bend/bend_var/inward in degrees
+    "technik": dict(take="09_01", tempo=1.1, crouch=0.05, hand_r=0.07, lane=1.25, toe_out=6,
+                    arms=dict(abd=14, off=8, amp=48, bend=88, bend_var=18, inward=8)),
+    "sprinter": dict(take="09_05", tempo=1.4, crouch=0.05, hand_r=0.07, lane=1.45, toe_out=4,
+                     arms=dict(abd=17, off=10, amp=60, bend=92, bend_var=20, inward=3)),
+    "tank": dict(take="35_17", tempo=0.93, crouch=0.06, hand_r=0.12, lane=1.0, toe_out=10,
+                 arms=dict(abd=30, off=6, amp=34, bend=78, bend_var=14, inward=0)),
 }
 FEATURE_BONES = ["LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot",
                  "LeftArm", "LeftForeArm", "RightArm", "RightForeArm", "Spine1", "Head"]
@@ -164,17 +168,11 @@ def build(ch):
     bpy.context.view_layer.update()
 
     f0, T = cyc["f0"], cyc["T"]
-    arm_out = plan["arm_out"]
-    # L arm hangs at +X: tilting it outward is a rotation about -Y (character forward); mirrored for R
-    bias = {}
-    for b in ("upper_arm", "forearm", "hand"):
-        bias[f"{b}.L"] = [0, 1, 0, arm_out]
-        bias[f"{b}.R"] = [0, 1, 0, -arm_out]
     stance_src = source_stance(src, f0, T)
     f_last = int(src.animation_data.action.frame_range[1])
     W_src = min(int(T * 0.35), f_last - (f0 + T))   # cross-fade window, source frames after the cycle
     res = retarget.run(source=src.name, target=rig.name, frames=[f0, f0 + T + W_src], name="RunMocap",
-                       match_rest=True, rest_bias=bias)
+                       match_rest=True)
     print("RETARGET", res)
     raw = bpy.data.actions[res["action"]]
 
@@ -294,13 +292,17 @@ def build(ch):
     hip_h = rig.data.bones["thigh.L"].head_local.z - rest_floor
     # ground speed = how fast the planted ball of the foot moves back in the in-place clip (median, stance frames)
     seconds = N / L.FPS
-    speed = ankle_speed(rig, N, stance)
     hips_speed = stride_target / seconds
+    # legs in their own lanes, feet pointing forward; then the foot lock (IK pins baked into the keys)
+    lanes = leg_lanes(rig, cb, N, plan["lane"], plan["toe_out"])
+    speed = ankle_speed(rig, N, stance)
     before = measure_contact(rig, N, speed, stance)
-    # foot lock (IK pins, then baked into the keys): during stance the ankle follows the ground
     lock_feet(rig, cb, N, speed, stance, drop=lambda: shift_hips(-plan["crouch"] * hip_h),
               sole=foot_soles(rig, mesh), floor=rest_floor)
-    arms = clear_arms(rig, cb, N, torso_points(rig, mesh), plan["hand_r"])
+    arm_style = stylize_arms(rig, cb, N, plan["arms"])
+    arms = clear_arms(rig, cb, N, torso_points(rig, mesh), plan["hand_r"], max_upper=20, max_fore=30)
+    arms["style"] = arm_style
+    arms["legs"] = lanes
     slide = measure_contact(rig, N, speed, stance)
     slide["before_lock"] = before
     slide["mesh_floor"] = mesh_floor_report(mesh, N, stance, rest_floor)
@@ -335,7 +337,7 @@ def build(ch):
         "duration_s": round(seconds, 3), "loop": True, "speed_mps": round(speed, 3),
         "source": "CMU mocap " + plan["take"], "source_frames_120fps": [f0, f0 + T],
         "source_speed_mps": round(cyc["speed_mps"], 3), "hips_stride_speed_mps": round(hips_speed, 3), "seam_mismatch_deg_before_fix": round(cyc["seam_deg"], 2),
-        "tempo": plan["tempo"], "arm_out_deg": arm_out, "retarget_max_error_deg": res["max_error_deg"],
+        "tempo": plan["tempo"], "retarget_max_error_deg": res["max_error_deg"],
         "hips_scale": res["hips_scale"], "loop_check": lc, "foot_contact": slide, "arms_vs_torso": arms,
     }
     rep["files"]["blend_bytes"] = os.path.getsize(blend)
@@ -597,6 +599,151 @@ def clear_arms(rig, cb, N, pts, hand_r, max_upper=30, max_fore=70):
         for fc in cb.fcurves:
             fc.update()
     return {"arm_in_torso_frames_before": before, "after": count_inside(), "of": 2 * N}
+
+
+def _rest_rel(rig):
+    return {b.name: (b.parent.matrix_local.inverted() @ b.matrix_local) for b in rig.data.bones if b.parent}
+
+
+def _write_locals(rig, cb, P, names, k, N, rest_rel):
+    """Bake armature-space pose matrices P[name] of `names` into the rotation keys of frame k (0-based);
+    frame 0 is mirrored onto frame N (loop). Parents must already hold their new matrices in P."""
+    bones = rig.data.bones
+    for b in names:
+        parent = bones[b].parent.name
+        q = ((P[parent] @ rest_rel[b]).inverted() @ P[b]).to_quaternion().normalized()
+        dp = f'pose.bones["{b}"].rotation_quaternion'
+        fcs = [cb.fcurves.find(dp, index=i) for i in range(4)]
+        old = Quaternion([fc.keyframe_points[k].co.y for fc in fcs])
+        if old.dot(q) < 0:
+            q.negate()
+        for i, fc in enumerate(fcs):
+            fc.keyframe_points[k].co.y = q[i]
+            if k == 0:
+                fc.keyframe_points[N].co.y = q[i]
+
+
+def _two_bone(P, s, A_t, foot_rot=None):
+    """Analytic 2-bone IK (thigh, shin) to ankle goal A_t, knee kept in its current plane.
+    Returns new armature-space matrices for thigh, shin and foot (foot keeps / gets foot_rot)."""
+    th, sh, ft = f"thigh.{s}", f"shin.{s}", f"foot.{s}"
+    H, K, A = P[th].translation, P[sh].translation, P[ft].translation
+    l1, l2 = (K - H).length, (A - K).length
+    d = A_t - H
+    dist = min(max(d.length, abs(l1 - l2) + 1e-4), l1 + l2 - 1e-4)
+    u = d.normalized()
+    pole = (K - H) - u * (K - H).dot(u)
+    if pole.length < 1e-6:
+        pole = Vector((0, -1, 0))
+    pole.normalize()
+    a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
+    h = math.sqrt(max(0.0, l1 * l1 - a * a))
+    K2 = H + u * a + pole * h
+    A2 = H + u * dist
+    S1 = (K - H).normalized().rotation_difference((K2 - H).normalized())
+    Rt = S1 @ P[th].to_quaternion()
+    S2 = (S1 @ (A - K)).normalized().rotation_difference((A2 - K2).normalized())
+    Rs = S2 @ S1 @ P[sh].to_quaternion()
+    Rf = foot_rot if foot_rot is not None else P[ft].to_quaternion()
+    return {th: Matrix.LocRotScale(H, Rt, None), sh: Matrix.LocRotScale(K2, Rs, None),
+            ft: Matrix.LocRotScale(A2, Rf, None)}
+
+
+def leg_lanes(rig, cb, N, lane_frac=0.8, toe_out=6.0):
+    """The mocap runner puts one foot in front of the other on the centre line; on a chibi with wide
+    hips that reads as legs crossing. Every frame: the ankle is kept at least lane_frac x hip width
+    out from the centre (2-bone IK), and the foot is turned to point forward (toe-out `toe_out` deg),
+    keeping its pitch and roll. Returns the largest lateral correction (m) and yaw correction (deg)."""
+    sc = bpy.context.scene
+    bones = rig.data.bones
+    rest_rel = _rest_rel(rig)
+    worst = [0.0, 0.0]
+    for k in range(N):
+        sc.frame_set(k + 1)
+        P = {pb.name: pb.matrix.copy() for pb in rig.pose.bones}
+        names = []
+        for s, sg in (("L", 1), ("R", -1)):
+            th, ft = f"thigh.{s}", f"foot.{s}"
+            lane = sg * abs(bones[th].head_local.x) * lane_frac
+            A = P[ft].translation.copy()
+            A_t = A.copy()
+            if sg * A.x < sg * lane:
+                A_t.x = lane
+            # foot yaw back to the modelled foot's yaw (+ toe_out): measured on the foot's side axis,
+            # which stays level whatever the pitch (the toe axis flips when the foot points down)
+            side = P[ft].to_quaternion() @ Vector((1, 0, 0))
+            side_rest = bones[ft].matrix_local.to_quaternion() @ Vector((1, 0, 0))
+            cur = math.atan2(side.y, side.x)
+            want = math.atan2(side_rest.y, side_rest.x) + sg * math.radians(toe_out)
+            dyaw = math.atan2(math.sin(want - cur), math.cos(want - cur))
+            dyaw = max(-math.radians(45), min(math.radians(45), dyaw))
+            Rf = Quaternion((0, 0, 1), dyaw) @ P[ft].to_quaternion()
+            worst[0] = max(worst[0], abs(A_t.x - A.x))
+            worst[1] = max(worst[1], abs(math.degrees(dyaw)))
+            P.update(_two_bone(P, s, A_t, Rf))
+            names += [th, f"shin.{s}", ft]
+        _write_locals(rig, cb, P, names, k, N, rest_rel)
+    for fc in cb.fcurves:
+        fc.update()
+    return {"max_lateral_fix_m": round(worst[0], 3), "max_foot_yaw_fix_deg": round(worst[1], 1)}
+
+
+def stylize_arms(rig, cb, N, cfg):
+    """Keyed arm pump for chibi proportions, phase-locked to the mocap legs (the actor's long arms on a
+    slim body hang at the hips of a short-armed, wide character). Per frame, in the chest's frame:
+      leg phase s = (pitch of right thigh - pitch of left thigh) normalised to -1..1
+      upper arm: down, abducted `abd` deg, swung forward by off + amp * s (left arm opposite left leg)
+      forearm:   bent `bend` +- `bend_var` (more when the arm is forward), turned `inward` deg to the middle
+      hand:      straight in line with the forearm
+    Bones are rotated by the minimal arc from their modelled rest (relative to the moving chest)."""
+    sc = bpy.context.scene
+    bones = rig.data.bones
+    rest_rel = _rest_rel(rig)
+    chest_rest = bones["chest"].matrix_local.to_quaternion()
+    pitch = {"L": [], "R": []}
+    for k in range(N):
+        sc.frame_set(k + 1)
+        for s in ("L", "R"):
+            pb = rig.pose.bones[f"thigh.{s}"]
+            d = (pb.tail - pb.head).normalized()
+            pitch[s].append(math.atan2(-d.y, -d.z))   # + = thigh forward
+    raw = [pitch["R"][k] - pitch["L"][k] for k in range(N)]
+    m = max(abs(v) for v in raw) or 1.0
+    phase = [v / m for v in raw]
+    down, fwd = Vector((0, 0, -1)), Vector((0, -1, 0))
+    for k in range(N):
+        sc.frame_set(k + 1)
+        P = {pb.name: pb.matrix.copy() for pb in rig.pose.bones}
+        Dc = P["chest"].to_quaternion() @ chest_rest.inverted()   # torso lean / twist carries the arms
+        names = []
+        for s, sg in (("L", 1), ("R", -1)):
+            sw = cfg["off"] + cfg["amp"] * (phase[k] if s == "L" else -phase[k])   # L arm forward when R leg is
+            abd = Quaternion((0, -sg, 0), math.radians(cfg["abd"]))
+            swing = Quaternion((-1, 0, 0), math.radians(sw))
+            d_u = swing @ abd @ down
+            fwdness = max(-1.0, min(1.0, sw / max(cfg["amp"], 1)))
+            bend = math.radians(cfg["bend"] + cfg["bend_var"] * fwdness)
+            n = d_u.cross(fwd)
+            if n.length < 1e-4:
+                n = Vector((-1, 0, 0))
+            d_f = Quaternion(n.normalized(), bend) @ d_u
+            d_f = Quaternion((0, 0, 1), -sg * math.radians(cfg["inward"])) @ d_f
+            d_u, d_f = Dc @ d_u, Dc @ d_f
+            ua, fa, hd = f"upper_arm.{s}", f"forearm.{s}", f"hand.{s}"
+            base = P["chest"] @ rest_rel[ua]
+            Ru = (base.to_quaternion() @ Vector((0, 1, 0))).rotation_difference(d_u) @ base.to_quaternion()
+            P[ua] = Matrix.LocRotScale(base.translation, Ru, None)
+            base = P[ua] @ rest_rel[fa]
+            Rf = (base.to_quaternion() @ Vector((0, 1, 0))).rotation_difference(d_f) @ base.to_quaternion()
+            P[fa] = Matrix.LocRotScale(base.translation, Rf, None)
+            base = P[fa] @ rest_rel[hd]
+            Rh = (base.to_quaternion() @ Vector((0, 1, 0))).rotation_difference(d_f) @ base.to_quaternion()
+            P[hd] = Matrix.LocRotScale(base.translation, Rh, None)
+            names += [ua, fa, hd]
+        _write_locals(rig, cb, P, names, k, N, rest_rel)
+    for fc in cb.fcurves:
+        fc.update()
+    return {"phase_source": "thigh pitch R-L", **cfg}
 
 
 def lock_feet(rig, cb, N, speed, stance, ease=2, drop=None, sole=None, floor=0.0):

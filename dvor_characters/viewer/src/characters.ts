@@ -17,7 +17,7 @@ export type ClipName = (typeof CLIP_NAMES)[number];
  * sliding, play Run with timeScale = speed / RUN_SPEED[id] (quicker steps).
  */
 export const RUN_SPEED: Readonly<Record<string, number>> = {
-  USER_CH_Technik: 2.32, USER_CH_Sprinter: 2.69, USER_CH_Tank: 1.72,   // CMU mocap runs
+  USER_CH_Technik: 2.35, USER_CH_Sprinter: 2.73, USER_CH_Tank: 1.75,   // CMU mocap runs
   CH_Technik: 4.5, CH_Sprinter: 5.6, CH_Tank: 3.8,                      // procedural set (approx.)
 };
 export const LOOPING: ReadonlySet<ClipName> = new Set<ClipName>(['Idle', 'Run', 'Victory']);

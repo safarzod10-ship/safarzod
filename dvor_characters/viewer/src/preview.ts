@@ -2,6 +2,8 @@
  * Single-character preview used for turnaround screenshots and visual QA.
  * URL params: char=CH_Technik  view=front|back|side|threequarter|game  clip=Idle  t=0.0
  *             lod=0|1  tex=png|ktx2  bg=e7e3de  wire=0|1  play=0|1
+ *             az=<deg> el=<deg>  any camera direction (az 0 = front, 90 = character's left side)
+ *             bones=1  draw the skeleton on top (x-ray)
  */
 import * as THREE from 'three';
 import { CharacterInstance, CharacterLibrary, type ClipName } from './characters';
@@ -69,7 +71,19 @@ lib.load(char).then((asset) => {
     // game camera: 55 deg elevation, slight yaw, the size a phone shows it at
     game: new THREE.Vector3(0.36, Math.tan(THREE.MathUtils.degToRad(55)), 1),
   };
-  const d = (dirs[view] ?? dirs.front).clone().normalize();
+  let d = (dirs[view] ?? dirs.front).clone().normalize();
+  if (q.get('az') !== null) {
+    const az = THREE.MathUtils.degToRad(Number(q.get('az')));
+    const el = THREE.MathUtils.degToRad(Number(q.get('el') ?? 8));
+    d = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  }
+  if (q.get('bones') === '1') {
+    const sk = new THREE.SkeletonHelper(inst.root);
+    (sk.material as THREE.LineBasicMaterial).depthTest = false;
+    (sk.material as THREE.LineBasicMaterial).linewidth = 2;
+    sk.renderOrder = 10;
+    scene.add(sk);
+  }
   camera.position.copy(target).addScaledVector(d, view === "game" ? 6.5 : dist);
   camera.lookAt(view === 'game' ? new THREE.Vector3(0, 0.5, 0) : target);
 

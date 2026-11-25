@@ -61,7 +61,7 @@
     "Run": {
       "duration_s": 0.533,
       "loop": true,
-      "speed_mps": 2.692,
+      "speed_mps": 2.731,
       "source": "CMU mocap 09_05",
       "source_frames_120fps": [
         11,
@@ -71,7 +71,6 @@
       "hips_stride_speed_mps": 2.961,
       "seam_mismatch_deg_before_fix": 3.85,
       "tempo": 1.4,
-      "arm_out_deg": 10,
       "retarget_max_error_deg": 0.0,
       "hips_scale": 0.6061,
       "loop_check": {
@@ -86,27 +85,27 @@
         "pops": [],
         "hitches": [
           {
-            "bone": "foot.L",
-            "deg_per_frame_in": 8.194,
-            "deg_per_frame_out": 18.727,
+            "bone": "forearm.R",
+            "deg_per_frame_in": 29.345,
+            "deg_per_frame_out": 20.965,
             "kind": "kink"
           },
           {
             "bone": "hand.R",
-            "deg_per_frame_in": 14.116,
-            "deg_per_frame_out": 8.84,
+            "deg_per_frame_in": 29.345,
+            "deg_per_frame_out": 20.965,
             "kind": "kink"
           },
           {
-            "bone": "thigh.L",
-            "deg_per_frame_in": 10.331,
-            "deg_per_frame_out": 6.839,
+            "bone": "upper_arm.R",
+            "deg_per_frame_in": 23.498,
+            "deg_per_frame_out": 16.973,
             "kind": "kink"
           },
           {
-            "bone": "shin.L",
-            "deg_per_frame_in": 12.392,
-            "deg_per_frame_out": 14.449,
+            "bone": "upper_arm.L",
+            "deg_per_frame_in": 22.34,
+            "deg_per_frame_out": 18.775,
             "kind": "kink"
           },
           {
@@ -125,9 +124,9 @@
         "slide_mean_pct_of_speed": 0.0,
         "before_lock": {
           "stance_frames": 7,
-          "slide_max_mps": 1.05,
-          "slide_mean_mps": 0.595,
-          "slide_mean_pct_of_speed": 22.1
+          "slide_max_mps": 1.018,
+          "slide_mean_mps": 0.539,
+          "slide_mean_pct_of_speed": 19.7
         },
         "mesh_floor": {
           "lowest_over_cycle_m": -0.0,
@@ -139,9 +138,22 @@
         }
       },
       "arms_vs_torso": {
-        "arm_in_torso_frames_before": 9,
+        "arm_in_torso_frames_before": 0,
         "after": 0,
-        "of": 32
+        "of": 32,
+        "style": {
+          "phase_source": "thigh pitch R-L",
+          "abd": 17,
+          "off": 10,
+          "amp": 60,
+          "bend": 92,
+          "bend_var": 20,
+          "inward": 3
+        },
+        "legs": {
+          "max_lateral_fix_m": 0.097,
+          "max_foot_yaw_fix_deg": 23.1
+        }
       }
     },
     "Attack": {
@@ -169,7 +181,7 @@
     }
   },
   "files": {
-    "blend_bytes": 409486,
+    "blend_bytes": 409629,
     "raw_glb_bytes": 516080
   }
 }

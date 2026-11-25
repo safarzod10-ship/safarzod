@@ -3,8 +3,8 @@
  * or WASD / arrow keys. Standalone page for the claude.ai artifact: no WebAssembly (plain GLBs, no
  * Meshopt/KTX2), images decoded through <img> (createImageBitmap disabled before loading).
  *
- * Movement speed = RUN_SPEED of the character x stick tilt; Run plays with the same factor as
- * timeScale, so the planted foot stays still at every speed.
+ * Any stick tilt past the dead zone = full run at the character's foot-matched speed (RUN_SPEED), as
+ * in arena games: a slowed-down Run clip looks like slow motion, not like walking.
  */
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
@@ -13,9 +13,9 @@ import { COURTYARD, hitsCollider, insideCourtyard, type Collider } from './arena
 
 const BASE = './models/';
 const HEROES = [
-  { id: 'USER_CH_Technik', name: 'Техник', speed: 2.32, color: '#f08a24' },
-  { id: 'USER_CH_Sprinter', name: 'Спринтер', speed: 2.69, color: '#c55be0' },
-  { id: 'USER_CH_Tank', name: 'Танк', speed: 1.72, color: '#9aa649' },
+  { id: 'USER_CH_Technik', name: 'Техник', speed: 2.35, color: '#f08a24' },
+  { id: 'USER_CH_Sprinter', name: 'Спринтер', speed: 2.73, color: '#c55be0' },
+  { id: 'USER_CH_Tank', name: 'Танк', speed: 1.75, color: '#9aa649' },
 ] as const;
 const BODY_R = 0.35;
 
@@ -281,8 +281,7 @@ function update(dt: number): void {
   const [ix, iy] = input();
   const mag = Math.min(1, Math.hypot(ix, iy));
   if (mag > DEAD) {
-    // tilt -> 45..100 % of the foot-matched speed; Run plays with the same factor
-    const k = 0.45 + 0.55 * (mag - DEAD) / (1 - DEAD);
+    const k = 1;   // constant run speed; the stick only gives the direction
     const speed = h.def.speed * k;
     const dx = (ix / mag) * speed * dt, dz = (-iy / mag) * speed * dt;   // screen up = north (-Z)
     const p = h.root.position;
@@ -296,7 +295,7 @@ function update(dt: number): void {
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     h.root.rotation.y += diff * Math.min(1, dt * 14);
     const run = h.play('Run');
-    run?.setEffectiveTimeScale(moved ? k : 0.45);
+    run?.setEffectiveTimeScale(moved ? k : 0.6);
     speedEl.textContent = `${(moved ? speed : 0).toFixed(1)} м/с`;
   } else {
     h.play('Idle');
