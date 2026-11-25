@@ -1,13 +1,22 @@
 # Next task
 
-**Blocked on Unity being free** — the FP-01 worker (artist-animated arms) owns Unity and was waiting for the owner's permission to run its proof-sheet render.
+**Waiting on the owner:** approval of a second entrance into the bomb site (map change). Findings 2026-11-25:
+the site has one usable entrance (NW passage through the arch); the "south gate" route has no direct path (map wall at z≈4.2,
+NavGrid path ratio 3–6). With equal bots the defenders win 14–15 of 15 and the bomb is never planted. Proposal for the owner:
+open a passage from the south gate (≈(1,7)) through the wall at z≈4 into the site courtyard, or take this up in MAP-01 (bigger level).
 
-When Unity is free, in this order (one Unity process at a time):
-1. `-executeMethod TownKit.Apply` (places the Tajik kit; read KIT_PLACED / KIT_SKIP lines), then `TownSetup.Preview` / `-mapshots` to check every placed piece looks right and blocks no route.
-2. `python3 -I tools/chars/conv_chars.py` + `CharSetup.BuildChars` (simplified ct1/ct2), check sheets.
-3. `Build.LinuxTown`; graphical run with `-uishots <dir>` (12 screens: menu bots/LAN, 3 settings tabs, loading, HUD freeze/live, buy, scoreboard, pause, match end) — review each screen at 1920x1080 and a 20:9 phone size (2400x1080).
-4. Headless 10-minute match (`-autohost -batchmode -nographics`): count ROUND_END / BOMB_PLANTED / BOMB_DEFUSED / HALFTIME; expect ≥3 plants in 10 rounds, win share 30–70%.
-5. Update FEATURES/BUGS/QUALITY_REPORT/PROGRESS; commit; new APK for the owner (FPS overlay on) to measure on a phone.
+Done today (see PROGRESS.md 2026-11-25): Tajik kit placed, simplified SWAT models, UI screenshots and fixes (1920x1080, 2400x1080),
+credits page, settings persistence test (UI-02 passing), UI-04 passing, FOV/volume settings, bot fixes (frozen carrier, corpses
+blocking doorways, equal skill, staging), -botself / -gfx / -settest / NavProbe / NavGrid tools.
 
-Not yet wired: field-of-view setting (Player.fovBase is fixed at 68), SFX/voice volume split (only master volume is offered in settings).
-Queue after that: MAP-01 (bigger level for 5v5) -> WPN-01 (remaining weapon models) -> BUG-002/005 -> NET-01 two-process LAN test.
+In progress: Android APK build (FPS overlay on) for the owner to measure on a phone.
+
+Next, in order:
+1. Deliver the APK; ask the owner for FPS/frame-time readings from the overlay (PERF-01) — never invent numbers.
+2. After owner approval: second site entrance (TownSetup), re-run `NavGrid.Run` (approach ratios) and a 10-min `-autohost -botself`
+   match: expect ≥3 plants in 10 rounds and a 30–70 % round share; update BUG-003/004.
+3. UI-03: capture kill feed, hit marker and planted-bomb HUD states; UI-01: 4:3 capture.
+4. MAP-01 (bigger level for 5v5) -> WPN-01 (remaining weapon models) -> BUG-002 (TP reload pose) -> BUG-005 visual check -> NET-01.
+
+Test commands: see .claude/skills/unity-build-test. Unattended matches need `-botself` (otherwise the idle host stalls rounds).
+Graphical runs on this CPU renderer need `-gfx 0` (High takes ~80 s per frame).
