@@ -11,6 +11,7 @@
 - [Импорт в игру](docs/IMPORT.md)
 - [Карта арены: размеры, текстуры, проверка краёв](docs/MAP.md)
 - [Бег из motion capture](docs/RUN.md)
+- [Оболочка Mini App: экраны по макету](docs/APP.md)
 
 | Папка | Содержимое |
 |---|---|
@@ -25,6 +26,7 @@
 | `export/raw/` | GLB прямо из Blender + `*.build.json` с измерениями |
 | `dist/` | оптимизированные GLB (Meshopt; `*.ktx2.glb` — с KTX2) + `report.json` |
 | `viewer/` | Vite + TS: тестовая сцена (`index.html`), превью (`preview.html`), скрипты оптимизации, снимков и замеров; `src/play.ts` + `artifact/` — страница «Пробежка по двору» с джойстиком (сборка: `npx vite build --config vite.play.config.ts && node scripts/artifact-assets.mjs`) |
+| `viewer/src/app/`, `viewer/app.html` | оболочка Telegram Mini App по макету (главная, выбор героя, поиск боя, бой) |
 | `review/` | превью с 4 ракурсов, листы поз, игровая камера, `perf.json` |
 | `.claude/skills/` | установленные скиллы (MIT): `blender-image-to-3d`, `blender-*` (EL4CTEO), `threejs-mobile-gltf` |
 
