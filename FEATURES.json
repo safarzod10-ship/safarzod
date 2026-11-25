@@ -236,8 +236,8 @@
     "description": "Settings screens: graphics, controls, sound; saved.",
     "acceptance": "Change, restart, persisted.",
     "test": "PlayerPrefs test.",
-    "status": "in_progress",
-    "evidence": "2026-11-25: graphics/controls/sound tabs captured at both resolutions; FOV and effects/voice sliders added. Missing: change-restart-persist test."
+    "status": "passing",
+    "evidence": "2026-11-25: graphics/controls/sound tabs captured at 1920x1080 and 2400x1080 (docs/ui). Persistence: Linux build, process 1 `-settest set` moved all 6 sliders through the UI and closed the screen (save) -> sens=0.84 fov=69 btn=0.98 vol=0.5 sfx=0.6 voice=0.7; process 2 `-settest check` loaded identical values. FOV applied to the player camera, effects/voice volumes applied per sound."
   },
   {
     "id": "UI-03",

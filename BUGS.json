@@ -22,7 +22,8 @@
   "status": "open",
   "title": "Bots never plant the bomb; rounds end in 20 s by elimination",
   "found": "2026-11-24 headless match",
-  "feature": "GP-02"
+  "feature": "GP-02",
+  "notes": "2026-11-25: root causes found and fixed: (1) bomb carrier froze — Reach() compared the snapped navmesh goal with the site centre (inside crates, >1 m away) and re-requested the path every frame; (2) dead bots kept their NavMeshAgent enabled and corpses blocked the doorway; (3) the idle human host was the last living attacker in unattended tests (-botself switch added). Bots now finish every round (15 rounds in 10 min, halftime and match end at 13 verified). Plants still 0: every round ends by elimination near the only site entrance."
  },
  {
   "id": "BUG-004",
@@ -30,7 +31,8 @@
   "status": "open",
   "title": "Team balance: attackers won 6 of 7 rounds",
   "found": "2026-11-24 headless match",
-  "feature": "GP-02"
+  "feature": "GP-02",
+  "notes": "2026-11-25: with ±0.15 skill spread one team of bots won on both sides (luck); spread reduced to ±0.05. With equal bots the defenders win 14–15 of 15: the site has a single usable entrance (NW passage, attackers die at (-9..-11, 4..5)); the 'south gate' route has no direct path to the site (map wall at z≈4.2, NavGrid ratio 3–6). Needs a second entrance (map change, owner approval) — bot tuning alone cannot balance a one-choke site."
  },
  {
   "id": "BUG-005",
