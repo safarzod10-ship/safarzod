@@ -1,292 +1,292 @@
 [
- {
-  "id": "GP-01",
-  "category": "gameplay",
-  "priority": "P0",
-  "description": "A full bot match runs without errors: freeze, live, end, next round, match end at 13 rounds, score reset.",
-  "acceptance": "Headless match of 10 min shows rounds advancing, correct winner per round, no exceptions in log, match restarts after 13 wins.",
-  "test": "Run headless match 10 min; parse REPORT lines; grep Exception.",
-  "status": "partial",
-  "evidence": "2026-11-24: 4 min headless match, 7 rounds, score 6:1, 0 exceptions. 13-round end not yet observed."
- },
- {
-  "id": "GP-02",
-  "category": "gameplay",
-  "priority": "P0",
-  "description": "Bots move, take cover, fight both teams fairly; attackers carry and plant the bomb; defenders defuse.",
-  "acceptance": "In 10 headless rounds: bomb planted in >=3 rounds, at least one defuse, win rate per team between 30% and 70%.",
-  "test": "Headless match with counters for plants/defuses/wins per team.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: team plan (defender holds, two attacker routes, staged execute, escorts) implemented; compiles; awaiting headless verification."
- },
- {
-  "id": "GP-03",
-  "category": "gameplay",
-  "priority": "P0",
-  "description": "Round never ends prematurely or with a wrong winner (time-out = defenders win; bomb exploded = attackers; defused = defenders; elimination).",
-  "acceptance": "Unit-style play test of each end condition logged with expected winner.",
-  "test": "Scripted test scenarios in a test scene.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "GP-04",
-  "category": "gameplay",
-  "priority": "P1",
-  "description": "Economy: start money, kill rewards by weapon, win/loss income, max money, buy time and buy menu restrictions.",
-  "acceptance": "Money values in logs follow the table for 5 rounds.",
-  "test": "Headless match log check.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: loss-streak economy, plant bonus, halftime swap implemented; compiles; awaiting headless verification."
- },
- {
-  "id": "GP-05",
-  "category": "gameplay",
-  "priority": "P1",
-  "description": "Damage model: head/body multipliers, armour, distance falloff, wall penetration none, friendly fire off.",
-  "acceptance": "Automated test fires at dummies and checks HP results.",
-  "test": "Edit-mode/Play-mode test.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "CTL-01",
-  "category": "controls",
-  "priority": "P0",
-  "description": "Touch controls: movement stick, look, fire, jump, crouch, reload, switch, scope, use, buy; responsive (<1 frame input latency in code), multi-touch safe.",
-  "acceptance": "Manual test on phone by owner + automated input simulation in play mode.",
-  "test": "Owner report; play-mode test.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "CTL-02",
-  "category": "controls",
-  "priority": "P1",
-  "description": "Look sensitivity, invert, button layout size and FOV are saved and restored between sessions.",
-  "acceptance": "Change settings, restart app, values persist.",
-  "test": "PlayerPrefs round-trip test.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "FP-01",
-  "category": "animation",
-  "priority": "P0",
-  "description": "First-person view: weapon at lower right, barrel forward, both hands on the weapon, correct for knife, pistols, rifles, sniper.",
-  "acceptance": "Proof sheet of all prepared weapons idle/fire/reload/switch reviewed and approved; no clipping into camera.",
-  "test": "CharLab.SheetFpPacks + in-game -fpshots + visual review.",
-  "status": "failing",
-  "evidence": "2026-11-25: procedural IK arms replaced by four artist-animated CC-BY packs (Assets/FpArms: AK pack for rifles/SMGs/shotguns/MG, pistol pack, sniper pack for scout/awp/g3, knife pack for knife+grenade), played by FpView through a PlayableGraph (idle/walk, fire restart per shot, reload scaled to weapon reload time, draw), on the view-model camera. Proof: CharLab.SheetFpPacks -> fp_packs.png + 24 tiles (idle, fire, reload 25/50/75, draw per family); in-game Linux build with -autohost -fpshots: 24 frames (knife, usp, ak, p90, awp at draw/idle/fire/reload), 0 exceptions; headless 240 s match 0 exceptions. Status stays failing until the owner reviews the sheet."
- },
- {
-  "id": "FP-02",
-  "category": "animation",
-  "priority": "P0",
-  "description": "First-person reload, switch, fire recoil, sprint and idle sway animations.",
-  "acceptance": "Proof sheet frames for each phase; plays in game screenshots.",
-  "test": "CharLab.SheetFp + in-game shots.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "TP-01",
-  "category": "animation",
-  "priority": "P0",
-  "description": "Third-person: 4 characters animate idle/walk/run/crouch/jump/fire/reload/death with hands locked on the weapon.",
-  "acceptance": "Proof sheets for all 4 characters reviewed; no floating hands; feet not below ground >2 cm.",
-  "test": "CharLab.SheetStates / SheetHold.",
-  "status": "partial",
-  "evidence": "Sheets a_states_ak, b_hold_* reviewed 2026-11-24; reload pose rifle points up; feet dip up to 3.5 cm."
- },
- {
-  "id": "TP-02",
-  "category": "animation",
-  "priority": "P1",
-  "description": "Deaths do not slide through walls; body stays where it fell.",
-  "acceptance": "In-game test: kill next to wall, body does not penetrate.",
-  "test": "Play test + screenshot.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "WPN-01",
-  "category": "weapons",
-  "priority": "P0",
-  "description": "All 24 weapons have their own models with grip markers (no stand-ins).",
-  "acceptance": "Every Weapons.All key has Resources/Weapons/<key>.prefab with GripR/GripL/Muzzle.",
-  "test": "Editor test enumerating prefabs.",
-  "status": "partial",
-  "evidence": "5 of 24 prepared (knife, usp, deagle, ak, awp)."
- },
- {
-  "id": "WPN-02",
-  "category": "weapons",
-  "priority": "P1",
-  "description": "Muzzle flash, tracer from the real muzzle, shell ejection, impact decals per surface.",
-  "acceptance": "In-game screenshots while firing.",
-  "test": "Visual check.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "SND-01",
-  "category": "audio",
-  "priority": "P0",
-  "description": "Real recorded sounds for shots per weapon family, reload, footsteps, impacts, voices, bomb; spatialised 3D audio.",
-  "acceptance": "All sounds load (no silent events in log); credits complete.",
-  "test": "Headless check that every Fx.Sound name resolves to a clip.",
-  "status": "partial",
-  "evidence": "73 recordings + credits; resolution check not automated yet."
- },
- {
-  "id": "SND-02",
-  "category": "audio",
-  "priority": "P1",
-  "description": "Audio mixer: master/sfx/voice/ui volumes in settings, footsteps of enemies audible, distance attenuation tuned.",
-  "acceptance": "Settings change volumes; values saved.",
-  "test": "Play-mode test.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "MAP-01",
-  "category": "environment",
-  "priority": "P0",
-  "description": "Level is large enough for 5v5 (two or three lanes, one bomb site, rotations) with no holes, no void visible, no stuck spots.",
-  "acceptance": "Nav-mesh reaches all intended areas; bots never stuck >5 s in a 10-min match; screenshot review of all areas.",
-  "test": "Headless stuck detector + screenshots.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "MAP-02",
-  "category": "environment",
-  "priority": "P0",
-  "description": "Tajik architecture identity: ornamented carved wooden doors and columns (Pamiri/ Khujand style), painted ceilings in an aivan, ornament tiles, bazaar stalls, mountains backdrop.",
-  "acceptance": "Screenshot review: at least 6 distinct Tajik features visible.",
-  "test": "Visual review.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: 8 original kit pieces (tools/tjkit, Assets/Town/Kit, docs/kit/kit_sheet.png); TownKit.Apply placement tool written; in-level placement not yet run."
- },
- {
-  "id": "MAP-03",
-  "category": "environment",
-  "priority": "P1",
-  "description": "Graffiti SAFARZOD and '11 A БА ПЕШ.' clearly readable.",
-  "acceptance": "Screenshot from 8 m readable.",
-  "test": "Visual review.",
-  "status": "passing",
-  "evidence": "Town shots prev_01 (east lane wall) 2026-11-24."
- },
- {
-  "id": "GFX-01",
-  "category": "graphics",
-  "priority": "P0",
-  "description": "Phone-ready rendering: quality presets Low/Medium/High; shadows, SSAO, post-processing per preset; LOD groups; texture sizes capped.",
-  "acceptance": "3 presets switch at runtime; settings saved; triangle count per frame < 300k on High.",
-  "test": "Play-mode test + frame stats log.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: GameSettings presets Low/Medium/High (render scale, MSAA, shadows, SSAO, HDR, post, texture mip limit, LOD bias, 60 fps cap) + PlayerPrefs; compiles; runtime switch not yet verified; settings UI pending."
- },
- {
-  "id": "GFX-02",
-  "category": "graphics",
-  "priority": "P1",
-  "description": "Lighting: baked or probe-based ambient, reflection probes, sun matching sky, contact shadows via SSAO.",
-  "acceptance": "Screenshot review.",
-  "test": "Visual review.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "PERF-01",
-  "category": "performance",
-  "priority": "P0",
-  "description": "Stable 60 FPS on a mid-range phone (target: Snapdragon 7-series / Mali-G68 class) on Medium preset; 30 FPS on Low-end on Low.",
-  "acceptance": "On-device FPS overlay readings reported by owner; CPU main-thread time measured in headless run <8 ms.",
-  "test": "On-device measurement + headless profiling.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: on-screen FPS + worst frame overlay (FpsOverlay) for on-device measurement; PERF log lines in batch/dev builds."
- },
- {
-  "id": "PERF-02",
-  "category": "performance",
-  "priority": "P1",
-  "description": "Character models <= 15k triangles each with LODs; draw calls < 250 on Medium.",
-  "acceptance": "Editor report of mesh stats.",
-  "test": "Editor test.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: ct1 106k->32k, ct2 72k->19k source (gltfpack -si, seams preserved; aggressive mode rejected: holes on legs). Rebuild of prefabs pending."
- },
- {
-  "id": "UI-01",
-  "category": "ui",
-  "priority": "P0",
-  "description": "Designed main menu with play vs bots, LAN host/join, settings, credits; consistent typography and palette.",
-  "acceptance": "Screenshots at 16:9, 19.5:9 and 4:3 reviewed.",
-  "test": "Visual review.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: Hud.cs/UiKit.cs rewritten (menu over live map, bots/Wi-Fi pages); compile-checked, screenshots pending (-uishots)."
- },
- {
-  "id": "UI-02",
-  "category": "ui",
-  "priority": "P0",
-  "description": "Settings screens: graphics, controls, sound; saved.",
-  "acceptance": "Change, restart, persisted.",
-  "test": "PlayerPrefs test.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: settings modal with graphics/controls/sound tabs wired to GameSettings (preset, post-fx, FPS, sensitivity, invert Y, button size, master volume); screenshots pending."
- },
- {
-  "id": "UI-03",
-  "category": "ui",
-  "priority": "P0",
-  "description": "HUD: health, armour, ammo, money, timer, score, kill feed, crosshair, hit marker, bomb indicator; readable on phone.",
-  "acceptance": "Screenshot review on 2 resolutions.",
-  "test": "Visual review.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: new HUD (health/armour bars, ammo, money, timer, score + alive pips, kill feed with team colours, crosshair, hit marker, damage vignette, scope mask); screenshots pending."
- },
- {
-  "id": "UI-04",
-  "category": "ui",
-  "priority": "P1",
-  "description": "Loading screen, pause menu, scoreboard (hold button), match end screen with MVP.",
-  "acceptance": "Screenshots of each.",
-  "test": "Visual review.",
-  "status": "in_progress",
-  "evidence": "2026-11-24: loading screen, pause, scoreboard (Tab / СЧЁТ), match end with MVP built; screenshots pending."
- },
- {
-  "id": "NET-01",
-  "category": "network",
-  "priority": "P1",
-  "description": "LAN play: host + client join by discovery or IP; both see each other move, shoot, die; rounds sync.",
-  "acceptance": "Two Linux players on one machine run a match; client REPORT shows same score as host.",
-  "test": "Two-process test.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "QA-01",
-  "category": "qa",
-  "priority": "P0",
-  "description": "Zero errors/exceptions in logs during a 10-minute match.",
-  "acceptance": "grep counts 0.",
-  "test": "Headless match.",
-  "status": "failing",
-  "evidence": ""
- },
- {
-  "id": "LIC-01",
-  "category": "legal",
-  "priority": "P0",
-  "description": "ASSET_LICENSES.md lists every third-party asset with author, licence, URL; no NC/ND assets.",
-  "acceptance": "Script compares Assets folders against the list.",
-  "test": "Licence audit script.",
-  "status": "failing",
-  "evidence": ""
- }
+  {
+    "id": "GP-01",
+    "category": "gameplay",
+    "priority": "P0",
+    "description": "A full bot match runs without errors: freeze, live, end, next round, match end at 13 rounds, score reset.",
+    "acceptance": "Headless match of 10 min shows rounds advancing, correct winner per round, no exceptions in log, match restarts after 13 wins.",
+    "test": "Run headless match 10 min; parse REPORT lines; grep Exception.",
+    "status": "partial",
+    "evidence": "2026-11-24: 4 min headless match, 7 rounds, score 6:1, 0 exceptions. 13-round end not yet observed."
+  },
+  {
+    "id": "GP-02",
+    "category": "gameplay",
+    "priority": "P0",
+    "description": "Bots move, take cover, fight both teams fairly; attackers carry and plant the bomb; defenders defuse.",
+    "acceptance": "In 10 headless rounds: bomb planted in >=3 rounds, at least one defuse, win rate per team between 30% and 70%.",
+    "test": "Headless match with counters for plants/defuses/wins per team.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: team plan (defender holds, two attacker routes, staged execute, escorts) implemented; compiles; awaiting headless verification."
+  },
+  {
+    "id": "GP-03",
+    "category": "gameplay",
+    "priority": "P0",
+    "description": "Round never ends prematurely or with a wrong winner (time-out = defenders win; bomb exploded = attackers; defused = defenders; elimination).",
+    "acceptance": "Unit-style play test of each end condition logged with expected winner.",
+    "test": "Scripted test scenarios in a test scene.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "GP-04",
+    "category": "gameplay",
+    "priority": "P1",
+    "description": "Economy: start money, kill rewards by weapon, win/loss income, max money, buy time and buy menu restrictions.",
+    "acceptance": "Money values in logs follow the table for 5 rounds.",
+    "test": "Headless match log check.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: loss-streak economy, plant bonus, halftime swap implemented; compiles; awaiting headless verification."
+  },
+  {
+    "id": "GP-05",
+    "category": "gameplay",
+    "priority": "P1",
+    "description": "Damage model: head/body multipliers, armour, distance falloff, wall penetration none, friendly fire off.",
+    "acceptance": "Automated test fires at dummies and checks HP results.",
+    "test": "Edit-mode/Play-mode test.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "CTL-01",
+    "category": "controls",
+    "priority": "P0",
+    "description": "Touch controls: movement stick, look, fire, jump, crouch, reload, switch, scope, use, buy; responsive (<1 frame input latency in code), multi-touch safe.",
+    "acceptance": "Manual test on phone by owner + automated input simulation in play mode.",
+    "test": "Owner report; play-mode test.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "CTL-02",
+    "category": "controls",
+    "priority": "P1",
+    "description": "Look sensitivity, invert, button layout size and FOV are saved and restored between sessions.",
+    "acceptance": "Change settings, restart app, values persist.",
+    "test": "PlayerPrefs round-trip test.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "FP-01",
+    "category": "animation",
+    "priority": "P0",
+    "description": "First-person view: weapon at lower right, barrel forward, both hands on the weapon, correct for knife, pistols, rifles, sniper.",
+    "acceptance": "Proof sheet of all prepared weapons idle/fire/reload/switch reviewed and approved; no clipping into camera.",
+    "test": "CharLab.SheetFpPacks + in-game -fpshots + visual review.",
+    "status": "failing",
+    "evidence": "2026-11-25: procedural IK arms replaced by four artist-animated CC-BY packs (Assets/FpArms: AK pack for rifles/SMGs/shotguns/MG, pistol pack, sniper pack for scout/awp/g3, knife pack for knife+grenade), played by FpView through a PlayableGraph (idle/walk, fire restart per shot, reload scaled to weapon reload time, draw), on the view-model camera. Proof: CharLab.SheetFpPacks -> fp_packs.png + 24 tiles (idle, fire, reload 25/50/75, draw per family); in-game Linux build with -autohost -fpshots: 24 frames (knife, usp, ak, p90, awp at draw/idle/fire/reload), 0 exceptions; headless 240 s match 0 exceptions. Status stays failing until the owner reviews the sheet."
+  },
+  {
+    "id": "FP-02",
+    "category": "animation",
+    "priority": "P0",
+    "description": "First-person reload, switch, fire recoil, sprint and idle sway animations.",
+    "acceptance": "Proof sheet frames for each phase; plays in game screenshots.",
+    "test": "CharLab.SheetFp + in-game shots.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "TP-01",
+    "category": "animation",
+    "priority": "P0",
+    "description": "Third-person: 4 characters animate idle/walk/run/crouch/jump/fire/reload/death with hands locked on the weapon.",
+    "acceptance": "Proof sheets for all 4 characters reviewed; no floating hands; feet not below ground >2 cm.",
+    "test": "CharLab.SheetStates / SheetHold.",
+    "status": "partial",
+    "evidence": "Sheets a_states_ak, b_hold_* reviewed 2026-11-24; reload pose rifle points up; feet dip up to 3.5 cm."
+  },
+  {
+    "id": "TP-02",
+    "category": "animation",
+    "priority": "P1",
+    "description": "Deaths do not slide through walls; body stays where it fell.",
+    "acceptance": "In-game test: kill next to wall, body does not penetrate.",
+    "test": "Play test + screenshot.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "WPN-01",
+    "category": "weapons",
+    "priority": "P0",
+    "description": "All 24 weapons have their own models with grip markers (no stand-ins).",
+    "acceptance": "Every Weapons.All key has Resources/Weapons/<key>.prefab with GripR/GripL/Muzzle.",
+    "test": "Editor test enumerating prefabs.",
+    "status": "partial",
+    "evidence": "5 of 24 prepared (knife, usp, deagle, ak, awp)."
+  },
+  {
+    "id": "WPN-02",
+    "category": "weapons",
+    "priority": "P1",
+    "description": "Muzzle flash, tracer from the real muzzle, shell ejection, impact decals per surface.",
+    "acceptance": "In-game screenshots while firing.",
+    "test": "Visual check.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "SND-01",
+    "category": "audio",
+    "priority": "P0",
+    "description": "Real recorded sounds for shots per weapon family, reload, footsteps, impacts, voices, bomb; spatialised 3D audio.",
+    "acceptance": "All sounds load (no silent events in log); credits complete.",
+    "test": "Headless check that every Fx.Sound name resolves to a clip.",
+    "status": "partial",
+    "evidence": "73 recordings + credits; resolution check not automated yet."
+  },
+  {
+    "id": "SND-02",
+    "category": "audio",
+    "priority": "P1",
+    "description": "Audio mixer: master/sfx/voice/ui volumes in settings, footsteps of enemies audible, distance attenuation tuned.",
+    "acceptance": "Settings change volumes; values saved.",
+    "test": "Play-mode test.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "MAP-01",
+    "category": "environment",
+    "priority": "P0",
+    "description": "Level is large enough for 5v5 (two or three lanes, one bomb site, rotations) with no holes, no void visible, no stuck spots.",
+    "acceptance": "Nav-mesh reaches all intended areas; bots never stuck >5 s in a 10-min match; screenshot review of all areas.",
+    "test": "Headless stuck detector + screenshots.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "MAP-02",
+    "category": "environment",
+    "priority": "P0",
+    "description": "Tajik architecture identity: ornamented carved wooden doors and columns (Pamiri/ Khujand style), painted ceilings in an aivan, ornament tiles, bazaar stalls, mountains backdrop.",
+    "acceptance": "Screenshot review: at least 6 distinct Tajik features visible.",
+    "test": "Visual review.",
+    "status": "in_progress",
+    "evidence": "2026-11-25: TownKit.Apply placed 13 kit pieces in Town.unity (3 carved doors, 4 panjara windows, 2 majolica panels, 2 tapchans, tandoor, grape trellis), 0 skipped; street-level renders docs/kit/kit_on_map.jpg show 6 distinct features (carved doors, lattice windows, majolica tiles, tapchan, tandoor, trellis). Aivan columns/section not placed yet; waiting for owner review before marking passing."
+  },
+  {
+    "id": "MAP-03",
+    "category": "environment",
+    "priority": "P1",
+    "description": "Graffiti SAFARZOD and '11 A БА ПЕШ.' clearly readable.",
+    "acceptance": "Screenshot from 8 m readable.",
+    "test": "Visual review.",
+    "status": "passing",
+    "evidence": "Town shots prev_01 (east lane wall) 2026-11-24."
+  },
+  {
+    "id": "GFX-01",
+    "category": "graphics",
+    "priority": "P0",
+    "description": "Phone-ready rendering: quality presets Low/Medium/High; shadows, SSAO, post-processing per preset; LOD groups; texture sizes capped.",
+    "acceptance": "3 presets switch at runtime; settings saved; triangle count per frame < 300k on High.",
+    "test": "Play-mode test + frame stats log.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: GameSettings presets Low/Medium/High (render scale, MSAA, shadows, SSAO, HDR, post, texture mip limit, LOD bias, 60 fps cap) + PlayerPrefs; compiles; runtime switch not yet verified; settings UI pending."
+  },
+  {
+    "id": "GFX-02",
+    "category": "graphics",
+    "priority": "P1",
+    "description": "Lighting: baked or probe-based ambient, reflection probes, sun matching sky, contact shadows via SSAO.",
+    "acceptance": "Screenshot review.",
+    "test": "Visual review.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "PERF-01",
+    "category": "performance",
+    "priority": "P0",
+    "description": "Stable 60 FPS on a mid-range phone (target: Snapdragon 7-series / Mali-G68 class) on Medium preset; 30 FPS on Low-end on Low.",
+    "acceptance": "On-device FPS overlay readings reported by owner; CPU main-thread time measured in headless run <8 ms.",
+    "test": "On-device measurement + headless profiling.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: on-screen FPS + worst frame overlay (FpsOverlay) for on-device measurement; PERF log lines in batch/dev builds."
+  },
+  {
+    "id": "PERF-02",
+    "category": "performance",
+    "priority": "P1",
+    "description": "Character models <= 15k triangles each with LODs; draw calls < 250 on Medium.",
+    "acceptance": "Editor report of mesh stats.",
+    "test": "Editor test.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: ct1 106k->32k, ct2 72k->19k source (gltfpack -si, seams preserved; aggressive mode rejected: holes on legs). Rebuild of prefabs pending."
+  },
+  {
+    "id": "UI-01",
+    "category": "ui",
+    "priority": "P0",
+    "description": "Designed main menu with play vs bots, LAN host/join, settings, credits; consistent typography and palette.",
+    "acceptance": "Screenshots at 16:9, 19.5:9 and 4:3 reviewed.",
+    "test": "Visual review.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: Hud.cs/UiKit.cs rewritten (menu over live map, bots/Wi-Fi pages); compile-checked, screenshots pending (-uishots)."
+  },
+  {
+    "id": "UI-02",
+    "category": "ui",
+    "priority": "P0",
+    "description": "Settings screens: graphics, controls, sound; saved.",
+    "acceptance": "Change, restart, persisted.",
+    "test": "PlayerPrefs test.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: settings modal with graphics/controls/sound tabs wired to GameSettings (preset, post-fx, FPS, sensitivity, invert Y, button size, master volume); screenshots pending."
+  },
+  {
+    "id": "UI-03",
+    "category": "ui",
+    "priority": "P0",
+    "description": "HUD: health, armour, ammo, money, timer, score, kill feed, crosshair, hit marker, bomb indicator; readable on phone.",
+    "acceptance": "Screenshot review on 2 resolutions.",
+    "test": "Visual review.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: new HUD (health/armour bars, ammo, money, timer, score + alive pips, kill feed with team colours, crosshair, hit marker, damage vignette, scope mask); screenshots pending."
+  },
+  {
+    "id": "UI-04",
+    "category": "ui",
+    "priority": "P1",
+    "description": "Loading screen, pause menu, scoreboard (hold button), match end screen with MVP.",
+    "acceptance": "Screenshots of each.",
+    "test": "Visual review.",
+    "status": "in_progress",
+    "evidence": "2026-11-24: loading screen, pause, scoreboard (Tab / СЧЁТ), match end with MVP built; screenshots pending."
+  },
+  {
+    "id": "NET-01",
+    "category": "network",
+    "priority": "P1",
+    "description": "LAN play: host + client join by discovery or IP; both see each other move, shoot, die; rounds sync.",
+    "acceptance": "Two Linux players on one machine run a match; client REPORT shows same score as host.",
+    "test": "Two-process test.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "QA-01",
+    "category": "qa",
+    "priority": "P0",
+    "description": "Zero errors/exceptions in logs during a 10-minute match.",
+    "acceptance": "grep counts 0.",
+    "test": "Headless match.",
+    "status": "failing",
+    "evidence": ""
+  },
+  {
+    "id": "LIC-01",
+    "category": "legal",
+    "priority": "P0",
+    "description": "ASSET_LICENSES.md lists every third-party asset with author, licence, URL; no NC/ND assets.",
+    "acceptance": "Script compares Assets folders against the list.",
+    "test": "Licence audit script.",
+    "status": "failing",
+    "evidence": ""
+  }
 ]

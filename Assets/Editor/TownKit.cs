@@ -25,7 +25,7 @@ public static class TownKit
         // carved doors set into house fronts
         new Place("door_khujand", Mount.Wall, new Vector3(-20.5f, 0, -8.5f), new Vector3(1, 0, 0)),
         new Place("door_khujand", Mount.Wall, new Vector3(5.5f, 0, 17.6f), new Vector3(0, 0, -1)),
-        new Place("door_khujand", Mount.Wall, new Vector3(-15.5f, 0, -13.0f), new Vector3(0, 0, 1)),
+        new Place("door_khujand", Mount.Wall, new Vector3(-17.0f, 0, -13.0f), new Vector3(0, 0, 1)),   // covers the plain door of the mesh
         // lattice windows
         new Place("window_panjara", Mount.Wall, new Vector3(-20.5f, 0, -5.5f), new Vector3(1, 0, 0), 0.95f),
         new Place("window_panjara", Mount.Wall, new Vector3(-20.5f, 0, 11.0f), new Vector3(1, 0, 0), 0.95f),
@@ -34,7 +34,6 @@ public static class TownKit
         // majolica panels
         new Place("tile_panel_majolica", Mount.Wall, new Vector3(-20.5f, 0, 6.5f), new Vector3(1, 0, 0), 0.7f),
         new Place("tile_panel_majolica", Mount.Wall, new Vector3(11.5f, 0, 17.6f), new Vector3(0, 0, -1), 0.7f),
-        new Place("tile_panel_majolica", Mount.Wall, new Vector3(1.0f, 0, 21.5f), new Vector3(-1, 0, 0), 0.7f),
         // floor props: courtyard life (checked for free space and kept away from routes)
         new Place("tapchan", Mount.Floor, new Vector3(-18.6f, 0, 2.2f), new Vector3(1, 0, 0)),
         new Place("tandoor", Mount.Floor, new Vector3(-18.8f, 0, 13.0f), new Vector3(1, 0, 0)),
