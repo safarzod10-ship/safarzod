@@ -1,0 +1,113 @@
+<title>Пробежка по двору</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700&display=swap">
+<style>
+  /* Full-screen game view: canvas fills the page, controls float over it at the screen edges.
+     Single dark look taken from the map (asphalt purple-grey) with the selected hero's colour as accent. */
+  :root {
+    --ground: #5d5560;
+    --panel: rgba(28, 24, 32, 0.72);
+    --panel-edge: rgba(255, 255, 255, 0.14);
+    --text: #f4efe8;
+    --muted: #c9c0cf;
+    --hero: #f08a24;
+    --font-ui: "Rubik", "Segoe UI", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+
+  .hud-top {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: center;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    pointer-events: none;
+  }
+  #pick {
+    display: flex; gap: 4px; padding: 4px;
+    background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 999px;
+    pointer-events: auto;
+  }
+  #pick button {
+    font: 500 15px/1 var(--font-ui);
+    color: var(--muted); background: transparent;
+    border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer;
+  }
+  #pick button[aria-pressed="true"] { background: var(--hero); color: #1b1520; font-weight: 700; }
+  #pick button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  #stick {
+    position: fixed;
+    left: calc(max(16px, env(safe-area-inset-left, 0px)) + 12px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+    width: 132px; height: 132px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(28, 24, 32, 0.25) 0 55%, rgba(28, 24, 32, 0.55) 56% 100%);
+    border: 2px solid var(--panel-edge);
+    display: grid; place-items: center;
+    touch-action: none; cursor: grab;
+  }
+  #stick.on { border-color: var(--hero); cursor: grabbing; }
+  #knob {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--hero);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 -4px 0 rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+  }
+  #stick.on #knob { transition: none; }
+  #stick:not(.on) #knob { transition: transform 0.12s ease-out; }
+
+  .hud-br {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+    display: grid; justify-items: end; gap: 6px;
+    pointer-events: none;
+  }
+  #speed {
+    font: 700 22px/1 var(--font-ui); font-variant-numeric: tabular-nums;
+    background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px; padding: 8px 12px;
+  }
+  .keys { font-size: 13px; color: var(--muted); display: none; background: var(--panel); border-radius: 8px; padding: 5px 9px; }
+  @media (hover: hover) and (pointer: fine) { .keys { display: block; } }
+
+  #loading {
+    position: fixed; inset: 0; display: grid; place-content: center; gap: 14px; text-align: center;
+    background: var(--ground);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  #loading p { margin: 0; font-size: 15px; color: var(--muted); max-width: 32ch; }
+  .bar { width: min(260px, 70vw); height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+  #loadbar { height: 100%; width: 0; background: var(--hero); transition: width 0.2s; }
+  @media (prefers-reduced-motion: reduce) { #loadbar, #stick:not(.on) #knob { transition: none; } }
+</style>
+
+<div id="stage" aria-label="Двор: персонаж на карте арены"></div>
+
+<div class="hud-top"><div id="pick" role="group" aria-label="Персонаж"></div></div>
+
+<div id="stick" role="application" aria-label="Джойстик: тяните, чтобы бежать"><div id="knob"></div></div>
+
+<div class="hud-br">
+  <div id="speed">0.0 м/с</div>
+  <div class="keys">WASD или стрелки · 1 2 3 — персонаж</div>
+</div>
+
+<div id="loading">
+  <div class="bar"><div id="loadbar"></div></div>
+  <p>Загружаю двор и персонажей, около 3 МБ</p>
+</div>
+
+<script type="module" src="play.js"></script>

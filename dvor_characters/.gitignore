@@ -8,3 +8,7 @@ review/map/edge_*.png
 review/map/void_*.png
 review/map/*.png
 map/source/*.blend1
+
+# artifact build outputs (npx vite build --config vite.play.config.ts && node scripts/artifact-assets.mjs)
+viewer/artifact/play.js
+viewer/artifact/models/

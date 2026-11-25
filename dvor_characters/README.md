@@ -24,7 +24,7 @@
 | `textures/` | текстуры 1024 (`USER_*`) и атласы 512 процедурных моделей |
 | `export/raw/` | GLB прямо из Blender + `*.build.json` с измерениями |
 | `dist/` | оптимизированные GLB (Meshopt; `*.ktx2.glb` — с KTX2) + `report.json` |
-| `viewer/` | Vite + TS: тестовая сцена (`index.html`), превью (`preview.html`), скрипты оптимизации, снимков и замеров |
+| `viewer/` | Vite + TS: тестовая сцена (`index.html`), превью (`preview.html`), скрипты оптимизации, снимков и замеров; `src/play.ts` + `artifact/` — страница «Пробежка по двору» с джойстиком (сборка: `npx vite build --config vite.play.config.ts && node scripts/artifact-assets.mjs`) |
 | `review/` | превью с 4 ракурсов, листы поз, игровая камера, `perf.json` |
 | `.claude/skills/` | установленные скиллы (MIT): `blender-image-to-3d`, `blender-*` (EL4CTEO), `threejs-mobile-gltf` |
 
