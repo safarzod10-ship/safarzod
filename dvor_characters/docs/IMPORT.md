@@ -42,7 +42,7 @@ hero.update(dt);
 Особенности:
 - Несколько одинаковых персонажей — это несколько `new CharacterInstance(asset)`. Геометрия и текстура общие, скелеты свои (`SkeletonUtils.clone`).
 - Одноразовые клипы (Attack, Ability, Hit, Defeat) останавливаются на последнем кадре и вызывают `onFinished`.
-- Анимации на месте: перемещение задаёт игровой код. Скорость бега для синхронизации шагов — в `export/raw/*.build.json` или в `speed_mps` экшена Run: Техник 4,5 м/с, Танк 3,8 м/с, Спринтер 5,6 м/с.
+- Анимации на месте: перемещение задаёт игровой код. Скорость, при которой стопа не скользит, — `RUN_SPEED` в `characters.ts`: Техник 2,32 м/с, Спринтер 2,69 м/с, Танк 1,72 м/с. Для другой скорости: `hero.play('Run', 0.15, speed / RUN_SPEED[id])` — шаги станут чаще ([RUN.md](RUN.md)).
 - Время событий:
   - момент удара (`event_hit_s`): Техник 0,30 с, Танк 0,50 с, Спринтер 0,23 с;
   - момент способности (`event_cast_s`): Техник 0,40 с, Танк 0,20 с, Спринтер 0,30 с.
@@ -83,6 +83,7 @@ cd dvor_characters/viewer && npm ci          # three, glTF-Transform 4.5.1, mesh
 
 # персонаж из модели заказчика
 /opt/dvor-venv/bin/python blender/user/build_user_character.py -- --char technik   # sprinter | tank
+/opt/dvor-venv/bin/python blender/user/mocap_run.py --char technik                # Run из mocap (после build)
 cd viewer && node scripts/optimize.mjs USER_CH_Technik && node scripts/sync-assets.mjs
 
 # просмотр и проверка

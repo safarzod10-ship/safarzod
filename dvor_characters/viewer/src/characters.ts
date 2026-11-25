@@ -11,6 +11,15 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
 export const CLIP_NAMES = ['Idle', 'Run', 'Attack', 'Ability', 'Hit', 'Defeat', 'Victory'] as const;
 export type ClipName = (typeof CLIP_NAMES)[number];
+/**
+ * Ground speed (m/s) at which each character's Run clip keeps the planted foot still (measured in
+ * Blender, export/raw/*.build.json -> clips.Run.speed_mps). To move at another speed without foot
+ * sliding, play Run with timeScale = speed / RUN_SPEED[id] (quicker steps).
+ */
+export const RUN_SPEED: Readonly<Record<string, number>> = {
+  USER_CH_Technik: 2.32, USER_CH_Sprinter: 2.69, USER_CH_Tank: 1.72,   // CMU mocap runs
+  CH_Technik: 4.5, CH_Sprinter: 5.6, CH_Tank: 3.8,                      // procedural set (approx.)
+};
 export const LOOPING: ReadonlySet<ClipName> = new Set<ClipName>(['Idle', 'Run', 'Victory']);
 export const CHARACTER_IDS = ['CH_Technik', 'CH_Tank', 'CH_Sprinter'] as const;
 export type CharacterId = (typeof CHARACTER_IDS)[number];
@@ -74,7 +83,18 @@ export class CharacterLibrary {
         .then((gltf) => {
           const clips = new Map<ClipName, THREE.AnimationClip>();
           for (const c of gltf.animations) {
-            if ((CLIP_NAMES as readonly string[]).includes(c.name)) clips.set(c.name as ClipName, c);
+            if (!(CLIP_NAMES as readonly string[]).includes(c.name)) continue;
+            // Blender keys start at frame 1 (t = 1/30 s). Shift every clip to t = 0, otherwise a loop
+            // holds its first pose for one extra frame at each repeat (a visible hitch in Run).
+            const t0 = Math.min(...c.tracks.map((t) => t.times[0]));
+            if (t0 > 0) {
+              for (const t of c.tracks) {
+                t.times = t.times.slice();   // GLTFLoader shares time arrays between tracks/clips
+                t.shift(-t0);
+              }
+              c.resetDuration();
+            }
+            clips.set(c.name as ClipName, c);
           }
           for (const n of CLIP_NAMES) if (!clips.has(n)) console.warn(`[dvor] ${id}: clip ${n} missing`);
           return { id, gltf, clips, bytes, loadMs: performance.now() - t0, usedKtx2: this.useKtx2 };

@@ -23,6 +23,7 @@ import {
   CLIP_NAMES,
   CharacterInstance,
   CharacterLibrary,
+  RUN_SPEED,
   type ClipName,
 } from './characters';
 import { COURTYARD, hitsCollider, insideCourtyard, loadArena, type Collider } from './arena';
@@ -154,7 +155,6 @@ const lib = new CharacterLibrary(renderer, {
   textures: (q.get('tex') as 'auto' | 'png' | 'ktx2') ?? 'auto',
 });
 
-const SPEED: Record<string, number> = { CH_Technik: 4.5, CH_Tank: 3.8, CH_Sprinter: 5.6 };
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const probe = new THREE.Vector3();
 function onScreen(x: number, z: number): boolean {
@@ -183,7 +183,7 @@ function pickTarget(a: Actor): void {
     if (CAM === 'follow' || onScreen(a.target.x, a.target.z)) break;
   }
   a.state = 'move';
-  a.inst.play('Run', 0.15);
+  a.inst.play('Run', 0.15, a.speed / RUN_SPEED[a.inst.asset.id]);
 }
 
 function doAction(a: Actor, clip?: ClipName): void {
@@ -222,7 +222,7 @@ async function spawn(): Promise<void> {
     shadow.position.y = 0.01;
     scene.add(shadow);
     const actor: Actor = {
-      inst, shadow, target: new THREE.Vector3(), speed: SPEED[id.replace('USER_', '')], state: 'move', timer: 0,
+      inst, shadow, target: new THREE.Vector3(), speed: RUN_SPEED[id], state: 'move', timer: 0,
     };
     inst.onFinished((name) => {
       if (name === 'Defeat') return; // stays down until its timer runs out

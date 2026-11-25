@@ -50,7 +50,64 @@
     "Run": {
       "duration_s": 0.8,
       "loop": true,
-      "speed_mps": 3.8
+      "speed_mps": 1.721,
+      "source": "CMU mocap 35_17",
+      "source_frames_120fps": [
+        33,
+        122
+      ],
+      "source_speed_mps": 3.158,
+      "hips_stride_speed_mps": 1.803,
+      "seam_mismatch_deg_before_fix": 2.8,
+      "tempo": 0.93,
+      "arm_out_deg": 24,
+      "retarget_max_error_deg": 0.0,
+      "hips_scale": 0.616,
+      "loop_check": {
+        "ok": true,
+        "object": "USER_CH_Tank_Rig",
+        "action": "Run",
+        "frames": [
+          1,
+          25
+        ],
+        "loops": true,
+        "pops": [],
+        "hitches": [
+          {
+            "bone": "neck",
+            "deg_per_frame_in": 0.812,
+            "deg_per_frame_out": 0.259,
+            "kind": "dip"
+          }
+        ],
+        "note": "speed changes across the seam: match the tangents (Graph Editor, auto-clamped/cyclic) or re-pose frame 2/N-1"
+      },
+      "foot_contact": {
+        "stance_frames": 12,
+        "slide_max_mps": 0.0,
+        "slide_mean_mps": 0.0,
+        "slide_mean_pct_of_speed": 0.0,
+        "before_lock": {
+          "stance_frames": 12,
+          "slide_max_mps": 1.104,
+          "slide_mean_mps": 0.593,
+          "slide_mean_pct_of_speed": 34.5
+        },
+        "mesh_floor": {
+          "lowest_over_cycle_m": -0.0002,
+          "stance_sole_height_m": [
+            -0.0002,
+            0.0316
+          ],
+          "highest_flight_m": 0.0316
+        }
+      },
+      "arms_vs_torso": {
+        "arm_in_torso_frames_before": 19,
+        "after": 11,
+        "of": 48
+      }
     },
     "Attack": {
       "duration_s": 0.967,
@@ -77,7 +134,7 @@
     }
   },
   "files": {
-    "blend_bytes": 356363,
+    "blend_bytes": 371761,
     "raw_glb_bytes": 483964
   }
 }

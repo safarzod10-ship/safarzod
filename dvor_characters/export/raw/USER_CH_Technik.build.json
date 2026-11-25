@@ -64,7 +64,100 @@
     "Run": {
       "duration_s": 0.667,
       "loop": true,
-      "speed_mps": 4.5
+      "speed_mps": 2.32,
+      "source": "CMU mocap 09_01",
+      "source_frames_120fps": [
+        5,
+        93
+      ],
+      "source_speed_mps": 3.633,
+      "hips_stride_speed_mps": 2.454,
+      "seam_mismatch_deg_before_fix": 2.79,
+      "tempo": 1.1,
+      "arm_out_deg": 14,
+      "retarget_max_error_deg": 0.0,
+      "hips_scale": 0.614,
+      "loop_check": {
+        "ok": true,
+        "object": "USER_CH_Technik_Rig",
+        "action": "Run",
+        "frames": [
+          1,
+          21
+        ],
+        "loops": true,
+        "pops": [],
+        "hitches": [
+          {
+            "bone": "hand.L",
+            "deg_per_frame_in": 11.632,
+            "deg_per_frame_out": 17.005,
+            "kind": "kink"
+          },
+          {
+            "bone": "shin.R",
+            "deg_per_frame_in": 8.795,
+            "deg_per_frame_out": 6.789,
+            "kind": "kink"
+          },
+          {
+            "bone": "foot.R",
+            "deg_per_frame_in": 8.872,
+            "deg_per_frame_out": 10.351,
+            "kind": "kink"
+          },
+          {
+            "bone": "pelvis",
+            "deg_per_frame_in": 2.825,
+            "deg_per_frame_out": 1.574,
+            "kind": "kink"
+          },
+          {
+            "bone": "thigh.R",
+            "deg_per_frame_in": 15.67,
+            "deg_per_frame_out": 14.758,
+            "kind": "kink"
+          },
+          {
+            "bone": "foot.L",
+            "deg_per_frame_in": 5.18,
+            "deg_per_frame_out": 4.857,
+            "kind": "kink"
+          },
+          {
+            "bone": "hand.R",
+            "deg_per_frame_in": 11.293,
+            "deg_per_frame_out": 11.092,
+            "kind": "kink"
+          }
+        ],
+        "note": "speed changes across the seam: match the tangents (Graph Editor, auto-clamped/cyclic) or re-pose frame 2/N-1"
+      },
+      "foot_contact": {
+        "stance_frames": 9,
+        "slide_max_mps": 0.207,
+        "slide_mean_mps": 0.05,
+        "slide_mean_pct_of_speed": 2.2,
+        "before_lock": {
+          "stance_frames": 9,
+          "slide_max_mps": 0.913,
+          "slide_mean_mps": 0.519,
+          "slide_mean_pct_of_speed": 22.4
+        },
+        "mesh_floor": {
+          "lowest_over_cycle_m": -0.0,
+          "stance_sole_height_m": [
+            -0.0,
+            0.0356
+          ],
+          "highest_flight_m": 0.0757
+        }
+      },
+      "arms_vs_torso": {
+        "arm_in_torso_frames_before": 27,
+        "after": 0,
+        "of": 40
+      }
     },
     "Attack": {
       "duration_s": 0.7,
@@ -91,7 +184,7 @@
     }
   },
   "files": {
-    "blend_bytes": 380204,
+    "blend_bytes": 393194,
     "raw_glb_bytes": 515636
   }
 }

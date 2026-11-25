@@ -5,10 +5,14 @@ own rest orientation (so different rolls, axes, object rotation/scale don't matt
 get the source hips' translation scaled by the hips-height ratio. Keys are written straight into a
 new slotted action (quaternions, linear) on the target. Rest poses must match in spirit (T vs A pose
 matters most): pose the target's rest to the source's first, or use a source rest-pose frame.
+--match-rest (T-pose mocap onto an A-pose/modelled rest): every mapped bone except the hips first gets
+the minimal-arc swing from its rest direction to the source bone's rest direction, so the target copies
+the source's bone *directions* instead of its rotation-from-rest. --rest-bias {target_bone: [ax, ay, az,
+deg]} tilts that reference by a world-axis rotation (e.g. arms held wider than the mocap actor's).
 Bone map: auto (Mixamo, Rigify DEF-/ORG-, UE/Unity-style names, BVH) or a JSON {target: source}.
 Usage:
   blender -b f.blend -P retarget.py -- --source Mocap --target GAME_RIG [--map auto|map.json]
-      [--frames 1 120] [--in-place] [--name Walk] [--save out.blend]
+      [--frames 1 120] [--in-place] [--name Walk] [--match-rest] [--rest-bias bias.json] [--save out.blend]
   blender -b f.blend -P retarget.py -- --source Mocap --target GAME_RIG --show-map
   MCP: import retarget; print(retarget.run(source="Armature", target="GAME_RIG", name="Walk"))
 """
@@ -87,7 +91,8 @@ def _rot(mat):
     return mat.to_3x3().normalized().to_quaternion()
 
 
-def run(source=None, target=None, map="auto", frames=None, in_place=False, name=None, show_map=False, **_):
+def run(source=None, target=None, map="auto", frames=None, in_place=False, name=None, show_map=False,
+        match_rest=False, rest_bias=None, **_):
     bx.object_mode()
     if not source or not target:
         raise ValueError("--source and --target are required")
@@ -122,13 +127,33 @@ def run(source=None, target=None, map="auto", frames=None, in_place=False, name=
     sc = bpy.context.scene
     sc.frame_set(f0)
     s_rest_w = {s: _rot(src.matrix_world @ src.data.bones[s].matrix_local) for s in bmap.values()}
+    if isinstance(rest_bias, str):
+        with open(bpy.path.abspath(rest_bias), encoding="utf-8") as f:
+            rest_bias = json.load(f)
+    rest_bias = rest_bias or {}
+    if match_rest:
+        for b, s in bmap.items():
+            if b == hips:
+                continue
+            tb, sb = tgt.data.bones[b], src.data.bones[s]
+            td = (tgt.matrix_world.to_3x3() @ (tb.tail_local - tb.head_local)).normalized()
+            sd = (src.matrix_world.to_3x3() @ (sb.tail_local - sb.head_local)).normalized()
+            if b in rest_bias:
+                ax, ay, az, deg = rest_bias[b]
+                sd = Quaternion(Vector((ax, ay, az)).normalized(), math.radians(deg)) @ sd
+            t_rest_w[b] = td.rotation_difference(sd) @ t_rest_w[b]
     ratio = 1.0
     if hips:
-        sh = (src.matrix_world @ src.data.bones[bmap[hips]].head_local).z
-        th = (tgt.matrix_world @ tgt.data.bones[hips].head_local).z
-        ratio = th / sh if abs(sh) > 1e-6 else 1.0
+        # hips height above the rest pose's lowest point (BVH rests often have the hips at z=0 and the
+        # feet below it, while the motion puts the floor at z=0): measure both rigs from their feet
+        def floor(ob):
+            return min(min((ob.matrix_world @ b.head_local).z, (ob.matrix_world @ b.tail_local).z) for b in ob.data.bones)
+        s_floor, t_floor = floor(src), floor(tgt)
         s_hips_rest = src.matrix_world @ src.data.bones[bmap[hips]].head_local
         t_hips_rest = tgt.matrix_world @ tgt.data.bones[hips].head_local
+        sh, th = s_hips_rest.z - s_floor, t_hips_rest.z - t_floor
+        ratio = th / sh if abs(sh) > 1e-6 else 1.0
+        s_hips_rest.z -= s_floor  # the source's rest, standing on the motion's floor (z = 0)
     keys = {b: [] for b in bmap}
     locs = []
     err = 0.0
@@ -168,10 +193,10 @@ def run(source=None, target=None, map="auto", frames=None, in_place=False, name=
     tgt.animation_data.action = act
     slot = tgt.animation_data.action_slot or act.slots.new(id_type="OBJECT", name=tgt.name)
     tgt.animation_data.action_slot = slot
-    cb = anim_utils.action_ensure_channelbag_for_slot(act, slot)
+    cb = bx.ensure_channelbag(act, slot)
 
     def write(path, idx, group, pts):
-        fc = cb.fcurves.ensure(path, index=idx, group_name=group)
+        fc = bx.fcurve_ensure(cb, path, index=idx, group_name=group)
         fc.keyframe_points.add(len(pts))
         fc.keyframe_points.foreach_set("co", [v for p in pts for v in p])
         fc.keyframe_points.foreach_set("interpolation", [bpy.types.Keyframe.bl_rna.properties["interpolation"].enum_items["LINEAR"].value] * len(pts))
@@ -197,5 +222,7 @@ if __name__ == "__main__":
     p.add_argument("--in-place", action="store_true", help="no hips translation")
     p.add_argument("--name", default=None)
     p.add_argument("--show-map", action="store_true")
+    p.add_argument("--match-rest", action="store_true", help="copy bone directions (T-pose source, A-pose target)")
+    p.add_argument("--rest-bias", default=None, help="JSON {target_bone: [ax, ay, az, deg]}")
     p.add_argument("--save", default=None)
     bx.cli(run, p)

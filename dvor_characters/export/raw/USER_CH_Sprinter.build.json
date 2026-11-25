@@ -61,7 +61,88 @@
     "Run": {
       "duration_s": 0.533,
       "loop": true,
-      "speed_mps": 5.6
+      "speed_mps": 2.692,
+      "source": "CMU mocap 09_05",
+      "source_frames_120fps": [
+        11,
+        101
+      ],
+      "source_speed_mps": 3.475,
+      "hips_stride_speed_mps": 2.961,
+      "seam_mismatch_deg_before_fix": 3.85,
+      "tempo": 1.4,
+      "arm_out_deg": 10,
+      "retarget_max_error_deg": 0.0,
+      "hips_scale": 0.6061,
+      "loop_check": {
+        "ok": true,
+        "object": "USER_CH_Sprinter_Rig",
+        "action": "Run",
+        "frames": [
+          1,
+          17
+        ],
+        "loops": true,
+        "pops": [],
+        "hitches": [
+          {
+            "bone": "foot.L",
+            "deg_per_frame_in": 8.194,
+            "deg_per_frame_out": 18.727,
+            "kind": "kink"
+          },
+          {
+            "bone": "hand.R",
+            "deg_per_frame_in": 14.116,
+            "deg_per_frame_out": 8.84,
+            "kind": "kink"
+          },
+          {
+            "bone": "thigh.L",
+            "deg_per_frame_in": 10.331,
+            "deg_per_frame_out": 6.839,
+            "kind": "kink"
+          },
+          {
+            "bone": "shin.L",
+            "deg_per_frame_in": 12.392,
+            "deg_per_frame_out": 14.449,
+            "kind": "kink"
+          },
+          {
+            "bone": "head",
+            "deg_per_frame_in": 1.524,
+            "deg_per_frame_out": 1.955,
+            "kind": "kink"
+          }
+        ],
+        "note": "speed changes across the seam: match the tangents (Graph Editor, auto-clamped/cyclic) or re-pose frame 2/N-1"
+      },
+      "foot_contact": {
+        "stance_frames": 7,
+        "slide_max_mps": 0.0,
+        "slide_mean_mps": 0.0,
+        "slide_mean_pct_of_speed": 0.0,
+        "before_lock": {
+          "stance_frames": 7,
+          "slide_max_mps": 1.05,
+          "slide_mean_mps": 0.595,
+          "slide_mean_pct_of_speed": 22.1
+        },
+        "mesh_floor": {
+          "lowest_over_cycle_m": -0.0,
+          "stance_sole_height_m": [
+            -0.0,
+            0.0
+          ],
+          "highest_flight_m": 0.0295
+        }
+      },
+      "arms_vs_torso": {
+        "arm_in_torso_frames_before": 9,
+        "after": 0,
+        "of": 32
+      }
     },
     "Attack": {
       "duration_s": 0.533,
@@ -88,7 +169,7 @@
     }
   },
   "files": {
-    "blend_bytes": 399982,
+    "blend_bytes": 409486,
     "raw_glb_bytes": 516080
   }
 }

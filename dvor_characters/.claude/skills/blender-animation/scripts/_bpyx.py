@@ -134,3 +134,26 @@ def r(v, n=4):
     if isinstance(v, float):
         return round(v, n)
     return [round(x, n) for x in v]
+
+
+def ensure_channelbag(act, slot):
+    """anim_utils.action_ensure_channelbag_for_slot (Blender 5.x) with a 4.4/4.5 fallback."""
+    from bpy_extras import anim_utils
+    f = getattr(anim_utils, "action_ensure_channelbag_for_slot", None)
+    if f:
+        return f(act, slot)
+    layer = act.layers[0] if act.layers else act.layers.new("Layer")
+    strip = layer.strips[0] if layer.strips else layer.strips.new(type="KEYFRAME")
+    return strip.channelbag(slot, ensure=True)
+
+
+def fcurve_ensure(cb, path, index=0, group_name=None):
+    """channelbag.fcurves.ensure (5.x) with a 4.4/4.5 fallback (find or new + group)."""
+    fcs = cb.fcurves
+    if hasattr(fcs, "ensure"):
+        return fcs.ensure(path, index=index, group_name=group_name)
+    fc = fcs.find(path, index=index) or fcs.new(path, index=index)
+    if group_name:
+        grp = cb.groups.get(group_name) or cb.groups.new(group_name)
+        fc.group = grp
+    return fc
