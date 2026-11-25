@@ -19,7 +19,7 @@ public class Hud : MonoBehaviour
 
     RectTransform root, menu, hud, buy, pause, settings, board, loading, matchEnd;
     // menu
-    RectTransform pageBots, pageLan; readonly List<Image> navMarks = new List<Image>(), navIcons = new List<Image>(); readonly List<Text> navTexts = new List<Text>();
+    RectTransform pageBots, pageLan, pageCredits; readonly List<Image> navMarks = new List<Image>(), navIcons = new List<Image>(); readonly List<Text> navTexts = new List<Text>();
     InputField ipField, nickBots, nickLan; Text tHosts, tMyIp, tMenuStatus; Transform hostList;
     // loading
     Text tLoadState, tLoadTip; RectTransform loadStripe; float loadingSince; bool loadingActive;
@@ -104,6 +104,7 @@ public class Hud : MonoBehaviour
         yield return new WaitForSeconds(1.5f);
         ShowPage(0); yield return Shot("ui01_menu_bots");
         ShowPage(1); yield return Shot("ui02_menu_lan");
+        ShowPage(3); yield return Shot("ui02b_menu_credits");
         for (int t = 0; t < 3; t++) { OpenSettings(); ShowTab(t); yield return Shot("ui0" + (3 + t) + "_settings_" + t); }
         CloseSettings();
         ShowPage(0);
@@ -226,12 +227,12 @@ public class Hud : MonoBehaviour
         Label(logo, "title", new Vector2(0, 1), new Vector2(36, 0), new Vector2(860, 150), 132, TextAnchor.UpperLeft, "БАЗАР", Title, Fg).rectTransform.pivot = new Vector2(0, 1);
         Label(logo, "sub", new Vector2(0, 1), new Vector2(40, -150), new Vector2(860, 40), 30, TextAnchor.UpperLeft, "СПЕЦНАЗ ПРОТИВ БАНДЫ  ·  СТАРЫЙ ГОРОД", Body, Accent).rectTransform.pivot = new Vector2(0, 1);
 
-        string[] items = { "ИГРАТЬ С БОТАМИ", "ИГРА ПО WI-FI", "НАСТРОЙКИ", "ВЫХОД" };
-        Sprite[] icons = { IconPlay, IconWifi, IconGear, IconExit };
+        string[] items = { "ИГРАТЬ С БОТАМИ", "ИГРА ПО WI-FI", "НАСТРОЙКИ", "АВТОРЫ", "ВЫХОД" };
+        Sprite[] icons = { IconPlay, IconWifi, IconGear, IconTrophy, IconExit };
         for (int i = 0; i < items.Length; i++)
         {
             int k = i;
-            var r = Node(menu, "nav" + i, new Vector2(0, 1), new Vector2(110, -400 - i * 104), new Vector2(620, 88), new Vector2(0, 1));
+            var r = Node(menu, "nav" + i, new Vector2(0, 1), new Vector2(110, -380 - i * 100), new Vector2(620, 88), new Vector2(0, 1));
             var bg = Img(r, new Color(1, 1, 1, 0.001f), Round, true);
             var b = r.gameObject.AddComponent<Button>(); b.targetGraphic = bg;
             var cb = b.colors; cb.normalColor = new Color(1, 1, 1, 0.001f); cb.highlightedColor = new Color(1, 1, 1, 0.06f); cb.pressedColor = new Color(1, 1, 1, 0.12f); cb.selectedColor = cb.normalColor; b.colors = cb;
@@ -243,7 +244,7 @@ public class Hud : MonoBehaviour
             b.onClick.AddListener(() =>
             {
                 Fx.Sound2D("click", 0.5f);
-                if (k == 0 || k == 1) ShowPage(k);
+                if (k == 0 || k == 1 || k == 3) ShowPage(k);
                 else if (k == 2) OpenSettings();
                 else Application.Quit();
             });
@@ -283,6 +284,20 @@ public class Hud : MonoBehaviour
         Btn(pageLan, "СОЗДАТЬ ИГРУ", new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(780, 104), () => { nickBots.text = nickLan.text; Host(); }, Style.Primary, 40, IconWifi)
             .GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0);
 
+        // --- page: credits (text generated from the licence records by tools/credits/make_credits.py)
+        pageCredits = Card(menu, "pageCredits", "АВТОРЫ", "Игра использует работы этих авторов. Спасибо!");
+        var view = Node(pageCredits, "view", new Vector2(0.5f, 1), new Vector2(0, -180), new Vector2(780, 580), new Vector2(0.5f, 1));
+        Img(view, new Color(1, 1, 1, 0.001f), null, true); view.gameObject.AddComponent<RectMask2D>();
+        var content = Node(view, "content", new Vector2(0.5f, 1), Vector2.zero, new Vector2(780, 100), new Vector2(0.5f, 1));
+        var ct = content.gameObject.AddComponent<Text>();
+        ct.font = BodyReg; ct.fontSize = 24; ct.color = Fg; ct.supportRichText = true; ct.raycastTarget = false; ct.lineSpacing = 1.05f;
+        ct.horizontalOverflow = HorizontalWrapMode.Wrap; ct.verticalOverflow = VerticalWrapMode.Overflow; ct.alignment = TextAnchor.UpperLeft;
+        var credits = Resources.Load<TextAsset>("credits");
+        ct.text = credits != null ? credits.text : "Список авторов: ASSET_LICENSES.md";
+        content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var sr = view.gameObject.AddComponent<ScrollRect>();
+        sr.content = content; sr.viewport = view; sr.horizontal = false; sr.vertical = true; sr.movementType = ScrollRect.MovementType.Clamped; sr.scrollSensitivity = 40f;
+
         tMenuStatus = Label(menu, "status", new Vector2(1, 0), new Vector2(-110, 40), new Vector2(880, 40), 28, TextAnchor.LowerRight, "", Body, Danger);
         tMenuStatus.rectTransform.pivot = new Vector2(1, 0);
         ShowPage(0);
@@ -301,7 +316,7 @@ public class Hud : MonoBehaviour
 
     void ShowPage(int k)
     {
-        pageBots.gameObject.SetActive(k == 0); pageLan.gameObject.SetActive(k == 1);
+        pageBots.gameObject.SetActive(k == 0); pageLan.gameObject.SetActive(k == 1); pageCredits.gameObject.SetActive(k == 3);
         for (int i = 0; i < navMarks.Count; i++)
         {
             bool on = i == k;

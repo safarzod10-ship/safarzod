@@ -227,7 +227,7 @@
     "acceptance": "Screenshots at 16:9, 19.5:9 and 4:3 reviewed.",
     "test": "Visual review.",
     "status": "in_progress",
-    "evidence": "2026-11-24: Hud.cs/UiKit.cs rewritten (menu over live map, bots/Wi-Fi pages); compile-checked, screenshots pending (-uishots)."
+    "evidence": "2026-11-25: menu pages (bots, Wi-Fi) captured in-game at 1920x1080 and 2400x1080 (docs/ui). Missing: credits page, 4:3 capture."
   },
   {
     "id": "UI-02",
@@ -237,7 +237,7 @@
     "acceptance": "Change, restart, persisted.",
     "test": "PlayerPrefs test.",
     "status": "in_progress",
-    "evidence": "2026-11-24: settings modal with graphics/controls/sound tabs wired to GameSettings (preset, post-fx, FPS, sensitivity, invert Y, button size, master volume); screenshots pending."
+    "evidence": "2026-11-25: graphics/controls/sound tabs captured at both resolutions; FOV and effects/voice sliders added. Missing: change-restart-persist test."
   },
   {
     "id": "UI-03",
@@ -247,7 +247,7 @@
     "acceptance": "Screenshot review on 2 resolutions.",
     "test": "Visual review.",
     "status": "in_progress",
-    "evidence": "2026-11-24: new HUD (health/armour bars, ammo, money, timer, score + alive pips, kill feed with team colours, crosshair, hit marker, damage vignette, scope mask); screenshots pending."
+    "evidence": "2026-11-25: HUD captured at 1920x1080 and 2400x1080 (freeze, live). Not yet captured: kill feed with entries, hit marker, planted-bomb state; phone readability unverified on a device."
   },
   {
     "id": "UI-04",
@@ -256,8 +256,8 @@
     "description": "Loading screen, pause menu, scoreboard (hold button), match end screen with MVP.",
     "acceptance": "Screenshots of each.",
     "test": "Visual review.",
-    "status": "in_progress",
-    "evidence": "2026-11-24: loading screen, pause, scoreboard (Tab / СЧЁТ), match end with MVP built; screenshots pending."
+    "status": "passing",
+    "evidence": "2026-11-25: loading, pause, scoreboard and match-end screens captured in-game at 1920x1080 and 2400x1080 (docs/ui/ui_screens_*.jpg), reviewed, layout fixes applied (opaque modals, match-end without HUD)."
   },
   {
     "id": "NET-01",
