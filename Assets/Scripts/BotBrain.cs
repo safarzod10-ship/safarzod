@@ -20,6 +20,9 @@ public class BotBrain : MonoBehaviour
         new[] { new Vector3(-1.5f, 0, 17.0f), new Vector3(-0.5f, 0, 14.0f), new Vector3(1.2f, 0, 11.5f), new Vector3(1.2f, 0, 7.5f) },                        // south gate
         new[] { new Vector3(-6.0f, 0, 14.0f), new Vector3(-17.0f, 0, 13.0f), new Vector3(-17.0f, 0, 8.0f), new Vector3(-12.7f, 0, 5.6f), new Vector3(-9.0f, 0, 3.5f) }, // east lane + arch
     };
+    // index of the staging point on each route: the last point still out of the defenders' sight. Both groups wait there
+    // until executeAt, then push together (the east group used to stage inside the site and met defenders still walking)
+    static readonly int[] StageAt = { 2, 1 };
     int rank, group, wp; float executeAt; bool planMode; Vector3 watch; bool holding;
 
     public string DebugState()
@@ -163,6 +166,12 @@ public class BotBrain : MonoBehaviour
         }
 
         float reaction = Mathf.Lerp(0.75f, 0.28f, skill);
+        // a bot that was holding an angle has its crosshair pre-placed: it reacts faster to an enemy in front of it
+        if (holding && watch != Vector3.zero)
+        {
+            Vector3 w = watch - transform.position; w.y = 0;
+            if (Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(w.x, w.z) * Mathf.Rad2Deg, wantYaw)) < 30f) reaction *= 0.55f;
+        }
         float off = Mathf.Abs(Mathf.DeltaAngle(p.yaw, wantYaw)) + Mathf.Abs(p.pitch - wantPitch);
         if (Time.time - seenSince < reaction || off > 9f) return;
         if (p.Def.slot == Slot.Knife && d > 2.1f) return;
@@ -238,8 +247,8 @@ public class BotBrain : MonoBehaviour
         var route = RouteT[group];
         if (wp < route.Length)
         {
-            bool staging = wp == route.Length - 1 && live < executeAt;
-            if (staging) { watch = route[wp]; holding = true; agent.isStopped = true; return; }
+            bool staging = wp == StageAt[group] + 1 && live < executeAt;   // reached the staging point: wait for the execute
+            if (staging) { watch = route[wp]; holding = true; agent.isStopped = true; p.crouch = rank % 2 == 1; return; }
             if (Reach(route[wp], 1.5f)) { wp++; hasGoal = false; }
             return;
         }
