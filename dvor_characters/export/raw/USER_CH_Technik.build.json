@@ -64,7 +64,7 @@
     "Run": {
       "duration_s": 0.667,
       "loop": true,
-      "speed_mps": 2.35,
+      "speed_mps": 2.347,
       "source": "CMU mocap 09_01",
       "source_frames_120fps": [
         5,
@@ -88,39 +88,27 @@
         "pops": [],
         "hitches": [
           {
-            "bone": "shin.R",
-            "deg_per_frame_in": 11.976,
-            "deg_per_frame_out": 6.816,
-            "kind": "kink"
-          },
-          {
             "bone": "foot.R",
-            "deg_per_frame_in": 8.617,
-            "deg_per_frame_out": 10.847,
-            "kind": "kink"
-          },
-          {
-            "bone": "thigh.R",
-            "deg_per_frame_in": 16.503,
-            "deg_per_frame_out": 14.636,
+            "deg_per_frame_in": 9.59,
+            "deg_per_frame_out": 10.711,
             "kind": "kink"
           },
           {
             "bone": "shin.L",
-            "deg_per_frame_in": 10.03,
-            "deg_per_frame_out": 8.602,
+            "deg_per_frame_in": 8.792,
+            "deg_per_frame_out": 8.388,
             "kind": "kink"
           },
           {
-            "bone": "pelvis",
-            "deg_per_frame_in": 2.825,
-            "deg_per_frame_out": 1.574,
+            "bone": "thigh.L",
+            "deg_per_frame_in": 8.673,
+            "deg_per_frame_out": 8.481,
             "kind": "kink"
           },
           {
             "bone": "foot.L",
-            "deg_per_frame_in": 4.222,
-            "deg_per_frame_out": 5.173,
+            "deg_per_frame_in": 5.097,
+            "deg_per_frame_out": 4.962,
             "kind": "kink"
           }
         ],
@@ -128,26 +116,26 @@
       },
       "foot_contact": {
         "stance_frames": 9,
-        "slide_max_mps": 0.212,
-        "slide_mean_mps": 0.043,
-        "slide_mean_pct_of_speed": 1.9,
+        "slide_max_mps": 0.225,
+        "slide_mean_mps": 0.057,
+        "slide_mean_pct_of_speed": 2.4,
         "before_lock": {
           "stance_frames": 9,
-          "slide_max_mps": 0.718,
-          "slide_mean_mps": 0.453,
-          "slide_mean_pct_of_speed": 19.3
+          "slide_max_mps": 0.719,
+          "slide_mean_mps": 0.466,
+          "slide_mean_pct_of_speed": 19.9
         },
         "mesh_floor": {
           "lowest_over_cycle_m": -0.0,
           "stance_sole_height_m": [
             -0.0,
-            0.0356
+            0.0386
           ],
-          "highest_flight_m": 0.0757
+          "highest_flight_m": 0.0826
         }
       },
       "arms_vs_torso": {
-        "arm_in_torso_frames_before": 1,
+        "arm_in_torso_frames_before": 2,
         "after": 0,
         "of": 40,
         "style": {
@@ -157,11 +145,27 @@
           "amp": 48,
           "bend": 88,
           "bend_var": 18,
-          "inward": 8
+          "inward": 8,
+          "wrist": 15
         },
         "legs": {
-          "max_lateral_fix_m": 0.083,
-          "max_foot_yaw_fix_deg": 18.5
+          "max_lateral_fix_m": 0.082,
+          "max_foot_yaw_fix_deg": 20.8
+        },
+        "torso_centering": {
+          "pelvis": {
+            "side_tilt_deg": 1.17,
+            "turn_deg": -0.77
+          },
+          "chest": {
+            "side_tilt_deg": -0.38,
+            "turn_deg": -3.66
+          },
+          "head": {
+            "side_tilt_deg": 0.79,
+            "turn_deg": 3.51
+          },
+          "hips_shift_m": 0.0
         }
       }
     },
@@ -190,7 +194,7 @@
     }
   },
   "files": {
-    "blend_bytes": 392625,
+    "blend_bytes": 392533,
     "raw_glb_bytes": 515636
   }
 }

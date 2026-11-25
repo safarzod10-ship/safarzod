@@ -14,8 +14,8 @@ import { COURTYARD, hitsCollider, insideCourtyard, type Collider } from './arena
 const BASE = './models/';
 const HEROES = [
   { id: 'USER_CH_Technik', name: 'Техник', speed: 2.35, color: '#f08a24' },
-  { id: 'USER_CH_Sprinter', name: 'Спринтер', speed: 2.73, color: '#c55be0' },
-  { id: 'USER_CH_Tank', name: 'Танк', speed: 1.75, color: '#9aa649' },
+  { id: 'USER_CH_Sprinter', name: 'Спринтер', speed: 2.72, color: '#c55be0' },
+  { id: 'USER_CH_Tank', name: 'Танк', speed: 1.78, color: '#9aa649' },
 ] as const;
 const BODY_R = 0.35;
 

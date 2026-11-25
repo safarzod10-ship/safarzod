@@ -246,15 +246,15 @@
     "USER_CH_Technik": {
       "glb": {
         "file": "USER_CH_Technik.glb",
-        "bytes": 298464,
-        "gzip": 225373,
-        "brotli": 220145
+        "bytes": 298472,
+        "gzip": 225405,
+        "brotli": 220134
       },
       "ktx2_glb": {
         "file": "USER_CH_Technik.ktx2.glb",
-        "bytes": 298776,
-        "gzip": 225192,
-        "brotli": 220319
+        "bytes": 298784,
+        "gzip": 225217,
+        "brotli": 220402
       },
       "raw_glb_bytes": 515636,
       "meshes": [
@@ -322,15 +322,15 @@
     "USER_CH_Sprinter": {
       "glb": {
         "file": "USER_CH_Sprinter.glb",
-        "bytes": 317996,
-        "gzip": 242282,
-        "brotli": 236386
+        "bytes": 318216,
+        "gzip": 242313,
+        "brotli": 236483
       },
       "ktx2_glb": {
         "file": "USER_CH_Sprinter.ktx2.glb",
-        "bytes": 321220,
-        "gzip": 245072,
-        "brotli": 239492
+        "bytes": 321440,
+        "gzip": 245099,
+        "brotli": 239639
       },
       "raw_glb_bytes": 516080,
       "meshes": [
@@ -398,15 +398,15 @@
     "USER_CH_Tank": {
       "glb": {
         "file": "USER_CH_Tank.glb",
-        "bytes": 273784,
-        "gzip": 198873,
-        "brotli": 193530
+        "bytes": 273660,
+        "gzip": 198868,
+        "brotli": 194287
       },
       "ktx2_glb": {
         "file": "USER_CH_Tank.ktx2.glb",
-        "bytes": 287928,
-        "gzip": 212514,
-        "brotli": 207495
+        "bytes": 287804,
+        "gzip": 212512,
+        "brotli": 207551
       },
       "raw_glb_bytes": 483964,
       "meshes": [
@@ -472,7 +472,7 @@
       ]
     }
   },
-  "generated": "2026-11-25T16:02:34.722Z",
+  "generated": "2026-11-25T16:24:17.085Z",
   "tools": {
     "gltf-transform": "4.5.1",
     "meshoptimizer": "1.3.0",
