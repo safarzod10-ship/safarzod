@@ -83,7 +83,8 @@ cd dvor_characters/viewer && npm ci          # three, glTF-Transform 4.5.1, mesh
 
 # персонаж из модели заказчика
 /opt/dvor-venv/bin/python blender/user/build_user_character.py -- --char technik   # sprinter | tank
-/opt/dvor-venv/bin/python blender/user/mocap_run.py --char technik                # Run из mocap (после build)
+/opt/dvor-venv/bin/python blender/user/hands.py --char technik                    # новые кисти (после build)
+/opt/dvor-venv/bin/python blender/user/mocap_run.py --char technik                # Run из mocap (после hands)
 cd viewer && node scripts/optimize.mjs USER_CH_Technik && node scripts/sync-assets.mjs
 
 # просмотр и проверка

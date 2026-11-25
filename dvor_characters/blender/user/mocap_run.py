@@ -55,11 +55,11 @@ PLAN = {
     # cycle times match the earlier procedural Run (0.67 / 0.53 / 0.80 s) so the game feel stays.
     # arms: keyed pump (see stylize_arms) -- abd/off/amp/bend/bend_var/inward/wrist in degrees
     # (wrist = hand bent toward the palm: Sprinter's flat glove reads as a loose fist instead of claws)
-    "technik": dict(take="09_01", tempo=1.1, crouch=0.05, hand_r=0.07, lane=0.75, toe_out=6, knee_out=4,
+    "technik": dict(take="09_01", tempo=1.1, crouch=0.05, hand_r=0.07, lane=0.9, toe_out=6, knee_out=12,
                     arms=dict(abd=14, off=8, amp=48, bend=88, bend_var=18, inward=8, wrist=15)),
-    "sprinter": dict(take="09_05", tempo=1.4, crouch=0.05, hand_r=0.07, lane=0.7, toe_out=4, knee_out=2,
+    "sprinter": dict(take="09_05", tempo=1.4, crouch=0.05, hand_r=0.055, lane=0.8, toe_out=4, knee_out=8,
                      arms=dict(abd=17, off=10, amp=60, bend=92, bend_var=20, inward=3, wrist=45)),
-    "tank": dict(take="35_17", tempo=0.93, crouch=0.05, hand_r=0.12, lane=0.85, toe_out=10, knee_out=8, pelvis_keep=0.5,
+    "tank": dict(take="35_17", tempo=0.93, crouch=0.05, hand_r=0.1, lane=1.0, toe_out=10, knee_out=18, pelvis_keep=0.5,
                  arms=dict(abd=30, off=6, amp=34, bend=78, bend_var=14, inward=0, wrist=10)),
 }
 FEATURE_BONES = ["LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot",
@@ -302,11 +302,13 @@ def build(ch):
     before = measure_contact(rig, N, speed, stance)
     lock_feet(rig, cb, N, speed, stance, drop=lambda: shift_hips(-plan["crouch"] * hip_h),
               sole=foot_soles(rig, mesh), floor=rest_floor)
+    knee_fix = knees_forward(rig, cb, N, plan.get("knee_out", 0))
     arm_style = stylize_arms(rig, cb, N, plan["arms"])
     arms = clear_arms(rig, cb, N, torso_points(rig, mesh), plan["hand_r"], max_upper=20, max_fore=30)
     arms["style"] = arm_style
     arms["legs"] = lanes
     arms["torso_centering"] = torso
+    arms["knees"] = {"max_knee_move_m": knee_fix, "inner_knee_gap": knee_gap(rig, mesh, N)}
     slide = measure_contact(rig, N, speed, stance)
     slide["before_lock"] = before
     slide["mesh_floor"] = mesh_floor_report(mesh, N, stance, rest_floor)
@@ -768,6 +770,55 @@ def leg_lanes(rig, cb, N, lane_frac=0.8, toe_out=6.0, knee_out=0.0):
     for fc in cb.fcurves:
         fc.update()
     return {"max_lateral_fix_m": round(worst[0], 3), "max_foot_yaw_fix_deg": round(worst[1], 1)}
+
+
+def knees_forward(rig, cb, N, knee_out=0.0):
+    """Last leg pass, every frame: same ankle position and foot orientation, the knee re-solved to
+    point forward (+ knee_out deg outward). Catches the swing frames where the leg is folded and the
+    knee from the recording swung toward the other leg. Returns the largest knee move (m)."""
+    sc = bpy.context.scene
+    rest_rel = _rest_rel(rig)
+    worst = 0.0
+    for k in range(N):
+        sc.frame_set(k + 1)
+        P = {pb.name: pb.matrix.copy() for pb in rig.pose.bones}
+        names = []
+        for s, sg in (("L", 1), ("R", -1)):
+            pole = Quaternion((0, 0, 1), sg * math.radians(knee_out)) @ Vector((0, -1, 0))
+            before = P[f"shin.{s}"].translation.copy()
+            P.update(_two_bone(P, s, P[f"foot.{s}"].translation.copy(), P[f"foot.{s}"].to_quaternion(), pole=pole))
+            worst = max(worst, (P[f"shin.{s}"].translation - before).length)
+            names += [f"thigh.{s}", f"shin.{s}", f"foot.{s}"]
+        _write_locals(rig, cb, P, names, k, N, rest_rel)
+    for fc in cb.fcurves:
+        fc.update()
+    return round(worst, 3)
+
+
+def knee_gap(rig, mesh, N):
+    """Smallest distance of the inner knee surface (deformed mesh, +-6 cm around the knee) from the
+    centre line over the cycle, and the same in the rest pose."""
+    sc = bpy.context.scene
+    bones = rig.data.bones
+    gi = {g.index: g.name for g in mesh.vertex_groups}
+    kv = {"L": [], "R": []}
+    for v in mesh.data.vertices:
+        if not v.groups:
+            continue
+        n = gi[max(v.groups, key=lambda e: e.weight).group]
+        for s in ("L", "R"):
+            if n in (f"thigh.{s}", f"shin.{s}") and abs(v.co.z - bones[f"shin.{s}"].head_local.z) < 0.06:
+                kv[s].append(v.index)
+    rest = min(abs(mesh.data.vertices[i].co.x) for s in kv for i in kv[s])
+    gap = 9.0
+    for k in range(N):
+        sc.frame_set(k + 1)
+        dg = bpy.context.evaluated_depsgraph_get()
+        ob = mesh.evaluated_get(dg)
+        me = ob.to_mesh()
+        gap = min(gap, min(abs(me.vertices[i].co.x) for s in kv for i in kv[s]))
+        ob.to_mesh_clear()
+    return {"rest_m": round(rest, 3), "run_min_m": round(gap, 3)}
 
 
 def stylize_arms(rig, cb, N, cfg):

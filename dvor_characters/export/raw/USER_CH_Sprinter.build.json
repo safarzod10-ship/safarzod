@@ -13,8 +13,8 @@
   },
   "lod0": {
     "object": "USER_CH_Sprinter_LOD0",
-    "triangles": 1123,
-    "vertices_blender": 577,
+    "triangles": 1447,
+    "vertices_blender": 758,
     "materials": 1,
     "max_influences": 4,
     "unweighted_vertices": 0,
@@ -51,7 +51,7 @@
       1024
     ],
     "path": "textures/USER_CH_Sprinter_basecolor_1024.jpg",
-    "bytes": 185766
+    "bytes": 198891
   },
   "clips": {
     "Idle": {
@@ -86,20 +86,44 @@
         "hitches": [
           {
             "bone": "forearm.R",
-            "deg_per_frame_in": 26.321,
-            "deg_per_frame_out": 13.889,
+            "deg_per_frame_in": 34.545,
+            "deg_per_frame_out": 16.882,
             "kind": "kink"
           },
           {
             "bone": "hand.R",
-            "deg_per_frame_in": 26.321,
-            "deg_per_frame_out": 13.889,
+            "deg_per_frame_in": 34.545,
+            "deg_per_frame_out": 16.882,
+            "kind": "kink"
+          },
+          {
+            "bone": "forearm.L",
+            "deg_per_frame_in": 33.841,
+            "deg_per_frame_out": 19.339,
+            "kind": "kink"
+          },
+          {
+            "bone": "hand.L",
+            "deg_per_frame_in": 33.841,
+            "deg_per_frame_out": 19.339,
             "kind": "kink"
           },
           {
             "bone": "upper_arm.R",
-            "deg_per_frame_in": 20.109,
-            "deg_per_frame_out": 11.105,
+            "deg_per_frame_in": 26.217,
+            "deg_per_frame_out": 13.33,
+            "kind": "kink"
+          },
+          {
+            "bone": "upper_arm.L",
+            "deg_per_frame_in": 25.031,
+            "deg_per_frame_out": 15.264,
+            "kind": "kink"
+          },
+          {
+            "bone": "thigh.L",
+            "deg_per_frame_in": 8.906,
+            "deg_per_frame_out": 7.766,
             "kind": "kink"
           },
           {
@@ -113,22 +137,22 @@
       },
       "foot_contact": {
         "stance_frames": 7,
-        "slide_max_mps": 0.067,
-        "slide_mean_mps": 0.01,
-        "slide_mean_pct_of_speed": 0.4,
+        "slide_max_mps": 0.087,
+        "slide_mean_mps": 0.012,
+        "slide_mean_pct_of_speed": 0.5,
         "before_lock": {
           "stance_frames": 7,
-          "slide_max_mps": 0.969,
-          "slide_mean_mps": 0.53,
+          "slide_max_mps": 0.96,
+          "slide_mean_mps": 0.529,
           "slide_mean_pct_of_speed": 19.5
         },
         "mesh_floor": {
           "lowest_over_cycle_m": -0.0,
           "stance_sole_height_m": [
             -0.0,
-            0.0122
+            0.014
           ],
-          "highest_flight_m": 0.0439
+          "highest_flight_m": 0.0469
         }
       },
       "arms_vs_torso": {
@@ -146,7 +170,7 @@
           "wrist": 45
         },
         "legs": {
-          "max_lateral_fix_m": 0.144,
+          "max_lateral_fix_m": 0.164,
           "max_foot_yaw_fix_deg": 28.3
         },
         "torso_centering": {
@@ -163,6 +187,13 @@
             "turn_deg": 5.33
           },
           "hips_shift_m": -0.049
+        },
+        "knees": {
+          "max_knee_move_m": 0.192,
+          "inner_knee_gap": {
+            "rest_m": 0.033,
+            "run_min_m": 0.016
+          }
         }
       }
     },
@@ -191,7 +222,71 @@
     }
   },
   "files": {
-    "blend_bytes": 409233,
-    "raw_glb_bytes": 516080
+    "blend_bytes": 425287,
+    "raw_glb_bytes": 549820
+  },
+  "hands": {
+    "old_hand_vertices": 73,
+    "colours": {
+      "glove": [
+        67,
+        40,
+        59
+      ],
+      "skin": [
+        229,
+        161,
+        135
+      ]
+    },
+    "atlas_patches_px": {
+      "at": [
+        [
+          40,
+          4
+        ],
+        [
+          64,
+          4
+        ],
+        [
+          88,
+          4
+        ]
+      ],
+      "size": 24
+    },
+    "L": {
+      "wrist_ring_vertices": 10,
+      "cuff": true,
+      "wrist_m": [
+        0.085,
+        0.075
+      ],
+      "fist_m": {
+        "width": 0.11,
+        "thickness": 0.085,
+        "length": 0.104
+      },
+      "new_faces": 134
+    },
+    "R": {
+      "wrist_ring_vertices": 9,
+      "cuff": true,
+      "wrist_m": [
+        0.087,
+        0.073
+      ],
+      "fist_m": {
+        "width": 0.113,
+        "thickness": 0.087,
+        "length": 0.106
+      },
+      "new_faces": 133
+    },
+    "triangles": {
+      "before": 1123,
+      "after": 1447
+    }
   }
 }

@@ -60,7 +60,7 @@ lib.load(char).then((asset) => {
   const h = inst.height;
   const ty = q.get('ty') ? Number(q.get('ty')) : view === 'face' ? 0.82 : 0.5;
   const zf = q.get('zf') ? Number(q.get('zf')) : view === 'face' ? 0.2 : 0.62;
-  const target = new THREE.Vector3(0, h * ty, 0);
+  const target = new THREE.Vector3(Number(q.get("tx") ?? 0), h * ty, Number(q.get("tz") ?? 0));
   const dist = (h * zf) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const dirs: Record<string, THREE.Vector3> = {
     front: new THREE.Vector3(0, 0.02, 1),

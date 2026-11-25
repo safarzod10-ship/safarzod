@@ -246,22 +246,22 @@
     "USER_CH_Technik": {
       "glb": {
         "file": "USER_CH_Technik.glb",
-        "bytes": 298472,
-        "gzip": 225405,
-        "brotli": 220134
+        "bytes": 312736,
+        "gzip": 238842,
+        "brotli": 233071
       },
       "ktx2_glb": {
         "file": "USER_CH_Technik.ktx2.glb",
-        "bytes": 298784,
-        "gzip": 225217,
-        "brotli": 220402
+        "bytes": 300216,
+        "gzip": 226053,
+        "brotli": 221488
       },
-      "raw_glb_bytes": 515636,
+      "raw_glb_bytes": 546128,
       "meshes": [
         {
           "name": "USER_CH_Technik_LOD0",
           "primitives": 1,
-          "triangles": 1140
+          "triangles": 1430
         }
       ],
       "materials": 1,
@@ -322,22 +322,22 @@
     "USER_CH_Sprinter": {
       "glb": {
         "file": "USER_CH_Sprinter.glb",
-        "bytes": 318216,
-        "gzip": 242313,
-        "brotli": 236483
+        "bytes": 333696,
+        "gzip": 256844,
+        "brotli": 250506
       },
       "ktx2_glb": {
         "file": "USER_CH_Sprinter.ktx2.glb",
-        "bytes": 321440,
-        "gzip": 245099,
-        "brotli": 239639
+        "bytes": 323712,
+        "gzip": 246703,
+        "brotli": 241772
       },
-      "raw_glb_bytes": 516080,
+      "raw_glb_bytes": 549820,
       "meshes": [
         {
           "name": "USER_CH_Sprinter_LOD0",
           "primitives": 1,
-          "triangles": 1123
+          "triangles": 1447
         }
       ],
       "materials": 1,
@@ -398,22 +398,22 @@
     "USER_CH_Tank": {
       "glb": {
         "file": "USER_CH_Tank.glb",
-        "bytes": 273660,
-        "gzip": 198868,
-        "brotli": 194287
+        "bytes": 286776,
+        "gzip": 211068,
+        "brotli": 204916
       },
       "ktx2_glb": {
         "file": "USER_CH_Tank.ktx2.glb",
-        "bytes": 287804,
-        "gzip": 212512,
-        "brotli": 207551
+        "bytes": 290160,
+        "gzip": 214146,
+        "brotli": 209185
       },
-      "raw_glb_bytes": 483964,
+      "raw_glb_bytes": 515252,
       "meshes": [
         {
           "name": "USER_CH_Tank_LOD0",
           "primitives": 1,
-          "triangles": 1120
+          "triangles": 1442
         }
       ],
       "materials": 1,
@@ -472,7 +472,7 @@
       ]
     }
   },
-  "generated": "2026-11-25T16:24:17.085Z",
+  "generated": "2026-11-25T16:45:42.354Z",
   "tools": {
     "gltf-transform": "4.5.1",
     "meshoptimizer": "1.3.0",

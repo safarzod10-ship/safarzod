@@ -13,8 +13,8 @@
   },
   "lod0": {
     "object": "USER_CH_Tank_LOD0",
-    "triangles": 1120,
-    "vertices_blender": 562,
+    "triangles": 1442,
+    "vertices_blender": 743,
     "materials": 1,
     "max_influences": 4,
     "unweighted_vertices": 0,
@@ -40,7 +40,7 @@
       1024
     ],
     "path": "textures/USER_CH_Tank_basecolor_1024.jpg",
-    "bytes": 143580
+    "bytes": 154058
   },
   "clips": {
     "Idle": {
@@ -75,14 +75,8 @@
         "hitches": [
           {
             "bone": "shin.L",
-            "deg_per_frame_in": 3.034,
-            "deg_per_frame_out": 30.328,
-            "kind": "kink"
-          },
-          {
-            "bone": "thigh.L",
-            "deg_per_frame_in": 1.611,
-            "deg_per_frame_out": 10.049,
+            "deg_per_frame_in": 1.96,
+            "deg_per_frame_out": 29.062,
             "kind": "kink"
           }
         ],
@@ -100,10 +94,10 @@
           "slide_mean_pct_of_speed": 31.4
         },
         "mesh_floor": {
-          "lowest_over_cycle_m": -0.0017,
+          "lowest_over_cycle_m": -0.0,
           "stance_sole_height_m": [
-            -0.0,
-            0.0158
+            0.0,
+            0.0186
           ],
           "highest_flight_m": 0.0222
         }
@@ -123,7 +117,7 @@
           "wrist": 10
         },
         "legs": {
-          "max_lateral_fix_m": 0.119,
+          "max_lateral_fix_m": 0.146,
           "max_foot_yaw_fix_deg": 16.4
         },
         "torso_centering": {
@@ -140,6 +134,13 @@
             "turn_deg": -9.86
           },
           "hips_shift_m": -0.0
+        },
+        "knees": {
+          "max_knee_move_m": 0.133,
+          "inner_knee_gap": {
+            "rest_m": 0.019,
+            "run_min_m": 0.0
+          }
         }
       }
     },
@@ -168,7 +169,71 @@
     }
   },
   "files": {
-    "blend_bytes": 371479,
-    "raw_glb_bytes": 483964
+    "blend_bytes": 385437,
+    "raw_glb_bytes": 515252
+  },
+  "hands": {
+    "old_hand_vertices": 53,
+    "colours": {
+      "glove": [
+        72,
+        54,
+        48
+      ],
+      "skin": [
+        72,
+        54,
+        48
+      ]
+    },
+    "atlas_patches_px": {
+      "at": [
+        [
+          4,
+          4
+        ],
+        [
+          28,
+          4
+        ],
+        [
+          52,
+          4
+        ]
+      ],
+      "size": 24
+    },
+    "L": {
+      "wrist_ring_vertices": 9,
+      "cuff": true,
+      "wrist_m": [
+        0.172,
+        0.15
+      ],
+      "fist_m": {
+        "width": 0.197,
+        "thickness": 0.163,
+        "length": 0.18
+      },
+      "new_faces": 123
+    },
+    "R": {
+      "wrist_ring_vertices": 11,
+      "cuff": false,
+      "wrist_m": [
+        0.174,
+        0.15
+      ],
+      "fist_m": {
+        "width": 0.201,
+        "thickness": 0.166,
+        "length": 0.183
+      },
+      "new_faces": 125
+    },
+    "triangles": {
+      "before": 1120,
+      "after": 1442
+    }
   }
 }
