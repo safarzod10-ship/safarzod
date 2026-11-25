@@ -77,7 +77,14 @@ public class BotBrain : MonoBehaviour
         if (p == null || !p.IsSpawned || !p.IsServer) return;
         var g = Game.I;
         if (g == null) return;
-        if (!p.Alive) { if (agent && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; p.NetSpeed.Value = 0; return; }
+        // a dead bot's agent must not stay on the navmesh: live agents steer around it and corpses in a doorway
+        // blocked whole teams until the round timer ran out (BUG-003)
+        if (!p.Alive) { if (agent && agent.enabled) agent.enabled = false; p.NetSpeed.Value = 0; return; }
+        if (agent != null && !agent.enabled)
+        {
+            if (!NavMesh.SamplePosition(transform.position, out var back, 4f, NavMesh.AllAreas)) return;
+            agent.enabled = true; agent.Warp(back.position); hasGoal = false;
+        }
         EnsureAgent();
         if (agent == null || !agent.isOnNavMesh) return;
         if (!g.CanAct) { agent.isStopped = true; p.NetSpeed.Value = 0; return; }
@@ -100,8 +107,23 @@ public class BotBrain : MonoBehaviour
             p.zoomed = false;
             if (p.Def.slot != Slot.Knife && p.mag[p.cur] < p.Def.mag / 2 && !p.Reloading) p.Reload();
             Objective(g);
+            Unstick();
         }
         p.NetSpeed.Value = agent.isStopped ? 0 : agent.velocity.magnitude;
+    }
+
+    // a bot that wants to move but has not moved for 3 s (wedged against another agent) re-plans and steps aside
+    float stuckFor; Vector3 stuckAt;
+    void Unstick()
+    {
+        bool wantsToMove = !agent.isStopped && agent.hasPath && agent.remainingDistance > 1.2f;
+        if (!wantsToMove || (transform.position - stuckAt).sqrMagnitude > 0.25f) { stuckAt = transform.position; stuckFor = 0; return; }
+        stuckFor += Time.deltaTime;
+        if (stuckFor < 3f) return;
+        stuckFor = 0; stuckAt = transform.position;
+        Vector3 side = Quaternion.Euler(0, Random.value < 0.5f ? 90f : -90f, 0) * agent.desiredVelocity.normalized;
+        agent.Move(side * 0.4f);
+        var dest = agent.destination; agent.ResetPath(); agent.SetDestination(dest);
     }
 
     void Think(Game g)
