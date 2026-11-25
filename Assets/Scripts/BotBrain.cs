@@ -8,7 +8,7 @@ public class BotBrain : MonoBehaviour
     NavMeshAgent agent;
     Player target, lastAttacker;
     float nextThink, seenSince, burstEnd, pauseEnd, holdUntil, workTime, hurtTime, strafeUntil;
-    Vector3 goal; bool hasGoal; int strafeDir = 1;
+    Vector3 goal, goalFor; bool hasGoal; int strafeDir = 1;   // goal: point on the navmesh; goalFor: the point it was asked for
     float skill;
 
     // ---- team plan for levels with one bomb site (Town). Unity coordinates, y ignored.
@@ -131,8 +131,8 @@ public class BotBrain : MonoBehaviour
         workTime = 0;
 
         // move: close in with a knife, otherwise stop or strafe a little
-        if (p.Def.slot == Slot.Knife) { agent.isStopped = false; agent.SetDestination(target.transform.position); }
-        else if (d > 28f && !p.Def.auto && p.Def.zoomFov == 0) { agent.isStopped = false; agent.SetDestination(target.transform.position); }
+        if (p.Def.slot == Slot.Knife) { agent.isStopped = false; agent.SetDestination(target.transform.position); hasGoal = false; }
+        else if (d > 28f && !p.Def.auto && p.Def.zoomFov == 0) { agent.isStopped = false; agent.SetDestination(target.transform.position); hasGoal = false; }
         else
         {
             if (Time.time > strafeUntil) { strafeUntil = Time.time + Random.Range(0.5f, 1.4f); strafeDir = Random.value < 0.4f ? 0 : (Random.value < 0.5f ? -1 : 1); }
@@ -181,10 +181,12 @@ public class BotBrain : MonoBehaviour
 
     bool Reach(Vector3 p0, float tol)
     {
-        if (!hasGoal || (goal - p0).sqrMagnitude > 1f)
+        // compare with the requested point, not the snapped one: a point inside a crate snaps >1 m away, and comparing
+        // with the snapped goal re-requested the path every frame so the agent never moved (bomb carrier froze, BUG-003)
+        if (!hasGoal || (goalFor - p0).sqrMagnitude > 0.25f)
         {
             if (!NavMesh.SamplePosition(p0, out var h, 3f, NavMesh.AllAreas)) return true;   // unreachable point: skip it
-            goal = h.position; hasGoal = true; agent.SetDestination(goal);
+            goal = h.position; goalFor = p0; hasGoal = true; agent.SetDestination(goal);
         }
         Vector3 d = goal - transform.position; d.y = 0;
         return d.sqrMagnitude < tol * tol || (!agent.pathPending && agent.remainingDistance < tol);
@@ -221,13 +223,14 @@ public class BotBrain : MonoBehaviour
         }
         if (p.HasBomb.Value)
         {
-            if (g.CanPlant(p) && (transform.position - site).sqrMagnitude < 9f)
+            bool atSite = Reach(site, 0.8f);
+            if (g.CanPlant(p) && (atSite || (transform.position - site).sqrMagnitude < 9f))
             {
                 workTime += Time.deltaTime; agent.isStopped = true; p.crouch = true;
                 if (workTime >= 3.2f) { g.PlantRpc(p.NetworkObject, transform.position); workTime = 0; p.crouch = false; }
                 return;
             }
-            workTime = 0; Reach(site, 0.8f); return;
+            workTime = 0; return;
         }
         // escorts: cover the carrier from points around the site
         watch = WatchCT[(rank + 1) % WatchCT.Length];
