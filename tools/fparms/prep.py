@@ -62,36 +62,78 @@ def rot_between(a, b):
     K = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     return np.eye(3) + K + K @ K / (1 + c)
 
+def world_at(js, binc, anim, t):
+    """world matrices of all nodes with animation `anim` sampled (nearest key) at time t"""
+    nodes = js['nodes']; over = {}
+    a = [x for x in js['animations'] if x['name'] == anim][0]
+    for c in a['channels']:
+        s = a['samplers'][c['sampler']]
+        T = glbinfo.acc(js, binc, s['input'])[:, 0]; V = glbinfo.acc(js, binc, s['output'])
+        k = int(np.clip(np.searchsorted(T, t), 0, len(T) - 1))
+        over.setdefault(c['target']['node'], {})[c['target']['path']] = V[k].tolist()
+    W = [None] * len(nodes)
+    def go(i, P):
+        n = dict(nodes[i]); n.update(over.get(i, {}))
+        if i in over: n.pop('matrix', None)
+        W[i] = P @ glbinfo.trs(n)
+        for ch in nodes[i].get('children', []): go(ch, W[i])
+    for r in js['scenes'][js.get('scene', 0)]['nodes']: go(r, np.eye(4))
+    return W
+
 def fix_knife(js, binc):
-    # The knife mesh of the knife pack is stored in a far-away, unscaled space that its inverse bind matrix does not undo
-    # (it renders kilometres away). Re-express it in bind space: handle centred on the Base bone, blade along the bone's +Y.
-    W, par = glbinfo.world(js); nodes = js['nodes']
+    # The knife mesh of the knife pack is stored in a far-away space that its inverse bind matrix does not undo (it renders
+    # kilometres away). Re-express it in bind space so that, in the idle pose, the handle lies in the closed right fist:
+    # along the pinky->index knuckle line, guard at the index side, blade out to the upper left, edge toward the fingertips.
+    nodes = js['nodes']; B = bytes(binc)
+    W = glbinfo.world(js)[0]; Wi = world_at(js, B, 'idle', 0.0)
+    idx = lambda name: [i for i, x in enumerate(nodes) if x.get('name', '').startswith(name)][0]
+    P_ = lambda name: Wi[idx(name)][:3, 3]
     sk = js['skins'][0]; J = sk['joints']
-    IBM = glbinfo.acc(js, bytes(binc), sk['inverseBindMatrices']).reshape(-1, 4, 4).transpose(0, 2, 1)
-    k = [i for i, j in enumerate(J) if nodes[j]['name'].startswith('Base')][0]
-    bind = np.linalg.inv(IBM[k])
-    kl = [i for i, x in enumerate(nodes) if x.get('name') == 'Knife_low'][0]
-    M = W[kl] @ np.diag([.01, .01, .01, 1])
-    R0 = M[:3, :3] / np.linalg.norm(M[:3, :3], axis=0)
+    IBM = glbinfo.acc(js, B, sk['inverseBindMatrices']).reshape(-1, 4, 4).transpose(0, 2, 1)
+    base = idx('Base_'); k = J.index(base)
+    toBind = np.linalg.inv(IBM[k]) @ np.linalg.inv(Wi[base])          # idle world -> bind space (through the Base bone)
+    # source knife frame
+    kl = idx('Knife_low')
+    M = W[kl] @ np.diag([.01, .01, .01, 1]); R0 = M[:3, :3] / np.linalg.norm(M[:3, :3], axis=0)
     mesh = [x for x in nodes if x.get('name') == 'Object_122'][0]
     prim = js['meshes'][mesh['mesh']]['primitives'][0]
-    P = glbinfo.acc(js, bytes(binc), prim['attributes']['POSITION']).astype(float)
+    P = glbinfo.acc(js, B, prim['attributes']['POSITION']).astype(float)
     Q = (M @ np.c_[P, np.ones(len(P))].T).T[:, :3]
     c = Q.mean(0); V = np.linalg.svd(Q - c, full_matrices=False)[2]; ax = V[0]
     t = (Q - c) @ ax
     size = lambda m: np.ptp((Q - c)[m] @ V[1]) + np.ptp((Q - c)[m] @ V[2])
-    if size(t > t.max() - 0.03) < size(t < t.min() + 0.03): ax = -ax; t = -t
-    # now +ax points to the (thick) handle end; blade = -ax
-    R = rot_between(-ax, bind[:3, 1])
-    hc = c + ax * (t.max() - 0.055)
-    Pn = (R @ (Q - hc).T).T + bind[:3, 3]
+    if size(t > t.max() - 0.03) > size(t < t.min() + 0.03): ax = -ax; t = -t      # +ax: toward the blade tip (thin end)
+    # guard = where the cross-section shrinks from handle to blade
+    bins = np.linspace(t.min(), t.max(), 31); thick = []
+    for i in range(30):
+        m = (t >= bins[i]) & (t < bins[i + 1]); thick.append(np.ptp((Q - c)[m] @ V[2]) if m.sum() > 3 else 0)
+    thick = np.array(thick); hmax = thick[:10].max()
+    gi = next(i for i in range(10, 30) if thick[i] < 0.45 * hmax)
+    g = c + ax * bins[gi]
+    e = V[1] - ax * (V[1] @ ax); e /= np.linalg.norm(e)
+    # edge side: the thinner half of the blade cross-section
+    bl = t > bins[gi] + 0.03; w1 = (Q - c)[bl] @ e; w2 = np.abs((Q - c)[bl] @ V[2])
+    if w2[w1 > np.median(w1)].mean() > w2[w1 <= np.median(w1)].mean(): e = -e
+    # target frame in the idle pose
+    pinky, index = P_('Pinky_1.R'), P_('Index_1.R')
+    d = index - pinky; d /= np.linalg.norm(d)
+    fist = np.mean([P_(n) for n in ('Index_1.R', 'Middle_1.R', 'Ring_1.R', 'Pinky_1.R', 'Index_2.R_end', 'Middle_2.R_end', 'Ring_2.R_end', 'Pinky_2.R_end', 'Index_0.R', 'Middle_0.R', 'Ring_0.R', 'Pinky_0.R')], axis=0)
+    tips = np.mean([P_(n) for n in ('Index_2.R_end', 'Middle_2.R_end', 'Ring_2.R_end', 'Pinky_2.R_end')], axis=0)
+    knuck = np.mean([P_(n) for n in ('Index_0.R', 'Middle_0.R', 'Ring_0.R', 'Pinky_0.R')], axis=0)
+    e2 = tips - knuck; e2 -= d * (e2 @ d); e2 /= np.linalg.norm(e2)
+    G = fist + d * (0.5 * np.linalg.norm(index - pinky) + 0.012)
+    S = np.c_[ax, e, np.cross(ax, e)]; T = np.c_[d, e2, np.cross(d, e2)]
+    R = T @ S.T
+    Pi = (R @ (Q - g).T).T + G
+    Pn = (toBind @ np.c_[Pi, np.ones(len(Pi))].T).T[:, :3]
     prim['attributes']['POSITION'] = add_acc(js, binc, Pn, js['accessors'][prim['attributes']['POSITION']])
+    Rn = toBind[:3, :3] @ R @ R0
     for key in ('NORMAL', 'TANGENT'):
         if key not in prim['attributes']: continue
-        A = glbinfo.acc(js, bytes(binc), prim['attributes'][key]).astype(float)
-        A[:, :3] = (R @ R0 @ A[:, :3].T).T
+        A = glbinfo.acc(js, B, prim['attributes'][key]).astype(float)
+        A[:, :3] = (Rn @ A[:, :3].T).T
         prim['attributes'][key] = add_acc(js, binc, A, js['accessors'][prim['attributes'][key]])
-    print('  knife mesh re-bound: length %.3f m, handle at Base bone' % np.ptp(t))
+    print('  knife mesh re-bound: length %.3f m, guard at %.3f from butt, in the right fist' % (np.ptp(t), bins[gi] - t.min()))
 
 def jpegify(outdir, name):
     gl = os.path.join(outdir, name + '.gltf'); J = json.load(open(gl))

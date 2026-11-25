@@ -38,14 +38,15 @@ public class FpView : MonoBehaviour
     // ------------------------------------------------------------------ per-pack placement (camera space, metres / degrees)
     // The pack root sits on the eye with the pack's authored camera; these offsets move the whole view model so that the
     // weapon sits lower-right with the barrel toward the crosshair and both hands on the weapon are on screen.
-    struct Tune { public Vector3 pos, rot; public float draw, lower, kickZ, kickPitch; }
+    struct Tune { public Vector3 pos, rot, reloadPos; public float draw, lower, kickZ, kickPitch; }
     static Tune TuneFor(string key)
     {
         switch (key)
         {
             case "ak": return new Tune { pos = new Vector3(0.0f, 0.0f, 0.0f), rot = new Vector3(0f, 0f, 0f), draw = 0.75f, lower = 0.16f, kickZ = 0.025f, kickPitch = 1.6f };
-            case "pistol": return new Tune { pos = new Vector3(0.0f, 0.0f, 0.0f), rot = new Vector3(0f, 0f, 0f), draw = 0.6f, lower = 0.16f, kickZ = 0.02f, kickPitch = 3f };
-            case "sniper": return new Tune { pos = new Vector3(0.0f, 0.0f, 0.0f), rot = new Vector3(0f, 0f, 0f), draw = 0.45f, lower = 0.16f, kickZ = 0.03f, kickPitch = 3f };
+            case "pistol": return new Tune { pos = new Vector3(0.0f, 0.0f, 0.0f), rot = new Vector3(0f, 0f, 0f), reloadPos = new Vector3(0.07f, -0.09f, 0.10f),   // the reload lifts the pistol to eye level 30 cm away: keep it off the crosshair
+                 draw = 0.6f, lower = 0.16f, kickZ = 0.02f, kickPitch = 3f };
+            case "sniper": return new Tune { pos = new Vector3(0.065f, -0.075f, 0.06f), rot = new Vector3(0f, 0f, 0f), draw = 0.45f, lower = 0.16f, kickZ = 0.03f, kickPitch = 3f };
             default: return new Tune { pos = new Vector3(0.0f, 0.0f, 0.0f), rot = new Vector3(0f, 0f, 0f), draw = 0.5f, lower = 0.14f, kickZ = 0f, kickPitch = 0f };
         }
     }
@@ -78,7 +79,7 @@ public class FpView : MonoBehaviour
     enum Act { None, Fire, Reload, Draw, Holster }
     Act act; int actClip = -1; float actT, actDur, actFrom, actTo;   // plays clip time actFrom..actTo over actDur seconds
     bool fireAlt; float idleT, walkPhase, kick, prevReloadU = -1f;
-    Vector2 sway;
+    Vector2 sway; float reloadW;
     enum Sw { None, Lower, Raise } Sw swPhase; float swT, swDur;
 
     public static FpView Create(Transform cam)
@@ -285,12 +286,14 @@ public class FpView : MonoBehaviour
             cur.play[k].SetTime(t); cur.play[k].SetTime(t);
         }
         cur.graph.Evaluate(0f);
+        if (cur.pack.hide != null) foreach (var h in cur.pack.hide) if (h) h.localScale = Vector3.zero;
 
         // ---- procedural layer on the pack root
         kick = Mathf.MoveTowards(kick, 0f, dt * 7f);
         sway = Vector2.Lerp(sway, Vector2.ClampMagnitude(s.look, 6f), 1f - Mathf.Exp(-dt * 12f));
         var tu = cur.tune;
-        Vector3 pos = tu.pos; Quaternion rot = Quaternion.Euler(tu.rot);
+        reloadW = Mathf.MoveTowards(reloadW, act == Act.Reload ? actW : 0f, dt / 0.2f);
+        Vector3 pos = tu.pos + tu.reloadPos * Smooth(reloadW); Quaternion rot = Quaternion.Euler(tu.rot);
         float k2 = kick * kick;
         pos += new Vector3(0f, 0f, -tu.kickZ * k2); rot = rot * Quaternion.Euler(-tu.kickPitch * k2, 0f, 0f);
         if (cur.iWalk < 0)

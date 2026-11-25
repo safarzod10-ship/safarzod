@@ -10,7 +10,7 @@ public static class FpPackSetup
 {
     class Cfg
     {
-        public string key, eye, weaponBone, handR; public string[] weaponMeshes; public float scale = 1f;
+        public string key, eye, weaponBone, handR; public string[] weaponMeshes, hide = new string[0]; public float scale = 1f;
     }
 
     static readonly Cfg[] Packs =
@@ -19,7 +19,7 @@ public static class FpPackSetup
         new Cfg { key = "ak", eye = "Camera", weaponBone = "Grip_01", handR = "DEF-hand.R", weaponMeshes = new[] { "Object_14", "Object_15", "Object_17", "Object_18" } },
         new Cfg { key = "pistol", eye = "DEF-spine.006", weaponBone = "DEF_Cuerpo", handR = "DEF-hand.R", weaponMeshes = new[] { "Object_20" }, scale = 1f / (1.9637157f * 1.505f) },   // file is 2.955x too large (root * armature scale)
         new Cfg { key = "sniper", eye = "Camera", weaponBone = "Body_057", handR = "Hand_R_037", weaponMeshes = new[] { "Object_89", "Object_90" } },
-        new Cfg { key = "knife", eye = "A_Camera", weaponBone = "Base_076", handR = "Hand.R_04", weaponMeshes = new[] { "Object_122" } },
+        new Cfg { key = "knife", eye = "A_Camera", weaponBone = "Base_076", handR = "Hand.R_04", weaponMeshes = new[] { "Object_122" }, hide = new[] { "UpperArm.L" } },
     };
 
     static Transform Find(Transform root, string prefix) =>
@@ -76,6 +76,7 @@ public static class FpPackSetup
         clips.TryGetValue("draw", out pack.draw); clips.TryGetValue("holster", out pack.holster);
         pack.weaponBone = Find(inst.transform, c.weaponBone);
         pack.handR = Find(inst.transform, c.handR);
+        pack.hide = c.hide.Select(h => Find(inst.transform, h)).Where(t => t != null).ToArray();
 
         var smrs = inst.GetComponentsInChildren<SkinnedMeshRenderer>(true);
         var weaponR = smrs.Where(r => c.weaponMeshes.Contains(r.name)).ToArray();

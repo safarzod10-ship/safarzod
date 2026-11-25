@@ -820,6 +820,7 @@ MonoBehaviour:
   - {fileID: 1091511182938564833}
   - {fileID: 6222904617908472063}
   handR: {fileID: 937064035988482223}
+  hide: []
 --- !u!1 &2039463281550642519
 GameObject:
   m_ObjectHideFlags: 0

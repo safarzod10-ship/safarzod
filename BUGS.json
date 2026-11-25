@@ -6,7 +6,7 @@
   "title": "First-person hands do not hold the weapons: procedural IK puts the left hand on the front sight palm-out, right hand off the grip, fingers not wrapped",
   "found": "2026-11-24 CharLab c_fp_ct1.png and in-game shot02",
   "feature": "FP-01",
-  "notes": "2026-11-24: separate view-model camera (FOV 52, own layer, no wall clipping) added and kept. Procedural hand placement rejected by owner. Fix: replace with artist-animated first-person arms+weapon packs (Sketchfab CC-BY), candidates in docs/fp_candidates.md."
+  "notes": "2026-11-24: separate view-model camera (FOV 52, own layer, no wall clipping) added and kept. Procedural hand placement rejected by owner. Fix: replace with artist-animated first-person arms+weapon packs (Sketchfab CC-BY), candidates in docs/fp_candidates.md. 2026-11-25: fixed in code — FpView now shows artist-animated arm packs whose hands are animated on their own weapon (no IK). Evidence: fp_packs.png sheet (CharLab.SheetFpPacks) and in-game fpw*.png (FpAutoTest, -fpshots). Waiting for owner review before closing; remaining: packs show their own weapon models (AK for all rifles), knife arm provenance to check (material named DMC5_Nero)."
  },
  {
   "id": "BUG-002",

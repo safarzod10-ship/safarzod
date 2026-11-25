@@ -2162,7 +2162,7 @@ Transform:
   m_GameObject: {fileID: 5015290786925865473}
   serializedVersion: 2
   m_LocalRotation: {x: -0.22732669, y: 0.910475, z: 0.28096402, w: 0.20103973}
-  m_LocalPosition: {x: 0.011467062, y: 0.23951396, z: 0.0018374326}
+  m_LocalPosition: {x: -0.07087973, y: -0.049697876, z: -0.07293155}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3969,6 +3969,8 @@ MonoBehaviour:
   weaponRenderers:
   - {fileID: 382955817719364319}
   handR: {fileID: 3399938645370447692}
+  hide:
+  - {fileID: 8401352795934633380}
 --- !u!1 &7959904208347449864
 GameObject:
   m_ObjectHideFlags: 0

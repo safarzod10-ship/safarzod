@@ -75,9 +75,9 @@
   "priority": "P0",
   "description": "First-person view: weapon at lower right, barrel forward, both hands on the weapon, correct for knife, pistols, rifles, sniper.",
   "acceptance": "Proof sheet of all prepared weapons idle/fire/reload/switch reviewed and approved; no clipping into camera.",
-  "test": "CharLab.SheetFp + visual review.",
+  "test": "CharLab.SheetFpPacks + in-game -fpshots + visual review.",
   "status": "failing",
-  "evidence": "2026-11-24 owner review: hands wrong on all weapons. View-model camera done."
+  "evidence": "2026-11-25: procedural IK arms replaced by four artist-animated CC-BY packs (Assets/FpArms: AK pack for rifles/SMGs/shotguns/MG, pistol pack, sniper pack for scout/awp/g3, knife pack for knife+grenade), played by FpView through a PlayableGraph (idle/walk, fire restart per shot, reload scaled to weapon reload time, draw), on the view-model camera. Proof: CharLab.SheetFpPacks -> fp_packs.png + 24 tiles (idle, fire, reload 25/50/75, draw per family); in-game -fpshots frames for knife, usp, ak, awp. Status stays failing until the owner reviews the sheet."
  },
  {
   "id": "FP-02",

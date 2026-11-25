@@ -12,6 +12,7 @@ public class FpPack : MonoBehaviour
     public Transform weaponBone;           // main bone of the pack's weapon
     public Renderer[] weaponRenderers;     // the pack's own weapon (hidden when the pack only lends its arms, e.g. grenade)
     public Transform handR;                // right hand bone (an item can be parented to it)
+    public Transform[] hide;               // bones collapsed after every evaluation (knife pack: the idle empty left arm)
 
     public AnimationClip[] Clips => new[] { idle, walk, run, fire, fire2, reload, reloadEmpty, draw, holster };
 }

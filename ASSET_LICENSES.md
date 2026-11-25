@@ -37,3 +37,14 @@ Full per-file table: Assets/Resources/Sounds/CREDITS.md (73 files). Gunshots: Th
 |---|---|---|---|
 | Russo One (titles) — Assets/Resources/Fonts/RussoOne.ttf | Jovanny Lemonad | SIL OFL 1.1 (OFL_RussoOne.txt) | https://github.com/google/fonts/tree/main/ofl/russoone |
 | PT Sans Narrow Regular/Bold (body) — Assets/Resources/Fonts/PTSansNarrow*.ttf | ParaType | SIL OFL 1.1 (OFL_PTSansNarrow.txt) | https://github.com/google/fonts/tree/main/ofl/ptsansnarrow |
+
+## First-person arm packs (Assets/FpArms, Resources/FpArms; prepared by tools/fparms/prep.py + Assets/Editor/FpPackSetup.cs)
+
+Licence label checked in the Sketchfab API response of each model on download (2026-11-24). Changes: meshes simplified, animations renamed/subset, textures re-encoded; knife mesh re-bound into the hand.
+
+| Asset | Author(s) | Licence | Source |
+|---|---|---|---|
+| FPS Character Animation Pack Ak-47 (arms, AK-47, 7 of 11 clips) — used for rifles, SMGs, shotguns, MG | DuqueCD7 (Cristian David Duque Camacho); the description says it uses "free elements from this platform" (gloves/sleeves/AK not separately credited by the author) | CC BY 4.0 | https://sketchfab.com/3d-models/b95778a564094fc3a49d1d6a3b6a30ab |
+| FPS Character Animation Pack Pistol (arms, pistol, 8 of 11 clips) — all pistols | DuqueCD7 (Cristian David Duque Camacho); same note on reused free elements | CC BY 4.0 | https://sketchfab.com/3d-models/e2815a5bea3a4e3895b3c29a2586e671 |
+| FPS animations sniper rifle (arms, rifle, 5 of 6 clips) — scout, awp, g3 | ccransh (Cransh); sniper rifle model by Oleg Anufriev (Naches, @olgnchsart); FPS arms by DJMaesen (@bumstrum) | CC BY 4.0 | https://sketchfab.com/3d-models/c15ae8393d824f5b929e3f69691cdd31 |
+| Animated Knife (arms, knife, 4 clips) — knife, grenade hand | teenjust500 (JUST). NOTE: the arm material is named "DMC5_Nero_BareArm", which suggests the arm mesh/texture may come from a commercial game (Devil May Cry 5); provenance unverified — replace before release if it cannot be cleared | CC BY 4.0 (as labelled by the uploader) | https://sketchfab.com/3d-models/7bee900b43f24ed9b3d48304362d5599 |
