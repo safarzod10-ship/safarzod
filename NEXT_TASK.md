@@ -9,7 +9,7 @@ Done today (see PROGRESS.md 2026-11-25): Tajik kit placed, simplified SWAT model
 credits page, settings persistence test (UI-02 passing), UI-04 passing, FOV/volume settings, bot fixes (frozen carrier, corpses
 blocking doorways, equal skill, staging), -botself / -gfx / -settest / NavProbe / NavGrid tools.
 
-In progress: Android APK build (FPS overlay on) for the owner to measure on a phone.
+APK delivered 2026-11-25 (Builds/android/town.apk, 252 MB, FPS overlay on); waiting for the owner's phone readings.
 
 Next, in order:
 1. Deliver the APK; ask the owner for FPS/frame-time readings from the overlay (PERF-01) — never invent numbers.
