@@ -104,7 +104,7 @@ export class CharacterInstance {
   private actions = new Map<ClipName, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
   private currentName: ClipName | null = null;
-  private lodLevel = 0;
+  private lodLevel = -1;
   private lodForced: number | null = null;
   private onFinish: ((name: ClipName) => void) | null = null;
   readonly height: number;
@@ -150,7 +150,7 @@ export class CharacterInstance {
   }
 
   get lod(): number {
-    return this.lodLevel;
+    return Math.max(0, this.lodLevel);
   }
 
   /** Cross-fade to a clip. One-shots stop on their last frame and fire onFinished. */
@@ -191,7 +191,7 @@ export class CharacterInstance {
 
   private applyLod(level: number): void {
     const l = Math.min(level, this.lods.length - 1);
-    if (l === this.lodLevel && this.lods[l].visible) return;
+    if (l === this.lodLevel) return;
     this.lodLevel = l;
     this.lods.forEach((m, i) => (m.visible = i === l));
   }

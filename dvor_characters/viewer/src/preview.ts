@@ -49,12 +49,17 @@ lib.load(char).then((asset) => {
   const inst = new CharacterInstance(asset);
   inst.setLod(lod);
   scene.add(inst.root);
+  if (q.get('normals') === '1') {
+    for (const m of inst.lods) m.material = new THREE.MeshNormalMaterial();
+  }
   if (q.get('wire') === '1') {
     for (const m of inst.lods) (m.material as THREE.MeshStandardMaterial).wireframe = true;
   }
   const h = inst.height;
-  const target = new THREE.Vector3(0, view === 'face' ? h * 0.82 : h * 0.5, 0);
-  const dist = (h * (view === 'face' ? 0.2 : 0.62)) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const ty = q.get('ty') ? Number(q.get('ty')) : view === 'face' ? 0.82 : 0.5;
+  const zf = q.get('zf') ? Number(q.get('zf')) : view === 'face' ? 0.2 : 0.62;
+  const target = new THREE.Vector3(0, h * ty, 0);
+  const dist = (h * zf) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const dirs: Record<string, THREE.Vector3> = {
     front: new THREE.Vector3(0, 0.02, 1),
     face: new THREE.Vector3(0.35, 0.05, 1),
@@ -76,7 +81,8 @@ lib.load(char).then((asset) => {
       renderer.render(scene, camera);
     });
   } else {
-    inst.pose(clip, t);
+    if (q.get('rest') === '1') inst.mixer.stopAllAction();
+    else inst.pose(clip, t);
     renderer.render(scene, camera);
   }
   const info = renderer.info.render;

@@ -145,12 +145,12 @@ def ability(role):
         keys = [(1, a), (8, crouch), (13, crouch), (17, tap), (21, crouch), (32, a)]
         return keys, False, {"event_cast_s": 13 / 30}
     if role == "tank":      # brace guard: forearms crossed in front, wide low stance
-        guard = over(a, loc=(0, 0.0, -0.1), spine=(12, 0, 0), chest=(4, 0, 0), head=(4, 0, 0),
-                     upper_arm_L=(-78, 34, 0), upper_arm_R=(-78, 34, 0),
-                     forearm_L=(-38, 0, 58), forearm_R=(-38, 0, 58),
+        guard = over(a, loc=(0, 0.0, -0.1), spine=(6, 0, 0), chest=(0, 0, 0), head=(8, 0, 0),
+                     upper_arm_L=(-74, 36, 0), upper_arm_R=(-74, 36, 0),
+                     forearm_L=(-105, 0, -34), forearm_R=(-105, 0, -34),
                      thigh_L=(-26, -14, 0), thigh_R=(-26, -14, 0), shin_L=(42, 0, 0),
                      shin_R=(42, 0, 0), foot_L=(-16, 14, 0), foot_R=(-16, 14, 0))
-        push = over(guard, loc=(0, -0.05, -0.08), spine=(18, 0, 0))
+        push = over(guard, loc=(0, -0.06, -0.08), spine=(14, 0, 0), head=(2, 0, 0))
         keys = [(1, a), (7, guard), (16, push), (26, guard), (34, a)]
         return keys, False, {"event_cast_s": 7 / 30}
     # sprinter: low explosive dash pose, arms swept back
