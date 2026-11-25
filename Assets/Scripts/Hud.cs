@@ -919,15 +919,19 @@ public class Hud : MonoBehaviour
         Vector3 c = g != null && g.sites.Count > 0 ? g.sites[0].center : Vector3.zero; c.y = 0;
         menuAngle += Time.unscaledDeltaTime * 3f;
         float a = menuAngle * Mathf.Deg2Rad;
-        // orbit above the roofs; when a building is between the camera and the site, come in front of it (smoothly)
-        Vector3 look = c + Vector3.up * 1.5f, want = c + new Vector3(Mathf.Sin(a) * 18f, 12f, Mathf.Cos(a) * 18f);
-        Vector3 dir = want - look; float dist = dir.magnitude; dir /= dist;
-        if (Physics.SphereCast(look, 0.6f, dir, out var hit, dist, ~0, QueryTriggerInteraction.Ignore)) dist = Mathf.Max(6f, hit.distance - 0.5f);
-        menuDist = menuDist <= 0f ? dist : Mathf.Lerp(menuDist, dist, 1f - Mathf.Exp(-Time.unscaledDeltaTime * (dist < menuDist ? 6f : 1.5f)));
-        cam.transform.position = look + dir * menuDist;
+        // orbit at a fixed distance; when something hides the site, rise (smoothly) until the view is clear
+        Vector3 look = c + Vector3.up * 2.5f;
+        float want = 30f;
+        for (float h = 11f; h <= 30f; h += 2.5f)
+        {
+            Vector3 at = c + new Vector3(Mathf.Sin(a) * 20f, h, Mathf.Cos(a) * 20f);
+            if (!Physics.Linecast(at, look, ~0, QueryTriggerInteraction.Ignore)) { want = h; break; }
+        }
+        menuDist = menuDist <= 0f ? want : Mathf.Lerp(menuDist, want, 1f - Mathf.Exp(-Time.unscaledDeltaTime * 1.2f));
+        cam.transform.position = c + new Vector3(Mathf.Sin(a) * 20f, menuDist, Mathf.Cos(a) * 20f);
         cam.transform.LookAt(look);
     }
-    float menuDist;
+    float menuDist;   // current camera height
 
     void DrawHud(Player p, Game g)
     {

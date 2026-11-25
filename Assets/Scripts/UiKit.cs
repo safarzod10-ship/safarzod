@@ -281,7 +281,7 @@ public static class UiKit
     {
         var r = Node(area, "switch", new Vector2(1, 0.5f), Vector2.zero, new Vector2(110, 54), new Vector2(1, 0.5f));
         var bg = Img(r, PanelLight, Round, true);
-        var knob = Node(r, "knob", new Vector2(0, 0.5f), Vector2.zero, new Vector2(42, 42));
+        var knob = Node(r, "knob", new Vector2(0, 0.5f), Vector2.zero, new Vector2(42, 42), new Vector2(0.5f, 0.5f));
         var kimg = Img(knob, Fg, Circle);
         var state = Label(area, "state", new Vector2(1, 0.5f), new Vector2(-130, 0), new Vector2(200, 54), 28, TextAnchor.MiddleRight, "", Body, Muted, false);
         state.rectTransform.pivot = new Vector2(1, 0.5f);
