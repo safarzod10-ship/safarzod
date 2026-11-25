@@ -113,7 +113,7 @@ export class CharacterInstance {
     this.root = cloneSkinned(asset.gltf.scene);
     this.root.traverse((o) => {
       const m = o as THREE.SkinnedMesh;
-      if (!m.isSkinnedMesh) return;
+      if (!(m as THREE.Mesh).isMesh) return; // skinned or static (unrigged review meshes)
       // animated poses (Defeat lies on the ground) leave the bind-pose bounds: skip culling,
       // the arena camera always sees the characters anyway.
       m.frustumCulled = false;

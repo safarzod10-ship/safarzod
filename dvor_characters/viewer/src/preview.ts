@@ -81,7 +81,7 @@ lib.load(char).then((asset) => {
       renderer.render(scene, camera);
     });
   } else {
-    if (q.get('rest') === '1') inst.mixer.stopAllAction();
+    if (q.get('rest') === '1' || asset.clips.size === 0) inst.mixer.stopAllAction();
     else inst.pose(clip, t);
     renderer.render(scene, camera);
   }
