@@ -99,7 +99,7 @@ public class CharBody : MonoBehaviour
     public void Die(int which = -1)
     {
         if (dead) return;
-        dead = true; deathT = 0f; reloadT = -1f; switchT = -1f;
+        dead = true; deathT = 0f; reloadT = -1f; switchT = -1f; deathSlideMax = MaxDeathSlide;
         if (pendingWeapon >= 0) { Swap(pendingWeapon); pendingWeapon = -1; }
         deathKind = which >= 0 ? which : crouch ? 1 : Random.value < 0.25f ? 2 : 0;
     }
@@ -117,7 +117,28 @@ public class CharBody : MonoBehaviour
         if (dead && deadW >= 1f && deathT > bc[7 + deathKind].length + 0.3f) return;      // lying still: nothing left to animate
         Animate(dt);
         graph.Evaluate(0f);
+        if (deadW > 0f) KeepCorpseInPlace();
         Hold(dt);
+    }
+
+    // The death clips carry the hips up to ~1 m away from where the character stood, which slid bodies into walls (BUG-005).
+    // Keep the horizontal hips travel within MaxDeathSlide, and shorter when a wall is close in that direction
+    // (the torso and head lie up to ~0.9 m beyond the hips).
+    const float MaxDeathSlide = 0.35f, BodyBeyondHips = 0.9f;
+    float deathSlideMax = MaxDeathSlide;
+
+    void KeepCorpseInPlace()
+    {
+        var hips = rig.hips;
+        if (hips == null) return;
+        Vector3 d = hips.position - transform.position; d.y = 0f;
+        float len = d.magnitude;
+        if (len < 1e-3f) return;
+        Vector3 dir = d / len;
+        if (Physics.SphereCast(transform.position + Vector3.up * 0.6f, 0.22f, dir, out var hit, MaxDeathSlide + BodyBeyondHips, ~0, QueryTriggerInteraction.Ignore)
+            && !hit.transform.IsChildOf(transform))
+            deathSlideMax = Mathf.Min(deathSlideMax, Mathf.Max(0f, hit.distance - BodyBeyondHips));
+        if (len > deathSlideMax) hips.position -= dir * (len - deathSlideMax);
     }
 
     void Animate(float dt)

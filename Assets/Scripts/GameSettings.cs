@@ -29,6 +29,10 @@ public static class GameSettings
         ShowFps = PlayerPrefs.GetInt("showFps", 1) == 1;
         PostFx = PlayerPrefs.GetInt("postFx", 1) == 1;
         ButtonScale = PlayerPrefs.GetFloat("btnScale", 1f);
+        // test runs on the CPU renderer: "-gfx 0|1|2" overrides the preset for this run only (not saved)
+        var args = System.Environment.GetCommandLineArgs();
+        for (int i = 0; i + 1 < args.Length; i++)
+            if (args[i] == "-gfx" && int.TryParse(args[i + 1], out var g)) Graphics = (Preset)Mathf.Clamp(g, 0, 2);
         loaded = true;
     }
 
