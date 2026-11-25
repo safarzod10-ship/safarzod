@@ -73,17 +73,79 @@ lib.load(char).then((asset) => {
   camera.position.copy(target).addScaledVector(d, view === "game" ? 6.5 : dist);
   camera.lookAt(view === 'game' ? new THREE.Vector3(0, 0.5, 0) : target);
 
+  // ---- measuring mode: orthographic front/side, metre grid, joint markers (Blender coords)
+  let cam: THREE.Camera = camera;
+  const measure = q.get('measure');
+  if (measure) {
+    const H = h * 1.08;
+    const halfW = (H / 2) * (innerWidth / innerHeight);
+    const oc = new THREE.OrthographicCamera(-halfW, halfW, H, 0, 0.01, 10);
+    oc.position.set(measure === 'side' ? 3 : 0, -0.03, measure === 'side' ? 0 : 3);
+    oc.lookAt(0, -0.03, 0);
+    oc.updateProjectionMatrix();
+    cam = oc;
+    const pts: number[] = [];
+    const step = Number(q.get('step') ?? 0.05);
+    for (let v = 0; v <= H + 1e-6; v += step) {
+      if (measure === 'side') pts.push(-1, v, -halfW, -1, v, halfW);
+      else pts.push(-halfW, v, -1, halfW, v, -1);
+    }
+    for (let u = -Math.floor(halfW / step) * step; u <= halfW; u += step) {
+      if (measure === 'side') pts.push(-1, 0, u, -1, H, u);
+      else pts.push(u, 0, -1, u, H, -1);
+    }
+    const grid = new THREE.LineSegments(
+      new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)),
+      new THREE.LineBasicMaterial({ color: 0x9a9088 }),
+    );
+    scene.add(grid);
+    const marks = (q.get('marks') ?? '').split(';').filter(Boolean);
+    for (const m of marks) {
+      const [x, y, z] = m.split(',').map(Number); // Blender: x right(char left), y back, z up
+      const s = new THREE.Mesh(
+        new THREE.SphereGeometry(Number(q.get('mr') ?? 0.009), 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff0033, depthTest: false }),
+      );
+      s.renderOrder = 10;
+      s.position.set(x, z, -y);
+      scene.add(s);
+    }
+    // labels every 0.1 along both axes
+    const lab = document.createElement('canvas');
+    lab.width = innerWidth;
+    lab.height = innerHeight;
+    lab.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none';
+    document.body.appendChild(lab);
+    const g = lab.getContext('2d')!;
+    g.font = '10px monospace';
+    g.fillStyle = '#333';
+    const toPx = (wx: number, wy: number, wz: number) => {
+      const v = new THREE.Vector3(wx, wy, wz).project(oc);
+      return [((v.x + 1) / 2) * innerWidth, ((1 - v.y) / 2) * innerHeight];
+    };
+    for (let v = 0; v <= H; v += 0.1) {
+      const [px, py] = toPx(measure === 'side' ? 0 : -halfW, v, measure === 'side' ? halfW : 0);
+      g.fillText(v.toFixed(1), 2, py - 2);
+      void px;
+    }
+    for (let u = -Math.floor(halfW / 0.1) * 0.1; u <= halfW; u += 0.1) {
+      const [px] = toPx(measure === 'side' ? 0 : u, 0, measure === 'side' ? u : 0);
+      // side view: screen right = Blender +Y (back) -> label with Blender y
+      g.fillText((measure === 'side' ? -u : u).toFixed(1), px + 2, innerHeight - 4);
+    }
+  }
+
   if (play) {
     inst.play(clip, 0);
     const clock = new THREE.Clock();
     renderer.setAnimationLoop(() => {
       inst.update(clock.getDelta());
-      renderer.render(scene, camera);
+      renderer.render(scene, cam);
     });
   } else {
     if (q.get('rest') === '1' || asset.clips.size === 0) inst.mixer.stopAllAction();
     else inst.pose(clip, t);
-    renderer.render(scene, camera);
+    renderer.render(scene, cam);
   }
   const info = renderer.info.render;
   (window as any).__preview = {

@@ -74,7 +74,7 @@
       ],
       "duration_s": 0.7,
       "loop": false,
-      "event_hit_s": 0.333
+      "event_hit_s": 0.3
     },
     "Ability": {
       "frames": [
@@ -83,7 +83,7 @@
       ],
       "duration_s": 1.033,
       "loop": false,
-      "event_cast_s": 0.433
+      "event_cast_s": 0.4
     },
     "Hit": {
       "frames": [
@@ -119,7 +119,7 @@
     ]
   },
   "files": {
-    "blend_bytes": 289971,
+    "blend_bytes": 290439,
     "raw_glb_bytes": 453312,
     "atlas_png_bytes": 14169
   }

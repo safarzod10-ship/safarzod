@@ -51,14 +51,20 @@ def turnaround(char, ref_key):
         x += t.width + 8
     tiles2 = []
     for lod in (0, 1):
-        g = Image.open(os.path.join(d, f"game_lod{lod}.png")).convert("RGB")
-        tiles2.append(label(g, f"игровая камера · LOD{lod}"))
+        gp = os.path.join(d, f"game_lod{lod}.png")
+        if os.path.exists(gp):
+            tiles2.append(label(Image.open(gp).convert("RGB"), f"игровая камера · LOD{lod}"))
     for lod in (0, 1):
         w = os.path.join(d, f"wire_lod{lod}.png")
         if os.path.exists(w):
             tiles2.append(label(fit(Image.open(w).convert("RGB"), 420), f"сетка · LOD{lod}"))
     for v in ("front", "side"):
-        tiles2.append(label(fit(Image.open(os.path.join(d, f"{v}_lod1.png")).convert("RGB"), 420), f"{names[v]} · LOD1"))
+        fp = os.path.join(d, f"{v}_lod1.png")
+        if os.path.exists(fp):
+            tiles2.append(label(fit(Image.open(fp).convert("RGB"), 420), f"{names[v]} · LOD1"))
+    fp = os.path.join(d, "face_lod0.png")
+    if os.path.exists(fp):
+        tiles2.append(label(fit(Image.open(fp).convert("RGB"), 420), "лицо"))
     row2 = Image.new("RGB", (sum(t.width for t in tiles2) + 8 * (len(tiles2) - 1), 420), BG)
     x = 0
     for t in tiles2:
@@ -94,5 +100,6 @@ def poses(char):
 
 if __name__ == "__main__":
     char, ref_key = sys.argv[1], sys.argv[2]
-    print(turnaround(char, ref_key))
+    if "--poses-only" not in sys.argv:
+        print(turnaround(char, ref_key))
     print(poses(char))

@@ -1,0 +1,97 @@
+{
+  "character": "USER_CH_Technik",
+  "source_mesh": "user_meshes/p1.glb",
+  "scale": 1.5,
+  "import": {
+    "verts_imported": 1634,
+    "verts_welded": 574
+  },
+  "cut": {
+    "side": "L",
+    "method": "delete_fill",
+    "min_cut_edges": 5,
+    "flow": 5,
+    "source_verts": 9,
+    "sink_verts": 210,
+    "patch_faces": 3
+  },
+  "fist_connected_to_torso_after": {
+    "L": "1/12",
+    "R": "1/20"
+  },
+  "lod0": {
+    "object": "USER_CH_Technik_LOD0",
+    "triangles": 1140,
+    "vertices_blender": 573,
+    "materials": 1,
+    "max_influences": 4,
+    "unweighted_vertices": 0,
+    "bbox_m": [
+      0.698,
+      0.625,
+      1.499
+    ]
+  },
+  "skin": {
+    "constrained_vertices": 78,
+    "unweighted_fixed": 0,
+    "rigid_pieces": [
+      {
+        "verts": 65,
+        "bone": "chest",
+        "centre_z_m": 0.904
+      }
+    ]
+  },
+  "bones": 18,
+  "texture": {
+    "source": [
+      4096,
+      4096
+    ],
+    "delivered": [
+      1024,
+      1024
+    ],
+    "path": "textures/USER_CH_Technik_basecolor_1024.jpg",
+    "bytes": 169629
+  },
+  "clips": {
+    "Idle": {
+      "duration_s": 2.0,
+      "loop": true
+    },
+    "Run": {
+      "duration_s": 0.667,
+      "loop": true,
+      "speed_mps": 4.5
+    },
+    "Attack": {
+      "duration_s": 0.7,
+      "loop": false,
+      "event_hit_s": 0.3
+    },
+    "Ability": {
+      "duration_s": 1.033,
+      "loop": false,
+      "event_cast_s": 0.4
+    },
+    "Hit": {
+      "duration_s": 0.4,
+      "loop": false
+    },
+    "Defeat": {
+      "duration_s": 1.567,
+      "loop": false,
+      "hold_last_frame": true
+    },
+    "Victory": {
+      "duration_s": 1.3,
+      "loop": true
+    }
+  },
+  "files": {
+    "blend_bytes": 380204,
+    "raw_glb_bytes": 515636
+  }
+}

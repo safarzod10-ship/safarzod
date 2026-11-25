@@ -1,0 +1,94 @@
+{
+  "character": "USER_CH_Sprinter",
+  "source_mesh": "user_meshes/p2.glb",
+  "scale": 1.5,
+  "import": {
+    "verts_imported": 1480,
+    "verts_welded": 577
+  },
+  "cut": null,
+  "fist_connected_to_torso_after": {
+    "L": "1/22",
+    "R": "1/21"
+  },
+  "lod0": {
+    "object": "USER_CH_Sprinter_LOD0",
+    "triangles": 1123,
+    "vertices_blender": 577,
+    "materials": 1,
+    "max_influences": 4,
+    "unweighted_vertices": 0,
+    "bbox_m": [
+      0.669,
+      0.645,
+      1.499
+    ]
+  },
+  "skin": {
+    "constrained_vertices": 86,
+    "unweighted_fixed": 0,
+    "rigid_pieces": [
+      {
+        "verts": 41,
+        "bone": "foot.R",
+        "centre_z_m": 0.087
+      },
+      {
+        "verts": 41,
+        "bone": "foot.L",
+        "centre_z_m": 0.075
+      }
+    ]
+  },
+  "bones": 18,
+  "texture": {
+    "source": [
+      4096,
+      4096
+    ],
+    "delivered": [
+      1024,
+      1024
+    ],
+    "path": "textures/USER_CH_Sprinter_basecolor_1024.jpg",
+    "bytes": 185766
+  },
+  "clips": {
+    "Idle": {
+      "duration_s": 2.0,
+      "loop": true
+    },
+    "Run": {
+      "duration_s": 0.533,
+      "loop": true,
+      "speed_mps": 5.6
+    },
+    "Attack": {
+      "duration_s": 0.533,
+      "loop": false,
+      "event_hit_s": 0.233
+    },
+    "Ability": {
+      "duration_s": 0.8,
+      "loop": false,
+      "event_cast_s": 0.3
+    },
+    "Hit": {
+      "duration_s": 0.4,
+      "loop": false
+    },
+    "Defeat": {
+      "duration_s": 1.567,
+      "loop": false,
+      "hold_last_frame": true
+    },
+    "Victory": {
+      "duration_s": 1.167,
+      "loop": true
+    }
+  },
+  "files": {
+    "blend_bytes": 399982,
+    "raw_glb_bytes": 516080
+  }
+}

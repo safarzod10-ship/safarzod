@@ -242,9 +242,237 @@
           "channels": 54
         }
       ]
+    },
+    "USER_CH_Technik": {
+      "glb": {
+        "file": "USER_CH_Technik.glb",
+        "bytes": 297440,
+        "gzip": 224038,
+        "brotli": 218638
+      },
+      "ktx2_glb": {
+        "file": "USER_CH_Technik.ktx2.glb",
+        "bytes": 297752,
+        "gzip": 223870,
+        "brotli": 218929
+      },
+      "raw_glb_bytes": 515636,
+      "meshes": [
+        {
+          "name": "USER_CH_Technik_LOD0",
+          "primitives": 1,
+          "triangles": 1140
+        }
+      ],
+      "materials": 1,
+      "textures": [
+        {
+          "name": "USER_CH_Technik_basecolor_1024",
+          "mime": "image/jpeg",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "joints": 18,
+      "draw_calls_visible_lod": 1,
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "animations": [
+        {
+          "name": "Ability",
+          "duration_s": 1.067,
+          "channels": 54
+        },
+        {
+          "name": "Attack",
+          "duration_s": 0.733,
+          "channels": 54
+        },
+        {
+          "name": "Defeat",
+          "duration_s": 1.6,
+          "channels": 54
+        },
+        {
+          "name": "Hit",
+          "duration_s": 0.433,
+          "channels": 54
+        },
+        {
+          "name": "Idle",
+          "duration_s": 2.033,
+          "channels": 54
+        },
+        {
+          "name": "Run",
+          "duration_s": 0.7,
+          "channels": 54
+        },
+        {
+          "name": "Victory",
+          "duration_s": 1.333,
+          "channels": 54
+        }
+      ]
+    },
+    "USER_CH_Sprinter": {
+      "glb": {
+        "file": "USER_CH_Sprinter.glb",
+        "bytes": 318020,
+        "gzip": 241725,
+        "brotli": 235955
+      },
+      "ktx2_glb": {
+        "file": "USER_CH_Sprinter.ktx2.glb",
+        "bytes": 321244,
+        "gzip": 244552,
+        "brotli": 239049
+      },
+      "raw_glb_bytes": 516080,
+      "meshes": [
+        {
+          "name": "USER_CH_Sprinter_LOD0",
+          "primitives": 1,
+          "triangles": 1123
+        }
+      ],
+      "materials": 1,
+      "textures": [
+        {
+          "name": "USER_CH_Sprinter_basecolor_1024",
+          "mime": "image/jpeg",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "joints": 18,
+      "draw_calls_visible_lod": 1,
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "animations": [
+        {
+          "name": "Ability",
+          "duration_s": 0.833,
+          "channels": 54
+        },
+        {
+          "name": "Attack",
+          "duration_s": 0.567,
+          "channels": 54
+        },
+        {
+          "name": "Defeat",
+          "duration_s": 1.6,
+          "channels": 54
+        },
+        {
+          "name": "Hit",
+          "duration_s": 0.433,
+          "channels": 54
+        },
+        {
+          "name": "Idle",
+          "duration_s": 2.033,
+          "channels": 54
+        },
+        {
+          "name": "Run",
+          "duration_s": 0.567,
+          "channels": 54
+        },
+        {
+          "name": "Victory",
+          "duration_s": 1.2,
+          "channels": 54
+        }
+      ]
+    },
+    "USER_CH_Tank": {
+      "glb": {
+        "file": "USER_CH_Tank.glb",
+        "bytes": 272580,
+        "gzip": 197399,
+        "brotli": 192017
+      },
+      "ktx2_glb": {
+        "file": "USER_CH_Tank.ktx2.glb",
+        "bytes": 286724,
+        "gzip": 211066,
+        "brotli": 206116
+      },
+      "raw_glb_bytes": 483964,
+      "meshes": [
+        {
+          "name": "USER_CH_Tank_LOD0",
+          "primitives": 1,
+          "triangles": 1120
+        }
+      ],
+      "materials": 1,
+      "textures": [
+        {
+          "name": "USER_CH_Tank_basecolor_1024",
+          "mime": "image/jpeg",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "joints": 18,
+      "draw_calls_visible_lod": 1,
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "animations": [
+        {
+          "name": "Ability",
+          "duration_s": 1.133,
+          "channels": 54
+        },
+        {
+          "name": "Attack",
+          "duration_s": 1,
+          "channels": 54
+        },
+        {
+          "name": "Defeat",
+          "duration_s": 1.6,
+          "channels": 54
+        },
+        {
+          "name": "Hit",
+          "duration_s": 0.433,
+          "channels": 54
+        },
+        {
+          "name": "Idle",
+          "duration_s": 2.033,
+          "channels": 54
+        },
+        {
+          "name": "Run",
+          "duration_s": 0.833,
+          "channels": 54
+        },
+        {
+          "name": "Victory",
+          "duration_s": 1.6,
+          "channels": 54
+        }
+      ]
     }
   },
-  "generated": "2026-11-25T10:47:03.845Z",
+  "generated": "2026-11-25T11:48:55.559Z",
   "tools": {
     "gltf-transform": "4.5.1",
     "meshoptimizer": "1.3.0",

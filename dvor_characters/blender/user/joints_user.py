@@ -1,0 +1,50 @@
+"""Joint positions measured on the user-supplied Tripo meshes.
+
+Blender coords in model units before scaling (1.0 = model height): x = character's left,
+y = back, z = up. Measured on orthographic front/side renders with a 0.05 grid
+(viewer: preview.html?measure=front|side) and checked with marker overlays
+(review/user_meshes/joints_*.png). Keys ending in _L/_R are per side; plain keys are centre-line.
+"""
+
+
+def sym(d):
+    """Mirror *_L keys to *_R where no explicit *_R is given."""
+    out = dict(d)
+    for k, v in d.items():
+        if k.endswith("_L") and k[:-2] + "_R" not in d:
+            out[k[:-2] + "_R"] = (-v[0], v[1], v[2])
+    return out
+
+
+TECHNIK = sym({  # p1.glb
+    "pelvis": (0.0, -0.03, 0.385), "spine": (0.0, -0.035, 0.455), "chest": (0.0, -0.04, 0.535),
+    "neck": (0.0, -0.035, 0.665), "head": (0.0, -0.035, 0.715), "head_end": (0.0, -0.04, 1.0),
+    "shoulder_L": (0.13, -0.03, 0.615), "elbow_L": (0.165, -0.06, 0.48),
+    "wrist_L": (0.16, -0.075, 0.435), "hand_end_L": (0.152, -0.085, 0.325),
+    "hip_L": (0.075, -0.03, 0.36), "knee_L": (0.10, -0.045, 0.20), "ankle_L": (0.11, -0.01, 0.08),
+    "toe_L": (0.11, -0.13, 0.02),
+})
+
+SPRINTER = {  # p2.glb — contrapposto, hands on hips: both sides measured separately
+    "pelvis": (0.04, -0.06, 0.38), "spine": (0.045, -0.06, 0.44), "chest": (0.05, -0.06, 0.51),
+    "neck": (0.04, -0.05, 0.62), "head": (0.035, -0.045, 0.655), "head_end": (0.03, -0.04, 0.92),
+    "shoulder_L": (0.13, -0.04, 0.565), "elbow_L": (0.214, 0.0, 0.47),
+    "wrist_L": (0.157, -0.09, 0.44), "hand_end_L": (0.13, -0.08, 0.40),
+    "shoulder_R": (-0.043, -0.04, 0.565), "elbow_R": (-0.12, 0.0, 0.47),
+    "wrist_R": (-0.07, -0.09, 0.44), "hand_end_R": (-0.043, -0.08, 0.40),
+    "hip_L": (0.085, -0.06, 0.36), "knee_L": (0.114, -0.085, 0.20), "ankle_L": (0.121, -0.07, 0.08),
+    "toe_L": (0.121, -0.185, 0.02),
+    "hip_R": (-0.02, -0.06, 0.36), "knee_R": (-0.086, -0.085, 0.20), "ankle_R": (-0.136, -0.07, 0.08),
+    "toe_R": (-0.15, -0.185, 0.02),
+}
+
+TANK = sym({  # p3.glb
+    "pelvis": (0.0, -0.02, 0.40), "spine": (0.0, -0.02, 0.48), "chest": (0.0, -0.02, 0.56),
+    "neck": (0.0, -0.01, 0.73), "head": (0.0, 0.0, 0.77), "head_end": (0.0, 0.0, 1.0),
+    "shoulder_L": (0.143, -0.02, 0.62), "elbow_L": (0.215, -0.02, 0.48),
+    "wrist_L": (0.21, -0.035, 0.43), "hand_end_L": (0.20, -0.04, 0.28),
+    "hip_L": (0.09, -0.02, 0.39), "knee_L": (0.128, -0.03, 0.20), "ankle_L": (0.12, -0.02, 0.10),
+    "toe_L": (0.12, -0.15, 0.02),
+})
+
+MESHES = {"technik": ("p1", TECHNIK), "sprinter": ("p2", SPRINTER), "tank": ("p3", TANK)}

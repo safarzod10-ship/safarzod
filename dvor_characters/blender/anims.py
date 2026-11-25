@@ -110,7 +110,7 @@ def attack(role):
                    loc=(0, -0.04, -0.04))
         fol = blend(rel, a, 0.35)
         keys = [(1, a), (7, wind), (11, rel), (15, fol), (22, a)]
-        return keys, False, {"event_hit_s": 10 / 30}
+        return keys, False, {"event_hit_s": (10 - 1) / 30}
     if role == "tank":      # two-handed overhead hammer slam
         wind = over(a, spine=(-12, 0, 0), chest=(-8, 0, 0), head=(-10, 0, 0),
                     upper_arm_L=(-165, 12, 0), upper_arm_R=(-165, 12, 0),
@@ -122,7 +122,7 @@ def attack(role):
                     shin_R=(62, 0, 0), foot_L=(-24, 10, 0), foot_R=(-24, 10, 0),
                     loc=(0, -0.03, -0.13))
         keys = [(1, a), (11, wind), (16, slam), (21, slam), (30, a)]
-        return keys, False, {"event_hit_s": 16 / 30}
+        return keys, False, {"event_hit_s": (16 - 1) / 30}
     # sprinter: fast front kick with the right leg
     chamber = over(a, thigh_R=(-85, 0, 0), shin_R=(95, 0, 0), foot_R=(-10, 0, 0),
                    spine=(-6, 0, 0), upper_arm_L=(-35, -25, 0), upper_arm_R=(25, -25, 0),
@@ -130,7 +130,7 @@ def attack(role):
     kick = over(chamber, thigh_R=(-95, 0, 0), shin_R=(8, 0, 0), foot_R=(30, 0, 0),
                 spine=(-14, 0, 0), chest=(-6, 0, 10), thigh_L=(6, 0, 0), shin_L=(10, 0, 0))
     keys = [(1, a), (5, chamber), (8, kick), (11, chamber), (17, a)]
-    return keys, False, {"event_hit_s": 8 / 30}
+    return keys, False, {"event_hit_s": (8 - 1) / 30}
 
 
 def ability(role):
@@ -143,7 +143,7 @@ def ability(role):
                       upper_arm_L=(-38, 6, 0), forearm_L=(-60, 0, 0))
         tap = over(crouch, upper_arm_R=(-72, 6, 0), forearm_R=(-55, 0, 0), head=(-16, 0, 0))
         keys = [(1, a), (8, crouch), (13, crouch), (17, tap), (21, crouch), (32, a)]
-        return keys, False, {"event_cast_s": 13 / 30}
+        return keys, False, {"event_cast_s": (13 - 1) / 30}
     if role == "tank":      # brace guard: forearms crossed in front, wide low stance
         guard = over(a, loc=(0, 0.0, -0.1), spine=(6, 0, 0), chest=(0, 0, 0), head=(8, 0, 0),
                      upper_arm_L=(-74, 36, 0), upper_arm_R=(-74, 36, 0),
@@ -152,7 +152,7 @@ def ability(role):
                      shin_R=(42, 0, 0), foot_L=(-16, 14, 0), foot_R=(-16, 14, 0))
         push = over(guard, loc=(0, -0.06, -0.08), spine=(14, 0, 0), head=(2, 0, 0))
         keys = [(1, a), (7, guard), (16, push), (26, guard), (34, a)]
-        return keys, False, {"event_cast_s": 7 / 30}
+        return keys, False, {"event_cast_s": (7 - 1) / 30}
     # sprinter: low explosive dash pose, arms swept back
     load = over(a, loc=(0, 0.03, -0.12), spine=(18, 0, 0), thigh_L=(-40, 0, 0), shin_L=(70, 0, 0),
                 foot_L=(-28, 0, 0), thigh_R=(-10, 0, 0), shin_R=(60, 0, 0), foot_R=(-40, 0, 0),
@@ -163,7 +163,7 @@ def ability(role):
                 upper_arm_L=(70, -22, 0), upper_arm_R=(70, -22, 0),
                 forearm_L=(-15, 0, 0), forearm_R=(-15, 0, 0))
     keys = [(1, a), (6, load), (10, dash), (17, dash), (25, a)]
-    return keys, False, {"event_cast_s": 10 / 30}
+    return keys, False, {"event_cast_s": (10 - 1) / 30}
 
 
 def hit(role):

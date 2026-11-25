@@ -4,6 +4,7 @@
  * fall and celebrate, so every clip and LOD switch is exercised at once.
  *
  * URL params:
+ *   set=user|proc  user = the supplied (Tripo) models USER_CH_*, proc = procedural fallback CH_*
  *   count=3        number of characters (cycles through the three; >3 = stress test)
  *   tex=auto|png|ktx2   texture variant (auto = KTX2 when the GPU supports a compressed format)
  *   lod=auto|0|1   LOD policy;  lodpx=150  switch height in CSS px for lod=auto
@@ -22,6 +23,7 @@ import {
 
 const q = new URLSearchParams(location.search);
 const COUNT = Math.max(1, Number(q.get('count') ?? 3));
+const PREFIX = (q.get('set') ?? 'user') === 'user' ? 'USER_' : '';
 const LOD_MODE = q.get('lod') ?? 'auto';
 const LOD_PX = Number(q.get('lodpx') ?? 150);
 const LAMBERT = q.get('lambert') === '1';
@@ -85,7 +87,7 @@ const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 80
 function placeCamera(): void {
   // top-down arena camera at 55 degrees; distance fits the arena on portrait phones too
   const aspect = innerWidth / innerHeight;
-  const dist = aspect < 1 ? 19 / Math.max(aspect, 0.45) * 0.62 : 15;
+  const dist = aspect < 1 ? 16 : 15;
   const el = THREE.MathUtils.degToRad(55);
   camera.position.set(0, Math.sin(el) * dist, Math.cos(el) * dist);
   camera.lookAt(0, 0, 0.6);
@@ -129,8 +131,20 @@ const lib = new CharacterLibrary(renderer, {
 
 const SPEED: Record<string, number> = { CH_Technik: 4.5, CH_Tank: 3.8, CH_Sprinter: 5.6 };
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
+const probe = new THREE.Vector3();
+function onScreen(x: number, z: number): boolean {
+  // feet and head (1.6 m) must both project inside the screen, below the HUD
+  for (const y of [0, 1.6]) {
+    probe.set(x, y, z).project(camera);
+    if (Math.abs(probe.x) > 0.85 || probe.y < -0.9 || probe.y > 0.55) return false;
+  }
+  return true;
+}
 function pickTarget(a: Actor): void {
-  a.target.set(rand(-ARENA + 1, ARENA - 1), 0, rand(-ARENA + 1, ARENA - 1));
+  for (let i = 0; i < 50; i++) {
+    a.target.set(rand(-ARENA + 1, ARENA - 1), 0, rand(-ARENA + 1, ARENA - 1));
+    if (onScreen(a.target.x, a.target.z)) break;
+  }
   a.state = 'move';
   a.inst.play('Run', 0.15);
 }
@@ -145,7 +159,7 @@ function doAction(a: Actor, clip?: ClipName): void {
 }
 
 async function spawn(): Promise<void> {
-  const ids = Array.from({ length: COUNT }, (_, i) => CHARACTER_IDS[i % CHARACTER_IDS.length]);
+  const ids = Array.from({ length: COUNT }, (_, i) => PREFIX + CHARACTER_IDS[i % CHARACTER_IDS.length]);
   const unique = [...new Set(ids)];
   const t0 = performance.now();
   const assets = await Promise.all(unique.map((id) => lib.load(id)));
@@ -158,12 +172,14 @@ async function spawn(): Promise<void> {
     if (LOD_MODE !== 'auto') inst.setLod(Number(LOD_MODE));
     else inst.setLod(null);
     const ang = (i / COUNT) * Math.PI * 2;
-    inst.root.position.set(Math.cos(ang) * 2.5, 0, Math.sin(ang) * 2.5);
+    inst.root.position.set(Math.cos(ang) * 1.6, 0, Math.sin(ang) * 1.6 + 0.8);
     scene.add(inst.root);
     const shadow = new THREE.Mesh(blobGeo, blobMat);
     shadow.position.y = 0.01;
     scene.add(shadow);
-    const actor: Actor = { inst, shadow, target: new THREE.Vector3(), speed: SPEED[id], state: 'move', timer: 0 };
+    const actor: Actor = {
+      inst, shadow, target: new THREE.Vector3(), speed: SPEED[id.replace('USER_', '')], state: 'move', timer: 0,
+    };
     inst.onFinished((name) => {
       if (name === 'Defeat') return; // stays down until its timer runs out
       pickTarget(actor);

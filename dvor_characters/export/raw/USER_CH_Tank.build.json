@@ -1,0 +1,83 @@
+{
+  "character": "USER_CH_Tank",
+  "source_mesh": "user_meshes/p3.glb",
+  "scale": 1.5,
+  "import": {
+    "verts_imported": 1449,
+    "verts_welded": 562
+  },
+  "cut": null,
+  "fist_connected_to_torso_after": {
+    "L": "6/28",
+    "R": "5/29"
+  },
+  "lod0": {
+    "object": "USER_CH_Tank_LOD0",
+    "triangles": 1120,
+    "vertices_blender": 562,
+    "materials": 1,
+    "max_influences": 4,
+    "unweighted_vertices": 0,
+    "bbox_m": [
+      0.88,
+      0.598,
+      1.499
+    ]
+  },
+  "skin": {
+    "constrained_vertices": 0,
+    "unweighted_fixed": 0,
+    "rigid_pieces": []
+  },
+  "bones": 18,
+  "texture": {
+    "source": [
+      4096,
+      4096
+    ],
+    "delivered": [
+      1024,
+      1024
+    ],
+    "path": "textures/USER_CH_Tank_basecolor_1024.jpg",
+    "bytes": 143580
+  },
+  "clips": {
+    "Idle": {
+      "duration_s": 2.0,
+      "loop": true
+    },
+    "Run": {
+      "duration_s": 0.8,
+      "loop": true,
+      "speed_mps": 3.8
+    },
+    "Attack": {
+      "duration_s": 0.967,
+      "loop": false,
+      "event_hit_s": 0.5
+    },
+    "Ability": {
+      "duration_s": 1.1,
+      "loop": false,
+      "event_cast_s": 0.2
+    },
+    "Hit": {
+      "duration_s": 0.4,
+      "loop": false
+    },
+    "Defeat": {
+      "duration_s": 1.567,
+      "loop": false,
+      "hold_last_frame": true
+    },
+    "Victory": {
+      "duration_s": 1.567,
+      "loop": true
+    }
+  },
+  "files": {
+    "blend_bytes": 356363,
+    "raw_glb_bytes": 483964
+  }
+}
