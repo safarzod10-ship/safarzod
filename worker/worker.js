@@ -1,17 +1,16 @@
 // Telegram bot + Mini App backend on Cloudflare Workers.
-// Bindings: DB (D1), BOT_TOKEN (secret), WEBHOOK_SECRET (secret), SETUP_KEY (secret).
-// Routes: GET / and static files -> mini app; POST /api/* -> game API (Telegram initData required);
+// The mini app itself is static (GitHub Pages, WEBAPP_URL); this Worker is its API and the bot.
+// Bindings: DB (D1), BOT_TOKEN (secret), WEBHOOK_SECRET (secret), SETUP_KEY (secret), WEBAPP_URL (var).
+// Routes: POST /api/* -> game API (Telegram initData required, CORS for the mini app origin);
 // POST /webhook -> Telegram updates (payments, /start); GET /setup?key=SETUP_KEY -> register webhook and menu button.
-import INDEX from "./index.html";
-import GAME from "./game.js.txt";
-import API from "./api.js.txt";
 
 const PACKS = [50, 100, 250, 500];                        // Stars top-up packs
 const STAKES = [0, 10, 25, 50];
 const REWARD = [[0, 0], [1500, 0.5], [3000, 1], [6000, 1.5], [10000, 2], [16000, 3]]; // [min score, multiplier]
 const MAX_POINTS_PER_SEC = 400;                           // sanity limit for a submitted score
 
-const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+let CORS = {};
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
 const enc = new TextEncoder();
 
 async function hmac(key, data) {
@@ -100,7 +99,7 @@ async function api(path, req, env) {
   return json({ error: "not found" }, 404);
 }
 
-async function webhook(req, env, origin) {
+async function webhook(req, env, app) {
   if (req.headers.get("x-telegram-bot-api-secret-token") !== env.WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
   const up = await req.json();
   if (up.pre_checkout_query) {
@@ -122,34 +121,29 @@ async function webhook(req, env, origin) {
   if (m && m.text) {
     const cmd = m.text.split(/[\s@]/)[0];
     if (cmd === "/paysupport") await tg(env, "sendMessage", { chat_id: m.chat.id, text: "Вопросы по оплате: напишите сюда, ответим в течение 24 часов." });
-    else await tg(env, "sendMessage", { chat_id: m.chat.id, text: "Играть:", reply_markup: { inline_keyboard: [[{ text: "▶ Играть", web_app: { url: origin + "/" } }]] } });
+    else await tg(env, "sendMessage", { chat_id: m.chat.id, text: "Играть:", reply_markup: { inline_keyboard: [[{ text: "▶ Играть", web_app: { url: app } }]] } });
   }
   return new Response("ok");
 }
 
-const STATIC = {
-  "/": [INDEX, "text/html; charset=utf-8"], "/index.html": [INDEX, "text/html; charset=utf-8"],
-  "/game.js": [GAME, "application/javascript; charset=utf-8"], "/api.js": [API, "application/javascript; charset=utf-8"],
-};
-
 export default {
   async fetch(req, env) {
-    const url = new URL(req.url), origin = url.origin;
+    const url = new URL(req.url), origin = url.origin, app = env.WEBAPP_URL;
+    CORS = { "access-control-allow-origin": new URL(app).origin, "access-control-allow-headers": "content-type, x-telegram-init-data", "access-control-allow-methods": "POST, OPTIONS", "vary": "origin" };
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     try {
       if (url.pathname === "/health") { await ensureSchema(env); return json({ ok: true, bot: !!env.BOT_TOKEN }); }
       if (url.pathname === "/setup") {
         if (url.searchParams.get("key") !== env.SETUP_KEY) return new Response("forbidden", { status: 403 });
         await ensureSchema(env);
         await tg(env, "setWebhook", { url: origin + "/webhook", secret_token: env.WEBHOOK_SECRET, allowed_updates: ["message", "pre_checkout_query"], drop_pending_updates: true });
-        await tg(env, "setChatMenuButton", { menu_button: { type: "web_app", text: "Играть", web_app: { url: origin + "/" } } });
+        await tg(env, "setChatMenuButton", { menu_button: { type: "web_app", text: "Играть", web_app: { url: app } } });
         await tg(env, "setMyCommands", { commands: [{ command: "start", description: "Играть" }, { command: "paysupport", description: "Помощь с оплатой" }] });
         const me = await tg(env, "getMe", {});
-        return json({ ok: true, bot: "@" + me.username, webapp: origin + "/" });
+        return json({ ok: true, bot: "@" + me.username, webapp: app });
       }
-      if (req.method === "POST" && url.pathname === "/webhook") return await webhook(req, env, origin);
+      if (req.method === "POST" && url.pathname === "/webhook") return await webhook(req, env, app);
       if (req.method === "POST" && url.pathname.startsWith("/api/")) return await api(url.pathname, req, env);
-      const s = STATIC[url.pathname];
-      if (s) return new Response(s[0], { headers: { "content-type": s[1], "cache-control": "no-cache" } });
       return new Response("not found", { status: 404 });
     } catch (e) {
       return json({ error: String(e.message || e) }, 500);

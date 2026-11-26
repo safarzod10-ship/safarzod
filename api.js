@@ -1,10 +1,11 @@
-// Client side of the game API. The server (Cloudflare Worker, same origin) keeps the balance,
+// Client side of the game API. The server (Cloudflare Worker at API_BASE) keeps the balance,
 // takes stakes, pays out and sells Stars through the bot. Every request carries Telegram initData.
+const API_BASE = "https://hypo-bot.dvor-game.workers.dev";
 const Api = (() => {
   const tg = window.Telegram && window.Telegram.WebApp;
   let table = [];
   async function call(path, body) {
-    const res = await fetch(path, {
+    const res = await fetch(API_BASE + path, {
       method: "POST",
       headers: { "content-type": "application/json", "x-telegram-init-data": tg ? tg.initData : "" },
       body: JSON.stringify(body || {}),
