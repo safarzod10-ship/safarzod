@@ -3,7 +3,8 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { load, loadColliders } from './assets';
 import type { Collider } from './game/arena';
 import { HEROES, heroById, type HeroId } from './data';
-import { Match, lineup, type PlayerInput, type Team } from './game/match';
+import { Match, lineup, type PlayerInput, type Snapshot, type Team, type UnitView } from './game/match';
+import type { Peer, RoomLink } from './net';
 import { applyResult, botSkill, boostOf, heroLevelOf, loadProfile, rankOf } from './progress';
 import { postGameScore, postResult } from './api';
 import { MATCH } from './game/kits';
@@ -11,12 +12,13 @@ import { ICONS, rankBadge } from './icons';
 import { haptic, inTelegram } from './tg';
 
 export interface Battle { destroy(): void }
+export interface Online { link: RoomLink; role: 'host' | 'guest'; blue: HeroId[]; red: HeroId[]; rival: Peer }
 
 const ABILITY_ICON: Record<HeroId, string> = {
   technik: ICONS.turret, tank: ICONS.ram, sprinter: ICONS.speed, sniper: ICONS.bullet, medic: ICONS.medkit,
 };
 
-export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => void, firstBlue?: HeroId[]): Battle {
+export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => void, firstBlue?: HeroId[], online?: Online): Battle {
   const me = heroById(heroId);
   root.innerHTML = `
     <div class="battle-stage"></div>
@@ -60,7 +62,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 120);
   const camTarget = new THREE.Vector3(0, 0, 6);
-  let camYaw = Math.PI;
+  const camYaw = Math.PI;
   const resize = () => {
     const w = stage.clientWidth || innerWidth, h = stage.clientHeight || innerHeight;
     renderer.setSize(w, h);
@@ -105,7 +107,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     if (n <= 0) return;
     const [sx, sy] = toScreen(x, y, z);
     const el = document.createElement('span');
-    el.className = `dmg ${heal ? 'heal' : team === 0 ? 'ours' : 'theirs'}`;
+    el.className = `dmg ${heal ? 'heal' : team === mine ? 'ours' : 'theirs'}`;
     el.textContent = heal ? `+${n}` : String(n);
     el.style.left = `${sx + (Math.random() - 0.5) * 24}px`;
     el.style.top = `${sy}px`;
@@ -114,12 +116,20 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   };
   const killFeed = (killer: string | null, victim: string, victimTeam: Team) => {
     const el = document.createElement('p');
-    el.innerHTML = `${killer ? `<b class="${victimTeam === 0 ? 'r' : 'b'}">${killer}</b> → ` : ''}<b class="${victimTeam === 0 ? 'b' : 'r'}">${victim}</b>`;
+    const ours = victimTeam === mine;
+    el.innerHTML = `${killer ? `<b class="${ours ? 'r' : 'b'}">${killer}</b> → ` : ''}<b class="${ours ? 'b' : 'r'}">${victim}</b>`;
     feed.prepend(el);
     setTimeout(() => el.remove(), 3500);
     while (feed.children.length > 3) feed.lastElementChild?.remove();
   };
-  const label = (u: { team: Team; isPlayer: boolean; hero: { name: string } }) => (u.isPlayer ? 'Ты' : u.hero.name);
+  const label = (u: UnitView) => (u.isPlayer ? 'Ты' : u.human && online ? online.rival.name : u.hero.name);
+  let mine: Team = 0;
+  const note = (text: string) => {
+    const el = document.createElement('p');
+    el.textContent = text;
+    feed.prepend(el);
+    setTimeout(() => el.remove(), 4000);
+  };
 
   const showResult = (r: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number; healed: number } }) => {
     haptic(r.winner === 0 ? 'success' : 'medium');
@@ -145,10 +155,10 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
           <li><span>Выбыл</span><b>${r.you.deaths}</b></li>
           <li><span>${r.you.healed > 0 ? 'Вылечено' : 'Урон'}</span><b>${(r.you.healed > 0 ? r.you.healed : r.you.dealt).toLocaleString('ru-RU')}</b></li>
         </ul>
-        <div class="result-btns"><button type="button" class="btn-main" id="again">Ещё раз</button><button type="button" class="btn-ghost" id="home">На главную</button></div>
+        <div class="result-btns">${online ? '' : '<button type="button" class="btn-main" id="again">Ещё раз</button>'}<button type="button" class="btn-ghost" id="home">На главную</button></div>
       </div>`;
     resEl.hidden = false;
-    resEl.querySelector('#again')!.addEventListener('click', () => { haptic('light'); newMatch(); });
+    resEl.querySelector('#again')?.addEventListener('click', () => { haptic('light'); newMatch(); });
     resEl.querySelector('#home')!.addEventListener('click', () => { haptic('light'); onExit(); });
   };
 
@@ -164,26 +174,32 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     bars.clear();
     feed.innerHTML = '';
     resEl.hidden = true;
-    const blue = firstBlue ?? lineup(heroId), red = lineup();
+    const blue = online?.blue ?? firstBlue ?? lineup(heroId), red = online?.red ?? lineup();
     firstBlue = undefined;
-    root.querySelector('.team.blue .faces')!.innerHTML = blue.map((id) => `<img src="${heroById(id).card}" alt="${heroById(id).name}">`).join('');
-    root.querySelector('.team.red .faces')!.innerHTML = red.map((id) => `<img src="${heroById(id).card}" alt="${heroById(id).name}">`).join('');
+    mine = online?.role === 'guest' ? 1 : 0;
+    const faces = (list: HeroId[]) => list.map((id) => `<img src="${heroById(id).card}" alt="${heroById(id).name}">`).join('');
+    root.querySelector('.team.blue .faces')!.innerHTML = faces(mine ? red : blue);
+    root.querySelector('.team.red .faces')!.innerHTML = faces(mine ? blue : red);
     match = new Match(scene, assets.heroes, assets.colliders, heroId, {
       damage: (x, y, z, n, team, heal) => popNumber(x, y, z, n, team, heal),
       kill: (k, vic) => { killFeed(k ? label(k) : null, label(vic), vic.team); if (vic.isPlayer) haptic('medium'); if (k?.isPlayer) { shake(0.35); haptic('light'); } },
       shake: (a) => shake(a),
-      end: (r) => setTimeout(() => alive && showResult(r), 1200),
-    }, assets.props, { blue, red, skill: botSkill(loadProfile().trophies), playerBoost: boostOf(heroId) });
+      end: (r) => {
+        if (online) endMsg = { t: 'end', winner: r.winner, score: r.score };
+        setTimeout(() => alive && showResult(r), 1200);
+      },
+    }, assets.props, online
+      ? { blue, red, net: online.role, playerBoost: boostOf(heroId), rivalBoost: online.rival.boost }
+      : { blue, red, skill: botSkill(loadProfile().trophies), playerBoost: boostOf(heroId) });
     for (const u of match.views()) {
       const el = document.createElement('div');
-      el.className = `hp ${u.team === 0 ? 'blue' : 'red'}${u.isPlayer ? ' me' : ''}`;
+      el.className = `hp ${u.team === mine ? 'blue' : 'red'}${u.isPlayer ? ' me' : ''}`;
       el.innerHTML = `<b></b><i><s></s></i>${u.isPlayer && u.hero.id === 'technik' ? '<u><s></s></u>' : ''}`;
       hud.insertBefore(el, feed);
       bars.set(u.id, el);
     }
-    const p = match.views()[0];
+    const p = match.views().find((u) => u.isPlayer)!;
     camTarget.set(p.x, 0, p.z);
-    camYaw = p.team === 0 ? Math.PI : 0;
     beginCountdown();
   }
   function beginCountdown(): void {
@@ -287,7 +303,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     if (!ray.ray.intersectPlane(plane, hit)) return;
-    const p = match.views()[0];
+    const p = match.views().find((u) => u.isPlayer)!;
     const dx = hit.x - p.x, dz = hit.z - p.z, l = Math.hypot(dx, dz) || 1;
     aimShot = [dx / l, dz / l];
   });
@@ -312,6 +328,48 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     return inp;
   };
 
+  let gone = false, sendAt = 0, endMsg: { t: 'end'; winner: number; score: [number, number] } | null = null;
+  const net = { a1: false, dash: false, attack: null as PlayerInput['attack'] };
+  const sync = (t: number, inp: PlayerInput) => {
+    if (!online || !match) return;
+    if (online.role === 'host') {
+      if (t - sendAt < 66 && !endMsg) return;
+      sendAt = t;
+      online.link.send({ t: 's', d: match.snapshot() });
+      if (endMsg) { online.link.send(endMsg); endMsg = null; gone = true; }
+      return;
+    }
+    net.a1 ||= inp.a1;
+    net.dash ||= inp.dash;
+    net.attack ??= inp.attack;
+    if (t - sendAt < 66 && !net.a1 && !net.dash && !net.attack) return;
+    sendAt = t;
+    online.link.send({ t: 'i', inp: { move: inp.move, auto: true, attack: net.attack, a1: net.a1, dash: net.dash } });
+    net.a1 = net.dash = false;
+    net.attack = null;
+  };
+  const abort = (text: string) => {
+    gone = true;
+    resEl.className = 'result draw';
+    resEl.innerHTML = `<div class="result-card"><h2>Бой прерван</h2><p class="result-up">${text}</p>
+      <div class="result-btns"><button type="button" class="btn-main" id="home">На главную</button></div></div>`;
+    resEl.hidden = false;
+    resEl.querySelector('#home')!.addEventListener('click', () => { haptic('light'); onExit(); });
+  };
+  const offNet = online?.link.on((m) => {
+    if (m.t === 's' && online.role === 'guest') match?.applySnapshot(m.d as Snapshot);
+    else if (m.t === 'i' && online.role === 'host') match?.setRemote(m.inp as PlayerInput);
+    else if (m.t === 'end' && online.role === 'guest' && match) {
+      gone = true;
+      const w = m.winner as number, sc = m.score as [number, number];
+      const r = { winner: (w === -1 ? -1 : w === mine ? 0 : 1) as Team | -1, score: [sc[mine], sc[1 - mine]] as [number, number], you: match.stats() };
+      setTimeout(() => alive && showResult(r), 1200);
+    } else if ((m.t === 'left' || m.t === 'closed') && !gone && !match?.ended) {
+      if (online.role === 'host' && match) { match.dropRemote(); note(`${online.rival.name} вышел — за него играет бот`); }
+      else abort('Соперник отключился. Кубки не списаны.');
+    }
+  });
+
   const setCd = (b: HTMLElement, left: number, max: number) => {
     b.style.setProperty('--cd', String(max ? left / max : 0));
     b.classList.toggle('cooling', left > 0.05);
@@ -322,9 +380,11 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     timer.update(t);
     const dt = Math.min(timer.getDelta(), 1 / 15);
     if (match) {
-      match.update(dt, readInput());
+      const inp = readInput();
+      match.update(dt, inp);
+      if (online && !gone) sync(t, inp);
       const views = match.views();
-      const p = views[0];
+      const p = views.find((u) => u.isPlayer)!;
       camTarget.x += (p.x - camTarget.x) * Math.min(1, dt * 10);
       camTarget.z += (p.z - camTarget.z) * Math.min(1, dt * 10);
       for (const u of views) {
@@ -340,12 +400,12 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
         const heat = el.querySelector<HTMLElement>('u s');
         if (heat) { heat.style.transform = `scaleX(${u.overheated ? 1 : u.heat / 6})`; heat.parentElement!.classList.toggle('hot', u.overheated); }
       }
-      s0.textContent = String(Math.floor(match.score[0]));
-      s1.textContent = String(Math.floor(match.score[1]));
+      s0.textContent = String(Math.floor(match.score[mine]));
+      s1.textContent = String(Math.floor(match.score[1 - mine]));
       const left = Math.max(0, Math.ceil(MATCH.seconds - match.time));
       timerEl.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
       const zo = match.zoneOwner;
-      timerEl.dataset.owner = String(zo);
+      timerEl.dataset.owner = String(zo === mine ? 0 : zo === 1 - mine ? 1 : zo);
       deadEl.hidden = p.alive || match.ended;
       if (!p.alive) deadEl.querySelector('b')!.textContent = String(Math.ceil(p.respawnIn));
       const cd = match.cooldowns();
@@ -365,6 +425,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       removeEventListener('keydown', kd);
       removeEventListener('keyup', ku);
       match?.dispose();
+      offNet?.();
+      online?.link.close();
       renderer.dispose();
       root.innerHTML = '';
     },

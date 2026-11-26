@@ -9,6 +9,8 @@ export type Team = 0 | 1;
 const R_BODY = 0.35;
 const R_HIT = 0.45;
 const TEAM_COL = [0x2b9cf0, 0xe2493b];
+const r2 = (v: number): number => Math.round(v * 100) / 100;
+const left = (v: number): number => (v > 0 ? r2(v) : 0);
 
 const SPAWNS: [number, number][][] = [
 
@@ -17,6 +19,8 @@ const SPAWNS: [number, number][][] = [
 ];
 const CLIPS = ['Idle', 'Run', 'Attack', 'Ability', 'Hit', 'Defeat', 'Victory'] as const;
 type Clip = (typeof CLIPS)[number];
+const KINDS = ['bullet', 'record', 'tracer', 'dart'] as const;
+type ProjKind = (typeof KINDS)[number];
 
 export interface PlayerInput {
   move: [number, number];
@@ -30,6 +34,13 @@ export interface MatchOptions {
   allBots?: boolean;
   skill?: number;
   playerBoost?: Boost;
+  net?: 'host' | 'guest';
+  rivalBoost?: Boost;
+}
+
+export interface Snapshot {
+  t: number; s: [number, number]; z: number; e: number;
+  u: number[][]; p: number[][]; q: number[][]; v: (string | number)[][];
 }
 export interface Boost { hp: number; dmg: number; speed: number; cd?: number }
 
@@ -54,15 +65,16 @@ export function lineup(first?: HeroId): HeroId[] {
 }
 
 export interface UnitView {
-  id: number; team: Team; hero: Hero; isPlayer: boolean; alive: boolean; hp: number; maxHp: number;
+  id: number; team: Team; hero: Hero; isPlayer: boolean; human: boolean; alive: boolean; hp: number; maxHp: number;
   x: number; z: number; heat: number; overheated: boolean; respawnIn: number;
 }
 
 interface Unit {
-  id: number; team: Team; hero: Hero; kit: Kit; isPlayer: boolean; slot: number;
+  id: number; team: Team; hero: Hero; kit: Kit; isPlayer: boolean; human: boolean; slot: number;
   root: THREE.Object3D; mixer: THREE.AnimationMixer; actions: Map<Clip, THREE.AnimationAction>;
   mats: THREE.MeshStandardMaterial[]; flashUntil: number;
-  cur: THREE.AnimationAction | null; oneShotUntil: number;
+  cur: THREE.AnimationAction | null; oneShotUntil: number; clip: Clip; seq: number; netSeq: number;
+  nx: number; nz: number; nyaw: number;
   ring: THREE.Mesh; stunFx: THREE.Mesh;
   x: number; z: number; yaw: number; kx: number; kz: number;
   hp: number; alive: boolean; respawnAt: number; invulnUntil: number;
@@ -77,10 +89,10 @@ interface Unit {
 }
 
 interface Proj {
-  team: Team; owner: Unit | null; x: number; z: number; vx: number; vz: number; left: number; dmg: number;
+  id: number; kind: ProjKind; team: Team; owner: Unit | null; x: number; z: number; vx: number; vz: number; left: number; dmg: number;
   bounces: number; obj: THREE.Object3D; spin: boolean; fromTurret: boolean; pierced: Set<number> | null;
 }
-interface Turret { team: Team; owner: Unit; x: number; z: number; hp: number; until: number; next: number; obj: THREE.Object3D; head: THREE.Object3D; born: number }
+interface Turret { id: number; team: Team; owner: Unit; x: number; z: number; hp: number; until: number; next: number; obj: THREE.Object3D; head: THREE.Object3D; born: number }
 interface Fx { obj: THREE.Object3D; t: number; dur: number; tick: (k: number) => void }
 
 export interface MatchEvents {
@@ -107,6 +119,10 @@ export class Match {
   private mats: Record<string, THREE.Material> = {};
   private geos: Record<string, THREE.BufferGeometry> = {};
   private started = false;
+  readonly me: Team;
+  private remote: PlayerInput | null = null;
+  private log: (string | number)[][] = [];
+  private nextId = 1;
 
   constructor(
     private scene: THREE.Scene,
@@ -117,6 +133,7 @@ export class Match {
     props: GLTF,
     private opts: MatchOptions = {},
   ) {
+    this.me = opts.net === 'guest' ? 1 : 0;
     this.buildShared();
     this.setupProps(props);
 
@@ -133,16 +150,21 @@ export class Match {
     let id = 0;
     for (const [team, list] of [[0, blue], [1, red]] as [Team, HeroId[]][]) {
       list.forEach((hid, slot) => {
-        this.units.push(this.makeUnit(id++, team, HEROES.find((h) => h.id === hid)!, heroes[hid], team === 0 && slot === 0, slot));
+        this.units.push(this.makeUnit(id++, team, HEROES.find((h) => h.id === hid)!, heroes[hid], team === this.me && slot === 0, slot));
       });
     }
   }
 
-  get player(): Unit { return this.units[0]; }
+  get player(): Unit { return this.units.find((u) => u.isPlayer) ?? this.units[0]; }
+  stats(): { kills: number; deaths: number; dealt: number; healed: number } {
+    const p = this.player;
+    return { kills: p.kills, deaths: p.deaths, dealt: Math.round(p.dealt), healed: Math.round(p.healed) };
+  }
+  private side(team: Team): 0 | 1 { return team === this.me ? 0 : 1; }
   start(): void { this.started = true; }
 
   view(u: Unit): UnitView {
-    return { id: u.id, team: u.team, hero: u.hero, isPlayer: u.isPlayer, alive: u.alive, hp: Math.round(u.hp), maxHp: u.kit.hp,
+    return { id: u.id, team: u.team, hero: u.hero, isPlayer: u.isPlayer, human: u.human, alive: u.alive, hp: Math.round(u.hp), maxHp: u.kit.hp,
       x: u.x, z: u.z, heat: u.heat, overheated: this.time < u.overheatUntil, respawnIn: Math.max(0, u.respawnAt - this.time) };
   }
   views(): UnitView[] { return this.units.map((u) => this.view(u)); }
@@ -187,7 +209,7 @@ export class Match {
       t.emissive.setHex(c).multiplyScalar(0.25);
       return t;
     };
-    this.teamMats = [paint(TEAM_COL[0]), paint(TEAM_COL[1])];
+    this.teamMats = [paint(TEAM_COL[this.me]), paint(TEAM_COL[1 - this.me])];
   }
   private propClone(team: Team): THREE.Object3D {
     const o = this.turretTpl.clone(true);
@@ -195,7 +217,7 @@ export class Match {
     o.rotation.set(0, 0, 0);
     o.traverse((c) => {
       const m = c as THREE.Mesh;
-      if (m.isMesh && !Array.isArray(m.material) && m.material.name === 'Team') m.material = this.teamMats[team];
+      if (m.isMesh && !Array.isArray(m.material) && m.material.name === 'Team') m.material = this.teamMats[this.side(team)];
     });
     return o;
   }
@@ -227,18 +249,21 @@ export class Match {
       if (c.name !== 'Idle' && c.name !== 'Run' && c.name !== 'Victory') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
       actions.set(c.name as Clip, a);
     }
-    const ring = new THREE.Mesh(this.geos.ring, team === 0 ? this.mats.ringBlue : this.mats.ringRed);
+    const ring = new THREE.Mesh(this.geos.ring, this.side(team) === 0 ? this.mats.ringBlue : this.mats.ringRed);
     const stunFx = new THREE.Mesh(this.geos.stun, this.mats.stun);
     stunFx.visible = false;
     this.scene.add(root, ring, stunFx);
     const [sx, sz] = SPAWNS[team][slot];
 
     const s = this.opts.skill ?? 0;
-    const kit = isPlayer && this.opts.playerBoost ? boostKit(KITS[hero.id], this.opts.playerBoost)
-      : team === 1 && !this.opts.allBots && s > 0 ? boostKit(KITS[hero.id], { hp: 1 + 0.15 * s, dmg: 1 + 0.15 * s, speed: 1 })
+    const human = slot === 0 && (isPlayer || !!this.opts.net);
+    const boost = isPlayer ? this.opts.playerBoost : human ? this.opts.rivalBoost : undefined;
+    const kit = boost ? boostKit(KITS[hero.id], boost)
+      : team === 1 && !this.opts.allBots && !this.opts.net && s > 0 ? boostKit(KITS[hero.id], { hp: 1 + 0.15 * s, dmg: 1 + 0.15 * s, speed: 1 })
       : KITS[hero.id];
     const u: Unit = {
-      id, team, hero, kit, isPlayer, slot, root, mixer, actions, mats, flashUntil: 0, cur: null, oneShotUntil: 0, ring, stunFx,
+      id, team, hero, kit, isPlayer, human, slot, root, mixer, actions, mats, flashUntil: 0, cur: null, oneShotUntil: 0, ring, stunFx,
+      clip: 'Idle', seq: 0, netSeq: -1, nx: sx, nz: sz, nyaw: team === 0 ? Math.PI : 0,
       x: sx, z: sz, yaw: team === 0 ? Math.PI : 0, kx: 0, kz: 0,
       hp: kit.hp, alive: true, respawnAt: 0, invulnUntil: 0,
       atkReady: 0, heat: 0, overheatUntil: 0, meleeCount: 0, cd1: 0, cdDash: 0,
@@ -256,6 +281,8 @@ export class Match {
     if (oneShotFor > 0) u.oneShotUntil = this.time + oneShotFor;
     if (next === u.cur && name !== 'Attack' && name !== 'Ability' && name !== 'Hit') return;
     next.reset().setEffectiveWeight(1).setEffectiveTimeScale(1).play();
+    u.clip = name;
+    u.seq++;
     if (u.cur && u.cur !== next && fade > 0) next.crossFadeFrom(u.cur, fade, false);
     else if (u.cur && u.cur !== next) u.cur.stop();
     u.cur = next;
@@ -328,9 +355,10 @@ export class Match {
     target.lastHurt = this.time;
     target.flashUntil = this.time + 0.1;
     if (target.isPlayer) this.ev.shake?.(Math.min(0.45, 0.12 + dmg / 4000));
+    else if (target.human) this.rec('h', target.id, dmg);
     target.lastFight = this.time;
     if (by) { by.dealt += dmg; by.lastFight = this.time; }
-    this.ev.damage(target.x, 2.0, target.z, dmg, target.team);
+    this.damage(target.x, 2.0, target.z, dmg, target.team);
     if (target.hp <= 0) {
       target.hp = 0;
       target.alive = false;
@@ -341,6 +369,7 @@ export class Match {
       if (by) by.kills++;
       this.play(target, 'Defeat', 0.1, 99);
       this.ev.kill(by ? this.view(by) : null, this.view(target));
+      this.rec('k', by ? by.id : -1, target.id);
     } else if (!target.moving && this.time > target.oneShotUntil) {
       this.play(target, 'Hit', 0.08, 0.35);
     }
@@ -353,16 +382,22 @@ export class Match {
     if (by) by.healed += got;
     target.healAcc += got;
     if (this.time >= target.healShowAt) {
-      this.ev.damage(target.x, 2.1, target.z, Math.round(target.healAcc), target.team, true);
+      this.damage(target.x, 2.1, target.z, Math.round(target.healAcc), target.team, true);
       target.healAcc = 0;
       target.healShowAt = this.time + 0.5;
     }
   }
   private hurtTurret(t: Turret, amount: number): void {
     t.hp -= amount;
-    this.ev.damage(t.x, 1.3, t.z, Math.round(amount), t.team);
+    this.damage(t.x, 1.3, t.z, Math.round(amount), t.team);
     if (t.hp <= 0) t.until = 0;
   }
+  private rec(...e: (string | number)[]): void { if (this.opts.net === 'host') this.log.push(e); }
+  private damage(x: number, y: number, z: number, n: number, team: Team, heal = false): void {
+    this.ev.damage(x, y, z, n, team, heal);
+    this.rec('d', r2(x), r2(y), r2(z), n, team, heal ? 1 : 0);
+  }
+
   private knock(target: Unit, fromX: number, fromZ: number, dist: number): void {
     const d = Math.hypot(target.x - fromX, target.z - fromZ) || 1;
     target.kx += ((target.x - fromX) / d) * dist * 6;
@@ -430,7 +465,7 @@ export class Match {
         if (ang <= half || d < 0.6) { this.hurt(e, a.dmg, u); if (knock && e.alive) this.knock(e, u.x, u.z, a.knock); }
       }
       for (const t of this.turrets) if (t.team !== u.team && Math.hypot(t.x - u.x, t.z - u.z) < a.range) this.hurtTurret(t, a.dmg);
-      this.fxArc(u, dx, dz, a.range, half);
+      this.fxArc(u.x, u.z, Math.atan2(dx, dz) - Math.PI / 2, a.range, half);
     }
   }
 
@@ -473,17 +508,18 @@ export class Match {
   }
 
   private spawnProj(u: Unit | null, x: number, z: number, vx: number, vz: number, range: number, dmg: number, bounces: number,
-    kind: 'bullet' | 'record' | 'tracer' | 'dart', fromTurret: boolean, team: Team = u?.team ?? 0, pierce = false): void {
+    kind: ProjKind, fromTurret: boolean, team: Team = u?.team ?? 0, pierce = false, id = this.nextId++): Proj {
+    const ours = this.side(team) === 0;
     let obj: THREE.Object3D;
     if (kind === 'tracer') {
-      obj = new THREE.Mesh(this.geos.tracer, team === 0 ? this.mats.tracer : this.mats.tracerRed);
+      obj = new THREE.Mesh(this.geos.tracer, ours ? this.mats.tracer : this.mats.tracerRed);
       if (pierce) obj.scale.set(2.2, 2.2, 1.6);
     } else if (kind === 'dart') {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(this.geos.dart, this.mats.dart), new THREE.Mesh(this.geos.dartTip, this.mats.dartTip));
       obj = g;
     } else if (kind === 'bullet') {
-      obj = new THREE.Mesh(this.geos.bullet, team === 0 ? this.mats.bullet : this.mats.bulletRed);
+      obj = new THREE.Mesh(this.geos.bullet, ours ? this.mats.bullet : this.mats.bulletRed);
       obj.rotation.y = Math.atan2(vx, vz);
       if (fromTurret) obj.scale.setScalar(0.75);
     } else {
@@ -495,29 +531,36 @@ export class Match {
     }
     obj.position.set(x, fromTurret ? 0.38 * TURRET_SCALE : 1.0, z);
     this.scene.add(obj);
-    this.projs.push({ team, owner: u, x, z, vx, vz, left: range, dmg, bounces, obj, spin: kind === 'record', fromTurret, pierced: pierce ? new Set() : null });
+    const p: Proj = { id, kind, team, owner: u, x, z, vx, vz, left: range, dmg, bounces, obj, spin: kind === 'record', fromTurret, pierced: pierce ? new Set() : null };
+    this.projs.push(p);
+    return p;
   }
 
   private spawnTurret(u: Unit, x: number, z: number): void {
     const k = u.kit.turret!;
-    const g = this.propClone(u.team);
-    const head = g.children.find((c) => c.name.startsWith('PROP_TurretHead'))!;
-    g.position.set(x, 0, z);
-    g.rotation.y = u.yaw;
-    this.scene.add(g);
-    this.turrets.push({ team: u.team, owner: u, x, z, hp: k.hp, until: this.time + k.dur, next: this.time + 0.4, obj: g, head, born: this.time });
+    this.turrets.push({ ...this.turretObj(u.team, x, z, u.yaw), id: this.nextId++, team: u.team, owner: u, x, z, hp: k.hp, until: this.time + k.dur, next: this.time + 0.4, born: this.time });
+  }
+  private turretObj(team: Team, x: number, z: number, yaw: number): { obj: THREE.Object3D; head: THREE.Object3D } {
+    const obj = this.propClone(team);
+    const head = obj.children.find((c) => c.name.startsWith('PROP_TurretHead'))!;
+    obj.position.set(x, 0, z);
+    obj.rotation.y = yaw;
+    this.scene.add(obj);
+    return { obj, head };
   }
 
-  private fxArc(u: Unit, dx: number, dz: number, range: number, half: number): void {
+  private fxArc(x: number, z: number, rot: number, range: number, half: number): void {
+    this.rec('a', r2(x), r2(z), r2(rot), range, r2(half));
     const geo = new THREE.RingGeometry(0.5, range, 12, 1, -half, half * 2).rotateX(-Math.PI / 2);
     const mat = (this.mats.arc as THREE.MeshBasicMaterial).clone();
     const m = new THREE.Mesh(geo, mat);
-    m.position.set(u.x, 0.5, u.z);
-    m.rotation.y = Math.atan2(dx, dz) - Math.PI / 2;
+    m.position.set(x, 0.5, z);
+    m.rotation.y = rot;
     this.scene.add(m);
     this.fx.push({ obj: m, t: 0, dur: 0.18, tick: (k) => { mat.opacity = 0.55 * (1 - k); if (k >= 1) { geo.dispose(); mat.dispose(); } } });
   }
   private fxWave(x: number, z: number, r: number): void {
+    this.rec('w', r2(x), r2(z), r);
     const mat = (this.mats.heal as THREE.MeshBasicMaterial).clone();
     const m = new THREE.Mesh(this.geos.wave, mat);
     m.position.set(x, 0.4, z);
@@ -533,7 +576,7 @@ export class Match {
     const range = k.attack.range;
     const want = { tank: 1.3, sprinter: 3.8, technik: 5.2, sniper: 5.0, medic: 4.4 }[u.hero.id];
 
-    const skill = this.opts.allBots ? 0.5 : u.team === 1 ? this.opts.skill ?? 0.3 : 0.55;
+    const skill = this.opts.allBots ? 0.5 : this.opts.net ? 0.45 : u.team === 1 ? this.opts.skill ?? 0.3 : 0.55;
     const pf = 0.5 + skill;
     let mx = 0, mz = 0, atk = false;
     let dir: [number, number] | null = null;
@@ -593,7 +636,28 @@ export class Match {
     return { move: l > 0.01 ? [mx / l, mz / l] : [0, 0], atk, dir };
   }
 
+  setRemote(inp: PlayerInput): void {
+    const r = this.remote;
+    this.remote = { move: inp.move, auto: true, attack: inp.attack ?? r?.attack ?? null, a1: inp.a1 || !!r?.a1, dash: inp.dash || !!r?.dash };
+  }
+  dropRemote(): void {
+    for (const u of this.units) if (u.human && !u.isPlayer) u.human = false;
+    this.remote = null;
+  }
+
+  private control(u: Unit, input: PlayerInput): [number, number] {
+    const [ix, iy] = input.move;
+    const m = Math.hypot(ix, iy);
+    const move: [number, number] = m > 0.15 ? [ix / m, -iy / m] : [0, 0];
+    if (input.attack) this.attack(u, input.attack.dir);
+    else if (input.auto) { const t = this.autoTarget(u); if (t) this.attack(u, t); }
+    if (input.a1) this.ability(u, null);
+    if (input.dash) this.doDash(u, move[0] || move[1] ? move : null);
+    return move;
+  }
+
   update(dt: number, input: PlayerInput): void {
+    if (this.opts.net === 'guest') return this.puppet(dt);
     if (this.started && !this.ended) this.time += dt;
     const now = this.time;
     const running = this.started && !this.ended;
@@ -613,15 +677,9 @@ export class Match {
       }
       let move: [number, number] = [0, 0];
       if (running) {
-        if (u.isPlayer && !this.opts.allBots) {
-          const [ix, iy] = input.move;
-          const m = Math.hypot(ix, iy);
-          move = m > 0.15 ? [ix / m, -iy / m] : [0, 0];
-          if (input.attack) this.attack(u, input.attack.dir);
-          else if (input.auto) { const t = this.autoTarget(u); if (t) this.attack(u, t); }
-          if (input.a1) this.ability(u, null);
-          if (input.dash) this.doDash(u, move[0] || move[1] ? move : null);
-        } else {
+        if (u.isPlayer && !this.opts.allBots) move = this.control(u, input);
+        else if (u.human && this.remote) move = this.control(u, this.remote);
+        else {
           const t = this.think(u);
           move = t.move;
           if (t.atk) this.attack(u, t.dir);
@@ -667,7 +725,7 @@ export class Match {
       } else if (!stunned && (move[0] || move[1])) {
         const sp = this.speedOf(u);
         moved = this.moveUnit(u, move[0] * sp * dt, move[1] * sp * dt);
-        if (!moved && !u.isPlayer) {
+        if (!moved && !u.human) {
 
           for (const deg of [50 * u.ai.strafe, -50 * u.ai.strafe, 95 * u.ai.strafe, -95 * u.ai.strafe]) {
             const a = (deg * Math.PI) / 180, c = Math.cos(a), s2 = Math.sin(a);
@@ -704,6 +762,7 @@ export class Match {
       this.syncUnit(u);
     }
 
+    if (this.remote) { this.remote.a1 = this.remote.dash = false; this.remote.attack = null; }
     for (let i = 0; i < this.units.length; i++) for (let j = i + 1; j < this.units.length; j++) {
       const a = this.units[i], b = this.units[j];
       if (!a.alive || !b.alive) continue;
@@ -722,6 +781,93 @@ export class Match {
     this.stepFx(dt);
     this.zoneVisual();
     if (running && (this.score[0] >= MATCH.target || this.score[1] >= MATCH.target || now >= MATCH.seconds)) this.finish();
+  }
+
+  snapshot(): Snapshot {
+    const t = this.time;
+    return {
+      t: r2(t), s: [r2(this.score[0]), r2(this.score[1])], z: this.zoneOwner, e: this.ended ? 1 : 0,
+      u: this.units.map((u) => [r2(u.x), r2(u.z), r2(u.yaw), Math.round(u.hp), u.alive ? 1 : 0, CLIPS.indexOf(u.clip), u.seq,
+        r2(u.cur?.getEffectiveTimeScale() ?? 1), t < u.flashUntil ? 1 : 0, t < u.stunUntil ? 1 : 0, left(u.invulnUntil - t),
+        left(u.respawnAt - t), r2(u.heat), t < u.overheatUntil ? 1 : 0, left(u.cd1 - t), left(u.cdDash - t),
+        u.kills, u.deaths, Math.round(u.dealt), Math.round(u.healed)]),
+      p: this.projs.map((p) => [p.id, KINDS.indexOf(p.kind), p.team, p.fromTurret ? 1 : 0, p.pierced ? 1 : 0, r2(p.x), r2(p.z), r2(p.vx), r2(p.vz)]),
+      q: this.turrets.map((q) => [q.id, q.team, r2(q.x), r2(q.z), r2(q.obj.rotation.y), r2(q.head.rotation.y), r2(q.obj.scale.x)]),
+      v: this.log.splice(0),
+    };
+  }
+
+  applySnapshot(n: Snapshot): void {
+    this.time = n.t;
+    this.score[0] = n.s[0];
+    this.score[1] = n.s[1];
+    this.zoneOwner = n.z as Team | -1 | -2;
+    this.ended = !!n.e;
+    const t = this.time;
+    n.u.forEach((a, i) => {
+      const u = this.units[i];
+      if (!u) return;
+      const [x, z, yaw, hp, alive, clip, seq, ts, flash, stun, inv, resp, heat, hot, cd1, cdd, kills, deaths, dealt, healed] = a;
+      if ((!u.alive && alive) || Math.hypot(x - u.x, z - u.z) > 3) { u.x = x; u.z = z; u.yaw = yaw; }
+      Object.assign(u, { nx: x, nz: z, nyaw: yaw, hp, alive: !!alive, heat, kills, deaths, dealt, healed,
+        stunUntil: stun ? t + 0.2 : 0, invulnUntil: t + inv, respawnAt: t + resp, overheatUntil: hot ? t + 0.2 : 0, cd1: t + cd1, cdDash: t + cdd });
+      if (flash) u.flashUntil = t + 0.1;
+      if (seq !== u.netSeq) { u.netSeq = seq; this.play(u, CLIPS[clip] ?? 'Idle', 0.1); }
+      u.cur?.setEffectiveTimeScale(ts);
+    });
+    const seen = new Set<number>();
+    for (const [id, kind, team, turret, pierce, x, z, vx, vz] of n.p) {
+      seen.add(id);
+      const p = this.projs.find((o) => o.id === id)
+        ?? this.spawnProj(null, x, z, vx, vz, 0, 0, 0, KINDS[kind] ?? 'bullet', !!turret, team as Team, !!pierce, id);
+      Object.assign(p, { x, z, vx, vz });
+    }
+    this.projs = this.projs.filter((p) => seen.has(p.id) || (this.scene.remove(p.obj), false));
+    seen.clear();
+    for (const [id, team, x, z, rot, head, scale] of n.q) {
+      seen.add(id);
+      let q = this.turrets.find((o) => o.id === id);
+      if (!q) {
+        q = { ...this.turretObj(team as Team, x, z, rot), id, team: team as Team, owner: this.units.find((u) => u.team === team)!, x, z, hp: 0, until: 0, next: 0, born: t };
+        this.turrets.push(q);
+      }
+      q.obj.rotation.y = rot;
+      q.head.rotation.y = head;
+      q.obj.scale.setScalar(scale);
+    }
+    this.turrets = this.turrets.filter((q) => seen.has(q.id) || (this.scene.remove(q.obj), false));
+    for (const e of n.v) {
+      const [k, a, b, c, d, f, g] = e as [string, number, number, number, number, number, number];
+      if (k === 'd') this.ev.damage(a, b, c, d, f as Team, !!g);
+      else if (k === 'k') this.ev.kill(a >= 0 ? this.view(this.units[a]) : null, this.view(this.units[b]));
+      else if (k === 'h' && this.units[a]?.isPlayer) this.ev.shake?.(Math.min(0.45, 0.12 + b / 4000));
+      else if (k === 'a') this.fxArc(a, b, c, d, f);
+      else if (k === 'w') this.fxWave(a, b, c);
+    }
+  }
+
+  private puppet(dt: number): void {
+    this.time += dt;
+    const k = 1 - Math.exp(-dt * 14);
+    for (const u of this.units) {
+      u.x += (u.nx - u.x) * k;
+      u.z += (u.nz - u.z) * k;
+      const d = Math.atan2(Math.sin(u.nyaw - u.yaw), Math.cos(u.nyaw - u.yaw));
+      u.yaw += d * k;
+      u.stunFx.visible = u.alive && this.time < u.stunUntil;
+      u.mixer.update(dt);
+      this.syncUnit(u);
+    }
+    for (const p of this.projs) {
+      p.x += p.vx * dt;
+      p.z += p.vz * dt;
+      p.obj.position.x = p.x;
+      p.obj.position.z = p.z;
+      if (p.spin) p.obj.rotation.y += dt * 25;
+      else p.obj.rotation.y = Math.atan2(p.vx, p.vz);
+    }
+    this.stepFx(dt);
+    this.zoneVisual();
   }
 
   private syncUnit(u: Unit): void {
@@ -832,7 +978,8 @@ export class Match {
   private zoneVisual(): void {
     const ring = this.zoneRing.material as THREE.MeshBasicMaterial;
     const fill = this.zoneFill.material as THREE.MeshBasicMaterial;
-    const col = this.zoneOwner === 0 ? TEAM_COL[0] : this.zoneOwner === 1 ? TEAM_COL[1] : this.zoneOwner === -2 ? 0xffc94a : 0xffffff;
+    const zo = this.zoneOwner;
+    const col = zo === 0 || zo === 1 ? TEAM_COL[this.side(zo)] : zo === -2 ? 0xffc94a : 0xffffff;
     ring.color.setHex(col);
     fill.color.setHex(col);
     ring.opacity = this.zoneOwner === -1 ? 0.35 : 0.85;

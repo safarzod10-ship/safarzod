@@ -1,17 +1,18 @@
 import './app.css';
 import { HEROES, heroById, type HeroId } from './data';
 import { ICONS, ROLE_ICON, rankBadge } from './icons';
-import { initTelegram, setBack, haptic, playerName } from './tg';
-import { startBattle, type Battle } from './battle';
+import { initTelegram, setBack, haptic, playerName, startParam } from './tg';
+import { startBattle, type Battle, type Online } from './battle';
+import { RoomLink, inviteFriend, newRoomId, roomLink, type Peer } from './net';
 import { preloadAll } from './assets';
 import { lineup } from './game/match';
-import { HERO_PRICE, MAX_UPGRADE, RANKS, STATS, UPGRADE_STEP, buyHero, chooseFirst, heroLevel, heroLevelOf, loadProfile, markStorySeen, upgradeCost,
+import { HERO_PRICE, MAX_UPGRADE, RANKS, STATS, UPGRADE_STEP, boostOf, buyHero, chooseFirst, heroLevel, heroLevelOf, loadProfile, markStorySeen, upgradeCost,
   nextRank, rankOf, upgrade, upgradesOf, type Stat } from './progress';
 import { KITS } from './game/kits';
 import { BACKSTORY, STORY } from './story';
 import { fetchTop, lastPlace, postResult, syncOnBoot } from './api';
 
-type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle' | 'story' | 'choose';
+type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle' | 'story' | 'choose' | 'room';
 const TABS: { id: Screen; label: string; icon: string }[] = [
   { id: 'home', label: 'Главная', icon: ICONS.home },
   { id: 'heroes', label: 'Герой', icon: ICONS.hero },
@@ -57,7 +58,7 @@ function go(s: Screen): void {
   tabbar.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === s)));
   setBack(tabbed || intro ? null : () => go('home'));
   ({ home, heroes, tasks: () => empty('Задания', 'Ежедневные задания появятся здесь.'),
-    rating, search, battle, story, choose })[s]();
+    rating, search, battle, story, choose, room })[s]();
 }
 
 const backBtn = () => `<button type="button" class="back" aria-label="Назад">${ICONS.back}</button>`;
@@ -85,9 +86,13 @@ function home(): void {
         <span class="home-hero-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
         <button type="button" class="home-change" id="change">${ICONS.hero}<span>Сменить</span></button>
       </div>
-      <button type="button" class="btn-play" id="play">${ICONS.play}<span>Играть</span></button>
+      <div class="home-actions">
+        <button type="button" class="btn-play" id="play">${ICONS.play}<span>Играть</span></button>
+        <button type="button" class="btn-friend" id="friend" aria-label="Бой с другом">${ICONS.person}<span>С другом</span></button>
+      </div>
     </div>`;
   view.querySelector('#play')!.addEventListener('click', () => { haptic('medium'); go('search'); });
+  view.querySelector('#friend')!.addEventListener('click', () => { haptic('medium'); roomId = newRoomId(); go('room'); });
   view.querySelector('#change')!.addEventListener('click', () => { haptic('light'); go('heroes'); });
   view.querySelector('.tb-me')!.addEventListener('click', () => { haptic('light'); go('rating'); });
 }
@@ -148,7 +153,7 @@ function choose(): void {
     chooseFirst(pick);
     selected = pick; store.set('dvor.hero', pick);
     haptic('success');
-    go('home');
+    go(roomId ? 'room' : 'home');
   });
   update();
 }
@@ -311,8 +316,79 @@ function search(): void {
   cleanup = () => timers.forEach((t) => { clearInterval(t); clearTimeout(t); });
 }
 
+let roomId = '';
+let online: Online | null = null;
+function room(): void {
+  const id = roomId, me = heroById(selected);
+  const hello: Peer = { name: playerName(), hero: selected, boost: boostOf(selected) };
+  view.innerHTML = `${backBtn()}
+    <section class="room">
+      <h1>Бой с другом</h1>
+      <p class="room-sub">Ты и друг, у каждого в команде бот. Круг, 2 минуты.</p>
+      <div class="room-vs">
+        <figure class="room-card"><img src="${me.card}" alt=""><figcaption><b>${playerName()}</b><span>${me.name}</span></figcaption></figure>
+        <span class="room-x">VS</span>
+        <figure class="room-card rival"><span class="room-ghost">${ICONS.person}</span><figcaption><b>Ждём…</b><span>соперник</span></figcaption></figure>
+      </div>
+      <p class="room-status" aria-live="polite">Подключаюсь…</p>
+      <button type="button" class="btn-main" id="invite">Позвать друга</button>
+      <p class="room-code">Комната <b>${id}</b></p>
+    </section>`;
+  bindBack();
+  const status = view.querySelector<HTMLElement>('.room-status')!, invite = view.querySelector<HTMLButtonElement>('#invite')!;
+  const rival = view.querySelector<HTMLElement>('.room-card.rival')!;
+  const link = new RoomLink(id, hello);
+  let handed = false, rivalPeer: Peer | null = null;
+  const fail = (text: string) => {
+    status.textContent = text;
+    status.classList.add('bad');
+    invite.textContent = 'Создать новую комнату';
+    invite.onclick = () => { haptic('light'); roomId = newRoomId(); go('room'); };
+  };
+  const toBattle = (role: 'host' | 'guest', peer: Peer, blue: HeroId[], red: HeroId[]) => {
+    handed = true;
+    online = { link, role, blue, red, rival: peer };
+    status.textContent = 'Бой начинается!';
+    haptic('success');
+    setTimeout(() => { off(); go('battle'); }, 900);
+  };
+  const off = link.on((m) => {
+    if (m.t === 'wait') { status.textContent = 'Ждём соперника. Отправь другу приглашение.'; status.classList.remove('bad'); }
+    else if (m.t === 'start') {
+      const peer = (m.role === 'host' ? m.guest : m.host) as Peer;
+      rivalPeer = peer;
+      const card = heroById(peer.hero);
+      rival.innerHTML = `<img src="${card.card}" alt=""><figcaption><b>${peer.name}</b><span>${card.name}</span></figcaption>`;
+      rival.classList.add('found');
+      invite.hidden = true;
+      status.textContent = `${peer.name} в комнате!`;
+      if (m.role === 'host') {
+        const a = (m.host as Peer).hero, b = peer.hero;
+        const bots = HEROES.map((h) => h.id).filter((h) => h !== a && h !== b).sort(() => Math.random() - 0.5);
+        const blue: HeroId[] = [a, bots[0]], red: HeroId[] = [b, bots[1] ?? bots[0]];
+        link.send({ t: 'go', blue, red });
+        toBattle('host', peer, blue, red);
+      }
+    } else if (m.t === 'go' && rivalPeer) toBattle('guest', rivalPeer, m.blue as HeroId[], m.red as HeroId[]);
+    else if (m.t === 'full' || m.t === 'over') fail('В этой комнате уже идёт бой.');
+    else if (m.t === 'left') { status.textContent = 'Соперник вышел. Ждём нового.'; rival.classList.remove('found'); }
+    else if (m.t === 'closed' && !handed) fail('Нет связи с сервером. Проверь интернет.');
+  });
+  invite.onclick = async () => {
+    haptic('light');
+    const r = await inviteFriend(id);
+    if (r === 'shared') status.textContent = 'Приглашение отправлено. Ждём соперника.';
+    else if (r === 'copied') status.textContent = 'Ссылка скопирована — отправь её другу.';
+    else if (r === 'none') status.textContent = `Отправь другу ссылку: ${roomLink(id)}`;
+  };
+  cleanup = () => { if (!handed) link.close(); };
+}
+
 function battle(): void {
-  let b: Battle | null = startBattle(view, selected, () => go('home'), nextBlue.length ? nextBlue : undefined);
+  const net = online;
+  online = null;
+  roomId = '';
+  let b: Battle | null = startBattle(view, selected, () => go('home'), nextBlue.length ? nextBlue : undefined, net ?? undefined);
   cleanup = () => { b?.destroy(); b = null; };
 }
 
@@ -360,7 +436,9 @@ function boot(): void {
         const p = loadProfile();
         selected = ownedHero(store.get('dvor.hero'));
         if (p.games > 0 && p.chosen) void postResult(p, selected);
-        go(!p.storySeen ? 'story' : !p.chosen ? 'choose' : current);
+        const sp = startParam().match(/^r_([a-z0-9]{6,16})$/);
+        if (sp) roomId = sp[1];
+        go(!p.storySeen ? 'story' : !p.chosen ? 'choose' : roomId ? 'room' : current);
         box.classList.add('out');
         setTimeout(() => { clearInterval(anim); box.remove(); }, 500);
       }, 550);

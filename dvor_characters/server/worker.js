@@ -103,7 +103,8 @@ const START = [
 
 const HELP = '<b>Как играть</b>\nДжойстик — движение, двойной тап — рывок. Атака идёт сама.\nКнопка справа — способность героя.\n'
   + 'Стой в Круге, чтобы команда получала очки. Кто первым наберёт 100 — побеждает.\n\n'
-  + '<b>С друзьями</b>\nВ любом чате напиши <code>@' + BOT + '</code> и выбери «Вызов на бой».\nВ группе: добавь бота и напиши /play.\n\n/top — рейтинг игроков';
+  + '<b>С другом онлайн</b>\nВ игре нажми «С другом» → «Позвать друга», или в любом чате напиши <code>@' + BOT + '</code> и выбери «Вызов на бой». '
+  + 'Комната ждёт, пока друг не нажмёт «В бой».\nВ группе: добавь бота и напиши /play.\n\n/top — рейтинг игроков';
 
 async function signToken(env, data) {
   const body = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -130,15 +131,28 @@ async function note(env, k, v) {
     .bind(k, String(v).slice(0, 2000), Date.now()).run();
 }
 
-async function onInline(q, env) {
-  const me = await env.DB.prepare('SELECT trophies, hero FROM players WHERE id = ?').bind(q.from.id).first();
+const ROOM_RE = /^[a-z0-9]{6,16}$/;
+function roomId() {
+  const a = crypto.getRandomValues(new Uint8Array(8));
+  return [...a].map((b) => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
+}
+
+async function duel(env, user, room) {
+  const me = await env.DB.prepare('SELECT trophies, hero FROM players WHERE id = ?').bind(user.id).first();
   const tro = me?.trophies ?? 0;
-  const who = displayName(q.from);
+  return {
+    type: 'article', id: `duel_${room}`, title: '⚔️ Вызов на бой', description: `Комната ждёт соперника. Мои кубки: ${tro}`,
+    input_message_content: { parse_mode: 'HTML', message_text: `⚔️ <b>${displayName(user)}</b> вызывает тебя на бой во ДВОРе!\n`
+      + `Мои кубки: <b>${tro}</b> 🏆${me?.hero ? ` · играю за ${HERO_NAMES[me.hero]}` : ''}\n\nКомната открыта — жми «В бой», я жду.` },
+    reply_markup: { inline_keyboard: [[{ text: '⚔️ В бой', url: appLink(`r_${room}`) }]] },
+  };
+}
+
+async function onInline(q, env) {
+  const asked = (q.query || '').trim().replace(/^r_/, '');
   const results = [
     { type: 'game', id: 'game', game_short_name: GAME },
-    { type: 'article', id: 'duel', title: '⚔️ Вызов на бой', description: `Мои кубки: ${tro}. Кто сильнее?`,
-      input_message_content: { message_text: `⚔️ <b>${who}</b> вызывает тебя на бой во ДВОРе!\nМои кубки: <b>${tro}</b> 🏆${me?.hero ? ` · играю за ${HERO_NAMES[me.hero]}` : ''}\nПобьёшь?`, parse_mode: 'HTML' },
-      reply_markup: { inline_keyboard: [[{ text: '▶ Принять вызов', url: appLink('duel') }]] } },
+    await duel(env, q.from, ROOM_RE.test(asked) ? asked : roomId()),
     { type: 'article', id: 'top', title: '🏆 Рейтинг двора', description: 'Отправить в чат лучших игроков',
       input_message_content: { message_text: await topText(env), parse_mode: 'HTML' },
       reply_markup: { inline_keyboard: [[{ text: '▶ Играть', url: appLink('top') }]] } },
@@ -224,6 +238,17 @@ async function apiProfileSave(request, env) {
   return json({ ok: true, updated: now });
 }
 
+async function apiRoomShare(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'bad json' }, 400); }
+  const user = await verifyInitData(env, body.initData);
+  if (!user?.id) return json({ error: 'not from Telegram' }, 401);
+  if (!ROOM_RE.test(body.room || '')) return json({ error: 'bad room' }, 400);
+  const r = await tg(env, 'savePreparedInlineMessage', { user_id: user.id, result: await duel(env, user, body.room),
+    allow_user_chats: true, allow_group_chats: true, allow_channel_chats: false, allow_bot_chats: false });
+  return r.ok ? json({ id: r.result.id }) : json({ error: r.description || 'telegram' }, 502);
+}
+
 async function setup(env, origin) {
   const done = await env.DB.prepare('SELECT v FROM meta WHERE k = ?').bind('setup').first();
   if (done?.v === SETUP_VERSION) return;
@@ -241,15 +266,87 @@ async function setup(env, origin) {
     .bind('setup_result', JSON.stringify(res).slice(0, 4000), Date.now()).run();
 }
 
+const cleanBoost = (b) => {
+  const n = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 1));
+  return { hp: n(b?.hp, 1, 1.6), dmg: n(b?.dmg, 1, 1.6), speed: n(b?.speed, 1, 1.2), cd: n(b?.cd, 0.7, 1) };
+};
+
 export class Room {
-  constructor(state) { this.state = state; }
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
+  }
+
   async fetch(req) {
-    if (req.headers.get('Upgrade') !== 'websocket') return new Response('room ok');
+    if (req.headers.get('Upgrade') !== 'websocket') return new Response('websocket only', { status: 426 });
     const pair = new WebSocketPair();
-    this.state.acceptWebSocket(pair[1]);
+    this.ctx.acceptWebSocket(pair[1]);
+    pair[1].serializeAttachment({});
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
-  webSocketMessage(ws, msg) { for (const s of this.state.getWebSockets()) s.send(msg); }
+
+  peers(except) {
+    return this.ctx.getWebSockets().filter((s) => s !== except && s.readyState === 1 && s.deserializeAttachment()?.role);
+  }
+
+  async webSocketMessage(ws, msg) {
+    if (typeof msg !== 'string' || msg.length > 32000) return;
+    const me = ws.deserializeAttachment() || {};
+    if (me.role) {
+      for (const s of this.peers(ws)) s.send(msg);
+      return;
+    }
+    let m;
+    try { m = JSON.parse(msg); } catch { return; }
+    if (m.t !== 'hello') return;
+    const user = m.initData ? await verifyInitData(this.env, m.initData) : null;
+    const peer = {
+      name: user ? displayName(user) : String(m.name || 'Игрок').replace(/[<>&]/g, '').slice(0, 24),
+      hero: HERO_NAMES[m.hero] ? m.hero : 'technik',
+      boost: cleanBoost(m.boost),
+    };
+    const uid = user?.id ?? 0;
+    const others = this.peers(ws);
+    if (await this.ctx.storage.get('started') || others.length >= 2) {
+      ws.send(JSON.stringify({ t: 'over' }));
+      ws.close(4002, 'over');
+      return;
+    }
+    const host = others[0];
+    if (host && uid && host.deserializeAttachment().uid === uid) {
+      host.close(4003, 'replaced');
+      ws.serializeAttachment({ role: 'host', peer, uid });
+      ws.send(JSON.stringify({ t: 'wait' }));
+      return;
+    }
+    if (!host) {
+      ws.serializeAttachment({ role: 'host', peer, uid });
+      ws.send(JSON.stringify({ t: 'wait' }));
+      return;
+    }
+    ws.serializeAttachment({ role: 'guest', peer, uid });
+    await this.ctx.storage.put('started', Date.now());
+    const start = { t: 'start', host: host.deserializeAttachment().peer, guest: peer };
+    host.send(JSON.stringify({ ...start, role: 'host' }));
+    ws.send(JSON.stringify({ ...start, role: 'guest' }));
+  }
+
+  async webSocketClose(ws, code) {
+    try { ws.close(code === 1005 ? 1000 : code, 'bye'); } catch {}
+    await this.gone(ws);
+  }
+
+  async webSocketError(ws) {
+    await this.gone(ws);
+  }
+
+  async gone(ws) {
+    const was = ws.deserializeAttachment()?.role;
+    const rest = this.peers(ws);
+    if (was) for (const s of rest) s.send(JSON.stringify({ t: 'left' }));
+    if (!rest.length) await this.ctx.storage.deleteAll();
+  }
 }
 
 let setupDone = false;
@@ -273,6 +370,9 @@ export default {
     if (url.pathname === '/api/game-score' && request.method === 'POST') return apiGameScore(request, env);
     if (url.pathname === '/api/profile/load' && request.method === 'POST') return apiProfileLoad(request, env);
     if (url.pathname === '/api/profile/save' && request.method === 'POST') return apiProfileSave(request, env);
+    if (url.pathname === '/api/room/share' && request.method === 'POST') return apiRoomShare(request, env);
+    const room = url.pathname.match(/^\/room\/([a-z0-9]{6,16})$/);
+    if (room) return env.ROOMS.get(env.ROOMS.idFromName(room[1])).fetch(request);
     if (url.pathname === '/health') return json({ ok: true, server: 'dvor' });
     return new Response('ДВОР', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
   },

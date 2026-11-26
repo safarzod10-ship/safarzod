@@ -5,7 +5,10 @@ interface TgWebApp {
   setBackgroundColor?(c: string): void;
   disableVerticalSwipes?(): void;
   initData?: string;
-  initDataUnsafe?: { user?: { first_name?: string; username?: string } };
+  initDataUnsafe?: { user?: { first_name?: string; username?: string }; start_param?: string };
+  isVersionAtLeast?(v: string): boolean;
+  shareMessage?(id: string, cb?: (sent: boolean) => void): void;
+  switchInlineQuery?(query: string, chatTypes?: string[]): void;
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   HapticFeedback?: { impactOccurred(s: 'light' | 'medium' | 'heavy'): void; notificationOccurred(t: 'success' | 'error' | 'warning'): void };
 }
@@ -63,3 +66,18 @@ export const inTelegram = (): boolean => !!wa;
 export const playerName = (): string => wa?.initDataUnsafe?.user?.first_name?.slice(0, 16) || 'Игрок';
 
 export const initData = (): string => wa?.initData ?? '';
+
+export const startParam = (): string => wa?.initDataUnsafe?.start_param ?? new URLSearchParams(location.search).get('startapp') ?? '';
+
+export function shareMessage(id: string): Promise<boolean | null> {
+  return new Promise((res) => {
+    if (!wa?.shareMessage || !wa.isVersionAtLeast?.('8.0')) return res(null);
+    wa.shareMessage(id, (sent) => res(!!sent));
+  });
+}
+
+export function switchInline(query: string): boolean {
+  if (!wa?.switchInlineQuery || !wa.isVersionAtLeast?.('6.7')) return false;
+  wa.switchInlineQuery(query, ['users', 'groups', 'supergroups']);
+  return true;
+}
