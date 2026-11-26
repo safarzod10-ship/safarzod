@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { splashHtml } from '../splash/build.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const V = path.join(here, '..');
@@ -23,6 +24,7 @@ ${css}
 html, body { height: 100%; }
 body { padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
 </style>
+${splashHtml()}
 <div id="app"></div>
 <script>document.documentElement.dataset.assets = 'b64';</script>
 <script type="module" src="app.js"></script>

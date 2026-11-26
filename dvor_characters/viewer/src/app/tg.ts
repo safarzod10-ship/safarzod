@@ -24,19 +24,27 @@ let backCb: (() => void) | null = null;
 export async function initTelegram(): Promise<void> {
   const inTelegram = /tgWebApp/.test(location.hash) || 'TelegramWebviewProxy' in window;
   if (!inTelegram) return;
-  await new Promise<void>((res) => {
-    const s = document.createElement('script');
-    s.src = 'https://telegram.org/js/telegram-web-app.js';
-    s.onload = () => res();
-    s.onerror = () => res();
-    document.head.appendChild(s);
-  });
-  wa = (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp ?? null;
+  const get = () => (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp ?? null;
+  // the splash (splash/splash.html) already started loading the SDK as script#tg-sdk
+  if (!get()) {
+    await new Promise<void>((res) => {
+      let s = document.getElementById('tg-sdk') as HTMLScriptElement | null;
+      if (!s) {
+        s = document.createElement('script');
+        s.src = 'https://telegram.org/js/telegram-web-app.js';
+        document.head.appendChild(s);
+      }
+      s.addEventListener('load', () => res());
+      s.addEventListener('error', () => res());
+      setTimeout(res, 6000);   // never hold the game on Telegram's CDN
+    });
+  }
+  wa = get();
   if (!wa) return;
   wa.ready();
   wa.expand();
   wa.setHeaderColor?.('#1b1a1e');
-  wa.setBackgroundColor?.('#1b1a1e');
+  wa.setBackgroundColor?.('#121114');
   wa.disableVerticalSwipes?.();
 }
 

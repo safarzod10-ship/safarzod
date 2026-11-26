@@ -189,20 +189,28 @@ const TIPS = [
   'Пластинки Спринтер отскакивают от стен',
   'Выбитый игрок возвращается через 3 секунды',
 ];
+/**
+ * The splash (#boot, splash/splash.html) is already on screen: it is part of the HTML, so it shows while
+ * this bundle downloads. Here it switches to real progress: each hero lights up when its model is ready.
+ */
 function boot(): void {
-  const el = document.createElement('div');
-  el.className = 'boot';
-  el.innerHTML = `
-    <div class="boot-art" style="background-image:url(ui/menu_bg.jpg)"></div>
-    <div class="boot-foot">
-      <p class="boot-tip"></p>
-      <div class="boot-bar"><i></i></div>
-      <p class="boot-pct">Загрузка <b>0</b>%</p>
-    </div>`;
-  app.appendChild(el);
-  const bar = el.querySelector<HTMLElement>('.boot-bar i')!, pct = el.querySelector('.boot-pct b')!, tip = el.querySelector('.boot-tip')!;
+  let el = document.getElementById('boot');
+  if (!el) {   // page built without the splash: a bare stand-in
+    el = document.createElement('div');
+    el.id = 'boot';
+    el.innerHTML = '<div class="sp-foot"><div class="sp-heroes"></div><div class="sp-bar"><i></i></div><p class="sp-pct"></p><p class="sp-tip"></p></div>';
+    document.body.appendChild(el);
+  }
+  const box = el;
+  const heroesRow = box.querySelector<HTMLElement>('.sp-heroes')!;
+  heroesRow.innerHTML = HEROES.map((h) =>
+    `<span class="sp-h" data-model="${h.model}"><span class="sp-av"><i style="background-image:url(${h.card})"></i></span>${h.name}</span>`).join('');
+  const bar = box.querySelector<HTMLElement>('.sp-bar i')!, tip = box.querySelector<HTMLElement>('.sp-tip')!;
+  box.querySelector('.sp-pct')!.innerHTML = 'Загрузка <b>0</b>%';
+  const pct = box.querySelector('.sp-pct b')!;
+  box.classList.add('live');
   let ti = Math.floor(Math.random() * TIPS.length);
-  const nextTip = () => { tip.textContent = TIPS[ti++ % TIPS.length]; tip.classList.remove('in'); void (tip as HTMLElement).offsetWidth; tip.classList.add('in'); };
+  const nextTip = () => { tip.textContent = TIPS[ti++ % TIPS.length]; tip.classList.remove('in'); void tip.offsetWidth; tip.classList.add('in'); };
   nextTip();
   const tipTimer = window.setInterval(nextTip, 2600);
   let shown = 0, target = 0;
@@ -212,22 +220,27 @@ function boot(): void {
     bar.style.width = `${(shown * 100).toFixed(1)}%`;
     pct.textContent = String(Math.floor(shown * 100));
   }, 33);
-  const t0 = performance.now();
-  const run = () => Promise.all([initTelegram(), preloadAll((k) => (target = k))]);
+  const heroReady = (model: string) => box.querySelector(`.sp-h[data-model="${model}"]`)?.classList.add('ok');
+  const run = () => Promise.all([initTelegram(), preloadAll((k) => (target = k), heroReady)]);
   const finish = () => {
     target = 1;
-    const wait = Math.max(0, 900 - (performance.now() - t0));   // no flash on a fast connection
+    // let the logo animation play out (it starts with the page), then: art in, bar out, home under it
+    const wait = Math.max(0, 1900 - performance.now());
     setTimeout(() => {
       clearInterval(tipTimer);
-      go(current);
-      el.classList.add('out');
-      setTimeout(() => { clearInterval(anim); el.remove(); }, 450);
-    }, wait + 250);
+      box.classList.add('done');
+      setTimeout(() => {
+        go(current);
+        box.classList.add('out');
+        setTimeout(() => { clearInterval(anim); box.remove(); }, 500);
+      }, 550);
+    }, wait + 300);
   };
   const fail = (e: unknown) => {
-    el.querySelector('.boot-foot')!.innerHTML = `<p class="boot-err">Не удалось загрузить игру<br><small>${String((e as Error)?.message ?? e)}</small></p>
-      <button type="button" class="btn-main" id="retry">Повторить</button>`;
-    el.querySelector('#retry')!.addEventListener('click', () => { el.remove(); clearInterval(tipTimer); clearInterval(anim); boot(); });
+    clearInterval(tipTimer);
+    box.querySelector('.sp-foot')!.innerHTML = `<p class="sp-err">Не удалось загрузить игру<br><small>${String((e as Error)?.message ?? e)}</small></p>
+      <button type="button" class="sp-retry" id="retry">Повторить</button>`;
+    box.querySelector('#retry')!.addEventListener('click', () => location.reload());
   };
   run().then(finish, fail);
 }

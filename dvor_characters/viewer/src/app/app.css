@@ -421,42 +421,6 @@ img { display: block; max-width: 100%; }
   .view.battle .skills { transform: scale(0.72); }
 }
 
-/* ---------------------------------------------------------------- boot screen */
-.boot {
-  position: absolute; inset: 0; z-index: 50; background: #151417; display: flex; flex-direction: column;
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-.boot.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
-.boot-art {
-  position: absolute; inset: 0; background: #151417 center top / cover no-repeat;
-  animation: bootArt 1.2s ease-out both;
-}
-.boot-art::after { content: ""; position: absolute; inset: 40% 0 0 0; background: linear-gradient(rgba(21, 20, 23, 0), #151417 70%); }
-@keyframes bootArt { from { opacity: 0; transform: scale(1.06); } }
-.boot-foot {
-  position: relative; margin-top: auto; display: grid; justify-items: center; gap: 12px;
-  padding: 0 28px calc(42px + env(safe-area-inset-bottom, 0px));
-}
-.boot-tip { margin: 0; min-height: 2.6em; max-width: 30ch; text-align: center; color: #d9d3cc; font-size: 15px; line-height: 1.3; opacity: 0; }
-.boot-tip.in { animation: tipIn 2.6s ease both; }
-@keyframes tipIn { 0% { opacity: 0; transform: translateY(6px); } 12%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-.boot-bar {
-  width: 100%; max-width: 320px; height: 14px; border-radius: 8px; overflow: hidden;
-  background: rgba(255, 255, 255, 0.1); border: 1.5px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-.boot-bar i {
-  display: block; height: 100%; width: 0; border-radius: 6px;
-  background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.18) 0 8px, rgba(255, 255, 255, 0) 8px 16px), linear-gradient(var(--accent-hi), var(--accent-lo));
-  background-size: 22.6px 22.6px, 100% 100%;
-  animation: barStripes 0.7s linear infinite;
-}
-@keyframes barStripes { to { background-position: 22.6px 0, 0 0; } }
-.boot-pct { margin: 0; font: italic 800 20px/1 var(--font-display); color: #f4efe8; letter-spacing: 0.02em; }
-.boot-pct b { font-weight: 800; color: var(--accent-hi); font-variant-numeric: tabular-nums; }
-.boot-err { margin: 0; text-align: center; font-size: 17px; font-weight: 600; }
-.boot-err small { color: var(--muted); font-weight: 400; font-size: 13px; }
-.boot .btn-main { max-width: 260px; height: 54px; font-size: 22px; }
-@media (prefers-reduced-motion: reduce) { .boot-bar i, .boot-art { animation: none; } .boot-tip.in { animation: none; opacity: 1; } }
 
 /* ---------------------------------------------------------------- home: selected hero on stage */
 .view.home .home-art::after { height: 42%; }

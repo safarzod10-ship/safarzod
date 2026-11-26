@@ -75,10 +75,10 @@ const SIZES: Record<string, number> = B64
 export const MODELS = Object.keys(SIZES);
 
 /**
- * Load everything; `progress` gets 0..1. Images count by file, models by bytes.
+ * Load everything; `progress` gets 0..1, `onModel` each model id as it is ready. Images count by file, models by bytes.
  * Resolves when every model is parsed, every image decoded and the fonts are ready.
  */
-export async function preloadAll(progress: (k: number) => void): Promise<void> {
+export async function preloadAll(progress: (k: number) => void, onModel: (id: string) => void = () => {}): Promise<void> {
   const got = new Map<string, number>();
   let imgs = 0;
   const totalBytes = Object.values(SIZES).reduce((a, b) => a + b, 0);
@@ -95,7 +95,7 @@ export async function preloadAll(progress: (k: number) => void): Promise<void> {
   });
   const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
   await Promise.all([
-    ...MODELS.map((id) => load(id, onBytes).then(() => { got.set(id, SIZES[id]); report(); })),
+    ...MODELS.map((id) => load(id, onBytes).then(() => { got.set(id, SIZES[id]); report(); onModel(id); })),
     loadColliders(),
     ...UI_IMAGES.map(image),
     fonts ? Promise.race([Promise.all([fonts.load('italic 800 20px "Exo 2"'), fonts.load('500 16px Rubik')]), new Promise((r) => setTimeout(r, 4000))]) : null,
