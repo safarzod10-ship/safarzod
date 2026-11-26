@@ -1,10 +1,3 @@
-/**
- * ДВОР — Telegram Mini App shell (from the customer's mockups).
- * Screens: Главная (the selected hero's menu art), Герой (5 heroes), Задания (empty), Рейтинг (rank
- * ladder, level, match history), Поиск боя, Бой. The splash loads everything (models, images, fonts)
- * before the first screen shows. The search is simulated; the battle is «Царь двора» 2 на 2 against
- * bots (game/match.ts) whose skill follows the player's rank (progress.ts).
- */
 import './app.css';
 import { HEROES, heroById, type HeroId } from './data';
 import { ICONS, ROLE_ICON, rankBadge } from './icons';
@@ -28,9 +21,9 @@ const TABS: { id: Screen; label: string; icon: string }[] = [
 
 const store = {
   get(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k: string, v: string): void { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+  set(k: string, v: string): void { try { localStorage.setItem(k, v); } catch {} },
 };
-// the hero to play: must be one the player owns (the first pick or a bought one)
+
 const ownedHero = (id: string | null): HeroId => {
   const p = loadProfile();
   if (id && p.owned.includes(id)) return heroById(id).id;
@@ -56,9 +49,9 @@ function go(s: Screen): void {
   cleanup = null;
   current = s;
   view.className = `view ${s}`;
-  app.classList.toggle('wide', s === 'battle');   // the battle uses the whole (landscape) screen
+  if (s !== 'battle' && s !== 'story') { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); }
   view.scrollTop = 0;
-  const tabbed = s === 'home' || s === 'tasks' || s === 'rating';
+  const tabbed = s === 'home' || s === 'heroes' || s === 'tasks' || s === 'rating';
   const intro = s === 'story' || s === 'choose';
   tabbar.hidden = !tabbed;
   tabbar.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === s)));
@@ -72,13 +65,11 @@ function bindBack(): void {
   view.querySelector('.back')?.addEventListener('click', () => { haptic('light'); go('home'); });
 }
 
-// ------------------------------------------------------------------ Главная
-/** Top bar: who you are (level, rank) and the game balance (coins, crystals). */
 const topBar = (): string => {
-  const p = loadProfile(), r = rankOf(p.trophies), lv = { level: heroLevelOf(selected) };
+  const p = loadProfile(), r = rankOf(p.trophies), lv = heroLevelOf(selected);
   return `<header class="topbar">
       <button type="button" class="tb-me" data-go="rating" aria-label="Профиль и рейтинг">
-        <span class="tb-badge">${rankBadge(r.color, r.dark)}<em>${lv.level}</em></span>
+        <span class="tb-badge">${rankBadge(r.color, r.dark)}<em>${lv}</em></span>
         <span class="tb-name"><b>${playerName()}</b><small>${r.name} · ${ICONS.trophy}${p.trophies}</small></span>
       </button>
       <span class="tb-cur"><span class="pill">${ICONS.coin}<b>${p.coins.toLocaleString('ru-RU')}</b></span><span class="pill">${ICONS.gem}<b>${p.gems.toLocaleString('ru-RU')}</b></span></span>
@@ -101,7 +92,6 @@ function home(): void {
   view.querySelector('.tb-me')!.addEventListener('click', () => { haptic('light'); go('rating'); });
 }
 
-// ------------------------------------------------------------------ История (один раз, перед первым выбором)
 function story(): void {
   let i = 0;
   view.innerHTML = `<div class="story" role="dialog" aria-label="История"><div class="story-art"></div><div class="story-tint"></div>
@@ -128,7 +118,6 @@ function story(): void {
   show();
 }
 
-// ------------------------------------------------------------------ Первый выбор героя (навсегда)
 function choose(): void {
   let pick: HeroId = HEROES[0].id;
   view.innerHTML = `<header class="choose-head"><h1>За кого ты?</h1><p>Выбрать можно <b>один раз</b> — изменить потом нельзя.<br>Остальных героев можно будет купить за ${HERO_PRICE.toLocaleString('ru-RU')} монет.</p></header>
@@ -144,7 +133,7 @@ function choose(): void {
       <div class="result-btns"><button type="button" class="btn-main" id="yes">Да, выбираю</button><button type="button" class="btn-ghost" id="no">Подумаю</button></div></div></div>`;
   const row = view.querySelector<HTMLElement>('.hcards')!, btn = view.querySelector<HTMLButtonElement>('#pick')!, modal = view.querySelector<HTMLElement>('.modal')!;
   const update = () => { btn.textContent = `Выбрать: ${heroById(pick).name}`; };
-  // the card in the middle of the strip is the one picked
+
   const onScroll = () => {
     const mid = row.scrollLeft + row.clientWidth / 2;
     let best = pick, bd = Infinity;
@@ -164,7 +153,6 @@ function choose(): void {
   update();
 }
 
-// ------------------------------------------------------------------ Герои: свои, покупка, улучшения
 const STAT_LABEL: Record<Stat, string> = { hp: 'Здоровье', dmg: 'Урон', speed: 'Скорость', ability: 'Способность' };
 const STAT_ICON: Record<Stat, string> = { hp: ICONS.heart, dmg: ICONS.damage, speed: ICONS.wing, ability: ICONS.gear };
 function statValue(id: HeroId, stat: Stat, lv: number): string {
@@ -174,34 +162,35 @@ function statValue(id: HeroId, stat: Stat, lv: number): string {
   if (stat === 'speed') return (k.speed * (1 + m * UPGRADE_STEP.speed)).toFixed(2).replace('.', ',') + ' м/с';
   return `${(k.a1.cd * (1 - m * UPGRADE_STEP.ability)).toFixed(1).replace('.', ',')} с`;
 }
-/** Герой: the hero you play, its level (average of the stats), four upgrade sliders up to 30; other heroes below. */
+
 function heroes(): void {
-  view.innerHTML = `${backBtn()}<div class="hero-page"></div>`;
+  view.innerHTML = '<div class="hero-page"></div>';
   const page = view.querySelector<HTMLElement>('.hero-page')!;
+  const statRow = (id: HeroId, st: Stat, lv: number, coins: number) => {
+    const max = lv >= MAX_UPGRADE, cost = upgradeCost(lv);
+    return `<li data-stat="${st}">
+      <span class="up-name">${STAT_ICON[st]}${STAT_LABEL[st]}</span>
+      <span class="up-val"><b>${statValue(id, st, lv)}</b>${max ? '' : `<em>→ ${statValue(id, st, lv + 1)}</em>`}</span>
+      <span class="up-bar" aria-label="${lv} из ${MAX_UPGRADE}"><s style="--k:${lv / MAX_UPGRADE}"></s><i>${lv}/${MAX_UPGRADE}</i></span>
+      <button type="button" class="up-btn" data-stat="${st}" ${max || coins < cost ? 'disabled' : ''}>${max ? 'Макс.' : `${ICONS.coin}${cost}`}</button>
+    </li>`;
+  };
   const render = () => {
-    const p = loadProfile(), h = heroById(selected), u = upgradesOf(p, h.id), level = heroLevel(u);
+    const p = loadProfile(), h = heroById(selected), u = upgradesOf(p, h.id);
     page.innerHTML = `
-      <section class="hp-card" style="--c:${h.color}">
-        <div class="hp-art" style="background-image:url(${h.menu})"></div>
-        <div class="hp-head">
-          <span class="hp-lv"><b>${level}</b><small>из ${MAX_UPGRADE}</small></span>
-          <span class="hp-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
-          <span class="sel-coins">${ICONS.coin}<b>${p.coins.toLocaleString('ru-RU')}</b></span>
+      <section class="hero-card" style="--c:${h.color}">
+        <div class="hero-art" style="background-image:url(${h.menu})"></div>
+        <div class="hero-head">
+          <span class="hero-lv"><b>${heroLevel(u)}</b><small>из ${MAX_UPGRADE}</small></span>
+          <span class="hero-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
+          <span class="hero-coins">${ICONS.coin}<b>${p.coins.toLocaleString('ru-RU')}</b></span>
         </div>
       </section>
-      <p class="hp-note">Уровень героя — среднее уровней четырёх характеристик.</p>
-      <ul class="ups">${STATS.map((st) => {
-        const lv = u[st], max = lv >= MAX_UPGRADE, cost = upgradeCost(lv);
-        return `<li>
-          <span class="up-name">${STAT_ICON[st]}${STAT_LABEL[st]}</span>
-          <span class="up-val"><b>${statValue(h.id, st, lv)}</b>${max ? '' : `<em>→ ${statValue(h.id, st, lv + 1)}</em>`}</span>
-          <span class="up-bar" aria-label="${lv} из ${MAX_UPGRADE}"><s style="width:${(100 * lv) / MAX_UPGRADE}%"></s><i>${lv}/${MAX_UPGRADE}</i></span>
-          <button type="button" class="up-btn" data-stat="${st}" ${max || p.coins < cost ? 'disabled' : ''}>${max ? 'Макс.' : `${ICONS.coin}${cost}`}</button>
-        </li>`;
-      }).join('')}</ul>
-      <h3 class="hp-sub">Способности</h3>
+      <p class="hero-note">Уровень героя — среднее уровней четырёх характеристик.</p>
+      <ul class="ups">${STATS.map((st) => statRow(h.id, st, u[st], p.coins)).join('')}</ul>
+      <h3 class="hero-sub">Способности</h3>
       <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Способность'][i]}</b> ${t}</li>`).join('')}</ul>
-      <h3 class="hp-sub">Другие герои</h3>
+      <h3 class="hero-sub">Другие герои</h3>
       <div class="others">${HEROES.filter((o) => o.id !== h.id).map((o) => {
         const own = p.owned.includes(o.id);
         return `<button type="button" class="other${own ? '' : ' locked'}" data-hero="${o.id}">
@@ -209,11 +198,33 @@ function heroes(): void {
           <span class="o-act">${own ? `Ур. ${heroLevel(upgradesOf(p, o.id))} · играть` : `${ICONS.lock}${ICONS.coin}${(HERO_PRICE / 1000).toFixed(0)}к`}</span>
         </button>`;
       }).join('')}</div>`;
+    page.classList.remove('in'); void page.offsetWidth; page.classList.add('in');
+  };
+  const bump = (el: Element | null, cls = 'bump') => { if (!el) return; el.classList.remove(cls); void (el as HTMLElement).offsetWidth; el.classList.add(cls); };
+  const afterUpgrade = (st: Stat) => {
+    const p = loadProfile(), u = upgradesOf(p, selected);
+    const row = page.querySelector<HTMLElement>(`.ups li[data-stat="${st}"]`)!;
+    const tpl = document.createElement('template');
+    tpl.innerHTML = statRow(selected, st, u[st], p.coins).trim();
+    const next = tpl.content.firstElementChild!;
+    row.querySelector('.up-val')!.replaceWith(next.querySelector('.up-val')!);
+    row.querySelector('.up-btn')!.replaceWith(next.querySelector('.up-btn')!);
+    row.querySelector('.up-bar i')!.textContent = `${u[st]}/${MAX_UPGRADE}`;
+    row.querySelector<HTMLElement>('.up-bar s')!.style.setProperty('--k', String(u[st] / MAX_UPGRADE));
+    bump(row, 'flash');
+    page.querySelectorAll<HTMLButtonElement>('.up-btn[data-stat]').forEach((b) => {
+      const lv = u[b.dataset.stat as Stat];
+      if (lv < MAX_UPGRADE) b.disabled = p.coins < upgradeCost(lv);
+    });
+    const lvEl = page.querySelector('.hero-lv b')!, coinsEl = page.querySelector('.hero-coins b')!;
+    if (lvEl.textContent !== String(heroLevel(u))) { lvEl.textContent = String(heroLevel(u)); bump(page.querySelector('.hero-lv')); }
+    coinsEl.textContent = p.coins.toLocaleString('ru-RU');
+    bump(page.querySelector('.hero-coins'));
   };
   page.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     const up = t.closest<HTMLButtonElement>('.up-btn');
-    if (up) { if (upgrade(selected, up.dataset.stat as Stat)) { haptic('success'); render(); } return; }
+    if (up) { const st = up.dataset.stat as Stat; if (upgrade(selected, st)) { haptic('success'); afterUpgrade(st); } return; }
     const o = t.closest<HTMLButtonElement>('.other');
     if (!o) return;
     const id = o.dataset.hero as HeroId, p = loadProfile();
@@ -223,18 +234,15 @@ function heroes(): void {
     }
     selected = id; store.set('dvor.hero', id); haptic('success'); render();
   });
-  bindBack();
   render();
 }
 
-// ------------------------------------------------------------------ Задания (пока пустые)
 function empty(title: string, text: string): void {
   view.innerHTML = `<div class="empty"><h1>${title}</h1><p>${text}</p></div>`;
 }
 
-// ------------------------------------------------------------------ Рейтинг: ранги, уровень, история
 function rating(): void {
-  const p = loadProfile(), r = rankOf(p.trophies), nx = nextRank(p.trophies), lv = { level: heroLevelOf(selected) };
+  const p = loadProfile(), r = rankOf(p.trophies), nx = nextRank(p.trophies), lv = heroLevelOf(selected);
   const toNext = nx ? Math.round((100 * (p.trophies - r.min)) / (nx.min - r.min)) : 100;
   const ago = (t: number) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : `${Math.round(m / 1440)} дн назад`; };
   view.innerHTML = `
@@ -248,7 +256,7 @@ function rating(): void {
           <i class="prog-bar"><s style="width:${toNext}%"></s></i></div>
       </div>
       <div class="prog-stats">
-        <span><b>${lv.level}</b>ур. героя</span><span><b>${p.games}</b>боёв</span><span><b>${p.games ? Math.round((100 * p.wins) / p.games) : 0}%</b>побед</span><span><b>${p.kills}</b>выбито</span>
+        <span><b>${lv}</b>ур. героя</span><span><b>${p.games}</b>боёв</span><span><b>${p.games ? Math.round((100 * p.wins) / p.games) : 0}%</b>побед</span><span><b>${p.kills}</b>выбито</span>
       </div>
       <h2>Ранги</h2>
       <ol class="ladder">${RANKS.map((x) => `<li class="${x.name === r.name ? 'me' : p.trophies >= x.min ? 'done' : ''}"><span class="lb">${rankBadge(x.color, x.dark)}</span><span>${x.name}</span><b>${x.min}</b></li>`).reverse().join('')}</ol>
@@ -265,7 +273,6 @@ function rating(): void {
   }).catch(() => { if (alive) list.innerHTML = '<li class="muted">Рейтинг сейчас недоступен — нет связи с сервером.</li>'; });
 }
 
-// ------------------------------------------------------------------ Поиск боя (симуляция)
 let nextBlue: HeroId[] = [];
 function search(): void {
   const team = (nextBlue = lineup(selected));
@@ -304,18 +311,16 @@ function search(): void {
   cleanup = () => timers.forEach((t) => { clearInterval(t); clearTimeout(t); });
 }
 
-// ------------------------------------------------------------------ Бой
 function battle(): void {
   let b: Battle | null = startBattle(view, selected, () => go('home'), nextBlue.length ? nextBlue : undefined);
   cleanup = () => { b?.destroy(); b = null; };
 }
 
-// ------------------------------------------------------------------ загрузка при входе
 const TIPS = [
   'Стой в круге с короной — команда получает очки',
   'Турель Техника сама стреляет 8 секунд',
   'Таран Танка оглушает всех на пути',
-  'Пластинки Спринтер отскакивают от стен',
+  'Пластинки Спринтера отскакивают от стен',
   'Бронебойная пуля Снайпера пробивает всех на линии',
   'Аптечка Медика лечит всех рядом',
   'Атака идёт сама — следи за позицией и кнопками',
@@ -323,19 +328,9 @@ const TIPS = [
   'Побеждай, чтобы подняться из Бронзы в Серебро',
   'Выбитый игрок возвращается через 3 секунды',
 ];
-/**
- * The splash (#boot, splash/splash.html) is already on screen: it is part of the HTML, so it shows while
- * this bundle downloads. Here it switches to real progress (bytes of every model, pictures, fonts).
- */
+
 function boot(): void {
-  let el = document.getElementById('boot');
-  if (!el) {   // page built without the splash: a bare stand-in
-    el = document.createElement('div');
-    el.id = 'boot';
-    el.innerHTML = '<div class="sp-foot"><div class="sp-bar"><i></i></div><p class="sp-pct"></p><p class="sp-tip"></p></div>';
-    document.body.appendChild(el);
-  }
-  const box = el;
+  const box = document.getElementById('boot')!;
   const bar = box.querySelector<HTMLElement>('.sp-bar i')!, tip = box.querySelector<HTMLElement>('.sp-tip')!;
   box.querySelector('.sp-pct')!.innerHTML = 'Загрузка <b>0</b>%';
   const pct = box.querySelector('.sp-pct b')!;
@@ -345,26 +340,26 @@ function boot(): void {
   nextTip();
   const tipTimer = window.setInterval(nextTip, 2600);
   let shown = 0, target = 0;
-  const anim = window.setInterval(() => {   // smooth the bar between progress events
+  const anim = window.setInterval(() => {
     shown += (target - shown) * 0.25;
     if (target - shown < 0.002) shown = target;
     bar.style.width = `${(shown * 100).toFixed(1)}%`;
     pct.textContent = String(Math.floor(shown * 100));
   }, 33);
-  // Telegram first (launch data), then the cloud copy of the progress (at most 4 s), alongside the assets
+
   const cloud = () => Promise.race([syncOnBoot(), new Promise<void>((r) => setTimeout(r, 4000))]);
   const run = () => Promise.all([initTelegram().then(cloud), preloadAll((k) => (target = k))]);
   const finish = () => {
     target = 1;
-    // let the logo animation play out (it starts with the page), then the logo and the bar fade, home under it
+
     const wait = Math.max(0, 2300 - performance.now());
     setTimeout(() => {
       clearInterval(tipTimer);
       box.classList.add('done');
       setTimeout(() => {
-        const p = loadProfile();   // first launch: the story, then the one-time hero pick
-        selected = ownedHero(store.get('dvor.hero'));   // the cloud copy may have brought other heroes
-        if (p.games > 0 && p.chosen) void postResult(p, selected);   // keep the leaderboard name / trophies fresh
+        const p = loadProfile();
+        selected = ownedHero(store.get('dvor.hero'));
+        if (p.games > 0 && p.chosen) void postResult(p, selected);
         go(!p.storySeen ? 'story' : !p.chosen ? 'choose' : current);
         box.classList.add('out');
         setTimeout(() => { clearInterval(anim); box.remove(); }, 500);

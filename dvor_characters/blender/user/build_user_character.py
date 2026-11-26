@@ -1,19 +1,3 @@
-"""Rig, skin and animate a user-supplied Tripo mesh (Blender 4.5 LTS bpy module).
-
-    /opt/dvor-venv/bin/python blender/user/build_user_character.py --char technik|sprinter|tank
-
-Pipeline
-  1. import user_meshes/pN.glb, weld UV-split vertices, scale x1.5 (model height 1.0 -> 1.5 m)
-  2. Technik only: cut the single fused vertex under the left fist (min edge cut)
-  3. 18-bone skeleton (same names/hierarchy as the DVOR family) from measured joints
-  4. heat (automatic) weights, then constrained by mesh connectivity: the arm piece below the
-     shoulder may only use its own arm bones, the body may not use forearm/hand bones
-  5. texture 4096 -> 1024 (Lanczos), one material, backface culling
-  6. the 7 clips of the role are retargeted from the A-pose library: each bone is first swung
-     (minimal arc) from its modelled rest direction to the A-pose direction, then the clip delta
-     is applied, so all three meshes share the same motion design
-  7. save source/USER_<NAME>.blend, export export/raw/USER_<NAME>.glb + build report
-"""
 import argparse
 import io
 import math
@@ -25,20 +9,19 @@ BL = os.path.dirname(HERE)
 ROOT = os.path.dirname(BL)
 sys.path[:0] = [HERE, BL]
 
-import bpy  # noqa: E402  (must precede bmesh)
-import bmesh  # noqa: E402
-from mathutils import Euler, Quaternion, Vector  # noqa: E402
+import bpy
+import bmesh
+from mathutils import Euler, Quaternion, Vector
 
-import anims  # noqa: E402
-import dvor_lib as L  # noqa: E402
-import joints_user as JU  # noqa: E402
-import user_mesh_lib as U  # noqa: E402
+import anims
+import dvor_lib as L
+import joints_user as JU
+import user_mesh_lib as U
 
 SCALE = 1.5
 NAMES = {"technik": "CH_Technik", "sprinter": "CH_Sprinter", "tank": "CH_Tank"}
 SHOULDER_BALL = {"technik": 0.16, "sprinter": 0.16, "tank": 0.24}
 FIST_R = {"technik": 0.07, "sprinter": 0.07, "tank": 0.12}
-# A-pose reference directions (armature space) the clip library was authored for
 A_ARM = math.radians(18)
 REF_DIR = {
     "upper_arm": Vector((math.sin(A_ARM), 0, -math.cos(A_ARM))),
@@ -51,12 +34,10 @@ REF_DIR = {
     "neck": Vector((0, 0, 1)), "head": Vector((0, 0, 1)),
 }
 REF_HIP_Z = 0.66
-# clips that keep the modelled pose instead of the A-pose (the concept pose IS the idle)
-KEEP_REST_POSE = {"sprinter": {"Idle"}}   # hip height of the A-pose reference (CH_Technik procedural) for pelvis offsets
+KEEP_REST_POSE = {"sprinter": {"Idle"}}
 
 
 def texture_1024(obj, name):
-    """Read the embedded 4096 texture, write a 1024 JPEG next to the other textures."""
     from PIL import Image
     mat = obj.data.materials[0]
     img = next(n.image for n in mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image)
@@ -83,8 +64,6 @@ def make_material(name, tex_path):
 
 
 def constrain_weights(obj, joints, ch):
-    """Arm piece (not connected to the torso once the shoulder ball is removed) may use only
-    its arm bones (+chest near the shoulder); everything else may not use forearm/hand bones."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bm.verts.ensure_lookup_table()
@@ -135,7 +114,6 @@ def constrain_weights(obj, joints, ch):
         if len(keep) != sum(1 for g in v.groups if g.weight > 1e-4):
             changed += 1
         if not keep:
-            # fall back to the nearest allowed bone
             cands = [r for r in rule if not r.startswith("*")] or [b for b in groups.values()
                                                                     if not b.startswith(("forearm", "hand"))]
             keep = {min(cands, key=lambda b: U._seg_dist(v.co, *joints[b])): 1.0}
@@ -152,7 +130,6 @@ def skin(obj, rig, joints, ch):
         o.select_set(o in (obj, rig))
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
-    # every deform bone must exist as a group even when heat gave it nothing
     for b in L.BONE_NAMES:
         if b != "root" and b not in obj.vertex_groups:
             obj.vertex_groups.new(name=b)
@@ -165,9 +142,7 @@ def skin(obj, rig, joints, ch):
     bpy.ops.object.vertex_group_clean(group_select_mode="ALL", limit=0.02)
     bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=4)
     bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
-    # separate pieces (backpack, loose soles...) follow one bone rigidly
     rigid = rigid_components(obj, joints)
-    # unweighted vertices -> nearest bone
     groups = {g.name: g for g in obj.vertex_groups}
     fixed = 0
     for v in obj.data.vertices:
@@ -211,8 +186,6 @@ def rigid_components(obj, joints):
                 tot[names[g.group]] = tot.get(names[g.group], 0) + g.weight
         d_torso = U._seg_dist(cen, *torso)
         d_arm = min(U._seg_dist(cen, *joints[f"{b}.{s}"]) for b in ("upper_arm", "forearm", "hand") for s in "LR")
-        # nearest bone to the piece centre (heat weights are unreliable on loose pieces);
-        # arm bones only if the piece sits closer to an arm than to the torso
         bones = [b for b in joints if b != "root" and (d_arm < d_torso or not b.startswith(("upper_arm", "forearm", "hand")))]
         bone = min(bones, key=lambda b: U._seg_dist(cen, *joints[b]))
         for i in c:
@@ -223,10 +196,7 @@ def rigid_components(obj, joints):
     return out
 
 
-# ----------------------------------------------------------------------------- retarget
 def straighten_rotations(rig, ch):
-    """W_b: minimal-arc swing from the modelled rest direction to the A-pose direction,
-    accumulated down the chain so children follow their straightened parent."""
     W = {}
     for b, parent in L.BONES:
         bone = rig.data.bones[b]
@@ -311,7 +281,6 @@ def main():
     mat = make_material(name, tex_path)
     obj.data.materials.clear()
     obj.data.materials.append(mat)
-    # drop the imported 4096 material/texture so the .blend only carries the 1024 atlas
     for m in list(bpy.data.materials):
         if m is not mat:
             bpy.data.materials.remove(m)

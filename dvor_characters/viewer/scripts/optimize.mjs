@@ -1,27 +1,16 @@
-// Optimise raw Blender GLBs for the Telegram Mini App.
-//   node scripts/optimize.mjs            (from dvor_characters/viewer)
-// Output in ../dist:
-//   <NAME>.glb       EXT_meshopt_compression + KHR_mesh_quantization, PNG atlas (works everywhere)
-//   <NAME>.ktx2.glb  same geometry, KTX2 / Basis ETC1S atlas (KHR_texture_basisu) for GPU-compressed VRAM
-//   report.json      measured byte sizes (raw, gzip, brotli), triangles, draw calls, clips
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { cloneDocument, dedup, prune, resample, meshopt } from '@gltf-transform/functions';
-import { toktx, Mode } from '@gltf-transform/cli';
+import { dedup, prune, resample, meshopt } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..', '..');
 const RAW = path.join(ROOT, 'export', 'raw');
 const DIST = path.join(ROOT, 'dist');
-const KTX_BIN = process.env.KTX_BIN || '/opt/ktx/KTX-Software-4.4.2-Linux-x86_64/bin';
-process.env.PATH = `${KTX_BIN}:${process.env.PATH}`;
-process.env.LD_LIBRARY_PATH = path.join(KTX_BIN, '..', 'lib');
-const ETC1S_QUALITY = Number(process.env.ETC1S_QUALITY || 192);
 
 await MeshoptDecoder.ready;
 await MeshoptEncoder.ready;
@@ -49,7 +38,6 @@ for (const file of fs.readdirSync(RAW).filter((f) => f.endsWith('.glb'))) {
   if (only.length && !only.includes(name)) continue;
   const doc = await io.read(path.join(RAW, file));
 
-  // KHR_materials_specular would make three.js use MeshPhysicalMaterial (heavier shader).
   for (const ext of doc.getRoot().listExtensionsUsed()) {
     if (ext.extensionName === 'KHR_materials_specular') ext.dispose();
   }
@@ -63,19 +51,11 @@ for (const file of fs.readdirSync(RAW).filter((f) => f.endsWith('.glb'))) {
     resample({ tolerance: 1e-4 }),
     prune({ keepLeaves: false, keepAttributes: false }),
   );
-  // KTX2 variant: Basis ETC1S with mipmaps, encoded before meshopt so geometry is compressed once.
-  const ktxDoc = cloneDocument(doc);
-  await ktxDoc.transform(toktx({ mode: Mode.ETC1S, quality: ETC1S_QUALITY, compression: 2 }));
 
-  const mopt = meshopt({ encoder: MeshoptEncoder, level: 'medium' });
-  await doc.transform(mopt);
-  await ktxDoc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+  await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   const outPng = path.join(DIST, `${name}.glb`);
-  const outKtx = path.join(DIST, `${name}.ktx2.glb`);
   await io.write(outPng, doc);
-  await io.write(outKtx, ktxDoc);
 
-  // measured facts for the report
   const check = await io.read(outPng);
   const meshes = check.getRoot().listMeshes().map((m) => ({
     name: m.getName(),
@@ -89,7 +69,6 @@ for (const file of fs.readdirSync(RAW).filter((f) => f.endsWith('.glb'))) {
   });
   report.characters[name] = {
     glb: { file: `${name}.glb`, ...sizes(outPng) },
-    ktx2_glb: { file: `${name}.ktx2.glb`, ...sizes(outKtx) },
     raw_glb_bytes: fs.statSync(path.join(RAW, file)).size,
     meshes,
     materials: check.getRoot().listMaterials().length,
@@ -99,9 +78,8 @@ for (const file of fs.readdirSync(RAW).filter((f) => f.endsWith('.glb'))) {
     extensions: check.getRoot().listExtensionsUsed().map((e) => e.extensionName),
     animations: anims,
   };
-  console.log(name, report.characters[name].glb, report.characters[name].ktx2_glb);
+  console.log(name, report.characters[name].glb);
 }
 report.generated = new Date().toISOString();
-report.etc1s_quality = ETC1S_QUALITY;
-report.tools = { 'gltf-transform': '4.5.1', meshoptimizer: '1.3.0', 'KTX-Software': '4.4.2' };
+report.tools = { 'gltf-transform': '4.5.1', meshoptimizer: '1.3.0' };
 fs.writeFileSync(path.join(DIST, 'report.json'), JSON.stringify(report, null, 2));

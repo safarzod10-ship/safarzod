@@ -1,12 +1,3 @@
-"""Preparation of the user-supplied Tripo meshes for rigging (Blender 4.5 bpy module).
-
-import_user_mesh  -> one welded mesh object (UVs kept per corner), Blender axes, metres
-build_joints      -> bone head/tail dict for dvor_lib.build_armature from measured joints
-segment           -> per-vertex nearest-bone label with radius-normalised distances
-cut_arms_free     -> delete faces that fuse arms to torso/legs (except the shoulder joint),
-                     fill the holes, give the patches UVs of their neighbours
-arm_paths         -> verification: shortest surface path hand -> hip must climb to the shoulder
-"""
 from __future__ import annotations
 
 import heapq
@@ -30,7 +21,7 @@ def import_user_mesh(path: str, scale: float, name: str):
     assert len(meshes) == 1, f"expected one mesh in {path}, got {len(meshes)}"
     src = meshes[0]
     me = src.data.copy()
-    me.transform(src.matrix_world)                 # glTF Y-up -> Blender Z-up, faces -Y
+    me.transform(src.matrix_world)
     me.transform(__import__("mathutils").Matrix.Scale(scale, 4))
     obj = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(obj)
@@ -43,7 +34,7 @@ def import_user_mesh(path: str, scale: float, name: str):
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     n0 = len(bm.verts)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5 * scale)   # UV seams split verts
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5 * scale)
     n1 = len(bm.verts)
     bm.to_mesh(obj.data)
     bm.free()
@@ -79,7 +70,6 @@ def _seg_dist(p, a, b):
 
 
 def segment(bm, joints: dict, iters: int = 2) -> dict:
-    """Label = bone with the smallest distance / typical radius of that bone."""
     bones = [b for b in joints if b != "root"]
     radius = {b: 1.0 for b in bones}
     label = {}
@@ -106,8 +96,6 @@ def _group(b):
 
 
 def cut_arms_free(obj, joints: dict, shoulder_keep: float):
-    """Delete faces joining an arm-chain region to a torso/leg region, except within
-    `shoulder_keep` metres of the shoulder joint. Fill the holes and fix their UVs."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     uvl = bm.loops.layers.uv.active
@@ -119,14 +107,12 @@ def cut_arms_free(obj, joints: dict, shoulder_keep: float):
         sides = {label[v].split(".")[1] for v in f.verts if "." in label[v] and _group(label[v]) in ARM}
         if not (groups & set(ARM)) or not (groups & set(BODY)):
             continue
-        # keep the natural shoulder connection
         side = next(iter(sides)) if sides else "L"
         sh = joints[f"upper_arm.{side}"][0]
         if all((v.co - sh).length < shoulder_keep for v in f.verts):
             continue
         kill.append(f)
     bmesh.ops.delete(bm, geom=kill, context="FACES_ONLY")
-    # drop vertices/edges left without faces
     loose_e = [e for e in bm.edges if not e.link_faces]
     bmesh.ops.delete(bm, geom=loose_e, context="EDGES")
     loose_v = [v for v in bm.verts if not v.link_faces]
@@ -137,7 +123,6 @@ def cut_arms_free(obj, joints: dict, shoulder_keep: float):
     filled = [f for f in bm.faces if f not in before]
     tri = bmesh.ops.triangulate(bm, faces=filled, quad_method="BEAUTY", ngon_method="BEAUTY")
     patch = tri["faces"]
-    # UVs: every corner of a patch face takes a UV that vertex already has on an original face
     for f in patch:
         f.smooth = True
         for loop in f.loops:
@@ -153,8 +138,6 @@ def cut_arms_free(obj, joints: dict, shoulder_keep: float):
 
 
 def arm_paths(obj, joints: dict) -> dict:
-    """Shortest path along edges from the hand tip to the hip joint area, per side.
-    Returns the highest z reached: it must reach shoulder height if the arm is free."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     label, _ = segment(bm, joints)
@@ -163,7 +146,6 @@ def arm_paths(obj, joints: dict) -> dict:
         tip = joints[f"hand.{side}"][1]
         hipj = joints[f"thigh.{side}"][0]
         hand = min((v for v in bm.verts if label[v] == f"hand.{side}"), key=lambda v: (v.co - tip).length)
-        # outer hip surface: thigh-labelled vertex furthest out sideways near hip height
         cand = [v for v in bm.verts if label[v] == f"thigh.{side}" and abs(v.co.z - hipj.z) < 0.08]
         sgn = 1 if side == "L" else -1
         hip = max(cand, key=lambda v: v.co.x * sgn)
@@ -197,7 +179,6 @@ def arm_paths(obj, joints: dict) -> dict:
     return out
 
 
-# ----------------------------------------------------------------------------- robust version
 def _components_connected(bm, a, b, removed: set) -> bool:
     seen, st = {a}, [a]
     while st:
@@ -213,8 +194,6 @@ def _components_connected(bm, a, b, removed: set) -> bool:
 
 
 def arm_fused(obj, joints: dict, shoulder_r: float = 0.10) -> dict:
-    """Remove a ball around each shoulder joint; if the hand is still connected to the
-    torso, the arm is fused to the body somewhere below the shoulder."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     out = {}
@@ -232,9 +211,6 @@ def arm_fused(obj, joints: dict, shoulder_r: float = 0.10) -> dict:
 
 def cut_plane_between(obj, joints: dict, side: str, radius: float, dz: float, bins: int = 24,
                       offset: float = 0.0):
-    """Cut the bridge between hand and hip of one side with a plane at the thinnest point.
-    Region: vertices within `radius` of the hip->hand line and within +-dz of hand height.
-    Returns stats; deletes straddling faces in the region, fills both holes."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     uvl = bm.loops.layers.uv.active
@@ -263,7 +239,6 @@ def cut_plane_between(obj, joints: dict, side: str, radius: float, dz: float, bi
         k = int((s - lo) / (hi - lo) * bins)
         if 0 <= k < bins:
             hist[k] += 1
-    # thinnest point in the middle 60 % (between the hip surface and the hand)
     a, b = int(bins * 0.2), int(bins * 0.8)
     kmin = min(range(a, b), key=lambda k: (hist[k], abs(k - bins / 2)))
     s0 = lo + (kmin + 0.5) / bins * (hi - lo) + offset
@@ -304,9 +279,6 @@ def _poly_dist(p, pts):
 
 def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: float = 0.06,
                    dry_run: bool = False):
-    """Minimum edge cut (unit capacities, Edmonds-Karp) between the outer side of the arm
-    (source) and the torso/opposite hip (sink) with the shoulder ball removed, so the only
-    remaining connections are the fusion bridges. Deletes the cut edges, fills the holes."""
     from collections import deque
     bm = bmesh.new()
     bm.from_mesh(obj.data)
@@ -325,7 +297,7 @@ def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: floa
         if v.index in removed:
             continue
         if _seg_dist(v.co, a, b) < core_r and (v.co.x - hc.x) * sgn > 0:
-            src.add(v.index)          # outer half of the fist
+            src.add(v.index)
     sink = set()
     for v in bm.verts:
         if v.index in removed or v.index in src:
@@ -334,7 +306,6 @@ def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: floa
         opposite_hip = (v.co.x - axis_x) * sgn < -0.03 and v.co.z > joints[f"shin.{side}"][0].z
         if _seg_dist(v.co, *torso_axis) < 0.10 or opposite_hip:
             sink.add(v.index)
-    # graph
     adj = {}
     for e in bm.edges:
         a, b = e.verts[0].index, e.verts[1].index
@@ -377,7 +348,6 @@ def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: floa
         flow += 1
         if flow > 200:
             break
-    # reachable set in residual graph
     reach = {S}
     q = deque([S])
     while q:
@@ -394,14 +364,11 @@ def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: floa
                                                      tuple(round(x, 3) for x in e.verts[1].co)) for e in cut_edges]}
         bm.free()
         return info
-    # Common case: the bridge is one "bow-tie" vertex shared by the fist and the pants.
-    # Split that vertex instead of deleting faces: no hole, no patch, UVs untouched.
     shared = set(cut_edges[0].verts) if cut_edges else set()
     for e in cut_edges[1:]:
         shared &= set(e.verts)
     if len(shared) == 1:
         v = next(iter(shared))
-        # fans: faces around v connected through edges that contain v
         faces = list(v.link_faces)
         fan_of = {}
         fans = []
@@ -426,7 +393,7 @@ def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: floa
             def fan_dist(fan):
                 pts = [u.co for f in fan for u in f.verts if u is not v]
                 return (sum(pts, Vector()) / len(pts) - hc).length
-            keep = min(fans, key=fan_dist)          # the fist fan keeps the original vertex
+            keep = min(fans, key=fan_dist)
             moved = 0
             for fan in fans:
                 if fan is keep:
@@ -468,8 +435,6 @@ def cut_min_bridge(obj, joints: dict, side: str, shoulder_r: float, core_r: floa
 
 
 def fist_connectivity(obj, joints: dict, shoulder_r: float, fist_r: float = 0.07) -> dict:
-    """Share of fist vertices (within fist_r of the wrist->hand_end segment) that are still
-    connected to the torso after removing a ball around the shoulder joint. 0 = arm is free."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     torso_c = (joints["spine"][0] + joints["spine"][1]) / 2
@@ -478,7 +443,6 @@ def fist_connectivity(obj, joints: dict, shoulder_r: float, fist_r: float = 0.07
         sh = joints[f"upper_arm.{side}"][0]
         removed = {v for v in bm.verts if (v.co - sh).length < shoulder_r}
         torso = min((v for v in bm.verts if v not in removed), key=lambda v: (v.co - torso_c).length)
-        # flood from torso
         seen, st = {torso}, [torso]
         while st:
             v = st.pop()

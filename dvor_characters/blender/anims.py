@@ -1,12 +1,3 @@
-"""Procedural clip library shared by the DVOR skeleton family.
-
-Rotations: XYZ euler degrees in the parent's (posed) frame aligned with the armature axes,
-L-side convention (dvor_lib.pose_to_local mirrors *.R).
-  rx < 0 swings a limb forward, rx > 0 bends a knee / leans the spine forward
-  ry < 0 raises an arm outward (abduction); rz turns the torso/head to the character's left
-Pelvis 'loc' is an offset in metres in armature space (Z up, -Y forward).
-Roles only change timing and pose emphasis; bone names, hierarchy and clip names are identical.
-"""
 import math
 
 ROLE = {
@@ -25,7 +16,6 @@ def sym(pose, base, rot, rot_r=None):
 
 
 def ready(role):
-    """Neutral combat-ready stance used as start/end of one-shot clips."""
     r = ROLE[role]
     p = {"spine": (3, 0, 0), "chest": (-2, 0, 0), "head": (-2, 0, 0)}
     sym(p, "upper_arm", (4, r["arm_in"], 0))
@@ -34,7 +24,7 @@ def ready(role):
     sym(p, "shin", (8, 0, 0))
     sym(p, "foot", (-4, 3 + 3 * r["heavy"], 0))
     p["loc"] = (0, 0, -0.012)
-    if role == "sniper":    # both hands on the rifle, which hangs in front of the chest (sniper_rifle.py)
+    if role == "sniper":
         p["upper_arm.R"] = (-35, 10, 0)
         p["forearm.R"] = (-90, 0, -25)
         p["upper_arm.L"] = (-50, 14, 0)
@@ -57,7 +47,6 @@ def over(base, **bones):
     return p
 
 
-# ------------------------------------------------------------------ clips
 def idle(role):
     r = ROLE[role]
     a = ready(role)
@@ -71,11 +60,11 @@ def idle(role):
         p["chest"] = (-2 - 2.5 * amp * s, 0, 0)
         p["spine"] = (3 + 0.8 * s, 1.5 * math.sin(ph / 1), 0)
         p["head"] = (-2 + 1.5 * s, 0, 3 * math.sin(ph + 1.0))
-        if role != "sniper":     # the sniper keeps both hands on the rifle
+        if role != "sniper":
             sym(p, "upper_arm", (4 - 2 * s, r["arm_in"] - 2.5 * amp * s, 0))
             sym(p, "forearm", (-18 - 4 * s, 0, 0))
         p["loc"] = (0.006 * math.sin(ph), 0, -0.012 + 0.006 * amp * s)
-        if role == "sprinter":   # light bounce on the toes
+        if role == "sprinter":
             p["loc"] = (0.01 * math.sin(ph), 0, -0.01 + 0.012 * abs(math.sin(ph)))
         keys.append((f + 1, p))
     return keys, True, {}
@@ -108,12 +97,12 @@ def run(role):
 
 def attack(role):
     a = ready(role)
-    if role == "sniper":    # settle into the aim, sharp recoil through the chest (the rifle rides on it), settle
+    if role == "sniper":
         aim = over(a, chest=(-2, 0, -10), spine=(8, 0, 0), head=(2, 0, 10), loc=(0, 0, -0.03))
         kick = over(aim, chest=(-14, 0, -10), spine=(-4, 0, 0), head=(-8, 0, 10), loc=(0, 0.035, -0.01))
         keys = [(1, a), (6, aim), (9, aim), (11, kick), (16, aim), (24, a)]
         return keys, False, {"event_hit_s": (10 - 1) / 30}
-    if role == "medic":     # underarm toss of a med pack with the right hand
+    if role == "medic":
         wind = over(a, spine=(-4, 0, 0), chest=(0, 0, -16), upper_arm_R=(40, -10, 0),
                     forearm_R=(-30, 0, 0), upper_arm_L=(-24, -12, 0), forearm_L=(-50, 0, 0))
         toss = over(a, spine=(12, 0, 0), chest=(2, 0, 14), upper_arm_R=(-78, -6, 0),
@@ -121,7 +110,7 @@ def attack(role):
                     thigh_L=(-22, -4, 0), shin_L=(18, 0, 0), loc=(0, -0.03, -0.03))
         keys = [(1, a), (7, wind), (11, toss), (15, blend(toss, a, 0.4)), (21, a)]
         return keys, False, {"event_hit_s": (10 - 1) / 30}
-    if role == "technik":   # sharp side-arm throw of a gadget with the right hand
+    if role == "technik":
         wind = over(a, chest=(-4, 0, -28), spine=(-4, 0, 0), upper_arm_R=(38, -38, 0),
                     forearm_R=(-105, 0, 0), upper_arm_L=(-30, -15, 0), forearm_L=(-40, 0, 0),
                     head=(0, 0, 18))
@@ -132,7 +121,7 @@ def attack(role):
         fol = blend(rel, a, 0.35)
         keys = [(1, a), (7, wind), (11, rel), (15, fol), (22, a)]
         return keys, False, {"event_hit_s": (10 - 1) / 30}
-    if role == "tank":      # two-handed overhead hammer slam
+    if role == "tank":
         wind = over(a, spine=(-12, 0, 0), chest=(-8, 0, 0), head=(-10, 0, 0),
                     upper_arm_L=(-165, 12, 0), upper_arm_R=(-165, 12, 0),
                     forearm_L=(-50, 0, 0), forearm_R=(-50, 0, 0), loc=(0, 0.02, 0.02))
@@ -144,7 +133,6 @@ def attack(role):
                     loc=(0, -0.03, -0.13))
         keys = [(1, a), (11, wind), (16, slam), (21, slam), (30, a)]
         return keys, False, {"event_hit_s": (16 - 1) / 30}
-    # sprinter: fast front kick with the right leg
     chamber = over(a, thigh_R=(-85, 0, 0), shin_R=(95, 0, 0), foot_R=(-10, 0, 0),
                    spine=(-6, 0, 0), upper_arm_L=(-35, -25, 0), upper_arm_R=(25, -25, 0),
                    forearm_L=(-70, 0, 0), forearm_R=(-70, 0, 0), loc=(0, 0.02, 0.0))
@@ -156,13 +144,13 @@ def attack(role):
 
 def ability(role):
     a = ready(role)
-    if role == "sniper":    # drop to one knee, steady aim, rise
+    if role == "sniper":
         kneel = over(a, loc=(0, 0.02, -0.24), spine=(12, 0, 0), chest=(-4, 0, -16), head=(-2, 0, 14),
                      thigh_L=(-80, -6, 0), shin_L=(86, 0, 0), foot_L=(-6, 6, 0),
                      thigh_R=(12, -4, 0), shin_R=(118, 0, 0), foot_R=(-60, 0, 0))
         keys = [(1, a), (7, kneel), (18, kneel), (28, a)]
         return keys, False, {"event_cast_s": (7 - 1) / 30}
-    if role == "medic":     # both hands up, then spread out: the heal pulse
+    if role == "medic":
         up = over(a, chest=(-8, 0, 0), head=(-12, 0, 0), upper_arm_L=(-150, -20, 0),
                   upper_arm_R=(-150, -20, 0), forearm_L=(-30, 0, 0), forearm_R=(-30, 0, 0),
                   loc=(0, 0, 0.02))
@@ -171,7 +159,7 @@ def ability(role):
                       loc=(0, 0, -0.03))
         keys = [(1, a), (8, up), (13, spread), (20, spread), (28, a)]
         return keys, False, {"event_cast_s": (13 - 1) / 30}
-    if role == "technik":   # crouch, plant a device with the right hand, tap and rise
+    if role == "technik":
         crouch = over(a, loc=(0, 0.02, -0.25), spine=(34, 0, 0), chest=(10, 0, 0), head=(-26, 0, 0),
                       thigh_L=(-78, -6, 0), shin_L=(118, 0, 0), foot_L=(-40, 6, 0),
                       thigh_R=(-28, -4, 0), shin_R=(112, 0, 0), foot_R=(-70, 0, 0),
@@ -180,7 +168,7 @@ def ability(role):
         tap = over(crouch, upper_arm_R=(-72, 6, 0), forearm_R=(-55, 0, 0), head=(-16, 0, 0))
         keys = [(1, a), (8, crouch), (13, crouch), (17, tap), (21, crouch), (32, a)]
         return keys, False, {"event_cast_s": (13 - 1) / 30}
-    if role == "tank":      # brace guard: forearms crossed in front, wide low stance
+    if role == "tank":
         guard = over(a, loc=(0, 0.0, -0.1), spine=(6, 0, 0), chest=(0, 0, 0), head=(8, 0, 0),
                      upper_arm_L=(-74, 36, 0), upper_arm_R=(-74, 36, 0),
                      forearm_L=(-105, 0, -34), forearm_R=(-105, 0, -34),
@@ -189,7 +177,6 @@ def ability(role):
         push = over(guard, loc=(0, -0.06, -0.08), spine=(14, 0, 0), head=(2, 0, 0))
         keys = [(1, a), (7, guard), (16, push), (26, guard), (34, a)]
         return keys, False, {"event_cast_s": (7 - 1) / 30}
-    # sprinter: low explosive dash pose, arms swept back
     load = over(a, loc=(0, 0.03, -0.12), spine=(18, 0, 0), thigh_L=(-40, 0, 0), shin_L=(70, 0, 0),
                 foot_L=(-28, 0, 0), thigh_R=(-10, 0, 0), shin_R=(60, 0, 0), foot_R=(-40, 0, 0),
                 upper_arm_L=(20, -10, 0), upper_arm_R=(20, -10, 0))
@@ -243,7 +230,7 @@ def victory(role):
         role = "technik"
     if role == "medic":
         role = "sprinter"
-    if role == "technik":   # fist pump, left hand on hip
+    if role == "technik":
         up = over(a, chest=(-8, 0, 0), head=(-14, 0, 0), upper_arm_R=(-168, -12, 0),
                   forearm_R=(-28, 0, 0), upper_arm_L=(18, -42, 0), forearm_L=(-70, 0, -50),
                   loc=(0, 0, 0.0))
@@ -251,7 +238,7 @@ def victory(role):
                   head=(-18, 0, 0))
         keys = [(1, up), (10, hi), (20, up), (30, hi), (40, up)]
         return keys, True, {}
-    if role == "tank":      # double-biceps flex with a heavy pulse
+    if role == "tank":
         flex = over(a, chest=(-10, 0, 0), head=(-6, 0, 0), spine=(-2, 0, 0),
                     upper_arm_L=(-6, -70, 0), upper_arm_R=(-6, -70, 0),
                     forearm_L=(0, -105, 0), forearm_R=(0, -105, 0),
@@ -261,7 +248,6 @@ def victory(role):
                      loc=(0, 0, -0.045))
         keys = [(1, flex), (12, tight), (24, flex), (36, tight), (48, flex)]
         return keys, True, {}
-    # sprinter: hop with arm thrown up
     crouch = over(a, loc=(0, 0, -0.08), thigh_L=(-30, 0, 0), thigh_R=(-30, 0, 0), shin_L=(55, 0, 0),
                   shin_R=(55, 0, 0), foot_L=(-25, 0, 0), foot_R=(-25, 0, 0), spine=(10, 0, 0),
                   upper_arm_L=(-170, -10, 0), forearm_L=(-10, 0, 0))

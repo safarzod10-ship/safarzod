@@ -1,5 +1,3 @@
-// Balance check: bot-only 3v3 matches and 1v1 duels in the real Match code, no rendering.
-//   npx vite --port 5179 &  then  node scripts/balance.mjs [matches=24] [duelsPerPair=24]
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const pw = require('playwright');
@@ -22,7 +20,7 @@ const res = await p.evaluate(async ([n3, nd]) => {
   const ev = { damage() {}, kill() {}, end() {} };
   const inp = { move: [0, 0], attack: null, auto: false, a1: false, a2: false, dash: false };
   const dt = 1 / 30;
-  // 3v3, three random different heroes per side
+
   const st = {}; for (const id of ids) st[id] = { dealt: 0, healed: 0, kills: 0, deaths: 0, zone: 0, n: 0, won: 0 };
   let wins = [0, 0, 0];
   for (let i = 0; i < n3; i++) {
@@ -39,7 +37,7 @@ const res = await p.evaluate(async ([n3, nd]) => {
     wins[m.score[0] > m.score[1] ? 0 : m.score[1] > m.score[0] ? 1 : 2]++;
     m.dispose();
   }
-  // 1v1 duels: first kill wins; 40 s timeout -> higher HP share wins
+
   const duel = {};
   for (const a of ids) for (const c of ids) {
     if (a >= c) continue;

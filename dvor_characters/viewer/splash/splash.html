@@ -1,8 +1,3 @@
-<!-- Splash: part of the HTML itself, so it shows at once (before the ~700 KB game bundle arrives).
-     Only the ДВОР logo, animated: the four letters stamp in one after another, the orange underline
-     swipes in, the crown drops on top with sparks, then a shine runs over it while everything loads.
-     main.ts adopts #boot (real progress, tips) and fades it out once every model, picture and font is
-     ready. Logos are inlined (data URIs, splash/build.mjs), so the first frame needs no network. -->
 <style>
 html, body { margin: 0; height: 100%; background: #121114; }
 #boot {
@@ -15,8 +10,6 @@ html, body { margin: 0; height: 100%; background: #121114; }
 }
 #boot.out { opacity: 0; pointer-events: none; }
 #boot * { box-sizing: border-box; }
-
-/* warm glow and embers */
 .sp-glow { position: absolute; left: 50%; top: 40%; width: min(150vw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%);
   background: radial-gradient(closest-side, rgba(255, 150, 70, .26), rgba(255, 120, 40, .08) 50%, rgba(255, 120, 40, 0) 75%);
   animation: sp-in 1s ease both, sp-breath 3.2s ease-in-out 1s infinite; }
@@ -26,8 +19,6 @@ html, body { margin: 0; height: 100%; background: #121114; }
   background: #ffb06a; box-shadow: 0 0 6px 1px rgba(255, 120, 30, .9); opacity: 0; animation: sp-rise var(--d) linear var(--t) infinite; }
 @keyframes sp-rise { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: .9; } 70% { opacity: .5; }
   100% { opacity: 0; transform: translate(var(--dx), -75vh); } }
-
-/* logo box: crown + wordmark, 460 x 346 source px */
 .sp-logo { position: absolute; left: 50%; top: 40%; width: min(82vw, 380px); aspect-ratio: 460 / 346; transform: translate(-50%, -58%); }
 .sp-float { position: absolute; inset: 0; animation: sp-float 3.4s ease-in-out 2s infinite; }
 @keyframes sp-float { 50% { transform: translateY(-6px) rotate(-.6deg); } }
@@ -57,8 +48,6 @@ html, body { margin: 0; height: 100%; background: #121114; }
 .sp-shake { position: absolute; inset: 0; animation: sp-shake .26s linear var(--sk, .2s) both; }
 @keyframes sp-shake { 25% { transform: translate(-3px, 2px); } 50% { transform: translate(3px, -1px); } 75% { transform: translate(-2px, -1px); } }
 #boot.done .sp-logo { transition: transform .5s cubic-bezier(.4, 0, .2, 1), opacity .5s; transform: translate(-50%, -58%) scale(1.08); opacity: 0; }
-
-/* bottom: progress and tips */
 .sp-foot { position: absolute; left: 0; right: 0; bottom: 0; display: grid; justify-items: center; gap: 12px;
   padding: 0 28px calc(40px + env(safe-area-inset-bottom, 0px)); animation: sp-up .5s ease .5s both; transition: opacity .3s; }
 @keyframes sp-up { from { opacity: 0; transform: translateY(16px); } }
@@ -119,7 +108,6 @@ html, body { margin: 0; height: 100%; background: #121114; }
 </div>
 <script>
 (function () {
-  // Telegram: load its SDK at once and call ready() so Telegram drops its own placeholder and shows this splash.
   if (/tgWebApp/.test(location.hash) || 'TelegramWebviewProxy' in window) {
     var s = document.createElement('script');
     s.id = 'tg-sdk';

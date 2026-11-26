@@ -1,14 +1,4 @@
-"""Joint positions measured on the user-supplied Tripo meshes.
-
-Blender coords in model units before scaling (1.0 = model height): x = character's left,
-y = back, z = up. Measured on orthographic front/side renders with a 0.05 grid
-(viewer: preview.html?measure=front|side) and checked with marker overlays
-(review/user_meshes/joints_*.png). Keys ending in _L/_R are per side; plain keys are centre-line.
-"""
-
-
 def sym(d):
-    """Mirror *_L keys to *_R where no explicit *_R is given."""
     out = dict(d)
     for k, v in d.items():
         if k.endswith("_L") and k[:-2] + "_R" not in d:
@@ -16,7 +6,7 @@ def sym(d):
     return out
 
 
-TECHNIK = sym({  # p1.glb
+TECHNIK = sym({
     "pelvis": (0.0, -0.03, 0.385), "spine": (0.0, -0.035, 0.455), "chest": (0.0, -0.04, 0.535),
     "neck": (0.0, -0.035, 0.665), "head": (0.0, -0.035, 0.715), "head_end": (0.0, -0.04, 1.0),
     "shoulder_L": (0.13, -0.03, 0.615), "elbow_L": (0.165, -0.06, 0.48),
@@ -25,7 +15,7 @@ TECHNIK = sym({  # p1.glb
     "toe_L": (0.11, -0.13, 0.02),
 })
 
-SPRINTER = {  # p2.glb — contrapposto, hands on hips: both sides measured separately
+SPRINTER = {
     "pelvis": (0.04, -0.06, 0.38), "spine": (0.045, -0.06, 0.44), "chest": (0.05, -0.06, 0.51),
     "neck": (0.04, -0.05, 0.62), "head": (0.035, -0.045, 0.655), "head_end": (0.03, -0.04, 0.92),
     "shoulder_L": (0.13, -0.04, 0.565), "elbow_L": (0.214, 0.0, 0.47),
@@ -38,7 +28,7 @@ SPRINTER = {  # p2.glb — contrapposto, hands on hips: both sides measured sepa
     "toe_R": (-0.15, -0.185, 0.02),
 }
 
-TANK = sym({  # p3.glb
+TANK = sym({
     "pelvis": (0.0, -0.02, 0.40), "spine": (0.0, -0.02, 0.48), "chest": (0.0, -0.02, 0.56),
     "neck": (0.0, -0.01, 0.73), "head": (0.0, 0.0, 0.77), "head_end": (0.0, 0.0, 1.0),
     "shoulder_L": (0.143, -0.02, 0.62), "elbow_L": (0.215, -0.02, 0.48),

@@ -1,36 +1,76 @@
-# ДВОР — 3D-персонажи (Техник, Танк, Спринтер, Снайпер, Медик)
+# ДВОР
 
-Это отдельный подпроект. В папке лежит `.gdignore`, поэтому Godot-проект DUSHANBE в этом репозитории не затрагивается. Цель — Telegram Mini App на Three.js и TypeScript.
+Telegram Mini App: арена «Царь двора», 2 на 2, пять героев. Играть: [@dvor_app](https://t.me/dvor_app) или
+https://safarzod10-ship.github.io/safarzod/.
 
-- **Герои** — `dist/USER_HERO_*.glb`: пять моделей заказчика (второй набор Tripo, `user_meshes/v2/`), заригованы
-  (`blender/user/build_v2.py`, суставы `joints_v2.py`), 7 клипов, бег из motion capture (`run_v2.py`), текстура 1024, Meshopt.
-  Старые модели (первый набор Tripo и процедурные) удалены.
-- **Карта арены** — `dist/MAP_Dvor.glb` (976 треугольников) по двум картинкам заказчика.
+В папке лежит `.gdignore`, Godot-проект в корне репозитория её не видит.
 
-Документы:
-- [Отчёт с измерениями](docs/REPORT.md)
-- [Импорт в игру](docs/IMPORT.md)
-- [Карта арены: размеры, текстуры, проверка краёв](docs/MAP.md)
-- [Бег из motion capture](docs/RUN.md)
-- [Оболочка Mini App: экраны по макету](docs/APP.md)
-- [Баланс пяти героев](docs/BALANCE.md)
-- [Сервер: Telegram-бот @dvor_app и рейтинг](docs/SERVER.md)
+## Игра
 
-| Папка | Содержимое |
+| Герой | HP | Скорость | Атака | Способность |
+|---|---|---|---|---|
+| Техник | 5100 | 2.4 | пистолет-пулемёт, 480 | турель на 8 с |
+| Танк | 5400 | 1.9 | кулаки, 1000, броня 15 % | таран с оглушением |
+| Спринтер | 4300 | 2.75 | две пластинки, 370, рикошет | три рывка |
+| Снайпер | 4400 | 2.3 | винтовка, 1200 | пробивающий выстрел |
+| Медик | 4300 | 2.6 | шприцы, 400 | аптечка на всех рядом |
+
+Управление: джойстик под пальцем, двойной тап — рывок, атака идёт сама по ближнему врагу, тап по арене — выстрел
+туда, одна кнопка способности. Круг с короной даёт очки; матч длится 2 минуты или до 100 очков.
+
+Прогресс: старт с Бронзы III, кубки поднимают ранг до «Царь двора». Первого героя выбирают один раз, остальные
+стоят по 50 000 монет. У героя четыре характеристики до 30 уровня, уровень героя — их среднее с округлением от .5.
+
+## Код
+
+| Путь | Что там |
 |---|---|
-| `user_meshes/` | исходные GLB заказчика (не меняются) |
-| `mocap/cmu/` | записи CMU motion capture (BVH, свободная лицензия) — источник клипа Run |
-| `map/` | карта: `ref/` картинки заказчика, `tools/` сборка текстур, `blender/` геометрия, `source/` .blend, `textures/`, `export/` |
-| `ref/` | концепт-лист и вырезки по персонажам |
-| `blender/user/` | подготовка моделей заказчика: суставы, разрез, скелет, веса, ретаргетинг; `hands.py` — новые кисти из руки; `mocap_run.py` — бег из mocap |
-| `blender/` | общая библиотека (`dvor_lib.py`), клипы (`anims.py`), процедурные модели `char_*.py` |
-| `source/` | исходники `.blend` (`USER_CH_*` — основной комплект) |
-| `textures/` | текстуры 1024 (`USER_*`) и атласы 512 процедурных моделей |
-| `export/raw/` | GLB прямо из Blender + `*.build.json` с измерениями |
-| `dist/` | оптимизированные GLB (Meshopt; `*.ktx2.glb` — с KTX2) + `report.json` |
-| `viewer/` | Vite + TS: тестовая сцена (`index.html`), превью (`preview.html`), скрипты оптимизации, снимков и замеров; `src/play.ts` + `artifact/` — страница «Пробежка по двору» с джойстиком (сборка: `npx vite build --config vite.play.config.ts && node scripts/artifact-assets.mjs`) |
-| `viewer/src/app/`, `viewer/app.html` | оболочка Telegram Mini App по макету (главная, выбор героя, поиск боя, бой) |
-| `review/` | превью с 4 ракурсов, листы поз, игровая камера, `perf.json` |
-| `.claude/skills/` | установленные скиллы: `blender-*`, `threejs-mobile-gltf`, а также с GitHub `threejs-*` (CloudAI-X, majidmanzarpour, MIT) и `gamedev-*` (awesome-gamedev-agent-skills, Apache-2.0); откуда что — `SOURCES.md` |
+| `viewer/src/app/main.ts` | экраны: главная, герой, задания, рейтинг, поиск, история, первый выбор |
+| `viewer/src/app/battle.ts` | бой: камера, HUD, ввод, экран результата |
+| `viewer/src/app/game/` | симуляция матча, боты, параметры героев, коллизии двора |
+| `viewer/src/app/progress.ts` | кубки, ранги, монеты, улучшения |
+| `viewer/src/app/api.ts` | рейтинг, облачное сохранение, рекорды чата |
+| `viewer/splash/` | экран загрузки с логотипом |
+| `server/worker.js` | Cloudflare Worker: бот, рейтинг, профили в D1 |
+| `blender/`, `map/` | сборка героев, анимаций, турели и карты в Blender |
+| `user_meshes/v2/` | исходные модели героев |
+| `dist/` | готовые GLB (Meshopt) |
 
-Инструменты: Blender 4.5.17 LTS (модуль `bpy`), three.js r187, glTF-Transform 4.5.1, meshoptimizer 1.3.0, KTX-Software 4.4.2.
+## Сборка
+
+```sh
+cd viewer
+npm ci
+node scripts/sync-assets.mjs
+npm run dev
+npx vite build && node scripts/pages.mjs
+```
+
+Содержимое `dist-pages/` публикуется в ветку `gh-pages`.
+
+Модели после правок в Blender:
+
+```sh
+/opt/dvor-venv/bin/python blender/user/build_v2.py
+/opt/dvor-venv/bin/python blender/user/run_v2.py
+/opt/dvor-venv/bin/python blender/user/sniper_rifle.py
+/opt/dvor-venv/bin/python blender/user/sniper_ik.py
+/opt/dvor-venv/bin/python blender/props.py
+cd viewer && node scripts/optimize.mjs && node scripts/optimize-map.mjs && node scripts/sync-assets.mjs
+```
+
+## Сервер
+
+Worker `dvor-server` на бесплатном тарифе Cloudflare. Привязки: D1 `DB`, Durable Object `ROOMS`, `WEBAPP_URL`.
+Секреты `BOT_TOKEN` и `WEBHOOK_SECRET` хранятся только в Cloudflare.
+
+| Путь | |
+|---|---|
+| `POST /tg` | вебхук бота: `/start`, `/play`, `/top`, `/help`, inline-вызов `@dvor_app` |
+| `GET /api/top` | топ-50, кэш 60 с |
+| `POST /api/result` | результат боя, проверка initData |
+| `POST /api/game-score` | рекорды чата для игры из сообщения |
+| `POST /api/profile/load`, `/save` | облачное сохранение прогресса |
+
+В @BotFather включены `/setinline`, `/newgame` с коротким именем `dvor` и картинкой `telegram/game_640x360.jpg`,
+Main Mini App с адресом GitHub Pages.

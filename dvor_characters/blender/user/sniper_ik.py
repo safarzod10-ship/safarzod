@@ -1,13 +1,3 @@
-"""Sniper: hands locked onto the rifle in every clip (run after sniper_rifle.py).
-
-    /opt/dvor-venv/bin/python blender/user/sniper_ik.py
-
-The rifle rides on the chest bone. Two grip points on it (pistol grip for the right hand, handguard
-for the left) become empties parented to the chest, so they follow the torso in every frame. A 2-bone
-IK constraint on each forearm pulls the wrist onto its grip (elbow poles out to the sides and down);
-the result is baked into the keys of the arm bones with visual keying and the constraints are removed.
-Victory keeps its raised fist (no IK there).
-"""
 import json
 import os
 import sys
@@ -17,10 +7,10 @@ BL = os.path.dirname(HERE)
 ROOT = os.path.dirname(BL)
 sys.path[:0] = [HERE, BL]
 
-import bpy  # noqa: E402
-from mathutils import Vector  # noqa: E402
+import bpy
+from mathutils import Vector
 
-import dvor_lib as L  # noqa: E402
+import dvor_lib as L
 
 NAME = "USER_HERO_Sniper"
 SKIP = {"Victory"}
@@ -36,9 +26,8 @@ def main():
     rep = json.load(open(rep_path))
     stock = Vector(rep["rifle"]["stock_m"])
     aim = Vector(rep["rifle"]["aim"]).normalized()
-    side = Vector((-1, 0, 0))   # character's right
+    side = Vector((-1, 0, 0))
     grips = {
-        # wrist targets: slightly below / beside the rifle so the fists close around it
         "R": stock + aim * 0.20 + Vector((0, 0, -0.05)) + side * 0.03,
         "L": stock + aim * 0.46 + Vector((0, 0, -0.06)) - side * 0.02,
     }
@@ -52,7 +41,6 @@ def main():
         e.parent = rig
         e.parent_type = "BONE"
         e.parent_bone = "chest"
-        # bone parenting places the child at the bone TAIL; keep the rest-pose world position
         e.matrix_world = rig.matrix_world @ __import__("mathutils").Matrix.Translation(p)
         empties[s] = e
     bpy.context.view_layer.update()

@@ -1,8 +1,3 @@
-/**
- * The opening story (shown once, before the first hero pick) and each hero's own story for the cards.
- * Five friends from one courtyard; one night the garages burned and a crown was sprayed on every
- * wall of the district; everyone blamed someone of their own, and the friends fell out.
- */
 import type { HeroId } from './data';
 
 export interface Slide { art: string; tint?: string; title: string; text: string }

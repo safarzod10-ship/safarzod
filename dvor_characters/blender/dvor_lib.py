@@ -1,17 +1,3 @@
-"""DVOR character toolkit for Blender 4.5 LTS (bpy, background mode).
-
-Shared by all three characters:
-  * low-poly primitives with explicit segment counts (loft, superellipsoid blob, extruded shape)
-  * one 512x512 atlas per character: painted face (front hemisphere of the head) + flat
-    colour swatches with a soft vertical gradient; one material, one draw call
-  * one humanoid skeleton family (18 bones, identical names and hierarchy)
-  * automatic skin weights (rigid parts / axial chain blending), max 3 influences
-  * a procedural clip library (Idle, Run, Attack, Ability, Hit, Defeat, Victory)
-  * LOD1 by collapse decimation, GLB export, measured report
-
-Conventions: 1 unit = 1 m, Z up, the character faces -Y, origin on the ground between the feet.
-Character's left side is +X (bones *.L).
-"""
 from __future__ import annotations
 
 import json
@@ -28,7 +14,6 @@ CELL = 64
 FPS = 30
 
 BONES = [
-    # name, parent
     ("root", None), ("pelvis", "root"), ("spine", "pelvis"), ("chest", "spine"),
     ("neck", "chest"), ("head", "neck"),
     ("upper_arm.L", "chest"), ("forearm.L", "upper_arm.L"), ("hand.L", "forearm.L"),
@@ -40,7 +25,6 @@ BONE_NAMES = [b for b, _ in BONES]
 CLIPS = ["Idle", "Run", "Attack", "Ability", "Hit", "Defeat", "Victory"]
 
 
-# ----------------------------------------------------------------------------- utilities
 def V(*a) -> Vector:
     return Vector(a[0] if len(a) == 1 else a)
 
@@ -60,10 +44,7 @@ def reset_scene():
     sc.render.fps = FPS
 
 
-# ----------------------------------------------------------------------------- atlas
 class Atlas:
-    """Swatch cells: right half (4x8 cells of 64 px) then bottom-left quarter (4x4).
-    Top-left 256x256 = face region (front hemisphere of the head, equirectangular)."""
 
     def __init__(self, palette: dict[str, tuple[int, int, int]]):
         self.palette = palette
@@ -78,7 +59,6 @@ class Atlas:
         return (j % 4) * CELL, 256 + (j // 4) * CELL
 
     def uv(self, key: str, t: float = 0.5) -> tuple[float, float]:
-        """t = 0 bottom (darker) .. 1 top (lighter) of the swatch gradient."""
         x0, y0 = self.cell_origin(key)
         t = min(1.0, max(0.0, t))
         y = y0 + 54 - t * 44
@@ -94,8 +74,6 @@ class Atlas:
 
 
 def paint_atlas(atlas: Atlas, face_painter, path: str):
-    """face_painter(draw, P) paints into a 1024x1024 supersampled face canvas.
-    P(lon, lat) -> (x, y) pixel coordinates in that canvas."""
     from PIL import Image, ImageDraw
 
     img = Image.new("RGB", (ATLAS, ATLAS), (128, 128, 128))
@@ -103,7 +81,6 @@ def paint_atlas(atlas: Atlas, face_painter, path: str):
     for key, col in atlas.palette.items():
         x0, y0 = atlas.cell_origin(key)
         for yy in range(CELL):
-            # top lighter, bottom darker (soft baked occlusion feel)
             f = 1.06 - 0.20 * (yy / (CELL - 1))
             c = tuple(max(0, min(255, int(round(ch * f)))) for ch in col)
             for xx in range(CELL):
@@ -122,26 +99,23 @@ def paint_atlas(atlas: Atlas, face_painter, path: str):
     return path
 
 
-# ----------------------------------------------------------------------------- geometry
 @dataclass
 class Part:
     name: str
     verts: list
-    faces: list            # list of vertex index tuples
-    face_uvs: list         # per face: list of (u, v) per corner
-    weight: tuple          # ("rigid", bone) | ("chain", [bones], blend)
+    faces: list
+    face_uvs: list
+    weight: tuple
     smooth: bool = True
 
 
 class Kit:
-    """Collects parts for one character, then builds one joined, skinned mesh."""
 
     def __init__(self, name: str, atlas: Atlas):
         self.name = name
         self.atlas = atlas
         self.parts: list[Part] = []
 
-    # --- helpers that turn raw geometry + colour into a Part
     def _add(self, name, verts, faces, color, weight, smooth=True, zrange=None, face_colors=None,
              uv_fn=None):
         zs = [v.z for v in verts]
@@ -157,12 +131,8 @@ class Kit:
         self.parts.append(Part(name, verts, faces, fuv, weight, smooth))
         return self.parts[-1]
 
-    # --- loft: tube through rings
     def loft(self, name, rings, color, weight, sides=10, power=1.0, cap0=True, cap1=True,
              front=V(0, -1, 0), face_color_fn=None, smooth=True, phase=0.0, closed=False):
-        """rings: list of (center, rx, ry) ; rx across the side axis, ry along `front`.
-        Optional 4th element: (dx, dy) local offset of the ring in (side, front) units.
-        closed=True joins the last ring to the first (bands, straps around the head)."""
         verts, faces = [], []
         n = len(rings)
         centers = [V(r[0]) for r in rings]
@@ -183,7 +153,7 @@ class Kit:
             if F.length < 1e-6:
                 F = V(0, 0, 1) - V(0, 0, 1).dot(T) * T
             F.normalize()
-            S = F.cross(T).normalized()   # (S, F, T) right-handed -> outward face normals
+            S = F.cross(T).normalized()
             for k in range(sides):
                 a = 2 * math.pi * (k + phase) / sides
                 ca, sa = math.cos(a), math.sin(a)
@@ -207,7 +177,6 @@ class Kit:
                 fc.append(face_color_fn(cen, f) or color)
         return self._add(name, verts, faces, color, weight, smooth, face_colors=fc)
 
-    # --- superellipsoid blob
     def blob(self, name, center, radii, color, weight, seg=12, rings=8, power=1.0, power_z=None,
              rot=(0, 0, 0), face_color_fn=None, smooth=True, head_uv=False, back_color=None,
              squash_bottom=1.0):
@@ -215,11 +184,10 @@ class Kit:
         center = V(center)
         R = Euler([math.radians(a) for a in rot], "XYZ").to_matrix()
         verts, latlon = [], []
-        # rings of latitude (excluding poles), then poles
         for i in range(1, rings):
             lat = -math.pi / 2 + math.pi * i / rings
             for k in range(seg):
-                lon = 2 * math.pi * k / seg - math.pi  # lon = 0 at front (-Y)
+                lon = 2 * math.pi * k / seg - math.pi
                 cl, sl = math.cos(lat), math.sin(lat)
                 x = radii[0] * sgnpow(cl, pz) * sgnpow(math.sin(lon), power)
                 y = -radii[1] * sgnpow(cl, pz) * sgnpow(math.cos(lon), power)
@@ -250,8 +218,6 @@ class Kit:
                     fc.append(face_color_fn(cen, f) or color)
             return self._add(name, verts, faces, color, weight, smooth, face_colors=fc)
 
-        # head: front hemisphere (|lon| <= 90) -> painted face region; back -> swatch.
-        # seg must be divisible by 4 so meridians lie exactly at +-90 degrees.
         assert seg % 4 == 0
         atlas = self.atlas
 
@@ -260,7 +226,6 @@ class Kit:
             for i in f:
                 lat, lon = latlon[i]
                 lons.append(lon)
-            # pole vertices take the longitude of their neighbours
             real = [latlon[i][1] for i in f if abs(latlon[i][0]) < 89.9]
             mean_lon = sum(real) / len(real)
             front_face = abs(mean_lon) <= 90.0 + 1e-3 and all(abs(l) <= 90.0 + 1e-3 for l in real)
@@ -272,13 +237,11 @@ class Kit:
                 if front_face:
                     out.append(atlas.face_uv(lon, lat))
                 else:
-                    # t=0.8 matches the flat (unshaded) skin of the painted face region
                     out.append(atlas.uv(back_color or color, 0.8))
             return out
 
         return self._add(name, verts, faces, color, weight, smooth, uv_fn=uv_fn)
 
-    # --- flat polygon extruded along its normal (crowns, straps, soles of shapes)
     def shape(self, name, pts2d, matrix, depth, color, weight, smooth=False, bevel_scale=1.0):
         n = len(pts2d)
         verts = [matrix @ V(x, y, 0.0) for x, y in pts2d]
@@ -287,7 +250,6 @@ class Kit:
         for k in range(n):
             a, b = k, (k + 1) % n
             faces.append((b, a, n + a, n + b))
-        # front face = first ring; its normal must face +Z of matrix -> pts CCW
         return self._add(name, verts, faces, color, weight, smooth)
 
     def mirror_part(self, part: Part, name: str, weight):
@@ -298,9 +260,7 @@ class Kit:
         return self.parts[-1]
 
 
-# ----------------------------------------------------------------------------- rig
 def build_armature(name: str, joints: dict) -> bpy.types.Object:
-    """joints: bone -> (head, tail) in metres."""
     arm = bpy.data.armatures.new(name + "_Skeleton")
     obj = bpy.data.objects.new(name + "_Rig", arm)
     bpy.context.scene.collection.objects.link(obj)
@@ -329,7 +289,6 @@ def _chain_weights(p: Vector, segs: list, blend: float) -> dict:
         outside = max(0.0, -t, t - 1.0) * L
         w = max(0.0, 1.0 - outside / blend)
         if w > 0:
-            # smoothstep for a soft but bounded blend
             ws[bone] = w * w * (3 - 2 * w)
         if outside < best_a:
             best_a, best = outside, bone
@@ -395,7 +354,7 @@ def make_material(name: str, image_path: str):
     img.pack()
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
-    mat.use_backface_culling = True          # exported as doubleSided = false
+    mat.use_backface_culling = True
     nt = mat.node_tree
     bsdf = nt.nodes["Principled BSDF"]
     tex = nt.nodes.new("ShaderNodeTexImage")
@@ -427,7 +386,6 @@ def make_lod(lod0, rig, target_tris: int):
     for o in bpy.context.view_layer.objects:
         o.select_set(o == lod1)
     bpy.ops.object.modifier_apply(modifier=dec.name)
-    # collapse can fold thin shells (crown, straps) into duplicate / zero-area faces
     bm = bmesh.new()
     bm.from_mesh(lod1.data)
     bmesh.ops.dissolve_degenerate(bm, dist=1e-5, edges=bm.edges[:])
@@ -439,7 +397,6 @@ def make_lod(lod0, rig, target_tris: int):
     bmesh.ops.triangulate(bmd, faces=bmd.faces[:])
     bmd.to_mesh(lod1.data)
     bmd.free()
-    # renormalise weights after collapse interpolation
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=3)
     bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
@@ -449,13 +406,11 @@ def make_lod(lod0, rig, target_tris: int):
     return lod1
 
 
-# ----------------------------------------------------------------------------- animation
 def _bone_rest_quat(rig, bone):
     return rig.data.bones[bone].matrix_local.to_quaternion()
 
 
 def pose_to_local(rig, bone: str, rot_deg) -> Quaternion:
-    """rot_deg: XYZ euler in armature axes (L-side convention). *.R bones are mirrored."""
     rx, ry, rz = rot_deg
     if bone.endswith(".R"):
         ry, rz = -ry, -rz
@@ -465,8 +420,6 @@ def pose_to_local(rig, bone: str, rot_deg) -> Quaternion:
 
 
 def make_action(rig, clip: str, keys: list, loop: bool, extra: dict | None = None):
-    """keys: list of (frame, {bone: (rx,ry,rz) | 'loc': (x,y,z)})  — pelvis 'loc' offset in metres.
-    Every bone is keyed on every key frame (missing -> rest) so clips never inherit poses."""
     act = bpy.data.actions.new(clip)
     act.use_fake_user = True
     act["loop"] = bool(loop)
@@ -481,7 +434,7 @@ def make_action(rig, clip: str, keys: list, loop: bool, extra: dict | None = Non
             pb = rig.pose.bones[b]
             pb.rotation_mode = "QUATERNION"
             q = pose_to_local(rig, b, pose.get(b, (0, 0, 0)))
-            if b in last_q and last_q[b].dot(q) < 0:   # keep hemisphere continuity
+            if b in last_q and last_q[b].dot(q) < 0:
                 q.negate()
             last_q[b] = q.copy()
             pb.rotation_quaternion = q
@@ -494,7 +447,6 @@ def make_action(rig, clip: str, keys: list, loop: bool, extra: dict | None = Non
                 pb.location = (0, 0, 0)
                 pb.keyframe_insert("location", frame=frame, group=b)
     act.frame_range = (keys[0][0], keys[-1][0])
-    # stash in NLA so the glTF exporter (ACTIONS mode) sees every clip
     tr = rig.animation_data.nla_tracks.new()
     tr.name = clip
     strip = tr.strips.new(clip, int(keys[0][0]), act)
@@ -510,7 +462,6 @@ def set_rest(rig):
         pb.location = (0, 0, 0)
 
 
-# ----------------------------------------------------------------------------- export / report
 def export_glb(path: str, objs: list):
     for o in bpy.context.view_layer.objects:
         o.select_set(o in objs)

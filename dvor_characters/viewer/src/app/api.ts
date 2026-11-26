@@ -1,8 +1,3 @@
-/**
- * The ДВОР server (Cloudflare Worker, dvor_characters/server/worker.js): players' leaderboard.
- * Writes only after a match (and the server keeps at most one per 20 s per player); the top list is
- * cached at the edge for a minute, so the free plan is plenty.
- */
 import { initData } from './tg';
 import type { Profile } from './progress';
 import { heroLevelOf, loadProfile, restoreProfile, setSaveHook } from './progress';
@@ -17,7 +12,6 @@ export async function fetchTop(): Promise<TopPlayer[]> {
   return (await r.json()).players as TopPlayer[];
 }
 
-/** Sends the player's progress (only inside Telegram: the server checks Telegram's signature). */
 export async function postResult(p: Profile, hero: string): Promise<number | null> {
   const data = initData();
   if (!data) return null;
@@ -28,19 +22,17 @@ export async function postResult(p: Profile, hero: string): Promise<number | nul
     });
     if (!r.ok) return null;
     const rank = (await r.json()).rank as number;
-    try { localStorage.setItem('dvor.place', String(rank)); } catch { /* ignore */ }
+    try { localStorage.setItem('dvor.place', String(rank)); } catch {}
     return rank;
   } catch { return null; }
 }
 export const lastPlace = (): number | null => { try { const v = Number(localStorage.getItem('dvor.place')); return v > 0 ? v : null; } catch { return null; } };
 
-// A game opened from a game message (inline «вызов» or /play in a group) carries ?g=<signed token>;
-// its results go to that chat's high-score table.
 const GKEY = 'dvor.g';
 try {
   const g = new URLSearchParams(location.search).get('g');
   if (g) sessionStorage.setItem(GKEY, g);
-} catch { /* ignore */ }
+} catch {}
 const gameToken = (): string | null => { try { return sessionStorage.getItem(GKEY); } catch { return null; } };
 
 export async function postGameScore(p: Profile, hero: string): Promise<void> {
@@ -51,11 +43,9 @@ export async function postGameScore(p: Profile, hero: string): Promise<void> {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ g, trophies: p.trophies, hero, level: heroLevelOf(hero) }),
     });
-  } catch { /* offline: next match */ }
+  } catch {}
 }
 
-// ------------------------------------------------------------------ cloud save (Cloudflare D1, per Telegram user)
-/** Who we are for the server: Mini App launch data, or the token of a game message; outside Telegram nothing. */
 const auth = (): Record<string, string> | null => {
   const d = initData();
   if (d) return { initData: d };
@@ -63,7 +53,6 @@ const auth = (): Record<string, string> | null => {
   return g ? { g } : null;
 };
 
-/** At start: take the newer of the phone copy and the cloud copy (a new phone gets the cloud one). */
 export async function syncOnBoot(): Promise<void> {
   const a = auth();
   if (!a) return;
@@ -74,7 +63,7 @@ export async function syncOnBoot(): Promise<void> {
     const local = loadProfile();
     if (profile && (profile.updatedAt ?? 0) > (local.updatedAt ?? 0)) restoreProfile(profile);
     else if (local.updatedAt > 0 && (!profile || local.updatedAt > (profile.updatedAt ?? 0))) queueSave(local);
-  } catch { /* offline: play on the phone copy */ }
+  } catch {}
 }
 
 let timer = 0, pending: Profile | null = null;
@@ -90,7 +79,7 @@ async function flush(): Promise<void> {
   try {
     const r = await fetch(`${SERVER}/api/profile/save`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...a, profile: p }) });
     const res = await r.json().catch(() => ({})) as { ok?: boolean; retry?: number };
-    if (!res.ok && res.retry && !pending) queueSave(p, res.retry * 1000 + 200);   // too soon: try again a little later
+    if (!res.ok && res.retry && !pending) queueSave(p, res.retry * 1000 + 200);
   } catch { if (!pending) queueSave(p, 10000); }
 }
 setSaveHook((p) => { if (auth()) queueSave(p); });

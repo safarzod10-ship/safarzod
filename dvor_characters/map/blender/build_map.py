@@ -1,24 +1,8 @@
-"""DVOR arena ("ДВОР" courtyard) — low-poly map built from the customer's reference renders.
-
-    /opt/dvor-venv/bin/python map/blender/build_map.py
-
-Layout is measured on map/ref/map_top.png (near top-down render) and converted to metres with
-the same floor homography that rectified the floor texture (map/textures/atlas.json), so the 3D
-props stand exactly on their baked shadows. Heights and the "ДВОР" wall come from map_persp.png.
-
-Conventions (three.js / glTF): metres, +Y up, +X east, +Z south (the game camera looks north,
-towards the "ДВОР" wall). Courtyard floor = x in [-10.5, 10.5], z in [-9.25, 9.25].
-
-Writes:
-  map/source/MAP_Dvor.blend
-  map/export/MAP_Dvor.raw.glb      (optimised by viewer/scripts/optimize-map.mjs -> dist/MAP_Dvor.glb)
-  map/export/MAP_Dvor.build.json   triangle counts per group, colliders (props footprints)
-"""
 import json
 import math
 import os
 
-import bpy  # noqa: F401  (bpy before bmesh/mathutils users)
+import bpy
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -27,11 +11,10 @@ TEX = os.path.join(MAP, 'textures')
 META = json.load(open(os.path.join(TEX, 'atlas.json')))
 R = META['regions']
 
-FX, FZ = 10.5, 9.25          # courtyard half sizes
-CHAMFER = 1.8                # cut corners of the fence (as in the render)
-SUN = np.array([1.0, 0.0, 0.35]) / np.linalg.norm([1.0, 0.0, 0.35])   # low warm sun from the east
+FX, FZ = 10.5, 9.25
+CHAMFER = 1.8
+SUN = np.array([1.0, 0.0, 0.35]) / np.linalg.norm([1.0, 0.0, 0.35])
 
-# ----------------------------------------------------------------------------- image -> world
 SRC = np.array(META['floor']['src_quad_px'], float)
 DST = np.array([[-FX, -FZ], [FX, -FZ], [FX, FZ], [-FX, FZ]], float)
 
@@ -49,14 +32,12 @@ H = _homography(SRC, DST)
 
 
 def w(px, py):
-    """map_top.png pixel -> world (x, z) on the floor plane."""
     p = H @ np.array([px, py, 1.0])
     return p[0] / p[2], p[1] / p[2]
 
 
-# ----------------------------------------------------------------------------- geometry buffers
-GROUPS = {}          # name -> {'atlas': [...faces], 'fence': [...faces]}
-COLLIDERS = []       # axis-aligned footprints of props the characters cannot walk through
+GROUPS = {}
+COLLIDERS = []
 
 
 def shade_of(n):
@@ -94,7 +75,6 @@ def quad(group, tl, tr, br, bl, region, sub=(0, 0, 1, 1), normal=None, mat='atla
 
 
 def box(group, x0, x1, z0, z1, y0, y1, tex, skip=(), collide=True):
-    """tex: face -> (region, sub) for faces 'top','n','s','e','w'. Bottom is never built."""
     P = {
         'top': ([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], (0, 1, 0)),
         's': ([x0, y1, z1], [x1, y1, z1], [x1, y0, z1], [x0, y0, z1], (0, 0, 1)),
@@ -115,10 +95,7 @@ def all_faces(region, sub=(0, 0, 1, 1)):
     return {f: (region, sub) for f in ('top', 'n', 's', 'e', 'w')}
 
 
-# ----------------------------------------------------------------------------- props
 def footprint(px0, px1, py_base, depth, width=None):
-    """Footprint from the visible south base edge in the top render: x from px0..px1, z_south
-    from py_base, extending `depth` metres north. width overrides the measured x extent."""
     xa, zs = w(px0, py_base)
     xb, _ = w(px1, py_base)
     if width is not None:
@@ -139,7 +116,6 @@ def grey_box(group, px0, px1, py_base, w_, d_, h_, skip=()):
 
 
 def block(group, xa, xb, za, zb, h=1.2):
-    """Concrete cover block with the crown graffiti on its long faces."""
     long_x = (xb - xa) >= (zb - za)
     tex = {'top': ('concrete', (0, 0, 1, 1))}
     face, end = ('block_face', (0, 0, 1, 1)), ('concrete', (0, 0, 0.4, 1))
@@ -153,7 +129,6 @@ def block(group, xa, xb, za, zb, h=1.2):
 def planter(group, xa, xb, za, zb, h=0.45, bush_h=0.75, inset=0.12):
     tex = {f: ('concrete', (0, 0, 1, 0.35)) for f in ('n', 's', 'e', 'w')}
     box(group, xa, xb, za, zb, 0, h, tex)
-    # bush mound: truncated pyramid, leaves texture projected from the top
     i, k = inset, 0.32
     bx0, bx1, bz0, bz1 = xa + i, xb - i, za + i, zb - i
     tx0, tx1, tz0, tz1 = bx0 + k, bx1 - k, bz0 + k, bz1 - k
@@ -184,7 +159,6 @@ def barrel(group, px, py_base, r=0.4, h=1.0, region='barrel_blue'):
         mid = np.array([(a[0] + b[0]) / 2 - cx, 0, (a[1] + b[1]) / 2 - cz])
         add_face(group, [[b[0], h, b[1]], [a[0], h, a[1]], [a[0], 0, a[1]], [b[0], 0, b[1]]],
                  [uv_in(region, s0, 0), uv_in(region, s1, 0), uv_in(region, s1, 1), uv_in(region, s0, 1)], normal=mid)
-    # top: hexagon as a 4-triangle fan
     uvs = [uv_in('barrel_top', 0.5 + 0.5 * (x - cx) / r, 0.5 + 0.5 * (z - cz) / r) for x, z in ring]
     for k in (1, 2, 3, 4):
         add_face(group, [[ring[0][0], h, ring[0][1]], [ring[k][0], h, ring[k][1]], [ring[k + 1][0], h, ring[k + 1][1]]],
@@ -219,7 +193,6 @@ def blob(group, c, rx, ry, rz, region, seed=0):
 
 
 def tree(group, x, z, r=2.2, trunk_h=2.4, seed=0, blobs=2):
-    # 3-sided trunk (no caps), canopy = two low-poly blobs
     tr = 0.3
     pts = [(x + tr * math.cos(a), z + tr * math.sin(a)) for a in (0, 2.094, 4.189)]
     for k in range(3):
@@ -231,8 +204,6 @@ def tree(group, x, z, r=2.2, trunk_h=2.4, seed=0, blobs=2):
         blob(group, np.array([x + r * 0.45, trunk_h + r * 0.95, z - r * 0.3]), r * 0.62, r * 0.5, r * 0.62, 'canopy', seed + 1)
 
 
-
-
 def ac_unit(group, x, z, y, rot=False):
     w_, d_ = (0.6, 0.9) if rot else (0.9, 0.6)
     tex = {'top': ('ac_top', (0, 0, 1, 1))}
@@ -241,7 +212,6 @@ def ac_unit(group, x, z, y, rot=False):
 
 
 def parapet(group, x0, x1, z0, z1, h, sides='new', t=0.22, ph=0.3):
-    """Low roof rim (concrete) on the given sides: makes a roof read as a roof from above."""
     rim = {'n': (x0, x1, z0, z0 + t), 's': (x0, x1, z1 - t, z1), 'w': (x0, x0 + t, z0 + t, z1 - t), 'e': (x1 - t, x1, z0 + t, z1 - t)}
     for sd in sides:
         a0, a1, b0, b1 = rim[sd]
@@ -263,13 +233,11 @@ def building(group, x0, x1, z0, z1, h, roof='roof', skip=()):
          uv=[(x0 / rt, z0 / rt), (x1 / rt, z0 / rt), (x1 / rt, z1 / rt), (x0 / rt, z1 / rt)], normal=(0, 1, 0), shade=1.0)
 
 
-# ============================================================================= LAYOUT
-# --- ground: big alley/street plane under everything, courtyard floor as an octagon on top
 G = 70.0
 pt = META['pavement']['tile_m'][0]
 quad('ground', [-G, -0.04, -G], [G, -0.04, -G], [G, -0.04, G], [-G, -0.04, G], None, mat='pave',
      uv=[(-G / pt, -G / pt), (G / pt, -G / pt), (G / pt, G / pt), (-G / pt, G / pt)], normal=(0, 1, 0),
-     shade=(0.62, 0.6, 0.64))    # alleys sit in the buildings' shade
+     shade=(0.62, 0.6, 0.64))
 c = CHAMFER
 octa = [(-FX + c, -FZ), (FX - c, -FZ), (FX, -FZ + c), (FX, FZ - c), (FX - c, FZ), (-FX + c, FZ), (-FX, FZ - c), (-FX, -FZ + c)]
 fuv = [uv_in('floor', (x + FX) / (2 * FX), (z + FZ) / (2 * FZ)) for x, z in octa]
@@ -277,20 +245,19 @@ for k in range(1, 7):
     add_face('floor', [[octa[0][0], 0, octa[0][1]], [octa[k][0], 0, octa[k][1]], [octa[k + 1][0], 0, octa[k + 1][1]]],
              [fuv[0], fuv[k], fuv[k + 1]], normal=(0, 1, 0), shade=1.0)
 
-# --- fence: concrete base + chain-link panel on every octagon edge, solid "ДВОР" wall on the north
-WALL_X = (-5.6, 4.4)         # solid graffiti wall span (map_top.png x 560..1050 px)
+WALL_X = (-5.6, 4.4)
 BASE_H, BASE_T, MESH_H = 0.45, 0.25, 1.7
 edges = []
 for k in range(8):
     a, b = np.array(octa[k], float), np.array(octa[(k + 1) % 8], float)
-    if k == 0:   # north edge: fence | wall | fence
+    if k == 0:
         edges += [(a, np.array([WALL_X[0], -FZ])), (np.array([WALL_X[1], -FZ]), b)]
     else:
         edges.append((a, b))
 for a, b in edges:
     d = b - a
     L = float(np.linalg.norm(d))
-    out = np.array([d[1], -d[0]]) / L          # outward normal (octagon is clockwise seen from above)
+    out = np.array([d[1], -d[0]]) / L
     ia, ib = a, b
     oa, ob = a + out * BASE_T, b + out * BASE_T
     s_len = min(1.0, L / 6.0)
@@ -307,7 +274,6 @@ for a, b in edges:
     quad('fence', [ma[0], BASE_H + MESH_H, ma[1]], [mb[0], BASE_H + MESH_H, mb[1]], [mb[0], BASE_H, mb[1]], [ma[0], BASE_H, ma[1]],
          None, mat='fence', uv=uv, normal=n_in, shade=1.0)
 
-# solid wall with the "ДВОР" graffiti facing the courtyard
 WH, WT = 2.6, 0.3
 x0, x1, zi, zo = WALL_X[0], WALL_X[1], -FZ, -FZ - WT
 quad('wall', [x0, WH, zi], [x1, WH, zi], [x1, 0, zi], [x0, 0, zi], 'wall_dvor', normal=(0, 0, 1), shade=1.0)
@@ -318,22 +284,20 @@ for xe, nx in ((x0, -1), (x1, 1)):
          'concrete', (0, 0, 0.2, 1), normal=(nx, 0, 0))
 COLLIDERS.append({'group': 'wall', 'x': [x0, x1], 'z': [zo, zi], 'h': WH})
 
-# --- cover blocks (map_top.png: visible base edge, depth from the top face / 0.85 foreshortening)
 xa, xb, za, zb = footprint(760, 912, 283, 1.25)
 block('cover_n', xa, xb, za, zb)
 xa, xb, za, zb = footprint(762, 925, 745, 1.25)
 block('cover_s', xa, xb, za, zb)
-xa, xb, za, zb = footprint(530, 588, 503, 3.4, width=1.2)            # west: long along z
+xa, xb, za, zb = footprint(530, 588, 503, 3.4, width=1.2)
 block('cover_w', xa, xb, za, zb)
 cx_w = (xa + xb) / 2
-box('cover_w', cx_w - 0.42, cx_w + 0.42, za + 0.6, za + 1.44, 1.2, 2.04, all_faces('crate'))   # crate on top (both renders)
-crate('cover_w', 540, 588, 548, 0.8)                                 # crate at its south end
-planter('cover_w', xa - 1.35, xa - 0.05, za + 0.2, zb + 0.6)          # planter hugging its west side
-xa, xb, za, zb = footprint(1075, 1140, 533, 3.0, width=1.3)          # east: long along z
+box('cover_w', cx_w - 0.42, cx_w + 0.42, za + 0.6, za + 1.44, 1.2, 2.04, all_faces('crate'))
+crate('cover_w', 540, 588, 548, 0.8)
+planter('cover_w', xa - 1.35, xa - 0.05, za + 0.2, zb + 0.6)
+xa, xb, za, zb = footprint(1075, 1140, 533, 3.0, width=1.3)
 block('cover_e', xa, xb, za, zb)
 crate('cover_e', 1088, 1128, 598, 0.8)
 
-# --- planters
 xa, xb, za, zb = footprint(1098, 1160, 300, 2.0, width=1.25)
 planter('planter_ne', xa, xb, za, zb)
 xa, xb, za, zb = footprint(472, 560, 872, 2.6, width=1.7)
@@ -342,7 +306,6 @@ xa, xb, za, zb = footprint(1300, 1352, 745, 2.5, width=1.0)
 planter('planter_e', min(xa, FX - 1.05), min(xb, FX - 0.05), za, zb)
 planter('planter_n', w(1045, 135)[0], w(1185, 135)[0], -FZ + 0.02, -FZ + 0.85, bush_h=0.6)
 
-# --- barrels and crates along the walls
 barrel('props_n', 599, 152, region='barrel_blue')
 barrel('props_n', 640, 140, region='barrel_rust')
 crate('props_n', 657, 702, 140, 0.85, skip=('n',))
@@ -373,35 +336,31 @@ barrel('props_e', 1328, 398, r=0.38, region='barrel_blue')
 crate('props_e', 1305, 1340, 600, 0.75, skip=('e',))
 crate('props_e', 1280, 1340, 840, 1.1, skip=('e',))
 
-# --- trees outside the fence (canopies kept clear of the courtyard, so nobody hides under them)
-tree('trees', -9.4, -11.3, r=2.3, seed=1, blobs=1)            # NW, behind the fence
-tree('trees', 5.2, -11.2, r=2.1, seed=3, blobs=1)             # NE, behind the "ДВОР" wall
-tree('trees', -15.5, 3.9, r=2.5, seed=5)             # W alley
-tree('trees', -15.0, -5.6, r=1.9, seed=7, blobs=1)            # W alley north
-tree('trees', 12.4, 10.2, r=2.1, seed=9)             # SE corner, trunk outside the chamfer
+tree('trees', -9.4, -11.3, r=2.3, seed=1, blobs=1)
+tree('trees', 5.2, -11.2, r=2.1, seed=3, blobs=1)
+tree('trees', -15.5, 3.9, r=2.5, seed=5)
+tree('trees', -15.0, -5.6, r=1.9, seed=7, blobs=1)
+tree('trees', 12.4, 10.2, r=2.1, seed=9)
 
-# --- buildings (<= 12.8 x 12.8 m footprint, <= 12 m high: one facade tile, whole windows)
 B = 'buildings'
-building(B, -22.5, -12.0, -18.0, -6.4, 9, 'roof')        # west row (map_top.png left column)
+building(B, -22.5, -12.0, -18.0, -6.4, 9, 'roof')
 building(B, -22.0, -12.0, -4.8, 2.4, 8, 'roof')
 building(B, -22.0, -12.0, 6.2, 16.0, 7, 'roof')
-building(B, 12.0, 23.0, -17.5, -5.0, 9, 'roof')          # east row
+building(B, 12.0, 23.0, -17.5, -5.0, 9, 'roof')
 building(B, 12.8, 24.0, -4.2, 3.6, 10, 'roof')
 building(B, 14.3, 25.0, 3.6, 15.0, 7, 'roof')
-building(B, -12.0, -1.0, -25.0, -12.5, 12, 'roof')       # north: tall brick blocks behind the wall
+building(B, -12.0, -1.0, -25.0, -12.5, 12, 'roof')
 building(B, -0.8, 11.2, -25.0, -12.5, 11, 'roof')
-building(B, -24.5, -12.0, -30.6, -18.2, 12, 'roof')      # north corners
+building(B, -24.5, -12.0, -30.6, -18.2, 12, 'roof')
 building(B, 11.0, 23.5, -30.0, -17.7, 12, 'roof')
-building(B, -12.0, 0.6, -37.5, -25.0, 12, 'roof')        # second row north
+building(B, -12.0, 0.6, -37.5, -25.0, 12, 'roof')
 building(B, 0.6, 13.0, -37.5, -25.0, 12, 'roof')
-building(B, -35.0, -22.5, -18.0, -6.0, 8, 'roof')        # second row west / east
+building(B, -35.0, -22.5, -18.0, -6.0, 8, 'roof')
 building(B, -35.0, -22.5, -5.0, 7.5, 9, 'roof')
 building(B, -35.0, -22.5, 8.0, 20.0, 7, 'roof')
 building(B, 24.0, 36.5, -17.0, -4.6, 8, 'roof')
 building(B, 25.0, 37.5, -4.2, 8.0, 9, 'roof')
 building(B, 25.0, 37.5, 8.5, 20.5, 7, 'roof')
-# south: one-storey annexes 2 m behind the fence. Low on purpose: the camera looks over them at
-# a character standing at the south fence (sight line is 3.6 m high above their front edge).
 building(B, -13.5, -4.5, 11.2, 17.5, 3.2, 'roof')
 building(B, -4.5, 4.5, 11.2, 17.5, 2.9, 'roof')
 building(B, 4.5, 13.5, 11.2, 17.5, 3.2, 'roof')
@@ -409,7 +368,6 @@ parapet(B, -13.5, -4.5, 11.2, 17.5, 3.2, 'nw')
 parapet(B, -4.5, 4.5, 11.2, 17.5, 2.9, 'n')
 parapet(B, 4.5, 13.5, 11.2, 17.5, 3.2, 'ne')
 
-# AC units on the roofs nearest to the courtyard (they show at the screen edges)
 ac_unit(B, -15.0, -14.0, 9, rot=True)
 ac_unit(B, -16.5, -1.5, 8)
 ac_unit(B, -14.6, 9.0, 7, rot=True)
@@ -419,7 +377,6 @@ ac_unit(B, -7.5, 14.0, 3.2)
 ac_unit(B, 2.0, 15.0, 3.2, rot=True)
 ac_unit(B, 9.0, 13.6, 3.2)
 
-# ============================================================================= Blender objects
 for o in list(bpy.data.objects):
     bpy.data.objects.remove(o, do_unlink=True)
 for m in list(bpy.data.meshes):
@@ -467,7 +424,7 @@ for gname, mats in GROUPS.items():
         for pts, fuv, s in mats[m]:
             base = len(verts)
             for p in pts:
-                verts.append((p[0], -p[2], p[1]))        # three (x, y, z) -> Blender (x, -z, y)
+                verts.append((p[0], -p[2], p[1]))
             faces.append(list(range(base, base + len(pts))))
             uvs += [(u, 1 - v) for u, v in fuv]
             rgb = (s, s, s) if np.isscalar(s) else tuple(s)

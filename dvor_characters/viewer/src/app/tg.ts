@@ -1,19 +1,9 @@
-/**
- * Telegram Mini App bridge. Everything is optional: outside Telegram (browser, artifact) the calls
- * do nothing. The Telegram script is only injected when the page was opened by Telegram.
- */
 interface TgWebApp {
   ready(): void;
   expand(): void;
   setHeaderColor?(c: string): void;
   setBackgroundColor?(c: string): void;
   disableVerticalSwipes?(): void;
-  isVersionAtLeast?(v: string): boolean;
-  requestFullscreen?(): void;
-  exitFullscreen?(): void;
-  lockOrientation?(): void;
-  unlockOrientation?(): void;
-  isFullscreen?: boolean;
   initData?: string;
   initDataUnsafe?: { user?: { first_name?: string; username?: string } };
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
@@ -27,7 +17,7 @@ export async function initTelegram(): Promise<void> {
   const inTelegram = /tgWebApp/.test(location.hash) || 'TelegramWebviewProxy' in window;
   if (!inTelegram) return;
   const get = () => (window as unknown as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp ?? null;
-  // the splash (splash/splash.html) already started loading the SDK as script#tg-sdk
+
   if (!get()) {
     await new Promise<void>((res) => {
       let s = document.getElementById('tg-sdk') as HTMLScriptElement | null;
@@ -38,7 +28,7 @@ export async function initTelegram(): Promise<void> {
       }
       s.addEventListener('load', () => res());
       s.addEventListener('error', () => res());
-      setTimeout(res, 6000);   // never hold the game on Telegram's CDN
+      setTimeout(res, 6000);
     });
   }
   wa = get();
@@ -50,7 +40,6 @@ export async function initTelegram(): Promise<void> {
   wa.disableVerticalSwipes?.();
 }
 
-/** Telegram's own back button (shown on pushed screens); null hides it. */
 export function setBack(cb: (() => void) | null): void {
   if (!wa) return;
   if (backCb) wa.BackButton.offClick(backCb);
@@ -69,26 +58,8 @@ export function haptic(kind: 'light' | 'medium' | 'success' = 'light'): void {
   else wa.HapticFeedback.impactOccurred(kind);
 }
 
-const v8 = () => !!wa?.isVersionAtLeast?.('8.0');
-
-/**
- * Battle in landscape. Telegram (Bot API 8.0+): full screen, and once the phone is held sideways,
- * lock that orientation. Telegram cannot rotate the screen by itself, the player turns the phone.
- */
-export function battleScreen(on: boolean): void {
-  if (!wa || !v8()) return;
-  try {
-    if (on) wa.requestFullscreen?.();
-    else { wa.unlockOrientation?.(); if (wa.isFullscreen) wa.exitFullscreen?.(); }
-  } catch { /* old client */ }
-}
-export function lockLandscape(): void {
-  if (!wa || !v8()) return;
-  try { wa.lockOrientation?.(); } catch { /* old client */ }
-}
 export const inTelegram = (): boolean => !!wa;
 
-/** The player's first name from Telegram, or a neutral name outside Telegram. */
 export const playerName = (): string => wa?.initDataUnsafe?.user?.first_name?.slice(0, 16) || 'Игрок';
-/** Signed launch data for the server (empty outside Telegram). */
+
 export const initData = (): string => wa?.initData ?? '';

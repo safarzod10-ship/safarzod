@@ -1,29 +1,3 @@
-"""Run clip from real motion capture (CMU mocap database, BVH) for the USER_CH_* characters.
-
-    /opt/dvor-venv/bin/python blender/user/mocap_run.py --analyze            # cycles in mocap/cmu/*.bvh
-    /opt/dvor-venv/bin/python blender/user/mocap_run.py --char technik|sprinter|tank
-
-Steps (after build_user_character.py has produced source/USER_<NAME>.blend):
-  1. import the BVH (CMU unit = 1/0.45 inch -> metres), at its native 120 fps
-  2. find the cleanest 2-step cycle: the period T and start f0 where the pose at f0+T best matches f0
-     (bone directions in the runner's heading frame + hips height)
-  3. turn the take so that cycle runs along -Y (the characters face -Y)
-  4. retarget with the blender-animation skill (scripts/retarget.py, --match-rest: CMU is a T-pose,
-     our rigs are modelled A-poses; arms tilted outward per character so they clear the torso)
-  5. resample to 30 fps with N frames per cycle; the seam is a cross-fade from the motion after the
-     cycle, so first == last frame with matching velocity; forward travel removed (in place, bob and
-     sway kept); torso rotations lightly smoothed (mocap jitter)
-  6. feet: the deformed mesh's lowest point is put on the floor; during the mocap's stance frames the
-     ball of each foot is pinned (2-bone IK, baked into the keys) and moves back at exactly the ground
-     speed; no foot vertex goes below the floor
-  7. replace the procedural Run action + NLA track, check the loop with scripts/loop_check.py,
-     save the .blend, export export/raw/USER_<NAME>.glb, update the build report
-
-The game speed that keeps the feet from sliding is measured (how fast the planted foot moves back in
-the in-place clip) and written into the build report as Run.speed_mps; the residual slide is reported.
-Data: "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created
-with funding from NSF EIA-0196217." (free for research and commercial use, see mocap/cmu/READMEFIRST.txt)
-"""
 import argparse
 import glob
 import json
@@ -37,24 +11,18 @@ ROOT = os.path.dirname(BL)
 SKILL = os.path.join(ROOT, ".claude", "skills", "blender-animation", "scripts")
 sys.path[:0] = [HERE, BL, SKILL]
 
-import bpy  # noqa: E402
-from bpy_extras import anim_utils  # noqa: E402
-from mathutils import Matrix, Quaternion, Vector  # noqa: E402
+import bpy
+from bpy_extras import anim_utils
+from mathutils import Matrix, Quaternion, Vector
 
-import dvor_lib as L  # noqa: E402
-import retarget  # noqa: E402  (blender-animation skill)
-import loop_check  # noqa: E402  (blender-animation skill)
+import dvor_lib as L
+import retarget
+import loop_check
 
 CMU_UNIT = 0.0254 / 0.45
 MOCAP = os.path.join(ROOT, "mocap", "cmu")
 NAMES = {"technik": "CH_Technik", "sprinter": "CH_Sprinter", "tank": "CH_Tank"}
-# take, cadence factor (>1 = quicker steps than the actor), crouch = hips lowered by this share of the
-# hip height while the feet are pinned, lane = min. ankle distance from the centre / the model's own
-# stance (rest ankle x), knee_out = knee turned out from straight ahead (deg)
 PLAN = {
-    # cycle times match the earlier procedural Run (0.67 / 0.53 / 0.80 s) so the game feel stays.
-    # arms: keyed pump (see stylize_arms) -- abd/off/amp/bend/bend_var/inward/wrist in degrees
-    # (wrist = hand bent toward the palm: Sprinter's flat glove reads as a loose fist instead of claws)
     "technik": dict(take="09_01", tempo=1.1, crouch=0.05, hand_r=0.07, lane=0.9, toe_out=6, knee_out=12,
                     arms=dict(abd=14, off=8, amp=48, bend=88, bend_var=18, inward=8, wrist=15)),
     "sprinter": dict(take="09_05", tempo=1.4, crouch=0.05, hand_r=0.055, lane=0.8, toe_out=4, knee_out=8,
@@ -77,7 +45,6 @@ def import_bvh(take):
 
 
 def sample(src, f0, f1):
-    """Per frame: hips world position and bone directions."""
     out = []
     sc = bpy.context.scene
     mw = src.matrix_world
@@ -102,7 +69,6 @@ def find_cycle(src):
             if travel.length < 0.5:
                 continue
             ang = sum(a["dirs"][k].angle(b["dirs"][k]) for k in FEATURE_BONES) / len(FEATURE_BONES)
-            # also match velocity across the seam (next frame)
             a2, b2 = S[i + 1], S[i + T + 1]
             ang2 = sum(a2["dirs"][k].angle(b2["dirs"][k]) for k in FEATURE_BONES) / len(FEATURE_BONES)
             dz = abs(a["hips"].z - b["hips"].z)
@@ -132,7 +98,6 @@ def analyze():
 
 
 def lowest_foot(rig, frames):
-    """Lowest point of the foot bones (head = ankle, tail = toe) per frame, armature space."""
     sc = bpy.context.scene
     out = []
     for f in frames:
@@ -163,7 +128,6 @@ def build(ch):
     sc.render.fps = 120
     src = import_bvh(plan["take"])
     cyc = find_cycle(src)
-    # turn the take so the chosen cycle runs along -Y
     h = cyc["heading"]
     yaw = math.atan2(h.x, -h.y)
     src.matrix_world = Matrix.Rotation(-yaw, 4, "Z") @ src.matrix_world
@@ -172,15 +136,12 @@ def build(ch):
     f0, T = cyc["f0"], cyc["T"]
     stance_src = source_stance(src, f0, T)
     f_last = int(src.animation_data.action.frame_range[1])
-    W_src = min(int(T * 0.35), f_last - (f0 + T))   # cross-fade window, source frames after the cycle
+    W_src = min(int(T * 0.35), f_last - (f0 + T))
     res = retarget.run(source=src.name, target=rig.name, frames=[f0, f0 + T + W_src], name="RunMocap",
                        match_rest=True)
     print("RETARGET", res)
     raw = bpy.data.actions[res["action"]]
 
-    # --- resample to 30 fps with N frames per cycle. Seam: the first W frames cross-fade from the
-    # motion that follows the cycle end (S(t+T)) into the cycle itself (S(t)), so frame 0 == frame N
-    # with the same velocity on both sides. In place: the hips' forward travel is removed.
     N = max(8, round(T / 120 * L.FPS / plan["tempo"]))
     W = max(1, round(N * W_src / T))
     fcs = fcurves_of(rig, raw)
@@ -194,7 +155,7 @@ def build(ch):
         for dp in sorted({p[0] for p in paths}):
             n = 4 if dp.endswith("rotation_quaternion") else 3
             v = [get[(dp, i)].evaluate(t) if (dp, i) in get else 0.0 for i in range(n)]
-            out[dp] = Quaternion(v) if n == 4 else R3 @ Vector(v)   # pelvis loc -> armature space
+            out[dp] = Quaternion(v) if n == 4 else R3 @ Vector(v)
         return out
 
     P0, PT = pose_at(f0), pose_at(f0 + T)
@@ -209,14 +170,13 @@ def build(ch):
         if k < W:
             B = pose_at(t + T)
             B[lp] = B[lp] - drift - drift * (k / N)
-            w = 0.5 * (1 + math.cos(math.pi * k / W))   # 1 at k=0 -> 0 at k=W
+            w = 0.5 * (1 + math.cos(math.pi * k / W))
             for dp in A:
                 if dp == lp:
                     A[dp] = A[dp].lerp(B[dp], w)
                 else:
                     A[dp] = A[dp].slerp(B[dp], w)
         frames.append(A)
-    # clean mocap jitter on the torso (pelvis..head): one cyclic [1 2 1]/4 pass on the rotations
     for b in ("pelvis", "spine", "chest", "neck", "head"):
         dp = f'pose.bones["{b}"].rotation_quaternion'
         if dp not in frames[0]:
@@ -250,14 +210,13 @@ def build(ch):
                 prev[dp] = q
                 for i in range(4):
                     vals[(dp, i)].append(q[i])
-    for dp in prev:  # the copied last frame must keep the sign of the curve's end
+    for dp in prev:
         q = Quaternion([vals[(dp, i)][N] for i in range(4)])
         q_before = Quaternion([vals[(dp, i)][N - 1] for i in range(4)])
         if q.dot(q_before) < 0:
             for i in range(4):
                 vals[(dp, i)][N] = -vals[(dp, i)][N]
 
-    # write the final action at frames 1..N+1 (loop: last == first)
     old = bpy.data.actions.get("Run")
     for tr in list(rig.animation_data.nla_tracks):
         if tr.name == "Run":
@@ -282,8 +241,6 @@ def build(ch):
     stance = {side: [stance_src[side][int(T * k / N)] for k in range(N)] for side in ("L", "R")}
     print("STANCE", {s: "".join("#" if x else "." for x in v) for s, v in stance.items()}, {s: "".join("#" if x else "." for x in v) for s, v in stance_src.items()})
 
-    # feet on the ground: shift the hips so the lowest point of the deformed mesh over the cycle
-    # equals the mesh's lowest point in its rest pose
     def shift_hips(dz):
         off_l = R3.inverted() @ Vector((0, 0, dz))
         for i in range(3):
@@ -293,10 +250,8 @@ def build(ch):
             fc.update()
     shift_hips(rest_floor - min(mesh_low(mesh, range(1, N + 2))))
     hip_h = rig.data.bones["thigh.L"].head_local.z - rest_floor
-    # ground speed = how fast the planted ball of the foot moves back in the in-place clip (median, stance frames)
     seconds = N / L.FPS
     hips_speed = stride_target / seconds
-    # legs in their own lanes, feet pointing forward; then the foot lock (IK pins baked into the keys)
     lanes = leg_lanes(rig, cb, N, plan["lane"], plan["toe_out"], plan.get("knee_out", 0))
     speed = ankle_speed(rig, N, stance)
     before = measure_contact(rig, N, speed, stance)
@@ -323,7 +278,6 @@ def build(ch):
     tr.name = "Run"
     tr.strips.new("Run", 1, act)
     tr.mute = True
-    # restore track order = clip order (cosmetic; glTF export takes all actions)
     L.set_rest(rig)
     sc.render.fps = L.FPS
     bpy.data.objects.remove(src)
@@ -353,8 +307,6 @@ def build(ch):
 
 
 def source_stance(src, f0, T):
-    """Planted-foot frames of the mocap cycle: toe joint within 6 cm of the take's floor and moving
-    slower than 1 m/s over the ground. Index = source frame - f0, 0..T-1."""
     sc = bpy.context.scene
     mw = src.matrix_world
     pos = {"L": [], "R": []}
@@ -368,9 +320,8 @@ def source_stance(src, f0, T):
         P = pos[side]
         st = []
         for i in range(1, T + 1):
-            v = (P[i + 1] - P[i - 1]) * 60.0   # 120 fps, central difference
+            v = (P[i + 1] - P[i - 1]) * 60.0
             st.append(P[i].z < floor + 0.06 and math.hypot(v.x, v.y) < 1.0)
-        # close short gaps (threshold flicker, up to 6 source frames = 50 ms), cyclic
         n = len(st)
         for i in range(n):
             if st[i] and not st[(i + 1) % n]:
@@ -384,7 +335,6 @@ def source_stance(src, f0, T):
 
 
 def mesh_low(mesh, frames):
-    """Lowest world z of the deformed mesh per frame."""
     sc = bpy.context.scene
     out = []
     for f in frames:
@@ -399,7 +349,6 @@ def mesh_low(mesh, frames):
 
 
 def ankles(rig, N):
-    """Contact point of each foot per frame (the foot bone's tail = ball/toe; runners land on it)."""
     sc = bpy.context.scene
     out = []
     for f in range(1, N + 2):
@@ -416,7 +365,6 @@ def ankle_speed(rig, N, stance):
 
 
 def measure_contact(rig, N, speed, stance):
-    """With the character moving at `speed` along -Y: horizontal world speed of each planted ankle."""
     tr = ankles(rig, N)
     sl = []
     for k in range(N):
@@ -440,7 +388,6 @@ def mesh_floor_report(mesh, N, stance, rest_floor):
 
 
 def _runs(flags):
-    """Cyclic runs of True: list of index lists."""
     n = len(flags)
     if all(flags):
         return [list(range(n))]
@@ -455,12 +402,10 @@ def _runs(flags):
             cur = []
     if cur:
         runs.append(cur)
-    # unwrap runs that cross the loop seam so indices increase (use i % n to index frames)
     return [[i + n if j and i < r[0] else i for j, i in enumerate(r)] for r in runs]
 
 
 def foot_soles(rig, mesh):
-    """Vertices of each foot (foot-dominant, plus shin-dominant ones below the ankle), foot rest space."""
     to_arm = rig.matrix_world.inverted() @ mesh.matrix_world
     out = {"L": [], "R": []}
     gi = {g.index: g.name for g in mesh.vertex_groups}
@@ -474,7 +419,6 @@ def foot_soles(rig, mesh):
         side = name[-1]
         foot = rig.data.bones[f"foot.{side}"]
         p = to_arm @ v.co
-        # foot-dominant vertices, and the shin's boot/heel below the ankle (rigid with the foot approx.)
         if name.startswith("foot.") or p.z < foot.head_local.z:
             out[side].append(foot.matrix_local.inverted() @ p)
     return {k: v for k, v in out.items() if v}
@@ -484,7 +428,6 @@ TORSO = ("pelvis", "spine", "chest")
 
 
 def torso_points(rig, mesh):
-    """Torso vertices (dominant pelvis/spine/chest weight) in their bone's rest space."""
     to_arm = rig.matrix_world.inverted() @ mesh.matrix_world
     gi = {g.index: g.name for g in mesh.vertex_groups}
     out = []
@@ -499,7 +442,6 @@ def torso_points(rig, mesh):
 
 
 def _torso_bins(P, pts, step=0.04):
-    """Per 4 cm height slice of the posed torso: centre and half extents (x, y)."""
     bins = {}
     for b, v in pts:
         p = P[b] @ v
@@ -522,10 +464,6 @@ def _inside(bins, p, r):
 
 
 def clear_arms(rig, cb, N, pts, hand_r, max_upper=30, max_fore=70):
-    """Arms of a slim mocap actor go through a chibi's wide torso. Per frame: if the elbow, wrist or
-    fist (radius hand_r) is inside the posed torso (elliptic slices), swing the upper arm out (up to
-    max_upper deg), then the forearm (up to max_fore deg) by the smallest angle that clears it.
-    Angles are smoothed over time so the push never pops. Returns frames inside before/after."""
     sc = bpy.context.scene
     bones = rig.data.bones
     rest_rel = {b.name: (b.parent.matrix_local.inverted() @ b.matrix_local) for b in bones if b.parent}
@@ -575,7 +513,7 @@ def clear_arms(rig, cb, N, pts, hand_r, max_upper=30, max_fore=70):
                     if not hits(bins, moved):
                         break
                 ang[s][k] = deg
-        for s in ("L", "R"):  # smooth: widen to neighbours, then [1 2 1]/4, never below the need
+        for s in ("L", "R"):
             a0 = ang[s]
             a1 = [max(a0[k], 0.7 * a0[k - 1], 0.7 * a0[(k + 1) % N]) for k in range(N)]
             a2 = [max(a0[k], (a1[k - 1] + 2 * a1[k] + a1[(k + 1) % N]) / 4) for k in range(N)]
@@ -612,8 +550,6 @@ def _rest_rel(rig):
 
 
 def _write_locals(rig, cb, P, names, k, N, rest_rel):
-    """Bake armature-space pose matrices P[name] of `names` into the rotation keys of frame k (0-based);
-    frame 0 is mirrored onto frame N (loop). Parents must already hold their new matrices in P."""
     bones = rig.data.bones
     for b in names:
         parent = bones[b].parent.name
@@ -630,8 +566,6 @@ def _write_locals(rig, cb, P, names, k, N, rest_rel):
 
 
 def _two_bone(P, s, A_t, foot_rot=None, pole=None):
-    """Analytic 2-bone IK (thigh, shin) to ankle goal A_t, knee kept in its current plane.
-    Returns new armature-space matrices for thigh, shin and foot (foot keeps / gets foot_rot)."""
     th, sh, ft = f"thigh.{s}", f"shin.{s}", f"foot.{s}"
     H, K, A = P[th].translation, P[sh].translation, P[ft].translation
     l1, l2 = (K - H).length, (A - K).length
@@ -658,8 +592,6 @@ def _two_bone(P, s, A_t, foot_rot=None, pole=None):
 
 
 def _frame_rot(dir_a, ref_a, dir_b, ref_b):
-    """Rotation taking the frame (dir_a, ref_a) onto (dir_b, ref_b): dir is matched exactly, ref is
-    projected perpendicular to dir (controls the twist around the bone)."""
     def basis(d, r):
         y = d.normalized()
         x = r - y * r.dot(y)
@@ -667,15 +599,11 @@ def _frame_rot(dir_a, ref_a, dir_b, ref_b):
             x = y.orthogonal()
         x.normalize()
         z = x.cross(y)
-        return Matrix((x, y, z)).transposed()   # columns x, y, z
+        return Matrix((x, y, z)).transposed()
     return (basis(dir_b, ref_b) @ basis(dir_a, ref_a).transposed()).to_quaternion()
 
 
 def center_torso(rig, cb, N, keep=0.6):
-    """The mocap actor's pelvis and torso lean / turn to one side on average (on the wide Tank it read
-    as legs shifted to one side). For pelvis, chest and head in turn: the world rotation relative to
-    rest is split into lean (X), side tilt (Y) and turn (Z); the cycle's mean side tilt and turn are
-    removed and the remaining swing of the pelvis is scaled by `keep`. Returns the removed means."""
     sc = bpy.context.scene
     bones = rig.data.bones
     rest_rel = _rest_rel(rig)
@@ -697,7 +625,6 @@ def center_torso(rig, cb, N, keep=0.6):
             e.z = (e.z - mz) * scale
             P[b] = Matrix.LocRotScale(P[b].translation, e.to_quaternion() @ rq, None)
             if b == "pelvis":
-                # the pelvis carries a location key: keep it, rotate only
                 pb = rig.pose.bones[b]
                 parent = bones[b].parent.name
                 q = ((P[parent] @ rest_rel[b]).inverted() @ P[b]).to_quaternion().normalized()
@@ -714,7 +641,6 @@ def center_torso(rig, cb, N, keep=0.6):
                 _write_locals(rig, cb, P, [b], k, N, rest_rel)
         for fc in cb.fcurves:
             fc.update()
-    # hips over the middle of the stance (Sprinter's modelled pose has her hips 5 cm to one side)
     dx = 0.0
     for k in range(N):
         sc.frame_set(k + 1)
@@ -732,10 +658,6 @@ def center_torso(rig, cb, N, keep=0.6):
 
 
 def leg_lanes(rig, cb, N, lane_frac=0.8, toe_out=6.0, knee_out=0.0):
-    """The mocap runner puts one foot in front of the other on the centre line; on a chibi with wide
-    hips that reads as legs crossing. Every frame: the ankle is kept at least lane_frac x hip width
-    out from the centre, x the model's own stance width (2-bone IK), the knee points forward (not to the
-    middle), and the foot is turned to point forward (toe-out `toe_out` deg), keeping pitch and roll. Returns the largest lateral correction (m) and yaw correction (deg)."""
     sc = bpy.context.scene
     bones = rig.data.bones
     rest_rel = _rest_rel(rig)
@@ -746,13 +668,11 @@ def leg_lanes(rig, cb, N, lane_frac=0.8, toe_out=6.0, knee_out=0.0):
         names = []
         for s, sg in (("L", 1), ("R", -1)):
             th, ft = f"thigh.{s}", f"foot.{s}"
-            lane = sg * abs(bones[ft].head_local.x) * lane_frac   # the model's own stance width
+            lane = sg * abs(bones[ft].head_local.x) * lane_frac
             A = P[ft].translation.copy()
             A_t = A.copy()
             if sg * A.x < sg * lane:
                 A_t.x = lane
-            # foot yaw back to the modelled foot's yaw (+ toe_out): measured on the foot's side axis,
-            # which stays level whatever the pitch (the toe axis flips when the foot points down)
             side = P[ft].to_quaternion() @ Vector((1, 0, 0))
             side_rest = bones[ft].matrix_local.to_quaternion() @ Vector((1, 0, 0))
             cur = math.atan2(side.y, side.x)
@@ -762,7 +682,6 @@ def leg_lanes(rig, cb, N, lane_frac=0.8, toe_out=6.0, knee_out=0.0):
             Rf = Quaternion((0, 0, 1), dyaw) @ P[ft].to_quaternion()
             worst[0] = max(worst[0], abs(A_t.x - A.x))
             worst[1] = max(worst[1], abs(math.degrees(dyaw)))
-            # knee points forward (plus knee_out deg outward), not toward the middle
             pole = Quaternion((0, 0, 1), sg * math.radians(knee_out)) @ Vector((0, -1, 0))
             P.update(_two_bone(P, s, A_t, Rf, pole=pole))
             names += [th, f"shin.{s}", ft]
@@ -773,9 +692,6 @@ def leg_lanes(rig, cb, N, lane_frac=0.8, toe_out=6.0, knee_out=0.0):
 
 
 def knees_forward(rig, cb, N, knee_out=0.0):
-    """Last leg pass, every frame: same ankle position and foot orientation, the knee re-solved to
-    point forward (+ knee_out deg outward). Catches the swing frames where the leg is folded and the
-    knee from the recording swung toward the other leg. Returns the largest knee move (m)."""
     sc = bpy.context.scene
     rest_rel = _rest_rel(rig)
     worst = 0.0
@@ -796,8 +712,6 @@ def knees_forward(rig, cb, N, knee_out=0.0):
 
 
 def knee_gap(rig, mesh, N):
-    """Smallest distance of the inner knee surface (deformed mesh, +-6 cm around the knee) from the
-    centre line over the cycle, and the same in the rest pose."""
     sc = bpy.context.scene
     bones = rig.data.bones
     gi = {g.index: g.name for g in mesh.vertex_groups}
@@ -822,14 +736,6 @@ def knee_gap(rig, mesh, N):
 
 
 def stylize_arms(rig, cb, N, cfg):
-    """Keyed arm pump for chibi proportions, phase-locked to the mocap legs (the actor's long arms on a
-    slim body hang at the hips of a short-armed, wide character). Per frame, in the chest's frame:
-      leg phase s = (pitch of right thigh - pitch of left thigh) normalised to -1..1
-      upper arm: down, abducted `abd` deg, swung forward by off + amp * s (left arm opposite left leg)
-      forearm:   bent `bend` +- `bend_var` (more when the arm is forward), turned `inward` deg to the middle
-      hand:      in line with the forearm (+ `wrist` deg flex), palm facing the body
-    Full orientation per bone (not just the direction): the upper arm's elbow bends toward the front,
-    forearm and hand keep the palm toward the body, so fists don't twist or break at the wrist."""
     sc = bpy.context.scene
     bones = rig.data.bones
     rest_rel = _rest_rel(rig)
@@ -840,7 +746,7 @@ def stylize_arms(rig, cb, N, cfg):
         for s in ("L", "R"):
             pb = rig.pose.bones[f"thigh.{s}"]
             d = (pb.tail - pb.head).normalized()
-            pitch[s].append(math.atan2(-d.y, -d.z))   # + = thigh forward
+            pitch[s].append(math.atan2(-d.y, -d.z))
     raw = [pitch["R"][k] - pitch["L"][k] for k in range(N)]
     m = max(abs(v) for v in raw) or 1.0
     phase = [v / m for v in raw]
@@ -848,10 +754,10 @@ def stylize_arms(rig, cb, N, cfg):
     for k in range(N):
         sc.frame_set(k + 1)
         P = {pb.name: pb.matrix.copy() for pb in rig.pose.bones}
-        Dc = P["chest"].to_quaternion() @ chest_rest.inverted()   # torso lean / twist carries the arms
+        Dc = P["chest"].to_quaternion() @ chest_rest.inverted()
         names = []
         for s, sg in (("L", 1), ("R", -1)):
-            sw = cfg["off"] + cfg["amp"] * (phase[k] if s == "L" else -phase[k])   # L arm forward when R leg is
+            sw = cfg["off"] + cfg["amp"] * (phase[k] if s == "L" else -phase[k])
             abd = Quaternion((0, -sg, 0), math.radians(cfg["abd"]))
             swing = Quaternion((-1, 0, 0), math.radians(sw))
             d_u = swing @ abd @ down
@@ -864,11 +770,11 @@ def stylize_arms(rig, cb, N, cfg):
             d_f = Quaternion((0, 0, 1), -sg * math.radians(cfg["inward"])) @ d_f
             d_u, d_f = Dc @ d_u, Dc @ d_f
             ua, fa, hd = f"upper_arm.{s}", f"forearm.{s}", f"hand.{s}"
-            inward = Dc @ Vector((-sg, 0, 0))                       # palm faces the body
+            inward = Dc @ Vector((-sg, 0, 0))
             d_h = Quaternion(d_f.cross(inward).normalized() if d_f.cross(inward).length > 1e-4 else Vector((1, 0, 0)),
                              math.radians(cfg.get("wrist", 0))) @ d_f
             for bname, d, ref, ref_rest in (
-                (ua, d_u, d_f - d_u * d_f.dot(d_u), Vector((0, -1, 0))),   # elbow bends toward the front
+                (ua, d_u, d_f - d_u * d_f.dot(d_u), Vector((0, -1, 0))),
                 (fa, d_f, inward, Vector((-sg, 0, 0))),
                 (hd, d_h, inward, Vector((-sg, 0, 0)))):
                 rq = bones[bname].matrix_local.to_quaternion()
@@ -885,10 +791,6 @@ def stylize_arms(rig, cb, N, cfg):
 
 
 def lock_feet(rig, cb, N, speed, stance, ease=2, drop=None, sole=None, floor=0.0):
-    """Two-bone IK pin of the foot's contact point (ball/toe) during stance, baked into the thigh/shin/foot keys. The pinned
-    ankle moves back at exactly `speed` (in place), anchored at the middle of each stance; `ease`
-    frames on each side blend in/out. `drop` lowers the hips after the pins are placed (chibi legs are
-    short for an adult's stride: without slack the leg straightens and the foot is dragged). The foot keeps its world orientation (heel-toe roll stays)."""
     sc = bpy.context.scene
     dt = 1.0 / L.FPS
     targets = {s: {} for s in ("L", "R")}
@@ -900,7 +802,7 @@ def lock_feet(rig, cb, N, speed, stance, ease=2, drop=None, sole=None, floor=0.0
             span = list(range(run[0] - ease, run[-1] + ease + 1))
             for j in span:
                 k = j % N
-                d = j - mid   # frames from the anchor (unwrapped)
+                d = j - mid
                 w = 1.0
                 if j < run[0]:
                     w = (j - (run[0] - ease - 1)) / (ease + 1)
@@ -908,7 +810,7 @@ def lock_feet(rig, cb, N, speed, stance, ease=2, drop=None, sole=None, floor=0.0
                     w = ((run[-1] + ease + 1) - j) / (ease + 1)
                 w = 0.5 - 0.5 * math.cos(math.pi * w)
                 targets[s][k] = (anchor + Vector((0, speed * d * dt, 0)), w)
-    if drop:   # lower the hips a little after the pins are placed: the knees get slack to hold them
+    if drop:
         drop()
     bones = rig.data.bones
     rest_rel = {b.name: (b.parent.matrix_local.inverted() @ b.matrix_local) for b in bones if b.parent}
@@ -921,18 +823,17 @@ def lock_feet(rig, cb, N, speed, stance, ease=2, drop=None, sole=None, floor=0.0
             H, K, A = P[th].translation, P[sh].translation, P[ft].translation
             toe = P[ft] @ Vector((0, bones[ft].length, 0))
             if k not in targets[s]:
-                # swing foot: only lift it out of the floor if it dips below
                 low = min((P[ft] @ v).z for v in sole[s]) if sole and s in sole else floor
                 if low >= floor:
                     continue
                 goal, w = toe + Vector((0, 0, floor - low)), 1.0
             else:
                 goal, w = targets[s][k]
-            if sole and s in sole:   # pin height: the foot's lowest vertex touches the floor
+            if sole and s in sole:
                 low = min((P[ft] @ v).z for v in sole[s])
                 goal = Vector((goal.x, goal.y, floor + (toe.z - low)))
-            A_t = A.lerp(goal - (toe - A), w)        # ankle goal that puts the toe on the pin
-            if sole and s in sole:   # eased frames: never let the blend push the sole into the floor
+            A_t = A.lerp(goal - (toe - A), w)
+            if sole and s in sole:
                 low_new = min((P[ft] @ v).z for v in sole[s]) + (A_t.z - A.z)
                 if low_new < floor:
                     A_t.z += floor - low_new

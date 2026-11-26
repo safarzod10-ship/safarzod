@@ -1,6 +1,3 @@
-// Customer's second set of Tripo meshes (meshopt + quantized, facing +X, centred on the origin) ->
-// plain GLB the Blender importer reads, facing +Z (three.js front), feet on y = 0.
-//   node scripts/prep-meshes.mjs <in.glb> <out.glb>
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dequantize, getBounds } from '@gltf-transform/functions';
@@ -14,7 +11,7 @@ await doc.transform(dequantize());
 for (const e of doc.getRoot().listExtensionsUsed()) if (/meshopt|quantization/i.test(e.extensionName)) e.dispose();
 const scene = doc.getRoot().listScenes()[0];
 const node = scene.listChildren()[0];
-node.setRotation([0, -Math.SQRT1_2, 0, Math.SQRT1_2]);   // +X front -> +Z front
+node.setRotation([0, -Math.SQRT1_2, 0, Math.SQRT1_2]);
 node.setTranslation([0, 0, 0]);
 const b = getBounds(scene);
 node.setTranslation([-(b.min[0] + b.max[0]) / 2, -b.min[1], -(b.min[2] + b.max[2]) / 2]);

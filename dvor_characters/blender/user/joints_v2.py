@@ -1,12 +1,3 @@
-"""Joint positions measured on the customer's second Tripo set (user_meshes/v2/*.glb, prepared by
-viewer/scripts/prep-meshes.mjs: facing front, feet on the floor, height 1.0).
-
-Blender coords in model units before scaling: x = character's left, y = back, z = up. Read off
-orthographic front/side renders with a 0.05 grid and checked with marker overlays
-(review/v2/joints_<name>.png). Arms are free of the body (A-pose), hands have modelled fingers.
-"""
-
-
 def sym(d):
     out = dict(d)
     for k, v in d.items():
@@ -16,7 +7,6 @@ def sym(d):
 
 
 def body(y, yh, z):
-    """Centre line: y of the torso and of the head; z of pelvis, spine, chest, neck, head, head_end."""
     names = ("pelvis", "spine", "chest", "neck", "head", "head_end")
     return {n: (0.0, yh if n in ("neck", "head", "head_end") else y, zz) for n, zz in zip(names, z)}
 

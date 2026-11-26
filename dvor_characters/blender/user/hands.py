@@ -1,19 +1,3 @@
-"""Readable stylised fists for the USER_CH_* characters (the Tripo meshes have shapeless lumps of
-20-34 vertices where the hands should be).
-
-    /opt/dvor-venv/bin/python blender/user/hands.py --char technik|sprinter|tank
-
-Run after build_user_character.py and before mocap_run.py. Per hand:
-  1. the old hand (vertices whose strongest weight is hand.L/R) is deleted; what remains of the arm
-     ends in an open ring (the wrist, or for Technik the sleeve end: his whole forearm is glove)
-  2. the hand GROWS OUT OF THAT RING: cross-sections cuff -> wrist -> palm -> knuckles -> curled
-     fingers, zipped to the arm's own ring, smooth shaded, so arm and hand are one surface
-  3. on the front of the fist: four finger segments and a thumb (small flat-shaded blocks)
-  4. sizes come from the wrist (not from the old lump): fist width ~1.3 x wrist width
-  5. flat colour patches (glove / skin / palm shade) are painted into free space of the 1024 atlas
-Weights: cuff = forearm, wrist ring = forearm/hand 50/50, the rest = hand (rigid fist, smooth wrist).
-The .blend, the texture and export/raw/USER_<NAME>.glb are updated; the build report gets "hands".
-"""
 import argparse
 import json
 import math
@@ -25,28 +9,25 @@ BL = os.path.dirname(HERE)
 ROOT = os.path.dirname(BL)
 sys.path[:0] = [HERE, BL]
 
-import bpy  # noqa: E402
-import bmesh  # noqa: E402
-import numpy as np  # noqa: E402
-from mathutils import Vector  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
+import bpy
+import bmesh
+import numpy as np
+from mathutils import Vector
+from PIL import Image, ImageDraw
 
-import dvor_lib as L  # noqa: E402
+import dvor_lib as L
 
 NAMES = {"technik": "CH_Technik", "sprinter": "CH_Sprinter", "tank": "CH_Tank"}
-# skin_fingers: fingerless gloves (fingers + thumb in skin colour)
-# fist: width / thickness / length of the fist relative to the wrist width
 STYLE = {
     "technik": dict(skin_fingers=True, fist=(1.32, 1.05, 1.25)),
-    "sprinter": dict(skin_fingers=False, fist=(1.30, 1.0, 1.22), rebuild_forearm=True),   # her forearm is squashed
-    "tank": dict(skin_fingers=False, fist=(1.15, 0.95, 1.05), wrist_taper=0.75),   # huge forearm, glove narrows
+    "sprinter": dict(skin_fingers=False, fist=(1.30, 1.0, 1.22), rebuild_forearm=True),
+    "tank": dict(skin_fingers=False, fist=(1.15, 0.95, 1.05), wrist_taper=0.75),
 }
-RING = 10   # vertices per cross-section
-FINGER_CHAMFER = 0.0   # 0 = plain blocks (12 triangles per finger)
+RING = 10
+FINGER_CHAMFER = 0.0
 
 
 def hand_frame(bone, side):
-    """y along the hand bone, n = palm normal (toward the body), t = thumb side (front)."""
     y = (bone.tail_local - bone.head_local).normalized()
     sg = 1 if side == "L" else -1
     n = Vector((-sg, 0, 0))
@@ -91,7 +72,6 @@ def free_spots(tex, uv_tris, need, size, k):
 
 
 def ring_points(c, n, t, w, d, m=RING, e=3.2):
-    """Rounded-rectangle (superellipse) cross-section: width w along t, thickness d along n."""
     pts = []
     for i in range(m):
         a = 2 * math.pi * (i + 0.5) / m
@@ -129,7 +109,6 @@ def build(ch):
         w = v[dl]
         return gi[max(w.items(), key=lambda kv: kv[1])[0]] if len(w) else ""
 
-    # colours of the old hands (glove / skin)
     cols = []
     old = []
     for side in ("L", "R"):
@@ -140,8 +119,6 @@ def build(ch):
                 u, vv = lp[uvl].uv
                 cols.append(tex[min(H - 1, max(0, int((1 - vv) * H))), min(W - 1, max(0, int(u * W)))])
     if st.get("rebuild_forearm"):
-        # Sprinter: the modelled forearm (hand on the hip) is squashed, half its vertices are weighted to
-        # the upper arm and tear into shards when the arm moves -> rebuild it from the elbow down too
         for side in ("L", "R"):
             fa = rig.data.bones[f"forearm.{side}"]
             ax = (fa.tail_local - fa.head_local)
@@ -168,7 +145,6 @@ def build(ch):
     ring_verts = {e.other_vert(v) for v in old for e in v.link_edges if e.other_vert(v) not in old}
     bmesh.ops.delete(bm, geom=old, context="VERTS")
 
-    # free atlas space for 3 flat patches
     uv_tris = []
     for f in bm.faces:
         ls = [lp[uvl].uv.copy() for lp in f.loops]
@@ -203,10 +179,8 @@ def build(ch):
     for side in ("L", "R"):
         hand = rig.data.bones[f"hand.{side}"]
         y, n, t = hand_frame(hand, side)
-        # the open ring left on this arm
         bverts = {v for v in ring_verts if v.is_valid and any(e.is_boundary for e in v.link_edges)}
         bverts = [v for v in bverts if (v.co - hand.head_local).length < 0.3]
-        # keep one connected loop (the one closest to the wrist)
         loops, left = [], set(bverts)
         while left:
             s0 = left.pop()
@@ -224,7 +198,7 @@ def build(ch):
         loopv = min(loops, key=lambda c: (sum((v.co for v in c), Vector()) / len(c) - hand.head_local).length)
         c0 = sum((v.co for v in loopv), Vector()) / len(loopv)
         fore = rig.data.bones[f"forearm.{side}"]
-        yf = (hand.head_local - fore.head_local).normalized()       # forearm direction
+        yf = (hand.head_local - fore.head_local).normalized()
         if st.get("rebuild_forearm"):
             yf = (hand.head_local - c0).normalized()
         sg = 1 if side == "L" else -1
@@ -240,18 +214,16 @@ def build(ch):
         proj = [((v.co - c0).dot(tf), (v.co - c0).dot(nf)) for v in loopv]
         lw = max(p[0] for p in proj) - min(p[0] for p in proj)
         ld = max(p[1] for p in proj) - min(p[1] for p in proj)
-        yw = (hand.head_local - c0).dot(yf)           # loop -> wrist joint along the forearm
-        cuff = yw > 0.04                              # Technik: the loop is the sleeve end
+        yw = (hand.head_local - c0).dot(yf)
+        cuff = yw > 0.04
         taper = st.get("wrist_taper", 0.8 if cuff else 1.0)
         wrist_w, wrist_d = taper * lw, taper * ld
         base = max(wrist_w, wrist_d)
         Wf, Df, Lf = (base * k for k in st["fist"])
         wrist_c = c0 + yf * max(yw, 0.012)
-        mid = (yf + y).normalized()                   # the wrist turns from the forearm to the hand
-        # sections: (centre, axis, width, thickness, weights)
+        mid = (yf + y).normalized()
         sections = []
         if st.get("rebuild_forearm"):
-            # skin forearm from the elbow ring to a glove cuff at the wrist
             for k, f in ((0.35, 0.8), (0.7, 0.66)):
                 sections.append((c0 + yf * (yw * k), yf, lw * f, ld * f, {f"forearm.{side}": 1.0}, UV_SKIN))
             wrist_w, wrist_d = lw * 0.52, ld * 0.52
@@ -277,7 +249,6 @@ def build(ch):
                 weigh(v, wts)
                 vs.append((ang, v))
             rings.append((cen, vs, _uv))
-        # zip the arm's own loop to the first section (different vertex counts: merge by angle)
         r0c, r0, uv0 = rings[0]
         A = sorted(((math.atan2((v.co - c0).dot(nf), (v.co - c0).dot(tf)) % (2 * math.pi), v) for v in loopv), key=lambda x: x[0])
         B = sorted(((ang % (2 * math.pi), v) for ang, v in r0), key=lambda x: x[0])
@@ -301,16 +272,14 @@ def build(ch):
             for k in range(RING):
                 new_faces.append(face([ra[k][1], ra[(k + 1) % RING][1], rb[(k + 1) % RING][1], rb[k][1]], uvb,
                                       lambda p, mc=mc: p - mc))
-        # rounded front of the fist (curled fingers): a centre vertex
         tip = bm.verts.new(wrist_c + y * Lf + n * (0.2 * Df))
         weigh(tip, {f"hand.{side}": 1.0})
         last = rings[-1][1]
         for k in range(RING):
             new_faces.append(face([last[k][1], last[(k + 1) % RING][1], tip], UV_SKIN if st["skin_fingers"] else UV_GLOVE,
                                   lambda p: y))
-        c0 = wrist_c                                   # finger / thumb blocks are placed from the wrist
+        c0 = wrist_c
         w0 = 0.0
-        # four finger segments across the front (index next to the thumb), flat shaded
         fw = Wf / 4
 
         def block(lo, hi, uv, chamfer=0.0):
@@ -337,13 +306,12 @@ def build(ch):
             return fs
 
         fuv = UV_SKIN if st["skin_fingers"] else UV_GLOVE
-        tips = (0.90, 0.98, 1.02, 0.98)                       # little, ring, middle, index
+        tips = (0.90, 0.98, 1.02, 0.98)
         for q in range(4):
             t0 = -Wf / 2 + q * fw + 0.07 * fw
             t1 = t0 + fw * 0.86
             new_faces += block((-Df * 0.40, w0 + 0.62 * Lf, t0), (Df * 0.42, w0 + tips[q] * Lf, t1), fuv,
                                chamfer=FINGER_CHAMFER * fw)
-        # thumb on the front side, folded over the fingers
         new_faces += block((Df * 0.02, w0 + 0.30 * Lf, Wf * 0.30), (Df * 0.52, w0 + 0.74 * Lf, Wf * 0.56), fuv,
                            chamfer=0.16 * fw)
         report[side] = {"wrist_ring_vertices": len(loopv), "cuff": cuff, "wrist_m": [round(wrist_w, 3), round(wrist_d, 3)],

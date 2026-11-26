@@ -1,29 +1,11 @@
-/**
- * ДВОР server on Cloudflare Workers (free plan): the Telegram bot and the players' leaderboard.
- *
- *   POST /tg            Telegram webhook (checked with the secret token header)
- *   POST /api/result    a player's progress after a match (Telegram initData is verified)
- *   POST /api/game-score the result of a match started from a game message (inline / group), signed token
- *   POST /api/profile/load, /api/profile/save   the player's progress (coins, trophies, heroes, upgrades)
- *                       kept in D1 per Telegram user, so it survives a new phone or cleared app data
- *   GET  /api/top       top 50 by trophies, cached at the edge for 60 s
- *   scheduled()         one-off setup: webhook, commands, menu button, descriptions (the first
- *                       fetch does the same, so it also runs without the cron)
- *
- * Bindings: DB (D1 "dvor"), ROOMS (Durable Object, reserved for online rooms), BOT_TOKEN and
- * WEBHOOK_SECRET (secrets), WEBAPP_URL (text). Light on the free tier: one D1 write per finished match
- * (and at most one per 20 s per player), leaderboard reads come from the edge cache.
- */
-
 const SETUP_VERSION = '5';
 const BOT = 'dvor_app';
-const GAME = 'dvor';   // game short name from @BotFather /newgame (until it exists, links to the Mini App are used)
+const GAME = 'dvor';
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', ...extra },
 });
 const HERO_NAMES = { technik: 'Техник', tank: 'Танк', sprinter: 'Спринтер', sniper: 'Снайпер', medic: 'Медик' };
 
-// ------------------------------------------------------------------ Telegram helpers
 async function tg(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
@@ -38,7 +20,6 @@ async function hmac(key, data) {
 }
 const hex = (b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 
-/** Telegram Mini App initData check (core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app). */
 async function verifyInitData(env, initData) {
   if (!initData || typeof initData !== 'string' || initData.length > 4096) return null;
   const p = new URLSearchParams(initData);
@@ -58,7 +39,6 @@ const displayName = (u) => {
   return n.replace(/[<>&]/g, '').slice(0, 24);
 };
 
-// ------------------------------------------------------------------ leaderboard
 async function top(env, n = 50) {
   const { results } = await env.DB.prepare('SELECT name, trophies, hero, level FROM players ORDER BY trophies DESC, updated ASC LIMIT ?').bind(n).all();
   return results;
@@ -85,7 +65,7 @@ async function apiResult(request, env) {
   const trophies = clampInt(body.trophies, 20000), level = Math.max(1, clampInt(body.level, 500));
   const games = clampInt(body.games, 1e6), wins = clampInt(body.wins, 1e6);
   const hero = HERO_NAMES[body.hero] ? body.hero : null;
-  if (!row || now - row.updated > 20000) {   // at most one write per 20 s per player
+  if (!row || now - row.updated > 20000) {
     await env.DB.prepare(`INSERT INTO players (id, name, trophies, hero, level, games, wins, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET name = excluded.name, trophies = excluded.trophies, hero = excluded.hero, level = excluded.level,
       games = excluded.games, wins = excluded.wins, updated = excluded.updated`)
@@ -95,12 +75,10 @@ async function apiResult(request, env) {
   return json({ rank: (ahead?.n ?? 0) + 1 });
 }
 
-// ------------------------------------------------------------------ bot
-/** Mini App link that works in any chat (groups too); needs the Main Mini App enabled in @BotFather. */
 const appLink = (param) => `https://t.me/${BOT}?startapp=${param}`;
 
 function playKeyboard(env, chatType = 'private') {
-  // web_app buttons work only in private chats; elsewhere the Mini App opens through a t.me link
+
   const play = chatType === 'private' ? { text: '▶ Играть', web_app: { url: env.WEBAPP_URL } } : { text: '▶ Играть', url: appLink('group') };
   return { inline_keyboard: [[play], [{ text: '🏆 Рейтинг игроков', callback_data: 'top' }]] };
 }
@@ -127,7 +105,6 @@ const HELP = '<b>Как играть</b>\nДжойстик — движение,
   + 'Стой в Круге, чтобы команда получала очки. Кто первым наберёт 100 — побеждает.\n\n'
   + '<b>С друзьями</b>\nВ любом чате напиши <code>@' + BOT + '</code> и выбери «Вызов на бой».\nВ группе: добавь бота и напиши /play.\n\n/top — рейтинг игроков';
 
-// ---- signed token for a game opened from a game message: who pressed Play, on which message
 async function signToken(env, data) {
   const body = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   const sig = hex(await hmac(env.WEBHOOK_SECRET, body)).slice(0, 32);
@@ -140,7 +117,6 @@ async function readToken(env, token) {
   try { return JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/'))))); } catch { return null; }
 }
 
-/** A game message in a chat; without the registered game, a message with a link button. */
 async function sendPlay(env, chat, chatType) {
   const r = await tg(env, 'sendGame', { chat_id: chat, game_short_name: GAME });
   await note(env, 'sendgame_last', JSON.stringify({ ok: r.ok, err: r.description || null }));
@@ -169,7 +145,7 @@ async function onInline(q, env) {
   ];
   let r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results, cache_time: 30, is_personal: true });
   await note(env, 'inline_last', JSON.stringify({ ok: r.ok, err: r.description || null }));
-  if (!r.ok) r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results: results.slice(1), cache_time: 30, is_personal: true });   // no game registered yet
+  if (!r.ok) r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results: results.slice(1), cache_time: 30, is_personal: true });
   return r;
 }
 
@@ -179,17 +155,17 @@ async function onUpdate(update, env) {
   if (msg?.text) {
     const chat = msg.chat.id, type = msg.chat.type;
     const [cmd, to] = msg.text.split(/\s/)[0].split('@');
-    if (to && to.toLowerCase() !== BOT) return;   // a command for another bot in a group
+    if (to && to.toLowerCase() !== BOT) return;
     if (cmd === '/top') return tg(env, 'sendMessage', { chat_id: chat, text: await topText(env), parse_mode: 'HTML', reply_markup: playKeyboard(env, type) });
     if (cmd === '/help') return tg(env, 'sendMessage', { chat_id: chat, parse_mode: 'HTML', reply_markup: playKeyboard(env, type), text: HELP });
     if (cmd === '/play') return sendPlay(env, chat, type);
-    if (type !== 'private') return;   // in groups the bot speaks only when asked
+    if (type !== 'private') return;
     return tg(env, 'sendMessage', { chat_id: chat, text: START, parse_mode: 'HTML', reply_markup: playKeyboard(env, type) });
   }
   const cb = update.callback_query;
   if (cb) {
     if (cb.game_short_name) {
-      // Play on a game message: open the game with a token that says who and where (for the chat's high scores)
+
       const where = cb.inline_message_id ? { i: cb.inline_message_id } : { c: cb.message?.chat.id, m: cb.message?.message_id };
       const token = await signToken(env, { u: cb.from.id, n: displayName(cb.from), ...where, t: Date.now() });
       return tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, url: `${env.WEBAPP_URL}?g=${token}` });
@@ -199,7 +175,6 @@ async function onUpdate(update, env) {
   }
 }
 
-/** A match played from a game message: the chat's high score table and the global leaderboard. */
 async function apiGameScore(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'bad json' }, 400); }
@@ -219,8 +194,6 @@ async function apiGameScore(request, env) {
   return json({ ok: !!r.ok });
 }
 
-// ------------------------------------------------------------------ cloud save
-/** Who is asking: a Telegram Mini App user (initData) or a player from a game message (signed token). */
 async function who(env, body) {
   if (body.initData) { const u = await verifyInitData(env, body.initData); return u?.id ? u.id : null; }
   if (body.g) { const t = await readToken(env, body.g); return t?.u ?? null; }
@@ -245,7 +218,7 @@ async function apiProfileSave(request, env) {
   if (!body.profile || typeof body.profile !== 'object' || data.length > 30000) return json({ error: 'bad profile' }, 400);
   const now = Date.now();
   const row = await env.DB.prepare('SELECT updated FROM profiles WHERE id = ?').bind(id).first();
-  if (row && now - row.updated < 5000) return json({ ok: false, retry: 5 });   // at most one write per 5 s per player
+  if (row && now - row.updated < 5000) return json({ ok: false, retry: 5 });
   await env.DB.prepare('INSERT INTO profiles (id, data, updated) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated = excluded.updated')
     .bind(id, data, now).run();
   return json({ ok: true, updated: now });
@@ -268,7 +241,6 @@ async function setup(env, origin) {
     .bind('setup_result', JSON.stringify(res).slice(0, 4000), Date.now()).run();
 }
 
-// ------------------------------------------------------------------ online rooms (reserved)
 export class Room {
   constructor(state) { this.state = state; }
   async fetch(req) {
@@ -280,12 +252,12 @@ export class Room {
   webSocketMessage(ws, msg) { for (const s of this.state.getWebSockets()) s.send(msg); }
 }
 
-let setupDone = false;   // per isolate: the D1 flag is checked once, then never again
+let setupDone = false;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    // the first request (Mini App opening, a bot message) also finishes the one-off setup
+
     if (!setupDone) ctx.waitUntil(setup(env, url.origin).then(() => { setupDone = true; }).catch(() => {}));
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' } });
