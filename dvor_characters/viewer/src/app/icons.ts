@@ -24,6 +24,9 @@ export const ICONS = {
   run: svg('<path fill="currentColor" d="M15 2.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6zM10 8.2l4.2-1c.8-.2 1.6.2 2 .9l1.8 3.1 3 .8-.6 2.1-3.8-1-1.1-1.8-1.4 3.8 3 2.7V23h-2.3v-4.6l-3.4-3-1.5 4-5.3.6-.3-2.3 3.9-.4 2.8-7.3-1.6.4-1.5 3-2-1 1.9-3.9z"/>'),
   turret: svg('<path fill="currentColor" d="M7 4h10a2 2 0 0 1 2 2v1h2v3h-2v1a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4-2h2v2h-2z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 13v3M12 16l-6 6M12 16l6 6M12 16v6"/><circle cx="9" cy="8.5" r="1.4" fill="#e06a14"/>'),
   cloud: svg('<path fill="currentColor" d="M6.5 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 17.4 8.6 4.8 4.8 0 0 1 17.5 19z"/>'),
+  door: svg('<rect x="5" y="3" width="14" height="18" rx="1.5" fill="currentColor"/><path stroke="rgba(0,0,0,.45)" stroke-width="1.6" d="M5 7.5h14M5 11.5h14M5 15.5h14"/>'),
+  ram: svg('<path fill="currentColor" d="M3 10h9V6l9 6-9 6v-4H3z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M2 6l2 2M2 18l2-2"/>'),
+  wave: svg('<circle cx="6" cy="12" r="2.6" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M11 7.5a6.5 6.5 0 0 1 0 9M14.5 4.5a10.5 10.5 0 0 1 0 15M18 2a14 14 0 0 1 0 20"/>'),
   close: svg('<path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/>'),
   rank: svg('<path fill="#9aa1aa" d="M32 2 6 12v18c0 15 11 27 26 32 15-5 26-17 26-32V12z"/><path fill="#5b6068" d="M32 7 11 15v15c0 12 9 22 21 27 12-5 21-15 21-27V15z"/><path fill="#d6dae0" d="M20 17h7v10h10V17h7v30h-7V34H27v13h-7z"/><path fill="#eef1f4" d="M24 17h3v30h-3zM37 17h3v30h-3z" opacity=".6"/>', '0 0 64 64'),
 };
