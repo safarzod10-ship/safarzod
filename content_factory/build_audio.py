@@ -61,7 +61,8 @@ mix += music * vol * fade
 
 def add(sig, at):
     o = int(at * SR)
-    if o < n: mix[o:o + len(sig)] += sig[: n - o]
+    if o < 0: sig, o = sig[-o:], 0
+    if o < n and len(sig): mix[o:o + len(sig)] += sig[: n - o]
 for ln, seg in zip(E["lines"], timeline):
     if ln.get("chime"):
         cs = np.arange(int(1.5 * SR)) / SR

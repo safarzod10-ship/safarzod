@@ -55,7 +55,7 @@ def ref(em):
 for i in todo:
     line = E["lines"][i - 1]
     rw, rt = ref(line.get("emotion", "calm"))
-    g = stress(clean_for_tts(line["text"]))
+    g = "... " + stress(clean_for_tts(line["text"]))  # leading pause: keeps the first syllable out of the ref/gen seam
     best = None
     for attempt, seed in enumerate([11, 23, 37, 53]):
         wav, sr, _ = tts.infer(ref_file=rw, ref_text=rt, gen_text=g, speed=line.get("speed", 1.0),

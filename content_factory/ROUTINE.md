@@ -41,6 +41,8 @@ Record the format in episodes.log as the 2nd field: `epNN | format | title | hoo
 - Structure: hook in the first line (question / shock), 9–13 lines, a twist, last line = call to comment.
 - Each line ≤ ~110 characters, simple spoken words. Write numbers in words. Use "ё".
   Mark ambiguous stresses with "+": вс+е (everyone) vs всё, з+амок/зам+ок, пл+ачу/плач+у, etc.
+- make_voice.py now prepends "... " to every line (fixes swallowed first syllables). If a line still loses its
+  first word, rephrase it.
 - Do NOT start a line with a short word like "Я", "И", "А", "Но" followed by a pause-free verb, or with a word whose
   first syllable is unstressed and short ("Наверное") — the model tends to swallow it. Start with a fuller word
   ("Тогда я…", "Она, наверное…").

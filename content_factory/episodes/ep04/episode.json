@@ -1,0 +1,46 @@
+{
+ "title": "Все слышат мысли",
+ "format": "what-if",
+ "hook": "ВСЕ СЛЫШАТ ТВОИ МЫСЛИ 🤯",
+ "outro": "А ЧТО ДУМАЕШЬ ТЫ?",
+ "music": "happy",
+ "location": "school",
+ "time": "day",
+ "highlight": ["МЫСЛИ", "ЗАБЫЛ", "ЧЕСТНОСТЬ", "ЛУЧШИЙ", "ГРОЗНЫЙ", "ИГРАТЬ", "ДОБРЕЕ", "СМЕЯЛСЯ"],
+ "cast": {
+  "teacher": {"preset": "teacher", "pos": [-3.5, 1], "label": null},
+  "timur":   {"preset": "timur", "pos": [0, 1.5], "label": null},
+  "liza":    {"preset": "liza", "pos": [5, 1], "label": null},
+  "artem":   {"preset": "artem", "pos": [8.5, 1.5], "label": null},
+  "max":     {"preset": "max", "pos": [-13, -2], "hidden": true, "label": null}
+ },
+ "props": [
+  {"shape": "book", "size": [1.4, 1.1, 0.12], "color": "#ffffff", "holder": "liza", "from": 4, "to": 5}
+ ],
+ "lines": [
+  {"text": "Представь, что вс+е вокруг слышат твои мысли. Один день в такой школе.", "emotion": "mystery", "cam": "wide:teacher,timur,liza", "whoosh": true,
+   "acts": {"timur": {"face": "neutral"}, "teacher": {"face": "neutral"}, "liza": {"face": "smile"}}},
+  {"text": "Учительница спросила: Тимур, ты сделал домашнее задание?", "emotion": "calm", "cam": "two:teacher:timur",
+   "acts": {"teacher": {"faceTo": "timur", "face": "neutral", "pose": "point"}, "timur": {"faceTo": "teacher", "face": "smile"}}},
+  {"text": "Конечно, сделал, ответил я. Но все вокруг услышали: я её забыл!", "emotion": "excited", "cam": "close:timur", "boom": true,
+   "acts": {"timur": {"faceTo": "cam", "face": "smile", "faceAfter": [2.4, "shock"], "pose": "shrug", "label": {"text": "Я ЕЁ ЗАБЫЛ!", "color": "#ff9fd8", "pop": true, "delay": 2.4}}}},
+  {"text": "Учительница тяжело вздохнула. Двойка за домашку и пятёрка за честность.", "emotion": "warm", "cam": "medium:teacher",
+   "acts": {"teacher": {"faceTo": "cam", "pose": "facepalm", "face": "neutral", "faceAfter": [2.0, "smile"]}, "timur": {"faceTo": "teacher", "face": "sad"}}},
+  {"text": "Потом Лиза показала всем свой новый рисунок.", "emotion": "calm", "cam": "two:liza:artem",
+   "acts": {"timur": {"label": null}, "liza": {"faceTo": "artem", "pose": "give", "face": "smile"}, "artem": {"faceTo": "liza", "face": "neutral"}}},
+  {"text": "Артём сказал: неплохо. А в мыслях прозвучало: это лучший рисунок на свете!", "emotion": "warm", "cam": "close:artem",
+   "acts": {"artem": {"faceTo": "liza", "face": "neutral", "faceAfter": [2.2, "joy"], "label": {"text": "ЛУЧШИЙ РИСУНОК!", "color": "#ff9fd8", "pop": true, "delay": 2.2}}, "liza": {"face": "joy"}}},
+  {"text": "Самое неожиданное случилось на перемене.", "emotion": "mystery", "cam": "wide", "whoosh": true,
+   "acts": {"artem": {"label": null, "faceTo": "cam"}, "liza": {"faceTo": "cam", "pose": "idle"}, "max": {"show": true, "faceTo": "cam", "pose": "sad", "face": "neutral"}, "teacher": {"hide": true}}},
+  {"text": "Макс, самый грозный парень в школе, стоял один. И все услышали его мысль.", "emotion": "sad", "cam": "close:max",
+   "acts": {"max": {"faceTo": "cam", "pose": "sad", "face": "sad"}}},
+  {"text": "Пожалуйста, хоть кто-нибудь, позовите меня играть.", "emotion": "sad", "cam": "medium:max", "pitch": -2, "chime": true,
+   "acts": {"max": {"faceTo": "cam", "pose": "sad", "face": "cry", "label": {"text": "ПОЗОВИТЕ МЕНЯ…", "color": "#9fd8ff", "pop": true, "delay": 0.3}}}},
+  {"text": "Через секунду к нему подбежали все. И впервые за год Макс смеялся вместе с нами.", "emotion": "warm", "cam": "wide:max,timur,liza,artem",
+   "acts": {"timur": {"moveTo": [-9.2, -3.0], "run": true, "faceTo": "max", "face": "joy"}, "liza": {"moveTo": [-14.8, -3.0], "run": true, "faceTo": "max", "face": "joy"},
+            "artem": {"moveTo": [-12.0, -5.2], "run": true, "delay": 0.3, "faceTo": "max", "face": "joy"},
+            "max": {"pose": "laugh", "face": "shock", "faceAfter": [2.2, "laugh"], "label": {"text": "Я НЕ ОДИН!", "color": "#7dff8a", "pop": true, "delay": 2.2}}}},
+  {"text": "Получается, мысли бывают добрее слов. А какую твою мысль лучше никому не слышать?", "emotion": "outro", "cam": "wide",
+   "acts": {"timur": {"faceTo": "cam", "pose": "cheer", "face": "joy"}, "liza": {"faceTo": "cam", "pose": "wave", "face": "joy"}, "artem": {"faceTo": "cam", "pose": "cheer", "face": "joy"}, "max": {"faceTo": "cam", "pose": "cheer", "face": "joy"}}}
+ ]
+}
