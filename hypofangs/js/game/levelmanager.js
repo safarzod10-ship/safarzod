@@ -282,6 +282,7 @@ export class LevelManager extends Component {
   *exitRoutine() {
     if (this.room.index >= this.rooms.length - 1) {
       const finale = this.extras.ending;
+      if (G.onGameComplete) G.onGameComplete();
       if (finale) yield* finale.play(this);
       const m = Math.floor(LevelStatics.totalTime / 60), s = LevelStatics.totalTime - m * 60;
       const text = () => `TIME  ${String(m).padStart(2, "0")}:${s.toFixed(2).padStart(5, "0")}      RETRIES  ${LevelStatics.deaths}\n\n${InputPrompts.key(InputPrompts.Accept)}  Play again`;
@@ -291,7 +292,9 @@ export class LevelManager extends Component {
       yield* this.hud.fadeOut(0.3);
       G.roomIndex = 0; LevelStatics.totalTime = 0; LevelStatics.deaths = 0;
       Prefs.setInt(SAVE_KEY, 0);
-      LevelManager.reload();
+      // the web build returns to the start menu after the results (the original reloads room 1)
+      G.frozen = G.inputLocked = G.paused = G.previewing = false; Time.timeScale = 1;
+      if (G.toMenu) G.toMenu(); else LevelManager.reload();
     } else {
       if (G.onRoomCleared) G.onRoomCleared();
       this.hud.flash("ROOM CLEAR", 0.6);

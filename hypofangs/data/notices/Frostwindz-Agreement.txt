@@ -1,0 +1,94 @@
+Frostwindz
+Asset License Agreement
+
+Summary
+
+This license allows customers to:
+
+Use Frostwindz's assets for commercial and non-commercial projects, including but not limited to:
+
+Digital products: games, animations, applications.
+Physical products: posters, clothing, board games, merchandise.
+
+Modify the assets to suit their needs.
+Use the assets in unlimited projects and generate unlimited sales or revenue.
+
+Restrictions:
+
+Redistribution, resale, and use in AI training are prohibited.
+The assets must be integrated into larger projects and not shared as standalone files.
+
+Additional Notes:
+
+Attribution is appreciated but not required.
+The assets are provided "as is," and Frostwindz retains all intellectual property rights.
+
+================================================================
+
+This license agreement ("Agreement") is between the purchaser ("Customer") and the seller ("Frostwindz") of the assets available on itch.io ("https://frostwindz.itch.io/"). By purchasing, downloading, or using assets from https://frostwindz.itch.io/, the Customer agrees to the terms in this Agreement.
+
+1. Permitted Uses
+
+1.1 Commercial and Non-Commercial Use: The Customer is granted a non-exclusive, worldwide license to use the https://frostwindz.itch.io/ assets in both commercial and non-commercial projects.
+
+1.2 Modification: The Customer is allowed to modify the https://frostwindz.itch.io/ assets to suit their project’s needs. Modified versions of the https://frostwindz.itch.io/ assets are still subject to this Agreement.
+
+1.3 Unlimited Projects and Sales: The Customer may use the https://frostwindz.itch.io/ assets in an unlimited number of projects and may generate an indefinite number of sales or revenue from projects incorporating the https://frostwindz.itch.io/ assets.
+
+1.4 Digital and Physical Projects: The Customer may use the https://frostwindz.itch.io/ assets in both digital and physical projects. Examples include, but are not limited to:
+
+Digital games, applications, and animations.
+Physical merchandise such as posters, clothing, and board games.
+
+
+2. Restrictions
+
+2.1 Redistribution and Resale: The Customer cannot give away, resell, sublicense, or make the https://frostwindz.itch.io/ assets available to third parties in their original or modified form. This includes:
+
+Offering the https://frostwindz.itch.io/ assets as part of a package.
+Sharing the assets on websites, digital platforms, or other places where they can be downloaded
+
+2.2 Standalone Use: The https://frostwindz.itch.io/ assets must be integrated into a larger project or product. The Customer cannot use or share the assets in a way that lets others take them out or reuse them separately.
+
+2.3 Prohibition of AI Training: The Customer is strictly prohibited from using the https://frostwindz.itch.io/ assets for the purpose of training artificial intelligence models, including but not limited to generative AI systems or datasets.
+
+3. Attribution
+
+Giving credit to Frostwindz is not required, but it’s appreciated. If the Customer decides to give credit, they should mention Frostwindz as the creator of the assets from https://frostwindz.itch.io/.
+
+4. Intellectual Property Rights
+
+Frostwindz retains all intellectual property rights to the https://frostwindz.itch.io/ assets, including modified versions created by the Customer.
+This Agreement does not transfer ownership of the https://frostwindz.itch.io/ assets to the Customer.
+
+5. Liability and Warranty Disclaimer
+
+5.1 No Warranty: The assets from https://frostwindz.itch.io/ are provided as they are, without any guarantees or promises, including but not limited to guarantees about quality, suitability for a specific use, or not violating anyone's rights.
+
+5.2 Limited Liability: Frostwindz will not be responsible for any damages, losses, or problems that happen from using or not being able to use the assets from https://frostwindz.itch.io/, even if they were warned that such issues could occur.
+
+5.3 Indemnification: The Customer agrees to protect Frostwindz and pay for any costs if they face any legal issues, damages, or claims related to the use of the assets from https://frostwindz.itch.io/ in the Customer’s projects.
+
+6. Termination
+
+6.1 This Agreement is effective upon purchase of the https://frostwindz.itch.io/ assets and remains in effect unless terminated.
+
+6.2 Frostwindz reserves the right to terminate this license if the Customer violates any terms of this Agreement. Upon termination, the Customer must cease all use of the https://frostwindz.itch.io/ assets and delete any copies in their possession.
+
+7. Additional Clarifications
+
+7.1 Usage on Streaming and Content Platforms: The Customer is allowed to showcase projects incorporating the https://frostwindz.itch.io/ assets on streaming platforms, social media, and similar channels, as long as the assets are part of a larger project and not shared as standalone files.
+
+7.2 Third-Party Contractors: The Customer may hire third-party contractors to work on projects that incorporate the https://frostwindz.itch.io/ assets, provided the contractors adhere to the terms of this Agreement and do not retain or distribute the assets outside the scope of the project.
+
+7.3 Educational Use: The https://frostwindz.itch.io/ assets may be used in educational materials, such as tutorials, courses, or workshops, as long as the assets are not distributed in their original or modified form for reuse by others.
+
+7.4 For clarity, this license doesn’t interfere with any legal rights you already have to use the material. If the law allows you to use the material without permission, this license won’t impose additional rules or limitations on that use.
+
+8. Amendments
+
+Frostwindz reserves the right to update or amend this Agreement at any time. Updates will apply to new purchases but will not retroactively affect existing licenses.
+
+================================================================
+
+By purchasing or using the https://frostwindz.itch.io/ assets, the Customer acknowledges that they have read, understood, and agreed to be bound by the terms of this Agreement.

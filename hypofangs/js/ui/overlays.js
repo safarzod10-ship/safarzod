@@ -12,6 +12,7 @@ import { UI } from "./draw.js";
 import { buildTree, layout, drawTree, hitButton, buttonsOf } from "./uitree.js";
 import { Api, Run } from "../net/api.js";
 import { Touch } from "./touch.js";
+import { LevelMap } from "./levelmap.js";
 
 let template = null;
 const pointer = { x: -1, y: -1, down: null };
@@ -162,25 +163,31 @@ class PauseWindow extends RetroWindow {
     m.find("RestartButton").onClick = () => this.confirmAsk(this.restartText(), () => this.restart());
     m.find("QuitButton").onClick = () => this.confirmAsk(this.quitText(), () => this.quit());
     this.pauseButton.onClick = () => this.toggle();
+    this.mapButton = makeButton(m.find("ResumeButton"), "LevelMapButton", "Level map", 81, -153, 154, 28, () => this.openMap());
+    m.add(this.mapButton);
     this.page("main");
   }
-  restartText() { return G.prologue ? "Restart the prologue?\n\nThe story will play again\nfrom the school bus arrival." : "Restart this room?\n\nThe current attempt will be lost.\nYou will return to the room entrance."; }
-  quitText() { return G.prologue ? "Quit HypoFangs?\n\nThe prologue will restart\nwhen you launch the game again." : "Quit HypoFangs?\n\nYour current room is saved.\nYou can continue next time."; }
-  toggle() { if (G.level) G.level.togglePause(); else if (G.prologue) G.prologue.togglePause(); }
+  openMap() { if (!G.level) return; if (!G.paused) G.level.setPaused(true); LevelMap.open(); }
+  restartText() { if (G.akari) return "Restart the cutscene?\n\nAkari's conversation and\nmemory will play again."; return G.prologue ? "Restart the prologue?\n\nThe story will play again\nfrom the school bus arrival." : "Restart this room?\n\nThe current attempt will be lost.\nYou will return to the room entrance."; }
+  quitText() { if (G.akari) return "Quit HypoFangs?\n\nThis cutscene will restart\nwhen you return."; return G.prologue ? "Quit HypoFangs?\n\nThe prologue will restart\nwhen you launch the game again." : "Quit HypoFangs?\n\nYour current room is saved.\nYou can continue next time."; }
+  toggle() { if (G.level) G.level.togglePause(); else if (G.prologue) G.prologue.togglePause(); else if (G.akari) G.akari.togglePause(); }
   open() { this.open_ = true; this.page("main"); this.refresh(); }
   hide() { this.open_ = false; }
-  backOrResume() { if (this.current !== "main") this.page("main"); else this.resume(); }
+  backOrResume() { if (LevelMap.IsOpen) { LevelMap.close(); this.page("main"); } else if (this.current !== "main") this.page("main"); else this.resume(); }
   back() { this.backOrResume(); }
-  resume() { if (G.level) G.level.setPaused(false); else if (G.prologue) G.prologue.setPaused(false); this.open_ = false; }
-  restart() { this.open_ = false; if (G.level) G.level.restartFromPause(); else if (G.prologue) G.prologue.restartPrologue(); }
+  resume() { LevelMap.close(); if (G.level) G.level.setPaused(false); else if (G.prologue) G.prologue.setPaused(false); else if (G.akari) G.akari.setPaused(false); this.open_ = false; }
+  restart() { this.open_ = false; if (G.level) G.level.restartFromPause(); else if (G.prologue) G.prologue.restartPrologue(); else if (G.akari) { G.akari.setPaused(false); G.akari.restartSequence(); } }
   quit() { this.open_ = false; G.paused = false; Time.timeScale = 1; Overlays.toMenu(); }
   refresh() {
     const lm = G.level;
     this.win.find("Title").text.text = "HYPOFANGS.EXE  -  Paused";
-    this.main.find("RestartButton").setLabel(G.prologue ? "Restart prologue" : "Restart room");
+    const rb = this.main.find("RestartButton");
+    rb.setLabel(G.akari ? "Restart cutscene" : G.prologue ? "Restart prologue" : "Restart room");
+    rb.rt.pos = [lm ? -81 : 0, -153]; rb.rt.size = [lm ? 154 : 316, 28]; rb.children[0].rt.size = [lm ? 146 : 308, 24];
+    this.mapButton.active = !!lm;
     const room = lm && lm.room;
-    this.main.find("RoomInfoFrame/RoomInfo").text.text = room ? `ROOM ${String(G.roomIndex + 1).padStart(2, "0")}  /  ${room.displayName}\n${lm.EnemiesLeft} targets remaining` : G.prologue ? "MABOROSHI BRIDGE\nStory suspended" : "Session suspended";
-    this.win.find("Status").text.text = G.paused && this.current === "main" ? `${InputPrompts.key(InputPrompts.Pause)} Resume  |  ${G.prologue ? "Story suspended" : "Timer suspended"}` : InputPrompts.MenuHelp;
+    this.main.find("RoomInfoFrame/RoomInfo").text.text = room ? `ROOM ${String(G.roomIndex + 1).padStart(2, "0")}  /  ${room.displayName}\n${lm.EnemiesLeft} targets remaining` : G.akari ? "AMAYOI GARDEN / AKARI\nCutscene suspended" : G.prologue ? "MABOROSHI BRIDGE\nStory suspended" : "Session suspended";
+    this.win.find("Status").text.text = G.paused && this.current === "main" ? `${InputPrompts.key(InputPrompts.Pause)} Resume  |  ${G.akari ? "Cutscene suspended" : G.prologue ? "Story suspended" : "Timer suspended"}` : InputPrompts.MenuHelp;
     this.pauseButton.setLabel(InputPrompts.key(InputPrompts.Pause) + "  Pause");
   }
 }
@@ -204,6 +211,8 @@ export const Overlays = {
     G.onRoomCleared = () => Run.roomCleared();
     G.onRoomStart = () => Run.begin();
     G.onPlayerDeath = () => Run.end().then((r) => (this.result = r));
+    G.onGameComplete = () => { Run.roomCleared(); Run.end().then((r) => (this.result = r)); };
+    G.toMenu = () => this.toMenu();
     Api.refresh().then(() => { if (Api.profile && Run.stake > Api.profile.balance) Run.stake = 0; });
     const params = new URLSearchParams(location.search);
     if (params.has("room")) { LevelStatics.launched = true; this.mode = "game"; G.menuOpen = false; G.loadScene("level1"); return; }
@@ -230,6 +239,7 @@ export const Overlays = {
     const p = refPoint(e);
     pointer.x = p.x; pointer.y = p.y;
     if (e.pointerType === "touch") { G.touch = true; Input.lastDevice = "touch"; }
+    if (LevelMap.IsOpen) { LevelMap.click(p); return; }
     const win = this.activeWindow();
     let btn = null;
     if (win) btn = hitButton(win.overlay.active ? win.win : win.tree, p.x, p.y);
@@ -256,13 +266,14 @@ export const Overlays = {
     if (G.paused) return null;
     const list = [this.pause.pauseButton];
     if (G.prologue) list.push(...this.storyButtons());
+    if (G.akari || levelDialogue()) list.push(this.storyButtons()[0]);
     for (const b of list) { const r = b.rect; if (b.active && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return b; }
     return null;
   },
   storyButtons() {
     if (!this.next) {
       const proto = this.pause.main.find("ResumeButton");
-      this.next = makeButton(proto, "NextDialogueLine", "", -8, 8, 180, 22, () => G.prologue && G.prologue.advanceDialogue());
+      this.next = makeButton(proto, "NextDialogueLine", "", -8, 8, 180, 22, () => { if (G.prologue) G.prologue.advanceDialogue(); else if (G.akari) G.akari.advanceDialogue(); else advanceLevelDialogue(); });
       this.skip = makeButton(proto, "SkipEntirePrologue", "", -8, 36, 180, 22, () => G.prologue && G.prologue.beginGameplay());
       for (const b of [this.next, this.skip]) { b.rt.amin = [1, 0]; b.rt.amax = [1, 0]; b.rt.pivot = [1, 0]; }
     }
@@ -270,6 +281,11 @@ export const Overlays = {
   },
   update() {
     if (!template) return;
+    if (G.level && this.mode === "game" && Input.hit("KeyM", "Tab") && G.level.CanPause !== false) {
+      if (LevelMap.IsOpen) { LevelMap.close(); this.pause.resume(); } else if (G.paused || G.level.CanPause) this.pause.openMap();
+    }
+    LevelMap.update();
+    if (LevelMap.IsOpen) return;
     const win = this.activeWindow();
     if (win) {
       win.hover = hitButton(win.win, pointer.x, pointer.y);
@@ -278,14 +294,47 @@ export const Overlays = {
       if (this.mode === "menu") this.menu.refresh(); else this.pause.refresh();
     }
   },
+  // screen overlays the original puts below the HUD canvas (rage blood edges, order 90 < 100)
+  drawUnderHud() {
+    const X = G.level && G.level.extras;
+    if (X && X.finalIntro) X.finalIntro.drawUnderHud();
+  },
   draw() {
     if (!template) return;
+    if (G.level && G.level.extras.bossDeath && G.level.extras.bossDeath.blackout > 0) UI.rect(0, 0, UI.W, UI.H, `rgba(0,0,0,${G.level.extras.bossDeath.blackout})`);
+    const X = G.level && G.level.extras;
+    if (X && X.finalIntro) X.finalIntro.draw();
+    if (X && X.ending) X.ending.draw();
+    if (!G.prologue) for (const b of Speech.boxes) { const s = b.speech && b.speech(); if (s) drawSpeech(s); }
+    if (G.level && G.level.extras.tutorial) G.level.extras.tutorial.draw();
+    if (G.akari && this.mode === "game") this.drawAkari();
     if (G.prologue && this.mode === "game") this.drawPrologue();
+    if (this.mode === "game" && levelDialogue()) this.drawLevelNext();
     if (this.mode === "menu") { this.menu.pauseButton.active = false; this.menu.draw(true); return; }
     this.pause.refresh();
     this.pause.pauseButton.active = !G.paused;
     this.pause.draw(G.paused && this.pause.open_);
-    if (this.result && G.level && G.level.player && G.level.player.Dead) this.drawResult();
+    LevelMap.draw();
+    if (this.result && G.level && G.level.player && (G.level.player.Dead || (X && X.ending && X.ending.results))) this.drawResult();
+  },
+  drawAkari() {
+    const A = G.akari;
+    if (A.flash > 0) UI.rect(0, 0, UI.W, UI.H, `rgba(255,224,217,${A.flash / 0.12 * 0.18})`);
+    if (A.black > 0) UI.rect(0, 0, UI.W, UI.H, `rgba(0,0,0,${A.black})`);
+    if (A.narration) {
+      const lines = UI.wrap(A.narration, UI.W - 128 / 3, 56 / 3, "Pixels");
+      UI.text(lines.join("\n"), UI.W / 2, UI.H / 2, 56 / 3, WHITE, 1, "Pixels", 1, null, 1.25);
+    }
+    const [next] = this.storyButtons();
+    next.setLabel(InputPrompts.key(InputPrompts.Accept) + " Next line");
+    layout(next, 0, 0, UI.W, UI.H, UI.H);
+    if (!G.paused) drawTree(next, { pressed: pointer.down && pointer.down.btn === next ? next : null });
+  },
+  drawLevelNext() {
+    const [next] = this.storyButtons(), E = G.level.extras.ending;
+    next.setLabel(InputPrompts.key(InputPrompts.Accept) + (E && E.CreditsPlaying ? " Next credit" : " Next line"));
+    layout(next, 0, 0, UI.W, UI.H, UI.H);
+    if (!G.paused) drawTree(next, { pressed: pointer.down && pointer.down.btn === next ? next : null });
   },
   drawResult() {
     const r = this.result;
@@ -315,13 +364,28 @@ export const Overlays = {
   },
 };
 
+// DialogueNavigation: the Next line button shows during boss farewells, the final intro and the ending while a line is visible
+function levelDialogue() {
+  const L = G.level;
+  if (!L || G.paused || !(L.bossFarewellPlaying || L.finalIntroPlaying || L.finalEndingPlaying)) return false;
+  if (L.finalEndingPlaying && L.extras.ending.CreditsPlaying) return true;
+  for (const b of Speech.boxes) if (b.Visible) return true;
+  return false;
+}
+function advanceLevelDialogue() {
+  const L = G.level;
+  if (!L || G.paused) return;
+  if (L.finalEndingPlaying) { L.extras.ending.advanceDialogue(); return; }
+  for (const b of Speech.boxes) if (b.Visible && b.advance) { b.advance(); return; }
+}
+
 // speech box: black panel with coloured, letter-by-letter text and a tail toward the speaker
 function drawSpeech(s) {
   const cam = Camera.main;
   if (!cam) return;
   const cp = cam.node.position, h = cam.orthographicSize, w = h * cam.aspect;
   const sx = (s.at.x - (cp.x - w)) / (2 * w) * UI.W, sy = UI.H - (s.at.y - (cp.y - h)) / (2 * h) * UI.H;
-  const size = 56 / 3, padX = 6, padY = 4;
+  const size = s.size || 56 / 3, padX = s.size ? 12 : 6, padY = s.size ? 8 : 4;
   const lines = UI.wrap(s.text, UI.W * 0.68 - padX * 2, size, "Pixels");
   UI.font(size, "Pixels");
   const c = UI.ctx;
