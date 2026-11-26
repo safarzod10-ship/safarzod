@@ -211,6 +211,8 @@ export const Overlays = {
     G.onRoomCleared = () => Run.roomCleared();
     G.onRoomStart = () => Run.begin();
     G.onPlayerDeath = () => Run.end().then((r) => (this.result = r));
+    G.onGameComplete = () => { Run.roomCleared(); Run.end().then((r) => (this.result = r)); };
+    G.toMenu = () => this.toMenu();
     Api.refresh().then(() => { if (Api.profile && Run.stake > Api.profile.balance) Run.stake = 0; });
     const params = new URLSearchParams(location.search);
     if (params.has("room")) { LevelStatics.launched = true; this.mode = "game"; G.menuOpen = false; G.loadScene("level1"); return; }
@@ -264,14 +266,14 @@ export const Overlays = {
     if (G.paused) return null;
     const list = [this.pause.pauseButton];
     if (G.prologue) list.push(...this.storyButtons());
-    if (G.akari) list.push(this.storyButtons()[0]);
+    if (G.akari || levelDialogue()) list.push(this.storyButtons()[0]);
     for (const b of list) { const r = b.rect; if (b.active && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return b; }
     return null;
   },
   storyButtons() {
     if (!this.next) {
       const proto = this.pause.main.find("ResumeButton");
-      this.next = makeButton(proto, "NextDialogueLine", "", -8, 8, 180, 22, () => { if (G.prologue) G.prologue.advanceDialogue(); else if (G.akari) G.akari.advanceDialogue(); });
+      this.next = makeButton(proto, "NextDialogueLine", "", -8, 8, 180, 22, () => { if (G.prologue) G.prologue.advanceDialogue(); else if (G.akari) G.akari.advanceDialogue(); else advanceLevelDialogue(); });
       this.skip = makeButton(proto, "SkipEntirePrologue", "", -8, 36, 180, 22, () => G.prologue && G.prologue.beginGameplay());
       for (const b of [this.next, this.skip]) { b.rt.amin = [1, 0]; b.rt.amax = [1, 0]; b.rt.pivot = [1, 0]; }
     }
@@ -292,19 +294,28 @@ export const Overlays = {
       if (this.mode === "menu") this.menu.refresh(); else this.pause.refresh();
     }
   },
+  // screen overlays the original puts below the HUD canvas (rage blood edges, order 90 < 100)
+  drawUnderHud() {
+    const X = G.level && G.level.extras;
+    if (X && X.finalIntro) X.finalIntro.drawUnderHud();
+  },
   draw() {
     if (!template) return;
     if (G.level && G.level.extras.bossDeath && G.level.extras.bossDeath.blackout > 0) UI.rect(0, 0, UI.W, UI.H, `rgba(0,0,0,${G.level.extras.bossDeath.blackout})`);
+    const X = G.level && G.level.extras;
+    if (X && X.finalIntro) X.finalIntro.draw();
+    if (X && X.ending) X.ending.draw();
     if (!G.prologue) for (const b of Speech.boxes) { const s = b.speech && b.speech(); if (s) drawSpeech(s); }
     if (G.level && G.level.extras.tutorial) G.level.extras.tutorial.draw();
     if (G.akari && this.mode === "game") this.drawAkari();
     if (G.prologue && this.mode === "game") this.drawPrologue();
+    if (this.mode === "game" && levelDialogue()) this.drawLevelNext();
     if (this.mode === "menu") { this.menu.pauseButton.active = false; this.menu.draw(true); return; }
     this.pause.refresh();
     this.pause.pauseButton.active = !G.paused;
     this.pause.draw(G.paused && this.pause.open_);
     LevelMap.draw();
-    if (this.result && G.level && G.level.player && G.level.player.Dead) this.drawResult();
+    if (this.result && G.level && G.level.player && (G.level.player.Dead || (X && X.ending && X.ending.results))) this.drawResult();
   },
   drawAkari() {
     const A = G.akari;
@@ -316,6 +327,12 @@ export const Overlays = {
     }
     const [next] = this.storyButtons();
     next.setLabel(InputPrompts.key(InputPrompts.Accept) + " Next line");
+    layout(next, 0, 0, UI.W, UI.H, UI.H);
+    if (!G.paused) drawTree(next, { pressed: pointer.down && pointer.down.btn === next ? next : null });
+  },
+  drawLevelNext() {
+    const [next] = this.storyButtons(), E = G.level.extras.ending;
+    next.setLabel(InputPrompts.key(InputPrompts.Accept) + (E && E.CreditsPlaying ? " Next credit" : " Next line"));
     layout(next, 0, 0, UI.W, UI.H, UI.H);
     if (!G.paused) drawTree(next, { pressed: pointer.down && pointer.down.btn === next ? next : null });
   },
@@ -347,13 +364,28 @@ export const Overlays = {
   },
 };
 
+// DialogueNavigation: the Next line button shows during boss farewells, the final intro and the ending while a line is visible
+function levelDialogue() {
+  const L = G.level;
+  if (!L || G.paused || !(L.bossFarewellPlaying || L.finalIntroPlaying || L.finalEndingPlaying)) return false;
+  if (L.finalEndingPlaying && L.extras.ending.CreditsPlaying) return true;
+  for (const b of Speech.boxes) if (b.Visible) return true;
+  return false;
+}
+function advanceLevelDialogue() {
+  const L = G.level;
+  if (!L || G.paused) return;
+  if (L.finalEndingPlaying) { L.extras.ending.advanceDialogue(); return; }
+  for (const b of Speech.boxes) if (b.Visible && b.advance) { b.advance(); return; }
+}
+
 // speech box: black panel with coloured, letter-by-letter text and a tail toward the speaker
 function drawSpeech(s) {
   const cam = Camera.main;
   if (!cam) return;
   const cp = cam.node.position, h = cam.orthographicSize, w = h * cam.aspect;
   const sx = (s.at.x - (cp.x - w)) / (2 * w) * UI.W, sy = UI.H - (s.at.y - (cp.y - h)) / (2 * h) * UI.H;
-  const size = 56 / 3, padX = 6, padY = 4;
+  const size = s.size || 56 / 3, padX = s.size ? 12 : 6, padY = s.size ? 8 : 4;
   const lines = UI.wrap(s.text, UI.W * 0.68 - padX * 2, size, "Pixels");
   UI.font(size, "Pixels");
   const c = UI.ctx;

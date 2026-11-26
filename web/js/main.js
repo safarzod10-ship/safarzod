@@ -16,6 +16,7 @@ import "./game/prologue.js";
 import { EncounterTutorial } from "./game/tutorial.js";
 import { BossDeathSequence } from "./game/bossdeath.js";
 import { beginAkariStory, resumePendingStory } from "./game/akari.js";
+import { FinalBossIntro, FinalBossEnding, stageFallen } from "./game/final.js";
 import { Speech } from "./game/prologue.js";
 import { HUD } from "./ui/hud.js";
 import { UI } from "./ui/draw.js";
@@ -35,7 +36,12 @@ G.runtime = Runtime;
 G.beginAkariStory = beginAkariStory;
 G.akariResume = resumePendingStory;
 G.bossDeath = { tryStart: (b) => BossDeathSequence.tryStart(b) };
-G.makeLevelExtras = (lm) => { lm.extras.tutorial = new EncounterTutorial(); lm.node.addComponent(lm.extras.tutorial); };
+G.stageFallen = stageFallen;
+G.makeLevelExtras = (lm) => {
+  lm.extras.tutorial = new EncounterTutorial(); lm.node.addComponent(lm.extras.tutorial);
+  lm.extras.finalIntro = new FinalBossIntro(); lm.node.addComponent(lm.extras.finalIntro);
+  lm.extras.ending = new FinalBossEnding(); lm.node.addComponent(lm.extras.ending);
+};
 window.__hypo = G;
 
 function safeInsets() {
@@ -158,7 +164,7 @@ function render() {
   drawWorld(R, view, true);
   R.end();
   UI.begin(uiCtx, uiCanvas.width, uiCanvas.height);
-  if (G.level) G.hud.draw(uiCtx);
+  if (G.level) { Overlays.drawUnderHud(uiCtx); G.hud.draw(uiCtx); }
   Overlays.draw(uiCtx);
   Touch.draw(uiCtx);
 }

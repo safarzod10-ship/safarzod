@@ -1,0 +1,156 @@
+HYPOFANGS - THIRD-PARTY ASSET NOTICES
+Reviewed 1 November 2026
+
+These notices identify third-party contributors; they do not replace individual asset licenses.
+
+CraftPix.net
+CraftPix file licenses
+https://craftpix.net/file-licenses/
+Commercial embedded game use permitted under applicable free/premium terms; no stock redistribution. Premium account acquisition not audited.
+
+ZeggyGames
+Creator project-use terms
+https://zegley.itch.io/strawhat
+Commercial use and adaptation permitted; no asset sharing/resale or AI training. Local StrawHat archive supplied by user.
+
+Banuar
+Creator project-use terms
+https://banuar.itch.io/wanderer
+Commercial use and character editing permitted; no asset resale. Credit appreciated.
+
+jasontomlee
+CC BY 4.0; publisher additionally disallows asset redistribution
+https://jasontomlee.itch.io/blood-fx
+Include creator, title, source, CC BY 4.0 link and changes. Sliced, tinted, scaled and flattened into effects/pools.
+
+jasontomlee
+Creator commercial-use terms
+https://jasontomlee.itch.io/smoke-fx
+Commercial game use and modification permitted; no direct copying/reselling as stock assets.
+
+Frostwindz
+Supplied Asset License Agreement
+https://frostwindz.itch.io/pixel-art-slashes
+Embedded commercial use and edits permitted. No standalone redistribution, resale or AI training; optional attribution.
+
+Comp-3 Interactive
+Creator permission in release-page comments
+https://comp3interactive.itch.io/retro-windows-gui
+Creator permits use and says credit is optional. This covers the GUI artwork; it does not establish the separate font license.
+
+blueberry
+Supplied Anime School Backgrounds Asset License
+https://blueberry-assets.itch.io/school-backgrounds
+Commercial embedded use and modification permitted, optional attribution. Bundled license discloses generative-AI origin. No asset resale/redistribution or AI training.
+
+overcrafted
+Creator vehicle-use permission
+https://overcrafted.itch.io/free-paid-vehicle-car-sprites-
+Creator permits use and modification without mandatory attribution. School Bus and Dodge Ram Rebel TRX.
+
+YukiPixels / Yūki
+CC BY-SA 4.0 (embedded font metadata confirms version 1.6)
+https://yukipixels.itch.io/boldpixels
+Credit: BoldPixels Font by Yūki (@YukiPixels). Link https://creativecommons.org/licenses/by-sa/4.0/ . Original glyph design; TMP/SDF conversion noted. Font derivatives retain applicable ShareAlike terms.
+
+Google Corporation; Red Hat, Inc.
+SIL OFL 1.1
+https://openfontlicense.org/
+Bundled LiberationSans - OFL.txt carries original notices; retained in build notices.
+
+Kenney
+CC0 1.0
+https://kenney.nl/assets/impact-sounds
+Optional creator credit included. Selected recordings layered/trimmed into effects; local pack license retained.
+
+Universfield
+Pixabay Content License
+https://pixabay.com/users/universfield-28281460/
+Punch (140236) and Punch 03 (352040) release pages verified. Trimmed into impacts; attribution optional.
+
+Derrickmckinnon
+Pixabay Content License
+https://pixabay.com/sound-effects/film-special-effects-muscle-truck-241621/
+Source recording verified; used for truck engine, edited playback/pitch/fades.
+
+joe_anderson22 (Freesound), via freesound_community / Pixabay
+Pixabay Content License
+https://pixabay.com/sound-effects/film-special-effects-punch-hit-1-47483/
+Original Book_Impact.mp3 hash exactly matches supplied freesound_community-punch-hit-1-47483.mp3. Game uses onset-trimmed WAV.
+
+Karl Casey @ White Bat Audio
+Creator royalty-free project-use terms
+https://whitebataudio.itch.io/free-cyberpunk-loop-pack
+Credit: Music by Karl Casey @ White Bat Audio. No separate soundtrack distribution. Target music_casualty_1 matches local Casualty LOOP 1 waveform (first 8s r=0.9986475 after Vorbis encoding). Exact boss-track match not established.
+
+Project sound design; Kenney source samples
+Procedural audio + CC0 source recordings
+https://kenney.nl/assets/impact-sounds
+Documented by work/build-combat-audio.py and CombatV2/Licenses/LICENSE-AND-SOURCES.md. No source recording ownership invented.
+
+UNRESOLVED SUPPLIED ASSET PROVENANCE
+The original creators/licenses of these files have not been established:
+
+Gaku character artwork - Jotem spritesheet.png [Active]
+Creator and commercial-use license; the ZIP contains only the sheet and Aseprite file.
+
+Boss music - music_casualty_2.ogg [Active]
+Exact original recording/loop and source license. Casualty LOOP 1 was identified for gameplay only.
+
+Interface font - RetroWindows.ttf [Active]
+Actual font family is pix M 8pt; metadata has no creator/license. GUI artwork permission does not establish font rights.
+
+Akari sigh - heavy-sigh_A#_minor.wav [Active]
+Exact download/source license. Candidate: samplefocus.com/samples/heavy-sigh, but exact file and applicable download terms unconfirmed.
+
+Bus bell - london-bus-bells-machine-fx.wav [Active]
+Original creator, source URL and commercial-use terms.
+
+Bus approach/departure - Bus_Arrival_04-08_2p825s.wav [Active]
+Original bus-is-coming-and-drive-thrue-63336 source known from processing record; release page inaccessible during audit, creator/terms not reverified.
+
+Bus stopped engine - Bus_DropoffBridge_08-25_2s.wav [Active]
+Same source as bus approach; original creator/terms not reverified.
+
+Dagger / knife / shuriken contact - dagger & knife & shuriken stab.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Launch / throw / missed dagger swing - Knife, held-object and arrow launch shuriken throw.wav [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Zenji and Gaku katana impact - zenji and gaku katana impact.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+All blade swings - zenji and gaku katana swing.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Gunshots - gunfire.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Throwable pickup - pickup knives.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Missed punch - punch swing if no impact.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Glass break - glass-breaking.mp3 [Active]
+Original creator, download URL and license were not supplied with this recording.
+
+Superseded punch swing - punch swing.mp3 [Retained, not played]
+Original creator, download URL and license were not supplied with this recording.
+
+Superseded shield-bash swing - shield bash swing.mp3 [Retained, not played]
+Original creator, download URL and license were not supplied with this recording.
+
+Notifications, switches, exits and healing - blip.wav [Active]
+Original creation script or third-party source/license record not found. This may be a project-generated sound; no external creator is assumed.
+
+Door break - door.wav [Active]
+Original creation script or third-party source/license record not found. This may be a project-generated sound; no external creator is assumed.
+
+Laser hit - laser.wav [Active]
+Original creation script or third-party source/license record not found. This may be a project-generated sound; no external creator is assumed.
+
+Some project-specific legacy effect textures and audio lack retained origin records. Full per-file audit is maintained in project Documentation/Credits.
+
+No endorsement by the credited creators is implied.
