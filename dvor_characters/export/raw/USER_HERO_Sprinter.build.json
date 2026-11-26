@@ -1,0 +1,238 @@
+{
+  "character": "USER_HERO_Sprinter",
+  "source_mesh": "user_meshes/v2/sprinter.glb",
+  "scale": 1.5,
+  "import": {
+    "verts_imported": 3629,
+    "verts_welded": 2501
+  },
+  "cut": null,
+  "fist_connected_to_torso_after": {
+    "L": "0/127",
+    "R": "0/128"
+  },
+  "lod0": {
+    "object": "USER_HERO_Sprinter_LOD0",
+    "triangles": 4982,
+    "vertices_blender": 2501,
+    "materials": 1,
+    "max_influences": 4,
+    "unweighted_vertices": 0,
+    "bbox_m": [
+      0.847,
+      0.683,
+      1.497
+    ]
+  },
+  "skin": {
+    "constrained_vertices": 648,
+    "unweighted_fixed": 0,
+    "rigid_pieces": [
+      {
+        "verts": 402,
+        "bone": "head",
+        "centre_z_m": 1.291
+      },
+      {
+        "verts": 84,
+        "bone": "head",
+        "centre_z_m": 1.334
+      },
+      {
+        "verts": 81,
+        "bone": "head",
+        "centre_z_m": 1.205
+      },
+      {
+        "verts": 81,
+        "bone": "head",
+        "centre_z_m": 1.205
+      }
+    ]
+  },
+  "bones": 18,
+  "texture": {
+    "source": [
+      4096,
+      4096
+    ],
+    "delivered": [
+      1024,
+      1024
+    ],
+    "path": "textures/USER_HERO_Sprinter_basecolor_1024.jpg",
+    "bytes": 176380
+  },
+  "clips": {
+    "Idle": {
+      "duration_s": 2.0,
+      "loop": true
+    },
+    "Run": {
+      "duration_s": 0.533,
+      "loop": true,
+      "speed_mps": 3.15,
+      "source": "CMU mocap 09_05",
+      "source_frames_120fps": [
+        11,
+        101
+      ],
+      "source_speed_mps": 3.475,
+      "hips_stride_speed_mps": 3.663,
+      "seam_mismatch_deg_before_fix": 3.85,
+      "tempo": 1.4,
+      "retarget_max_error_deg": 0.0,
+      "hips_scale": 0.7496,
+      "loop_check": {
+        "ok": true,
+        "object": "USER_HERO_Sprinter_Rig",
+        "action": "Run",
+        "frames": [
+          1,
+          17
+        ],
+        "loops": true,
+        "pops": [],
+        "hitches": [
+          {
+            "bone": "forearm.R",
+            "deg_per_frame_in": 37.543,
+            "deg_per_frame_out": 21.269,
+            "kind": "kink"
+          },
+          {
+            "bone": "hand.R",
+            "deg_per_frame_in": 37.543,
+            "deg_per_frame_out": 21.269,
+            "kind": "kink"
+          },
+          {
+            "bone": "forearm.L",
+            "deg_per_frame_in": 36.677,
+            "deg_per_frame_out": 21.91,
+            "kind": "kink"
+          },
+          {
+            "bone": "hand.L",
+            "deg_per_frame_in": 36.677,
+            "deg_per_frame_out": 21.91,
+            "kind": "kink"
+          },
+          {
+            "bone": "upper_arm.R",
+            "deg_per_frame_in": 28.119,
+            "deg_per_frame_out": 16.466,
+            "kind": "kink"
+          },
+          {
+            "bone": "upper_arm.L",
+            "deg_per_frame_in": 27.336,
+            "deg_per_frame_out": 17.189,
+            "kind": "kink"
+          },
+          {
+            "bone": "thigh.L",
+            "deg_per_frame_in": 13.466,
+            "deg_per_frame_out": 9.545,
+            "kind": "kink"
+          },
+          {
+            "bone": "head",
+            "deg_per_frame_in": 1.738,
+            "deg_per_frame_out": 1.837,
+            "kind": "kink"
+          }
+        ],
+        "note": "speed changes across the seam: match the tangents (Graph Editor, auto-clamped/cyclic) or re-pose frame 2/N-1"
+      },
+      "foot_contact": {
+        "stance_frames": 7,
+        "slide_max_mps": 0.0,
+        "slide_mean_mps": 0.0,
+        "slide_mean_pct_of_speed": 0.0,
+        "before_lock": {
+          "stance_frames": 7,
+          "slide_max_mps": 0.818,
+          "slide_mean_mps": 0.531,
+          "slide_mean_pct_of_speed": 16.8
+        },
+        "mesh_floor": {
+          "lowest_over_cycle_m": -0.0001,
+          "stance_sole_height_m": [
+            -0.0001,
+            0.0114
+          ],
+          "highest_flight_m": 0.0396
+        }
+      },
+      "arms_vs_torso": {
+        "arm_in_torso_frames_before": 6,
+        "after": 0,
+        "of": 32,
+        "style": {
+          "phase_source": "thigh pitch R-L",
+          "abd": 17,
+          "off": 10,
+          "amp": 60,
+          "bend": 92,
+          "bend_var": 20,
+          "inward": 3,
+          "wrist": 45
+        },
+        "legs": {
+          "max_lateral_fix_m": 0.105,
+          "max_foot_yaw_fix_deg": 28.1
+        },
+        "torso_centering": {
+          "pelvis": {
+            "side_tilt_deg": 3.58,
+            "turn_deg": -3.17
+          },
+          "chest": {
+            "side_tilt_deg": -1.24,
+            "turn_deg": -2.02
+          },
+          "head": {
+            "side_tilt_deg": 3.06,
+            "turn_deg": 6.93
+          },
+          "hips_shift_m": -0.0
+        },
+        "knees": {
+          "max_knee_move_m": 0.168,
+          "inner_knee_gap": {
+            "rest_m": 0.045,
+            "run_min_m": 0.015
+          }
+        }
+      }
+    },
+    "Attack": {
+      "duration_s": 0.533,
+      "loop": false,
+      "event_hit_s": 0.233
+    },
+    "Ability": {
+      "duration_s": 0.8,
+      "loop": false,
+      "event_cast_s": 0.3
+    },
+    "Hit": {
+      "duration_s": 0.4,
+      "loop": false
+    },
+    "Defeat": {
+      "duration_s": 1.567,
+      "loop": false,
+      "hold_last_frame": true
+    },
+    "Victory": {
+      "duration_s": 1.167,
+      "loop": true
+    }
+  },
+  "files": {
+    "blend_bytes": 542440,
+    "raw_glb_bytes": 631892
+  }
+}

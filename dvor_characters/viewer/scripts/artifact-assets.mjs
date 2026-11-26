@@ -17,7 +17,7 @@ fs.mkdirSync(OUT, { recursive: true });
 await MeshoptDecoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
 const manifest = {};
-for (const id of ['MAP_Dvor', 'USER_CH_Technik', 'USER_CH_Sprinter', 'USER_CH_Tank', 'PROPS']) {
+for (const id of ['MAP_Dvor', 'USER_HERO_Technik', 'USER_HERO_Sprinter', 'USER_HERO_Tank', 'USER_HERO_Sniper', 'USER_HERO_Medic', 'PROPS']) {
   const doc = await io.read(path.join(DIST, `${id}.glb`));
   for (const ext of doc.getRoot().listExtensionsUsed()) if (ext.extensionName === 'EXT_meshopt_compression') ext.dispose();
   const out = path.join(OUT, `${id}.glb`);

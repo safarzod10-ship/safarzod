@@ -4,7 +4,7 @@
  * fall and celebrate, so every clip and LOD switch is exercised at once.
  *
  * URL params:
- *   set=user|proc  user = the supplied (Tripo) models USER_CH_*, proc = procedural fallback CH_*
+ *   the customer's five heroes USER_HERO_* (second Tripo set)
  *   count=3        number of characters (cycles through the three; >3 = stress test)
  *   tex=auto|png|ktx2   texture variant (auto = KTX2 when the GPU supports a compressed format)
  *   lod=auto|0|1   LOD policy;  lodpx=150  switch height in CSS px for lod=auto
@@ -30,7 +30,7 @@ import { COURTYARD, hitsCollider, insideCourtyard, loadArena, type Collider } fr
 
 const q = new URLSearchParams(location.search);
 const COUNT = Math.max(1, Number(q.get('count') ?? 3));
-const PREFIX = (q.get('set') ?? 'user') === 'user' ? 'USER_' : '';
+const PREFIX = 'USER_';
 const LOD_MODE = q.get('lod') ?? 'auto';
 const LOD_PX = Number(q.get('lodpx') ?? 150);
 const LAMBERT = q.get('lambert') === '1';

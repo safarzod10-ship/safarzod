@@ -1,17 +1,18 @@
 /**
- * ДВОР — Telegram Mini App shell (from the customer's 4-screen mockup, ref/ui_mockup.png).
- * Screens: Главная (tab), Герой (hero select), Задания / Рейтинг (empty tabs), Поиск боя, Бой.
- * Character pictures come from the mockup (public/ui/); the selected hero stands on the home screen as
- * its 3D model. A boot screen loads everything (models, images, fonts) before the first screen shows.
- * The search is simulated; the battle is «Царь двора» 3 на 3 against bots (game/match.ts).
+ * ДВОР — Telegram Mini App shell (from the customer's mockups).
+ * Screens: Главная (the selected hero's menu art), Герой (5 heroes), Задания (empty), Рейтинг (rank
+ * ladder, level, match history), Поиск боя, Бой. The splash loads everything (models, images, fonts)
+ * before the first screen shows. The search is simulated; the battle is «Царь двора» 3 на 3 against
+ * bots (game/match.ts) whose skill follows the player's rank (progress.ts).
  */
 import './app.css';
-import { HEROES, PROFILE, STAT_NAMES, heroById, type HeroId } from './data';
-import { ICONS, ROLE_ICON, STAT_ICONS } from './icons';
+import { HEROES, STAT_NAMES, heroById, type HeroId } from './data';
+import { ICONS, ROLE_ICON, STAT_ICONS, rankBadge } from './icons';
 import { initTelegram, setBack, haptic } from './tg';
 import { startBattle, type Battle } from './battle';
 import { preloadAll } from './assets';
-import { createHomeStage } from './home3d';
+import { lineup } from './game/match';
+import { RANKS, levelOf, loadProfile, nextRank, rankOf } from './progress';
 
 type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle';
 const TABS: { id: Screen; label: string; icon: string }[] = [
@@ -53,7 +54,7 @@ function go(s: Screen): void {
   tabbar.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === s)));
   setBack(tabbed ? null : () => go('home'));
   ({ home, heroes, tasks: () => empty('Задания', 'Ежедневные задания появятся здесь.'),
-    rating: () => empty('Рейтинг', 'Таблица лучших игроков появится здесь.'), search, battle })[s]();
+    rating, search, battle })[s]();
 }
 
 const backBtn = () => `<button type="button" class="back" aria-label="Назад">${ICONS.back}</button>`;
@@ -62,16 +63,18 @@ function bindBack(): void {
 }
 
 // ------------------------------------------------------------------ Главная
+const rankChip = (): string => {
+  const p = loadProfile(), r = rankOf(p.trophies), lv = levelOf(p.xp);
+  return `<div class="rank">
+      <span class="rank-badge">${rankBadge(r.color, r.dark)}</span>
+      <span class="rank-text"><b>${r.name}</b><span>${ICONS.trophy}${p.trophies.toLocaleString('ru-RU')}<small>Ур. ${lv.level}</small></span></span>
+    </div>`;
+};
 function home(): void {
   const h = heroById(selected);
   view.innerHTML = `
-    <div class="home-art" role="img" aria-label="ДВОР" style="background-image:url(ui/menu_bg.jpg)"></div>
-    <div class="home-spot" aria-hidden="true"></div>
-    <div class="home-stage" aria-label="${h.name}"></div>
-    <div class="rank">
-      <span class="rank-badge">${ICONS.rank}</span>
-      <span class="rank-text"><b>${PROFILE.rank}</b><span>${ICONS.trophy}${PROFILE.trophies.toLocaleString('ru-RU')}</span></span>
-    </div>
+    <div class="home-art" role="img" aria-label="ДВОР — ${h.name}" style="background-image:url(${h.menu})"></div>
+    ${rankChip()}
     <div class="home-bottom">
       <div class="home-hero">
         <span class="home-hero-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
@@ -81,8 +84,6 @@ function home(): void {
     </div>`;
   view.querySelector('#play')!.addEventListener('click', () => { haptic('medium'); go('search'); });
   view.querySelector('#change')!.addEventListener('click', () => { haptic('light'); go('heroes'); });
-  const stage = createHomeStage(view.querySelector<HTMLElement>('.home-stage')!, selected);
-  cleanup = () => stage.dispose();
 }
 
 // ------------------------------------------------------------------ Выбор героя
@@ -90,7 +91,7 @@ function heroes(): void {
   previewHero = selected;
   view.innerHTML = `
     ${backBtn()}
-    <header class="sel-head"><h1>Выбор героя</h1><p>Выбери одного из трёх героев.<br>Каждый играет свою роль в команде.</p></header>
+    <header class="sel-head"><h1>Выбор героя</h1><p>Пять героев — у каждого своя роль в команде.</p></header>
     <div class="cards" role="radiogroup" aria-label="Герой">${HEROES.map((h) => `
       <button type="button" class="card" role="radio" data-hero="${h.id}">
         <img src="${h.card}" alt="">
@@ -102,13 +103,14 @@ function heroes(): void {
   const render = () => {
     const h = heroById(previewHero);
     view.querySelectorAll<HTMLButtonElement>('.card').forEach((c) => c.setAttribute('aria-checked', String(c.dataset.hero === h.id)));
-    detail.className = `detail ${h.detail === h.card ? 'portrait-card' : ''}`;
+    detail.className = 'detail portrait-card';
     detail.innerHTML = `
-      <img class="detail-img" src="${h.detail}" alt="">
+      <img class="detail-img" src="${h.card}" alt="">
       <div class="detail-body">
         <h2>${h.name}</h2>
         <p class="role">${ROLE_ICON[h.roleIcon]}<span>${h.role}</span></p>
         <p class="desc">${h.text}</p>
+        <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Кнопка 1', 'Кнопка 2'][i]}</b> ${t}</li>`).join('')}</ul>
         <h3>Характеристики (${STAT_NAMES.length})</h3>
         <ul class="stats">${STAT_NAMES.map((n, i) => `
           <li>${STAT_ICONS[i]}<span>${n}</span><span class="pips" aria-label="${h.stats[i]} из 5">${'<i class="on"></i>'.repeat(h.stats[i])}${'<i></i>'.repeat(5 - h.stats[i])}</span></li>`).join('')}
@@ -132,14 +134,38 @@ function heroes(): void {
   render();
 }
 
-// ------------------------------------------------------------------ Задания / Рейтинг (пока пустые)
+// ------------------------------------------------------------------ Задания (пока пустые)
 function empty(title: string, text: string): void {
   view.innerHTML = `<div class="empty"><h1>${title}</h1><p>${text}</p></div>`;
 }
 
+// ------------------------------------------------------------------ Рейтинг: ранги, уровень, история
+function rating(): void {
+  const p = loadProfile(), r = rankOf(p.trophies), nx = nextRank(p.trophies), lv = levelOf(p.xp);
+  const toNext = nx ? Math.round((100 * (p.trophies - r.min)) / (nx.min - r.min)) : 100;
+  const ago = (t: number) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : `${Math.round(m / 1440)} дн назад`; };
+  view.innerHTML = `
+    <section class="prog">
+      <div class="prog-head">
+        <span class="prog-badge">${rankBadge(r.color, r.dark)}</span>
+        <div><h1>${r.name}</h1><p>${ICONS.trophy}<b>${p.trophies}</b>${nx ? ` · до «${nx.name}» ${nx.min - p.trophies}` : ' · высший ранг'}</p>
+          <i class="prog-bar"><s style="width:${toNext}%"></s></i></div>
+      </div>
+      <div class="prog-stats">
+        <span><b>${lv.level}</b>уровень</span><span><b>${p.games}</b>боёв</span><span><b>${p.games ? Math.round((100 * p.wins) / p.games) : 0}%</b>побед</span><span><b>${p.kills}</b>выбито</span>
+      </div>
+      <p class="prog-lv">Уровень ${lv.level}: ${lv.into} / ${lv.need} опыта<i class="prog-bar xp"><s style="width:${Math.round((100 * lv.into) / lv.need)}%"></s></i></p>
+      <h2>Ранги</h2>
+      <ol class="ladder">${RANKS.map((x) => `<li class="${x.name === r.name ? 'me' : p.trophies >= x.min ? 'done' : ''}"><span class="lb">${rankBadge(x.color, x.dark)}</span><span>${x.name}</span><b>${x.min}</b></li>`).reverse().join('')}</ol>
+      <h2>Последние бои</h2>
+      ${p.history.length ? `<ul class="history">${p.history.map((m) => `<li class="${m.result}"><img src="${heroById(m.hero).card}" alt=""><span><b>${m.result === 'win' ? 'Победа' : m.result === 'lose' ? 'Поражение' : 'Ничья'}</b> ${m.score[0]}:${m.score[1]} · ${ago(m.t)}</span><em>${m.trophies > 0 ? '+' : ''}${m.trophies}</em></li>`).join('')}</ul>` : '<p class="muted">Сыграй первый бой — он появится здесь.</p>'}
+    </section>`;
+}
+
 // ------------------------------------------------------------------ Поиск боя (симуляция)
+let nextBlue: HeroId[] = [];
 function search(): void {
-  const team = [selected, ...HEROES.map((h) => h.id).filter((id) => id !== selected)];
+  const team = (nextBlue = lineup(selected));
   view.innerHTML = `
     <div class="search-bg" style="background-image:url(ui/search_bg.jpg)"></div>
     ${backBtn()}
@@ -177,7 +203,7 @@ function search(): void {
 
 // ------------------------------------------------------------------ Бой
 function battle(): void {
-  let b: Battle | null = startBattle(view, selected, () => go('home'));
+  let b: Battle | null = startBattle(view, selected, () => go('home'), nextBlue.length ? nextBlue : undefined);
   cleanup = () => { b?.destroy(); b = null; };
 }
 
@@ -187,6 +213,11 @@ const TIPS = [
   'Дым Техника замедляет врагов внутри облака',
   'Гаражная дверь Танка держит выстрелы спереди',
   'Пластинки Спринтер отскакивают от стен',
+  'Растяжка Снайпера оглушает того, кто на неё наступит',
+  'Аптечка Медика лечит всех рядом, госпиталь — всех в круге',
+  'Атака идёт сама — следи за позицией и кнопками',
+  'Двойной тап под джойстиком — рывок',
+  'Побеждай, чтобы подняться из Бронзы в Серебро',
   'Выбитый игрок возвращается через 3 секунды',
 ];
 /**

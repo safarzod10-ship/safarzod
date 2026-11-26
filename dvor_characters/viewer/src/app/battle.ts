@@ -1,7 +1,9 @@
 /**
- * Battle screen: «Царь двора» 3 на 3 against bots (game/match.ts) on the real 3D arena and models,
- * with the HUD from the mockup: joystick, attack (tap = auto-aim, drag = aim), two hero abilities,
- * dash, score / timer, HP bars, damage numbers, kill feed and the result screen.
+ * Battle screen: «Царь двора» 3 на 3 against bots (game/match.ts) on the real 3D arena and models.
+ * Few controls, all functions: the hero fires by itself at the nearest enemy in sight; the joystick
+ * appears wherever the left thumb touches; a double tap there is the dash; two ability buttons; a tap
+ * on the arena shoots that way. HUD: score / timer, HP bars, damage and heal numbers, kill feed, result
+ * screen with trophies and experience (progress.ts).
  *
  * Assets: <html data-assets="b64"> (claude.ai artifact: no .glb hosting, no WebAssembly) loads
  * models/<id>.txt (base64 GLB without Meshopt); otherwise models/<id>.glb with the Meshopt decoder.
@@ -11,9 +13,10 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { load, loadColliders } from './assets';
 import type { Collider } from '../arena';
 import { HEROES, heroById, type HeroId } from './data';
-import { Match, type PlayerInput, type Team } from './game/match';
+import { Match, lineup, type PlayerInput, type Team } from './game/match';
+import { applyResult, botSkill, loadProfile, rankOf, levelOf } from './progress';
 import { MATCH } from './game/kits';
-import { ICONS } from './icons';
+import { ICONS, rankBadge } from './icons';
 import { haptic, battleScreen, lockLandscape, inTelegram } from './tg';
 
 export interface Battle { destroy(): void }
@@ -22,32 +25,32 @@ const ABILITY_ICONS: Record<HeroId, [string, string]> = {
   technik: [ICONS.turret, ICONS.cloud],
   tank: [ICONS.door, ICONS.ram],
   sprinter: [ICONS.speed, ICONS.wave],
+  sniper: [ICONS.mine, ICONS.bullet],
+  medic: [ICONS.medkit, ICONS.zone],
 };
 
-export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => void): Battle {
+export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => void, firstBlue?: HeroId[]): Battle {
   const me = heroById(heroId);
-  const blue = [heroId, ...HEROES.map((h) => h.id).filter((id) => id !== heroId)].map(heroById);
-  const red = (['tank', 'technik', 'sprinter'] as HeroId[]).map(heroById);
   const [ic1, ic2] = ABILITY_ICONS[heroId];
   root.innerHTML = `
     <div class="battle-stage"></div>
     <div class="battle-hud">
       <div class="scorebar">
-        <div class="team blue">${blue.map((h) => `<img src="${h.card}" alt="${h.name}">`).join('')}<span class="score" id="s0">0</span></div>
+        <div class="team blue"><span class="faces"></span><span class="score" id="s0">0</span></div>
         <div class="timer" id="timer">2:00</div>
-        <div class="team red"><span class="score" id="s1">0</span>${red.map((h) => `<img src="${h.card}" alt="${h.name}">`).join('')}</div>
+        <div class="team red"><span class="score" id="s1">0</span><span class="faces"></span></div>
       </div>
       <div class="zonebar"><i class="z0"></i><span id="zone">Круг ничей</span><i class="z1"></i></div>
       <div class="feed" aria-live="polite"></div>
       <button class="exit" type="button" aria-label="Выйти из боя">${ICONS.close}</button>
-      <div class="stick" role="application" aria-label="Джойстик"><span class="arr u"></span><span class="arr d"></span><span class="arr l"></span><span class="arr r"></span><div class="knob"></div></div>
-      <div class="skills">
-        <button type="button" class="sk run" data-k="dash" aria-label="Рывок">${ICONS.run}<em></em></button>
-        <button type="button" class="sk main" data-k="a1" aria-label="${me.name}: способность 1">${ic1}<em></em></button>
-        <button type="button" class="sk cloud" data-k="a2" aria-label="${me.name}: способность 2">${ic2}<em></em></button>
-        <button type="button" class="sk aim" data-k="atk" aria-label="Атака">${ICONS.crosshair}</button>
+      <div class="stick-zone" role="application" aria-label="Джойстик: веди пальцем, двойной тап — рывок">
+        <div class="stick"><span class="arr u"></span><span class="arr d"></span><span class="arr l"></span><span class="arr r"></span><div class="knob"></div><i class="dash-ring"></i></div>
       </div>
-      <div class="aimline" hidden></div>
+      <div class="skills two">
+        <button type="button" class="sk main" data-k="a1" aria-label="${me.name}: ${me.abilities[1]}">${ic1}<em></em></button>
+        <button type="button" class="sk cloud" data-k="a2" aria-label="${me.name}: ${me.abilities[2]}">${ic2}<em></em></button>
+      </div>
+      <div class="hint" hidden><p><b>Атака — сама</b> по ближнему врагу</p><p><b>Двойной тап</b> под джойстиком — рывок</p><p><b>Тап по арене</b> — выстрел туда</p></div>
       <div class="dead" hidden>Возвращение через <b>3</b></div>
       <div class="countdown" hidden></div>
       <div class="result" hidden></div>
@@ -63,8 +66,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const stage = $('.battle-stage'), hud = $('.battle-hud'), loadEl = $('.battle-loading'), loadBar = loadEl.querySelector<HTMLElement>('i')!;
   const timerEl = $('#timer'), s0 = $('#s0'), s1 = $('#s1'), zoneEl = $('#zone'), zoneBar = $('.zonebar');
-  const stickEl = $('.stick'), knobEl = $('.knob'), feed = $('.feed'), deadEl = $('.dead'), cdEl = $('.countdown'), resEl = $('.result');
-  const aimLine = $('.aimline'), rotEl = $('.rotate');
+  const feed = $('.feed'), deadEl = $('.dead'), cdEl = $('.countdown'), resEl = $('.result');
+  const rotEl = $('.rotate'), hintEl = $('.hint'), zoneStick = $('.stick-zone');
   let alive = true;
 
   // ---- landscape: the battle waits (paused) while the screen is taller than wide
@@ -120,7 +123,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   let match: Match | null = null;
   const bars = new Map<number, HTMLElement>();
   const sizes = new Map<string, number>();
-  const expect: Record<string, number> = { MAP_Dvor: 760e3, USER_CH_Technik: 310e3, USER_CH_Tank: 290e3, USER_CH_Sprinter: 330e3 };
+  const expect: Record<string, number> = { MAP_Dvor: 760e3, ...Object.fromEntries(HEROES.map((h) => [h.model, 400e3])) };
   const onBytes = (id: string, n: number) => {
     sizes.set(id, n);
     const total = Object.values(expect).reduce((a, b) => a + b, 0);
@@ -134,11 +137,12 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     v.set(x, y, z).project(camera);
     return [((v.x + 1) / 2) * stage.clientWidth, ((1 - v.y) / 2) * stage.clientHeight];
   };
-  const popNumber = (x: number, y: number, z: number, n: number, team: Team) => {
+  const popNumber = (x: number, y: number, z: number, n: number, team: Team, heal = false) => {
+    if (n <= 0) return;
     const [sx, sy] = toScreen(x, y, z);
     const el = document.createElement('span');
-    el.className = `dmg ${team === 0 ? 'ours' : 'theirs'}`;
-    el.textContent = String(n);
+    el.className = `dmg ${heal ? 'heal' : team === 0 ? 'ours' : 'theirs'}`;
+    el.textContent = heal ? `+${n}` : String(n);
     el.style.left = `${sx + (Math.random() - 0.5) * 24}px`;
     el.style.top = `${sy}px`;
     hud.appendChild(el);
@@ -154,18 +158,26 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   const label = (u: { team: Team; isPlayer: boolean; hero: { name: string } }) => (u.isPlayer ? 'Ты' : u.hero.name);
 
   // ---- result screen
-  const showResult = (r: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number } }) => {
+  const showResult = (r: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number; healed: number } }) => {
     haptic(r.winner === 0 ? 'success' : 'medium');
     const title = r.winner === 0 ? 'Победа!' : r.winner === 1 ? 'Поражение' : 'Ничья';
+    const rw = applyResult(heroId, r);
+    const rank = rankOf(rw.after.trophies), lv = levelOf(rw.after.xp);
     resEl.className = `result ${r.winner === 0 ? 'win' : r.winner === 1 ? 'lose' : 'draw'}`;
     resEl.innerHTML = `
       <div class="result-card">
         <h2>${title}</h2>
         <p class="result-score"><span class="b">${r.score[0]}</span> : <span class="r">${r.score[1]}</span></p>
+        <div class="result-reward">
+          <span class="rr-badge">${rankBadge(rank.color, rank.dark)}</span>
+          <span class="rr-text"><b>${rank.name}</b><span>${ICONS.trophy}${rw.after.trophies} <em class="${rw.trophies > 0 ? 'up' : rw.trophies < 0 ? 'down' : ''}">${rw.trophies > 0 ? '+' : ''}${rw.trophies}</em></span></span>
+          <span class="rr-xp"><b>Ур. ${lv.level}</b><span>+${rw.xp} опыта</span><i><s style="width:${Math.round((100 * lv.into) / lv.need)}%"></s></i></span>
+        </div>
+        ${rw.rankUp ? `<p class="result-up">Новый ранг: <b>${rw.rankUp.name}</b></p>` : ''}${rw.levelUp ? `<p class="result-up">Новый уровень: <b>${rw.levelUp}</b></p>` : ''}
         <ul>
           <li><span>Выбито</span><b>${r.you.kills}</b></li>
           <li><span>Выбыл</span><b>${r.you.deaths}</b></li>
-          <li><span>Урон</span><b>${r.you.dealt.toLocaleString('ru-RU')}</b></li>
+          <li><span>${r.you.healed > 0 ? 'Вылечено' : 'Урон'}</span><b>${(r.you.healed > 0 ? r.you.healed : r.you.dealt).toLocaleString('ru-RU')}</b></li>
         </ul>
         <div class="result-btns"><button type="button" class="btn-main" id="again">Ещё раз</button><button type="button" class="btn-ghost" id="home">На главную</button></div>
       </div>`;
@@ -186,11 +198,15 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     bars.clear();
     feed.innerHTML = '';
     resEl.hidden = true;
+    const blue = firstBlue ?? lineup(heroId), red = lineup();
+    firstBlue = undefined;
+    root.querySelector('.team.blue .faces')!.innerHTML = blue.map((id) => `<img src="${heroById(id).card}" alt="${heroById(id).name}">`).join('');
+    root.querySelector('.team.red .faces')!.innerHTML = red.map((id) => `<img src="${heroById(id).card}" alt="${heroById(id).name}">`).join('');
     match = new Match(scene, assets.heroes, assets.colliders, heroId, {
-      damage: (x, y, z, n, team) => popNumber(x, y, z, n, team),
+      damage: (x, y, z, n, team, heal) => popNumber(x, y, z, n, team, heal),
       kill: (k, vic) => { killFeed(k ? label(k) : null, label(vic), vic.team); if (vic.isPlayer) haptic('medium'); },
       end: (r) => setTimeout(() => alive && showResult(r), 1200),
-    }, assets.props);
+    }, assets.props, { blue, red, skill: botSkill(loadProfile().trophies) });
     match.camera = camera;
     for (const u of match.views()) {
       const el = document.createElement('div');
@@ -206,11 +222,12 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   function beginCountdown(): void {
     // 3-2-1
     cdEl.hidden = false;
+    hintEl.hidden = false;
     countdownTimers.forEach(clearTimeout);
     countdownTimers = [3, 2, 1, 0].map((n, i) => window.setTimeout(() => {
       cdEl.textContent = n ? String(n) : 'Бой!';
       cdEl.classList.remove('pop'); void cdEl.offsetWidth; cdEl.classList.add('pop');
-      if (!n) { match?.start(); haptic('light'); countdownTimers.push(window.setTimeout(() => (cdEl.hidden = true), 700)); }
+      if (!n) { match?.start(); haptic('light'); countdownTimers.push(window.setTimeout(() => (cdEl.hidden = true), 700), window.setTimeout(() => (hintEl.hidden = true), 2500)); }
     }, i * 700));
   }
   function restart(): void { newMatch(); }
@@ -240,58 +257,53 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     loadEl.querySelector('p')!.textContent = `Не удалось загрузить арену: ${e?.message ?? e}`;
   });
 
-  // ---- input: joystick
-  const stick = { x: 0, y: 0, id: -1 };
+  // ---- input: floating joystick on the left half (appears under the thumb), double tap = dash
+  const stick = { x: 0, y: 0, id: -1, cx: 0, cy: 0, lastTap: 0 };
+  const stickEl = $('.stick'), knobEl = $('.knob');
+  const pending = { a1: false, a2: false, dash: false };
+  const R_STICK = () => stickEl.offsetWidth / 2 || 60;
   const moveStick = (e: PointerEvent) => {
-    const r = stickEl.getBoundingClientRect();
-    const R = r.width / 2;
-    let dx = (e.clientX - (r.left + R)) / R, dy = (r.top + R - e.clientY) / R;
+    const R = R_STICK();
+    let dx = (e.clientX - stick.cx) / R, dy = (stick.cy - e.clientY) / R;
     const l = Math.hypot(dx, dy);
     if (l > 1) { dx /= l; dy /= l; }
     stick.x = dx; stick.y = dy;
     knobEl.style.transform = `translate(${dx * R * 0.55}px, ${-dy * R * 0.55}px)`;
   };
-  const release = () => { stick.id = -1; stick.x = stick.y = 0; knobEl.style.transform = ''; stickEl.classList.remove('on'); };
-  stickEl.addEventListener('pointerdown', (e) => { stick.id = e.pointerId; stickEl.setPointerCapture(e.pointerId); stickEl.classList.add('on'); moveStick(e); e.preventDefault(); });
-  stickEl.addEventListener('pointermove', (e) => { if (e.pointerId === stick.id) moveStick(e); });
-  stickEl.addEventListener('pointerup', release);
-  stickEl.addEventListener('pointercancel', release);
-  stickEl.addEventListener('lostpointercapture', release);
-
-  // ---- input: attack button (tap = auto-aim, hold = keep firing, drag = aim and fire on release)
-  const pending = { a1: false, a2: false, dash: false };
-  let atkHeld = false, atkAim: [number, number] | null = null, atkFireOnce = false, atkId = -1;
-  const atkBtn = $('.sk.aim');
-  const atkStart = { x: 0, y: 0 };
-  atkBtn.addEventListener('pointerdown', (e) => {
-    atkId = e.pointerId; atkBtn.setPointerCapture(e.pointerId);
-    atkStart.x = e.clientX; atkStart.y = e.clientY;
-    atkHeld = true; atkAim = null; atkFireOnce = true;
-    haptic('light'); e.preventDefault();
-  });
-  atkBtn.addEventListener('pointermove', (e) => {
-    if (e.pointerId !== atkId) return;
-    const dx = e.clientX - atkStart.x, dy = e.clientY - atkStart.y, l = Math.hypot(dx, dy);
-    if (l > 14) { atkAim = [dx / l, dy / l]; atkHeld = false; }
-  });
-  const atkUp = (e: PointerEvent) => {
-    if (e.pointerId !== atkId) return;
-    atkId = -1;
-    if (atkAim) { aimShot = atkAim; }
-    atkHeld = false; atkAim = null;
+  const release = () => {
+    stick.id = -1; stick.x = stick.y = 0; knobEl.style.transform = '';
+    stickEl.classList.remove('on'); stickEl.style.left = stickEl.style.top = '';
   };
-  let aimShot: [number, number] | null = null;
-  atkBtn.addEventListener('pointerup', atkUp);
-  atkBtn.addEventListener('pointercancel', atkUp);
-  root.querySelectorAll<HTMLButtonElement>('.sk[data-k="a1"], .sk[data-k="a2"], .sk[data-k="dash"]').forEach((b) => {
+  zoneStick.addEventListener('pointerdown', (e) => {
+    if (stick.id >= 0) return;
+    const now = performance.now();
+    if (now - stick.lastTap < 320) { pending.dash = true; haptic('light'); stickEl.classList.remove('dashed'); void stickEl.offsetWidth; stickEl.classList.add('dashed'); }
+    stick.lastTap = now;
+    stick.id = e.pointerId; zoneStick.setPointerCapture(e.pointerId);
+    const zr = zoneStick.getBoundingClientRect(), R = R_STICK();
+    // centre the stick under the thumb (kept fully inside the zone)
+    stick.cx = Math.min(zr.right - R, Math.max(zr.left + R, e.clientX));
+    stick.cy = Math.min(zr.bottom - R, Math.max(zr.top + R, e.clientY));
+    stickEl.style.left = `${stick.cx - zr.left - R}px`;
+    stickEl.style.top = `${stick.cy - zr.top - R}px`;
+    stickEl.classList.add('on');
+    moveStick(e); e.preventDefault();
+  });
+  zoneStick.addEventListener('pointermove', (e) => { if (e.pointerId === stick.id) moveStick(e); });
+  zoneStick.addEventListener('pointerup', release);
+  zoneStick.addEventListener('pointercancel', release);
+  zoneStick.addEventListener('lostpointercapture', release);
+
+  // ---- input: two ability buttons
+  root.querySelectorAll<HTMLButtonElement>('.sk[data-k="a1"], .sk[data-k="a2"]').forEach((b) => {
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      pending[b.dataset.k as 'a1' | 'a2' | 'dash'] = true;
+      pending[b.dataset.k as 'a1' | 'a2'] = true;
       haptic('light');
       b.classList.remove('press'); void b.offsetWidth; b.classList.add('press');
     });
   });
-  // keyboard: WASD / arrows, Space or J = attack, K/E = ability 1, L/Q = ability 2, Shift = dash
+  // keyboard: WASD / arrows, Space or J = shoot ahead, K/E = ability 1, L/Q = ability 2, Shift = dash
   const keys = new Set<string>();
   const KEYMAP: Record<string, [number, number]> = { KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
   const kd = (e: KeyboardEvent) => {
@@ -304,7 +316,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   const ku = (e: KeyboardEvent) => { keys.delete(e.code); if (e.code === 'Space' || e.code === 'KeyJ') keys.delete('atk'); };
   addEventListener('keydown', kd);
   addEventListener('keyup', ku);
-  // mouse / tap on the arena: attack toward that point
+  // tap / click on the arena: shoot toward that point
+  let aimShot: [number, number] | null = null;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3();
   stage.addEventListener('pointerdown', (e) => {
     if (!match) return;
@@ -326,14 +339,14 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     }
     let attack: PlayerInput['attack'] = null;
     if (aimShot) { attack = { dir: [aimShot[0], aimShot[1]] }; aimShot = null; }
-    else if (atkFireOnce || atkHeld || keys.has('atk')) { attack = { dir: null }; atkFireOnce = false; }
-    const inp: PlayerInput = { move: [mx, my], attack, a1: pending.a1, a2: pending.a2, dash: pending.dash };
+    else if (keys.has('atk')) attack = { dir: null };
+    const inp: PlayerInput = { move: [mx, my], attack, auto: true, a1: pending.a1, a2: pending.a2, dash: pending.dash };
     pending.a1 = pending.a2 = pending.dash = false;
     return inp;
   };
 
   // ---- loop
-  const skA1 = $('.sk[data-k="a1"]'), skA2 = $('.sk[data-k="a2"]'), skDash = $('.sk[data-k="dash"]');
+  const skA1 = $('.sk[data-k="a1"]'), skA2 = $('.sk[data-k="a2"]'), dashRing = $('.dash-ring');
   const setCd = (b: HTMLElement, left: number, max: number) => {
     b.style.setProperty('--cd', String(max ? left / max : 0));
     b.classList.toggle('cooling', left > 0.05);
@@ -344,18 +357,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     timer.update(t);
     const dt = Math.min(timer.getDelta(), 1 / 15);
     if (match && !paused) {
-      const inp = readInput();
-      // aim line while dragging the attack button
-      if (atkAim) {
-        const p = match.views()[0];
-        const [sx, sy] = toScreen(p.x, 1, p.z);
-        aimLine.hidden = false;
-        aimLine.style.transform = `translate(${sx}px, ${sy}px) rotate(${Math.atan2(atkAim[1], atkAim[0])}rad)`;
-        inp.attack = null;
-      } else aimLine.hidden = true;
-      // screen drag directions are in screen space: x right, y down -> world x, z
-      if (inp.attack?.dir) inp.attack.dir = [inp.attack.dir[0], inp.attack.dir[1]];
-      match.update(dt, inp);
+      match.update(dt, readInput());
       const views = match.views();
       const p = views[0];
       camTarget.x += (p.x - camTarget.x) * Math.min(1, dt * 6);
@@ -383,7 +385,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       deadEl.hidden = p.alive || match.ended;
       if (!p.alive) deadEl.querySelector('b')!.textContent = String(Math.ceil(p.respawnIn));
       const cd = match.cooldowns();
-      setCd(skA1, cd.a1, cd.a1Max); setCd(skA2, cd.a2, cd.a2Max); setCd(skDash, cd.dash, cd.dashMax);
+      setCd(skA1, cd.a1, cd.a1Max); setCd(skA2, cd.a2, cd.a2Max);
+      dashRing.style.setProperty('--cd', String(cd.dashMax ? cd.dash / cd.dashMax : 0));
       (window as unknown as { __match: unknown }).__match = { score: match.score, time: match.time, ended: match.ended, units: views.map((u) => ({ hero: u.hero.id, team: u.team, hp: u.hp, alive: u.alive, x: +u.x.toFixed(2), z: +u.z.toFixed(2) })) };
     }
     placeCamera();

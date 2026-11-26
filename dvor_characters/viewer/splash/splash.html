@@ -1,5 +1,6 @@
 <!-- Splash: shown by the HTML itself, before the 700 KB game bundle has arrived. main.ts adopts #boot
-     (progress, heroes, tips) and removes it once everything is loaded. Logos are inlined (data URIs),
+     (progress, heroes, tips) and removes it once everything is loaded; at the end the selected hero's
+     menu art fades in exactly where the home screen shows it. Logos are inlined (data URIs),
      so the first frame needs no network. Built into the page by splash/build.mjs. -->
 <style>
 html, body { margin: 0; height: 100%; background: #121114; }
@@ -15,10 +16,12 @@ html, body { margin: 0; height: 100%; background: #121114; }
 #boot * { box-sizing: border-box; }
 .sp-stage { position: absolute; left: 0; right: 0; top: 0; bottom: var(--tb); container-type: size; }
 .sp-cover { position: absolute; top: 0; left: 50%; width: 100%; width: max(100cqw, calc(100cqh * 782 / 1580)); aspect-ratio: 782 / 1580; transform: translateX(-50%); }
-.sp-art { position: absolute; inset: 0; background: url(ui/menu_bg.jpg) 0 0 / 100% 100% no-repeat; opacity: 0; transition: opacity .6s ease; }
-.sp-low { -webkit-mask-image: linear-gradient(transparent 21%, #000 46%, #000 70%, transparent 92%); mask-image: linear-gradient(transparent 21%, #000 46%, #000 70%, transparent 92%); }
-#boot.art .sp-low { opacity: .3; }
+/* the selected hero's menu art (same placement as on the home screen: top, full width) */
+.sp-art { position: absolute; inset: 0; background: var(--art, none) 50% 0 / 100% auto no-repeat; opacity: 0; transition: opacity .6s ease; }
+.sp-low { -webkit-mask-image: linear-gradient(transparent 22%, #000 40%, #000 52%, transparent 62%); mask-image: linear-gradient(transparent 22%, #000 40%, #000 52%, transparent 62%); }
+#boot.art .sp-low { opacity: .32; }
 #boot.done .sp-full { opacity: 1; }
+#boot.done .sp-logo { opacity: 0; transition: opacity .45s ease; }
 #boot.done .sp-fx { opacity: 0; }
 
 /* street-lamp glow behind the logo, flickering */
@@ -75,10 +78,10 @@ html, body { margin: 0; height: 100%; background: #121114; }
   animation: sp-up .5s ease .3s both; }
 @keyframes sp-up { from { opacity: 0; transform: translateY(16px); } }
 #boot.done .sp-foot { opacity: 0; transform: translateY(24px); }
-.sp-heroes { display: flex; gap: 22px; min-height: 76px; opacity: 0; transition: opacity .3s; }
+.sp-heroes { display: flex; gap: 12px; min-height: 70px; opacity: 0; transition: opacity .3s; }
 #boot.live .sp-heroes { opacity: 1; }
-.sp-h { display: grid; justify-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: #8f8983; transition: color .3s; }
-.sp-av { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .12); transition: border-color .35s, box-shadow .35s; }
+.sp-h { display: grid; justify-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: #8f8983; transition: color .3s; }
+.sp-av { position: relative; width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .12); transition: border-color .35s, box-shadow .35s; }
 .sp-av i { position: absolute; inset: 0; border-radius: 50%; background: #2a282d 50% 14% / cover no-repeat; filter: grayscale(1) brightness(.45); transition: filter .35s; }
 .sp-av::before { content: ""; position: absolute; inset: -6px; border-radius: 50%;
   border: 2px solid rgba(255, 155, 69, 0); border-top-color: #ff9b45; border-right-color: rgba(255, 155, 69, .35);
@@ -121,9 +124,9 @@ html, body { margin: 0; height: 100%; background: #121114; }
 }
 </style>
 <div id="boot" role="status" aria-label="Загрузка игры">
+  <div class="sp-art sp-low"></div>
   <div class="sp-stage"><div class="sp-cover">
     <div class="sp-fx"><div class="sp-glow"></div></div>
-    <div class="sp-art sp-low"></div>
     <div class="sp-fx">
       <div class="sp-fog"></div><div class="sp-fog b"></div>
       <div class="sp-emb">
@@ -135,7 +138,6 @@ html, body { margin: 0; height: 100%; background: #121114; }
         <i style="--x:92%;--s:2px;--d:6s;--t:-5.6s;--dx:-24px"></i><i style="--x:47%;--s:2px;--d:8.4s;--t:-7.2s;--dx:30px"></i>
       </div>
     </div>
-    <div class="sp-art sp-full"></div>
     <div class="sp-logo">
       <div class="sp-puff"></div>
       <div class="sp-word"></div><div class="sp-shine"></div>
@@ -144,6 +146,7 @@ html, body { margin: 0; height: 100%; background: #121114; }
         <i style="--a:10deg"></i><i style="--a:32deg"></i><i style="--a:56deg"></i><i style="--a:82deg"></i></div>
     </div>
   </div></div>
+  <div class="sp-art sp-full"></div>
   <div class="sp-foot">
     <div class="sp-heroes"></div>
     <div class="sp-bar"><i></i></div>
@@ -165,9 +168,13 @@ html, body { margin: 0; height: 100%; background: #121114; }
     };
     document.head.appendChild(s);
   }
-  // the yard behind the logo fades in as soon as the picture is here
+  // the selected hero's menu art shows through as soon as the picture is here
+  var hero = 'technik';
+  try { var h = localStorage.getItem('dvor.hero'); if (/^(technik|tank|sprinter|sniper|medic)$/.test(h || '')) hero = h; } catch (e) {}
+  var src = 'ui/menu_' + hero + '.jpg', b = document.getElementById('boot');
+  b.style.setProperty('--art', 'url(' + src + ')');
   var im = new Image();
-  im.onload = function () { var b = document.getElementById('boot'); if (b) b.classList.add('art'); };
-  im.src = 'ui/menu_bg.jpg';
+  im.onload = function () { b.classList.add('art'); };
+  im.src = src;
 })();
 </script>

@@ -1,6 +1,6 @@
 // Builds the splash fragment (splash.html with the logos inlined as data URIs) and a Vite plugin that
 // puts it where app.html says <!--splash-->. Used by the Pages/dev builds and scripts/app-artifact.mjs.
-// The logos are the crown and the wordmark keyed out of public/ui/menu_bg.jpg (782x1580 px); the
+// The logos are the crown and the wordmark keyed out of the first menu art (782x1580 px, removed); the
 // percentages in splash.html are their boxes in that picture, so they land exactly on the menu art.
 import fs from 'node:fs';
 import path from 'node:path';

@@ -66,12 +66,14 @@ export function loadColliders(): Promise<Collider[]> {
   return collidersP;
 }
 
-export const UI_IMAGES = ['ui/menu_bg.jpg', 'ui/search_bg.jpg', 'ui/detail_technik.jpg', ...HEROES.map((h) => h.card)];
+export const UI_IMAGES = ['ui/search_bg.jpg', ...HEROES.flatMap((h) => [h.menu, h.card])];
 
 /** Approximate download sizes (bytes) for an honest progress bar. */
-const SIZES: Record<string, number> = B64
-  ? { MAP_Dvor: 768e3, USER_CH_Technik: 346e3, USER_CH_Tank: 315e3, USER_CH_Sprinter: 363e3, PROPS: 40e3 }
-  : { MAP_Dvor: 751e3, USER_CH_Technik: 313e3, USER_CH_Tank: 287e3, USER_CH_Sprinter: 334e3, PROPS: 30e3 };
+const SIZES: Record<string, number> = {
+  MAP_Dvor: B64 ? 768e3 : 751e3, PROPS: B64 ? 40e3 : 30e3,
+  // measured .glb sizes (dist/); the base64 loader reports decoded bytes, so the same numbers fit
+  ...Object.fromEntries(HEROES.map((h) => [h.model, ({ technik: 346e3, sprinter: 339e3, tank: 307e3, sniper: 474e3, medic: 484e3 } as Record<string, number>)[h.id]])),
+};
 export const MODELS = Object.keys(SIZES);
 
 /**

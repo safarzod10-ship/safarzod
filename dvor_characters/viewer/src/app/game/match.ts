@@ -1,6 +1,6 @@
 /**
- * «Царь двора» 3 на 3 — match prototype on the real arena with the real character models.
- * Blue team = the player + 2 bots, red team = 3 bots. A team that is alone in the crown circle scores
+ * «Царь двора» 3 на 3 — match on the real arena with the real character models.
+ * Blue team = the player + 2 bots, red team = 3 bots (how good the red bots are follows the player's rank). A team that is alone in the crown circle scores
  * 2 points per second; first to 100 or the leader after 2:00 wins. Fallen heroes return after 3 s.
  * Logic and visuals live together here (single-player prototype); the numbers are in kits.ts.
  */
@@ -27,8 +27,21 @@ type Clip = (typeof CLIPS)[number];
 
 export interface PlayerInput {
   move: [number, number];                   // screen: x right, y up
-  attack: null | { dir: [number, number] | null };   // null dir = auto-aim
+  attack: null | { dir: [number, number] | null };   // a tap on the arena: shoot that way (null dir = auto-aim)
+  auto: boolean;                            // fire by itself at the nearest enemy in range and in sight
   a1: boolean; a2: boolean; dash: boolean;
+}
+
+export interface MatchOptions {
+  blue?: HeroId[]; red?: HeroId[];
+  allBots?: boolean;      // balance simulations: the player slot is a bot too
+  skill?: number;         // 0..1, red bots' aim and reactions (player's rank)
+}
+
+/** Three different heroes, the first one given (or random). */
+export function lineup(first?: HeroId): HeroId[] {
+  const rest = HEROES.map((h) => h.id).filter((id) => id !== first).sort(() => Math.random() - 0.5);
+  return first ? [first, rest[0], rest[1]] : rest.slice(0, 3);
 }
 
 export interface UnitView {
@@ -49,13 +62,16 @@ interface Unit {
   spurtLeft: number; spurtNext: number;
   stunUntil: number; doorUntil: number; lastHurt: number; lastFight: number; moving: boolean; faceUntil: number;
   ai: { think: number; tx: number; tz: number; target: Unit | null; strafe: number };
-  kills: number; deaths: number; dealt: number;
+  kills: number; deaths: number; dealt: number; healed: number;
+  pierceAt: number; pierceDir: [number, number]; healAcc: number; healShowAt: number;
 }
 
 interface Proj {
   team: Team; owner: Unit | null; x: number; z: number; vx: number; vz: number; left: number; dmg: number;
-  bounces: number; obj: THREE.Object3D; spin: boolean; fromTurret: boolean;
+  bounces: number; obj: THREE.Object3D; spin: boolean; fromTurret: boolean; pierced: Set<number> | null;
 }
+interface Mine { team: Team; owner: Unit; x: number; z: number; armAt: number; until: number; obj: THREE.Object3D; light: THREE.Mesh }
+interface HealZone { team: Team; owner: Unit; x: number; z: number; r: number; until: number; hps: number; obj: THREE.Object3D; born: number }
 interface Turret { team: Team; owner: Unit; x: number; z: number; hp: number; until: number; next: number; obj: THREE.Object3D; head: THREE.Object3D; born: number }
 interface Smoke { team: Team; x: number; z: number; r: number; until: number; slow: number; obj: THREE.Group; born: number }
 interface Fx { obj: THREE.Object3D; t: number; dur: number; tick: (k: number) => void }
@@ -63,7 +79,7 @@ interface Fx { obj: THREE.Object3D; t: number; dur: number; tick: (k: number) =>
 export interface MatchEvents {
   damage(x: number, y: number, z: number, amount: number, team: Team, heal?: boolean): void;
   kill(killer: UnitView | null, victim: UnitView): void;
-  end(result: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number } }): void;
+  end(result: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number; healed: number } }): void;
 }
 
 const TURRET_SCALE = 1.4;   // the mini tank model is 0.6 m long; bigger reads better from the game camera
@@ -77,6 +93,8 @@ export class Match {
   private projs: Proj[] = [];
   private turrets: Turret[] = [];
   private smokes: Smoke[] = [];
+  private mines: Mine[] = [];
+  private zones: HealZone[] = [];
   private fx: Fx[] = [];
   private zoneTick = 0;
   private zoneRing: THREE.Mesh;
@@ -96,8 +114,7 @@ export class Match {
     playerHero: HeroId,
     private ev: MatchEvents,
     props?: GLTF,
-    /** Balance simulations (scripts): custom teams, the player slot played by a bot too. */
-    private sim?: { blue?: HeroId[]; red?: HeroId[]; allBots?: boolean },
+    private opts: MatchOptions = {},
   ) {
     this.buildShared();
     if (props) this.setupProps(props);
@@ -110,9 +127,9 @@ export class Match {
     this.zoneRing.position.set(MATCH.zone.x, 0.03, MATCH.zone.z);
     this.zoneFill.position.set(MATCH.zone.x, 0.025, MATCH.zone.z);
     scene.add(this.zoneRing, this.zoneFill);
-    // teams: blue = player's hero first, then the other two; red = all three
-    const blue = sim?.blue ?? [playerHero, ...HEROES.map((h) => h.id).filter((id) => id !== playerHero)];
-    const red: HeroId[] = sim?.red ?? ['tank', 'technik', 'sprinter'];
+    // teams: blue = player's hero first and two others; red = three heroes
+    const blue = opts.blue ?? lineup(playerHero);
+    const red: HeroId[] = opts.red ?? lineup();
     let id = 0;
     for (const [team, list] of [[0, blue], [1, red]] as [Team, HeroId[]][]) {
       list.forEach((hid, slot) => {
@@ -144,6 +161,9 @@ export class Match {
       metal: new THREE.MeshLambertMaterial({ color: 0x7d8088 }), dark: new THREE.MeshLambertMaterial({ color: 0x2c2d31 }),
       stun: M(0xffd23f), ringBlue: M(TEAM_COL[0], 0.9), ringRed: M(TEAM_COL[1], 0.9),
       teamBlue: new THREE.MeshLambertMaterial({ color: TEAM_COL[0] }), teamRed: new THREE.MeshLambertMaterial({ color: TEAM_COL[1] }),
+      tracer: M(0xfff1c2), tracerRed: M(0xffb39a), dart: new THREE.MeshLambertMaterial({ color: 0xf4f1ea }), dartTip: M(0xd8382c),
+      heal: M(0x5be37d, 0.6), healFill: M(0x5be37d, 0.18), cross: M(0xffffff, 0.9), mine: new THREE.MeshLambertMaterial({ color: 0x3b3a34 }),
+      mineLight: M(0xff4a2a), blast: M(0xffb347, 0.7),
     };
     this.geos = {
       bullet: new THREE.BoxGeometry(0.07, 0.07, 0.42),
@@ -161,6 +181,14 @@ export class Match {
       stripe: new THREE.BoxGeometry(0.38, 0.06, 0.44),
       door: new THREE.BoxGeometry(1.5, 1.45, 0.07),
       rib: new THREE.BoxGeometry(1.52, 0.06, 0.1),
+      tracer: new THREE.BoxGeometry(0.06, 0.06, 0.9),
+      dart: new THREE.CylinderGeometry(0.025, 0.025, 0.3, 6).rotateX(Math.PI / 2),
+      dartTip: new THREE.ConeGeometry(0.03, 0.1, 6).rotateX(Math.PI / 2).translate(0, 0, 0.2),
+      disc: new THREE.CircleGeometry(1, 40).rotateX(-Math.PI / 2),
+      crossA: new THREE.PlaneGeometry(0.9, 0.3).rotateX(-Math.PI / 2),
+      crossB: new THREE.PlaneGeometry(0.3, 0.9).rotateX(-Math.PI / 2),
+      mine: new THREE.CylinderGeometry(0.2, 0.24, 0.08, 12),
+      mineLight: new THREE.SphereGeometry(0.05, 8, 6),
     };
   }
 
@@ -230,7 +258,7 @@ export class Match {
       atkReady: 0, heat: 0, overheatUntil: 0, meleeCount: 0, cd1: 0, cd2: 0, cdDash: 0,
       dash: null, spurtLeft: 0, spurtNext: 0, stunUntil: 0, doorUntil: 0, lastHurt: -99, lastFight: -99, moving: false, faceUntil: 0,
       ai: { think: 0, tx: sx, tz: sz, target: null, strafe: Math.random() < 0.5 ? 1 : -1 },
-      kills: 0, deaths: 0, dealt: 0,
+      kills: 0, deaths: 0, dealt: 0, healed: 0, pierceAt: 0, pierceDir: [0, 1], healAcc: 0, healShowAt: 0,
     };
     this.play(u, 'Idle', 0);
     return u;
@@ -334,6 +362,19 @@ export class Match {
       this.play(target, 'Hit', 0.08, 0.35);
     }
   }
+  private healUnit(target: Unit, amount: number, by: Unit | null): void {
+    if (!target.alive || this.ended) return;
+    const got = Math.min(amount, target.kit.hp - target.hp);
+    if (got <= 0) return;
+    target.hp += got;
+    if (by) by.healed += got;
+    target.healAcc += got;   // shown as one green number every 0.5 s, not every frame
+    if (this.time >= target.healShowAt) {
+      this.ev.damage(target.x, 2.1, target.z, Math.round(target.healAcc), target.team, true);
+      target.healAcc = 0;
+      target.healShowAt = this.time + 0.5;
+    }
+  }
   private hurtTurret(t: Turret, amount: number): void {
     t.hp -= amount;
     this.ev.damage(t.x, 1.3, t.z, Math.round(amount), t.team);
@@ -360,6 +401,17 @@ export class Match {
     return best;
   }
 
+  /** Auto-attack: direction to the nearest enemy (or turret) in range and in sight, else null. */
+  private autoTarget(u: Unit): [number, number] | null {
+    const range = u.kit.attack.range + 0.3;
+    let best: { x: number; z: number } | null = null, bd = range;
+    for (const e of this.enemiesOf(u)) { const d = Math.hypot(e.x - u.x, e.z - u.z); if (d < bd && this.los(u.x, u.z, e.x, e.z)) { bd = d; best = e; } }
+    if (!best) for (const t of this.turrets) if (t.team !== u.team) { const d = Math.hypot(t.x - u.x, t.z - u.z); if (d < bd && this.los(u.x, u.z, t.x, t.z)) { bd = d; best = t; } }
+    if (!best) return null;
+    const d = Math.hypot(best.x - u.x, best.z - u.z) || 1;
+    return [(best.x - u.x) / d, (best.z - u.z) / d];
+  }
+
   private attack(u: Unit, dir: [number, number] | null): void {
     if (!u.alive || this.time < u.atkReady || this.time < u.stunUntil || u.dash) return;
     const a = u.kit.attack;
@@ -368,7 +420,10 @@ export class Match {
     u.faceUntil = this.time + 0.35;   // keep facing the target while running and shooting
     u.lastFight = this.time;
     if (!u.moving) this.play(u, 'Attack', 0.06, 0.3);
-    if (a.kind === 'gun') {
+    if (a.kind === 'rifle' || a.kind === 'darts') {
+      u.atkReady = this.time + a.cd;
+      this.spawnProj(u, u.x + dx * 0.5, u.z + dz * 0.5, dx * a.speed, dz * a.speed, a.range, a.dmg, 0, a.kind === 'rifle' ? 'tracer' : 'dart', false);
+    } else if (a.kind === 'gun') {
       if (this.time < u.overheatUntil) return;
       u.atkReady = this.time + a.cd;
       u.heat += 1;
@@ -436,6 +491,29 @@ export class Match {
       this.fxWave(u.x, u.z, k.wave.r);
       ok = true;
     }
+    else if (u.hero.id === 'sniper' && which === 1 && k.mine) {
+      let px = u.x + dx * k.mine.place, pz = u.z + dz * k.mine.place;
+      if (!this.free(px, pz)) { px = u.x; pz = u.z; }
+      const mine = this.mines.filter((m) => m.owner === u);
+      if (mine.length >= 2) mine[0].until = 0;   // two traps per Sniper at most
+      this.spawnMine(u, px, pz);
+      ok = true;
+    } else if (u.hero.id === 'sniper' && which === 2 && k.pierce) {
+      u.pierceAt = this.time + k.pierce.delay;   // aims for a moment, then fires (stepPierce)
+      u.pierceDir = [dx, dz];
+      u.faceUntil = this.time + k.pierce.delay + 0.2;
+      ok = true;
+    } else if (u.hero.id === 'medic' && which === 1 && k.heal) {
+      for (const o of this.units) if (o.team === u.team && Math.hypot(o.x - u.x, o.z - u.z) < k.heal.r) this.healUnit(o, k.heal.amount, u);
+      this.fxWave(u.x, u.z, k.heal.r, this.mats.heal as THREE.MeshBasicMaterial);
+      ok = true;
+    } else if (u.hero.id === 'medic' && which === 2 && k.hospital) {
+      const d = dir ? k.hospital.throw : 0;
+      let px = u.x + dx * d, pz = u.z + dz * d;
+      if (!this.free(px, pz)) { px = u.x; pz = u.z; }
+      this.spawnHealZone(u, px, pz);
+      ok = true;
+    }
     if (ok) {
       u[cdKey] = this.time + (which === 1 ? k.a1.cd : k.a2.cd);
       this.play(u, 'Ability', 0.06, 0.45);
@@ -453,9 +531,16 @@ export class Match {
 
   // ------------------------------------------------------------------ spawners
   private spawnProj(u: Unit | null, x: number, z: number, vx: number, vz: number, range: number, dmg: number, bounces: number,
-    kind: 'bullet' | 'record', fromTurret: boolean, team: Team = u?.team ?? 0): void {
+    kind: 'bullet' | 'record' | 'tracer' | 'dart', fromTurret: boolean, team: Team = u?.team ?? 0, pierce = false): void {
     let obj: THREE.Object3D;
-    if (kind === 'bullet') {
+    if (kind === 'tracer') {
+      obj = new THREE.Mesh(this.geos.tracer, team === 0 ? this.mats.tracer : this.mats.tracerRed);
+      if (pierce) obj.scale.set(2.2, 2.2, 1.6);
+    } else if (kind === 'dart') {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(this.geos.dart, this.mats.dart), new THREE.Mesh(this.geos.dartTip, this.mats.dartTip));
+      obj = g;
+    } else if (kind === 'bullet') {
       obj = new THREE.Mesh(this.geos.bullet, team === 0 ? this.mats.bullet : this.mats.bulletRed);
       obj.rotation.y = Math.atan2(vx, vz);
       if (fromTurret) obj.scale.setScalar(0.75);
@@ -468,7 +553,7 @@ export class Match {
     }
     obj.position.set(x, fromTurret ? (this.propTpl ? 0.38 * TURRET_SCALE : 0.75) : 1.0, z);
     this.scene.add(obj);
-    this.projs.push({ team, owner: u, x, z, vx, vz, left: range, dmg, bounces, obj, spin: kind === 'record', fromTurret });
+    this.projs.push({ team, owner: u, x, z, vx, vz, left: range, dmg, bounces, obj, spin: kind === 'record', fromTurret, pierced: pierce ? new Set() : null });
   }
 
   private spawnTurret(u: Unit, x: number, z: number): void {
@@ -523,6 +608,47 @@ export class Match {
     this.smokes.push({ team, x, z, r, until: this.time + dur, slow, obj: g, born: this.time });
   }
 
+  private spawnMine(u: Unit, x: number, z: number): void {
+    const k = u.kit.mine!;
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(this.geos.mine, this.mats.mine);
+    body.position.y = 0.04;
+    const band = new THREE.Mesh(this.geos.canBand, u.team === 0 ? this.mats.teamBlue : this.mats.teamRed);
+    band.scale.set(2.9, 0.5, 2.9);
+    band.position.y = 0.07;
+    const light = new THREE.Mesh(this.geos.mineLight, this.mats.mineLight);
+    light.position.y = 0.11;
+    g.add(body, band, light);
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+    this.mines.push({ team: u.team, owner: u, x, z, armAt: this.time + k.arm, until: this.time + k.dur, obj: g, light });
+  }
+
+  private spawnHealZone(u: Unit, x: number, z: number): void {
+    const k = u.kit.hospital!;
+    const g = new THREE.Group();
+    const fill = new THREE.Mesh(this.geos.disc, (this.mats.healFill as THREE.MeshBasicMaterial).clone());
+    fill.scale.setScalar(k.r);
+    fill.position.y = 0.035;
+    const ring = new THREE.Mesh(this.geos.wave, (this.mats.heal as THREE.MeshBasicMaterial).clone());
+    ring.scale.setScalar(k.r);
+    ring.position.y = 0.04;
+    const a = new THREE.Mesh(this.geos.crossA, this.mats.cross), b = new THREE.Mesh(this.geos.crossB, this.mats.cross);
+    a.position.y = b.position.y = 0.045;
+    g.add(fill, ring, a, b);
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+    this.zones.push({ team: u.team, owner: u, x, z, r: k.r, until: this.time + k.dur, hps: k.hps, obj: g, born: this.time });
+  }
+
+  private fxBlast(x: number, z: number, r: number): void {
+    const mat = (this.mats.blast as THREE.MeshBasicMaterial).clone();
+    const m = new THREE.Mesh(this.geos.disc, mat);
+    m.position.set(x, 0.3, z);
+    this.scene.add(m);
+    this.fx.push({ obj: m, t: 0, dur: 0.35, tick: (k) => { m.scale.setScalar(0.2 + k * r); mat.opacity = 0.75 * (1 - k); if (k >= 1) mat.dispose(); } });
+  }
+
   private fxArc(u: Unit, dx: number, dz: number, range: number, half: number): void {
     const geo = new THREE.RingGeometry(0.5, range, 12, 1, -half, half * 2).rotateX(-Math.PI / 2);
     const mat = (this.mats.arc as THREE.MeshBasicMaterial).clone();
@@ -532,8 +658,8 @@ export class Match {
     this.scene.add(m);
     this.fx.push({ obj: m, t: 0, dur: 0.18, tick: (k) => { mat.opacity = 0.55 * (1 - k); if (k >= 1) { geo.dispose(); mat.dispose(); } } });
   }
-  private fxWave(x: number, z: number, r: number): void {
-    const mat = (this.mats.wave as THREE.MeshBasicMaterial).clone();
+  private fxWave(x: number, z: number, r: number, base = this.mats.wave as THREE.MeshBasicMaterial): void {
+    const mat = base.clone();
     const m = new THREE.Mesh(this.geos.wave, mat);
     m.position.set(x, 0.4, z);
     this.scene.add(m);
@@ -547,7 +673,10 @@ export class Match {
     const d = e ? Math.hypot(e.x - u.x, e.z - u.z) : 99;
     const zx = MATCH.zone.x, zz = MATCH.zone.z;
     const range = k.attack.range;
-    const want = u.hero.id === 'tank' ? 1.3 : u.hero.id === 'sprinter' ? 3.8 : 5.2;
+    const want = { tank: 1.3, sprinter: 3.8, technik: 5.2, sniper: 6.0, medic: 4.4 }[u.hero.id];
+    // red bots get better with the player's rank; the player's own bots play at a steady level
+    const skill = this.opts.allBots ? 0.5 : u.team === 1 ? this.opts.skill ?? 0.3 : 0.55;
+    const pf = 0.5 + skill;   // how often abilities are used
     let mx = 0, mz = 0, atk = false;
     let dir: [number, number] | null = null;
     const low = u.hp < k.hp * 0.3;
@@ -557,6 +686,16 @@ export class Match {
       u.ai.tx = zx + Math.cos(a) * rr;
       u.ai.tz = zz + Math.sin(a) * rr;
       if (Math.random() < 0.3) u.ai.strafe *= -1;
+    }
+    // the medic keeps close to a hurt ally when no enemy is in reach
+    if (u.hero.id === 'medic' && (!e || d > range + 2)) {
+      let hurt: Unit | null = null, worst = 0.85;
+      for (const o of this.units) if (o !== u && o.alive && o.team === u.team && o.hp / o.kit.hp < worst) { worst = o.hp / o.kit.hp; hurt = o; }
+      if (hurt && Math.hypot(hurt.x - u.x, hurt.z - u.z) > 1.5) { u.ai.tx = hurt.x; u.ai.tz = hurt.z; }
+    }
+    if (u.hero.id === 'medic' && k.heal && Math.random() < 0.08 * pf) {
+      const need = this.units.some((o) => o.alive && o.team === u.team && o.hp / o.kit.hp < 0.6 && Math.hypot(o.x - u.x, o.z - u.z) < k.heal!.r);
+      if (need) this.ability(u, 1, null);
     }
     if (e && low && d < 6 && !this.inZone(u)) {
       const [sx, sz] = SPAWNS[u.team][u.slot];
@@ -569,21 +708,27 @@ export class Match {
       if (!this.inZone(u) && Math.random() < 0.02) { mx += (zx - u.x) * 0.2; mz += (zz - u.z) * 0.2; }
       if (d <= range + 0.2) {
         atk = true;
-        const err = ((Math.random() - 0.5) * (this.sim ? 12 : u.team === 1 ? 14 : 10) * Math.PI) / 180;
+        const err = ((Math.random() - 0.5) * (this.opts.allBots ? 12 : 22 - 14 * skill) * Math.PI) / 180;
         const c = Math.cos(err), s = Math.sin(err);
         dir = [ux * c - uz * s, ux * s + uz * c];
       }
       // abilities
       const id = u.hero.id;
       if (id === 'technik') {
-        if (d < 6.5 && Math.random() < 0.03) this.ability(u, 1, [ux, uz]);
-        if (d < 3.2 && Math.random() < 0.05) this.ability(u, 2, [ux, uz]);
+        if (d < 6.5 && Math.random() < 0.03 * pf) this.ability(u, 1, [ux, uz]);
+        if (d < 3.2 && Math.random() < 0.05 * pf) this.ability(u, 2, [ux, uz]);
       } else if (id === 'tank') {
-        if (d > 2.2 && d < 4.2 && Math.random() < 0.05) this.ability(u, 2, [ux, uz]);
-        if (this.time - u.lastHurt < 0.6 && d > 2.5 && Math.random() < 0.05) this.ability(u, 1, [ux, uz]);
-      } else {
-        if (d > 2 && d < 7 && Math.random() < 0.03) this.ability(u, 1, [ux, uz]);
-        if (d < 2.4 && Math.random() < 0.06) this.ability(u, 2, [ux, uz]);
+        if (d > 2.2 && d < 4.2 && Math.random() < 0.05 * pf) this.ability(u, 2, [ux, uz]);
+        if (this.time - u.lastHurt < 0.6 && d > 2.5 && Math.random() < 0.05 * pf) this.ability(u, 1, [ux, uz]);
+      } else if (id === 'sprinter') {
+        if (d > 2 && d < 7 && Math.random() < 0.03 * pf) this.ability(u, 1, [ux, uz]);
+        if (d < 2.4 && Math.random() < 0.06 * pf) this.ability(u, 2, [ux, uz]);
+      } else if (id === 'sniper') {
+        if (d < 3.5 && Math.random() < 0.05 * pf) this.ability(u, 1, [-ux, -uz]);   // trap behind while backing off
+        if (d < 11 && Math.random() < 0.03 * pf) this.ability(u, 2, dir ?? [ux, uz]);
+      } else if (id === 'medic') {
+        const near = this.units.filter((o) => o.alive && o.team === u.team && Math.hypot(o.x - u.x, o.z - u.z) < 2.4).length;
+        if ((near >= 2 || u.hp < k.hp * 0.6) && d < 7 && Math.random() < 0.03 * pf) this.ability(u, 2, null);
       }
     } else if (e && d < 9) {
       [mx, mz] = this.steer(u, e.x, e.z);   // seen but not in line of fire: go around the cover
@@ -617,11 +762,12 @@ export class Match {
       }
       let move: [number, number] = [0, 0];
       if (running) {
-        if (u.isPlayer && !this.sim?.allBots) {
+        if (u.isPlayer && !this.opts.allBots) {
           const [ix, iy] = input.move;
           const m = Math.hypot(ix, iy);
           move = m > 0.15 ? [ix / m, -iy / m] : [0, 0];
           if (input.attack) this.attack(u, input.attack.dir);
+          else if (input.auto) { const t = this.autoTarget(u); if (t) this.attack(u, t); }
           if (input.a1) this.ability(u, 1, null);
           if (input.a2) this.ability(u, 2, null);
           if (input.dash) this.doDash(u, move[0] || move[1] ? move : null);
@@ -630,6 +776,12 @@ export class Match {
           move = t.move;
           if (t.atk) this.attack(u, t.dir);
         }
+      }
+      // sniper's armour-piercing shot leaves after its short aim
+      if (u.pierceAt && now >= u.pierceAt && u.kit.pierce) {
+        const k = u.kit.pierce, [dx, dz] = u.pierceDir;
+        u.pierceAt = 0;
+        if (now >= u.stunUntil) this.spawnProj(u, u.x + dx * 0.5, u.z + dz * 0.5, dx * k.speed, dz * k.speed, k.range, k.dmg, 0, 'tracer', false, u.team, true);
       }
       // regen
       if (running && now - u.lastHurt > REGEN.delay && u.hp < u.kit.hp) u.hp = Math.min(u.kit.hp, u.hp + u.kit.hp * REGEN.perSec * dt);
@@ -692,7 +844,7 @@ export class Match {
       if (u.alive && now >= u.oneShotUntil) {
         if (u.moving || u.dash) {
           this.play(u, 'Run', 0.12);
-          u.cur?.setEffectiveTimeScale(u.dash ? 1.6 : this.speedOf(u) / u.kit.speed);
+          u.cur?.setEffectiveTimeScale(u.dash ? 1.6 : this.speedOf(u) / u.hero.runSpeed);
         } else this.play(u, 'Idle', 0.18);
       } else if (u.moving && u.cur && u.cur !== u.actions.get('Defeat')) {
         this.play(u, 'Run', 0.08);
@@ -715,6 +867,8 @@ export class Match {
     if (running) {
       this.stepProjectiles(dt);
       this.stepTurrets();
+      this.stepMines();
+      this.stepHealZones(dt);
       this.stepZone(dt);
     }
     this.stepSmokes(dt);
@@ -793,7 +947,10 @@ export class Match {
         if (dead) break;
         for (const u of this.units) {
           if (u.team === p.team || !u.alive) continue;
-          if (Math.hypot(u.x - p.x, u.z - p.z) < R_HIT) { this.hurt(u, p.dmg, p.owner); dead = true; break; }
+          if (Math.hypot(u.x - p.x, u.z - p.z) < R_HIT) {
+            if (p.pierced) { if (!p.pierced.has(u.id)) { p.pierced.add(u.id); this.hurt(u, p.dmg, p.owner); } continue; }
+            this.hurt(u, p.dmg, p.owner); dead = true; break;
+          }
         }
         if (dead) break;
         for (const t of this.turrets) {
@@ -830,6 +987,42 @@ export class Match {
       keep.push(t);
     }
     this.turrets = keep;
+  }
+
+  private stepMines(): void {
+    const keep: Mine[] = [];
+    for (const m of this.mines) {
+      if (this.time >= m.until) { this.scene.remove(m.obj); continue; }
+      const armed = this.time >= m.armAt;
+      m.light.visible = armed ? Math.floor(this.time * 3) % 2 === 0 : true;
+      const k = m.owner.kit.mine!;
+      if (armed && this.units.some((e) => e.alive && e.team !== m.team && Math.hypot(e.x - m.x, e.z - m.z) < k.r)) {
+        for (const e of this.units) {
+          if (!e.alive || e.team === m.team || Math.hypot(e.x - m.x, e.z - m.z) > k.r * 1.25) continue;
+          this.hurt(e, k.dmg, m.owner);
+          if (e.alive) { e.stunUntil = this.time + k.stun; e.dash = null; }
+        }
+        this.fxBlast(m.x, m.z, k.r * 1.25);
+        this.scene.remove(m.obj);
+        continue;
+      }
+      keep.push(m);
+    }
+    this.mines = keep;
+  }
+
+  private stepHealZones(dt: number): void {
+    const keep: HealZone[] = [];
+    for (const z of this.zones) {
+      if (this.time >= z.until) { this.scene.remove(z.obj); continue; }
+      for (const u of this.units) if (u.alive && u.team === z.team && Math.hypot(u.x - z.x, u.z - z.z) < z.r) this.healUnit(u, z.hps * dt, z.owner);
+      const age = this.time - z.born;
+      z.obj.scale.setScalar(Math.min(1, age / 0.25));
+      const ring = z.obj.children[1] as THREE.Mesh;
+      (ring.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.25 * Math.sin(this.time * 6);
+      keep.push(z);
+    }
+    this.zones = keep;
   }
 
   private stepSmokes(dt: number): void {
@@ -890,13 +1083,15 @@ export class Match {
       else { u.oneShotUntil = 0; this.play(u, 'Idle', 0.2); }
     }
     const p = this.player;
-    this.ev.end({ winner, score: [Math.round(this.score[0]), Math.round(this.score[1])], you: { kills: p.kills, deaths: p.deaths, dealt: p.dealt } });
+    this.ev.end({ winner, score: [Math.round(this.score[0]), Math.round(this.score[1])], you: { kills: p.kills, deaths: p.deaths, dealt: p.dealt, healed: Math.round(p.healed) } });
   }
 
   dispose(): void {
     for (const p of this.projs) this.scene.remove(p.obj);
     for (const t of this.turrets) this.scene.remove(t.obj);
     for (const s of this.smokes) this.scene.remove(s.obj);
+    for (const m of this.mines) this.scene.remove(m.obj);
+    for (const z of this.zones) this.scene.remove(z.obj);
     this.smokeFx.dispose();
     for (const g of Object.values(this.geos)) g.dispose();
     for (const m of Object.values(this.mats)) m.dispose();

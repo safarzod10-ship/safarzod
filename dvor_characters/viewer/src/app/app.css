@@ -468,3 +468,88 @@ img { display: block; max-width: 100%; }
 }
 @keyframes shine { 0%, 55% { transform: translateX(0); } 100% { transform: translateX(560%); } }
 @media (prefers-reduced-motion: reduce) { .btn-play::after { animation: none; display: none; } }
+
+/* ---------------------------------------------------------------- 5 heroes: home art per hero */
+.view.home .home-art {
+  inset: 0 0 auto 0; aspect-ratio: 845 / 1060; max-height: 100%;
+  background-color: var(--bg); background-position: 50% 0; background-size: 100% auto;
+}
+.view.home .home-art::after { height: 38%; background: linear-gradient(to top, var(--bg), rgba(27, 26, 30, 0)); }
+.rank-text small { margin-left: 10px; font-size: 15px; font-weight: 500; color: var(--muted); }
+
+/* hero select: five cards in a row */
+.cards { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.card { aspect-ratio: 0.62; border-radius: 9px; }
+.card-name { bottom: 25px; font-size: 12.5px; }
+.card-role { bottom: 6px; font-size: 15px; }
+.detail .kit { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 5px; font-size: 13px; line-height: 1.25; color: var(--ink-2); }
+.detail .kit b { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-lo); }
+.detail h3 { margin-top: 12px; }
+
+/* ---------------------------------------------------------------- battle: few controls */
+.stick-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 62%; touch-action: none; }
+.view.battle .stick { transform: none; }
+.stick.on { background: radial-gradient(circle, rgba(230, 226, 222, 0.22) 0 50%, rgba(230, 226, 222, 0.32) 51% 100%); }
+.dash-ring {
+  position: absolute; inset: -8px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(rgba(255, 155, 69, 0.95) calc((1 - var(--cd, 0)) * 360deg), rgba(255, 255, 255, 0.12) 0);
+  -webkit-mask: radial-gradient(circle, transparent 66%, #000 68%); mask: radial-gradient(circle, transparent 66%, #000 68%);
+}
+.stick.dashed .dash-ring { animation: dashFlash 0.35s ease-out; }
+@keyframes dashFlash { 50% { inset: -14px; opacity: 0.5; } }
+.skills.two { width: 176px; height: 124px; }
+.skills.two .sk.main { right: 0; top: 0; width: 94px; height: 94px; font-size: 48px; }
+.skills.two .sk.cloud { left: 0; top: auto; bottom: 0; width: 72px; height: 72px; font-size: 36px; }
+.hint {
+  position: absolute; left: 50%; top: 56%; transform: translateX(-50%); pointer-events: none; text-align: center;
+  padding: 10px 16px; border-radius: 12px; background: rgba(16, 16, 20, 0.72); font-size: 14px; line-height: 1.5; white-space: nowrap;
+}
+.hint p { margin: 0; color: #d9d3cc; } .hint b { color: #fff; }
+.dmg.heal { color: #6dff8f; }
+@media (max-height: 430px) { .stick { width: 116px; height: 116px; } .hint { top: 50%; font-size: 13px; } }
+@media (max-height: 340px) { .stick { width: 100px; height: 100px; } }
+
+/* result: trophies, rank and level */
+.result-reward {
+  display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 10px; text-align: left;
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.06);
+}
+.rr-badge svg { width: 46px; height: 50px; }
+.rr-text { display: grid; gap: 2px; } .rr-text b { font-size: 16px; }
+.rr-text > span { display: flex; align-items: center; gap: 5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rr-text > span svg { color: #ffc23d; }
+.rr-text em { font-style: normal; font-weight: 800; } .rr-text em.up { color: #6dff8f; } .rr-text em.down { color: #ff8d80; }
+.rr-xp { display: grid; justify-items: end; gap: 3px; font-size: 12.5px; color: var(--muted); }
+.rr-xp b { font-size: 15px; color: #fff; }
+.rr-xp i, .prog-bar { display: block; width: 74px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.rr-xp s, .prog-bar s { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-lo), var(--accent-hi)); }
+.result-up { margin: -4px 0 10px; font-weight: 600; color: var(--accent-hi); }
+
+/* ---------------------------------------------------------------- Рейтинг: ranks, level, history */
+.prog { padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
+.prog-head { display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
+.prog-badge svg { width: 72px; height: 78px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)); }
+.prog-head h1 { margin: 0; font: italic 800 30px/1.05 var(--font-display); }
+.prog-head p { display: flex; align-items: center; gap: 5px; margin: 6px 0 8px; color: var(--muted); font-size: 14px; }
+.prog-head p svg { color: #ffc23d; } .prog-head p b { color: #fff; font-size: 16px; }
+.prog-head .prog-bar { width: 100%; height: 8px; border-radius: 4px; }
+.prog-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 16px 0 10px; }
+.prog-stats span { display: grid; justify-items: center; gap: 2px; padding: 8px 2px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); font-size: 12px; color: var(--muted); }
+.prog-stats b { font-size: 20px; color: #fff; font-variant-numeric: tabular-nums; }
+.prog-lv { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+.prog-lv .prog-bar { width: 100%; margin-top: 6px; }
+.prog h2 { margin: 18px 0 8px; font: italic 800 20px/1 var(--font-display); }
+.ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.ladder li { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 5px 10px; border-radius: 8px; color: var(--muted); font-size: 14px; }
+.ladder li b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ladder .lb svg { width: 24px; height: 26px; }
+.ladder li.done { color: #e8e2dc; }
+.ladder li.me { color: #fff; background: rgba(240, 122, 30, 0.18); box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.history li { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); font-size: 13.5px; color: var(--muted); }
+.history img { width: 38px; height: 38px; border-radius: 8px; object-fit: cover; object-position: top; }
+.history b { color: #fff; } .history li.win b { color: var(--accent-hi); } .history li.lose b { color: #ff8d80; }
+.history em { font-style: normal; font-weight: 800; color: #6dff8f; } .history li.lose em { color: #ff8d80; }
+.muted { color: var(--muted); font-size: 14px; }
+
+.scorebar .faces { display: flex; gap: 3px; }

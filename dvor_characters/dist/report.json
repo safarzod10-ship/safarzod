@@ -1,273 +1,30 @@
 {
   "characters": {
-    "CH_Technik": {
+    "USER_HERO_Medic": {
       "glb": {
-        "file": "CH_Technik.glb",
-        "bytes": 160648,
-        "gzip": 77683,
-        "brotli": 72642
+        "file": "USER_HERO_Medic.glb",
+        "bytes": 483532,
+        "gzip": 395751,
+        "brotli": 387536
       },
       "ktx2_glb": {
-        "file": "CH_Technik.ktx2.glb",
-        "bytes": 153820,
-        "gzip": 72112,
-        "brotli": 67052
+        "file": "USER_HERO_Medic.ktx2.glb",
+        "bytes": 443724,
+        "gzip": 355341,
+        "brotli": 347202
       },
-      "raw_glb_bytes": 453312,
+      "raw_glb_bytes": 932824,
       "meshes": [
         {
-          "name": "CH_Technik_LOD0",
+          "name": "USER_HERO_Medic_LOD0",
           "primitives": 1,
-          "triangles": 3859
-        },
-        {
-          "name": "CH_Technik_LOD1",
-          "primitives": 1,
-          "triangles": 1347
+          "triangles": 4897
         }
       ],
       "materials": 1,
       "textures": [
         {
-          "name": "CH_Technik_atlas",
-          "mime": "image/png",
-          "size": [
-            512,
-            512
-          ]
-        }
-      ],
-      "joints": 18,
-      "draw_calls_visible_lod": 1,
-      "extensions": [
-        "EXT_meshopt_compression",
-        "KHR_mesh_quantization"
-      ],
-      "animations": [
-        {
-          "name": "Ability",
-          "duration_s": 1.067,
-          "channels": 54
-        },
-        {
-          "name": "Attack",
-          "duration_s": 0.733,
-          "channels": 54
-        },
-        {
-          "name": "Defeat",
-          "duration_s": 1.6,
-          "channels": 54
-        },
-        {
-          "name": "Hit",
-          "duration_s": 0.433,
-          "channels": 54
-        },
-        {
-          "name": "Idle",
-          "duration_s": 2.033,
-          "channels": 54
-        },
-        {
-          "name": "Run",
-          "duration_s": 0.7,
-          "channels": 54
-        },
-        {
-          "name": "Victory",
-          "duration_s": 1.333,
-          "channels": 54
-        }
-      ]
-    },
-    "CH_Sprinter": {
-      "glb": {
-        "file": "CH_Sprinter.glb",
-        "bytes": 157152,
-        "gzip": 74531,
-        "brotli": 69600
-      },
-      "ktx2_glb": {
-        "file": "CH_Sprinter.ktx2.glb",
-        "bytes": 151184,
-        "gzip": 69695,
-        "brotli": 64641
-      },
-      "raw_glb_bytes": 430496,
-      "meshes": [
-        {
-          "name": "CH_Sprinter_LOD0",
-          "primitives": 1,
-          "triangles": 3296
-        },
-        {
-          "name": "CH_Sprinter_LOD1",
-          "primitives": 1,
-          "triangles": 1349
-        }
-      ],
-      "materials": 1,
-      "textures": [
-        {
-          "name": "CH_Sprinter_atlas",
-          "mime": "image/png",
-          "size": [
-            512,
-            512
-          ]
-        }
-      ],
-      "joints": 18,
-      "draw_calls_visible_lod": 1,
-      "extensions": [
-        "EXT_meshopt_compression",
-        "KHR_mesh_quantization"
-      ],
-      "animations": [
-        {
-          "name": "Ability",
-          "duration_s": 0.833,
-          "channels": 54
-        },
-        {
-          "name": "Attack",
-          "duration_s": 0.567,
-          "channels": 54
-        },
-        {
-          "name": "Defeat",
-          "duration_s": 1.6,
-          "channels": 54
-        },
-        {
-          "name": "Hit",
-          "duration_s": 0.433,
-          "channels": 54
-        },
-        {
-          "name": "Idle",
-          "duration_s": 2.033,
-          "channels": 54
-        },
-        {
-          "name": "Run",
-          "duration_s": 0.567,
-          "channels": 54
-        },
-        {
-          "name": "Victory",
-          "duration_s": 1.2,
-          "channels": 54
-        }
-      ]
-    },
-    "CH_Tank": {
-      "glb": {
-        "file": "CH_Tank.glb",
-        "bytes": 153296,
-        "gzip": 68460,
-        "brotli": 63784
-      },
-      "ktx2_glb": {
-        "file": "CH_Tank.ktx2.glb",
-        "bytes": 147800,
-        "gzip": 64092,
-        "brotli": 59238
-      },
-      "raw_glb_bytes": 430552,
-      "meshes": [
-        {
-          "name": "CH_Tank_LOD0",
-          "primitives": 1,
-          "triangles": 2996
-        },
-        {
-          "name": "CH_Tank_LOD1",
-          "primitives": 1,
-          "triangles": 1348
-        }
-      ],
-      "materials": 1,
-      "textures": [
-        {
-          "name": "CH_Tank_atlas",
-          "mime": "image/png",
-          "size": [
-            512,
-            512
-          ]
-        }
-      ],
-      "joints": 18,
-      "draw_calls_visible_lod": 1,
-      "extensions": [
-        "EXT_meshopt_compression",
-        "KHR_mesh_quantization"
-      ],
-      "animations": [
-        {
-          "name": "Ability",
-          "duration_s": 1.133,
-          "channels": 54
-        },
-        {
-          "name": "Attack",
-          "duration_s": 1,
-          "channels": 54
-        },
-        {
-          "name": "Defeat",
-          "duration_s": 1.6,
-          "channels": 54
-        },
-        {
-          "name": "Hit",
-          "duration_s": 0.433,
-          "channels": 54
-        },
-        {
-          "name": "Idle",
-          "duration_s": 2.033,
-          "channels": 54
-        },
-        {
-          "name": "Run",
-          "duration_s": 0.833,
-          "channels": 54
-        },
-        {
-          "name": "Victory",
-          "duration_s": 1.6,
-          "channels": 54
-        }
-      ]
-    },
-    "USER_CH_Technik": {
-      "glb": {
-        "file": "USER_CH_Technik.glb",
-        "bytes": 312736,
-        "gzip": 238842,
-        "brotli": 233071
-      },
-      "ktx2_glb": {
-        "file": "USER_CH_Technik.ktx2.glb",
-        "bytes": 300216,
-        "gzip": 226053,
-        "brotli": 221488
-      },
-      "raw_glb_bytes": 546128,
-      "meshes": [
-        {
-          "name": "USER_CH_Technik_LOD0",
-          "primitives": 1,
-          "triangles": 1430
-        }
-      ],
-      "materials": 1,
-      "textures": [
-        {
-          "name": "USER_CH_Technik_basecolor_1024",
+          "name": "USER_HERO_Medic_basecolor_1024",
           "mime": "image/jpeg",
           "size": [
             1024,
@@ -284,12 +41,12 @@
       "animations": [
         {
           "name": "Ability",
-          "duration_s": 1.067,
+          "duration_s": 0.933,
           "channels": 54
         },
         {
           "name": "Attack",
-          "duration_s": 0.733,
+          "duration_s": 0.7,
           "channels": 54
         },
         {
@@ -309,7 +66,83 @@
         },
         {
           "name": "Run",
-          "duration_s": 0.7,
+          "duration_s": 0.633,
+          "channels": 54
+        },
+        {
+          "name": "Victory",
+          "duration_s": 1.2,
+          "channels": 54
+        }
+      ]
+    },
+    "USER_HERO_Sniper": {
+      "glb": {
+        "file": "USER_HERO_Sniper.glb",
+        "bytes": 473544,
+        "gzip": 386653,
+        "brotli": 378066
+      },
+      "ktx2_glb": {
+        "file": "USER_HERO_Sniper.ktx2.glb",
+        "bytes": 439272,
+        "gzip": 351515,
+        "brotli": 344017
+      },
+      "raw_glb_bytes": 919928,
+      "meshes": [
+        {
+          "name": "USER_HERO_Sniper_LOD0",
+          "primitives": 1,
+          "triangles": 4900
+        }
+      ],
+      "materials": 1,
+      "textures": [
+        {
+          "name": "USER_HERO_Sniper_basecolor_1024",
+          "mime": "image/jpeg",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "joints": 18,
+      "draw_calls_visible_lod": 1,
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "animations": [
+        {
+          "name": "Ability",
+          "duration_s": 0.933,
+          "channels": 54
+        },
+        {
+          "name": "Attack",
+          "duration_s": 0.8,
+          "channels": 54
+        },
+        {
+          "name": "Defeat",
+          "duration_s": 1.6,
+          "channels": 54
+        },
+        {
+          "name": "Hit",
+          "duration_s": 0.433,
+          "channels": 54
+        },
+        {
+          "name": "Idle",
+          "duration_s": 2.033,
+          "channels": 54
+        },
+        {
+          "name": "Run",
+          "duration_s": 0.767,
           "channels": 54
         },
         {
@@ -319,31 +152,31 @@
         }
       ]
     },
-    "USER_CH_Sprinter": {
+    "USER_HERO_Sprinter": {
       "glb": {
-        "file": "USER_CH_Sprinter.glb",
-        "bytes": 333696,
-        "gzip": 256844,
-        "brotli": 250506
+        "file": "USER_HERO_Sprinter.glb",
+        "bytes": 338524,
+        "gzip": 257956,
+        "brotli": 251192
       },
       "ktx2_glb": {
-        "file": "USER_CH_Sprinter.ktx2.glb",
-        "bytes": 323712,
-        "gzip": 246703,
-        "brotli": 241772
+        "file": "USER_HERO_Sprinter.ktx2.glb",
+        "bytes": 347956,
+        "gzip": 266832,
+        "brotli": 260813
       },
-      "raw_glb_bytes": 549820,
+      "raw_glb_bytes": 631892,
       "meshes": [
         {
-          "name": "USER_CH_Sprinter_LOD0",
+          "name": "USER_HERO_Sprinter_LOD0",
           "primitives": 1,
-          "triangles": 1447
+          "triangles": 4982
         }
       ],
       "materials": 1,
       "textures": [
         {
-          "name": "USER_CH_Sprinter_basecolor_1024",
+          "name": "USER_HERO_Sprinter_basecolor_1024",
           "mime": "image/jpeg",
           "size": [
             1024,
@@ -395,31 +228,31 @@
         }
       ]
     },
-    "USER_CH_Tank": {
+    "USER_HERO_Tank": {
       "glb": {
-        "file": "USER_CH_Tank.glb",
-        "bytes": 286776,
-        "gzip": 211068,
-        "brotli": 204916
+        "file": "USER_HERO_Tank.glb",
+        "bytes": 306528,
+        "gzip": 224986,
+        "brotli": 218823
       },
       "ktx2_glb": {
-        "file": "USER_CH_Tank.ktx2.glb",
-        "bytes": 290160,
-        "gzip": 214146,
-        "brotli": 209185
+        "file": "USER_HERO_Tank.ktx2.glb",
+        "bytes": 327024,
+        "gzip": 245270,
+        "brotli": 238712
       },
-      "raw_glb_bytes": 515252,
+      "raw_glb_bytes": 604692,
       "meshes": [
         {
-          "name": "USER_CH_Tank_LOD0",
+          "name": "USER_HERO_Tank_LOD0",
           "primitives": 1,
-          "triangles": 1442
+          "triangles": 4996
         }
       ],
       "materials": 1,
       "textures": [
         {
-          "name": "USER_CH_Tank_basecolor_1024",
+          "name": "USER_HERO_Tank_basecolor_1024",
           "mime": "image/jpeg",
           "size": [
             1024,
@@ -467,12 +300,88 @@
         {
           "name": "Victory",
           "duration_s": 1.6,
+          "channels": 54
+        }
+      ]
+    },
+    "USER_HERO_Technik": {
+      "glb": {
+        "file": "USER_HERO_Technik.glb",
+        "bytes": 346148,
+        "gzip": 266688,
+        "brotli": 259502
+      },
+      "ktx2_glb": {
+        "file": "USER_HERO_Technik.ktx2.glb",
+        "bytes": 352268,
+        "gzip": 272222,
+        "brotli": 265536
+      },
+      "raw_glb_bytes": 660836,
+      "meshes": [
+        {
+          "name": "USER_HERO_Technik_LOD0",
+          "primitives": 1,
+          "triangles": 5231
+        }
+      ],
+      "materials": 1,
+      "textures": [
+        {
+          "name": "USER_HERO_Technik_basecolor_1024",
+          "mime": "image/jpeg",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "joints": 18,
+      "draw_calls_visible_lod": 1,
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "animations": [
+        {
+          "name": "Ability",
+          "duration_s": 1.067,
+          "channels": 54
+        },
+        {
+          "name": "Attack",
+          "duration_s": 0.733,
+          "channels": 54
+        },
+        {
+          "name": "Defeat",
+          "duration_s": 1.6,
+          "channels": 54
+        },
+        {
+          "name": "Hit",
+          "duration_s": 0.433,
+          "channels": 54
+        },
+        {
+          "name": "Idle",
+          "duration_s": 2.033,
+          "channels": 54
+        },
+        {
+          "name": "Run",
+          "duration_s": 0.7,
+          "channels": 54
+        },
+        {
+          "name": "Victory",
+          "duration_s": 1.333,
           "channels": 54
         }
       ]
     }
   },
-  "generated": "2026-11-25T16:45:42.354Z",
+  "generated": "2026-11-26T11:56:14.288Z",
   "tools": {
     "gltf-transform": "4.5.1",
     "meshoptimizer": "1.3.0",

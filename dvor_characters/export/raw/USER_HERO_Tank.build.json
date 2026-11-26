@@ -1,0 +1,193 @@
+{
+  "character": "USER_HERO_Tank",
+  "source_mesh": "user_meshes/v2/tank.glb",
+  "scale": 1.5,
+  "import": {
+    "verts_imported": 3378,
+    "verts_welded": 2500
+  },
+  "cut": null,
+  "fist_connected_to_torso_after": {
+    "L": "0/150",
+    "R": "0/150"
+  },
+  "lod0": {
+    "object": "USER_HERO_Tank_LOD0",
+    "triangles": 4996,
+    "vertices_blender": 2500,
+    "materials": 1,
+    "max_influences": 4,
+    "unweighted_vertices": 0,
+    "bbox_m": [
+      1.163,
+      0.583,
+      1.497
+    ]
+  },
+  "skin": {
+    "constrained_vertices": 0,
+    "unweighted_fixed": 0,
+    "rigid_pieces": []
+  },
+  "bones": 18,
+  "texture": {
+    "source": [
+      4096,
+      4096
+    ],
+    "delivered": [
+      1024,
+      1024
+    ],
+    "path": "textures/USER_HERO_Tank_basecolor_1024.jpg",
+    "bytes": 142914
+  },
+  "clips": {
+    "Idle": {
+      "duration_s": 2.0,
+      "loop": true
+    },
+    "Run": {
+      "duration_s": 0.8,
+      "loop": true,
+      "speed_mps": 1.939,
+      "source": "CMU mocap 35_17",
+      "source_frames_120fps": [
+        33,
+        122
+      ],
+      "source_speed_mps": 3.158,
+      "hips_stride_speed_mps": 2.029,
+      "seam_mismatch_deg_before_fix": 2.8,
+      "tempo": 0.93,
+      "retarget_max_error_deg": 0.0,
+      "hips_scale": 0.693,
+      "loop_check": {
+        "ok": true,
+        "object": "USER_HERO_Tank_Rig",
+        "action": "Run",
+        "frames": [
+          1,
+          25
+        ],
+        "loops": true,
+        "pops": [],
+        "hitches": [
+          {
+            "bone": "forearm.L",
+            "deg_per_frame_in": 4.964,
+            "deg_per_frame_out": 9.122,
+            "kind": "dip"
+          },
+          {
+            "bone": "hand.L",
+            "deg_per_frame_in": 4.964,
+            "deg_per_frame_out": 9.122,
+            "kind": "dip"
+          },
+          {
+            "bone": "thigh.L",
+            "deg_per_frame_in": 2.021,
+            "deg_per_frame_out": 5.297,
+            "kind": "dip"
+          },
+          {
+            "bone": "upper_arm.L",
+            "deg_per_frame_in": 3.238,
+            "deg_per_frame_out": 6.102,
+            "kind": "kink"
+          }
+        ],
+        "note": "speed changes across the seam: match the tangents (Graph Editor, auto-clamped/cyclic) or re-pose frame 2/N-1"
+      },
+      "foot_contact": {
+        "stance_frames": 12,
+        "slide_max_mps": 0.217,
+        "slide_mean_mps": 0.032,
+        "slide_mean_pct_of_speed": 1.6,
+        "before_lock": {
+          "stance_frames": 12,
+          "slide_max_mps": 1.384,
+          "slide_mean_mps": 0.573,
+          "slide_mean_pct_of_speed": 29.5
+        },
+        "mesh_floor": {
+          "lowest_over_cycle_m": -0.0,
+          "stance_sole_height_m": [
+            -0.0,
+            0.042
+          ],
+          "highest_flight_m": 0.0646
+        }
+      },
+      "arms_vs_torso": {
+        "arm_in_torso_frames_before": 0,
+        "after": 0,
+        "of": 48,
+        "style": {
+          "phase_source": "thigh pitch R-L",
+          "abd": 30,
+          "off": 6,
+          "amp": 34,
+          "bend": 78,
+          "bend_var": 14,
+          "inward": 0,
+          "wrist": 10
+        },
+        "legs": {
+          "max_lateral_fix_m": 0.155,
+          "max_foot_yaw_fix_deg": 16.3
+        },
+        "torso_centering": {
+          "pelvis": {
+            "side_tilt_deg": 1.24,
+            "turn_deg": -2.43
+          },
+          "chest": {
+            "side_tilt_deg": -2.95,
+            "turn_deg": 2.9
+          },
+          "head": {
+            "side_tilt_deg": -2.96,
+            "turn_deg": -9.86
+          },
+          "hips_shift_m": 0.0
+        },
+        "knees": {
+          "max_knee_move_m": 0.129,
+          "inner_knee_gap": {
+            "rest_m": 0.04,
+            "run_min_m": 0.019
+          }
+        }
+      }
+    },
+    "Attack": {
+      "duration_s": 0.967,
+      "loop": false,
+      "event_hit_s": 0.5
+    },
+    "Ability": {
+      "duration_s": 1.1,
+      "loop": false,
+      "event_cast_s": 0.2
+    },
+    "Hit": {
+      "duration_s": 0.4,
+      "loop": false
+    },
+    "Defeat": {
+      "duration_s": 1.567,
+      "loop": false,
+      "hold_last_frame": true
+    },
+    "Victory": {
+      "duration_s": 1.567,
+      "loop": true
+    }
+  },
+  "files": {
+    "blend_bytes": 529270,
+    "raw_glb_bytes": 604692
+  }
+}

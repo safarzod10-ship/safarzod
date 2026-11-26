@@ -13,6 +13,8 @@ ROLE = {
     "technik": dict(run_frames=20, run_amp=40, lean=11, bob=0.022, heavy=0.0, arm_in=6),
     "tank": dict(run_frames=24, run_amp=30, lean=8, bob=0.03, heavy=1.0, arm_in=-6),
     "sprinter": dict(run_frames=16, run_amp=50, lean=16, bob=0.02, heavy=-0.5, arm_in=8),
+    "sniper": dict(run_frames=20, run_amp=38, lean=10, bob=0.024, heavy=0.4, arm_in=-2),
+    "medic": dict(run_frames=18, run_amp=44, lean=13, bob=0.021, heavy=-0.3, arm_in=8),
 }
 
 
@@ -95,11 +97,27 @@ def run(role):
         p["head"] = (-r["lean"] * 0.7, 0, -3 * s)
         p["loc"] = (0, 0, r["bob"] * math.cos(2 * ph) - r["bob"] - 0.02)
         keys.append((f + 1, p))
-    return keys, True, {"speed_mps": {"technik": 4.5, "tank": 3.8, "sprinter": 5.6}[role]}
+    return keys, True, {"speed_mps": {"technik": 4.5, "tank": 3.8, "sprinter": 5.6, "sniper": 4.3, "medic": 5.0}[role]}
 
 
 def attack(role):
     a = ready(role)
+    if role == "sniper":    # shouldered rifle: raise, aim, sharp recoil, settle
+        aim = over(a, chest=(-2, 0, -18), spine=(4, 0, 0), head=(4, 0, 14),
+                   upper_arm_R=(-70, 30, 0), forearm_R=(-95, 0, 0),
+                   upper_arm_L=(-82, 6, 0), forearm_L=(-28, 0, 0), loc=(0, 0, -0.02))
+        kick = over(aim, chest=(-10, 0, -18), spine=(-6, 0, 0), head=(-6, 0, 14),
+                    upper_arm_R=(-88, 30, 0), upper_arm_L=(-96, 6, 0), loc=(0, 0.03, -0.01))
+        keys = [(1, a), (6, aim), (9, aim), (11, kick), (16, aim), (24, a)]
+        return keys, False, {"event_hit_s": (10 - 1) / 30}
+    if role == "medic":     # underarm toss of a med pack with the right hand
+        wind = over(a, spine=(-4, 0, 0), chest=(0, 0, -16), upper_arm_R=(40, -10, 0),
+                    forearm_R=(-30, 0, 0), upper_arm_L=(-24, -12, 0), forearm_L=(-50, 0, 0))
+        toss = over(a, spine=(12, 0, 0), chest=(2, 0, 14), upper_arm_R=(-78, -6, 0),
+                    forearm_R=(-14, 0, 0), upper_arm_L=(20, -14, 0), forearm_L=(-40, 0, 0),
+                    thigh_L=(-22, -4, 0), shin_L=(18, 0, 0), loc=(0, -0.03, -0.03))
+        keys = [(1, a), (7, wind), (11, toss), (15, blend(toss, a, 0.4)), (21, a)]
+        return keys, False, {"event_hit_s": (10 - 1) / 30}
     if role == "technik":   # sharp side-arm throw of a gadget with the right hand
         wind = over(a, chest=(-4, 0, -28), spine=(-4, 0, 0), upper_arm_R=(38, -38, 0),
                     forearm_R=(-105, 0, 0), upper_arm_L=(-30, -15, 0), forearm_L=(-40, 0, 0),
@@ -135,6 +153,23 @@ def attack(role):
 
 def ability(role):
     a = ready(role)
+    if role == "sniper":    # drop to one knee, steady aim, rise
+        kneel = over(a, loc=(0, 0.02, -0.24), spine=(12, 0, 0), chest=(-4, 0, -16), head=(-2, 0, 14),
+                     thigh_L=(-80, -6, 0), shin_L=(86, 0, 0), foot_L=(-6, 6, 0),
+                     thigh_R=(12, -4, 0), shin_R=(118, 0, 0), foot_R=(-60, 0, 0),
+                     upper_arm_R=(-70, 30, 0), forearm_R=(-95, 0, 0),
+                     upper_arm_L=(-82, 6, 0), forearm_L=(-28, 0, 0))
+        keys = [(1, a), (7, kneel), (18, kneel), (28, a)]
+        return keys, False, {"event_cast_s": (7 - 1) / 30}
+    if role == "medic":     # both hands up, then spread out: the heal pulse
+        up = over(a, chest=(-8, 0, 0), head=(-12, 0, 0), upper_arm_L=(-150, -20, 0),
+                  upper_arm_R=(-150, -20, 0), forearm_L=(-30, 0, 0), forearm_R=(-30, 0, 0),
+                  loc=(0, 0, 0.02))
+        spread = over(a, chest=(-4, 0, 0), head=(-4, 0, 0), upper_arm_L=(-40, -70, 0),
+                      upper_arm_R=(-40, -70, 0), forearm_L=(-10, 0, 0), forearm_R=(-10, 0, 0),
+                      loc=(0, 0, -0.03))
+        keys = [(1, a), (8, up), (13, spread), (20, spread), (28, a)]
+        return keys, False, {"event_cast_s": (13 - 1) / 30}
     if role == "technik":   # crouch, plant a device with the right hand, tap and rise
         crouch = over(a, loc=(0, 0.02, -0.25), spine=(34, 0, 0), chest=(10, 0, 0), head=(-26, 0, 0),
                       thigh_L=(-78, -6, 0), shin_L=(118, 0, 0), foot_L=(-40, 6, 0),
@@ -168,7 +203,7 @@ def ability(role):
 
 def hit(role):
     a = ready(role)
-    k = 0.6 if role == "tank" else (1.2 if role == "sprinter" else 1.0)
+    k = {"tank": 0.6, "sprinter": 1.2, "sniper": 0.8, "medic": 1.1}.get(role, 1.0)
     rec = over(a, spine=(-18 * k, 0, 0), chest=(-8 * k, 0, 8 * k), head=(-22 * k, 0, -6),
                upper_arm_L=(14, -26 * k, 0), upper_arm_R=(14, -26 * k, 0),
                forearm_L=(-34, 0, 0), forearm_R=(-34, 0, 0), loc=(0, 0.05 * k, -0.025))
@@ -178,7 +213,7 @@ def hit(role):
 
 def defeat(role):
     a = ready(role)
-    tall = {"technik": 0.66, "tank": 0.70, "sprinter": 0.68}[role]
+    tall = {"technik": 0.66, "tank": 0.70, "sprinter": 0.68, "sniper": 0.70, "medic": 0.68}[role]
     stag = over(a, spine=(-14, 0, 0), head=(-26, 0, 0), upper_arm_L=(20, -30, 0),
                 upper_arm_R=(20, -30, 0), forearm_L=(-30, 0, 0), forearm_R=(-30, 0, 0),
                 loc=(0, 0.04, -0.02))
@@ -203,6 +238,10 @@ def defeat(role):
 
 def victory(role):
     a = ready(role)
+    if role == "sniper":
+        role = "technik"
+    if role == "medic":
+        role = "sprinter"
     if role == "technik":   # fist pump, left hand on hip
         up = over(a, chest=(-8, 0, 0), head=(-14, 0, 0), upper_arm_R=(-168, -12, 0),
                   forearm_R=(-28, 0, 0), upper_arm_L=(18, -42, 0), forearm_L=(-70, 0, -50),

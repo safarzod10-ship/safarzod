@@ -1,19 +1,20 @@
 /**
- * Hero kits for the match prototype. All numbers in one place (metres, seconds, HP) so balance can be
- * tuned without touching code. Tuned with bot-only simulations (scripts/balance.mjs, 60 matches +
- * 60 duels per pair): sides 30:29, duels Technik > Tank 57 %, Sprinter > Technik 55 %, Tank > Sprinter 67 %.
- * Bots are not people: confirm with play tests.
+ * Hero kits for the match. All numbers in one place (metres, seconds, HP) so balance can be tuned
+ * without touching code. Tuned with bot-only simulations (scripts/balance.mjs); the results are in
+ * docs/BALANCE.md. Bots are not people: confirm with play tests.
  */
 import type { HeroId } from '../data';
 
 export interface Kit {
   hp: number;
-  speed: number;              // m/s (foot-matched Run speed)
+  speed: number;              // m/s on the ground
   armor: number;              // share of incoming damage blocked
   attack:
     | { kind: 'gun'; range: number; dmg: number; cd: number; speed: number; heatMax: number; cool: number }
     | { kind: 'melee'; range: number; arcDeg: number; dmg: number; cd: number; knockEvery: number; knock: number }
-    | { kind: 'records'; range: number; dmg: number; cd: number; speed: number; count: number; spreadDeg: number; bounces: number };
+    | { kind: 'records'; range: number; dmg: number; cd: number; speed: number; count: number; spreadDeg: number; bounces: number }
+    | { kind: 'rifle'; range: number; dmg: number; cd: number; speed: number }
+    | { kind: 'darts'; range: number; dmg: number; cd: number; speed: number };
   a1: { name: string; cd: number };
   a2: { name: string; cd: number };
   // ability parameters
@@ -23,6 +24,10 @@ export interface Kit {
   ram?: { dist: number; stun: number; dmg: number };
   spurt?: { dashes: number; dist: number; gap: number; dmg: number };
   wave?: { r: number; push: number; dmg: number };
+  mine?: { dur: number; r: number; dmg: number; stun: number; arm: number; place: number };
+  pierce?: { range: number; dmg: number; delay: number; speed: number };
+  heal?: { r: number; amount: number };
+  hospital?: { r: number; dur: number; hps: number; throw: number };
   outOfCombatBoost?: number;  // speed bonus after 2 s without fighting
 }
 
@@ -33,25 +38,39 @@ export const MATCH = { seconds: 120, target: 100, zone: { x: -0.14, z: -0.5, r: 
 
 export const KITS: Record<HeroId, Kit> = {
   technik: {
-    hp: 4800, speed: 2.35, armor: 0,
+    hp: 4800, speed: 2.4, armor: 0,
     attack: { kind: 'gun', range: 6.5, dmg: 450, cd: 0.5, speed: 18, heatMax: 6, cool: 1.5 },
     a1: { name: 'Турель', cd: 14 }, a2: { name: 'Дымовая шашка', cd: 12 },
-    turret: { dur: 8, range: 5.5, dmg: 180, rate: 2, hp: 1200, place: 2.2 },
+    turret: { dur: 8, range: 5.5, dmg: 200, rate: 2, hp: 1200, place: 2.2 },
     smoke: { dur: 5, r: 2.5, slow: 0.3, throw: 4.5 },
   },
   tank: {
-    hp: 5600, speed: 1.78, armor: 0.15,
-    attack: { kind: 'melee', range: 2, arcDeg: 75, dmg: 1100, cd: 0.85, knockEvery: 3, knock: 1.5 },
+    hp: 5700, speed: 1.9, armor: 0.15,
+    attack: { kind: 'melee', range: 2, arcDeg: 75, dmg: 1000, cd: 0.85, knockEvery: 3, knock: 1.5 },
     a1: { name: 'Гаражная дверь', cd: 10 }, a2: { name: 'Таран', cd: 8 },
     door: { dur: 4, width: 1.5 },
     ram: { dist: 4.5, stun: 0.5, dmg: 400 },
   },
   sprinter: {
-    hp: 4700, speed: 2.72, armor: 0,
+    hp: 4500, speed: 2.85, armor: 0,
     attack: { kind: 'records', range: 5.5, dmg: 400, cd: 0.65, speed: 12, count: 2, spreadDeg: 11, bounces: 1 },
     a1: { name: 'Спурт', cd: 10 }, a2: { name: 'На всю громкость', cd: 14 },
     spurt: { dashes: 3, dist: 3, gap: 0.45, dmg: 500 },
     wave: { r: 3, push: 2, dmg: 200 },
     outOfCombatBoost: 0.25,
+  },
+  sniper: {
+    hp: 4100, speed: 2.3, armor: 0,
+    attack: { kind: 'rifle', range: 8.5, dmg: 1050, cd: 1.4, speed: 30 },
+    a1: { name: 'Растяжка', cd: 12 }, a2: { name: 'Бронебойный', cd: 10 },
+    mine: { dur: 20, r: 1.3, dmg: 900, stun: 1.0, arm: 0.6, place: 1.2 },
+    pierce: { range: 12, dmg: 1500, delay: 0.35, speed: 40 },
+  },
+  medic: {
+    hp: 4300, speed: 2.6, armor: 0,
+    attack: { kind: 'darts', range: 5.5, dmg: 400, cd: 0.55, speed: 16 },
+    a1: { name: 'Аптечка', cd: 11 }, a2: { name: 'Полевой госпиталь', cd: 16 },
+    heal: { r: 3.5, amount: 1500 },
+    hospital: { r: 2.4, dur: 5, hps: 320, throw: 2.5 },
   },
 };

@@ -14,26 +14,28 @@ const res = await p.evaluate(async ([n3, nd]) => {
   const { Match } = await import('/src/app/game/match.ts');
   const { MATCH } = await import('/src/app/game/kits.ts');
   const { load, loadColliders } = await import('/src/app/assets.ts');
-  const ids = ['technik', 'tank', 'sprinter'];
-  const model = { technik: 'USER_CH_Technik', tank: 'USER_CH_Tank', sprinter: 'USER_CH_Sprinter' };
-  const heroes = {}; for (const id of ids) heroes[id] = await load(model[id]);
+  const { HEROES } = await import('/src/app/data.ts');
+  const { lineup } = await import('/src/app/game/match.ts');
+  const ids = HEROES.map((h) => h.id);
+  const heroes = {}; for (const h of HEROES) heroes[h.id] = await load(h.model);
   const cols = await loadColliders(); const props = await load('PROPS');
   const ev = { damage() {}, kill() {}, end() {} };
-  const inp = { move: [0, 0], attack: null, a1: false, a2: false, dash: false };
+  const inp = { move: [0, 0], attack: null, auto: false, a1: false, a2: false, dash: false };
   const dt = 1 / 30;
-  // 3v3, each side one of each hero
-  const st = {}; for (const id of ids) st[id] = { dealt: 0, kills: 0, deaths: 0, zone: 0, n: 0 };
+  // 3v3, three random different heroes per side
+  const st = {}; for (const id of ids) st[id] = { dealt: 0, healed: 0, kills: 0, deaths: 0, zone: 0, n: 0, won: 0 };
   let wins = [0, 0, 0];
   for (let i = 0; i < n3; i++) {
     const scene = new THREE.Scene();
-    const order = [...ids].sort(() => Math.random() - 0.5);
-    const m = new Match(scene, heroes, cols, order[0], ev, props, { blue: order, red: [...ids].sort(() => Math.random() - 0.5), allBots: true });
+    const blue = lineup(), red = lineup();
+    const m = new Match(scene, heroes, cols, blue[0], ev, props, { blue, red, allBots: true });
     m.start();
     while (!m.ended) {
       m.update(dt, inp);
       for (const u of m.units) if (u.alive && Math.hypot(u.x - MATCH.zone.x, u.z - MATCH.zone.z) < MATCH.zone.r) st[u.hero.id].zone += dt;
     }
-    for (const u of m.units) { const s = st[u.hero.id]; s.dealt += u.dealt; s.kills += u.kills; s.deaths += u.deaths; s.n++; }
+    const win = m.score[0] > m.score[1] ? 0 : m.score[1] > m.score[0] ? 1 : -1;
+    for (const u of m.units) { const s = st[u.hero.id]; s.dealt += u.dealt; s.healed += u.healed; s.kills += u.kills; s.deaths += u.deaths; s.n++; if (u.team === win) s.won++; }
     wins[m.score[0] > m.score[1] ? 0 : m.score[1] > m.score[0] ? 1 : 2]++;
     m.dispose();
   }
@@ -57,7 +59,7 @@ const res = await p.evaluate(async ([n3, nd]) => {
     }
     duel[`${a} vs ${c}`] = { [a]: wa, [c]: wc, kills: done, avgTTK: done ? +(ttk / done).toFixed(1) : null };
   }
-  for (const id of ids) { const s = st[id]; st[id] = { dealtPerMatch: Math.round(s.dealt / s.n), kills: +(s.kills / s.n).toFixed(2), deaths: +(s.deaths / s.n).toFixed(2), zoneSec: +(s.zone / s.n).toFixed(1) }; }
+  for (const id of ids) { const s = st[id]; st[id] = { teamWin: +(s.won / s.n).toFixed(2), dealtPerMatch: Math.round(s.dealt / s.n), healedPerMatch: Math.round(s.healed / s.n), kills: +(s.kills / s.n).toFixed(2), deaths: +(s.deaths / s.n).toFixed(2), zoneSec: +(s.zone / s.n).toFixed(1) }; }
   return { matches: n3, blueWins: wins[0], redWins: wins[1], draws: wins[2], perHero: st, duel };
 }, [+N3, +ND]);
 console.log(JSON.stringify(res, null, 1));

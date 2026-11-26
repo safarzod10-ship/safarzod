@@ -27,9 +27,18 @@ export const ICONS = {
   door: svg('<rect x="5" y="3" width="14" height="18" rx="1.5" fill="currentColor"/><path stroke="rgba(0,0,0,.45)" stroke-width="1.6" d="M5 7.5h14M5 11.5h14M5 15.5h14"/>'),
   ram: svg('<path fill="currentColor" d="M3 10h9V6l9 6-9 6v-4H3z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M2 6l2 2M2 18l2-2"/>'),
   wave: svg('<circle cx="6" cy="12" r="2.6" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M11 7.5a6.5 6.5 0 0 1 0 9M14.5 4.5a10.5 10.5 0 0 1 0 15M18 2a14 14 0 0 1 0 20"/>'),
+  scope: svg('<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6"/>'),
+  cross: svg('<path fill="currentColor" d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>'),
+  mine: svg('<ellipse cx="12" cy="16" rx="9" ry="4" fill="currentColor"/><path fill="currentColor" d="M7 15c0-3 2.2-5 5-5s5 2 5 5z"/><circle cx="12" cy="7" r="2" fill="#ff5a3c"/><path stroke="currentColor" stroke-width="1.6" d="M12 9v1.5"/>'),
+  bullet: svg('<path fill="currentColor" d="M3 10.5h11l4-1.5c2 .5 3 1.6 3 3s-1 2.5-3 3l-4-1.5H3z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M2 6.5h7M2 17.5h7"/>'),
+  medkit: svg('<rect x="3" y="7" width="18" height="13" rx="2" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2" d="M9 7V4.5h6V7"/><path fill="#d8382c" d="M10.5 10h3v2.5H16v3h-2.5V18h-3v-2.5H8v-3h2.5z"/>'),
+  zone: svg('<ellipse cx="12" cy="17" rx="10" ry="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M10.5 4h3v3.5H17v3h-3.5V14h-3v-3.5H7v-3h3.5z"/>'),
   close: svg('<path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/>'),
   rank: svg('<path fill="#9aa1aa" d="M32 2 6 12v18c0 15 11 27 26 32 15-5 26-17 26-32V12z"/><path fill="#5b6068" d="M32 7 11 15v15c0 12 9 22 21 27 12-5 21-15 21-27V15z"/><path fill="#d6dae0" d="M20 17h7v10h10V17h7v30h-7V34H27v13h-7z"/><path fill="#eef1f4" d="M24 17h3v30h-3zM37 17h3v30h-3z" opacity=".6"/>', '0 0 64 64'),
 };
 
-export const ROLE_ICON = { crosshair: ICONS.crosshair, shield: ICONS.shield, speed: ICONS.speed };
+export const ROLE_ICON = { crosshair: ICONS.crosshair, shield: ICONS.shield, speed: ICONS.speed, scope: ICONS.scope, cross: ICONS.cross };
+
+/** League badge (shield with «Д»), coloured for the rank. */
+export const rankBadge = (color: string, dark: string): string => svg(`<path fill="${color}" d="M32 2 6 12v18c0 15 11 27 26 32 15-5 26-17 26-32V12z"/><path fill="${dark}" d="M32 7 11 15v15c0 12 9 22 21 27 12-5 21-15 21-27V15z"/><path fill="${color}" d="M20 17h7v10h10V17h7v30h-7V34H27v13h-7z"/><path fill="#fff" d="M24 17h3v30h-3zM37 17h3v30h-3z" opacity=".35"/>`, '0 0 64 64');
 export const STAT_ICONS = [ICONS.heart, ICONS.damage, ICONS.wing, ICONS.defense, ICONS.gear];
