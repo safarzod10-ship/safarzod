@@ -79,13 +79,17 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
   <h1 class="title">NIGHT<br>BLADE</h1>
   <p class="sub" id="hello">Один удар — одна жизнь. Режь, отбивай пули, уходи рывком.</p>
   <div class="card">
-    <div class="row"><span class="label">Баланс</span><span class="demo">ДЕМО</span></div>
+    <div class="row"><span class="label">Баланс</span><span class="label" id="status"></span></div>
     <div class="row" style="margin-top:4px"><span class="bal" id="balance">500 ⭐</span><span class="label" id="best">Рекорд: 0</span></div>
     <div class="label" style="margin-top:10px">Ставка</div>
     <div class="stakes" id="stakes"></div>
     <div class="mult" id="multTable"></div>
   </div>
   <button class="btn main" id="playBtn">ИГРАТЬ</button>
+  <div class="card" style="margin-top:12px">
+    <div class="label">Пополнить баланс</div>
+    <div class="stakes" id="packs"></div>
+  </div>
   <div class="card" style="margin-top:12px">
     <ul class="tips">
       <li><b>УДАР</b> убивает с одного касания. Тебя — тоже.</li>

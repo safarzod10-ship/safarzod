@@ -449,7 +449,7 @@ function drawHud() {
   $("combo").textContent = combo >= 2 ? `КОМБО ${combo}` + (m > 1 ? `  ×${m}` : "") : "";
 }
 
-let stake = 25, profile = { balance: 0, best: 0 };
+let stake = 0, profile = { balance: 0, best: 0, packs: [] };
 const STAKES = [0, 10, 25, 50];
 function renderMenu() {
   $("balance").textContent = profile.balance + " ⭐";
@@ -459,16 +459,35 @@ function renderMenu() {
   $("multTable").innerHTML = Api.table.filter((r) => r.min > 0).map((r) => `<div>от ${r.min}<b>×${r.mult}</b></div>`).join("");
   $("playBtn").textContent = stake > profile.balance ? "НЕ ХВАТАЕТ ЗВЁЗД" : "ИГРАТЬ";
   $("playBtn").disabled = stake > profile.balance;
-  if (Api.demo && profile.balance < 10) { $("playBtn").disabled = false; $("playBtn").textContent = "ПОПОЛНИТЬ ДЕМО-БАЛАНС"; }
+  $("packs").innerHTML = (profile.packs || []).map((a) => `<button data-a="${a}">+${a} ⭐</button>`).join("");
+  $("packs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => topUp(+b.dataset.a)));
+}
+
+function setStatus(t) { $("status").textContent = t || ""; }
+async function refreshProfile() {
+  try { profile = await Api.getProfile(); setStatus(""); } catch (e) { setStatus(e.message); }
+  renderMenu();
+}
+async function topUp(amount) {
+  haptic.light();
+  try {
+    setStatus("Оплата…");
+    const st = await Api.topUp(amount);
+    if (st === "paid") {
+      setStatus("Зачисляем…");
+      const before = profile.balance;
+      for (let i = 0; i < 10 && profile.balance <= before; i++) { await new Promise((r) => setTimeout(r, 1000)); await refreshProfile(); }
+      haptic.ok(); setStatus(profile.balance > before ? "Зачислено" : "Платёж принят, баланс обновится");
+    } else setStatus(st === "cancelled" ? "" : st === "failed" ? "Оплата не прошла" : "");
+  } catch (e) { setStatus(e.message); }
 }
 
 async function startRun() {
-  if (Api.demo && profile.balance < 10 && stake > profile.balance) { profile = await Api.demoRefill(); renderMenu(); return; }
   try {
     const r = await Api.startRun(stake);
     run = { id: r.runId, stake };
     profile.balance = r.balance;
-  } catch (e) { banner(e.message); return; }
+  } catch (e) { setStatus(e.message); show("result", false); show("menu", true); return; }
   resetRun();
   state = "play"; banner("ВОЛНА " + wave);
   show("menu", false); show("result", false); show("pause", false); show("hud", true); show("controls", true);
@@ -479,7 +498,9 @@ async function finishRun() {
   if (state === "result") return;
   state = "result";
   show("hud", false); show("controls", false);
-  const r = await Api.finishRun(run.id, run.stake, score, log);
+  let r;
+  try { r = await Api.finishRun(run.id, run.stake, score, log); }
+  catch (e) { r = { mult: 0, payout: 0, balance: profile.balance, best: profile.best }; setStatus(e.message); }
   profile.balance = r.balance; profile.best = r.best;
   $("rScore").textContent = score;
   $("rDetail").textContent = `Волна ${wave} · убито ${kills} · ${runTime.toFixed(0)} с`;
@@ -497,7 +518,7 @@ function togglePause() {
 }
 async function toMenu() {
   state = "menu"; show("result", false); show("pause", false); show("hud", false); show("controls", false); show("menu", true);
-  profile = await Api.getProfile(); renderMenu();
+  await refreshProfile();
   TG && TG.BackButton && TG.BackButton.hide();
   resetRun(); waveQueue = []; enemies = []; banner("");
 }
@@ -532,6 +553,6 @@ function frame(now) {
   }
   resize();
   resetRun(); waveQueue = [];          // menu background: empty street
-  profile = await Api.getProfile(); renderMenu();
-  requestAnimationFrame(frame);
+  renderMenu(); requestAnimationFrame(frame);
+  await refreshProfile();
 })();
