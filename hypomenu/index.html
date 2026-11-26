@@ -13,7 +13,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#140c2a;font:16px Bold
 #bg{position:fixed;inset:0;overflow:hidden}
 #bg div{position:absolute;inset:0;background-repeat:repeat-x;background-position:0 100%;image-rendering:pixelated}
 #ui{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px 12px calc(16px + env(safe-area-inset-bottom))}
-.win{width:min(100%,400px);border:10px solid;border-image:url(a/Window_Base.png) 5 fill / 10px stretch;background:#d4d0c8}
+.win{width:min(100%,400px);transform-origin:center;border:10px solid;border-image:url(a/Window_Base.png) 5 fill / 10px stretch;background:#d4d0c8}
 .bar{display:flex;align-items:center;justify-content:space-between;background:#000080;color:#fff;font:14px RetroWindows,BoldPixels,monospace;padding:4px 4px 4px 8px;letter-spacing:.5px}
 .bar i{font-style:normal;width:20px;height:18px;display:grid;place-items:center;color:#18181c;border:6px solid;border-image:url(a/Windows_Button.png) 5 fill / 6px stretch;font-size:10px;line-height:0}
 .in{padding:12px 12px 10px}
@@ -96,6 +96,7 @@ let t0 = performance.now();
 let profile = { balance: 0, packs: [50, 100, 250, 500], stakes: [0, 10, 25, 50] }, stake = 0, online = false;
 function status(t) { $("status").textContent = t; }
 function render() {
+  requestAnimationFrame(() => typeof scaleWin === "function" && scaleWin());
   $("bal").textContent = online ? profile.balance : "—";
   $("stakes").innerHTML = profile.stakes.map((s) => `<button class="btn ${s === stake ? "sel" : ""}" data-s="${s}">${s || "Без"}${s ? '<span class="star"></span>' : ""}</button>`).join("");
   $("stakes").querySelectorAll("button").forEach((b) => (b.onclick = () => { click(); stake = +b.dataset.s; render(); }));
@@ -138,7 +139,17 @@ if (TG) {
     (el.requestFullscreen ? el.requestFullscreen() : Promise.resolve()).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {})).catch(() => {});
   });
 }
-render(); load();
+// scale the window with the screen (pixel-art look stays crisp: whole-window transform)
+const mainWin = document.querySelector("#ui .win");
+function scaleWin() {
+  mainWin.style.transform = "none";
+  const r = mainWin.getBoundingClientRect();
+  const k = Math.min((window.innerWidth * 0.86) / r.width, (window.innerHeight * 0.86) / r.height);
+  mainWin.style.transform = `scale(${Math.max(1, k).toFixed(3)})`;
+}
+window.addEventListener("resize", scaleWin);
+if (TG && TG.onEvent) { TG.onEvent("viewportChanged", scaleWin); TG.onEvent("fullscreenChanged", scaleWin); }
+render(); load(); requestAnimationFrame(scaleWin);
 </script>
 </body>
 </html>
