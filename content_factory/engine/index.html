@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#000;overflow:hidden}
+  #wrap{position:relative;width:720px;height:1280px}
+  canvas{display:block}
+  #cap{position:absolute;left:0;right:0;top:900px;text-align:center;font-family:'Inter';font-weight:900;
+       font-size:76px;line-height:1.05;color:#fff;-webkit-text-stroke:14px #000;paint-order:stroke fill;
+       letter-spacing:1px;text-transform:uppercase;padding:0 30px}
+  #cap .hl{color:#ffe14a}
+  #hook{position:absolute;left:30px;right:30px;top:110px;text-align:center;font-family:'Inter';font-weight:900;
+       font-size:58px;line-height:1.1;color:#fff}
+  #hook .bg{background:#ff3b3b;padding:8px 20px;border-radius:16px;color:#fff;box-shadow:0 6px 0 #000;display:inline-block}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+</head><body>
+<div id="wrap"><div id="hook"></div><div id="cap"></div><div id="flash"></div></div>
+<script type="module" src="./engine.js"></script>
+</body></html>

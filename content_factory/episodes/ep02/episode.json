@@ -1,0 +1,53 @@
+{
+ "title": "Девочка без числа",
+ "hook": "У НЕЁ НЕТ ЧИСЛА 😳",
+ "outro": "А ТЫ СЧИТАЕШЬ ДОБРО?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": ["ЕДИНИЦА", "ЛИЗА", "ЧИСЛА", "НИКАКОГО", "ОБЕД", "ДОБРО", "ВСПЫХНУЛО", "ДВОЙКОЙ", "БЫВАЕТ"],
+ "cast": {
+  "timur": {"preset": "timur", "pos": [0, 1], "label": {"text": "5 000", "heart": true, "color": "#7dff8a"}},
+  "max":   {"preset": "max", "pos": [-3.6, 2], "label": {"text": "1", "heart": true, "color": "#ff5a5a"}},
+  "artem": {"preset": "artem", "pos": [4, -0.5], "label": {"text": "1 400", "heart": true, "color": "#7dff8a"}},
+  "liza":  {"preset": "liza", "pos": [16, 3], "hidden": true, "label": null},
+  "kid":   {"preset": "kid", "pos": [0, 30], "hidden": true, "label": {"text": "300", "heart": true, "color": "#7dff8a"}}
+ },
+ "props": [
+  {"shape": "box", "size": [1.1, 0.6, 0.8], "color": "#ff9f1a", "holder": "liza", "from": 6, "to": 6},
+  {"shape": "box", "size": [1.1, 0.6, 0.8], "color": "#ff9f1a", "holder": "kid", "from": 7, "to": 9},
+  {"shape": "box", "size": [1.1, 0.6, 0.8], "color": "#3ab0ff", "holder": "max", "from": 10, "to": 10}
+ ],
+ "lines": [
+  {"text": "После той истории над головой Макса горела единица. И вс+е над ним смеялись.", "emotion": "calm", "cam": "wide",
+   "acts": {"max": {"pose": "sad", "face": "sad"}, "artem": {"pose": "laugh", "face": "laugh", "faceTo": "max"}, "timur": {"face": "neutral"}}},
+  {"text": "Даже первоклашки показывали на него пальцем.", "emotion": "sad", "cam": "close:max",
+   "acts": {"max": {"pose": "sad", "face": "cry"}, "kid": {"show": true, "pos": [-1.5, 6], "pose": "point", "face": "laugh", "faceTo": "max"}}},
+  {"text": "А в понедельник в школу пришла новенькая. Её звали Лиза.", "emotion": "mystery", "cam": "wide", "whoosh": true,
+   "acts": {"kid": {"hide": true}, "liza": {"show": true, "pos": [16, 3], "moveTo": [6.5, 3], "faceTo": "cam", "face": "smile"},
+            "timur": {"faceTo": "liza", "face": "neutral"}, "artem": {"faceTo": "liza"}, "max": {"faceTo": "liza", "face": "neutral"}}},
+  {"text": "И над её головой не было числа. Вообще никакого.", "emotion": "surprise", "cam": "close:liza", "boom": true,
+   "acts": {"liza": {"face": "neutral", "faceTo": "cam"}}},
+  {"text": "Вс+е зашептались. Так не бывает! У каждого есть число!", "emotion": "excited", "cam": "orbit",
+   "acts": {"timur": {"pose": "shock", "face": "shock", "faceTo": "liza"}, "artem": {"pose": "shock", "face": "shock", "faceTo": "liza"}, "max": {"face": "shock", "faceTo": "liza"}, "liza": {"pose": "shrug", "face": "neutral"}}},
+  {"text": "Она, наверное, самая злая на свете, сказал Макс.", "emotion": "angry", "cam": "over:timur:max", "pitch": -2,
+   "acts": {"max": {"pose": "angry", "face": "angry", "faceTo": "timur"}, "timur": {"faceTo": "max", "face": "neutral"}}},
+  {"text": "Но вечером я увидел Лизу в парке. Она отдала свой обед голодному малышу.", "emotion": "calm", "cam": "two:liza:kid", "location": "park", "time": "evening",
+   "acts": {"timur": {"hide": true, "pos": [-14, 3]}, "max": {"hide": true}, "artem": {"hide": true},
+            "liza": {"pos": [-2, 1.5], "faceTo": "kid", "pose": "give", "face": "smile"},
+            "kid": {"show": true, "pos": [0.8, 1.8], "faceTo": "liza", "pose": "idle", "face": "sad", "faceAfter": [2.0, "joy"]}}},
+  {"text": "Тогда я подошёл и спросил. Лиза, почему у тебя нет числа?", "emotion": "calm", "cam": "two:timur:liza",
+   "acts": {"timur": {"show": true, "pos": [-12, 4], "moveTo": [-4.6, 3.2], "faceTo": "liza", "face": "neutral"}, "liza": {"faceTo": "timur", "face": "neutral"}, "kid": {"face": "joy", "faceTo": "liza"}}},
+  {"text": "Она улыбнулась. Потому что я никогда не считаю своё добро.", "emotion": "warm", "cam": "close:liza",
+   "acts": {"liza": {"faceTo": "timur", "face": "smile"}}},
+  {"text": "И в ту же секунду над её головой вспыхнуло число. Такое огромное, что вс+е ахнули.", "emotion": "surprise", "cam": "low:liza", "flash": true, "chime": true, "shake": true,
+   "acts": {"liza": {"pose": "shrug", "face": "joy", "faceTo": "cam", "label": {"from": 0, "to": 999999999, "heart": true, "color": "#ffe14a", "dur": 2.2, "delay": 0.4}},
+            "timur": {"pose": "shock", "face": "shock", "faceTo": "liza"}, "kid": {"pose": "cheer", "face": "joy"}}},
+  {"text": "А на следующий день Макс впервые поделился своим обедом. И его число стало двойкой.", "emotion": "warm", "cam": "two:max:artem", "location": "school", "time": "day",
+   "acts": {"liza": {"pos": [6, 4], "faceTo": "max", "face": "smile", "pose": "idle"}, "kid": {"hide": true}, "timur": {"pos": [3, 5], "faceTo": "max", "face": "smile", "pose": "idle"},
+            "max": {"show": true, "pos": [-2.4, 2], "faceTo": "artem", "pose": "give", "face": "smile", "label": {"from": 1, "to": 2, "heart": true, "color": "#7dff8a", "delay": 2.6, "dur": 0.4}},
+            "artem": {"show": true, "pos": [1.4, 2], "faceTo": "max", "face": "joy"}}},
+  {"text": "Маленькое число. Но своё. А ты считаешь своё добро? Напиши в комментариях.", "emotion": "outro", "cam": "wide",
+   "acts": {"max": {"pose": "cheer", "face": "joy", "faceTo": "cam"}, "artem": {"pose": "wave", "face": "joy", "faceTo": "cam"}, "timur": {"pose": "cheer", "face": "joy", "faceTo": "cam"}, "liza": {"pose": "wave", "face": "joy", "faceTo": "cam"}}}
+ ]
+}
