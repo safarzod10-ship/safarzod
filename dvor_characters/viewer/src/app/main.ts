@@ -43,6 +43,7 @@ function go(s: Screen): void {
   cleanup = null;
   current = s;
   view.className = `view ${s}`;
+  app.classList.toggle('wide', s === 'battle');   // the battle uses the whole (landscape) screen
   view.scrollTop = 0;
   const tabbed = s === 'home' || s === 'tasks' || s === 'rating';
   tabbar.hidden = !tabbed;

@@ -369,3 +369,54 @@ img { display: block; max-width: 100%; }
 .result-btns { display: grid; gap: 10px; }
 .result .btn-main { height: 54px; font-size: 24px; }
 .btn-ghost { height: 46px; border-radius: 12px; border: 1.5px solid var(--line); font-weight: 600; font-size: 16px; color: #e8e2dc; }
+
+/* ---------------------------------------------------------------- landscape battle */
+#app.wide { width: 100vw; }
+.view.battle {
+  /* Telegram full screen: its own buttons sit at the top, the CSS vars come from telegram-web-app.js */
+  --top: max(env(safe-area-inset-top, 0px), calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)));
+  --sl: max(env(safe-area-inset-left, 0px), var(--tg-safe-area-inset-left, 0px));
+  --sr: max(env(safe-area-inset-right, 0px), var(--tg-safe-area-inset-right, 0px));
+}
+.rotate {
+  position: absolute; inset: 0; z-index: 20; display: grid; place-content: center; justify-items: center; gap: 10px;
+  padding: 24px; text-align: center; background: rgba(20, 19, 23, 0.94);
+}
+.rotate h3 { margin: 8px 0 0; font: italic 800 30px/1.05 var(--font-display); color: var(--accent-hi); }
+.rotate p { margin: 0 0 10px; color: var(--muted); font-size: 15px; }
+.rotate .btn-main { width: 240px; height: 50px; font-size: 20px; }
+.rotate .btn-ghost { width: 240px; }
+.rotate-phone { width: 96px; height: 96px; display: grid; place-items: center; }
+.rotate-phone i {
+  width: 46px; height: 80px; border-radius: 9px; border: 4px solid #e8e2dc; position: relative;
+  animation: turn 2.2s ease-in-out infinite;
+}
+.rotate-phone i::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 10px; height: 3px; margin-left: -5px; border-radius: 2px; background: #e8e2dc; }
+@keyframes turn { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+@media (prefers-reduced-motion: reduce) { .rotate-phone i { animation: none; transform: rotate(-90deg); } }
+
+@media (orientation: landscape) {
+  .view.battle .scorebar {
+    left: 50%; right: auto; width: min(540px, 64vw); transform: translateX(-50%); top: calc(6px + var(--top));
+  }
+  .view.battle .zonebar { top: calc(50px + var(--top)); }
+  .view.battle .exit { top: calc(8px + var(--top)); left: calc(10px + var(--sl)); }
+  .view.battle .feed { top: calc(8px + var(--top)); right: calc(10px + var(--sr)); max-width: calc((100vw - min(540px, 64vw)) / 2 - 20px); }
+  .view.battle .stick { left: calc(28px + var(--sl)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .view.battle .skills { right: calc(20px + var(--sr)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform-origin: 100% 100%; }
+  .view.battle .result-card { width: min(380px, 100%); padding: 14px 16px; }
+  .view.battle .result h2 { font-size: 34px; }
+  .view.battle .result-score { margin: 6px 0 10px; }
+  .view.battle .result ul { margin-bottom: 10px; }
+  .view.battle .result-btns { grid-template-columns: 1fr 1fr; align-items: center; }
+  .view.battle .result .btn-main { height: 48px; font-size: 21px; }
+}
+@media (orientation: landscape) and (max-height: 430px) {
+  .view.battle .stick { transform: scale(0.88); transform-origin: 0 100%; }
+  .view.battle .skills { transform: scale(0.86); }
+  .view.battle .countdown { font-size: 60px; }
+}
+@media (orientation: landscape) and (max-height: 340px) {
+  .view.battle .stick { transform: scale(0.75); }
+  .view.battle .skills { transform: scale(0.72); }
+}

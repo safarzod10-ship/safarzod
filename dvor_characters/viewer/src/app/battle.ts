@@ -13,7 +13,7 @@ import { HEROES, heroById, type HeroId } from './data';
 import { Match, type PlayerInput, type Team } from './game/match';
 import { MATCH } from './game/kits';
 import { ICONS } from './icons';
-import { haptic } from './tg';
+import { haptic, battleScreen, lockLandscape, inTelegram } from './tg';
 
 const BASE = './models/';
 const B64 = document.documentElement.dataset.assets === 'b64';
@@ -102,14 +102,42 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       <div class="dead" hidden>Возвращение через <b>3</b></div>
       <div class="countdown" hidden></div>
       <div class="result" hidden></div>
+      <div class="rotate" hidden>
+        <div class="rotate-phone"><i></i></div>
+        <h3>Поверни телефон</h3>
+        <p>Бой идёт горизонтально</p>
+        <button type="button" class="btn-main" id="fs" hidden>На весь экран</button>
+        <button type="button" class="btn-ghost" id="portrait">Играть вертикально</button>
+      </div>
       <div class="battle-loading"><div class="bar"><i></i></div><p>Загружаю арену</p></div>
     </div>`;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const stage = $('.battle-stage'), hud = $('.battle-hud'), loadEl = $('.battle-loading'), loadBar = loadEl.querySelector<HTMLElement>('i')!;
   const timerEl = $('#timer'), s0 = $('#s0'), s1 = $('#s1'), zoneEl = $('#zone'), zoneBar = $('.zonebar');
   const stickEl = $('.stick'), knobEl = $('.knob'), feed = $('.feed'), deadEl = $('.dead'), cdEl = $('.countdown'), resEl = $('.result');
-  const aimLine = $('.aimline');
+  const aimLine = $('.aimline'), rotEl = $('.rotate');
   let alive = true;
+
+  // ---- landscape: the battle waits (paused) while the screen is taller than wide
+  battleScreen(true);
+  let allowPortrait = false, locked = false, paused = false, waitingStart = false;
+  const checkOrientation = () => {
+    const portrait = (stage.clientHeight || innerHeight) > (stage.clientWidth || innerWidth);
+    paused = portrait && !allowPortrait;
+    rotEl.hidden = !paused;
+    if (!portrait && !locked) { lockLandscape(); locked = true; }
+    if (!paused && waitingStart) { waitingStart = false; beginCountdown(); }
+  };
+  const fsBtn = $('#fs');
+  const canFs = !inTelegram() && !!document.fullscreenEnabled && !!(screen.orientation as { lock?: unknown } | undefined)?.lock;
+  fsBtn.hidden = !canFs;
+  fsBtn.addEventListener('click', async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      await (screen.orientation as unknown as { lock(o: string): Promise<void> }).lock('landscape');
+    } catch { /* not supported here (iPhone, embedded frame): the player turns the phone */ }
+  });
+  $('#portrait').addEventListener('click', () => { allowPortrait = true; checkOrientation(); });
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
@@ -128,12 +156,13 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    checkOrientation();
   };
   const ro = new ResizeObserver(resize);
   ro.observe(stage);
   resize();
   const placeCamera = () => {
-    const dist = camera.aspect < 1 ? 17 : 15;
+    const dist = camera.aspect < 1 ? 17 : 13;
     const el = THREE.MathUtils.degToRad(57);
     camera.position.set(camTarget.x, Math.sin(el) * dist, camTarget.z + Math.cos(el) * dist);
     camera.lookAt(camTarget.x, 0, camTarget.z + 0.3);
@@ -222,6 +251,9 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     }
     const p = match.views()[0];
     camTarget.set(p.x, 0, p.z - 1.5);
+    if (paused) waitingStart = true; else beginCountdown();
+  }
+  function beginCountdown(): void {
     // 3-2-1
     cdEl.hidden = false;
     countdownTimers.forEach(clearTimeout);
@@ -360,7 +392,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   renderer.setAnimationLoop((t) => {
     timer.update(t);
     const dt = Math.min(timer.getDelta(), 1 / 15);
-    if (match) {
+    if (match && !paused) {
       const inp = readInput();
       // aim line while dragging the attack button
       if (atkAim) {
@@ -410,6 +442,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   return {
     destroy() {
       alive = false;
+      battleScreen(false);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       countdownTimers.forEach(clearTimeout);
       renderer.setAnimationLoop(null);
       ro.disconnect();

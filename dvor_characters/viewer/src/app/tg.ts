@@ -8,6 +8,12 @@ interface TgWebApp {
   setHeaderColor?(c: string): void;
   setBackgroundColor?(c: string): void;
   disableVerticalSwipes?(): void;
+  isVersionAtLeast?(v: string): boolean;
+  requestFullscreen?(): void;
+  exitFullscreen?(): void;
+  lockOrientation?(): void;
+  unlockOrientation?(): void;
+  isFullscreen?: boolean;
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   HapticFeedback?: { impactOccurred(s: 'light' | 'medium' | 'heavy'): void; notificationOccurred(t: 'success' | 'error' | 'warning'): void };
 }
@@ -52,3 +58,22 @@ export function haptic(kind: 'light' | 'medium' | 'success' = 'light'): void {
   if (kind === 'success') wa.HapticFeedback.notificationOccurred('success');
   else wa.HapticFeedback.impactOccurred(kind);
 }
+
+const v8 = () => !!wa?.isVersionAtLeast?.('8.0');
+
+/**
+ * Battle in landscape. Telegram (Bot API 8.0+): full screen, and once the phone is held sideways,
+ * lock that orientation. Telegram cannot rotate the screen by itself, the player turns the phone.
+ */
+export function battleScreen(on: boolean): void {
+  if (!wa || !v8()) return;
+  try {
+    if (on) wa.requestFullscreen?.();
+    else { wa.unlockOrientation?.(); if (wa.isFullscreen) wa.exitFullscreen?.(); }
+  } catch { /* old client */ }
+}
+export function lockLandscape(): void {
+  if (!wa || !v8()) return;
+  try { wa.lockOrientation?.(); } catch { /* old client */ }
+}
+export const inTelegram = (): boolean => !!wa;
