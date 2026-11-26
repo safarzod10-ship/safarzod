@@ -1,0 +1,44 @@
+{
+ "title": "Кто съел торт?",
+ "format": "detective",
+ "hook": "ОДИН ИЗ НИХ ВРЁТ 🕵️",
+ "outro": "ТЫ УГАДАЛ? ПИШИ В КОММЕНТЫ",
+ "music": "mystery",
+ "location": "home",
+ "time": "night",
+ "highlight": ["ТОРТ", "ВРЁТ", "СВЕТА", "ПАПА", "ФУТБОЛ", "ФОНАРИКОМ", "ПЯТЬ", "БОЛЬШЕ"],
+ "cast": {
+  "dad":  {"preset": "dad",  "pos": [-4, 0], "label": {"text": "ПАПА", "color": "#ffe14a"}},
+  "liza": {"preset": "liza", "pos": [0, 0.6], "label": {"text": "ЛИЗА", "color": "#ffe14a"}},
+  "kid":  {"preset": "kid",  "pos": [3.6, 0], "label": {"text": "ДАНЯ", "color": "#ffe14a"}},
+  "mom":  {"preset": "mom",  "pos": [9, 2], "hidden": true, "label": null}
+ },
+ "props": [
+  {"shape": "box", "size": [3, 0.15, 2], "color": "#ffffff", "pos": [4, 2.45, -6], "from": 0, "to": 9},
+  {"shape": "phone", "size": [0.4, 0.4, 0.6], "color": "#ffee88", "holder": "kid", "from": 3, "to": 3},
+  {"shape": "cake", "holder": "dad", "from": 8, "to": 9}
+ ],
+ "lines": [
+  {"text": "Ночью из нашего холодильника пропал мамин торт. А дома было всего трое.", "emotion": "mystery", "cam": "wide", "boom": true,
+   "acts": {"dad": {"face": "neutral"}, "liza": {"face": "neutral"}, "kid": {"face": "neutral"}}},
+  {"text": "Папа сказал: я всю ночь смотрел футбол по телевизору.", "emotion": "calm", "cam": "close:dad",
+   "acts": {"dad": {"face": "smile", "pose": "shrug"}}},
+  {"text": "Моя сестра Лиза сказала: я спала и вообще ничего не слышала.", "emotion": "calm", "cam": "close:liza",
+   "acts": {"liza": {"face": "neutral", "pose": "shrug"}}},
+  {"text": "Малыш Даня сказал: я читал книжку под одеялом с фонариком.", "emotion": "calm", "cam": "close:kid",
+   "acts": {"kid": {"face": "smile", "pose": "phone"}}},
+  {"text": "Есть одна важная деталь. Этой ночью во всём доме не было света.", "emotion": "mystery", "cam": "orbit", "whoosh": true,
+   "acts": {"dad": {"face": "neutral"}, "liza": {"face": "think", "pose": "think"}, "kid": {"face": "neutral"}}},
+  {"text": "Кто из них врёт? Подумай пять секунд.", "emotion": "excited", "cam": "wide", "gap": 3.2,
+   "acts": {"dad": {"face": "smug", "label": {"text": "1", "color": "#ffffff", "pop": true}}, "liza": {"face": "neutral", "label": {"text": "2", "color": "#ffffff", "pop": true}}, "kid": {"face": "neutral", "label": {"text": "3", "color": "#ffffff", "pop": true}}}},
+  {"text": "Правильно! Врёт папа. Без света телевизор не работает.", "emotion": "surprise", "cam": "close:dad", "flash": true, "boom": true, "shake": true,
+   "acts": {"dad": {"face": "shock", "pose": "shock", "label": {"text": "ВРЁТ!", "color": "#ff5a5a", "pop": true}}}},
+  {"text": "Папа покраснел и признался, что съел торт ещё вечером.", "emotion": "sad", "cam": "medium:dad",
+   "acts": {"dad": {"face": "sad", "pose": "facepalm"}, "liza": {"face": "laugh", "pose": "laugh", "faceTo": "dad"}, "kid": {"face": "laugh", "pose": "point", "faceTo": "dad"}}},
+  {"text": "Утром он принёс маме новый торт. В два раза больше старого!", "emotion": "warm", "cam": "two:dad:mom", "time": "day", "chime": true,
+   "acts": {"mom": {"show": true, "pos": [1.5, 1.2], "faceTo": "dad", "face": "joy", "pose": "cheer"}, "dad": {"pos": [-2.4, 1], "faceTo": "mom", "face": "joy", "pose": "give", "label": null},
+            "liza": {"pos": [-6.5, -2], "face": "joy", "label": null}, "kid": {"pos": [5.5, -2], "face": "joy", "pose": "cheer", "label": null}}},
+  {"text": "Ты угадал? Напиши в комментариях, сколько секунд тебе понадобилось.", "emotion": "outro", "cam": "wide",
+   "acts": {"dad": {"face": "joy", "pose": "wave", "faceTo": "cam"}, "mom": {"face": "joy", "faceTo": "cam"}, "liza": {"face": "smile", "faceTo": "cam"}, "kid": {"face": "joy", "pose": "cheer", "faceTo": "cam"}}}
+ ]
+}

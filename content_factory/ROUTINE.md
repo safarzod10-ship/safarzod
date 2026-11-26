@@ -16,8 +16,21 @@ Deliver the MP4 (and the voice-only MP3) to the user with SendUserFile, status "
 5. Look at 4–6 stills (`node render.js episodes/epNN /tmp/x 1 t1,t2,...` while http server on 8766 runs)
    and fix framing problems (characters blocking the camera, back of the head in a close-up) by changing `cam`.
    Re-render only (voice is cached) — `./run_episode.sh epNN` again.
-6. Append one line to `episodes.log`: `epNN | title | hook | one-line plot`.
+6. Append one line to `episodes.log`: `epNN | format | title | hook | one-line plot`.
 7. SendUserFile out/epNN.mp4 (+ out/epNN_voice.mp3), short caption in Russian: title + hook + duration.
+
+## Format rotation (do NOT make two episodes of the same format in a row — check episodes.log)
+1. **series** — "Число над головой" episode (kindness numbers, Тимур narrates).
+2. **detective** — "Кто из них врёт?": 3 suspects give alibis (labels with names), one hidden clue,
+   "Подумай пять секунд" line with `"gap": 3.2`, reveal with flash/boom, funny kind ending. Logic must be fair.
+3. **what-if** — "Что если…" thought experiment (что если над головой видно, сколько раз человек соврал /
+   сколько у него друзей / сколько ему осталось спать…), 3 escalating situations + twist.
+4. **mystery-night** — light spooky story (night, evening light, music "mystery"/"tense"): strange sounds,
+   a figure in the park, the explanation is funny or kind. Never really scary, no violence.
+5. **comedy** — school/home sketch with a punchline (teacher, mom, dad, homework, phone, cake), music "happy".
+6. **choice** — "Что бы ты выбрал?": two options shown on labels over two characters, consequences, ask viewer.
+7. **life-lesson** — a short moral story (honesty, friendship, being new at school) with an unexpected twist.
+Record the format in episodes.log as the 2nd field: `epNN | format | title | hook | plot`.
 
 ## Writing rules (Russian)
 - Original stories only. Never copy other channels' characters, plots or titles. No brand names (no "Roblox").

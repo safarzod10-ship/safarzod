@@ -64,7 +64,21 @@ const LIGHT = {
 };
 scene.fog = new THREE.Fog(0xcfeaff, 60, 170);
 const lampMats = [];
-function setTime(name) {
+const INDOOR = {
+  day: { hemi: [0xfff4e0, 0x7a5a3a, 1.35], sun: [0xfff1d6, 1.9, [10, 30, 18]], exp: 1.05, lamp: 0.8, win: [0xbfe6ff, 0x8fcfff, 0.6] },
+  evening: { hemi: [0xffe2c0, 0x5a3a2a, 1.2], sun: [0xffc890, 1.7, [8, 28, 16]], exp: 1.05, lamp: 1.4, win: [0xff9a5a, 0xff8040, 0.6] },
+  night: { hemi: [0xffdcb8, 0x3a2a2a, 1.05], sun: [0xffd09a, 1.5, [6, 26, 16]], exp: 1.08, lamp: 2.4, win: [0x0a1238, 0x101a50, 0.4] },
+};
+function setTime(name, loc) {
+  if (loc === 'home') {
+    const L = INDOOR[name] || INDOOR.day;
+    scene.background = SKY[name] || SKY.day; scene.fog.color.setHex(0x2a2a2a);
+    hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
+    sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sun.position.set(...L.sun[2]);
+    renderer.toneMappingExposure = L.exp; lampMats.forEach(m => m.emissiveIntensity = L.lamp);
+    homeWin.color.setHex(L.win[0]); homeWin.emissive.setHex(L.win[1]); homeWin.emissiveIntensity = L.win[2];
+    return;
+  }
   const L = LIGHT[name] || LIGHT.day;
   scene.background = L.sky; scene.fog.color.setHex(L.fog);
   hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
@@ -106,6 +120,7 @@ for (let i = 0; i < 9; i++) {
 }
 
 const LOC = {};
+const homeWin = mat(0xbfe6ff, { emissive: 0x8fcfff, emissiveIntensity: 0.5 });
 // --- school yard ---
 {
   const G = new THREE.Group(); scene.add(G); LOC.school = G;
@@ -152,11 +167,13 @@ const LOC = {};
 {
   const G = new THREE.Group(); scene.add(G); LOC.home = G;
   const floor = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#c08a55'; g.fillRect(0, 0, w, h); g.strokeStyle = '#9a6a3a'; g.lineWidth = 3; for (let y = 0; y < h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [8, 6]);
-  box(36, 0.2, 26, new THREE.MeshStandardMaterial({ map: floor, roughness: 0.8 }), 2, 0.1, -3, G, false);
+  box(80, 0.2, 70, new THREE.MeshStandardMaterial({ map: floor, roughness: 0.8 }), 2, 0.1, 10, G, false);
   const wallP = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#9fc7e8'; g.fillRect(0, 0, w, h); g.fillStyle = '#8bb6db'; g.fillRect(0, 0, 64, h); }, [10, 3]);
-  box(36, 13, 0.5, new THREE.MeshStandardMaterial({ map: wallP }), 2, 6.5, -16, G);
-  box(0.5, 13, 26, new THREE.MeshStandardMaterial({ map: wallP }), -16, 6.5, -3, G);
-  const win = mat(0xbfe6ff, { emissive: 0x8fcfff, emissiveIntensity: 0.5 }); box(7, 5, 0.3, win, 8, 7, -15.7, G, false);
+  const wm = new THREE.MeshStandardMaterial({ map: wallP });
+  box(80, 40, 0.5, wm, 2, 20, -16, G); box(0.5, 40, 70, wm, -18, 20, 10, G); box(0.5, 40, 70, wm, 22, 20, 10, G);
+  box(80, 0.5, 70, mat(0xf4efe6), 2, 30, 10, G, false);
+  box(80, 1.2, 0.3, mat(0xffffff), 2, 0.6, -15.7, G, false);
+  const win = homeWin; box(7, 5, 0.3, win, 8, 7, -15.7, G, false);
   box(7.6, 0.4, 0.6, mat(0xffffff), 8, 4.4, -15.5, G);
   box(10, 1.4, 4.5, mat(0x7a4ab0), -8, 1.2, -12, G); box(10, 2.6, 1.2, mat(0x6a3aa0), -8, 2.4, -14, G); // sofa
   box(5, 0.3, 3, mat(0x8a5a2a), 4, 2.2, -6, G); for (const [dx, dz] of [[-2.2, -1.2], [2.2, -1.2], [-2.2, 1.2], [2.2, 1.2]]) box(0.3, 2.2, 0.3, mat(0x6a4a2a), 4 + dx, 1.1, -6 + dz, G);
@@ -278,7 +295,7 @@ function makeChar(id, o) {
   if (hs === 'bun') box(0.8, 0.7, 0.8, hairM, 0, 2.2, -0.4, headG);
   if (hs === 'spiky') for (let i = -1; i <= 1; i++) box(0.5, 0.5, 0.5, hairM, i * 0.5, 2.1, 0.1 * i, headG).rotation.z = i * 0.3;
   if (o.cap) { box(1.66, 0.4, 1.66, mat(o.cap), 0, 1.85, 0, headG); box(1.4, 0.12, 0.8, mat(o.cap), 0, 1.68, 1.05, headG); }
-  if (o.beard) box(1.52, 0.5, 0.2, mat(o.beard), 0, 0.2, 0.7, headG);
+  if (o.beard) { box(1.52, 0.26, 0.2, mat(o.beard), 0, 0.12, 0.7, headG); box(0.2, 0.7, 0.2, mat(o.beard), -0.66, 0.4, 0.7, headG); box(0.2, 0.7, 0.2, mat(o.beard), 0.66, 0.4, 0.7, headG); }
   if (o.glassesClear) { const gm = mat(0x222222); box(0.5, 0.06, 0.05, gm, -0.35, 1.1, 0.77, headG); box(0.5, 0.06, 0.05, gm, 0.35, 1.1, 0.77, headG); box(0.06, 0.4, 0.05, gm, -0.6, 0.9, 0.77, headG); box(0.06, 0.4, 0.05, gm, 0.6, 0.9, 0.77, headG); box(0.06, 0.4, 0.05, gm, -0.1, 0.9, 0.77, headG); box(0.06, 0.4, 0.05, gm, 0.1, 0.9, 0.77, headG); }
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('0', false, '#fff'), depthTest: false, transparent: true }));
   label.renderOrder = 10; root.add(label);
@@ -345,7 +362,7 @@ function shotLoc(i) { for (let j = i; j >= 0; j--) if (SH[j].location) return SH
 function shotTime(i) { for (let j = i; j >= 0; j--) if (SH[j].time) return SH[j].time; return E.time || 'day'; }
 function stateAt(t, s) {
   const st = {};
-  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1 };
+  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].root.scale.y };
   for (let j = 0; j <= s; j++) {
     const acts = SH[j].acts || {}, t0 = shotStart[j], isCur = j === s;
     // location change resets everyone to explicit positions given in that shot
@@ -385,7 +402,7 @@ function labelText(L) {
 }
 
 // ---------- camera ----------
-const headPos = (x, y = 4.9) => v3(x.pos.x, y, x.pos.z);
+const headPos = (x, y = 4.9) => v3(x.pos.x, y * (x.sc || 1), x.pos.z);
 function frontDir(x, others) {
   // direction the character "faces" for framing; 'cam' => world +z
   const f = x.face;
@@ -463,7 +480,7 @@ const isHL = w => { const u = w.toUpperCase().replace(/Ё/g, 'Е').replace(/[^А
 window.renderAt = function (t) {
   const s = shotOf(t), t0 = shotStart[s], k = (t - t0) / (shotEnd(s) - t0);
   const shot = SH[s];
-  setLocation(shotLoc(s)); setTime(shotTime(s));
+  setLocation(shotLoc(s)); setTime(shotTime(s), shotLoc(s));
   const st = stateAt(t, s);
   const acts = shot.acts || {};
   const cam = placeCam(shot.cam, st, k, t);
