@@ -17,6 +17,8 @@ export interface Kit {
   pierce?: { range: number; dmg: number; delay: number; speed: number };
   heal?: { r: number; amount: number };
   outOfCombatBoost?: number;
+  immortal?: boolean;
+  dashCd?: number;
 }
 
 export const DASH = { dist: 3, time: 0.2, cd: 6 };

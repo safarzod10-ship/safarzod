@@ -301,12 +301,14 @@ export class Room {
     try { m = JSON.parse(msg); } catch { return; }
     if (m.t !== 'hello') return;
     const user = m.initData ? await verifyInitData(this.env, m.initData) : null;
+    const uid = user?.id ?? 0;
+    const row = uid ? await this.env.DB.prepare("SELECT json_extract(data, '$.perks') AS p FROM profiles WHERE id = ?").bind(uid).first() : null;
+    const perks = row?.p ? JSON.parse(row.p) : null;
     const peer = {
       name: user ? displayName(user) : String(m.name || 'Игрок').replace(/[<>&]/g, '').slice(0, 24),
       hero: HERO_NAMES[m.hero] ? m.hero : 'technik',
-      boost: cleanBoost(m.boost),
+      boost: { ...cleanBoost(m.boost), ...(perks ? { immortal: !!perks.immortal, noCd: !!perks.noCooldown, dmgFlat: Math.min(5000, Number(perks.damage) || 0) || undefined } : {}) },
     };
-    const uid = user?.id ?? 0;
     const others = this.peers(ws);
     if (await this.ctx.storage.get('started') || others.length >= 2) {
       ws.send(JSON.stringify({ t: 'over' }));

@@ -24,8 +24,10 @@ export interface Profile {
   chosen: string | null;
   owned: string[];
   upgrades: Record<string, Upgrades>;
+  perks?: Perks;
   updatedAt: number;
 }
+export interface Perks { immortal?: boolean; noCooldown?: boolean; damage?: number }
 
 const KEY = 'dvor.profile.v1';
 const fresh = (): Profile => ({ trophies: 0, coins: 100, gems: 0, games: 0, wins: 0, kills: 0, best: 0, history: [],
@@ -85,10 +87,11 @@ export function upgrade(hero: string, stat: Stat): Profile | null {
   return change((q) => { q.coins -= upgradeCost(lv); q.upgrades[hero] = { ...u, [stat]: lv + 1 }; });
 }
 
-export function boostOf(hero: string): { hp: number; dmg: number; speed: number; cd: number } {
-  const u = upgradesOf(loadProfile(), hero);
+export function boostOf(hero: string): { hp: number; dmg: number; speed: number; cd: number; immortal?: boolean; noCd?: boolean; dmgFlat?: number } {
+  const p = loadProfile(), u = upgradesOf(p, hero), k = p.perks;
   return { hp: 1 + (u.hp - 1) * UPGRADE_STEP.hp, dmg: 1 + (u.dmg - 1) * UPGRADE_STEP.dmg,
-    speed: 1 + (u.speed - 1) * UPGRADE_STEP.speed, cd: 1 - (u.ability - 1) * UPGRADE_STEP.ability };
+    speed: 1 + (u.speed - 1) * UPGRADE_STEP.speed, cd: 1 - (u.ability - 1) * UPGRADE_STEP.ability,
+    ...(k ? { immortal: !!k.immortal, noCd: !!k.noCooldown, dmgFlat: k.damage || undefined } : {}) };
 }
 
 export const rankOf = (trophies: number): Rank => [...RANKS].reverse().find((r) => trophies >= r.min) ?? RANKS[0];

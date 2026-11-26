@@ -42,7 +42,7 @@ export interface Snapshot {
   t: number; s: [number, number]; z: number; e: number;
   u: number[][]; p: number[][]; q: number[][]; v: (string | number)[][];
 }
-export interface Boost { hp: number; dmg: number; speed: number; cd?: number }
+export interface Boost { hp: number; dmg: number; speed: number; cd?: number; immortal?: boolean; noCd?: boolean; dmgFlat?: number }
 
 function boostKit(k: Kit, b: Boost): Kit {
   const d = b.dmg;
@@ -56,6 +56,12 @@ function boostKit(k: Kit, b: Boost): Kit {
   if (x.spurt) x.spurt.dmg = Math.round(x.spurt.dmg * d);
   if (x.pierce) x.pierce.dmg = Math.round(x.pierce.dmg * d);
   if (x.heal) x.heal.amount = Math.round(x.heal.amount * d);
+  if (b.dmgFlat) {
+    x.attack.dmg = b.dmgFlat;
+    for (const f of [x.turret, x.ram, x.spurt, x.pierce]) if (f) f.dmg = b.dmgFlat;
+  }
+  if (b.noCd) { x.a1.cd = 0; x.dashCd = 0; }
+  if (b.immortal) x.immortal = true;
   return x;
 }
 
@@ -66,7 +72,7 @@ export function lineup(first?: HeroId): HeroId[] {
 
 export interface UnitView {
   id: number; team: Team; hero: Hero; isPlayer: boolean; human: boolean; alive: boolean; hp: number; maxHp: number;
-  x: number; z: number; heat: number; overheated: boolean; respawnIn: number;
+  x: number; z: number; heat: number; overheated: boolean; respawnIn: number; immortal: boolean;
 }
 
 interface Unit {
@@ -165,12 +171,12 @@ export class Match {
 
   view(u: Unit): UnitView {
     return { id: u.id, team: u.team, hero: u.hero, isPlayer: u.isPlayer, human: u.human, alive: u.alive, hp: Math.round(u.hp), maxHp: u.kit.hp,
-      x: u.x, z: u.z, heat: u.heat, overheated: this.time < u.overheatUntil, respawnIn: Math.max(0, u.respawnAt - this.time) };
+      x: u.x, z: u.z, heat: u.heat, overheated: this.time < u.overheatUntil, respawnIn: Math.max(0, u.respawnAt - this.time), immortal: !!u.kit.immortal };
   }
   views(): UnitView[] { return this.units.map((u) => this.view(u)); }
   cooldowns(): { a1: number; dash: number; a1Max: number; dashMax: number } {
     const p = this.player;
-    return { a1: Math.max(0, p.cd1 - this.time), dash: Math.max(0, p.cdDash - this.time), a1Max: p.kit.a1.cd, dashMax: DASH.cd };
+    return { a1: Math.max(0, p.cd1 - this.time), dash: Math.max(0, p.cdDash - this.time), a1Max: p.kit.a1.cd, dashMax: p.kit.dashCd ?? DASH.cd };
   }
 
   private buildShared(): void {
@@ -349,7 +355,7 @@ export class Match {
   }
 
   private hurt(target: Unit, amount: number, by: Unit | null): void {
-    if (!target.alive || this.time < target.invulnUntil || this.ended) return;
+    if (!target.alive || this.time < target.invulnUntil || this.ended || target.kit.immortal) return;
     const dmg = Math.round(amount * (1 - target.kit.armor));
     target.hp -= dmg;
     target.lastHurt = this.time;
@@ -503,7 +509,7 @@ export class Match {
     if (!u.alive || this.time < u.cdDash || this.time < u.stunUntil || u.dash) return;
     const [dx, dz] = dir ?? [Math.sin(u.yaw), Math.cos(u.yaw)];
     u.dash = { dx, dz, left: DASH.dist, speed: DASH.dist / DASH.time, hit: new Set(), dmg: 0, stun: 0 };
-    u.cdDash = this.time + DASH.cd;
+    u.cdDash = this.time + (u.kit.dashCd ?? DASH.cd);
     this.face(u, dx, dz);
   }
 

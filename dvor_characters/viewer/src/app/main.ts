@@ -161,7 +161,10 @@ function choose(): void {
 const STAT_LABEL: Record<Stat, string> = { hp: 'Здоровье', dmg: 'Урон', speed: 'Скорость', ability: 'Способность' };
 const STAT_ICON: Record<Stat, string> = { hp: ICONS.heart, dmg: ICONS.damage, speed: ICONS.wing, ability: ICONS.gear };
 function statValue(id: HeroId, stat: Stat, lv: number): string {
-  const k = KITS[id], m = lv - 1;
+  const k = KITS[id], m = lv - 1, perks = loadProfile().perks;
+  if (perks?.immortal && stat === 'hp') return '∞';
+  if (perks?.damage && stat === 'dmg') return perks.damage.toLocaleString('ru-RU');
+  if (perks?.noCooldown && stat === 'ability') return '0 с';
   if (stat === 'hp') return Math.round(k.hp * (1 + m * UPGRADE_STEP.hp)).toLocaleString('ru-RU');
   if (stat === 'dmg') return Math.round(k.attack.dmg * (1 + m * UPGRADE_STEP.dmg)).toLocaleString('ru-RU');
   if (stat === 'speed') return (k.speed * (1 + m * UPGRADE_STEP.speed)).toFixed(2).replace('.', ',') + ' м/с';
@@ -172,10 +175,10 @@ function heroes(): void {
   view.innerHTML = '<div class="hero-page"></div>';
   const page = view.querySelector<HTMLElement>('.hero-page')!;
   const statRow = (id: HeroId, st: Stat, lv: number, coins: number) => {
-    const max = lv >= MAX_UPGRADE, cost = upgradeCost(lv);
+    const max = lv >= MAX_UPGRADE, cost = upgradeCost(lv), cur = statValue(id, st, lv), nxt = statValue(id, st, lv + 1);
     return `<li data-stat="${st}">
       <span class="up-name">${STAT_ICON[st]}${STAT_LABEL[st]}</span>
-      <span class="up-val"><b>${statValue(id, st, lv)}</b>${max ? '' : `<em>→ ${statValue(id, st, lv + 1)}</em>`}</span>
+      <span class="up-val"><b>${cur}</b>${max || cur === nxt ? '' : `<em>→ ${nxt}</em>`}</span>
       <span class="up-bar" aria-label="${lv} из ${MAX_UPGRADE}"><s style="--k:${lv / MAX_UPGRADE}"></s><i>${lv}/${MAX_UPGRADE}</i></span>
       <button type="button" class="up-btn" data-stat="${st}" ${max || coins < cost ? 'disabled' : ''}>${max ? 'Макс.' : `${ICONS.coin}${cost}`}</button>
     </li>`;
