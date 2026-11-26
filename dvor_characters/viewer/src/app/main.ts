@@ -16,7 +16,7 @@ import { HERO_PRICE, MAX_UPGRADE, RANKS, STATS, UPGRADE_STEP, buyHero, chooseFir
   nextRank, rankOf, upgrade, upgradesOf, type Stat } from './progress';
 import { KITS } from './game/kits';
 import { BACKSTORY, STORY } from './story';
-import { fetchTop, lastPlace, postResult } from './api';
+import { fetchTop, lastPlace, postResult, syncOnBoot } from './api';
 
 type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle' | 'story' | 'choose';
 const TABS: { id: Screen; label: string; icon: string }[] = [
@@ -351,7 +351,9 @@ function boot(): void {
     bar.style.width = `${(shown * 100).toFixed(1)}%`;
     pct.textContent = String(Math.floor(shown * 100));
   }, 33);
-  const run = () => Promise.all([initTelegram(), preloadAll((k) => (target = k))]);
+  // Telegram first (launch data), then the cloud copy of the progress (at most 4 s), alongside the assets
+  const cloud = () => Promise.race([syncOnBoot(), new Promise<void>((r) => setTimeout(r, 4000))]);
+  const run = () => Promise.all([initTelegram().then(cloud), preloadAll((k) => (target = k))]);
   const finish = () => {
     target = 1;
     // let the logo animation play out (it starts with the page), then the logo and the bar fade, home under it
@@ -361,6 +363,7 @@ function boot(): void {
       box.classList.add('done');
       setTimeout(() => {
         const p = loadProfile();   // first launch: the story, then the one-time hero pick
+        selected = ownedHero(store.get('dvor.hero'));   // the cloud copy may have brought other heroes
         if (p.games > 0 && p.chosen) void postResult(p, selected);   // keep the leaderboard name / trophies fresh
         go(!p.storySeen ? 'story' : !p.chosen ? 'choose' : current);
         box.classList.add('out');

@@ -36,11 +36,12 @@ export interface Profile {
   chosen: string | null;        // the first hero, picked once for good
   owned: string[];              // heroes the player can play (the chosen one + bought ones)
   upgrades: Record<string, Upgrades>;
+  updatedAt: number;            // last change (ms); the newer of phone / cloud copy wins
 }
 
 const KEY = 'dvor.profile.v1';
 const fresh = (): Profile => ({ trophies: 0, xp: 0, coins: 100, gems: 0, games: 0, wins: 0, kills: 0, best: 0, history: [],
-  storySeen: false, chosen: null, owned: [], upgrades: {} });
+  storySeen: false, chosen: null, owned: [], upgrades: {}, updatedAt: 0 });
 
 export function loadProfile(): Profile {
   try {
@@ -49,7 +50,18 @@ export function loadProfile(): Profile {
   } catch { /* private mode / broken data */ }
   return fresh();
 }
-function save(p: Profile): void { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* ignore */ } }
+// cloud save (api.ts): called after every change; the server keeps the copy per Telegram user
+let onSave: ((p: Profile) => void) | null = null;
+export const setSaveHook = (f: (p: Profile) => void): void => { onSave = f; };
+function save(p: Profile): void {
+  p.updatedAt = Date.now();
+  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* ignore */ }
+  onSave?.(p);
+}
+/** Replace the phone copy with the cloud copy (no save back). */
+export function restoreProfile(p: Profile): void {
+  try { localStorage.setItem(KEY, JSON.stringify({ ...fresh(), ...p })); } catch { /* ignore */ }
+}
 function change(f: (p: Profile) => void): Profile { const p = loadProfile(); f(p); save(p); return p; }
 
 // ------------------------------------------------------------------ heroes: first pick, purchases, upgrades

@@ -5,7 +5,7 @@
  */
 import { initData } from './tg';
 import type { Profile } from './progress';
-import { heroLevelOf } from './progress';
+import { heroLevelOf, loadProfile, restoreProfile, setSaveHook } from './progress';
 
 export const SERVER = 'https://dvor-server.dvor-game.workers.dev';
 
@@ -53,3 +53,44 @@ export async function postGameScore(p: Profile, hero: string): Promise<void> {
     });
   } catch { /* offline: next match */ }
 }
+
+// ------------------------------------------------------------------ cloud save (Cloudflare D1, per Telegram user)
+/** Who we are for the server: Mini App launch data, or the token of a game message; outside Telegram nothing. */
+const auth = (): Record<string, string> | null => {
+  const d = initData();
+  if (d) return { initData: d };
+  const g = gameToken();
+  return g ? { g } : null;
+};
+
+/** At start: take the newer of the phone copy and the cloud copy (a new phone gets the cloud one). */
+export async function syncOnBoot(): Promise<void> {
+  const a = auth();
+  if (!a) return;
+  try {
+    const r = await fetch(`${SERVER}/api/profile/load`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(a) });
+    if (!r.ok) return;
+    const { profile } = await r.json() as { profile: Profile | null };
+    const local = loadProfile();
+    if (profile && (profile.updatedAt ?? 0) > (local.updatedAt ?? 0)) restoreProfile(profile);
+    else if (local.updatedAt > 0 && (!profile || local.updatedAt > (profile.updatedAt ?? 0))) queueSave(local);
+  } catch { /* offline: play on the phone copy */ }
+}
+
+let timer = 0, pending: Profile | null = null;
+function queueSave(p: Profile, delay = 1500): void {
+  pending = p;
+  clearTimeout(timer);
+  timer = window.setTimeout(flush, delay);
+}
+async function flush(): Promise<void> {
+  const a = auth(), p = pending;
+  if (!a || !p) return;
+  pending = null;
+  try {
+    const r = await fetch(`${SERVER}/api/profile/save`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...a, profile: p }) });
+    const res = await r.json().catch(() => ({})) as { ok?: boolean; retry?: number };
+    if (!res.ok && res.retry && !pending) queueSave(p, res.retry * 1000 + 200);   // too soon: try again a little later
+  } catch { if (!pending) queueSave(p, 10000); }
+}
+setSaveHook((p) => { if (auth()) queueSave(p); });

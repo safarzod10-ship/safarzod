@@ -4,6 +4,8 @@
  *   POST /tg            Telegram webhook (checked with the secret token header)
  *   POST /api/result    a player's progress after a match (Telegram initData is verified)
  *   POST /api/game-score the result of a match started from a game message (inline / group), signed token
+ *   POST /api/profile/load, /api/profile/save   the player's progress (coins, trophies, heroes, upgrades)
+ *                       kept in D1 per Telegram user, so it survives a new phone or cleared app data
  *   GET  /api/top       top 50 by trophies, cached at the edge for 60 s
  *   scheduled()         one-off setup: webhook, commands, menu button, descriptions (the first
  *                       fetch does the same, so it also runs without the cron)
@@ -13,7 +15,7 @@
  * (and at most one per 20 s per player), leaderboard reads come from the edge cache.
  */
 
-const SETUP_VERSION = '4';
+const SETUP_VERSION = '5';
 const BOT = 'dvor_app';
 const GAME = 'dvor';   // game short name from @BotFather /newgame (until it exists, links to the Mini App are used)
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
@@ -141,9 +143,15 @@ async function readToken(env, token) {
 /** A game message in a chat; without the registered game, a message with a link button. */
 async function sendPlay(env, chat, chatType) {
   const r = await tg(env, 'sendGame', { chat_id: chat, game_short_name: GAME });
+  await note(env, 'sendgame_last', JSON.stringify({ ok: r.ok, err: r.description || null }));
   if (r.ok) return r;
   return tg(env, 'sendMessage', { chat_id: chat, parse_mode: 'HTML', reply_markup: playKeyboard(env, chatType),
     text: '⚔️ <b>Бой во дворе!</b>\nЖми «Играть» — бои 2 на 2 за Круг.' });
+}
+
+async function note(env, k, v) {
+  await env.DB.prepare('INSERT INTO meta (k, v, t) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, t = excluded.t')
+    .bind(k, String(v).slice(0, 2000), Date.now()).run();
 }
 
 async function onInline(q, env) {
@@ -160,6 +168,7 @@ async function onInline(q, env) {
       reply_markup: { inline_keyboard: [[{ text: '▶ Играть', url: appLink('top') }]] } },
   ];
   let r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results, cache_time: 30, is_personal: true });
+  await note(env, 'inline_last', JSON.stringify({ ok: r.ok, err: r.description || null }));
   if (!r.ok) r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results: results.slice(1), cache_time: 30, is_personal: true });   // no game registered yet
   return r;
 }
@@ -210,6 +219,38 @@ async function apiGameScore(request, env) {
   return json({ ok: !!r.ok });
 }
 
+// ------------------------------------------------------------------ cloud save
+/** Who is asking: a Telegram Mini App user (initData) or a player from a game message (signed token). */
+async function who(env, body) {
+  if (body.initData) { const u = await verifyInitData(env, body.initData); return u?.id ? u.id : null; }
+  if (body.g) { const t = await readToken(env, body.g); return t?.u ?? null; }
+  return null;
+}
+
+async function apiProfileLoad(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'bad json' }, 400); }
+  const id = await who(env, body);
+  if (!id) return json({ error: 'not from Telegram' }, 401);
+  const row = await env.DB.prepare('SELECT data, updated FROM profiles WHERE id = ?').bind(id).first();
+  return json({ profile: row ? JSON.parse(row.data) : null, updated: row?.updated ?? 0 });
+}
+
+async function apiProfileSave(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'bad json' }, 400); }
+  const id = await who(env, body);
+  if (!id) return json({ error: 'not from Telegram' }, 401);
+  const data = JSON.stringify(body.profile ?? null);
+  if (!body.profile || typeof body.profile !== 'object' || data.length > 30000) return json({ error: 'bad profile' }, 400);
+  const now = Date.now();
+  const row = await env.DB.prepare('SELECT updated FROM profiles WHERE id = ?').bind(id).first();
+  if (row && now - row.updated < 5000) return json({ ok: false, retry: 5 });   // at most one write per 5 s per player
+  await env.DB.prepare('INSERT INTO profiles (id, data, updated) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated = excluded.updated')
+    .bind(id, data, now).run();
+  return json({ ok: true, updated: now });
+}
+
 async function setup(env, origin) {
   const done = await env.DB.prepare('SELECT v FROM meta WHERE k = ?').bind('setup').first();
   if (done?.v === SETUP_VERSION) return;
@@ -258,6 +299,8 @@ export default {
     if (url.pathname === '/api/top' && request.method === 'GET') return apiTop(request, env, ctx);
     if (url.pathname === '/api/result' && request.method === 'POST') return apiResult(request, env);
     if (url.pathname === '/api/game-score' && request.method === 'POST') return apiGameScore(request, env);
+    if (url.pathname === '/api/profile/load' && request.method === 'POST') return apiProfileLoad(request, env);
+    if (url.pathname === '/api/profile/save' && request.method === 'POST') return apiProfileSave(request, env);
     if (url.pathname === '/health') return json({ ok: true, server: 'dvor' });
     return new Response('ДВОР', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
   },
