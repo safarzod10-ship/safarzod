@@ -12,6 +12,7 @@ import { UI } from "./draw.js";
 import { buildTree, layout, drawTree, hitButton, buttonsOf } from "./uitree.js";
 import { Api, Run } from "../net/api.js";
 import { Touch } from "./touch.js";
+import { LevelMap } from "./levelmap.js";
 
 let template = null;
 const pointer = { x: -1, y: -1, down: null };
@@ -162,22 +163,28 @@ class PauseWindow extends RetroWindow {
     m.find("RestartButton").onClick = () => this.confirmAsk(this.restartText(), () => this.restart());
     m.find("QuitButton").onClick = () => this.confirmAsk(this.quitText(), () => this.quit());
     this.pauseButton.onClick = () => this.toggle();
+    this.mapButton = makeButton(m.find("ResumeButton"), "LevelMapButton", "Level map", 81, -153, 154, 28, () => this.openMap());
+    m.add(this.mapButton);
     this.page("main");
   }
+  openMap() { if (!G.level) return; if (!G.paused) G.level.setPaused(true); LevelMap.open(); }
   restartText() { return G.prologue ? "Restart the prologue?\n\nThe story will play again\nfrom the school bus arrival." : "Restart this room?\n\nThe current attempt will be lost.\nYou will return to the room entrance."; }
   quitText() { return G.prologue ? "Quit HypoFangs?\n\nThe prologue will restart\nwhen you launch the game again." : "Quit HypoFangs?\n\nYour current room is saved.\nYou can continue next time."; }
   toggle() { if (G.level) G.level.togglePause(); else if (G.prologue) G.prologue.togglePause(); }
   open() { this.open_ = true; this.page("main"); this.refresh(); }
   hide() { this.open_ = false; }
-  backOrResume() { if (this.current !== "main") this.page("main"); else this.resume(); }
+  backOrResume() { if (LevelMap.IsOpen) { LevelMap.close(); this.page("main"); } else if (this.current !== "main") this.page("main"); else this.resume(); }
   back() { this.backOrResume(); }
-  resume() { if (G.level) G.level.setPaused(false); else if (G.prologue) G.prologue.setPaused(false); this.open_ = false; }
+  resume() { LevelMap.close(); if (G.level) G.level.setPaused(false); else if (G.prologue) G.prologue.setPaused(false); this.open_ = false; }
   restart() { this.open_ = false; if (G.level) G.level.restartFromPause(); else if (G.prologue) G.prologue.restartPrologue(); }
   quit() { this.open_ = false; G.paused = false; Time.timeScale = 1; Overlays.toMenu(); }
   refresh() {
     const lm = G.level;
     this.win.find("Title").text.text = "HYPOFANGS.EXE  -  Paused";
-    this.main.find("RestartButton").setLabel(G.prologue ? "Restart prologue" : "Restart room");
+    const rb = this.main.find("RestartButton");
+    rb.setLabel(G.prologue ? "Restart prologue" : "Restart room");
+    rb.rt.pos = [lm ? -81 : 0, -153]; rb.rt.size = [lm ? 154 : 316, 28]; rb.children[0].rt.size = [lm ? 146 : 308, 24];
+    this.mapButton.active = !!lm;
     const room = lm && lm.room;
     this.main.find("RoomInfoFrame/RoomInfo").text.text = room ? `ROOM ${String(G.roomIndex + 1).padStart(2, "0")}  /  ${room.displayName}\n${lm.EnemiesLeft} targets remaining` : G.prologue ? "MABOROSHI BRIDGE\nStory suspended" : "Session suspended";
     this.win.find("Status").text.text = G.paused && this.current === "main" ? `${InputPrompts.key(InputPrompts.Pause)} Resume  |  ${G.prologue ? "Story suspended" : "Timer suspended"}` : InputPrompts.MenuHelp;
@@ -230,6 +237,7 @@ export const Overlays = {
     const p = refPoint(e);
     pointer.x = p.x; pointer.y = p.y;
     if (e.pointerType === "touch") { G.touch = true; Input.lastDevice = "touch"; }
+    if (LevelMap.IsOpen) { LevelMap.click(p); return; }
     const win = this.activeWindow();
     let btn = null;
     if (win) btn = hitButton(win.overlay.active ? win.win : win.tree, p.x, p.y);
@@ -270,6 +278,11 @@ export const Overlays = {
   },
   update() {
     if (!template) return;
+    if (G.level && this.mode === "game" && Input.hit("KeyM", "Tab") && G.level.CanPause !== false) {
+      if (LevelMap.IsOpen) { LevelMap.close(); this.pause.resume(); } else if (G.paused || G.level.CanPause) this.pause.openMap();
+    }
+    LevelMap.update();
+    if (LevelMap.IsOpen) return;
     const win = this.activeWindow();
     if (win) {
       win.hover = hitButton(win.win, pointer.x, pointer.y);
@@ -280,11 +293,13 @@ export const Overlays = {
   },
   draw() {
     if (!template) return;
+    if (G.level && G.level.extras.tutorial) G.level.extras.tutorial.draw();
     if (G.prologue && this.mode === "game") this.drawPrologue();
     if (this.mode === "menu") { this.menu.pauseButton.active = false; this.menu.draw(true); return; }
     this.pause.refresh();
     this.pause.pauseButton.active = !G.paused;
     this.pause.draw(G.paused && this.pause.open_);
+    LevelMap.draw();
     if (this.result && G.level && G.level.player && G.level.player.Dead) this.drawResult();
   },
   drawResult() {

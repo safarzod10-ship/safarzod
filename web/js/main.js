@@ -13,6 +13,7 @@ import { Enemies } from "./game/enemy.js";
 import { Pickups, Hints, Lasers, Bullets, ThrownList } from "./game/world.js";
 import "./game/levelmanager.js";
 import "./game/prologue.js";
+import { EncounterTutorial } from "./game/tutorial.js";
 import { HUD } from "./ui/hud.js";
 import { UI } from "./ui/draw.js";
 import { Overlays } from "./ui/overlays.js";
@@ -28,6 +29,7 @@ let sceneReady = false;
 let loadingScene = null;
 
 G.runtime = Runtime;
+G.makeLevelExtras = (lm) => { lm.extras.tutorial = new EncounterTutorial(); lm.node.addComponent(lm.extras.tutorial); };
 window.__hypo = G;
 
 function safeInsets() {
