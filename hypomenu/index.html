@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>HYPOFANGS</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+@font-face{font-family:BoldPixels;src:url(a/BoldPixels.ttf)}
+@font-face{font-family:RetroWindows;src:url(a/RetroWindows.ttf)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#140c2a;font:16px BoldPixels,monospace;color:#18181c;image-rendering:pixelated}
+#bg{position:fixed;inset:0;overflow:hidden}
+#bg div{position:absolute;inset:0;background-repeat:repeat-x;background-position:0 100%;image-rendering:pixelated}
+#ui{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px 12px calc(16px + env(safe-area-inset-bottom))}
+.win{width:min(100%,400px);border:10px solid;border-image:url(a/Window_Base.png) 5 fill / 10px stretch;background:#d4d0c8}
+.bar{display:flex;align-items:center;justify-content:space-between;background:#000080;color:#fff;font:14px RetroWindows,BoldPixels,monospace;padding:4px 4px 4px 8px;letter-spacing:.5px}
+.bar i{font-style:normal;width:20px;height:18px;display:grid;place-items:center;color:#18181c;border:6px solid;border-image:url(a/Windows_Button.png) 5 fill / 6px stretch;font-size:10px;line-height:0}
+.in{padding:12px 12px 10px}
+.title{font:40px/1 BoldPixels,monospace;text-align:center;color:#fff;letter-spacing:2px;background:#0b0820;padding:14px 6px 12px;border:8px solid;border-image:url(a/Windows_Inner_Frame.png) 5 fill / 8px stretch;text-shadow:2px 0 #ff2b3b,-2px 0 #35e4f0}
+.sub{text-align:center;color:#9aa2c0;font-size:12px;margin-top:6px}
+.row{display:flex;justify-content:space-between;align-items:center;margin:12px 2px 6px}
+.lbl{font-size:14px;color:#3a3a46}
+.bal{font-size:24px;color:#000080;display:flex;align-items:center;gap:6px}
+.star{width:16px;height:16px;display:inline-block;background:conic-gradient(from 0deg,#ffc83d,#ffb400);clip-path:polygon(50% 0,62% 36%,100% 38%,70% 60%,80% 100%,50% 76%,20% 100%,30% 60%,0 38%,38% 36%)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.btn{font:15px BoldPixels,monospace;color:#18181c;background:none;height:38px;border:8px solid;border-image:url(a/Windows_Button.png) 5 fill / 8px stretch;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+.btn:active,.btn.sel{border-image:url(a/Windows_Button_Pressed.png) 5 fill / 8px stretch}
+.btn.sel{color:#000080}
+.btn:disabled{border-image:url(a/Windows_Button_Inactive.png) 5 fill / 8px stretch;color:#8a8a92}
+.play{width:100%;height:54px;font-size:22px;margin-top:12px;color:#000080}
+.sep{height:2px;background:linear-gradient(#808080 50%,#fff 50%);margin:14px 0 4px}
+.status{margin-top:10px;padding:4px 8px;font-size:13px;color:#3a3a46;border:6px solid;border-image:url(a/Windows_Inner_Frame.png) 5 fill / 6px stretch;min-height:30px}
+#soon{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:#0008;padding:16px}
+#soon.on{display:flex}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="ui">
+  <div class="win">
+    <div class="bar"><span>HYPOFANGS.EXE</span><i>x</i></div>
+    <div class="in">
+      <div class="title">HYPOFANGS</div>
+      <div class="row"><span class="lbl">Баланс</span><span class="bal"><span id="bal">—</span><span class="star"></span></span></div>
+      <div class="lbl" style="margin:8px 2px 6px">Ставка</div>
+      <div class="grid" id="stakes"></div>
+      <button class="btn play" id="play">ИГРАТЬ</button>
+      <div class="sep"></div>
+      <div class="lbl" style="margin:8px 2px 6px">Пополнить</div>
+      <div class="grid" id="packs"></div>
+      <div class="status" id="status">Загрузка…</div>
+    </div>
+  </div>
+</div>
+<div id="soon"><div class="win"><div class="bar"><span>NEURAL LINK</span><i id="soonX">x</i></div>
+  <div class="in"><div style="font-size:16px;line-height:1.4">Игра подключается в следующем обновлении. Баланс и ставка сохранятся.</div>
+  <button class="btn play" id="soonOk">OK</button></div></div></div>
+<script src="api.js"></script>
+<script>
+"use strict";
+const TG = window.Telegram && window.Telegram.WebApp;
+const $ = (id) => document.getElementById(id);
+const blip = new Audio("a/blip.mp3"); blip.volume = 0.5;
+const music = new Audio("a/music.mp3"); music.loop = true; music.volume = 0.45;
+let musicOn = false;
+function click() { try { blip.currentTime = 0; blip.play(); } catch (e) {} if (TG && TG.HapticFeedback) TG.HapticFeedback.selectionChanged(); if (!musicOn) { musicOn = true; music.play().catch(() => (musicOn = false)); } }
+
+// parallax background: the game's own NeonDistrict sky layers (city1_01 far .. city1_10 near)
+const bg = $("bg"), layers = [];
+for (let i = 1; i <= 10; i++) { const d = document.createElement("div"); d.style.backgroundImage = `url(a/city1_${String(i).padStart(2, "0")}.png)`; bg.appendChild(d); layers.push(d); }
+function fit() { const k = Math.ceil(window.innerHeight / 324); layers.forEach((d) => (d.style.backgroundSize = `${576 * k}px ${324 * k}px`)); return k; }
+let scale = fit(); window.addEventListener("resize", () => (scale = fit()));
+let t0 = performance.now();
+(function tick(now) { const t = (now - t0) / 1000; layers.forEach((d, i) => (d.style.backgroundPositionX = `${-Math.round(t * i * 2.2 * scale)}px`)); requestAnimationFrame(tick); })(t0);
+
+let profile = { balance: 0, packs: [50, 100, 250, 500], stakes: [0, 10, 25, 50] }, stake = 0, online = false;
+function status(t) { $("status").textContent = t; }
+function render() {
+  $("bal").textContent = online ? profile.balance : "—";
+  $("stakes").innerHTML = profile.stakes.map((s) => `<button class="btn ${s === stake ? "sel" : ""}" data-s="${s}">${s || "Без"}${s ? '<span class="star"></span>' : ""}</button>`).join("");
+  $("stakes").querySelectorAll("button").forEach((b) => (b.onclick = () => { click(); stake = +b.dataset.s; render(); }));
+  $("packs").innerHTML = profile.packs.map((a) => `<button class="btn" data-a="${a}" ${online ? "" : "disabled"}>+${a}<span class="star"></span></button>`).join("");
+  $("packs").querySelectorAll("button").forEach((b) => (b.onclick = () => { click(); topUp(+b.dataset.a); }));
+  $("play").disabled = online && stake > profile.balance;
+  $("play").textContent = online && stake > profile.balance ? "НЕ ХВАТАЕТ ЗВЁЗД" : "ИГРАТЬ";
+}
+async function load() {
+  try { profile = await Api.getProfile(); online = true; status("Готово"); }
+  catch (e) { online = false; status(e.message); }
+  render();
+}
+async function topUp(amount) {
+  try {
+    status("Оплата…");
+    const r = await Api.topUp(amount);
+    if (r === "paid") {
+      status("Зачисляем…");
+      const before = profile.balance;
+      for (let i = 0; i < 12 && profile.balance <= before; i++) { await new Promise((r) => setTimeout(r, 1000)); await load(); }
+      status(profile.balance > before ? `Зачислено ${profile.balance - before}` : "Платёж принят, баланс скоро обновится");
+      if (TG && TG.HapticFeedback) TG.HapticFeedback.notificationOccurred("success");
+    } else status(r === "failed" ? "Оплата не прошла" : "Готово");
+  } catch (e) { status(e.message); }
+}
+$("play").onclick = () => { click(); $("soon").classList.add("on"); };
+$("soonOk").onclick = $("soonX").onclick = () => { click(); $("soon").classList.remove("on"); };
+if (TG) { TG.ready(); TG.expand(); TG.disableVerticalSwipes && TG.disableVerticalSwipes(); TG.setHeaderColor && TG.setHeaderColor("#000080"); TG.setBackgroundColor && TG.setBackgroundColor("#140c2a"); }
+render(); load();
+</script>
+</body>
+</html>
