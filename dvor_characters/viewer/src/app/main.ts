@@ -8,7 +8,7 @@
 import './app.css';
 import { HEROES, STAT_NAMES, heroById, type HeroId } from './data';
 import { ICONS, ROLE_ICON, STAT_ICONS, rankBadge } from './icons';
-import { initTelegram, setBack, haptic } from './tg';
+import { initTelegram, setBack, haptic, playerName } from './tg';
 import { startBattle, type Battle } from './battle';
 import { preloadAll } from './assets';
 import { lineup } from './game/match';
@@ -63,18 +63,22 @@ function bindBack(): void {
 }
 
 // ------------------------------------------------------------------ Главная
-const rankChip = (): string => {
+/** Top bar: who you are (level, rank) and the game balance (coins, crystals). */
+const topBar = (): string => {
   const p = loadProfile(), r = rankOf(p.trophies), lv = levelOf(p.xp);
-  return `<div class="rank">
-      <span class="rank-badge">${rankBadge(r.color, r.dark)}</span>
-      <span class="rank-text"><b>${r.name}</b><span>${ICONS.trophy}${p.trophies.toLocaleString('ru-RU')}<small>Ур. ${lv.level}</small></span></span>
-    </div>`;
+  return `<header class="topbar">
+      <button type="button" class="tb-me" data-go="rating" aria-label="Профиль и рейтинг">
+        <span class="tb-badge">${rankBadge(r.color, r.dark)}<em>${lv.level}</em></span>
+        <span class="tb-name"><b>${playerName()}</b><small>${r.name} · ${ICONS.trophy}${p.trophies}</small></span>
+      </button>
+      <span class="tb-cur"><span class="pill">${ICONS.coin}<b>${p.coins.toLocaleString('ru-RU')}</b></span><span class="pill">${ICONS.gem}<b>${p.gems.toLocaleString('ru-RU')}</b></span></span>
+    </header>`;
 };
 function home(): void {
   const h = heroById(selected);
   view.innerHTML = `
+    ${topBar()}
     <div class="home-art" role="img" aria-label="ДВОР — ${h.name}" style="background-image:url(${h.menu})"></div>
-    ${rankChip()}
     <div class="home-bottom">
       <div class="home-hero">
         <span class="home-hero-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
@@ -84,6 +88,7 @@ function home(): void {
     </div>`;
   view.querySelector('#play')!.addEventListener('click', () => { haptic('medium'); go('search'); });
   view.querySelector('#change')!.addEventListener('click', () => { haptic('light'); go('heroes'); });
+  view.querySelector('.tb-me')!.addEventListener('click', () => { haptic('light'); go('rating'); });
 }
 
 // ------------------------------------------------------------------ Выбор героя
@@ -222,20 +227,17 @@ const TIPS = [
 ];
 /**
  * The splash (#boot, splash/splash.html) is already on screen: it is part of the HTML, so it shows while
- * this bundle downloads. Here it switches to real progress: each hero lights up when its model is ready.
+ * this bundle downloads. Here it switches to real progress (bytes of every model, pictures, fonts).
  */
 function boot(): void {
   let el = document.getElementById('boot');
   if (!el) {   // page built without the splash: a bare stand-in
     el = document.createElement('div');
     el.id = 'boot';
-    el.innerHTML = '<div class="sp-foot"><div class="sp-heroes"></div><div class="sp-bar"><i></i></div><p class="sp-pct"></p><p class="sp-tip"></p></div>';
+    el.innerHTML = '<div class="sp-foot"><div class="sp-bar"><i></i></div><p class="sp-pct"></p><p class="sp-tip"></p></div>';
     document.body.appendChild(el);
   }
   const box = el;
-  const heroesRow = box.querySelector<HTMLElement>('.sp-heroes')!;
-  heroesRow.innerHTML = HEROES.map((h) =>
-    `<span class="sp-h" data-model="${h.model}"><span class="sp-av"><i style="background-image:url(${h.card})"></i></span>${h.name}</span>`).join('');
   const bar = box.querySelector<HTMLElement>('.sp-bar i')!, tip = box.querySelector<HTMLElement>('.sp-tip')!;
   box.querySelector('.sp-pct')!.innerHTML = 'Загрузка <b>0</b>%';
   const pct = box.querySelector('.sp-pct b')!;
@@ -251,12 +253,11 @@ function boot(): void {
     bar.style.width = `${(shown * 100).toFixed(1)}%`;
     pct.textContent = String(Math.floor(shown * 100));
   }, 33);
-  const heroReady = (model: string) => box.querySelector(`.sp-h[data-model="${model}"]`)?.classList.add('ok');
-  const run = () => Promise.all([initTelegram(), preloadAll((k) => (target = k), heroReady)]);
+  const run = () => Promise.all([initTelegram(), preloadAll((k) => (target = k))]);
   const finish = () => {
     target = 1;
-    // let the logo animation play out (it starts with the page), then: art in, bar out, home under it
-    const wait = Math.max(0, 1900 - performance.now());
+    // let the logo animation play out (it starts with the page), then the logo and the bar fade, home under it
+    const wait = Math.max(0, 2300 - performance.now());
     setTimeout(() => {
       clearInterval(tipTimer);
       box.classList.add('done');

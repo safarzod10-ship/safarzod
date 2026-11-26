@@ -553,3 +553,44 @@ img { display: block; max-width: 100%; }
 .muted { color: var(--muted); font-size: 14px; }
 
 .scorebar .faces { display: flex; gap: 3px; }
+
+/* ---------------------------------------------------------------- battle HUD v3: Telegram full screen, simpler */
+.zonebar { display: none; }
+.timer { border-radius: 8px; transition: background-color .2s; }
+.timer[data-owner="0"] { background: rgba(31, 122, 224, 0.55); }
+.timer[data-owner="1"] { background: rgba(216, 56, 44, 0.55); }
+.timer[data-owner="-2"] { background: rgba(255, 201, 74, 0.45); }
+.view.battle .team img { width: 26px; height: 26px; }
+.view.battle .score { min-width: 28px; height: 28px; font-size: 18px; }
+.view.battle .timer { font-size: 19px; }
+@media (orientation: landscape) {
+  /* the bar goes to the very top, between Telegram's «Назад» and its menu buttons (only the system inset) */
+  .view.battle .scorebar {
+    top: calc(4px + max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px)));
+    width: min(500px, calc(100vw - 2 * max(150px, var(--sl) + 140px))); padding: 3px;
+  }
+}
+
+/* ---------------------------------------------------------------- home v3: game balance on top, art below */
+.topbar {
+  position: absolute; z-index: 3; left: 0; right: 0; top: 0; height: calc(58px + env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: env(safe-area-inset-top, 0px) max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(#17161a, #1d1c21); border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.tb-me { display: flex; align-items: center; gap: 8px; min-width: 0; text-align: left; }
+.tb-badge { position: relative; width: 38px; height: 42px; flex: none; }
+.tb-badge svg { width: 100%; height: 100%; }
+.tb-badge em { position: absolute; right: -4px; bottom: -2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  display: grid; place-items: center; font: 700 11px/1 var(--font-ui); font-style: normal; color: #fff; background: var(--accent); box-shadow: 0 0 0 2px #1a191d; }
+.tb-name { display: grid; min-width: 0; }
+.tb-name b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-name small { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tb-name small svg { font-size: 12px; color: #ffc23d; }
+.tb-cur { display: flex; gap: 6px; flex: none; }
+.pill { display: flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px 0 5px; border-radius: 15px;
+  background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; font-variant-numeric: tabular-nums; }
+.pill svg { font-size: 21px; }
+.view.home .home-art { top: calc(58px + env(safe-area-inset-top, 0px)); }
+.result-loot { display: flex; justify-content: center; gap: 14px; margin: -4px 0 10px; font-weight: 700; font-size: 16px; }
+.result-loot span { display: flex; align-items: center; gap: 5px; } .result-loot svg { font-size: 20px; }

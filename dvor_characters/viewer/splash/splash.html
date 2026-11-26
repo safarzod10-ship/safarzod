@@ -1,107 +1,73 @@
-<!-- Splash: shown by the HTML itself, before the 700 KB game bundle has arrived. main.ts adopts #boot
-     (progress, heroes, tips) and removes it once everything is loaded; at the end the selected hero's
-     menu art fades in exactly where the home screen shows it. Logos are inlined (data URIs),
-     so the first frame needs no network. Built into the page by splash/build.mjs. -->
+<!-- Splash: part of the HTML itself, so it shows at once (before the ~700 KB game bundle arrives).
+     Only the ДВОР logo, animated: the four letters stamp in one after another, the orange underline
+     swipes in, the crown drops on top with sparks, then a shine runs over it while everything loads.
+     main.ts adopts #boot (real progress, tips) and fades it out once every model, picture and font is
+     ready. Logos are inlined (data URIs, splash/build.mjs), so the first frame needs no network. -->
 <style>
 html, body { margin: 0; height: 100%; background: #121114; }
 #boot {
-  --lw: url(__LOGO_WORD__); --lc: url(__LOGO_CROWN__);
-  --tb: calc(67px + env(safe-area-inset-bottom, 0px));   /* tab bar height: the art lines up with the home screen */
-  position: fixed; top: 0; bottom: 0; left: 50%; z-index: 50; width: min(100vw, 480px); transform: translateX(-50%);
-  overflow: hidden; color: #f4efe8; font-family: Rubik, "Segoe UI", system-ui, sans-serif;
-  background: radial-gradient(130% 70% at 50% 10%, #2b2623 0%, #1a181b 55%, #121114 100%);
-  transition: opacity .45s ease;
+  --l1: url(__LOGO_L1__); --l2: url(__LOGO_L2__); --l3: url(__LOGO_L3__); --l4: url(__LOGO_L4__);
+  --line: url(__LOGO_LINE__); --lc: url(__LOGO_CROWN__); --lw: url(__LOGO_WORD__);
+  position: fixed; inset: 0; z-index: 50; overflow: hidden; color: #f4efe8;
+  font-family: Rubik, "Segoe UI", system-ui, sans-serif;
+  background: radial-gradient(90% 55% at 50% 40%, #2c2522 0%, #191719 58%, #111013 100%);
+  transition: opacity .5s ease;
 }
 #boot.out { opacity: 0; pointer-events: none; }
 #boot * { box-sizing: border-box; }
-.sp-stage { position: absolute; left: 0; right: 0; top: 0; bottom: var(--tb); container-type: size; }
-.sp-cover { position: absolute; top: 0; left: 50%; width: 100%; width: max(100cqw, calc(100cqh * 782 / 1580)); aspect-ratio: 782 / 1580; transform: translateX(-50%); }
-/* the selected hero's menu art (same placement as on the home screen: top, full width) */
-.sp-art { position: absolute; inset: 0; background: var(--art, none) 50% 0 / 100% auto no-repeat; opacity: 0; transition: opacity .6s ease; }
-.sp-low { -webkit-mask-image: linear-gradient(transparent 22%, #000 40%, #000 52%, transparent 62%); mask-image: linear-gradient(transparent 22%, #000 40%, #000 52%, transparent 62%); }
-#boot.art .sp-low { opacity: .32; }
-#boot.done .sp-full { opacity: 1; }
-#boot.done .sp-logo { opacity: 0; transition: opacity .45s ease; }
-#boot.done .sp-fx { opacity: 0; }
 
-/* street-lamp glow behind the logo, flickering */
-.sp-glow { position: absolute; left: 50%; top: 14%; width: 120%; aspect-ratio: 1; transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, rgba(255, 168, 90, .30), rgba(255, 140, 60, .10) 45%, rgba(255, 140, 60, 0) 75%);
-  animation: sp-flicker 5s steps(1) infinite, sp-in .8s ease both; }
-@keyframes sp-flicker { 0%, 100% { opacity: 1; } 42% { opacity: .75; } 44% { opacity: 1; } 71% { opacity: .85; } 72% { opacity: 1; } }
+/* warm glow and embers */
+.sp-glow { position: absolute; left: 50%; top: 40%; width: min(150vw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(255, 150, 70, .26), rgba(255, 120, 40, .08) 50%, rgba(255, 120, 40, 0) 75%);
+  animation: sp-in 1s ease both, sp-breath 3.2s ease-in-out 1s infinite; }
 @keyframes sp-in { from { opacity: 0; } }
-.sp-fx { position: absolute; inset: 0; pointer-events: none; transition: opacity .5s; }
-/* fog banks drifting along the ground */
-.sp-fog { position: absolute; left: -50%; width: 200%; height: 34%; bottom: 14%;
-  background: radial-gradient(28% 40% at 25% 60%, rgba(190, 185, 200, .10), rgba(190, 185, 200, 0) 70%),
-              radial-gradient(22% 35% at 62% 45%, rgba(190, 185, 200, .08), rgba(190, 185, 200, 0) 70%),
-              radial-gradient(30% 45% at 88% 65%, rgba(190, 185, 200, .09), rgba(190, 185, 200, 0) 70%);
-  animation: sp-drift 16s ease-in-out infinite alternate; }
-.sp-fog.b { bottom: 30%; opacity: .7; animation-duration: 23s; animation-direction: alternate-reverse; }
-@keyframes sp-drift { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
-/* embers rising from the yard */
+@keyframes sp-breath { 50% { opacity: .7; transform: translate(-50%, -50%) scale(.94); } }
 .sp-emb i { position: absolute; bottom: -12px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
-  background: #ffb06a; box-shadow: 0 0 6px 1px rgba(255, 120, 30, .9); opacity: 0;
-  animation: sp-rise var(--d) linear var(--t) infinite; }
-@keyframes sp-rise { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: .9; } 70% { opacity: .6; }
-  100% { opacity: 0; transform: translate(var(--dx), -62vh); } }
+  background: #ffb06a; box-shadow: 0 0 6px 1px rgba(255, 120, 30, .9); opacity: 0; animation: sp-rise var(--d) linear var(--t) infinite; }
+@keyframes sp-rise { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: .9; } 70% { opacity: .5; }
+  100% { opacity: 0; transform: translate(var(--dx), -75vh); } }
 
-/* logo: the word slams in, the crown drops on top, sparks fly, then a shine passes over */
-.sp-logo { position: absolute; inset: 0; animation: sp-shake .32s linear .5s both; }
-@keyframes sp-shake { 0%, 100% { transform: none; } 20% { transform: translate(-3px, 2px); } 40% { transform: translate(3px, -2px); }
-  60% { transform: translate(-2px, -1px); } 80% { transform: translate(2px, 1px); } }
-.sp-word, .sp-shine { position: absolute; left: 19.82%; top: 8.544%; width: 58.82%; aspect-ratio: 460 / 233; }
-.sp-word { background: var(--lw) 0 0 / 100% 100% no-repeat; animation: sp-slam .55s cubic-bezier(.2, .9, .3, 1.15) .12s both; }
-@keyframes sp-slam { 0% { opacity: 0; transform: scale(1.9) rotate(-5deg); filter: blur(8px); } 65% { opacity: 1; transform: scale(.94) rotate(0); filter: blur(0); }
-  100% { opacity: 1; transform: none; filter: none; } }
+/* logo box: crown + wordmark, 460 x 346 source px */
+.sp-logo { position: absolute; left: 50%; top: 40%; width: min(82vw, 380px); aspect-ratio: 460 / 346; transform: translate(-50%, -58%); }
+.sp-float { position: absolute; inset: 0; animation: sp-float 3.4s ease-in-out 2s infinite; }
+@keyframes sp-float { 50% { transform: translateY(-6px) rotate(-.6deg); } }
+.sp-word { position: absolute; left: 0; top: 32.66%; width: 100%; aspect-ratio: 460 / 233; }
+.sp-word > i, .sp-shine { position: absolute; inset: 0; background: 0 0 / 100% 100% no-repeat; }
+.sp-word > i { opacity: 0; animation: sp-stamp .42s cubic-bezier(.2, .9, .3, 1.25) var(--at) both; transform-origin: var(--ox) 60%; }
+.sp-word > .l1 { background-image: var(--l1); --at: .15s; --ox: 23%; }
+.sp-word > .l2 { background-image: var(--l2); --at: .32s; --ox: 48%; }
+.sp-word > .l3 { background-image: var(--l3); --at: .49s; --ox: 68%; }
+.sp-word > .l4 { background-image: var(--l4); --at: .66s; --ox: 85%; }
+@keyframes sp-stamp { 0% { opacity: 0; transform: scale(2.4) rotate(-8deg); filter: blur(6px); }
+  60% { opacity: 1; transform: scale(.9) rotate(1deg); filter: blur(0); } 100% { opacity: 1; transform: none; filter: none; } }
+.sp-word > .line { background-image: var(--line); opacity: 1; clip-path: inset(0 100% 0 0); animation: sp-swipe .38s cubic-bezier(.6, 0, .3, 1) .9s both; }
+@keyframes sp-swipe { to { clip-path: inset(0 0 0 0); } }
 .sp-shine { -webkit-mask: var(--lw) 0 0 / 100% 100% no-repeat; mask: var(--lw) 0 0 / 100% 100% no-repeat;
-  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, .7) 50%, rgba(255, 255, 255, 0) 58%) 0 0 / 300% 100% no-repeat;
-  animation: sp-shine 3.6s ease-in-out 1.6s infinite both; }
-@keyframes sp-shine { 0% { background-position: 110% 0; } 45%, 100% { background-position: -10% 0; } }
-.sp-puff { position: absolute; left: 48%; top: 16%; width: 80%; aspect-ratio: 2.2; transform: translate(-50%, -50%) scale(.3);
-  background: radial-gradient(closest-side, rgba(200, 195, 190, .45), rgba(200, 195, 190, 0)); opacity: 0;
-  animation: sp-puff .8s ease-out .48s both; }
-@keyframes sp-puff { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.35); } 1% { opacity: .9; transform: translate(-50%, -50%) scale(.35); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
-.sp-crown { position: absolute; left: 41.56%; top: 1.392%; width: 20.46%; aspect-ratio: 160 / 136; transform-origin: 50% 100%;
-  background: var(--lc) 0 0 / 100% 100% no-repeat; animation: sp-drop .75s cubic-bezier(.3, .6, .4, 1) .72s both; }
-@keyframes sp-drop { 0% { opacity: 0; transform: translateY(-190%) rotate(-20deg); } 45% { opacity: 1; transform: translateY(4%) rotate(5deg) scaleY(.86); }
-  62% { transform: translateY(-14%) rotate(-4deg); } 80% { transform: translateY(0) rotate(2deg) scaleY(.96); } 100% { opacity: 1; transform: none; } }
-.sp-sparks { position: absolute; left: 51.8%; top: 9.2%; width: 0; height: 0; }
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, .75) 50%, rgba(255, 255, 255, 0) 58%) 0 0 / 300% 100% no-repeat;
+  animation: sp-shine 2.8s ease-in-out 1.8s infinite both; }
+@keyframes sp-shine { 0% { background-position: 110% 0; } 50%, 100% { background-position: -10% 0; } }
+.sp-crown { position: absolute; left: 36.96%; top: 0; width: 34.78%; aspect-ratio: 160 / 136; transform-origin: 50% 100%;
+  background: var(--lc) 0 0 / 100% 100% no-repeat; animation: sp-drop .7s cubic-bezier(.3, .6, .4, 1) 1.1s both; }
+@keyframes sp-drop { 0% { opacity: 0; transform: translateY(-260%) rotate(-25deg); } 45% { opacity: 1; transform: translateY(4%) rotate(5deg) scaleY(.82); }
+  62% { transform: translateY(-16%) rotate(-4deg); } 80% { transform: translateY(0) rotate(2deg) scaleY(.95); } 100% { opacity: 1; transform: none; } }
+.sp-sparks { position: absolute; left: 54.3%; top: 38%; width: 0; height: 0; }
 .sp-sparks i { position: absolute; left: -1.5px; top: -6px; width: 3px; height: 12px; border-radius: 2px; background: #ffb347;
-  box-shadow: 0 0 6px rgba(255, 140, 40, .9); opacity: 0; transform: rotate(var(--a)) translateY(0);
-  animation: sp-spark .55s ease-out 1.05s both; }
-@keyframes sp-spark { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-8px) scaleY(1); } 1% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-46px) scaleY(.3); } }
+  box-shadow: 0 0 6px rgba(255, 140, 40, .9); opacity: 0; animation: sp-spark .55s ease-out 1.42s both; }
+@keyframes sp-spark { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-8px); } 1% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-54px) scaleY(.3); } }
+.sp-shake { position: absolute; inset: 0; animation: sp-shake .26s linear var(--sk, .2s) both; }
+@keyframes sp-shake { 25% { transform: translate(-3px, 2px); } 50% { transform: translate(3px, -1px); } 75% { transform: translate(-2px, -1px); } }
+#boot.done .sp-logo { transition: transform .5s cubic-bezier(.4, 0, .2, 1), opacity .5s; transform: translate(-50%, -58%) scale(1.08); opacity: 0; }
 
-/* bottom: heroes being loaded, progress bar, tips */
+/* bottom: progress and tips */
 .sp-foot { position: absolute; left: 0; right: 0; bottom: 0; display: grid; justify-items: center; gap: 12px;
-  padding: 0 24px calc(34px + env(safe-area-inset-bottom, 0px)); transition: opacity .35s ease, transform .35s ease;
-  animation: sp-up .5s ease .3s both; }
+  padding: 0 28px calc(40px + env(safe-area-inset-bottom, 0px)); animation: sp-up .5s ease .5s both; transition: opacity .3s; }
 @keyframes sp-up { from { opacity: 0; transform: translateY(16px); } }
-#boot.done .sp-foot { opacity: 0; transform: translateY(24px); }
-.sp-heroes { display: flex; gap: 12px; min-height: 70px; opacity: 0; transition: opacity .3s; }
-#boot.live .sp-heroes { opacity: 1; }
-.sp-h { display: grid; justify-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: #8f8983; transition: color .3s; }
-.sp-av { position: relative; width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .12); transition: border-color .35s, box-shadow .35s; }
-.sp-av i { position: absolute; inset: 0; border-radius: 50%; background: #2a282d 50% 14% / cover no-repeat; filter: grayscale(1) brightness(.45); transition: filter .35s; }
-.sp-av::before { content: ""; position: absolute; inset: -6px; border-radius: 50%;
-  border: 2px solid rgba(255, 155, 69, 0); border-top-color: #ff9b45; border-right-color: rgba(255, 155, 69, .35);
-  animation: sp-spin .9s linear infinite; }
-.sp-av::after { content: "✓"; position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%;
-  display: grid; place-items: center; font: 700 12px/1 system-ui, sans-serif; color: #fff; background: #f07a1e;
-  box-shadow: 0 0 0 2px #1a181b; transform: scale(0); transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
-@keyframes sp-spin { to { transform: rotate(360deg); } }
-.sp-h.ok { color: #f4efe8; }
-.sp-h.ok .sp-av i { filter: none; }
-.sp-h.ok .sp-av { border-color: #f07a1e; box-shadow: 0 0 16px rgba(240, 122, 30, .55); animation: sp-pop .45s ease; }
-.sp-h.ok .sp-av::before { display: none; }
-.sp-h.ok .sp-av::after { transform: scale(1); }
-@keyframes sp-pop { 40% { transform: scale(1.14); } }
+#boot.done .sp-foot { opacity: 0; }
 .sp-bar { width: 100%; max-width: 300px; height: 12px; border-radius: 7px; overflow: hidden;
   background: rgba(255, 255, 255, .08); border: 1.5px solid rgba(255, 255, 255, .14); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .5); }
 .sp-bar i { display: block; height: 100%; width: 34%; border-radius: 6px;
   background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, .2) 0 7px, rgba(255, 255, 255, 0) 7px 14px), linear-gradient(#ff9b45, #c4560f);
-  background-size: 19.8px 19.8px, 100% 100%;
-  animation: sp-stripes .7s linear infinite, sp-indet 1.1s ease-in-out infinite alternate; }
+  background-size: 19.8px 19.8px, 100% 100%; animation: sp-stripes .7s linear infinite, sp-indet 1.1s ease-in-out infinite alternate; }
 #boot.live .sp-bar i { width: 0; animation: sp-stripes .7s linear infinite; }
 @keyframes sp-stripes { to { background-position: 19.8px 0, 0 0; } }
 @keyframes sp-indet { from { transform: translateX(-10%); } to { transform: translateX(204%); } }
@@ -110,7 +76,7 @@ html, body { margin: 0; height: 100%; background: #121114; }
 .sp-dots { display: inline-block; width: 1.1em; margin-right: -1.1em; text-align: left; }
 .sp-dots::after { content: ""; animation: sp-dots 1.2s steps(4) infinite; }
 @keyframes sp-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
-.sp-tip { margin: 0; min-height: 2.6em; max-width: 30ch; text-align: center; color: #d9d3cc; font-size: 14.5px; line-height: 1.3; opacity: 0; }
+.sp-tip { margin: 0; min-height: 2.6em; max-width: 30ch; text-align: center; color: #cfc8c1; font-size: 14.5px; line-height: 1.3; opacity: 0; }
 .sp-tip.in { animation: sp-tip 2.6s ease both; }
 @keyframes sp-tip { 0% { opacity: 0; transform: translateY(6px); } 12%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .sp-err { margin: 0; text-align: center; font-size: 17px; font-weight: 600; }
@@ -118,37 +84,34 @@ html, body { margin: 0; height: 100%; background: #121114; }
 .sp-retry { height: 50px; padding: 0 34px; border: 0; border-radius: 14px; color: #fff; cursor: pointer;
   font: italic 800 21px/1 "Exo 2", "Arial Narrow", system-ui, sans-serif; background: linear-gradient(#ff9b45, #c4560f); box-shadow: 0 4px 0 #8e3c0a; }
 @media (prefers-reduced-motion: reduce) {
-  .sp-glow, .sp-fog, .sp-emb, .sp-shine, .sp-puff, .sp-sparks { animation: none; display: none; }
-  .sp-logo, .sp-word, .sp-crown, .sp-foot { animation: none; }
+  .sp-glow, .sp-emb, .sp-shine, .sp-sparks, .sp-float, .sp-shake { animation: none; }
+  .sp-emb, .sp-sparks { display: none; }
+  .sp-word > i, .sp-crown, .sp-foot { animation: none; opacity: 1; }
+  .sp-word > .line { animation: none; clip-path: none; }
   .sp-bar i { animation: none; } .sp-tip.in { animation: none; opacity: 1; }
 }
 </style>
 <div id="boot" role="status" aria-label="Загрузка игры">
-  <div class="sp-art sp-low"></div>
-  <div class="sp-stage"><div class="sp-cover">
-    <div class="sp-fx"><div class="sp-glow"></div></div>
-    <div class="sp-fx">
-      <div class="sp-fog"></div><div class="sp-fog b"></div>
-      <div class="sp-emb">
-        <i style="--x:8%;--s:3px;--d:6.5s;--t:-1s;--dx:20px"></i><i style="--x:17%;--s:2px;--d:5.2s;--t:-3.4s;--dx:-14px"></i>
-        <i style="--x:26%;--s:4px;--d:7.4s;--t:-5s;--dx:26px"></i><i style="--x:34%;--s:2px;--d:5.8s;--t:-.4s;--dx:12px"></i>
-        <i style="--x:43%;--s:3px;--d:6.9s;--t:-2.6s;--dx:-22px"></i><i style="--x:52%;--s:2px;--d:5.1s;--t:-4.4s;--dx:16px"></i>
-        <i style="--x:60%;--s:3px;--d:7.8s;--t:-6.1s;--dx:-10px"></i><i style="--x:68%;--s:4px;--d:6.2s;--t:-1.7s;--dx:24px"></i>
-        <i style="--x:76%;--s:2px;--d:5.5s;--t:-3.9s;--dx:-18px"></i><i style="--x:84%;--s:3px;--d:7.1s;--t:-.9s;--dx:14px"></i>
-        <i style="--x:92%;--s:2px;--d:6s;--t:-5.6s;--dx:-24px"></i><i style="--x:47%;--s:2px;--d:8.4s;--t:-7.2s;--dx:30px"></i>
-      </div>
+  <div class="sp-glow"></div>
+  <div class="sp-emb">
+    <i style="--x:8%;--s:3px;--d:6.5s;--t:-1s;--dx:20px"></i><i style="--x:17%;--s:2px;--d:5.2s;--t:-3.4s;--dx:-14px"></i>
+    <i style="--x:26%;--s:4px;--d:7.4s;--t:-5s;--dx:26px"></i><i style="--x:34%;--s:2px;--d:5.8s;--t:-.4s;--dx:12px"></i>
+    <i style="--x:43%;--s:3px;--d:6.9s;--t:-2.6s;--dx:-22px"></i><i style="--x:52%;--s:2px;--d:5.1s;--t:-4.4s;--dx:16px"></i>
+    <i style="--x:60%;--s:3px;--d:7.8s;--t:-6.1s;--dx:-10px"></i><i style="--x:68%;--s:4px;--d:6.2s;--t:-1.7s;--dx:24px"></i>
+    <i style="--x:76%;--s:2px;--d:5.5s;--t:-3.9s;--dx:-18px"></i><i style="--x:84%;--s:3px;--d:7.1s;--t:-.9s;--dx:14px"></i>
+    <i style="--x:92%;--s:2px;--d:6s;--t:-5.6s;--dx:-24px"></i><i style="--x:47%;--s:2px;--d:8.4s;--t:-7.2s;--dx:30px"></i>
+  </div>
+  <div class="sp-logo">
+    <div class="sp-float">
+      <div class="sp-shake" style="--sk:.52s"><div class="sp-shake" style="--sk:.86s">
+        <div class="sp-word"><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="line"></i><div class="sp-shine"></div></div>
+        <div class="sp-crown"></div>
+        <div class="sp-sparks"><i style="--a:-80deg"></i><i style="--a:-55deg"></i><i style="--a:-30deg"></i><i style="--a:-8deg"></i>
+          <i style="--a:10deg"></i><i style="--a:32deg"></i><i style="--a:56deg"></i><i style="--a:82deg"></i></div>
+      </div></div>
     </div>
-    <div class="sp-logo">
-      <div class="sp-puff"></div>
-      <div class="sp-word"></div><div class="sp-shine"></div>
-      <div class="sp-crown"></div>
-      <div class="sp-sparks"><i style="--a:-80deg"></i><i style="--a:-55deg"></i><i style="--a:-30deg"></i><i style="--a:-8deg"></i>
-        <i style="--a:10deg"></i><i style="--a:32deg"></i><i style="--a:56deg"></i><i style="--a:82deg"></i></div>
-    </div>
-  </div></div>
-  <div class="sp-art sp-full"></div>
+  </div>
   <div class="sp-foot">
-    <div class="sp-heroes"></div>
     <div class="sp-bar"><i></i></div>
     <p class="sp-pct">Загрузка<span class="sp-dots"></span></p>
     <p class="sp-tip"></p>
@@ -164,17 +127,9 @@ html, body { margin: 0; height: 100%; background: #121114; }
     s.onload = function () {
       var w = window.Telegram && window.Telegram.WebApp;
       if (!w) return;
-      try { w.setHeaderColor && w.setHeaderColor('#1b1a1e'); w.setBackgroundColor && w.setBackgroundColor('#121114'); w.ready(); w.expand(); } catch (e) {}
+      try { w.setHeaderColor && w.setHeaderColor('#121114'); w.setBackgroundColor && w.setBackgroundColor('#121114'); w.ready(); w.expand(); } catch (e) {}
     };
     document.head.appendChild(s);
   }
-  // the selected hero's menu art shows through as soon as the picture is here
-  var hero = 'technik';
-  try { var h = localStorage.getItem('dvor.hero'); if (/^(technik|tank|sprinter|sniper|medic)$/.test(h || '')) hero = h; } catch (e) {}
-  var src = 'ui/menu_' + hero + '.jpg', b = document.getElementById('boot');
-  b.style.setProperty('--art', 'url(' + src + ')');
-  var im = new Image();
-  im.onload = function () { b.classList.add('art'); };
-  im.src = src;
 })();
 </script>

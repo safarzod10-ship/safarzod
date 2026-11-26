@@ -171,13 +171,13 @@
         "of": 44,
         "style": {
           "phase_source": "thigh pitch R-L",
-          "abd": 24,
-          "off": 6,
-          "amp": 40,
-          "bend": 82,
-          "bend_var": 16,
-          "inward": 2,
-          "wrist": 12
+          "abd": 8,
+          "off": 40,
+          "amp": 6,
+          "bend": 88,
+          "bend_var": 4,
+          "inward": 28,
+          "wrist": 8
         },
         "legs": {
           "max_lateral_fix_m": 0.12,
@@ -232,7 +232,22 @@
     }
   },
   "files": {
-    "blend_bytes": 644360,
+    "blend_bytes": 644992,
     "raw_glb_bytes": 919928
+  },
+  "rifle": {
+    "vertices": 259,
+    "length_m": 0.788,
+    "stock_m": [
+      -0.11,
+      -0.16,
+      1.03
+    ],
+    "aim": [
+      0.0,
+      -0.977,
+      -0.215
+    ],
+    "bone": "chest"
   }
 }

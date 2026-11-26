@@ -52,6 +52,7 @@ export interface UnitView {
 interface Unit {
   id: number; team: Team; hero: Hero; kit: Kit; isPlayer: boolean; slot: number;
   root: THREE.Object3D; mixer: THREE.AnimationMixer; actions: Map<Clip, THREE.AnimationAction>;
+  mats: THREE.MeshStandardMaterial[]; flashUntil: number;
   cur: THREE.AnimationAction | null; oneShotUntil: number;
   ring: THREE.Mesh; stunFx: THREE.Mesh; door: THREE.Object3D | null;
   x: number; z: number; yaw: number; kx: number; kz: number;
@@ -79,6 +80,7 @@ interface Fx { obj: THREE.Object3D; t: number; dur: number; tick: (k: number) =>
 export interface MatchEvents {
   damage(x: number, y: number, z: number, amount: number, team: Team, heal?: boolean): void;
   kill(killer: UnitView | null, victim: UnitView): void;
+  shake?(amount: number): void;   // camera shake request (the player was hit, a blast nearby...)
   end(result: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number; healed: number } }): void;
 }
 
@@ -230,7 +232,16 @@ export class Match {
   private makeUnit(id: number, team: Team, hero: Hero, gltf: GLTF, isPlayer: boolean, slot: number): Unit {
     const root = cloneSkinned(gltf.scene);
     const meshes: THREE.Mesh[] = [];
-    root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.frustumCulled = false; meshes.push(m); } });
+    const mats: THREE.MeshStandardMaterial[] = [];
+    root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      m.frustumCulled = false;
+      meshes.push(m);
+      // own material per hero so a hit flash lights only this one
+      m.material = (m.material as THREE.MeshStandardMaterial).clone();
+      mats.push(m.material as THREE.MeshStandardMaterial);
+    });
     meshes.sort((a, b) => a.name.localeCompare(b.name)).forEach((m, i) => (m.visible = i === 0));
     const mixer = new THREE.AnimationMixer(root);
     const actions = new Map<Clip, THREE.AnimationAction>();
@@ -252,7 +263,7 @@ export class Match {
     const [sx, sz] = SPAWNS[team][slot];
     const kit = KITS[hero.id];
     const u: Unit = {
-      id, team, hero, kit, isPlayer, slot, root, mixer, actions, cur: null, oneShotUntil: 0, ring, stunFx, door: null,
+      id, team, hero, kit, isPlayer, slot, root, mixer, actions, mats, flashUntil: 0, cur: null, oneShotUntil: 0, ring, stunFx, door: null,
       x: sx, z: sz, yaw: team === 0 ? Math.PI : 0, kx: 0, kz: 0,
       hp: kit.hp, alive: true, respawnAt: 0, invulnUntil: 0,
       atkReady: 0, heat: 0, overheatUntil: 0, meleeCount: 0, cd1: 0, cd2: 0, cdDash: 0,
@@ -344,6 +355,8 @@ export class Match {
     const dmg = Math.round(amount * (1 - target.kit.armor));
     target.hp -= dmg;
     target.lastHurt = this.time;
+    target.flashUntil = this.time + 0.1;
+    if (target.isPlayer) this.ev.shake?.(Math.min(0.45, 0.12 + dmg / 4000));
     target.lastFight = this.time;
     if (by) { by.dealt += dmg; by.lastFight = this.time; }
     this.ev.damage(target.x, 2.0, target.z, dmg, target.team);
@@ -878,6 +891,8 @@ export class Match {
   }
 
   private syncUnit(u: Unit): void {
+    const flash = this.time < u.flashUntil ? 0.55 : 0;   // white hit flash
+    for (const m of u.mats) if (m.emissiveIntensity !== flash) { m.emissive.setRGB(1, 0.92, 0.85); m.emissiveIntensity = flash; }
     u.root.position.set(u.x, 0, u.z);
     u.root.rotation.y = u.yaw;
     u.ring.position.set(u.x, 0.02, u.z);
@@ -1003,6 +1018,7 @@ export class Match {
           if (e.alive) { e.stunUntil = this.time + k.stun; e.dash = null; }
         }
         this.fxBlast(m.x, m.z, k.r * 1.25);
+        this.ev.shake?.(0.5);
         this.scene.remove(m.obj);
         continue;
       }
@@ -1093,6 +1109,7 @@ export class Match {
     for (const m of this.mines) this.scene.remove(m.obj);
     for (const z of this.zones) this.scene.remove(z.obj);
     this.smokeFx.dispose();
+    for (const u of this.units) for (const m of u.mats) m.dispose();
     for (const g of Object.values(this.geos)) g.dispose();
     for (const m of Object.values(this.mats)) m.dispose();
   }

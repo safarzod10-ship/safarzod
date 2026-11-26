@@ -37,10 +37,9 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     <div class="battle-hud">
       <div class="scorebar">
         <div class="team blue"><span class="faces"></span><span class="score" id="s0">0</span></div>
-        <div class="timer" id="timer">2:00</div>
+        <div class="timer" id="timer" title="Цвет — чей круг">2:00</div>
         <div class="team red"><span class="score" id="s1">0</span><span class="faces"></span></div>
       </div>
-      <div class="zonebar"><i class="z0"></i><span id="zone">Круг ничей</span><i class="z1"></i></div>
       <div class="feed" aria-live="polite"></div>
       <button class="exit" type="button" aria-label="Выйти из боя">${ICONS.close}</button>
       <div class="stick-zone" role="application" aria-label="Джойстик: веди пальцем, двойной тап — рывок">
@@ -65,7 +64,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     </div>`;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const stage = $('.battle-stage'), hud = $('.battle-hud'), loadEl = $('.battle-loading'), loadBar = loadEl.querySelector<HTMLElement>('i')!;
-  const timerEl = $('#timer'), s0 = $('#s0'), s1 = $('#s1'), zoneEl = $('#zone'), zoneBar = $('.zonebar');
+  const timerEl = $('#timer'), s0 = $('#s0'), s1 = $('#s1');
   const feed = $('.feed'), deadEl = $('.dead'), cdEl = $('.countdown'), resEl = $('.result');
   const rotEl = $('.rotate'), hintEl = $('.hint'), zoneStick = $('.stick-zone');
   let alive = true;
@@ -113,11 +112,18 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   const ro = new ResizeObserver(resize);
   ro.observe(stage);
   resize();
-  const placeCamera = () => {
+  // screen shake from decaying trauma (gamedev-game-feel): hits add trauma, the offset is trauma^2
+  let trauma = 0, shakeT = 0;
+  const shake = (amount: number) => { trauma = Math.min(1, trauma + amount); };
+  const placeCamera = (dt = 0) => {
     const dist = camera.aspect < 1 ? 17 : 13;
     const el = THREE.MathUtils.degToRad(57);
-    camera.position.set(camTarget.x, Math.sin(el) * dist, camTarget.z + Math.cos(el) * dist);
-    camera.lookAt(camTarget.x, 0, camTarget.z + 0.3);
+    trauma = Math.max(0, trauma - dt * 1.6);
+    shakeT += dt * 30;
+    const k = trauma * trauma * 0.35;
+    const ox = k * Math.sin(shakeT * 1.7), oz = k * Math.sin(shakeT * 2.3);
+    camera.position.set(camTarget.x + ox, Math.sin(el) * dist, camTarget.z + Math.cos(el) * dist + oz);
+    camera.lookAt(camTarget.x + ox, 0, camTarget.z + 0.3 + oz);
   };
 
   let match: Match | null = null;
@@ -173,6 +179,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
           <span class="rr-text"><b>${rank.name}</b><span>${ICONS.trophy}${rw.after.trophies} <em class="${rw.trophies > 0 ? 'up' : rw.trophies < 0 ? 'down' : ''}">${rw.trophies > 0 ? '+' : ''}${rw.trophies}</em></span></span>
           <span class="rr-xp"><b>Ур. ${lv.level}</b><span>+${rw.xp} опыта</span><i><s style="width:${Math.round((100 * lv.into) / lv.need)}%"></s></i></span>
         </div>
+        <p class="result-loot"><span>${ICONS.coin}+${rw.coins}</span>${rw.gems ? `<span>${ICONS.gem}+${rw.gems}</span>` : ''}</p>
         ${rw.rankUp ? `<p class="result-up">Новый ранг: <b>${rw.rankUp.name}</b></p>` : ''}${rw.levelUp ? `<p class="result-up">Новый уровень: <b>${rw.levelUp}</b></p>` : ''}
         <ul>
           <li><span>Выбито</span><b>${r.you.kills}</b></li>
@@ -204,7 +211,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     root.querySelector('.team.red .faces')!.innerHTML = red.map((id) => `<img src="${heroById(id).card}" alt="${heroById(id).name}">`).join('');
     match = new Match(scene, assets.heroes, assets.colliders, heroId, {
       damage: (x, y, z, n, team, heal) => popNumber(x, y, z, n, team, heal),
-      kill: (k, vic) => { killFeed(k ? label(k) : null, label(vic), vic.team); if (vic.isPlayer) haptic('medium'); },
+      kill: (k, vic) => { killFeed(k ? label(k) : null, label(vic), vic.team); if (vic.isPlayer) haptic('medium'); if (k?.isPlayer) { shake(0.35); haptic('light'); } },
+      shake: (a) => shake(a),
       end: (r) => setTimeout(() => alive && showResult(r), 1200),
     }, assets.props, { blue, red, skill: botSkill(loadProfile().trophies) });
     match.camera = camera;
@@ -329,6 +337,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     const dx = hit.x - p.x, dz = hit.z - p.z, l = Math.hypot(dx, dz) || 1;
     aimShot = [dx / l, dz / l];
   });
+  // inside Telegram its own «Назад» button leaves the battle; ours would only crowd the corner
+  $('.exit').hidden = inTelegram();
   $('.exit').addEventListener('click', () => onExit());
 
   const readInput = (): PlayerInput => {
@@ -378,10 +388,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       const left = Math.max(0, Math.ceil(MATCH.seconds - match.time));
       timerEl.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
       const zo = match.zoneOwner;
-      zoneEl.textContent = zo === 0 ? 'Круг ваш' : zo === 1 ? 'Круг у соперников' : zo === -2 ? 'Круг спорный' : 'Круг ничей';
-      zoneBar.dataset.owner = String(zo);
-      (zoneBar.querySelector('.z0') as HTMLElement).style.width = `${match.score[0]}%`;
-      (zoneBar.querySelector('.z1') as HTMLElement).style.width = `${match.score[1]}%`;
+      timerEl.dataset.owner = String(zo);   // the timer pill takes the colour of whoever holds the circle
       deadEl.hidden = p.alive || match.ended;
       if (!p.alive) deadEl.querySelector('b')!.textContent = String(Math.ceil(p.respawnIn));
       const cd = match.cooldowns();
@@ -389,7 +396,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       dashRing.style.setProperty('--cd', String(cd.dashMax ? cd.dash / cd.dashMax : 0));
       (window as unknown as { __match: unknown }).__match = { score: match.score, time: match.time, ended: match.ended, units: views.map((u) => ({ hero: u.hero.id, team: u.team, hp: u.hp, alive: u.alive, x: +u.x.toFixed(2), z: +u.z.toFixed(2) })) };
     }
-    placeCamera();
+    placeCamera(paused ? 0 : dt);
     renderer.render(scene, camera);
   });
 

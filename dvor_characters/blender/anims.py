@@ -34,6 +34,11 @@ def ready(role):
     sym(p, "shin", (8, 0, 0))
     sym(p, "foot", (-4, 3 + 3 * r["heavy"], 0))
     p["loc"] = (0, 0, -0.012)
+    if role == "sniper":    # both hands on the rifle, which hangs in front of the chest (sniper_rifle.py)
+        p["upper_arm.R"] = (-35, 10, 0)
+        p["forearm.R"] = (-90, 0, -25)
+        p["upper_arm.L"] = (-50, 14, 0)
+        p["forearm.L"] = (-80, 0, -35)
     return p
 
 
@@ -66,8 +71,9 @@ def idle(role):
         p["chest"] = (-2 - 2.5 * amp * s, 0, 0)
         p["spine"] = (3 + 0.8 * s, 1.5 * math.sin(ph / 1), 0)
         p["head"] = (-2 + 1.5 * s, 0, 3 * math.sin(ph + 1.0))
-        sym(p, "upper_arm", (4 - 2 * s, r["arm_in"] - 2.5 * amp * s, 0))
-        sym(p, "forearm", (-18 - 4 * s, 0, 0))
+        if role != "sniper":     # the sniper keeps both hands on the rifle
+            sym(p, "upper_arm", (4 - 2 * s, r["arm_in"] - 2.5 * amp * s, 0))
+            sym(p, "forearm", (-18 - 4 * s, 0, 0))
         p["loc"] = (0.006 * math.sin(ph), 0, -0.012 + 0.006 * amp * s)
         if role == "sprinter":   # light bounce on the toes
             p["loc"] = (0.01 * math.sin(ph), 0, -0.01 + 0.012 * abs(math.sin(ph)))
@@ -102,12 +108,9 @@ def run(role):
 
 def attack(role):
     a = ready(role)
-    if role == "sniper":    # shouldered rifle: raise, aim, sharp recoil, settle
-        aim = over(a, chest=(-2, 0, -18), spine=(4, 0, 0), head=(4, 0, 14),
-                   upper_arm_R=(-70, 30, 0), forearm_R=(-95, 0, 0),
-                   upper_arm_L=(-82, 6, 0), forearm_L=(-28, 0, 0), loc=(0, 0, -0.02))
-        kick = over(aim, chest=(-10, 0, -18), spine=(-6, 0, 0), head=(-6, 0, 14),
-                    upper_arm_R=(-88, 30, 0), upper_arm_L=(-96, 6, 0), loc=(0, 0.03, -0.01))
+    if role == "sniper":    # settle into the aim, sharp recoil through the chest (the rifle rides on it), settle
+        aim = over(a, chest=(-2, 0, -10), spine=(8, 0, 0), head=(2, 0, 10), loc=(0, 0, -0.03))
+        kick = over(aim, chest=(-14, 0, -10), spine=(-4, 0, 0), head=(-8, 0, 10), loc=(0, 0.035, -0.01))
         keys = [(1, a), (6, aim), (9, aim), (11, kick), (16, aim), (24, a)]
         return keys, False, {"event_hit_s": (10 - 1) / 30}
     if role == "medic":     # underarm toss of a med pack with the right hand
@@ -156,9 +159,7 @@ def ability(role):
     if role == "sniper":    # drop to one knee, steady aim, rise
         kneel = over(a, loc=(0, 0.02, -0.24), spine=(12, 0, 0), chest=(-4, 0, -16), head=(-2, 0, 14),
                      thigh_L=(-80, -6, 0), shin_L=(86, 0, 0), foot_L=(-6, 6, 0),
-                     thigh_R=(12, -4, 0), shin_R=(118, 0, 0), foot_R=(-60, 0, 0),
-                     upper_arm_R=(-70, 30, 0), forearm_R=(-95, 0, 0),
-                     upper_arm_L=(-82, 6, 0), forearm_L=(-28, 0, 0))
+                     thigh_R=(12, -4, 0), shin_R=(118, 0, 0), foot_R=(-60, 0, 0))
         keys = [(1, a), (7, kneel), (18, kneel), (28, a)]
         return keys, False, {"event_cast_s": (7 - 1) / 30}
     if role == "medic":     # both hands up, then spread out: the heal pulse

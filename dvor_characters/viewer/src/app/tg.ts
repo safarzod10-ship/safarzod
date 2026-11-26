@@ -14,6 +14,7 @@ interface TgWebApp {
   lockOrientation?(): void;
   unlockOrientation?(): void;
   isFullscreen?: boolean;
+  initDataUnsafe?: { user?: { first_name?: string; username?: string } };
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   HapticFeedback?: { impactOccurred(s: 'light' | 'medium' | 'heavy'): void; notificationOccurred(t: 'success' | 'error' | 'warning'): void };
 }
@@ -85,3 +86,6 @@ export function lockLandscape(): void {
   try { wa.lockOrientation?.(); } catch { /* old client */ }
 }
 export const inTelegram = (): boolean => !!wa;
+
+/** The player's first name from Telegram, or a neutral name outside Telegram. */
+export const playerName = (): string => wa?.initDataUnsafe?.user?.first_name?.slice(0, 16) || 'Игрок';

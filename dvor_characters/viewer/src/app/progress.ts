@@ -1,6 +1,9 @@
 /**
  * Player progress: trophies -> rank (everyone starts at Бронза III with 0), experience -> level,
- * match history. Kept in localStorage on this device (no server yet).
+ * the game balance (монеты, кристаллы), match history. Kept in localStorage on this device (no server yet).
+ *
+ * Coins per match: win 40, draw 20, loss 15, +5 per knock-out. Crystals: +5 for every new level,
+ * +10 for every new rank. Start: 100 coins, 0 crystals.
  *
  * Trophies per match: win +28 (+2 per knock-out, max +8), draw +6, loss -12 (never below the floor of
  * the current league: Бронза 0, Серебро 300, Золото 800...). The rank also sets how good the bots are
@@ -24,10 +27,10 @@ export const RANKS: Rank[] = [
 ];
 
 export interface MatchRecord { t: number; hero: string; result: 'win' | 'lose' | 'draw'; score: [number, number]; kills: number; deaths: number; dealt: number; trophies: number; xp: number }
-export interface Profile { trophies: number; xp: number; games: number; wins: number; kills: number; best: number; history: MatchRecord[] }
+export interface Profile { trophies: number; xp: number; coins: number; gems: number; games: number; wins: number; kills: number; best: number; history: MatchRecord[] }
 
 const KEY = 'dvor.profile.v1';
-const fresh = (): Profile => ({ trophies: 0, xp: 0, games: 0, wins: 0, kills: 0, best: 0, history: [] });
+const fresh = (): Profile => ({ trophies: 0, xp: 0, coins: 100, gems: 0, games: 0, wins: 0, kills: 0, best: 0, history: [] });
 
 export function loadProfile(): Profile {
   try {
@@ -53,7 +56,7 @@ export function levelOf(xp: number): { level: number; into: number; need: number
 /** Bot skill for the player's rank: 0 at Бронза III, 1 at Алмаз and above. */
 export const botSkill = (trophies: number): number => Math.max(0, Math.min(1, trophies / 2400));
 
-export interface Reward { trophies: number; xp: number; before: Profile; after: Profile; rankUp: Rank | null; levelUp: number | null }
+export interface Reward { trophies: number; xp: number; coins: number; gems: number; before: Profile; after: Profile; rankUp: Rank | null; levelUp: number | null }
 
 export function applyResult(hero: string, r: { winner: 0 | 1 | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number } }): Reward {
   const before = loadProfile();
@@ -61,8 +64,10 @@ export function applyResult(hero: string, r: { winner: 0 | 1 | -1; score: [numbe
   let dt = res === 'win' ? 28 + Math.min(8, r.you.kills * 2) : res === 'draw' ? 6 : -12;
   if (dt < 0) dt = Math.max(dt, leagueFloor(before.trophies) - before.trophies);
   const xp = (res === 'win' ? 120 : res === 'draw' ? 70 : 50) + r.you.kills * 15 + Math.round(r.you.dealt / 400);
+  const coins = (res === 'win' ? 40 : res === 'draw' ? 20 : 15) + r.you.kills * 5;
   const after: Profile = {
     ...before,
+    coins: before.coins + coins,
     trophies: before.trophies + dt,
     xp: before.xp + xp,
     games: before.games + 1,
@@ -71,8 +76,10 @@ export function applyResult(hero: string, r: { winner: 0 | 1 | -1; score: [numbe
     best: Math.max(before.best, before.trophies + dt),
     history: [{ t: Date.now(), hero, result: res as MatchRecord['result'], score: r.score, kills: r.you.kills, deaths: r.you.deaths, dealt: r.you.dealt, trophies: dt, xp }, ...before.history].slice(0, 20),
   };
-  save(after);
   const r0 = rankOf(before.trophies), r1 = rankOf(after.trophies);
   const l0 = levelOf(before.xp).level, l1 = levelOf(after.xp).level;
-  return { trophies: dt, xp, before, after, rankUp: r1.min > r0.min ? r1 : null, levelUp: l1 > l0 ? l1 : null };
+  const gems = (l1 - l0) * 5 + (r1.min > r0.min ? 10 : 0);
+  after.gems = before.gems + gems;
+  save(after);
+  return { trophies: dt, xp, coins, gems, before, after, rankUp: r1.min > r0.min ? r1 : null, levelUp: l1 > l0 ? l1 : null };
 }
