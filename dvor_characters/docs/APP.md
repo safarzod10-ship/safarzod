@@ -82,3 +82,11 @@
 Сборка для артефакта: `npx vite build --config vite.app-artifact.config.ts && node scripts/artifact-assets.mjs && node scripts/app-artifact.mjs` → `viewer/app-artifact/`. Там модели лежат как base64-текст: артефакты не отдают `.glb` и могут запрещать WebAssembly. В обычной сборке грузятся сжатые `.glb` с Meshopt.
 
 **Проверено:** в Chromium на экране 390×844 со строгой политикой безопасности, как у артефактов, — без ошибок в консоли. Снимки экранов — `review/app/`. На реальном телефоне в Telegram не проверялось.
+
+## GitHub Pages (Mini App URL for BotFather)
+
+    cd viewer
+    npx vite build --config vite.pages.config.ts && node scripts/pages.mjs
+
+`dist-pages/` holds the app (index.html, .glb models with the Meshopt decoder, mockup images) and is
+pushed as the root of the `gh-pages` branch: https://safarzod10-ship.github.io/safarzod/
