@@ -38,7 +38,7 @@ export interface MatchOptions {
   skill?: number;         // 0..1, red bots' aim and reactions (player's rank)
   playerBoost?: Boost;    // the player's stat upgrades (progress.ts)
 }
-export interface Boost { hp: number; dmg: number; speed: number }
+export interface Boost { hp: number; dmg: number; speed: number; cd?: number }
 
 /** A kit with health, damage / healing and speed multiplied (upgrades, stronger bots at higher ranks). */
 function boostKit(k: Kit, b: Boost): Kit {
@@ -46,6 +46,7 @@ function boostKit(k: Kit, b: Boost): Kit {
   const x: Kit = JSON.parse(JSON.stringify(k));
   x.hp = Math.round(k.hp * b.hp);
   x.speed = k.speed * b.speed;
+  x.a1.cd = k.a1.cd * (b.cd ?? 1);
   x.attack.dmg = Math.round(k.attack.dmg * d);
   if (x.turret) x.turret.dmg = Math.round(x.turret.dmg * d);
   if (x.ram) x.ram.dmg = Math.round(x.ram.dmg * d);
@@ -171,7 +172,7 @@ export class Match {
   cooldowns(): { a1: number; a2: number; dash: number; a1Max: number; a2Max: number; dashMax: number } {
     const p = this.player;
     return { a1: Math.max(0, p.cd1 - this.time), a2: Math.max(0, p.cd2 - this.time), dash: Math.max(0, p.cdDash - this.time),
-      a1Max: p.kit.a1.cd, a2Max: p.kit.a2.cd, dashMax: DASH.cd };
+      a1Max: p.kit.a1.cd, a2Max: p.kit.a2?.cd ?? 0, dashMax: DASH.cd };
   }
 
   // ------------------------------------------------------------------ setup
@@ -495,56 +496,58 @@ export class Match {
     const cdKey = which === 1 ? 'cd1' : 'cd2';
     if (this.time < u[cdKey]) return false;
     const k = u.kit;
+    const act = which === 1 ? k.a1.key : k.a2?.key;
+    if (!act) return false;
     const [dx, dz] = this.aimAt(u, dir, 7);
     this.face(u, dx, dz);
     u.lastFight = this.time;
     let ok = false;
-    if (u.hero.id === 'technik' && which === 1 && k.turret) {
+    if (act === 'turret' && k.turret) {
       let px = u.x + dx * k.turret.place, pz = u.z + dz * k.turret.place;
       if (!this.free(px, pz)) { px = u.x + dx * 0.9; pz = u.z + dz * 0.9; }
       if (!this.free(px, pz)) { px = u.x; pz = u.z; }
       for (const t of this.turrets.filter((t) => t.owner === u)) t.until = 0;   // one turret per Technik
       this.spawnTurret(u, px, pz);
       ok = true;
-    } else if (u.hero.id === 'technik' && which === 2 && k.smoke) {
+    } else if (act === 'smoke' && k.smoke) {
       const e = this.nearestEnemy(u, k.smoke.throw + 1);
       const d = e ? Math.min(k.smoke.throw, Math.hypot(e.x - u.x, e.z - u.z)) : k.smoke.throw;
       this.spawnSmoke(u.team, u.x + dx * d, u.z + dz * d, k.smoke.r, k.smoke.dur, k.smoke.slow);
       ok = true;
-    } else if (u.hero.id === 'tank' && which === 1 && k.door) {
+    } else if (act === 'door' && k.door) {
       u.doorUntil = this.time + k.door.dur;
       ok = true;
-    } else if (u.hero.id === 'tank' && which === 2 && k.ram) {
+    } else if (act === 'ram' && k.ram) {
       u.dash = { dx, dz, left: k.ram.dist, speed: k.ram.dist / 0.3, hit: new Set(), dmg: k.ram.dmg, stun: k.ram.stun };
       ok = true;
-    } else if (u.hero.id === 'sprinter' && which === 1 && k.spurt) {
+    } else if (act === 'spurt' && k.spurt) {
       u.spurtLeft = k.spurt.dashes;
       u.spurtNext = this.time;
       ok = true;
-    } else if (u.hero.id === 'sprinter' && which === 2 && k.wave) {
+    } else if (act === 'wave' && k.wave) {
       for (const e of this.enemiesOf(u)) {
         if (Math.hypot(e.x - u.x, e.z - u.z) < k.wave.r) { this.hurt(e, k.wave.dmg, u); if (e.alive) this.knock(e, u.x, u.z, k.wave.push); }
       }
       this.fxWave(u.x, u.z, k.wave.r);
       ok = true;
     }
-    else if (u.hero.id === 'sniper' && which === 1 && k.mine) {
+    else if (act === 'mine' && k.mine) {
       let px = u.x + dx * k.mine.place, pz = u.z + dz * k.mine.place;
       if (!this.free(px, pz)) { px = u.x; pz = u.z; }
       const mine = this.mines.filter((m) => m.owner === u);
       if (mine.length >= 2) mine[0].until = 0;   // two traps per Sniper at most
       this.spawnMine(u, px, pz);
       ok = true;
-    } else if (u.hero.id === 'sniper' && which === 2 && k.pierce) {
+    } else if (act === 'pierce' && k.pierce) {
       u.pierceAt = this.time + k.pierce.delay;   // aims for a moment, then fires (stepPierce)
       u.pierceDir = [dx, dz];
       u.faceUntil = this.time + k.pierce.delay + 0.2;
       ok = true;
-    } else if (u.hero.id === 'medic' && which === 1 && k.heal) {
+    } else if (act === 'heal' && k.heal) {
       for (const o of this.units) if (o.team === u.team && Math.hypot(o.x - u.x, o.z - u.z) < k.heal.r) this.healUnit(o, k.heal.amount, u);
       this.fxWave(u.x, u.z, k.heal.r, this.mats.heal as THREE.MeshBasicMaterial);
       ok = true;
-    } else if (u.hero.id === 'medic' && which === 2 && k.hospital) {
+    } else if (act === 'hospital' && k.hospital) {
       const d = dir ? k.hospital.throw : 0;
       let px = u.x + dx * d, pz = u.z + dz * d;
       if (!this.free(px, pz)) { px = u.x; pz = u.z; }
@@ -552,7 +555,7 @@ export class Match {
       ok = true;
     }
     if (ok) {
-      u[cdKey] = this.time + (which === 1 ? k.a1.cd : k.a2.cd);
+      u[cdKey] = this.time + (which === 1 ? k.a1.cd : k.a2?.cd ?? 0);
       this.play(u, 'Ability', 0.06, 0.45);
     }
     return ok;
@@ -751,21 +754,15 @@ export class Match {
       }
       // abilities
       const id = u.hero.id;
+      // one ability per hero (the medic's heal is handled above)
       if (id === 'technik') {
         if (d < 6.5 && Math.random() < 0.03 * pf) this.ability(u, 1, [ux, uz]);
-        if (d < 3.2 && Math.random() < 0.05 * pf) this.ability(u, 2, [ux, uz]);
       } else if (id === 'tank') {
-        if (d > 2.2 && d < 4.2 && Math.random() < 0.05 * pf) this.ability(u, 2, [ux, uz]);
-        if (this.time - u.lastHurt < 0.6 && d > 2.5 && Math.random() < 0.05 * pf) this.ability(u, 1, [ux, uz]);
+        if (d > 2.2 && d < 4.2 && Math.random() < 0.05 * pf) this.ability(u, 1, [ux, uz]);
       } else if (id === 'sprinter') {
         if (d > 2 && d < 7 && Math.random() < 0.03 * pf) this.ability(u, 1, [ux, uz]);
-        if (d < 2.4 && Math.random() < 0.06 * pf) this.ability(u, 2, [ux, uz]);
       } else if (id === 'sniper') {
-        if (d < 3.5 && Math.random() < 0.05 * pf) this.ability(u, 1, [-ux, -uz]);   // trap behind while backing off
-        if (d < 11 && Math.random() < 0.03 * pf) this.ability(u, 2, dir ?? [ux, uz]);
-      } else if (id === 'medic') {
-        const near = this.units.filter((o) => o.alive && o.team === u.team && Math.hypot(o.x - u.x, o.z - u.z) < 2.4).length;
-        if ((near >= 2 || u.hp < k.hp * 0.6) && d < 7 && Math.random() < 0.03 * pf) this.ability(u, 2, null);
+        if (d < 11 && Math.random() < 0.03 * pf) this.ability(u, 1, dir ?? [ux, uz]);
       }
     } else if (e && d < 9) {
       [mx, mz] = this.steer(u, e.x, e.z);   // seen but not in line of fire: go around the cover

@@ -5,7 +5,7 @@
  */
 import { initData } from './tg';
 import type { Profile } from './progress';
-import { levelOf } from './progress';
+import { heroLevelOf } from './progress';
 
 export const SERVER = 'https://dvor-server.dvor-game.workers.dev';
 
@@ -24,7 +24,7 @@ export async function postResult(p: Profile, hero: string): Promise<number | nul
   try {
     const r = await fetch(`${SERVER}/api/result`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ initData: data, trophies: p.trophies, hero, level: levelOf(p.xp).level, games: p.games, wins: p.wins }),
+      body: JSON.stringify({ initData: data, trophies: p.trophies, hero, level: heroLevelOf(hero), games: p.games, wins: p.wins }),
     });
     if (!r.ok) return null;
     const rank = (await r.json()).rank as number;
@@ -33,3 +33,23 @@ export async function postResult(p: Profile, hero: string): Promise<number | nul
   } catch { return null; }
 }
 export const lastPlace = (): number | null => { try { const v = Number(localStorage.getItem('dvor.place')); return v > 0 ? v : null; } catch { return null; } };
+
+// A game opened from a game message (inline «вызов» or /play in a group) carries ?g=<signed token>;
+// its results go to that chat's high-score table.
+const GKEY = 'dvor.g';
+try {
+  const g = new URLSearchParams(location.search).get('g');
+  if (g) sessionStorage.setItem(GKEY, g);
+} catch { /* ignore */ }
+const gameToken = (): string | null => { try { return sessionStorage.getItem(GKEY); } catch { return null; } };
+
+export async function postGameScore(p: Profile, hero: string): Promise<void> {
+  const g = gameToken();
+  if (!g) return;
+  try {
+    await fetch(`${SERVER}/api/game-score`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ g, trophies: p.trophies, hero, level: heroLevelOf(hero) }),
+    });
+  } catch { /* offline: next match */ }
+}

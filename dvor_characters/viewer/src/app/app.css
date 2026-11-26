@@ -667,3 +667,45 @@ img { display: block; max-width: 100%; }
 .leaders small { font-size: 11.5px; color: var(--muted); }
 .leaders em { display: flex; align-items: center; gap: 4px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
 .leaders em svg { color: #ffc23d; }
+
+/* ---------------------------------------------------------------- battle v4: upright, one ability button */
+.skills.one { width: 104px; height: 104px; }
+.skills.one .sk.main { right: 0; bottom: 0; top: auto; width: 98px; height: 98px; font-size: 50px; }
+.view.battle .stick-zone { width: 55%; height: 45%; }
+.view.battle .hint { top: 46%; white-space: normal; width: min(320px, 86vw); }
+
+/* ---------------------------------------------------------------- Герой v4: your hero, level, 4 sliders */
+.view.heroes { background: var(--bg); }
+.hero-page { padding: calc(8px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 28px max(14px, env(safe-area-inset-left, 0px)); }
+.hp-card { position: relative; height: 230px; border-radius: 16px; overflow: hidden; border: 2px solid color-mix(in srgb, var(--c) 60%, transparent); }
+.hp-art { position: absolute; inset: 0; background: 50% 38% / cover no-repeat; }
+.hp-card::after { content: ""; position: absolute; inset: 40% 0 0 0; background: linear-gradient(rgba(18, 17, 21, 0), rgba(18, 17, 21, .95)); }
+.hp-head { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.hp-lv { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 40% 35%, var(--accent-hi), var(--accent-lo)); box-shadow: 0 0 0 3px rgba(0, 0, 0, .5), 0 0 18px rgba(240, 122, 30, .5); }
+.hp-lv b { font: italic 800 26px/1 var(--font-display); } .hp-lv small { font-size: 10px; margin-top: -10px; opacity: .85; }
+.hp-name { display: grid; flex: 1; min-width: 0; }
+.hp-name b { font: italic 800 30px/1 var(--font-display); }
+.hp-name span { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); } .hp-name svg { font-size: 16px; color: var(--c); }
+.hero-page .sel-coins { margin: 0; }
+.hp-note { margin: 10px 2px 4px; font-size: 13px; color: var(--muted); }
+.hero-page .ups { gap: 10px; margin-top: 8px; }
+.hero-page .ups li { grid-template-columns: 1fr auto; grid-template-areas: "n v" "p b"; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); font-size: 14px; }
+.hero-page .up-name svg { color: var(--accent); }
+.hero-page .up-val em { color: #6dff8f; }
+.up-bar { grid-area: p; position: relative; height: 16px; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, .1); }
+.up-bar s { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--accent-lo), var(--accent-hi)); }
+.up-bar i { position: absolute; inset: 0; display: grid; place-items: center; font: 700 11px/1 var(--font-ui); font-style: normal; color: #fff; text-shadow: 0 1px 2px #000; }
+.hero-page .up-btn { height: 32px; min-width: 76px; justify-content: center; }
+.hp-sub { margin: 18px 2px 8px; font: italic 800 20px/1 var(--font-display); }
+.hero-page .kit { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; color: #ddd6cf; }
+.hero-page .kit b { color: var(--accent-hi); margin-right: 6px; }
+.others { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.other { position: relative; display: grid; border-radius: 10px; overflow: hidden; background: #232227; border: 1.5px solid rgba(255, 255, 255, .15); text-align: center; }
+.other img { width: 100%; aspect-ratio: .8; object-fit: cover; object-position: top; }
+.other.locked img { filter: grayscale(.85) brightness(.7); }
+.o-name { font-size: 12.5px; font-weight: 600; padding-top: 4px; }
+.o-act { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 11.5px; color: var(--muted); padding: 2px 0 6px; }
+.o-act svg { font-size: 13px; }
+.other.nope { animation: nope .3s; }
+@keyframes nope { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }

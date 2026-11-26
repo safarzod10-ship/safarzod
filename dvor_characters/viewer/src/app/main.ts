@@ -7,12 +7,12 @@
  */
 import './app.css';
 import { HEROES, heroById, type HeroId } from './data';
-import { ICONS, ROLE_ICON, STAT_ICONS, rankBadge } from './icons';
+import { ICONS, ROLE_ICON, rankBadge } from './icons';
 import { initTelegram, setBack, haptic, playerName } from './tg';
 import { startBattle, type Battle } from './battle';
 import { preloadAll } from './assets';
 import { lineup } from './game/match';
-import { HERO_PRICE, MAX_UPGRADE, RANKS, UPGRADE_COST, UPGRADE_STEP, buyHero, chooseFirst, levelOf, loadProfile, markStorySeen,
+import { HERO_PRICE, MAX_UPGRADE, RANKS, STATS, UPGRADE_STEP, buyHero, chooseFirst, heroLevel, heroLevelOf, loadProfile, markStorySeen, upgradeCost,
   nextRank, rankOf, upgrade, upgradesOf, type Stat } from './progress';
 import { KITS } from './game/kits';
 import { BACKSTORY, STORY } from './story';
@@ -37,7 +37,6 @@ const ownedHero = (id: string | null): HeroId => {
   return heroById(p.chosen ?? 'technik').id;
 };
 let selected: HeroId = ownedHero(store.get('dvor.hero'));
-let previewHero: HeroId = selected;
 
 const app = document.getElementById('app')!;
 app.innerHTML = `<main class="view"></main><nav class="tabbar" aria-label="Разделы">${TABS.map((t) =>
@@ -76,7 +75,7 @@ function bindBack(): void {
 // ------------------------------------------------------------------ Главная
 /** Top bar: who you are (level, rank) and the game balance (coins, crystals). */
 const topBar = (): string => {
-  const p = loadProfile(), r = rankOf(p.trophies), lv = levelOf(p.xp);
+  const p = loadProfile(), r = rankOf(p.trophies), lv = { level: heroLevelOf(selected) };
   return `<header class="topbar">
       <button type="button" class="tb-me" data-go="rating" aria-label="Профиль и рейтинг">
         <span class="tb-badge">${rankBadge(r.color, r.dark)}<em>${lv.level}</em></span>
@@ -138,7 +137,7 @@ function choose(): void {
         <img src="${h.card}" alt="">
         <div class="hcard-body"><h2>${h.name}</h2><p class="role">${ROLE_ICON[h.roleIcon]}<span>${h.role}</span></p>
           <p class="hcard-story">${BACKSTORY[h.id]}</p>
-          <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Кнопка 1', 'Кнопка 2'][i]}</b> ${t}</li>`).join('')}</ul></div>
+          <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Способность'][i]}</b> ${t}</li>`).join('')}</ul></div>
       </article>`).join('')}</div>
     <div class="sel-foot"><button type="button" class="btn-main" id="pick">Выбрать</button></div>
     <div class="modal" hidden><div class="modal-card"><h2></h2><p>Этот выбор навсегда. Других героев потом можно купить за ${HERO_PRICE.toLocaleString('ru-RU')} монет.</p>
@@ -166,79 +165,63 @@ function choose(): void {
 }
 
 // ------------------------------------------------------------------ Герои: свои, покупка, улучшения
-const STAT_LABEL: Record<Stat, string> = { hp: 'Здоровье', dmg: 'Урон', speed: 'Скорость' };
+const STAT_LABEL: Record<Stat, string> = { hp: 'Здоровье', dmg: 'Урон', speed: 'Скорость', ability: 'Способность' };
+const STAT_ICON: Record<Stat, string> = { hp: ICONS.heart, dmg: ICONS.damage, speed: ICONS.wing, ability: ICONS.gear };
 function statValue(id: HeroId, stat: Stat, lv: number): string {
-  const k = KITS[id];
-  if (stat === 'hp') return Math.round(k.hp * (1 + lv * UPGRADE_STEP.hp)).toLocaleString('ru-RU');
-  if (stat === 'dmg') return Math.round(k.attack.dmg * (1 + lv * UPGRADE_STEP.dmg)).toLocaleString('ru-RU');
-  return (k.speed * (1 + lv * UPGRADE_STEP.speed)).toFixed(2).replace('.', ',') + ' м/с';
+  const k = KITS[id], m = lv - 1;
+  if (stat === 'hp') return Math.round(k.hp * (1 + m * UPGRADE_STEP.hp)).toLocaleString('ru-RU');
+  if (stat === 'dmg') return Math.round(k.attack.dmg * (1 + m * UPGRADE_STEP.dmg)).toLocaleString('ru-RU');
+  if (stat === 'speed') return (k.speed * (1 + m * UPGRADE_STEP.speed)).toFixed(2).replace('.', ',') + ' м/с';
+  return `${(k.a1.cd * (1 - m * UPGRADE_STEP.ability)).toFixed(1).replace('.', ',')} с`;
 }
+/** Герой: the hero you play, its level (average of the stats), four upgrade sliders up to 30; other heroes below. */
 function heroes(): void {
-  previewHero = selected;
-  view.innerHTML = `
-    ${backBtn()}
-    <header class="sel-head"><h1>Герои</h1><p class="sel-coins">${ICONS.coin}<b></b></p></header>
-    <div class="cards" role="radiogroup" aria-label="Герой">${HEROES.map((h) => `
-      <button type="button" class="card" role="radio" data-hero="${h.id}">
-        <img src="${h.card}" alt="">
-        <span class="card-name">${h.name}</span><span class="card-role">${ROLE_ICON[h.roleIcon]}</span><span class="card-lock">${ICONS.lock}</span>
-      </button>`).join('')}</div>
-    <section class="detail" aria-live="polite"></section>
-    <div class="sel-foot"><button type="button" class="btn-main" id="pick"></button></div>`;
-  const detail = view.querySelector<HTMLElement>('.detail')!;
+  view.innerHTML = `${backBtn()}<div class="hero-page"></div>`;
+  const page = view.querySelector<HTMLElement>('.hero-page')!;
   const render = () => {
-    const p = loadProfile(), h = heroById(previewHero), own = p.owned.includes(h.id), u = upgradesOf(p, h.id);
-    view.querySelector('.sel-coins b')!.textContent = p.coins.toLocaleString('ru-RU');
-    view.querySelectorAll<HTMLButtonElement>('.card').forEach((c) => {
-      c.setAttribute('aria-checked', String(c.dataset.hero === h.id));
-      c.classList.toggle('locked', !p.owned.includes(c.dataset.hero!));
-    });
-    detail.className = 'detail portrait-card';
-    detail.innerHTML = `
-      <img class="detail-img" src="${h.card}" alt="">
-      <div class="detail-body">
-        <h2>${h.name}</h2>
-        <p class="role">${ROLE_ICON[h.roleIcon]}<span>${h.role}</span></p>
-        <p class="desc">${BACKSTORY[h.id]}</p>
-        <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Кнопка 1', 'Кнопка 2'][i]}</b> ${t}</li>`).join('')}</ul>
-        <h3>${own ? 'Улучшения' : 'Характеристики'}</h3>
-        <ul class="ups">${(['hp', 'dmg', 'speed'] as Stat[]).map((st) => {
-          const lv = u[st], max = lv >= MAX_UPGRADE, cost = UPGRADE_COST[lv];
-          return `<li><span class="up-name">${STAT_ICONS[st === 'hp' ? 0 : st === 'dmg' ? 1 : 2]}${STAT_LABEL[st]}</span>
-            <span class="up-val"><b>${statValue(h.id, st, lv)}</b>${own && !max ? `<em>→ ${statValue(h.id, st, lv + 1)}</em>` : ''}</span>
-            <span class="pips" aria-label="${lv} из ${MAX_UPGRADE}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(MAX_UPGRADE - lv)}</span>
-            ${own ? `<button type="button" class="up-btn" data-stat="${st}" ${max || p.coins < cost ? 'disabled' : ''}>${max ? 'Макс.' : `${ICONS.coin}${cost.toLocaleString('ru-RU')}`}</button>` : ''}</li>`;
-        }).join('')}</ul>
-      </div>`;
-    const pick = view.querySelector<HTMLButtonElement>('#pick')!;
-    pick.disabled = false;
-    pick.classList.remove('done');
-    if (own) {
-      pick.textContent = h.id === selected ? 'Выбран для боя' : `Играть за: ${h.name}`;
-      pick.classList.toggle('done', h.id === selected);
-    } else {
-      pick.innerHTML = `Купить ${ICONS.coin}${HERO_PRICE.toLocaleString('ru-RU')}`;
-      pick.disabled = p.coins < HERO_PRICE;
-    }
+    const p = loadProfile(), h = heroById(selected), u = upgradesOf(p, h.id), level = heroLevel(u);
+    page.innerHTML = `
+      <section class="hp-card" style="--c:${h.color}">
+        <div class="hp-art" style="background-image:url(${h.menu})"></div>
+        <div class="hp-head">
+          <span class="hp-lv"><b>${level}</b><small>из ${MAX_UPGRADE}</small></span>
+          <span class="hp-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
+          <span class="sel-coins">${ICONS.coin}<b>${p.coins.toLocaleString('ru-RU')}</b></span>
+        </div>
+      </section>
+      <p class="hp-note">Уровень героя — среднее уровней четырёх характеристик.</p>
+      <ul class="ups">${STATS.map((st) => {
+        const lv = u[st], max = lv >= MAX_UPGRADE, cost = upgradeCost(lv);
+        return `<li>
+          <span class="up-name">${STAT_ICON[st]}${STAT_LABEL[st]}</span>
+          <span class="up-val"><b>${statValue(h.id, st, lv)}</b>${max ? '' : `<em>→ ${statValue(h.id, st, lv + 1)}</em>`}</span>
+          <span class="up-bar" aria-label="${lv} из ${MAX_UPGRADE}"><s style="width:${(100 * lv) / MAX_UPGRADE}%"></s><i>${lv}/${MAX_UPGRADE}</i></span>
+          <button type="button" class="up-btn" data-stat="${st}" ${max || p.coins < cost ? 'disabled' : ''}>${max ? 'Макс.' : `${ICONS.coin}${cost}`}</button>
+        </li>`;
+      }).join('')}</ul>
+      <h3 class="hp-sub">Способности</h3>
+      <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Способность'][i]}</b> ${t}</li>`).join('')}</ul>
+      <h3 class="hp-sub">Другие герои</h3>
+      <div class="others">${HEROES.filter((o) => o.id !== h.id).map((o) => {
+        const own = p.owned.includes(o.id);
+        return `<button type="button" class="other${own ? '' : ' locked'}" data-hero="${o.id}">
+          <img src="${o.card}" alt=""><span class="o-name">${o.name}</span>
+          <span class="o-act">${own ? `Ур. ${heroLevel(upgradesOf(p, o.id))} · играть` : `${ICONS.lock}${ICONS.coin}${(HERO_PRICE / 1000).toFixed(0)}к`}</span>
+        </button>`;
+      }).join('')}</div>`;
   };
-  view.querySelector('.cards')!.addEventListener('click', (e) => {
-    const c = (e.target as HTMLElement).closest<HTMLButtonElement>('.card');
-    if (c) { haptic('light'); previewHero = c.dataset.hero as HeroId; render(); }
-  });
-  detail.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.up-btn');
-    if (b && upgrade(previewHero, b.dataset.stat as Stat)) { haptic('success'); render(); }
-  });
-  view.querySelector('#pick')!.addEventListener('click', () => {
-    const p = loadProfile();
-    if (!p.owned.includes(previewHero)) {
-      if (!buyHero(previewHero)) return;
-      haptic('success');
+  page.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const up = t.closest<HTMLButtonElement>('.up-btn');
+    if (up) { if (upgrade(selected, up.dataset.stat as Stat)) { haptic('success'); render(); } return; }
+    const o = t.closest<HTMLButtonElement>('.other');
+    if (!o) return;
+    const id = o.dataset.hero as HeroId, p = loadProfile();
+    if (!p.owned.includes(id)) {
+      if (p.coins < HERO_PRICE) { haptic('light'); o.classList.remove('nope'); void o.offsetWidth; o.classList.add('nope'); return; }
+      if (!buyHero(id)) return;
     }
-    selected = previewHero;
-    store.set('dvor.hero', selected);
-    haptic('success');
-    render();
+    selected = id; store.set('dvor.hero', id); haptic('success'); render();
   });
   bindBack();
   render();
@@ -251,7 +234,7 @@ function empty(title: string, text: string): void {
 
 // ------------------------------------------------------------------ Рейтинг: ранги, уровень, история
 function rating(): void {
-  const p = loadProfile(), r = rankOf(p.trophies), nx = nextRank(p.trophies), lv = levelOf(p.xp);
+  const p = loadProfile(), r = rankOf(p.trophies), nx = nextRank(p.trophies), lv = { level: heroLevelOf(selected) };
   const toNext = nx ? Math.round((100 * (p.trophies - r.min)) / (nx.min - r.min)) : 100;
   const ago = (t: number) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : `${Math.round(m / 1440)} дн назад`; };
   view.innerHTML = `
@@ -265,9 +248,8 @@ function rating(): void {
           <i class="prog-bar"><s style="width:${toNext}%"></s></i></div>
       </div>
       <div class="prog-stats">
-        <span><b>${lv.level}</b>уровень</span><span><b>${p.games}</b>боёв</span><span><b>${p.games ? Math.round((100 * p.wins) / p.games) : 0}%</b>побед</span><span><b>${p.kills}</b>выбито</span>
+        <span><b>${lv.level}</b>ур. героя</span><span><b>${p.games}</b>боёв</span><span><b>${p.games ? Math.round((100 * p.wins) / p.games) : 0}%</b>побед</span><span><b>${p.kills}</b>выбито</span>
       </div>
-      <p class="prog-lv">Уровень ${lv.level}: ${lv.into} / ${lv.need} опыта<i class="prog-bar xp"><s style="width:${Math.round((100 * lv.into) / lv.need)}%"></s></i></p>
       <h2>Ранги</h2>
       <ol class="ladder">${RANKS.map((x) => `<li class="${x.name === r.name ? 'me' : p.trophies >= x.min ? 'done' : ''}"><span class="lb">${rankBadge(x.color, x.dark)}</span><span>${x.name}</span><b>${x.min}</b></li>`).reverse().join('')}</ol>
       <h2>Последние бои</h2>
@@ -331,11 +313,11 @@ function battle(): void {
 // ------------------------------------------------------------------ загрузка при входе
 const TIPS = [
   'Стой в круге с короной — команда получает очки',
-  'Дым Техника замедляет врагов внутри облака',
-  'Гаражная дверь Танка держит выстрелы спереди',
+  'Турель Техника сама стреляет 8 секунд',
+  'Таран Танка оглушает всех на пути',
   'Пластинки Спринтер отскакивают от стен',
-  'Растяжка Снайпера оглушает того, кто на неё наступит',
-  'Аптечка Медика лечит всех рядом, госпиталь — всех в круге',
+  'Бронебойная пуля Снайпера пробивает всех на линии',
+  'Аптечка Медика лечит всех рядом',
   'Атака идёт сама — следи за позицией и кнопками',
   'Двойной тап под джойстиком — рывок',
   'Побеждай, чтобы подняться из Бронзы в Серебро',

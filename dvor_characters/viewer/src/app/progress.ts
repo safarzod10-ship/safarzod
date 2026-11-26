@@ -2,8 +2,8 @@
  * Player progress: trophies -> rank (everyone starts at Бронза III with 0), experience -> level,
  * the game balance (монеты, кристаллы), match history. Kept in localStorage on this device (no server yet).
  *
- * Coins per match: win 40, draw 20, loss 15, +5 per knock-out. Crystals: +5 for every new level,
- * +10 for every new rank. Start: 100 coins, 0 crystals.
+ * Coins per match: win 40, draw 20, loss 15, +5 per knock-out. Crystals: +10 for every new rank.
+ * Start: 100 coins, 0 crystals. The level shown is the hero's level (average of its stat levels).
  *
  * Trophies per match: win +28 (+2 per knock-out, max +8), draw +6, loss -12 (never below the floor of
  * the current league: Бронза 0, Серебро 300, Золото 800...). The rank also sets how good the bots are
@@ -27,8 +27,8 @@ export const RANKS: Rank[] = [
 ];
 
 export interface MatchRecord { t: number; hero: string; result: 'win' | 'lose' | 'draw'; score: [number, number]; kills: number; deaths: number; dealt: number; trophies: number; xp: number }
-export type Stat = 'hp' | 'dmg' | 'speed';
-export type Upgrades = Record<Stat, number>;   // 0..MAX_UPGRADE per stat
+export type Stat = 'hp' | 'dmg' | 'speed' | 'ability';
+export type Upgrades = Record<Stat, number>;   // level 1..MAX_UPGRADE per stat
 export interface Profile {
   trophies: number; xp: number; coins: number; gems: number; games: number; wins: number; kills: number; best: number;
   history: MatchRecord[];
@@ -54,11 +54,12 @@ function change(f: (p: Profile) => void): Profile { const p = loadProfile(); f(p
 
 // ------------------------------------------------------------------ heroes: first pick, purchases, upgrades
 export const HERO_PRICE = 50000;
-export const MAX_UPGRADE = 5;
-/** Coins for the next level of one stat: 1 -> 200, 2 -> 500, 3 -> 1000, 4 -> 2000, 5 -> 4000. */
-export const UPGRADE_COST = [200, 500, 1000, 2000, 4000];
-/** Per level: +6 % health, +6 % damage (and healing), +2.5 % speed. */
-export const UPGRADE_STEP: Upgrades = { hp: 0.06, dmg: 0.06, speed: 0.025 };
+export const STATS: Stat[] = ['hp', 'dmg', 'speed', 'ability'];
+export const MAX_UPGRADE = 30;
+/** Coins to raise a stat from level n to n + 1: 20, 30 ... 300 (4 640 for one stat from 1 to 30). */
+export const upgradeCost = (level: number): number => 10 * level + 10;
+/** Per level above 1: +2 % health, +2 % damage and healing, +0.6 % speed, −1 % ability cooldown. */
+export const UPGRADE_STEP: Upgrades = { hp: 0.02, dmg: 0.02, speed: 0.006, ability: 0.01 };
 
 export const markStorySeen = (): Profile => change((p) => { p.storySeen = true; });
 export function chooseFirst(hero: string): Profile {
@@ -70,18 +71,25 @@ export function buyHero(hero: string): Profile | null {
   return change((q) => { q.coins -= HERO_PRICE; q.owned.push(hero); });
 }
 export const upgradesOf = (p: Profile, hero: string): Upgrades => {
-  const u = p.upgrades[hero];
-  return { hp: u?.hp ?? 0, dmg: u?.dmg ?? 0, speed: u?.speed ?? 0 };
+  const u = p.upgrades[hero] as Partial<Upgrades> | undefined;
+  // older saves kept 0..5 upgrade steps without the ability stat: step n = level n + 1
+  const old = u && u.ability === undefined ? 1 : 0;
+  const lv = (v: number | undefined) => Math.max(1, Math.min(MAX_UPGRADE, (v ?? 0) + old || 1));
+  return { hp: lv(u?.hp), dmg: lv(u?.dmg), speed: lv(u?.speed), ability: lv(u?.ability) };
 };
+/** The hero's level: the average of its four stat levels, rounded half up (1.5 -> 2), 1..30. */
+export const heroLevel = (u: Upgrades): number => Math.min(MAX_UPGRADE, Math.floor(STATS.reduce((a, k) => a + u[k], 0) / STATS.length + 0.5));
+export const heroLevelOf = (hero: string): number => heroLevel(upgradesOf(loadProfile(), hero));
 export function upgrade(hero: string, stat: Stat): Profile | null {
   const p = loadProfile(), u = upgradesOf(p, hero), lv = u[stat];
-  if (!p.owned.includes(hero) || lv >= MAX_UPGRADE || p.coins < UPGRADE_COST[lv]) return null;
-  return change((q) => { q.coins -= UPGRADE_COST[lv]; q.upgrades[hero] = { ...u, [stat]: lv + 1 }; });
+  if (!p.owned.includes(hero) || lv >= MAX_UPGRADE || p.coins < upgradeCost(lv)) return null;
+  return change((q) => { q.coins -= upgradeCost(lv); q.upgrades[hero] = { ...u, [stat]: lv + 1 }; });
 }
 /** Multipliers for the match (game/match.ts). */
-export function boostOf(hero: string): Upgrades {
+export function boostOf(hero: string): { hp: number; dmg: number; speed: number; cd: number } {
   const u = upgradesOf(loadProfile(), hero);
-  return { hp: 1 + u.hp * UPGRADE_STEP.hp, dmg: 1 + u.dmg * UPGRADE_STEP.dmg, speed: 1 + u.speed * UPGRADE_STEP.speed };
+  return { hp: 1 + (u.hp - 1) * UPGRADE_STEP.hp, dmg: 1 + (u.dmg - 1) * UPGRADE_STEP.dmg,
+    speed: 1 + (u.speed - 1) * UPGRADE_STEP.speed, cd: 1 - (u.ability - 1) * UPGRADE_STEP.ability };
 }
 
 export const rankOf = (trophies: number): Rank => [...RANKS].reverse().find((r) => trophies >= r.min) ?? RANKS[0];
@@ -121,7 +129,7 @@ export function applyResult(hero: string, r: { winner: 0 | 1 | -1; score: [numbe
   };
   const r0 = rankOf(before.trophies), r1 = rankOf(after.trophies);
   const l0 = levelOf(before.xp).level, l1 = levelOf(after.xp).level;
-  const gems = (l1 - l0) * 5 + (r1.min > r0.min ? 10 : 0);
+  const gems = r1.min > r0.min ? 10 : 0;
   after.gems = before.gems + gems;
   save(after);
   return { trophies: dt, xp, coins, gems, before, after, rankUp: r1.min > r0.min ? r1 : null, levelUp: l1 > l0 ? l1 : null };

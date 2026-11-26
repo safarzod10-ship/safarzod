@@ -3,6 +3,7 @@
  *
  *   POST /tg            Telegram webhook (checked with the secret token header)
  *   POST /api/result    a player's progress after a match (Telegram initData is verified)
+ *   POST /api/game-score the result of a match started from a game message (inline / group), signed token
  *   GET  /api/top       top 50 by trophies, cached at the edge for 60 s
  *   scheduled()         one-off setup: webhook, commands, menu button, descriptions (the first
  *                       fetch does the same, so it also runs without the cron)
@@ -12,7 +13,9 @@
  * (and at most one per 20 s per player), leaderboard reads come from the edge cache.
  */
 
-const SETUP_VERSION = '3';
+const SETUP_VERSION = '4';
+const BOT = 'dvor_app';
+const GAME = 'dvor';   // game short name from @BotFather /newgame (until it exists, links to the Mini App are used)
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', ...extra },
 });
@@ -91,8 +94,13 @@ async function apiResult(request, env) {
 }
 
 // ------------------------------------------------------------------ bot
-function playKeyboard(env) {
-  return { inline_keyboard: [[{ text: '▶ Играть', web_app: { url: env.WEBAPP_URL } }], [{ text: '🏆 Рейтинг игроков', callback_data: 'top' }]] };
+/** Mini App link that works in any chat (groups too); needs the Main Mini App enabled in @BotFather. */
+const appLink = (param) => `https://t.me/${BOT}?startapp=${param}`;
+
+function playKeyboard(env, chatType = 'private') {
+  // web_app buttons work only in private chats; elsewhere the Mini App opens through a t.me link
+  const play = chatType === 'private' ? { text: '▶ Играть', web_app: { url: env.WEBAPP_URL } } : { text: '▶ Играть', url: appLink('group') };
+  return { inline_keyboard: [[play], [{ text: '🏆 Рейтинг игроков', callback_data: 'top' }]] };
 }
 
 async function topText(env) {
@@ -113,31 +121,101 @@ const START = [
   'Жми «Играть» 👇',
 ].join('\n');
 
+const HELP = '<b>Как играть</b>\nДжойстик — движение, двойной тап — рывок. Атака идёт сама.\nКнопка справа — способность героя.\n'
+  + 'Стой в Круге, чтобы команда получала очки. Кто первым наберёт 100 — побеждает.\n\n'
+  + '<b>С друзьями</b>\nВ любом чате напиши <code>@' + BOT + '</code> и выбери «Вызов на бой».\nВ группе: добавь бота и напиши /play.\n\n/top — рейтинг игроков';
+
+// ---- signed token for a game opened from a game message: who pressed Play, on which message
+async function signToken(env, data) {
+  const body = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const sig = hex(await hmac(env.WEBHOOK_SECRET, body)).slice(0, 32);
+  return `${body}.${sig}`;
+}
+async function readToken(env, token) {
+  if (typeof token !== 'string' || token.length > 1024) return null;
+  const [body, sig] = token.split('.');
+  if (!body || !sig || hex(await hmac(env.WEBHOOK_SECRET, body)).slice(0, 32) !== sig) return null;
+  try { return JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/'))))); } catch { return null; }
+}
+
+/** A game message in a chat; without the registered game, a message with a link button. */
+async function sendPlay(env, chat, chatType) {
+  const r = await tg(env, 'sendGame', { chat_id: chat, game_short_name: GAME });
+  if (r.ok) return r;
+  return tg(env, 'sendMessage', { chat_id: chat, parse_mode: 'HTML', reply_markup: playKeyboard(env, chatType),
+    text: '⚔️ <b>Бой во дворе!</b>\nЖми «Играть» — бои 2 на 2 за Круг.' });
+}
+
+async function onInline(q, env) {
+  const me = await env.DB.prepare('SELECT trophies, hero FROM players WHERE id = ?').bind(q.from.id).first();
+  const tro = me?.trophies ?? 0;
+  const who = displayName(q.from);
+  const results = [
+    { type: 'game', id: 'game', game_short_name: GAME },
+    { type: 'article', id: 'duel', title: '⚔️ Вызов на бой', description: `Мои кубки: ${tro}. Кто сильнее?`,
+      input_message_content: { message_text: `⚔️ <b>${who}</b> вызывает тебя на бой во ДВОРе!\nМои кубки: <b>${tro}</b> 🏆${me?.hero ? ` · играю за ${HERO_NAMES[me.hero]}` : ''}\nПобьёшь?`, parse_mode: 'HTML' },
+      reply_markup: { inline_keyboard: [[{ text: '▶ Принять вызов', url: appLink('duel') }]] } },
+    { type: 'article', id: 'top', title: '🏆 Рейтинг двора', description: 'Отправить в чат лучших игроков',
+      input_message_content: { message_text: await topText(env), parse_mode: 'HTML' },
+      reply_markup: { inline_keyboard: [[{ text: '▶ Играть', url: appLink('top') }]] } },
+  ];
+  let r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results, cache_time: 30, is_personal: true });
+  if (!r.ok) r = await tg(env, 'answerInlineQuery', { inline_query_id: q.id, results: results.slice(1), cache_time: 30, is_personal: true });   // no game registered yet
+  return r;
+}
+
 async function onUpdate(update, env) {
+  if (update.inline_query) return onInline(update.inline_query, env);
   const msg = update.message;
   if (msg?.text) {
-    const chat = msg.chat.id;
-    const cmd = msg.text.split(/[\s@]/)[0];
-    if (cmd === '/top') return tg(env, 'sendMessage', { chat_id: chat, text: await topText(env), parse_mode: 'HTML', reply_markup: playKeyboard(env) });
-    if (cmd === '/help') {
-      return tg(env, 'sendMessage', { chat_id: chat, parse_mode: 'HTML', reply_markup: playKeyboard(env), text:
-        '<b>Как играть</b>\nДжойстик — движение, двойной тап — рывок. Атака идёт сама.\nДве кнопки справа — способности героя.\nСтой в Круге, чтобы команда получала очки. Кто первым наберёт 100 — побеждает.\n\n/top — рейтинг игроков' });
-    }
-    return tg(env, 'sendMessage', { chat_id: chat, text: START, parse_mode: 'HTML', reply_markup: playKeyboard(env) });
+    const chat = msg.chat.id, type = msg.chat.type;
+    const [cmd, to] = msg.text.split(/\s/)[0].split('@');
+    if (to && to.toLowerCase() !== BOT) return;   // a command for another bot in a group
+    if (cmd === '/top') return tg(env, 'sendMessage', { chat_id: chat, text: await topText(env), parse_mode: 'HTML', reply_markup: playKeyboard(env, type) });
+    if (cmd === '/help') return tg(env, 'sendMessage', { chat_id: chat, parse_mode: 'HTML', reply_markup: playKeyboard(env, type), text: HELP });
+    if (cmd === '/play') return sendPlay(env, chat, type);
+    if (type !== 'private') return;   // in groups the bot speaks only when asked
+    return tg(env, 'sendMessage', { chat_id: chat, text: START, parse_mode: 'HTML', reply_markup: playKeyboard(env, type) });
   }
   const cb = update.callback_query;
   if (cb) {
+    if (cb.game_short_name) {
+      // Play on a game message: open the game with a token that says who and where (for the chat's high scores)
+      const where = cb.inline_message_id ? { i: cb.inline_message_id } : { c: cb.message?.chat.id, m: cb.message?.message_id };
+      const token = await signToken(env, { u: cb.from.id, n: displayName(cb.from), ...where, t: Date.now() });
+      return tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, url: `${env.WEBAPP_URL}?g=${token}` });
+    }
     await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id });
-    if (cb.data === 'top' && cb.message) return tg(env, 'sendMessage', { chat_id: cb.message.chat.id, text: await topText(env), parse_mode: 'HTML', reply_markup: playKeyboard(env) });
+    if (cb.data === 'top' && cb.message) return tg(env, 'sendMessage', { chat_id: cb.message.chat.id, text: await topText(env), parse_mode: 'HTML', reply_markup: playKeyboard(env, cb.message.chat.type) });
   }
+}
+
+/** A match played from a game message: the chat's high score table and the global leaderboard. */
+async function apiGameScore(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'bad json' }, 400); }
+  const t = await readToken(env, body.g);
+  if (!t || !t.u || Date.now() - t.t > 86400 * 1000 * 3) return json({ error: 'bad token' }, 401);
+  const score = Math.max(0, Math.min(20000, Math.floor(Number(body.trophies) || 0)));
+  const where = t.i ? { inline_message_id: t.i } : { chat_id: t.c, message_id: t.m };
+  const r = await tg(env, 'setGameScore', { user_id: t.u, score, force: true, ...where });
+  const now = Date.now();
+  const row = await env.DB.prepare('SELECT updated FROM players WHERE id = ?').bind(t.u).first();
+  const hero = HERO_NAMES[body.hero] ? body.hero : null;
+  if (!row || now - row.updated > 20000) {
+    await env.DB.prepare(`INSERT INTO players (id, name, trophies, hero, level, games, wins, updated) VALUES (?, ?, ?, ?, ?, 0, 0, ?)
+      ON CONFLICT(id) DO UPDATE SET name = excluded.name, trophies = excluded.trophies, hero = excluded.hero, level = excluded.level, updated = excluded.updated`)
+      .bind(t.u, String(t.n || 'Игрок').slice(0, 24), score, hero, Math.max(1, Math.min(30, Math.floor(Number(body.level) || 1))), now).run();
+  }
+  return json({ ok: !!r.ok });
 }
 
 async function setup(env, origin) {
   const done = await env.DB.prepare('SELECT v FROM meta WHERE k = ?').bind('setup').first();
   if (done?.v === SETUP_VERSION) return;
   const res = {};
-  res.webhook = await tg(env, 'setWebhook', { url: `${origin}/tg`, secret_token: env.WEBHOOK_SECRET, allowed_updates: ['message', 'callback_query'], drop_pending_updates: true });
-  res.commands = await tg(env, 'setMyCommands', { commands: [{ command: 'start', description: 'Начать' }, { command: 'top', description: 'Рейтинг игроков' }, { command: 'help', description: 'Как играть' }] });
+  res.webhook = await tg(env, 'setWebhook', { url: `${origin}/tg`, secret_token: env.WEBHOOK_SECRET, allowed_updates: ['message', 'callback_query', 'inline_query'], drop_pending_updates: true });
+  res.commands = await tg(env, 'setMyCommands', { commands: [{ command: 'start', description: 'Начать' }, { command: 'play', description: 'Бой (и в группе)' }, { command: 'top', description: 'Рейтинг игроков' }, { command: 'help', description: 'Как играть' }] });
   res.menu = await tg(env, 'setChatMenuButton', { menu_button: { type: 'web_app', text: 'Играть', web_app: { url: env.WEBAPP_URL } } });
   res.desc = await tg(env, 'setMyDescription', { description: 'ДВОР — бои 2 на 2 за Круг двора. Пятеро бывших друзей, пять героев, ранги от Бронзы до Царя двора. Жми «Начать».' });
   res.short = await tg(env, 'setMyShortDescription', { short_description: 'Бои 2 на 2 за Круг двора. Играй прямо в Telegram.' });
@@ -179,6 +257,7 @@ export default {
     }
     if (url.pathname === '/api/top' && request.method === 'GET') return apiTop(request, env, ctx);
     if (url.pathname === '/api/result' && request.method === 'POST') return apiResult(request, env);
+    if (url.pathname === '/api/game-score' && request.method === 'POST') return apiGameScore(request, env);
     if (url.pathname === '/health') return json({ ok: true, server: 'dvor' });
     return new Response('ДВОР', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
   },

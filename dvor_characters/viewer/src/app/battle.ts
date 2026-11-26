@@ -14,25 +14,21 @@ import { load, loadColliders } from './assets';
 import { insideCourtyard, type Collider } from '../arena';
 import { HEROES, heroById, type HeroId } from './data';
 import { Match, lineup, type PlayerInput, type Team } from './game/match';
-import { applyResult, botSkill, boostOf, loadProfile, rankOf, levelOf } from './progress';
-import { postResult } from './api';
+import { applyResult, botSkill, boostOf, heroLevelOf, loadProfile, rankOf } from './progress';
+import { postGameScore, postResult } from './api';
 import { MATCH } from './game/kits';
 import { ICONS, rankBadge } from './icons';
-import { haptic, battleScreen, lockLandscape, inTelegram } from './tg';
+import { haptic, inTelegram } from './tg';
 
 export interface Battle { destroy(): void }
 
-const ABILITY_ICONS: Record<HeroId, [string, string]> = {
-  technik: [ICONS.turret, ICONS.cloud],
-  tank: [ICONS.door, ICONS.ram],
-  sprinter: [ICONS.speed, ICONS.wave],
-  sniper: [ICONS.mine, ICONS.bullet],
-  medic: [ICONS.medkit, ICONS.zone],
+const ABILITY_ICON: Record<HeroId, string> = {
+  technik: ICONS.turret, tank: ICONS.ram, sprinter: ICONS.speed, sniper: ICONS.bullet, medic: ICONS.medkit,
 };
 
 export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => void, firstBlue?: HeroId[]): Battle {
   const me = heroById(heroId);
-  const [ic1, ic2] = ABILITY_ICONS[heroId];
+  const ic1 = ABILITY_ICON[heroId];
   root.innerHTML = `
     <div class="battle-stage"></div>
     <div class="battle-hud">
@@ -46,50 +42,24 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       <div class="stick-zone" role="application" aria-label="Джойстик: веди пальцем, двойной тап — рывок">
         <div class="stick"><span class="arr u"></span><span class="arr d"></span><span class="arr l"></span><span class="arr r"></span><div class="knob"></div><i class="dash-ring"></i></div>
       </div>
-      <div class="skills two">
+      <div class="skills one">
         <button type="button" class="sk main" data-k="a1" aria-label="${me.name}: ${me.abilities[1]}">${ic1}<em></em></button>
-        <button type="button" class="sk cloud" data-k="a2" aria-label="${me.name}: ${me.abilities[2]}">${ic2}<em></em></button>
       </div>
       <div class="hint" hidden><p><b>Атака — сама</b> по ближнему врагу</p><p><b>Двойной тап</b> под джойстиком — рывок</p><p><b>Веди пальцем справа</b> — поворот камеры</p></div>
       <div class="dead" hidden>Возвращение через <b>3</b></div>
       <div class="countdown" hidden></div>
       <div class="result" hidden></div>
-      <div class="rotate" hidden>
-        <div class="rotate-phone"><i></i></div>
-        <h3>Поверни телефон</h3>
-        <p>Бой идёт горизонтально</p>
-        <button type="button" class="btn-main" id="fs" hidden>На весь экран</button>
-        <button type="button" class="btn-ghost" id="portrait">Играть вертикально</button>
-      </div>
       <div class="battle-loading"><div class="bar"><i></i></div><p>Загружаю арену</p></div>
     </div>`;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const stage = $('.battle-stage'), hud = $('.battle-hud'), loadEl = $('.battle-loading'), loadBar = loadEl.querySelector<HTMLElement>('i')!;
   const timerEl = $('#timer'), s0 = $('#s0'), s1 = $('#s1');
   const feed = $('.feed'), deadEl = $('.dead'), cdEl = $('.countdown'), resEl = $('.result');
-  const rotEl = $('.rotate'), hintEl = $('.hint'), zoneStick = $('.stick-zone');
+  const hintEl = $('.hint'), zoneStick = $('.stick-zone');
   let alive = true;
 
-  // ---- landscape: the battle waits (paused) while the screen is taller than wide
-  battleScreen(true);
-  let allowPortrait = false, locked = false, paused = false, waitingStart = false;
-  const checkOrientation = () => {
-    const portrait = (stage.clientHeight || innerHeight) > (stage.clientWidth || innerWidth);
-    paused = portrait && !allowPortrait;
-    rotEl.hidden = !paused;
-    if (!portrait && !locked) { lockLandscape(); locked = true; }
-    if (!paused && waitingStart) { waitingStart = false; beginCountdown(); }
-  };
-  const fsBtn = $('#fs');
-  const canFs = !inTelegram() && !!document.fullscreenEnabled && !!(screen.orientation as { lock?: unknown } | undefined)?.lock;
-  fsBtn.hidden = !canFs;
-  fsBtn.addEventListener('click', async () => {
-    try {
-      await document.documentElement.requestFullscreen();
-      await (screen.orientation as unknown as { lock(o: string): Promise<void> }).lock('landscape');
-    } catch { /* not supported here (iPhone, embedded frame): the player turns the phone */ }
-  });
-  $('#portrait').addEventListener('click', () => { allowPortrait = true; checkOrientation(); });
+  // the battle is played upright (portrait), like the menus; nothing to turn
+  const paused = false;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
@@ -110,7 +80,6 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    checkOrientation();
   };
   const ro = new ResizeObserver(resize);
   ro.observe(stage);
@@ -126,11 +95,12 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     let d = camYawGoal - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d));
     camYaw += d * Math.min(1, dt * 10);
     const fx = Math.sin(camYaw), fz = Math.cos(camYaw);
-    const far = camera.aspect < 1 ? 5.6 : 4.8, height = camera.aspect < 1 ? 3.3 : 2.7;
-    // pull in while the spot behind is outside the courtyard (walls / buildings)
+    // far behind and above the hero; near a wall the camera rises instead of coming in (same distance)
+    const far = camera.aspect < 1 ? 11 : 9.6, height = camera.aspect < 1 ? 6.8 : 5.4;
+    const D = Math.hypot(far, height);
     let dist = far;
-    while (dist > 1.4 && !insideCourtyard(camTarget.x - fx * dist, camTarget.z - fz * dist, 0.25)) dist -= 0.2;
-    const h = height * (0.55 + 0.45 * dist / far);
+    while (dist > 2 && !insideCourtyard(camTarget.x - fx * dist, camTarget.z - fz * dist, 0.25)) dist -= 0.25;
+    const h = Math.sqrt(D * D - dist * dist);
     camera.position.set(camTarget.x - fx * dist + ox, h + oy, camTarget.z - fz * dist);
     camera.lookAt(camTarget.x + fx * 2.2 + ox, 0.7 + oy, camTarget.z + fz * 2.2);
   };
@@ -178,7 +148,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     const title = r.winner === 0 ? 'Победа!' : r.winner === 1 ? 'Поражение' : 'Ничья';
     const rw = applyResult(heroId, r);
     void postResult(rw.after, heroId);   // leaderboard (inside Telegram)
-    const rank = rankOf(rw.after.trophies), lv = levelOf(rw.after.xp);
+    void postGameScore(rw.after, heroId);   // the chat's high scores, when opened from a game message
+    const rank = rankOf(rw.after.trophies), lv = heroLevelOf(heroId);
     resEl.className = `result ${r.winner === 0 ? 'win' : r.winner === 1 ? 'lose' : 'draw'}`;
     resEl.innerHTML = `
       <div class="result-card">
@@ -187,10 +158,10 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
         <div class="result-reward">
           <span class="rr-badge">${rankBadge(rank.color, rank.dark)}</span>
           <span class="rr-text"><b>${rank.name}</b><span>${ICONS.trophy}${rw.after.trophies} <em class="${rw.trophies > 0 ? 'up' : rw.trophies < 0 ? 'down' : ''}">${rw.trophies > 0 ? '+' : ''}${rw.trophies}</em></span></span>
-          <span class="rr-xp"><b>Ур. ${lv.level}</b><span>+${rw.xp} опыта</span><i><s style="width:${Math.round((100 * lv.into) / lv.need)}%"></s></i></span>
+          <span class="rr-xp"><b>${me.name}</b><span>ур. ${lv}</span></span>
         </div>
         <p class="result-loot"><span>${ICONS.coin}+${rw.coins}</span>${rw.gems ? `<span>${ICONS.gem}+${rw.gems}</span>` : ''}</p>
-        ${rw.rankUp ? `<p class="result-up">Новый ранг: <b>${rw.rankUp.name}</b></p>` : ''}${rw.levelUp ? `<p class="result-up">Новый уровень: <b>${rw.levelUp}</b></p>` : ''}
+        ${rw.rankUp ? `<p class="result-up">Новый ранг: <b>${rw.rankUp.name}</b></p>` : ''}
         <ul>
           <li><span>Выбито</span><b>${r.you.kills}</b></li>
           <li><span>Выбыл</span><b>${r.you.deaths}</b></li>
@@ -236,7 +207,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     const p = match.views()[0];
     camTarget.set(p.x, 0, p.z);
     camYaw = camYawGoal = p.team === 0 ? Math.PI : 0;
-    if (paused) waitingStart = true; else beginCountdown();
+    beginCountdown();
   }
   function beginCountdown(): void {
     // 3-2-1
@@ -329,7 +300,6 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     if (KEYMAP[e.code]) { keys.add(e.code); e.preventDefault(); }
     if (e.code === 'Space' || e.code === 'KeyJ') { keys.add('atk'); e.preventDefault(); }
     if (e.code === 'KeyK' || e.code === 'KeyE') pending.a1 = true;
-    if (e.code === 'KeyL' || e.code === 'KeyQ') pending.a2 = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') pending.dash = true;
   };
   const ku = (e: KeyboardEvent) => { keys.delete(e.code); if (e.code === 'Space' || e.code === 'KeyJ') keys.delete('atk'); };
@@ -393,7 +363,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   };
 
   // ---- loop
-  const skA1 = $('.sk[data-k="a1"]'), skA2 = $('.sk[data-k="a2"]'), dashRing = $('.dash-ring');
+  const skA1 = $('.sk[data-k="a1"]'), dashRing = $('.dash-ring');
   const setCd = (b: HTMLElement, left: number, max: number) => {
     b.style.setProperty('--cd', String(max ? left / max : 0));
     b.classList.toggle('cooling', left > 0.05);
@@ -431,7 +401,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       deadEl.hidden = p.alive || match.ended;
       if (!p.alive) deadEl.querySelector('b')!.textContent = String(Math.ceil(p.respawnIn));
       const cd = match.cooldowns();
-      setCd(skA1, cd.a1, cd.a1Max); setCd(skA2, cd.a2, cd.a2Max);
+      setCd(skA1, cd.a1, cd.a1Max);
       dashRing.style.setProperty('--cd', String(cd.dashMax ? cd.dash / cd.dashMax : 0));
       (window as unknown as { __match: unknown }).__match = { score: match.score, time: match.time, ended: match.ended, units: views.map((u) => ({ hero: u.hero.id, team: u.team, hp: u.hp, alive: u.alive, x: +u.x.toFixed(2), z: +u.z.toFixed(2) })) };
     }
@@ -442,8 +412,6 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   return {
     destroy() {
       alive = false;
-      battleScreen(false);
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       countdownTimers.forEach(clearTimeout);
       renderer.setAnimationLoop(null);
       ro.disconnect();
