@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist-pages');
 fs.renameSync(path.join(OUT, 'app.html'), path.join(OUT, 'index.html'));
-const KEEP = new Set(['MAP_Dvor.glb', 'MAP_Dvor.colliders.json', 'USER_CH_Technik.glb', 'USER_CH_Tank.glb', 'USER_CH_Sprinter.glb']);
+const KEEP = new Set(['MAP_Dvor.glb', 'MAP_Dvor.colliders.json', 'USER_CH_Technik.glb', 'USER_CH_Tank.glb', 'USER_CH_Sprinter.glb', 'PROPS.glb']);
 for (const f of fs.readdirSync(path.join(OUT, 'models'))) if (!KEEP.has(f)) fs.rmSync(path.join(OUT, 'models', f));
 fs.rmSync(path.join(OUT, 'basis'), { recursive: true, force: true });
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');

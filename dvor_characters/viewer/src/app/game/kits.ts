@@ -1,6 +1,8 @@
 /**
  * Hero kits for the match prototype. All numbers in one place (metres, seconds, HP) so balance can be
- * tuned without touching code. Starting values from the design discussion, not yet play-tested.
+ * tuned without touching code. Tuned with bot-only simulations (scripts/balance.mjs, 60 matches +
+ * 60 duels per pair): sides 30:29, duels Technik > Tank 57 %, Sprinter > Technik 55 %, Tank > Sprinter 67 %.
+ * Bots are not people: confirm with play tests.
  */
 import type { HeroId } from '../data';
 
@@ -32,21 +34,21 @@ export const MATCH = { seconds: 120, target: 100, zone: { x: -0.14, z: -0.5, r: 
 export const KITS: Record<HeroId, Kit> = {
   technik: {
     hp: 4800, speed: 2.35, armor: 0,
-    attack: { kind: 'gun', range: 7, dmg: 500, cd: 0.5, speed: 18, heatMax: 6, cool: 1.5 },
+    attack: { kind: 'gun', range: 6.5, dmg: 450, cd: 0.5, speed: 18, heatMax: 6, cool: 1.5 },
     a1: { name: 'Турель', cd: 14 }, a2: { name: 'Дымовая шашка', cd: 12 },
-    turret: { dur: 8, range: 6, dmg: 250, rate: 2, hp: 1500, place: 2.2 },
+    turret: { dur: 8, range: 5.5, dmg: 180, rate: 2, hp: 1200, place: 2.2 },
     smoke: { dur: 5, r: 2.5, slow: 0.3, throw: 4.5 },
   },
   tank: {
     hp: 5600, speed: 1.78, armor: 0.15,
     attack: { kind: 'melee', range: 2, arcDeg: 75, dmg: 1100, cd: 0.85, knockEvery: 3, knock: 1.5 },
-    a1: { name: 'Гаражная дверь', cd: 12 }, a2: { name: 'Таран', cd: 10 },
+    a1: { name: 'Гаражная дверь', cd: 10 }, a2: { name: 'Таран', cd: 8 },
     door: { dur: 4, width: 1.5 },
-    ram: { dist: 4, stun: 0.5, dmg: 400 },
+    ram: { dist: 4.5, stun: 0.5, dmg: 400 },
   },
   sprinter: {
-    hp: 4400, speed: 2.72, armor: 0,
-    attack: { kind: 'records', range: 5.5, dmg: 380, cd: 0.65, speed: 12, count: 2, spreadDeg: 11, bounces: 1 },
+    hp: 4700, speed: 2.72, armor: 0,
+    attack: { kind: 'records', range: 5.5, dmg: 400, cd: 0.65, speed: 12, count: 2, spreadDeg: 11, bounces: 1 },
     a1: { name: 'Спурт', cd: 10 }, a2: { name: 'На всю громкость', cd: 14 },
     spurt: { dashes: 3, dist: 3, gap: 0.45, dmg: 500 },
     wave: { r: 3, push: 2, dmg: 200 },

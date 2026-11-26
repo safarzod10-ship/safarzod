@@ -420,3 +420,87 @@ img { display: block; max-width: 100%; }
   .view.battle .stick { transform: scale(0.75); }
   .view.battle .skills { transform: scale(0.72); }
 }
+
+/* ---------------------------------------------------------------- boot screen */
+.boot {
+  position: absolute; inset: 0; z-index: 50; background: #151417; display: flex; flex-direction: column;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.boot.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+.boot-art {
+  position: absolute; inset: 0; background: #151417 center top / cover no-repeat;
+  animation: bootArt 1.2s ease-out both;
+}
+.boot-art::after { content: ""; position: absolute; inset: 40% 0 0 0; background: linear-gradient(rgba(21, 20, 23, 0), #151417 70%); }
+@keyframes bootArt { from { opacity: 0; transform: scale(1.06); } }
+.boot-foot {
+  position: relative; margin-top: auto; display: grid; justify-items: center; gap: 12px;
+  padding: 0 28px calc(42px + env(safe-area-inset-bottom, 0px));
+}
+.boot-tip { margin: 0; min-height: 2.6em; max-width: 30ch; text-align: center; color: #d9d3cc; font-size: 15px; line-height: 1.3; opacity: 0; }
+.boot-tip.in { animation: tipIn 2.6s ease both; }
+@keyframes tipIn { 0% { opacity: 0; transform: translateY(6px); } 12%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.boot-bar {
+  width: 100%; max-width: 320px; height: 14px; border-radius: 8px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.1); border: 1.5px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.boot-bar i {
+  display: block; height: 100%; width: 0; border-radius: 6px;
+  background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.18) 0 8px, rgba(255, 255, 255, 0) 8px 16px), linear-gradient(var(--accent-hi), var(--accent-lo));
+  background-size: 22.6px 22.6px, 100% 100%;
+  animation: barStripes 0.7s linear infinite;
+}
+@keyframes barStripes { to { background-position: 22.6px 0, 0 0; } }
+.boot-pct { margin: 0; font: italic 800 20px/1 var(--font-display); color: #f4efe8; letter-spacing: 0.02em; }
+.boot-pct b { font-weight: 800; color: var(--accent-hi); font-variant-numeric: tabular-nums; }
+.boot-err { margin: 0; text-align: center; font-size: 17px; font-weight: 600; }
+.boot-err small { color: var(--muted); font-weight: 400; font-size: 13px; }
+.boot .btn-main { max-width: 260px; height: 54px; font-size: 22px; }
+@media (prefers-reduced-motion: reduce) { .boot-bar i, .boot-art { animation: none; } .boot-tip.in { animation: none; opacity: 1; } }
+
+/* ---------------------------------------------------------------- home: selected hero on stage */
+.view.home .home-art::after { height: 42%; }
+.home-spot {
+  position: absolute; left: 50%; bottom: 200px; width: 300px; height: 300px; transform: translateX(-50%);
+  background:
+    radial-gradient(50% 9% at 50% 93%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 100%),
+    radial-gradient(50% 12% at 50% 92%, rgba(255, 160, 80, 0.45), rgba(255, 160, 80, 0) 100%),
+    radial-gradient(45% 60% at 50% 70%, rgba(255, 190, 120, 0.22), rgba(255, 190, 120, 0) 100%);
+  pointer-events: none;
+}
+.home-stage { position: absolute; left: 0; right: 0; top: 17%; bottom: 200px; touch-action: pan-y; }
+.home-stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.home-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 8px 8px 14px; border-radius: 14px;
+  background: rgba(22, 20, 24, 0.82); border: 1px solid var(--line); backdrop-filter: blur(6px);
+}
+.home-hero-name { display: grid; gap: 1px; min-width: 0; }
+.home-hero-name b { font: italic 800 24px/1.05 var(--font-display); color: #fff3e6; }
+.home-hero-name span { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.home-hero-name span svg { font-size: 16px; color: var(--accent); }
+.home-change {
+  display: flex; align-items: center; gap: 7px; height: 42px; padding: 0 14px; border-radius: 11px;
+  background: rgba(255, 255, 255, 0.08); border: 1.5px solid rgba(255, 255, 255, 0.18); font-weight: 600; font-size: 15px;
+}
+.home-change svg { font-size: 20px; color: var(--accent); }
+.home-change:active { transform: translateY(1px); background: rgba(255, 255, 255, 0.14); }
+.view.home .home-bottom { gap: 12px; }
+.view.home .rank { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 172px; margin-left: 0; transform: scale(0.72); transform-origin: 0 100%; }
+
+/* ---------------------------------------------------------------- light refresh: tab bar */
+.tabbar { background: linear-gradient(#222126, #19181c); border-top: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.35); }
+.tabbar button { position: relative; transition: color 0.15s; }
+.tabbar button[aria-current="true"]::before {
+  content: ""; position: absolute; left: 50%; top: -6px; width: 34px; height: 3px; margin-left: -17px; border-radius: 0 0 3px 3px;
+  background: var(--accent); box-shadow: 0 0 10px rgba(240, 122, 30, 0.8);
+}
+.tabbar button[aria-current="true"] svg { filter: drop-shadow(0 0 6px rgba(240, 122, 30, 0.55)); }
+.btn-play { position: relative; overflow: hidden; }
+.btn-play::after {   /* slow shine across the play button */
+  content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  animation: shine 3.2s ease-in-out infinite;
+}
+@keyframes shine { 0%, 55% { transform: translateX(0); } 100% { transform: translateX(560%); } }
+@media (prefers-reduced-motion: reduce) { .btn-play::after { animation: none; display: none; } }

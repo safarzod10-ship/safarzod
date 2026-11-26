@@ -10,6 +10,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { hitsCollider, insideCourtyard, type Collider } from '../../arena';
 import { HEROES, type Hero, type HeroId } from '../data';
 import { DASH, KITS, MATCH, REGEN, RESPAWN_S, type Kit } from './kits';
+import { SmokeSystem } from './smoke';
 
 export type Team = 0 | 1;   // 0 = blue (player), 1 = red
 const R_BODY = 0.35;
@@ -17,7 +18,8 @@ const R_HIT = 0.45;
 const TEAM_COL = [0x2b9cf0, 0xe2493b];
 // spawns sit beside the cover blocks in front of each base (not behind them)
 const SPAWNS: [number, number][][] = [
-  [[-2.6, 7.1], [2.8, 7.1], [-4.2, 6.0]],
+  // point-mirrored from the red spawns through the zone centre, so both teams walk the same distance
+  [[-2.88, 6.2], [2.52, 6.2], [-4.48, 5.0]],
   [[2.6, -7.2], [-2.8, -7.2], [4.2, -6.0]],
 ];
 const CLIPS = ['Idle', 'Run', 'Attack', 'Ability', 'Hit', 'Defeat', 'Victory'] as const;
@@ -38,7 +40,7 @@ interface Unit {
   id: number; team: Team; hero: Hero; kit: Kit; isPlayer: boolean; slot: number;
   root: THREE.Object3D; mixer: THREE.AnimationMixer; actions: Map<Clip, THREE.AnimationAction>;
   cur: THREE.AnimationAction | null; oneShotUntil: number;
-  ring: THREE.Mesh; stunFx: THREE.Mesh; door: THREE.Group | null;
+  ring: THREE.Mesh; stunFx: THREE.Mesh; door: THREE.Object3D | null;
   x: number; z: number; yaw: number; kx: number; kz: number;
   hp: number; alive: boolean; respawnAt: number; invulnUntil: number;
   atkReady: number; heat: number; overheatUntil: number; meleeCount: number;
@@ -54,7 +56,7 @@ interface Proj {
   team: Team; owner: Unit | null; x: number; z: number; vx: number; vz: number; left: number; dmg: number;
   bounces: number; obj: THREE.Object3D; spin: boolean; fromTurret: boolean;
 }
-interface Turret { team: Team; owner: Unit; x: number; z: number; hp: number; until: number; next: number; obj: THREE.Group; head: THREE.Object3D }
+interface Turret { team: Team; owner: Unit; x: number; z: number; hp: number; until: number; next: number; obj: THREE.Object3D; head: THREE.Object3D; born: number }
 interface Smoke { team: Team; x: number; z: number; r: number; until: number; slow: number; obj: THREE.Group; born: number }
 interface Fx { obj: THREE.Object3D; t: number; dur: number; tick: (k: number) => void }
 
@@ -63,6 +65,8 @@ export interface MatchEvents {
   kill(killer: UnitView | null, victim: UnitView): void;
   end(result: { winner: Team | -1; score: [number, number]; you: { kills: number; deaths: number; dealt: number } }): void;
 }
+
+const TURRET_SCALE = 1.4;   // the mini tank model is 0.6 m long; bigger reads better from the game camera
 
 export class Match {
   readonly units: Unit[] = [];
@@ -80,6 +84,10 @@ export class Match {
   private mats: Record<string, THREE.Material> = {};
   private geos: Record<string, THREE.BufferGeometry> = {};
   private started = false;
+  private smokeFx = new SmokeSystem();
+  private fxTime = 0;
+  /** Camera used to sort smoke puffs back-to-front (set by the battle screen). */
+  camera: THREE.Camera | null = null;
 
   constructor(
     private scene: THREE.Scene,
@@ -87,8 +95,13 @@ export class Match {
     private colliders: Collider[],
     playerHero: HeroId,
     private ev: MatchEvents,
+    props?: GLTF,
+    /** Balance simulations (scripts): custom teams, the player slot played by a bot too. */
+    private sim?: { blue?: HeroId[]; red?: HeroId[]; allBots?: boolean },
   ) {
     this.buildShared();
+    if (props) this.setupProps(props);
+    scene.add(this.smokeFx.mesh);
     // zone
     this.zoneRing = new THREE.Mesh(new THREE.RingGeometry(MATCH.zone.r - 0.18, MATCH.zone.r, 56).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
@@ -98,8 +111,8 @@ export class Match {
     this.zoneFill.position.set(MATCH.zone.x, 0.025, MATCH.zone.z);
     scene.add(this.zoneRing, this.zoneFill);
     // teams: blue = player's hero first, then the other two; red = all three
-    const blue = [playerHero, ...HEROES.map((h) => h.id).filter((id) => id !== playerHero)];
-    const red: HeroId[] = ['tank', 'technik', 'sprinter'];
+    const blue = sim?.blue ?? [playerHero, ...HEROES.map((h) => h.id).filter((id) => id !== playerHero)];
+    const red: HeroId[] = sim?.red ?? ['tank', 'technik', 'sprinter'];
     let id = 0;
     for (const [team, list] of [[0, blue], [1, red]] as [Team, HeroId[]][]) {
       list.forEach((hid, slot) => {
@@ -127,7 +140,7 @@ export class Match {
     const M = (c: number, o = 1) => new THREE.MeshBasicMaterial({ color: c, transparent: o < 1, opacity: o, depthWrite: o >= 1 });
     this.mats = {
       bullet: M(0xffd36a), bulletRed: M(0xff8a6a), record: new THREE.MeshLambertMaterial({ color: 0x151417 }),
-      label: M(0xe23a54), arc: M(0xffffff, 0.55), wave: M(0xc7a6ff, 0.6), smoke: new THREE.MeshBasicMaterial({ color: 0xd8d5d0, transparent: true, opacity: 0.32, depthWrite: false }),
+      label: M(0xe23a54), arc: M(0xffffff, 0.55), wave: M(0xc7a6ff, 0.6), 
       metal: new THREE.MeshLambertMaterial({ color: 0x7d8088 }), dark: new THREE.MeshLambertMaterial({ color: 0x2c2d31 }),
       stun: M(0xffd23f), ringBlue: M(TEAM_COL[0], 0.9), ringRed: M(TEAM_COL[1], 0.9),
       teamBlue: new THREE.MeshLambertMaterial({ color: TEAM_COL[0] }), teamRed: new THREE.MeshLambertMaterial({ color: TEAM_COL[1] }),
@@ -139,7 +152,8 @@ export class Match {
       ring: new THREE.RingGeometry(0.42, 0.5, 36).rotateX(-Math.PI / 2),
       arc: new THREE.RingGeometry(0.5, 2.0, 12, 1, 0, 1).rotateX(-Math.PI / 2),
       wave: new THREE.RingGeometry(0.85, 1, 40).rotateX(-Math.PI / 2),
-      puff: new THREE.IcosahedronGeometry(0.85, 2),
+      can: new THREE.CylinderGeometry(0.07, 0.07, 0.24, 10),
+      canBand: new THREE.CylinderGeometry(0.075, 0.075, 0.06, 10),
       stun: new THREE.TorusGeometry(0.22, 0.03, 6, 16).rotateX(Math.PI / 2),
       leg: new THREE.CylinderGeometry(0.035, 0.035, 0.75, 5),
       head: new THREE.BoxGeometry(0.36, 0.24, 0.42),
@@ -148,6 +162,41 @@ export class Match {
       door: new THREE.BoxGeometry(1.5, 1.45, 0.07),
       rib: new THREE.BoxGeometry(1.52, 0.06, 0.1),
     };
+  }
+
+  /** Mini tank (turret) and garage door from PROPS.glb; the "Team" material gets the team colour. */
+  private propTpl: { turret: THREE.Object3D; door: THREE.Object3D } | null = null;
+  private teamMats: [THREE.Material, THREE.Material] | null = null;
+  private setupProps(g: GLTF): void {
+    const turret = g.scene.getObjectByName('PROP_Turret'), door = g.scene.getObjectByName('PROP_Door');
+    if (!turret || !door) return;
+    let team: THREE.MeshStandardMaterial | null = null;
+    g.scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      for (const mt of ([] as THREE.Material[]).concat(m.material)) if (mt.name === 'Team') team = mt as THREE.MeshStandardMaterial;
+    });
+    if (team) {
+      const t = team as THREE.MeshStandardMaterial;
+      const a = t.clone(), b = t.clone();
+      a.color.setHex(TEAM_COL[0]); b.color.setHex(TEAM_COL[1]);
+      a.emissive.setHex(TEAM_COL[0]).multiplyScalar(0.25); b.emissive.setHex(TEAM_COL[1]).multiplyScalar(0.25);
+      this.teamMats = [a, b];
+    }
+    this.propTpl = { turret, door };
+  }
+  private propClone(which: 'turret' | 'door', team: Team): THREE.Object3D {
+    const o = this.propTpl![which].clone(true);
+    o.position.set(0, 0, 0);
+    o.rotation.set(0, 0, 0);
+    o.traverse((c) => {
+      const m = c as THREE.Mesh;
+      if (!m.isMesh || !this.teamMats) return;
+      m.material = Array.isArray(m.material)
+        ? m.material.map((mt) => (mt.name === 'Team' ? this.teamMats![team] : mt))
+        : m.material.name === 'Team' ? this.teamMats[team] : m.material;
+    });
+    return o;
   }
 
   private makeUnit(id: number, team: Team, hero: Hero, gltf: GLTF, isPlayer: boolean, slot: number): Unit {
@@ -417,13 +466,23 @@ export class Match {
       g.add(l);
       obj = g;
     }
-    obj.position.set(x, fromTurret ? 0.75 : 1.0, z);
+    obj.position.set(x, fromTurret ? (this.propTpl ? 0.38 * TURRET_SCALE : 0.75) : 1.0, z);
     this.scene.add(obj);
     this.projs.push({ team, owner: u, x, z, vx, vz, left: range, dmg, bounces, obj, spin: kind === 'record', fromTurret });
   }
 
   private spawnTurret(u: Unit, x: number, z: number): void {
     const k = u.kit.turret!;
+    if (this.propTpl) {
+      const g = this.propClone('turret', u.team);
+      const head = g.getObjectByName('PROP_TurretHead')!;
+      g.position.set(x, 0, z);
+      g.rotation.y = u.yaw;
+      head.rotation.y = 0;
+      this.scene.add(g);
+      this.turrets.push({ team: u.team, owner: u, x, z, hp: k.hp, until: this.time + k.dur, next: this.time + 0.4, obj: g, head, born: this.time });
+      return;
+    }
     const g = new THREE.Group();
     for (let i = 0; i < 3; i++) {
       const leg = new THREE.Mesh(this.geos.leg, this.mats.dark);
@@ -444,22 +503,23 @@ export class Match {
     g.add(head);
     g.position.set(x, 0, z);
     this.scene.add(g);
-    this.turrets.push({ team: u.team, owner: u, x, z, hp: k.hp, until: this.time + k.dur, next: this.time + 0.4, obj: g, head });
+    this.turrets.push({ team: u.team, owner: u, x, z, hp: k.hp, until: this.time + k.dur, next: this.time + 0.4, obj: g, head, born: this.time });
   }
 
   private spawnSmoke(team: Team, x: number, z: number, r: number, dur: number, slow: number): void {
+    // the canister on the ground; the cloud itself is particles (smoke.ts)
     const g = new THREE.Group();
-    for (let i = 0; i < 10; i++) {
-      const p = new THREE.Mesh(this.geos.puff, this.mats.smoke);
-      const a = (i / 9) * Math.PI * 2;
-      const rr = i === 0 ? 0 : r * 0.55;
-      p.position.set(Math.cos(a) * rr, 0.6 + (i % 3) * 0.25, Math.sin(a) * rr);
-      p.scale.setScalar(i === 0 ? 1.3 : 0.9 + (i % 2) * 0.3);
-      g.add(p);
-    }
+    const can = new THREE.Mesh(this.geos.can, this.mats.dark);
+    can.rotation.z = Math.PI / 2;
+    can.position.y = 0.07;
+    const band = new THREE.Mesh(this.geos.canBand, team === 0 ? this.mats.teamBlue : this.mats.teamRed);
+    band.rotation.z = Math.PI / 2;
+    band.position.y = 0.07;
+    g.add(can, band);
     g.position.set(x, 0, z);
-    g.scale.setScalar(0.2);
+    g.rotation.y = Math.random() * Math.PI;
     this.scene.add(g);
+    this.smokeFx.emit(x, z, r, this.fxTime, this.fxTime + Math.max(0.5, dur - 1.6));
     this.smokes.push({ team, x, z, r, until: this.time + dur, slow, obj: g, born: this.time });
   }
 
@@ -509,7 +569,7 @@ export class Match {
       if (!this.inZone(u) && Math.random() < 0.02) { mx += (zx - u.x) * 0.2; mz += (zz - u.z) * 0.2; }
       if (d <= range + 0.2) {
         atk = true;
-        const err = ((Math.random() - 0.5) * (u.team === 1 ? 14 : 10) * Math.PI) / 180;
+        const err = ((Math.random() - 0.5) * (this.sim ? 12 : u.team === 1 ? 14 : 10) * Math.PI) / 180;
         const c = Math.cos(err), s = Math.sin(err);
         dir = [ux * c - uz * s, ux * s + uz * c];
       }
@@ -557,7 +617,7 @@ export class Match {
       }
       let move: [number, number] = [0, 0];
       if (running) {
-        if (u.isPlayer) {
+        if (u.isPlayer && !this.sim?.allBots) {
           const [ix, iy] = input.move;
           const m = Math.hypot(ix, iy);
           move = m > 0.15 ? [ix / m, -iy / m] : [0, 0];
@@ -657,7 +717,7 @@ export class Match {
       this.stepTurrets();
       this.stepZone(dt);
     }
-    this.stepSmokes();
+    this.stepSmokes(dt);
     this.stepFx(dt);
     this.zoneVisual();
     if (running && (this.score[0] >= MATCH.target || this.score[1] >= MATCH.target || now >= MATCH.seconds)) this.finish();
@@ -675,11 +735,16 @@ export class Match {
     // tank door
     const doorOn = u.alive && this.time < u.doorUntil;
     if (doorOn && !u.door) {
-      const g = new THREE.Group();
-      const d = new THREE.Mesh(this.geos.door, this.mats.metal);
-      d.position.y = 0.78;
-      g.add(d);
-      for (let i = 0; i < 5; i++) { const r = new THREE.Mesh(this.geos.rib, this.mats.dark); r.position.y = 0.18 + i * 0.3; g.add(r); }
+      let g: THREE.Object3D;
+      if (this.propTpl) g = this.propClone('door', u.team);
+      else {
+        g = new THREE.Group();
+        const d = new THREE.Mesh(this.geos.door, this.mats.metal);
+        d.position.y = 0.78;
+        g.add(d);
+        for (let i = 0; i < 5; i++) { const r = new THREE.Mesh(this.geos.rib, this.mats.dark); r.position.y = 0.18 + i * 0.3; g.add(r); }
+      }
+      g.userData.born = this.time;
       this.scene.add(g);
       u.door = g;
     }
@@ -687,6 +752,9 @@ export class Match {
     if (u.door) {
       u.door.position.set(u.x + Math.sin(u.yaw) * 0.6, 0, u.z + Math.cos(u.yaw) * 0.6);
       u.door.rotation.y = u.yaw;
+      // pops up out of the ground
+      const k = Math.min(1, (this.time - (u.door.userData.born ?? 0)) / 0.18);
+      u.door.scale.set(1, 0.3 + 0.7 * (1 - (1 - k) ** 3), 1);
     }
   }
 
@@ -747,14 +815,16 @@ export class Match {
     for (const t of this.turrets) {
       if (this.time >= t.until || !t.owner) { this.scene.remove(t.obj); continue; }
       const k = t.owner.kit.turret!;
+      const age = this.time - t.born;   // drops in with a small bounce
+      t.obj.scale.setScalar(TURRET_SCALE * (age >= 0.3 ? 1 : Math.max(0.01, 1 + 0.25 * Math.sin((age / 0.3) * Math.PI) - (1 - age / 0.3) ** 2)));
       let best: Unit | null = null, bd = k.range;
       for (const e of this.units) if (e.alive && e.team !== t.team) { const d = Math.hypot(e.x - t.x, e.z - t.z); if (d < bd && this.los(t.x, t.z, e.x, e.z)) { bd = d; best = e; } }
       if (best) {
         const dx = (best.x - t.x) / bd, dz = (best.z - t.z) / bd;
-        t.head.rotation.y = Math.atan2(dx, dz);
+        t.head.rotation.y = Math.atan2(dx, dz) - t.obj.rotation.y;
         if (this.time >= t.next) {
           t.next = this.time + 1 / k.rate;
-          this.spawnProj(t.owner, t.x + dx * 0.35, t.z + dz * 0.35, dx * 16, dz * 16, k.range + 0.5, k.dmg, 0, 'bullet', true, t.team);
+          this.spawnProj(t.owner, t.x + dx * 0.5 * TURRET_SCALE, t.z + dz * 0.5 * TURRET_SCALE, dx * 16, dz * 16, k.range + 0.5, k.dmg, 0, 'bullet', true, t.team);
         }
       } else t.head.rotation.y += 0.01;
       keep.push(t);
@@ -762,13 +832,15 @@ export class Match {
     this.turrets = keep;
   }
 
-  private stepSmokes(): void {
+  private stepSmokes(dt: number): void {
+    this.fxTime += dt;
+    this.smokeFx.update(dt, this.fxTime, this.camera ?? this.scene.children[0]);
     const keep: Smoke[] = [];
     for (const s of this.smokes) {
       const age = this.time - s.born, left = s.until - this.time;
       if (left <= 0) { this.scene.remove(s.obj); continue; }
-      s.obj.scale.setScalar(Math.min(1, 0.2 + age * 3) * Math.min(1, left / 0.6 + 0.2));
-      s.obj.rotation.y += 0.004;
+      if (age < 0.25) s.obj.position.y = 0.4 * Math.sin((age / 0.25) * Math.PI);   // lands with a small hop
+      else s.obj.position.y = 0;
       keep.push(s);
     }
     this.smokes = keep;
@@ -825,6 +897,7 @@ export class Match {
     for (const p of this.projs) this.scene.remove(p.obj);
     for (const t of this.turrets) this.scene.remove(t.obj);
     for (const s of this.smokes) this.scene.remove(s.obj);
+    this.smokeFx.dispose();
     for (const g of Object.values(this.geos)) g.dispose();
     for (const m of Object.values(this.mats)) m.dispose();
   }

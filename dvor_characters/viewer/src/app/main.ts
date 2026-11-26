@@ -1,14 +1,17 @@
 /**
  * ДВОР — Telegram Mini App shell (from the customer's 4-screen mockup, ref/ui_mockup.png).
  * Screens: Главная (tab), Герой (hero select), Задания / Рейтинг (empty tabs), Поиск боя, Бой.
- * Character pictures come from the mockup (public/ui/); the 3D models are used only in the battle.
- * No game rules yet: the search is simulated, the battle only lets the hero run around the map.
+ * Character pictures come from the mockup (public/ui/); the selected hero stands on the home screen as
+ * its 3D model. A boot screen loads everything (models, images, fonts) before the first screen shows.
+ * The search is simulated; the battle is «Царь двора» 3 на 3 against bots (game/match.ts).
  */
 import './app.css';
 import { HEROES, PROFILE, STAT_NAMES, heroById, type HeroId } from './data';
 import { ICONS, ROLE_ICON, STAT_ICONS } from './icons';
 import { initTelegram, setBack, haptic } from './tg';
 import { startBattle, type Battle } from './battle';
+import { preloadAll } from './assets';
+import { createHomeStage } from './home3d';
 
 type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle';
 const TABS: { id: Screen; label: string; icon: string }[] = [
@@ -60,16 +63,26 @@ function bindBack(): void {
 
 // ------------------------------------------------------------------ Главная
 function home(): void {
+  const h = heroById(selected);
   view.innerHTML = `
-    <div class="home-art" role="img" aria-label="ДВОР" style="background-image:url(ui/home_bg.jpg)"></div>
+    <div class="home-art" role="img" aria-label="ДВОР" style="background-image:url(ui/menu_bg.jpg)"></div>
+    <div class="home-spot" aria-hidden="true"></div>
+    <div class="home-stage" aria-label="${h.name}"></div>
+    <div class="rank">
+      <span class="rank-badge">${ICONS.rank}</span>
+      <span class="rank-text"><b>${PROFILE.rank}</b><span>${ICONS.trophy}${PROFILE.trophies.toLocaleString('ru-RU')}</span></span>
+    </div>
     <div class="home-bottom">
-      <div class="rank">
-        <span class="rank-badge">${ICONS.rank}</span>
-        <span class="rank-text"><b>${PROFILE.rank}</b><span>${ICONS.trophy}${PROFILE.trophies.toLocaleString('ru-RU')}</span></span>
+      <div class="home-hero">
+        <span class="home-hero-name"><b>${h.name}</b><span>${ROLE_ICON[h.roleIcon]}${h.role}</span></span>
+        <button type="button" class="home-change" id="change">${ICONS.hero}<span>Сменить</span></button>
       </div>
       <button type="button" class="btn-play" id="play">${ICONS.play}<span>Играть</span></button>
     </div>`;
   view.querySelector('#play')!.addEventListener('click', () => { haptic('medium'); go('search'); });
+  view.querySelector('#change')!.addEventListener('click', () => { haptic('light'); go('heroes'); });
+  const stage = createHomeStage(view.querySelector<HTMLElement>('.home-stage')!, selected);
+  cleanup = () => stage.dispose();
 }
 
 // ------------------------------------------------------------------ Выбор героя
@@ -168,4 +181,54 @@ function battle(): void {
   cleanup = () => { b?.destroy(); b = null; };
 }
 
-initTelegram().finally(() => go(current));
+// ------------------------------------------------------------------ загрузка при входе
+const TIPS = [
+  'Стой в круге с короной — команда получает очки',
+  'Дым Техника замедляет врагов внутри облака',
+  'Гаражная дверь Танка держит выстрелы спереди',
+  'Пластинки Спринтер отскакивают от стен',
+  'Выбитый игрок возвращается через 3 секунды',
+];
+function boot(): void {
+  const el = document.createElement('div');
+  el.className = 'boot';
+  el.innerHTML = `
+    <div class="boot-art" style="background-image:url(ui/menu_bg.jpg)"></div>
+    <div class="boot-foot">
+      <p class="boot-tip"></p>
+      <div class="boot-bar"><i></i></div>
+      <p class="boot-pct">Загрузка <b>0</b>%</p>
+    </div>`;
+  app.appendChild(el);
+  const bar = el.querySelector<HTMLElement>('.boot-bar i')!, pct = el.querySelector('.boot-pct b')!, tip = el.querySelector('.boot-tip')!;
+  let ti = Math.floor(Math.random() * TIPS.length);
+  const nextTip = () => { tip.textContent = TIPS[ti++ % TIPS.length]; tip.classList.remove('in'); void (tip as HTMLElement).offsetWidth; tip.classList.add('in'); };
+  nextTip();
+  const tipTimer = window.setInterval(nextTip, 2600);
+  let shown = 0, target = 0;
+  const anim = window.setInterval(() => {   // smooth the bar between progress events
+    shown += (target - shown) * 0.25;
+    if (target - shown < 0.002) shown = target;
+    bar.style.width = `${(shown * 100).toFixed(1)}%`;
+    pct.textContent = String(Math.floor(shown * 100));
+  }, 33);
+  const t0 = performance.now();
+  const run = () => Promise.all([initTelegram(), preloadAll((k) => (target = k))]);
+  const finish = () => {
+    target = 1;
+    const wait = Math.max(0, 900 - (performance.now() - t0));   // no flash on a fast connection
+    setTimeout(() => {
+      clearInterval(tipTimer);
+      go(current);
+      el.classList.add('out');
+      setTimeout(() => { clearInterval(anim); el.remove(); }, 450);
+    }, wait + 250);
+  };
+  const fail = (e: unknown) => {
+    el.querySelector('.boot-foot')!.innerHTML = `<p class="boot-err">Не удалось загрузить игру<br><small>${String((e as Error)?.message ?? e)}</small></p>
+      <button type="button" class="btn-main" id="retry">Повторить</button>`;
+    el.querySelector('#retry')!.addEventListener('click', () => { el.remove(); clearInterval(tipTimer); clearInterval(anim); boot(); });
+  };
+  run().then(finish, fail);
+}
+boot();

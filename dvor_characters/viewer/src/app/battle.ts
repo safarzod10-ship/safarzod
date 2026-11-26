@@ -7,65 +7,14 @@
  * models/<id>.txt (base64 GLB without Meshopt); otherwise models/<id>.glb with the Meshopt decoder.
  */
 import * as THREE from 'three';
-import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { load, loadColliders } from './assets';
 import type { Collider } from '../arena';
 import { HEROES, heroById, type HeroId } from './data';
 import { Match, type PlayerInput, type Team } from './game/match';
 import { MATCH } from './game/kits';
 import { ICONS } from './icons';
 import { haptic, battleScreen, lockLandscape, inTelegram } from './tg';
-
-const BASE = './models/';
-const B64 = document.documentElement.dataset.assets === 'b64';
-
-let loaderP: Promise<GLTFLoader> | null = null;
-function getLoader(): Promise<GLTFLoader> {
-  loaderP ??= (async () => {
-    const l = new GLTFLoader();
-    if (B64) {
-      (window as unknown as { createImageBitmap?: unknown }).createImageBitmap = undefined;   // <img> decoding
-    } else {
-      const { MeshoptDecoder } = await import('three/addons/libs/meshopt_decoder.module.js');
-      l.setMeshoptDecoder(MeshoptDecoder);
-    }
-    return l;
-  })();
-  return loaderP;
-}
-
-const cache = new Map<string, Promise<GLTF>>();
-function load(id: string, onBytes: (id: string, n: number) => void): Promise<GLTF> {
-  let p = cache.get(id);
-  if (!p) {
-    p = (async () => {
-      const loader = await getLoader();
-      if (!B64) return loader.loadAsync(`${BASE}${id}.glb`, (e) => onBytes(id, e.loaded));
-      const res = await fetch(`${BASE}${id}.txt`);
-      if (!res.ok || !res.body) throw new Error(`${id}: HTTP ${res.status}`);
-      const reader = res.body.getReader();
-      const parts: Uint8Array[] = [];
-      let n = 0;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        parts.push(value);
-        n += value.length;
-        onBytes(id, n * 0.75);
-      }
-      const all = new Uint8Array(n);
-      let o = 0;
-      for (const q of parts) { all.set(q, o); o += q.length; }
-      const bin = atob(new TextDecoder().decode(all));
-      const buf = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-      return loader.parseAsync(buf.buffer, BASE);
-    })();
-    p.catch(() => cache.delete(id));
-    cache.set(id, p);
-  }
-  return p;
-}
-
 
 export interface Battle { destroy(): void }
 
@@ -225,7 +174,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     resEl.querySelector('#home')!.addEventListener('click', () => { haptic('light'); onExit(); });
   };
 
-  let assets: { map: GLTF; heroes: Record<HeroId, GLTF>; colliders: Collider[] } | null = null;
+  let assets: { map: GLTF; heroes: Record<HeroId, GLTF>; colliders: Collider[]; props?: GLTF } | null = null;
   let arena: THREE.Object3D | null = null;
   let countdownTimers: number[] = [];
 
@@ -241,7 +190,8 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
       damage: (x, y, z, n, team) => popNumber(x, y, z, n, team),
       kill: (k, vic) => { killFeed(k ? label(k) : null, label(vic), vic.team); if (vic.isPlayer) haptic('medium'); },
       end: (r) => setTimeout(() => alive && showResult(r), 1200),
-    });
+    }, assets.props);
+    match.camera = camera;
     for (const u of match.views()) {
       const el = document.createElement('div');
       el.className = `hp ${u.team === 0 ? 'blue' : 'red'}${u.isPlayer ? ' me' : ''}`;
@@ -266,9 +216,10 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
   function restart(): void { newMatch(); }
 
   (async () => {
-    const [map, cols, ...chars] = await Promise.all([
+    const [map, cols, props, ...chars] = await Promise.all([
       load('MAP_Dvor', onBytes),
-      fetch(`${BASE}MAP_Dvor.colliders.json`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      loadColliders(),
+      load('PROPS', onBytes).catch(() => undefined),
       ...HEROES.map((h) => load(h.model, onBytes)),
     ]);
     if (!alive) return;
@@ -282,7 +233,7 @@ export function startBattle(root: HTMLElement, heroId: HeroId, onExit: () => voi
     });
     scene.add(arena);
     const heroes = Object.fromEntries(HEROES.map((h, i) => [h.id, chars[i]])) as Record<HeroId, GLTF>;
-    assets = { map, heroes, colliders: cols as Collider[] };
+    assets = { map, heroes, colliders: cols as Collider[], props: props as GLTF | undefined };
     loadEl.hidden = true;
     newMatch();
   })().catch((e) => {
