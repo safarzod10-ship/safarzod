@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d1f">
+<title>Night Blade</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0b0d1f;--panel:#121532;--line:#2b3070;--ink:#eef0ff;--mute:#9aa0c8;--cy:#38e8ff;--mg:#ff3d9a;--gold:#ffc83d;--red:#ff3045;--ok:#3ddc84}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated}
+.layer{position:fixed;inset:0;display:none}
+.layer.on{display:flex}
+/* menu */
+#menu,#result,#pause{flex-direction:column;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#0b0d1fcc,#0b0d1ff2 55%)}
+.title{font:900 44px/0.95 Impact,"Arial Black",system-ui,sans-serif;letter-spacing:1px;text-align:center;color:#fff;text-shadow:3px 0 var(--mg),-3px 0 var(--cy);margin:0}
+.sub{color:var(--mute);text-align:center;margin:8px 0 18px;max-width:320px}
+.card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bal{font-weight:800;font-size:22px;color:var(--gold)}
+.demo{font-size:11px;font-weight:700;color:#111;background:var(--gold);border-radius:6px;padding:2px 6px}
+.label{color:var(--mute);font-size:13px}
+.stakes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.stakes button{height:44px;border-radius:10px;border:1px solid var(--line);background:#191d45;color:var(--ink);font-weight:800;font-size:15px}
+.stakes button.sel{background:var(--cy);color:#04121a;border-color:var(--cy)}
+.btn{width:100%;max-width:360px;height:56px;border:0;border-radius:14px;font:900 20px system-ui,sans-serif;letter-spacing:.5px;cursor:pointer}
+.btn.main{background:linear-gradient(90deg,var(--mg),#ff6a3d);color:#fff;box-shadow:0 6px 24px #ff3d9a55}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);height:48px;font-size:16px;margin-top:10px}
+.btn:disabled{opacity:.45}
+.tips{font-size:13px;color:var(--mute);margin:0;padding-left:18px}
+.tips li{margin:3px 0}
+.mult{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;font-size:12px;color:var(--mute);text-align:center}
+.mult div{background:#191d45;border-radius:8px;padding:5px 2px}
+.mult b{display:block;color:var(--ink);font-size:14px}
+/* hud */
+#hud{position:fixed;left:0;right:0;top:0;padding:calc(10px + env(safe-area-inset-top)) 14px 0;justify-content:space-between;align-items:flex-start;pointer-events:none}
+#hud .score{font:900 28px/1 Impact,"Arial Black",sans-serif;color:#fff;text-shadow:2px 2px 0 #000a}
+#hud .small{font-size:12px;color:var(--mute);font-weight:700;letter-spacing:.5px}
+#combo{font:900 18px Impact,"Arial Black",sans-serif;color:var(--gold);min-height:22px;text-shadow:2px 2px 0 #000a}
+#pauseBtn{pointer-events:auto;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#121532cc;color:var(--ink);font-weight:900;font-size:16px}
+#banner{position:fixed;left:0;right:0;top:32%;text-align:center;font:900 34px Impact,"Arial Black",sans-serif;color:#fff;text-shadow:3px 0 var(--mg),-3px 0 var(--cy);pointer-events:none;opacity:0;transition:opacity .25s}
+/* controls */
+#controls{position:fixed;left:0;right:0;bottom:0;padding:0 12px calc(14px + env(safe-area-inset-bottom));justify-content:space-between;align-items:flex-end;pointer-events:none}
+.pad{display:flex;gap:10px;pointer-events:auto}
+.cb{width:66px;height:66px;border-radius:50%;border:2px solid #ffffff33;background:#ffffff14;color:#fff;font:900 13px system-ui,sans-serif;display:grid;place-items:center;backdrop-filter:blur(2px)}
+.cb.big{width:82px;height:82px;border-color:var(--cy);color:var(--cy);font-size:14px}
+.cb.act{background:#ffffff38;transform:scale(.94)}
+.right{flex-direction:row;align-items:flex-end}
+.right .col{display:flex;flex-direction:column;gap:10px}
+/* result */
+.big{font:900 54px/1 Impact,"Arial Black",sans-serif;color:#fff;text-align:center}
+.win{color:var(--ok)}.lose{color:var(--red)}
+.center{text-align:center}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="layer">
+  <div><div class="score" id="score">0</div><div class="small" id="wave">ВОЛНА 1</div><div id="combo"></div></div>
+  <button id="pauseBtn" aria-label="Пауза">II</button>
+</div>
+<div id="banner"></div>
+
+<div id="controls" class="layer">
+  <div class="pad">
+    <div class="cb" data-k="left">◀</div>
+    <div class="cb" data-k="right">▶</div>
+  </div>
+  <div class="pad right">
+    <div class="col"><div class="cb" data-k="roll">РЫВОК</div><div class="cb" data-k="jump">ПРЫЖОК</div></div>
+    <div class="cb big" data-k="slash">УДАР</div>
+  </div>
+</div>
+
+<div id="menu" class="layer on">
+  <h1 class="title">NIGHT<br>BLADE</h1>
+  <p class="sub" id="hello">Один удар — одна жизнь. Режь, отбивай пули, уходи рывком.</p>
+  <div class="card">
+    <div class="row"><span class="label">Баланс</span><span class="demo">ДЕМО</span></div>
+    <div class="row" style="margin-top:4px"><span class="bal" id="balance">500 ⭐</span><span class="label" id="best">Рекорд: 0</span></div>
+    <div class="label" style="margin-top:10px">Ставка</div>
+    <div class="stakes" id="stakes"></div>
+    <div class="mult" id="multTable"></div>
+  </div>
+  <button class="btn main" id="playBtn">ИГРАТЬ</button>
+  <div class="card" style="margin-top:12px">
+    <ul class="tips">
+      <li><b>УДАР</b> убивает с одного касания. Тебя — тоже.</li>
+      <li>Удар по летящей пуле отправляет её обратно.</li>
+      <li><b>РЫВОК</b> — короткая неуязвимость, проскочи сквозь врага.</li>
+      <li>Щитовика бей только со спины.</li>
+    </ul>
+  </div>
+</div>
+
+<div id="pause" class="layer">
+  <h2 class="title" style="font-size:36px">ПАУЗА</h2>
+  <p class="sub">Ставка не сгорает, пока ты на паузе.</p>
+  <button class="btn main" id="resumeBtn">ПРОДОЛЖИТЬ</button>
+  <button class="btn ghost" id="quitBtn">СДАТЬСЯ</button>
+</div>
+
+<div id="result" class="layer">
+  <div class="label">ОЧКИ</div>
+  <div class="big" id="rScore">0</div>
+  <p class="sub" id="rDetail"></p>
+  <div class="card center">
+    <div class="label">Множитель</div>
+    <div class="big" style="font-size:40px" id="rMult">×0</div>
+    <div class="bal" id="rPay" style="margin-top:6px">+0 ⭐</div>
+  </div>
+  <button class="btn main" id="againBtn">ЕЩЁ РАЗ</button>
+  <button class="btn ghost" id="menuBtn">В МЕНЮ</button>
+</div>
+
+<script src="api.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
