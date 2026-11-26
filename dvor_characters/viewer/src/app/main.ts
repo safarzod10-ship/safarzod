@@ -2,19 +2,23 @@
  * ДВОР — Telegram Mini App shell (from the customer's mockups).
  * Screens: Главная (the selected hero's menu art), Герой (5 heroes), Задания (empty), Рейтинг (rank
  * ladder, level, match history), Поиск боя, Бой. The splash loads everything (models, images, fonts)
- * before the first screen shows. The search is simulated; the battle is «Царь двора» 3 на 3 against
+ * before the first screen shows. The search is simulated; the battle is «Царь двора» 2 на 2 against
  * bots (game/match.ts) whose skill follows the player's rank (progress.ts).
  */
 import './app.css';
-import { HEROES, STAT_NAMES, heroById, type HeroId } from './data';
+import { HEROES, heroById, type HeroId } from './data';
 import { ICONS, ROLE_ICON, STAT_ICONS, rankBadge } from './icons';
 import { initTelegram, setBack, haptic, playerName } from './tg';
 import { startBattle, type Battle } from './battle';
 import { preloadAll } from './assets';
 import { lineup } from './game/match';
-import { RANKS, levelOf, loadProfile, nextRank, rankOf } from './progress';
+import { HERO_PRICE, MAX_UPGRADE, RANKS, UPGRADE_COST, UPGRADE_STEP, buyHero, chooseFirst, levelOf, loadProfile, markStorySeen,
+  nextRank, rankOf, upgrade, upgradesOf, type Stat } from './progress';
+import { KITS } from './game/kits';
+import { BACKSTORY, STORY } from './story';
+import { fetchTop, lastPlace, postResult } from './api';
 
-type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle';
+type Screen = 'home' | 'heroes' | 'tasks' | 'rating' | 'search' | 'battle' | 'story' | 'choose';
 const TABS: { id: Screen; label: string; icon: string }[] = [
   { id: 'home', label: 'Главная', icon: ICONS.home },
   { id: 'heroes', label: 'Герой', icon: ICONS.hero },
@@ -26,7 +30,13 @@ const store = {
   get(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } },
   set(k: string, v: string): void { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
-let selected: HeroId = heroById(store.get('dvor.hero') ?? 'technik').id;
+// the hero to play: must be one the player owns (the first pick or a bought one)
+const ownedHero = (id: string | null): HeroId => {
+  const p = loadProfile();
+  if (id && p.owned.includes(id)) return heroById(id).id;
+  return heroById(p.chosen ?? 'technik').id;
+};
+let selected: HeroId = ownedHero(store.get('dvor.hero'));
 let previewHero: HeroId = selected;
 
 const app = document.getElementById('app')!;
@@ -50,11 +60,12 @@ function go(s: Screen): void {
   app.classList.toggle('wide', s === 'battle');   // the battle uses the whole (landscape) screen
   view.scrollTop = 0;
   const tabbed = s === 'home' || s === 'tasks' || s === 'rating';
+  const intro = s === 'story' || s === 'choose';
   tabbar.hidden = !tabbed;
   tabbar.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.tab === s)));
-  setBack(tabbed ? null : () => go('home'));
+  setBack(tabbed || intro ? null : () => go('home'));
   ({ home, heroes, tasks: () => empty('Задания', 'Ежедневные задания появятся здесь.'),
-    rating, search, battle })[s]();
+    rating, search, battle, story, choose })[s]();
 }
 
 const backBtn = () => `<button type="button" class="back" aria-label="Назад">${ICONS.back}</button>`;
@@ -91,45 +102,139 @@ function home(): void {
   view.querySelector('.tb-me')!.addEventListener('click', () => { haptic('light'); go('rating'); });
 }
 
-// ------------------------------------------------------------------ Выбор героя
+// ------------------------------------------------------------------ История (один раз, перед первым выбором)
+function story(): void {
+  let i = 0;
+  view.innerHTML = `<div class="story" role="dialog" aria-label="История"><div class="story-art"></div><div class="story-tint"></div>
+    <button type="button" class="story-skip">Пропустить</button>
+    <div class="story-box"><p class="story-dots">${STORY.map(() => '<i></i>').join('')}</p><h2></h2><p class="story-text"></p><span class="story-next">Нажми, чтобы продолжить</span></div></div>`;
+  const art = view.querySelector<HTMLElement>('.story-art')!, tint = view.querySelector<HTMLElement>('.story-tint')!;
+  const h = view.querySelector('h2')!, t = view.querySelector('.story-text')!, dots = [...view.querySelectorAll('.story-dots i')];
+  const show = () => {
+    const sl = STORY[i];
+    art.style.backgroundImage = `url(${sl.art})`;
+    art.classList.remove('kb'); void art.offsetWidth; art.classList.add('kb');
+    tint.style.background = sl.tint ?? 'transparent';
+    h.textContent = sl.title; t.textContent = sl.text;
+    dots.forEach((d, k) => d.classList.toggle('on', k <= i));
+    view.querySelector('.story-box')!.classList.remove('in'); void (view.querySelector('.story-box') as HTMLElement).offsetWidth;
+    view.querySelector('.story-box')!.classList.add('in');
+  };
+  const done = () => { markStorySeen(); go('choose'); };
+  view.querySelector('.story')!.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('.story-skip')) return done();
+    haptic('light');
+    if (++i >= STORY.length) done(); else show();
+  });
+  show();
+}
+
+// ------------------------------------------------------------------ Первый выбор героя (навсегда)
+function choose(): void {
+  let pick: HeroId = HEROES[0].id;
+  view.innerHTML = `<header class="choose-head"><h1>За кого ты?</h1><p>Выбрать можно <b>один раз</b> — изменить потом нельзя.<br>Остальных героев можно будет купить за ${HERO_PRICE.toLocaleString('ru-RU')} монет.</p></header>
+    <div class="hcards">${HEROES.map((h) => `
+      <article class="hcard" data-hero="${h.id}" style="--c:${h.color}">
+        <img src="${h.card}" alt="">
+        <div class="hcard-body"><h2>${h.name}</h2><p class="role">${ROLE_ICON[h.roleIcon]}<span>${h.role}</span></p>
+          <p class="hcard-story">${BACKSTORY[h.id]}</p>
+          <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Кнопка 1', 'Кнопка 2'][i]}</b> ${t}</li>`).join('')}</ul></div>
+      </article>`).join('')}</div>
+    <div class="sel-foot"><button type="button" class="btn-main" id="pick">Выбрать</button></div>
+    <div class="modal" hidden><div class="modal-card"><h2></h2><p>Этот выбор навсегда. Других героев потом можно купить за ${HERO_PRICE.toLocaleString('ru-RU')} монет.</p>
+      <div class="result-btns"><button type="button" class="btn-main" id="yes">Да, выбираю</button><button type="button" class="btn-ghost" id="no">Подумаю</button></div></div></div>`;
+  const row = view.querySelector<HTMLElement>('.hcards')!, btn = view.querySelector<HTMLButtonElement>('#pick')!, modal = view.querySelector<HTMLElement>('.modal')!;
+  const update = () => { btn.textContent = `Выбрать: ${heroById(pick).name}`; };
+  // the card in the middle of the strip is the one picked
+  const onScroll = () => {
+    const mid = row.scrollLeft + row.clientWidth / 2;
+    let best = pick, bd = Infinity;
+    row.querySelectorAll<HTMLElement>('.hcard').forEach((c) => { const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid); if (d < bd) { bd = d; best = c.dataset.hero as HeroId; } });
+    if (best !== pick) { pick = best; update(); }
+  };
+  row.addEventListener('scroll', onScroll, { passive: true });
+  row.addEventListener('click', (e) => { const c = (e.target as HTMLElement).closest<HTMLElement>('.hcard'); if (c) c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); });
+  btn.addEventListener('click', () => { haptic('light'); modal.querySelector('h2')!.textContent = `Точно ${heroById(pick).name}?`; modal.hidden = false; });
+  modal.querySelector('#no')!.addEventListener('click', () => { modal.hidden = true; });
+  modal.querySelector('#yes')!.addEventListener('click', () => {
+    chooseFirst(pick);
+    selected = pick; store.set('dvor.hero', pick);
+    haptic('success');
+    go('home');
+  });
+  update();
+}
+
+// ------------------------------------------------------------------ Герои: свои, покупка, улучшения
+const STAT_LABEL: Record<Stat, string> = { hp: 'Здоровье', dmg: 'Урон', speed: 'Скорость' };
+function statValue(id: HeroId, stat: Stat, lv: number): string {
+  const k = KITS[id];
+  if (stat === 'hp') return Math.round(k.hp * (1 + lv * UPGRADE_STEP.hp)).toLocaleString('ru-RU');
+  if (stat === 'dmg') return Math.round(k.attack.dmg * (1 + lv * UPGRADE_STEP.dmg)).toLocaleString('ru-RU');
+  return (k.speed * (1 + lv * UPGRADE_STEP.speed)).toFixed(2).replace('.', ',') + ' м/с';
+}
 function heroes(): void {
   previewHero = selected;
   view.innerHTML = `
     ${backBtn()}
-    <header class="sel-head"><h1>Выбор героя</h1><p>Пять героев — у каждого своя роль в команде.</p></header>
+    <header class="sel-head"><h1>Герои</h1><p class="sel-coins">${ICONS.coin}<b></b></p></header>
     <div class="cards" role="radiogroup" aria-label="Герой">${HEROES.map((h) => `
       <button type="button" class="card" role="radio" data-hero="${h.id}">
         <img src="${h.card}" alt="">
-        <span class="card-name">${h.name}</span><span class="card-role">${ROLE_ICON[h.roleIcon]}</span>
+        <span class="card-name">${h.name}</span><span class="card-role">${ROLE_ICON[h.roleIcon]}</span><span class="card-lock">${ICONS.lock}</span>
       </button>`).join('')}</div>
     <section class="detail" aria-live="polite"></section>
-    <div class="sel-foot"><button type="button" class="btn-main" id="pick">Выбрать героя</button></div>`;
+    <div class="sel-foot"><button type="button" class="btn-main" id="pick"></button></div>`;
   const detail = view.querySelector<HTMLElement>('.detail')!;
   const render = () => {
-    const h = heroById(previewHero);
-    view.querySelectorAll<HTMLButtonElement>('.card').forEach((c) => c.setAttribute('aria-checked', String(c.dataset.hero === h.id)));
+    const p = loadProfile(), h = heroById(previewHero), own = p.owned.includes(h.id), u = upgradesOf(p, h.id);
+    view.querySelector('.sel-coins b')!.textContent = p.coins.toLocaleString('ru-RU');
+    view.querySelectorAll<HTMLButtonElement>('.card').forEach((c) => {
+      c.setAttribute('aria-checked', String(c.dataset.hero === h.id));
+      c.classList.toggle('locked', !p.owned.includes(c.dataset.hero!));
+    });
     detail.className = 'detail portrait-card';
     detail.innerHTML = `
       <img class="detail-img" src="${h.card}" alt="">
       <div class="detail-body">
         <h2>${h.name}</h2>
         <p class="role">${ROLE_ICON[h.roleIcon]}<span>${h.role}</span></p>
-        <p class="desc">${h.text}</p>
+        <p class="desc">${BACKSTORY[h.id]}</p>
         <ul class="kit">${h.abilities.map((t, i) => `<li><b>${['Атака', 'Кнопка 1', 'Кнопка 2'][i]}</b> ${t}</li>`).join('')}</ul>
-        <h3>Характеристики (${STAT_NAMES.length})</h3>
-        <ul class="stats">${STAT_NAMES.map((n, i) => `
-          <li>${STAT_ICONS[i]}<span>${n}</span><span class="pips" aria-label="${h.stats[i]} из 5">${'<i class="on"></i>'.repeat(h.stats[i])}${'<i></i>'.repeat(5 - h.stats[i])}</span></li>`).join('')}
-        </ul>
+        <h3>${own ? 'Улучшения' : 'Характеристики'}</h3>
+        <ul class="ups">${(['hp', 'dmg', 'speed'] as Stat[]).map((st) => {
+          const lv = u[st], max = lv >= MAX_UPGRADE, cost = UPGRADE_COST[lv];
+          return `<li><span class="up-name">${STAT_ICONS[st === 'hp' ? 0 : st === 'dmg' ? 1 : 2]}${STAT_LABEL[st]}</span>
+            <span class="up-val"><b>${statValue(h.id, st, lv)}</b>${own && !max ? `<em>→ ${statValue(h.id, st, lv + 1)}</em>` : ''}</span>
+            <span class="pips" aria-label="${lv} из ${MAX_UPGRADE}">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(MAX_UPGRADE - lv)}</span>
+            ${own ? `<button type="button" class="up-btn" data-stat="${st}" ${max || p.coins < cost ? 'disabled' : ''}>${max ? 'Макс.' : `${ICONS.coin}${cost.toLocaleString('ru-RU')}`}</button>` : ''}</li>`;
+        }).join('')}</ul>
       </div>`;
     const pick = view.querySelector<HTMLButtonElement>('#pick')!;
-    pick.textContent = h.id === selected ? 'Выбран' : 'Выбрать героя';
-    pick.classList.toggle('done', h.id === selected);
+    pick.disabled = false;
+    pick.classList.remove('done');
+    if (own) {
+      pick.textContent = h.id === selected ? 'Выбран для боя' : `Играть за: ${h.name}`;
+      pick.classList.toggle('done', h.id === selected);
+    } else {
+      pick.innerHTML = `Купить ${ICONS.coin}${HERO_PRICE.toLocaleString('ru-RU')}`;
+      pick.disabled = p.coins < HERO_PRICE;
+    }
   };
   view.querySelector('.cards')!.addEventListener('click', (e) => {
     const c = (e.target as HTMLElement).closest<HTMLButtonElement>('.card');
     if (c) { haptic('light'); previewHero = c.dataset.hero as HeroId; render(); }
   });
+  detail.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.up-btn');
+    if (b && upgrade(previewHero, b.dataset.stat as Stat)) { haptic('success'); render(); }
+  });
   view.querySelector('#pick')!.addEventListener('click', () => {
+    const p = loadProfile();
+    if (!p.owned.includes(previewHero)) {
+      if (!buyHero(previewHero)) return;
+      haptic('success');
+    }
     selected = previewHero;
     store.set('dvor.hero', selected);
     haptic('success');
@@ -151,6 +256,9 @@ function rating(): void {
   const ago = (t: number) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : `${Math.round(m / 1440)} дн назад`; };
   view.innerHTML = `
     <section class="prog">
+      <h2 class="lb-title">Игроки двора${lastPlace() ? `<small>твоё место: ${lastPlace()}</small>` : ''}</h2>
+      <ol class="leaders"><li class="muted">Загружаю рейтинг…</li></ol>
+      <h2>Мой путь</h2>
       <div class="prog-head">
         <span class="prog-badge">${rankBadge(r.color, r.dark)}</span>
         <div><h1>${r.name}</h1><p>${ICONS.trophy}<b>${p.trophies}</b>${nx ? ` · до «${nx.name}» ${nx.min - p.trophies}` : ' · высший ранг'}</p>
@@ -165,6 +273,14 @@ function rating(): void {
       <h2>Последние бои</h2>
       ${p.history.length ? `<ul class="history">${p.history.map((m) => `<li class="${m.result}"><img src="${heroById(m.hero).card}" alt=""><span><b>${m.result === 'win' ? 'Победа' : m.result === 'lose' ? 'Поражение' : 'Ничья'}</b> ${m.score[0]}:${m.score[1]} · ${ago(m.t)}</span><em>${m.trophies > 0 ? '+' : ''}${m.trophies}</em></li>`).join('')}</ul>` : '<p class="muted">Сыграй первый бой — он появится здесь.</p>'}
     </section>`;
+  const list = view.querySelector('.leaders')!;
+  let alive = true;
+  cleanup = () => { alive = false; };
+  fetchTop().then((top) => {
+    if (!alive) return;
+    list.innerHTML = top.length ? top.map((t, i) => `<li class="${i < 3 ? `m${i + 1}` : ''}"><b>${i + 1}</b>${t.hero ? `<img src="${heroById(t.hero).card}" alt="">` : '<i></i>'}<span>${t.name.replace(/[<>&]/g, '')}<small>ур. ${t.level}</small></span><em>${ICONS.trophy}${t.trophies}</em></li>`).join('')
+      : '<li class="muted">Пока пусто — сыграй бой в Telegram, и ты будешь первым.</li>';
+  }).catch(() => { if (alive) list.innerHTML = '<li class="muted">Рейтинг сейчас недоступен — нет связи с сервером.</li>'; });
 }
 
 // ------------------------------------------------------------------ Поиск боя (симуляция)
@@ -174,11 +290,11 @@ function search(): void {
   view.innerHTML = `
     <div class="search-bg" style="background-image:url(ui/search_bg.jpg)"></div>
     ${backBtn()}
-    <div class="search-top"><h1>Поиск боя</h1><p>Рейтинговый <span aria-hidden="true">•</span> 3 на 3</p></div>
+    <div class="search-top"><h1>Поиск боя</h1><p>Рейтинговый <span aria-hidden="true">•</span> 2 на 2</p></div>
     <div class="spinner" aria-hidden="true"></div>
     <p class="search-title">Поиск противников…</p>
-    <p class="search-count">Найдено игроков: <b>1</b> из 6</p>
-    <ul class="slots">${team.map((id) => `<li data-team><img src="${heroById(id).card}" alt="${heroById(id).name}"><span class="tick">${ICONS.check}</span></li>`).join('')}${('<li data-enemy><span class="ghost">' + ICONS.person + '</span><span class="tick">' + ICONS.check + '</span></li>').repeat(3)}</ul>
+    <p class="search-count">Найдено игроков: <b>1</b> из 4</p>
+    <ul class="slots">${team.map((id) => `<li data-team><img src="${heroById(id).card}" alt="${heroById(id).name}"><span class="tick">${ICONS.check}</span></li>`).join('')}${('<li data-enemy><span class="ghost">' + ICONS.person + '</span><span class="tick">' + ICONS.check + '</span></li>').repeat(2)}</ul>
     <p class="wait">${ICONS.hourglass}<span>Ожидание: ~ <b>12</b> сек</span></p>`;
   bindBack();
   const slots = [...view.querySelectorAll<HTMLElement>('.slots li')];
@@ -193,10 +309,10 @@ function search(): void {
   show(++found);
   let left = 12;
   const timers = [window.setInterval(() => {
-    if (found < 6) {
+    if (found < 4) {
       show(++found);
       haptic('light');
-      if (found === 6) {
+      if (found === 4) {
         titleEl.textContent = 'Бой найден!';
         haptic('success');
         timers.push(window.setTimeout(() => go('battle'), 900));
@@ -262,7 +378,9 @@ function boot(): void {
       clearInterval(tipTimer);
       box.classList.add('done');
       setTimeout(() => {
-        go(current);
+        const p = loadProfile();   // first launch: the story, then the one-time hero pick
+        if (p.games > 0 && p.chosen) void postResult(p, selected);   // keep the leaderboard name / trophies fresh
+        go(!p.storySeen ? 'story' : !p.chosen ? 'choose' : current);
         box.classList.add('out');
         setTimeout(() => { clearInterval(anim); box.remove(); }, 500);
       }, 550);

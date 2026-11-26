@@ -248,6 +248,28 @@
       -0.977,
       -0.215
     ],
-    "bone": "chest"
+    "bone": "chest",
+    "hands_ik": {
+      "clips": [
+        "Idle",
+        "Attack",
+        "Ability",
+        "Hit",
+        "Defeat",
+        "Run"
+      ],
+      "grips_m": {
+        "R": [
+          -0.14,
+          -0.355,
+          0.937
+        ],
+        "L": [
+          -0.09,
+          -0.609,
+          0.871
+        ]
+      }
+    }
   }
 }

@@ -27,10 +27,20 @@ export const RANKS: Rank[] = [
 ];
 
 export interface MatchRecord { t: number; hero: string; result: 'win' | 'lose' | 'draw'; score: [number, number]; kills: number; deaths: number; dealt: number; trophies: number; xp: number }
-export interface Profile { trophies: number; xp: number; coins: number; gems: number; games: number; wins: number; kills: number; best: number; history: MatchRecord[] }
+export type Stat = 'hp' | 'dmg' | 'speed';
+export type Upgrades = Record<Stat, number>;   // 0..MAX_UPGRADE per stat
+export interface Profile {
+  trophies: number; xp: number; coins: number; gems: number; games: number; wins: number; kills: number; best: number;
+  history: MatchRecord[];
+  storySeen: boolean;
+  chosen: string | null;        // the first hero, picked once for good
+  owned: string[];              // heroes the player can play (the chosen one + bought ones)
+  upgrades: Record<string, Upgrades>;
+}
 
 const KEY = 'dvor.profile.v1';
-const fresh = (): Profile => ({ trophies: 0, xp: 0, coins: 100, gems: 0, games: 0, wins: 0, kills: 0, best: 0, history: [] });
+const fresh = (): Profile => ({ trophies: 0, xp: 0, coins: 100, gems: 0, games: 0, wins: 0, kills: 0, best: 0, history: [],
+  storySeen: false, chosen: null, owned: [], upgrades: {} });
 
 export function loadProfile(): Profile {
   try {
@@ -40,6 +50,39 @@ export function loadProfile(): Profile {
   return fresh();
 }
 function save(p: Profile): void { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* ignore */ } }
+function change(f: (p: Profile) => void): Profile { const p = loadProfile(); f(p); save(p); return p; }
+
+// ------------------------------------------------------------------ heroes: first pick, purchases, upgrades
+export const HERO_PRICE = 50000;
+export const MAX_UPGRADE = 5;
+/** Coins for the next level of one stat: 1 -> 200, 2 -> 500, 3 -> 1000, 4 -> 2000, 5 -> 4000. */
+export const UPGRADE_COST = [200, 500, 1000, 2000, 4000];
+/** Per level: +6 % health, +6 % damage (and healing), +2.5 % speed. */
+export const UPGRADE_STEP: Upgrades = { hp: 0.06, dmg: 0.06, speed: 0.025 };
+
+export const markStorySeen = (): Profile => change((p) => { p.storySeen = true; });
+export function chooseFirst(hero: string): Profile {
+  return change((p) => { if (!p.chosen) { p.chosen = hero; p.owned = [hero]; } });
+}
+export function buyHero(hero: string): Profile | null {
+  const p = loadProfile();
+  if (p.owned.includes(hero) || p.coins < HERO_PRICE) return null;
+  return change((q) => { q.coins -= HERO_PRICE; q.owned.push(hero); });
+}
+export const upgradesOf = (p: Profile, hero: string): Upgrades => {
+  const u = p.upgrades[hero];
+  return { hp: u?.hp ?? 0, dmg: u?.dmg ?? 0, speed: u?.speed ?? 0 };
+};
+export function upgrade(hero: string, stat: Stat): Profile | null {
+  const p = loadProfile(), u = upgradesOf(p, hero), lv = u[stat];
+  if (!p.owned.includes(hero) || lv >= MAX_UPGRADE || p.coins < UPGRADE_COST[lv]) return null;
+  return change((q) => { q.coins -= UPGRADE_COST[lv]; q.upgrades[hero] = { ...u, [stat]: lv + 1 }; });
+}
+/** Multipliers for the match (game/match.ts). */
+export function boostOf(hero: string): Upgrades {
+  const u = upgradesOf(loadProfile(), hero);
+  return { hp: 1 + u.hp * UPGRADE_STEP.hp, dmg: 1 + u.dmg * UPGRADE_STEP.dmg, speed: 1 + u.speed * UPGRADE_STEP.speed };
+}
 
 export const rankOf = (trophies: number): Rank => [...RANKS].reverse().find((r) => trophies >= r.min) ?? RANKS[0];
 export const nextRank = (trophies: number): Rank | null => RANKS.find((r) => r.min > trophies) ?? null;

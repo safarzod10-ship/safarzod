@@ -32,37 +32,38 @@ export interface Kit {
 }
 
 export const DASH = { dist: 3, time: 0.2, cd: 6 };
+export const TEAM_SIZE = 2;   // 2 на 2
 export const RESPAWN_S = 3;
 export const REGEN = { delay: 3, perSec: 0.1 };
 export const MATCH = { seconds: 120, target: 100, zone: { x: -0.14, z: -0.5, r: 2.5 }, pointsPerSec: 2 };
 
 export const KITS: Record<HeroId, Kit> = {
   technik: {
-    hp: 4800, speed: 2.4, armor: 0,
-    attack: { kind: 'gun', range: 6.5, dmg: 450, cd: 0.5, speed: 18, heatMax: 6, cool: 1.5 },
+    hp: 5100, speed: 2.4, armor: 0,
+    attack: { kind: 'gun', range: 6.5, dmg: 480, cd: 0.5, speed: 18, heatMax: 6, cool: 1.5 },
     a1: { name: 'Турель', cd: 14 }, a2: { name: 'Дымовая шашка', cd: 12 },
     turret: { dur: 8, range: 5.5, dmg: 200, rate: 2, hp: 1200, place: 2.2 },
     smoke: { dur: 5, r: 2.5, slow: 0.3, throw: 4.5 },
   },
   tank: {
-    hp: 5700, speed: 1.9, armor: 0.15,
+    hp: 5400, speed: 1.9, armor: 0.15,
     attack: { kind: 'melee', range: 2, arcDeg: 75, dmg: 1000, cd: 0.85, knockEvery: 3, knock: 1.5 },
     a1: { name: 'Гаражная дверь', cd: 10 }, a2: { name: 'Таран', cd: 8 },
     door: { dur: 4, width: 1.5 },
     ram: { dist: 4.5, stun: 0.5, dmg: 400 },
   },
   sprinter: {
-    hp: 4500, speed: 2.85, armor: 0,
+    hp: 4300, speed: 2.85, armor: 0,
     attack: { kind: 'records', range: 5.5, dmg: 400, cd: 0.65, speed: 12, count: 2, spreadDeg: 11, bounces: 1 },
     a1: { name: 'Спурт', cd: 10 }, a2: { name: 'На всю громкость', cd: 14 },
-    spurt: { dashes: 3, dist: 3, gap: 0.45, dmg: 500 },
+    spurt: { dashes: 3, dist: 3, gap: 0.45, dmg: 450 },
     wave: { r: 3, push: 2, dmg: 200 },
     outOfCombatBoost: 0.25,
   },
   sniper: {
-    hp: 4100, speed: 2.3, armor: 0,
-    attack: { kind: 'rifle', range: 8.5, dmg: 1050, cd: 1.4, speed: 30 },
-    a1: { name: 'Растяжка', cd: 12 }, a2: { name: 'Бронебойный', cd: 10 },
+    hp: 4400, speed: 2.3, armor: 0,
+    attack: { kind: 'rifle', range: 8.5, dmg: 1200, cd: 1.3, speed: 30 },
+    a1: { name: 'Растяжка', cd: 10 }, a2: { name: 'Бронебойный', cd: 10 },
     mine: { dur: 20, r: 1.3, dmg: 900, stun: 1.0, arm: 0.6, place: 1.2 },
     pierce: { range: 12, dmg: 1500, delay: 0.35, speed: 40 },
   },
@@ -70,7 +71,7 @@ export const KITS: Record<HeroId, Kit> = {
     hp: 4300, speed: 2.6, armor: 0,
     attack: { kind: 'darts', range: 5.5, dmg: 400, cd: 0.55, speed: 16 },
     a1: { name: 'Аптечка', cd: 11 }, a2: { name: 'Полевой госпиталь', cd: 16 },
-    heal: { r: 3.5, amount: 1500 },
+    heal: { r: 3.5, amount: 1700 },
     hospital: { r: 2.4, dur: 5, hps: 320, throw: 2.5 },
   },
 };

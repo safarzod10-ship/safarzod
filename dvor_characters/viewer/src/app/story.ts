@@ -1,0 +1,29 @@
+/**
+ * The opening story (shown once, before the first hero pick) and each hero's own story for the cards.
+ * Five friends from one courtyard; one night the garages burned and a crown was sprayed on every
+ * wall of the district; everyone blamed someone of their own, and the friends fell out.
+ */
+import type { HeroId } from './data';
+
+export interface Slide { art: string; tint?: string; title: string; text: string }
+
+export const STORY: Slide[] = [
+  { art: 'ui/menu_technik.jpg', title: 'Наш двор',
+    text: 'Пятеро выросли в одном дворе: Техник, Танк, Спринтер, Снайпер и Медик. Во дворе их звали просто — «наши».' },
+  { art: 'ui/menu_sprinter.jpg', title: 'Круг',
+    text: 'Площадка с кольцом посреди двора была их местом. Корону на асфальте нарисовали они сами — знак, что Круг держат «наши».' },
+  { art: 'ui/menu_tank.jpg', tint: 'rgba(255, 90, 20, .35)', title: 'Та ночь',
+    text: 'Однажды ночью сгорели гаражи, а на каждой стене района появилась их корона. Весь район решил: это сделали «наши».' },
+  { art: 'ui/menu_sniper.jpg', tint: 'rgba(40, 60, 120, .35)', title: 'Ссора',
+    text: 'Каждый подумал, что подставил кто-то из своих. Слово за слово — драка. Пятеро разошлись по разным углам двора.' },
+  { art: 'ui/menu_medic.jpg', title: 'Битва за Круг',
+    text: 'Теперь каждый собирает свою команду и бьётся за Круг. Кто станет Царём двора — тот узнает, кто устроил пожар.' },
+];
+
+export const BACKSTORY: Record<HeroId, string> = {
+  technik: 'Собирал всё из хлама за гаражами. Его мини-танк — единственный, кто его ни разу не подвёл. Уверен, что пожар устроил Танк: у того в руках была канистра.',
+  tank: 'Самый сильный во дворе, всегда прикрывал младших. В ту ночь стоял у гаражей — и теперь все смотрят на него как на виноватого.',
+  sprinter: 'Быстрее всех во дворе, музыка в ушах, на месте не стоит. Видела, кто убегал от гаражей, но никому не сказала. Пока.',
+  sniper: 'Вернулся в родной двор после службы. Друзьям доверял как никому — после ссоры не доверяет никому вообще.',
+  medic: 'Лечила всему двору разбитые коленки и носы. Пыталась помирить друзей — не вышло. Теперь лечит только своих.',
+};

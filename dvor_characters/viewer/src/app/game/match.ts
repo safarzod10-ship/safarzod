@@ -1,6 +1,6 @@
 /**
- * «Царь двора» 3 на 3 — match on the real arena with the real character models.
- * Blue team = the player + 2 bots, red team = 3 bots (how good the red bots are follows the player's rank). A team that is alone in the crown circle scores
+ * «Царь двора» 2 на 2 — match on the real arena with the real character models.
+ * Blue team = the player + 1 bot, red team = 2 bots (how good the red bots are follows the player's rank). A team that is alone in the crown circle scores
  * 2 points per second; first to 100 or the leader after 2:00 wins. Fallen heroes return after 3 s.
  * Logic and visuals live together here (single-player prototype); the numbers are in kits.ts.
  */
@@ -9,7 +9,7 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { hitsCollider, insideCourtyard, type Collider } from '../../arena';
 import { HEROES, type Hero, type HeroId } from '../data';
-import { DASH, KITS, MATCH, REGEN, RESPAWN_S, type Kit } from './kits';
+import { DASH, KITS, MATCH, REGEN, RESPAWN_S, TEAM_SIZE, type Kit } from './kits';
 import { SmokeSystem } from './smoke';
 
 export type Team = 0 | 1;   // 0 = blue (player), 1 = red
@@ -36,12 +36,32 @@ export interface MatchOptions {
   blue?: HeroId[]; red?: HeroId[];
   allBots?: boolean;      // balance simulations: the player slot is a bot too
   skill?: number;         // 0..1, red bots' aim and reactions (player's rank)
+  playerBoost?: Boost;    // the player's stat upgrades (progress.ts)
+}
+export interface Boost { hp: number; dmg: number; speed: number }
+
+/** A kit with health, damage / healing and speed multiplied (upgrades, stronger bots at higher ranks). */
+function boostKit(k: Kit, b: Boost): Kit {
+  const d = b.dmg;
+  const x: Kit = JSON.parse(JSON.stringify(k));
+  x.hp = Math.round(k.hp * b.hp);
+  x.speed = k.speed * b.speed;
+  x.attack.dmg = Math.round(k.attack.dmg * d);
+  if (x.turret) x.turret.dmg = Math.round(x.turret.dmg * d);
+  if (x.ram) x.ram.dmg = Math.round(x.ram.dmg * d);
+  if (x.spurt) x.spurt.dmg = Math.round(x.spurt.dmg * d);
+  if (x.wave) x.wave.dmg = Math.round(x.wave.dmg * d);
+  if (x.mine) x.mine.dmg = Math.round(x.mine.dmg * d);
+  if (x.pierce) x.pierce.dmg = Math.round(x.pierce.dmg * d);
+  if (x.heal) x.heal.amount = Math.round(x.heal.amount * d);
+  if (x.hospital) x.hospital.hps = Math.round(x.hospital.hps * d);
+  return x;
 }
 
-/** Three different heroes, the first one given (or random). */
+/** TEAM_SIZE different heroes, the first one given (or random). */
 export function lineup(first?: HeroId): HeroId[] {
   const rest = HEROES.map((h) => h.id).filter((id) => id !== first).sort(() => Math.random() - 0.5);
-  return first ? [first, rest[0], rest[1]] : rest.slice(0, 3);
+  return first ? [first, ...rest.slice(0, TEAM_SIZE - 1)] : rest.slice(0, TEAM_SIZE);
 }
 
 export interface UnitView {
@@ -261,7 +281,11 @@ export class Match {
     stunFx.visible = false;
     this.scene.add(root, ring, stunFx);
     const [sx, sz] = SPAWNS[team][slot];
-    const kit = KITS[hero.id];
+    // the player's upgrades; red bots get a little stronger with the player's rank
+    const s = this.opts.skill ?? 0;
+    const kit = isPlayer && this.opts.playerBoost ? boostKit(KITS[hero.id], this.opts.playerBoost)
+      : team === 1 && !this.opts.allBots && s > 0 ? boostKit(KITS[hero.id], { hp: 1 + 0.15 * s, dmg: 1 + 0.15 * s, speed: 1 })
+      : KITS[hero.id];
     const u: Unit = {
       id, team, hero, kit, isPlayer, slot, root, mixer, actions, mats, flashUntil: 0, cur: null, oneShotUntil: 0, ring, stunFx, door: null,
       x: sx, z: sz, yaw: team === 0 ? Math.PI : 0, kx: 0, kz: 0,
@@ -686,7 +710,7 @@ export class Match {
     const d = e ? Math.hypot(e.x - u.x, e.z - u.z) : 99;
     const zx = MATCH.zone.x, zz = MATCH.zone.z;
     const range = k.attack.range;
-    const want = { tank: 1.3, sprinter: 3.8, technik: 5.2, sniper: 6.0, medic: 4.4 }[u.hero.id];
+    const want = { tank: 1.3, sprinter: 3.8, technik: 5.2, sniper: 5.0, medic: 4.4 }[u.hero.id];
     // red bots get better with the player's rank; the player's own bots play at a steady level
     const skill = this.opts.allBots ? 0.5 : u.team === 1 ? this.opts.skill ?? 0.3 : 0.55;
     const pf = 0.5 + skill;   // how often abilities are used

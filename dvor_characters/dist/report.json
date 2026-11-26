@@ -79,15 +79,15 @@
     "USER_HERO_Sniper": {
       "glb": {
         "file": "USER_HERO_Sniper.glb",
-        "bytes": 471728,
-        "gzip": 387766,
-        "brotli": 378498
+        "bytes": 477156,
+        "gzip": 388140,
+        "brotli": 379591
       },
       "ktx2_glb": {
         "file": "USER_HERO_Sniper.ktx2.glb",
-        "bytes": 437456,
-        "gzip": 352800,
-        "brotli": 344450
+        "bytes": 442884,
+        "gzip": 353213,
+        "brotli": 344561
       },
       "raw_glb_bytes": 919928,
       "meshes": [
@@ -381,7 +381,7 @@
       ]
     }
   },
-  "generated": "2026-11-26T13:22:36.528Z",
+  "generated": "2026-11-26T14:09:19.649Z",
   "tools": {
     "gltf-transform": "4.5.1",
     "meshoptimizer": "1.3.0",

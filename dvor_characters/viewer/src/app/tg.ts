@@ -14,6 +14,7 @@ interface TgWebApp {
   lockOrientation?(): void;
   unlockOrientation?(): void;
   isFullscreen?: boolean;
+  initData?: string;
   initDataUnsafe?: { user?: { first_name?: string; username?: string } };
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   HapticFeedback?: { impactOccurred(s: 'light' | 'medium' | 'heavy'): void; notificationOccurred(t: 'success' | 'error' | 'warning'): void };
@@ -89,3 +90,5 @@ export const inTelegram = (): boolean => !!wa;
 
 /** The player's first name from Telegram, or a neutral name outside Telegram. */
 export const playerName = (): string => wa?.initDataUnsafe?.user?.first_name?.slice(0, 16) || 'Игрок';
+/** Signed launch data for the server (empty outside Telegram). */
+export const initData = (): string => wa?.initData ?? '';

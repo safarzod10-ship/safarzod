@@ -35,6 +35,7 @@ export const ICONS = {
   zone: svg('<ellipse cx="12" cy="17" rx="10" ry="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M10.5 4h3v3.5H17v3h-3.5V14h-3v-3.5H7v-3h3.5z"/>'),
   coin: svg('<circle cx="12" cy="12" r="10" fill="#f5b72e"/><circle cx="12" cy="12" r="7.2" fill="#e09a12"/><path fill="#ffe08a" d="m12 7.2 1.4 2.9 3.2.4-2.3 2.2.6 3.2-2.9-1.6-2.9 1.6.6-3.2-2.3-2.2 3.2-.4z"/>'),
   gem: svg('<path fill="#46c3ff" d="M6 3h12l4 6-10 12L2 9z"/><path fill="#9ae2ff" d="M6 3h12l-3 6H9z"/><path fill="#1f8fd1" d="M12 21 9 9h6z"/>'),
+  lock: svg('<rect x="5" y="10.5" width="14" height="11" rx="2" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2.4" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>'),
   close: svg('<path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/>'),
   rank: svg('<path fill="#9aa1aa" d="M32 2 6 12v18c0 15 11 27 26 32 15-5 26-17 26-32V12z"/><path fill="#5b6068" d="M32 7 11 15v15c0 12 9 22 21 27 12-5 21-15 21-27V15z"/><path fill="#d6dae0" d="M20 17h7v10h10V17h7v30h-7V34H27v13h-7z"/><path fill="#eef1f4" d="M24 17h3v30h-3zM37 17h3v30h-3z" opacity=".6"/>', '0 0 64 64'),
 };

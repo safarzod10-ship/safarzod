@@ -14,6 +14,7 @@
 - [Бег из motion capture](docs/RUN.md)
 - [Оболочка Mini App: экраны по макету](docs/APP.md)
 - [Баланс пяти героев](docs/BALANCE.md)
+- [Сервер: Telegram-бот @dvor_app и рейтинг](docs/SERVER.md)
 
 | Папка | Содержимое |
 |---|---|
