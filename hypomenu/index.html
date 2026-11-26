@@ -31,6 +31,20 @@ html,body{margin:0;height:100%;overflow:hidden;background:#140c2a;font:16px Bold
 .play{width:100%;height:54px;font-size:22px;margin-top:12px;color:#000080}
 .sep{height:2px;background:linear-gradient(#808080 50%,#fff 50%);margin:14px 0 4px}
 .status{margin-top:10px;padding:4px 8px;font-size:13px;color:#3a3a46;border:6px solid;border-image:url(a/Windows_Inner_Frame.png) 5 fill / 6px stretch;min-height:30px}
+#rot{display:none;position:fixed;inset:0;z-index:9;background:#140c2a;color:#fff;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-size:20px;text-align:center}
+#rot svg{width:72px;height:72px;animation:rot 1.6s ease-in-out infinite}
+@keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait){#rot{display:flex}}
+@media (orientation:landscape){
+ #ui{padding:calc(8px + var(--tg-content-safe-area-inset-top,0px) + var(--tg-safe-area-inset-top,0px)) calc(12px + var(--tg-safe-area-inset-right,0px)) calc(8px + var(--tg-safe-area-inset-bottom,0px)) calc(12px + var(--tg-safe-area-inset-left,0px))}
+ .win{width:min(100%,760px)}
+ .in{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-items:start;padding:10px 12px}
+ .title{grid-column:1/3;font-size:34px;padding:8px 6px}
+ .col{min-width:0}
+ .sep{display:none}
+ .status{grid-column:1/3;margin-top:8px}
+ .play{height:46px}
+}
 #soon{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:#0008;padding:16px}
 #soon.on{display:flex}
 </style>
@@ -42,17 +56,22 @@ html,body{margin:0;height:100%;overflow:hidden;background:#140c2a;font:16px Bold
     <div class="bar"><span>HYPOFANGS.EXE</span><i>x</i></div>
     <div class="in">
       <div class="title">HYPOFANGS</div>
-      <div class="row"><span class="lbl">Баланс</span><span class="bal"><span id="bal">—</span><span class="star"></span></span></div>
-      <div class="lbl" style="margin:8px 2px 6px">Ставка</div>
-      <div class="grid" id="stakes"></div>
-      <button class="btn play" id="play">ИГРАТЬ</button>
-      <div class="sep"></div>
-      <div class="lbl" style="margin:8px 2px 6px">Пополнить</div>
-      <div class="grid" id="packs"></div>
+      <div class="col">
+        <div class="row"><span class="lbl">Баланс</span><span class="bal"><span id="bal">—</span><span class="star"></span></span></div>
+        <div class="lbl" style="margin:8px 2px 6px">Ставка</div>
+        <div class="grid" id="stakes"></div>
+      </div>
+      <div class="col">
+        <button class="btn play" id="play">ИГРАТЬ</button>
+        <div class="sep"></div>
+        <div class="lbl" style="margin:8px 2px 6px">Пополнить</div>
+        <div class="grid" id="packs"></div>
+      </div>
       <div class="status" id="status">Загрузка…</div>
     </div>
   </div>
 </div>
+<div id="rot"><svg viewBox="0 0 24 24" fill="none" stroke="#35e4f0" stroke-width="1.6"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Поверните телефон</div>
 <div id="soon"><div class="win"><div class="bar"><span>NEURAL LINK</span><i id="soonX">x</i></div>
   <div class="in"><div style="font-size:16px;line-height:1.4">Игра подключается в следующем обновлении. Баланс и ставка сохранятся.</div>
   <button class="btn play" id="soonOk">OK</button></div></div></div>
@@ -105,7 +124,20 @@ async function topUp(amount) {
 }
 $("play").onclick = () => { click(); $("soon").classList.add("on"); };
 $("soonOk").onclick = $("soonX").onclick = () => { click(); $("soon").classList.remove("on"); };
-if (TG) { TG.ready(); TG.expand(); TG.disableVerticalSwipes && TG.disableVerticalSwipes(); TG.setHeaderColor && TG.setHeaderColor("#000080"); TG.setBackgroundColor && TG.setBackgroundColor("#140c2a"); }
+if (TG) {
+  TG.ready(); TG.expand();
+  try { TG.requestFullscreen && TG.requestFullscreen(); } catch (e) {}
+  try { TG.lockOrientation && TG.lockOrientation(); } catch (e) {}
+  TG.disableVerticalSwipes && TG.disableVerticalSwipes();
+  TG.setHeaderColor && TG.setHeaderColor("#140c2a"); TG.setBackgroundColor && TG.setBackgroundColor("#140c2a");
+} else {
+  // browser: full screen + landscape on the first tap
+  document.addEventListener("pointerdown", function once() {
+    document.removeEventListener("pointerdown", once);
+    const el = document.documentElement;
+    (el.requestFullscreen ? el.requestFullscreen() : Promise.resolve()).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {})).catch(() => {});
+  });
+}
 render(); load();
 </script>
 </body>
