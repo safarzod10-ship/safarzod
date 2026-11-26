@@ -1,5 +1,6 @@
-// Prologue (Maboroshi Bridge): school bus, Akari's drop-off and school dialogue, camera follow, parallax, phone call card,
-// title card and hand-off to the Neon District. Ported from HypoFangs.Prologue.
+// Prologue (Maboroshi Bridge): school bus, Akari's drop-off and school dialogue, camera follow, parallax, then (abduction.js)
+// the biker and the truck; Gaku's phone call card, StrawHat on the bridge, the title card and the hand-off to the Neon District.
+// Ported from HypoFangs.Prologue.
 import { Component, Time, Mathf, Random, newNode } from "../engine/core.js";
 import { registerScript, SpriteRenderer, Camera } from "../engine/scene.js";
 import { Input } from "../engine/input.js";
@@ -8,6 +9,8 @@ import { Audio } from "../engine/audio.js";
 import { G, GA, FX, Sfx, Music, Prefs, GameClock, SpriteAnim } from "./common.js";
 import { SpriteSurfaces } from "./surfaces.js";
 import { raycastAll, mask } from "../engine/physics.js";
+import { CarDialoguePresenter, placeSpeech, protectSpeechActors } from "./speech.js";
+import { stopWithScene } from "./abduction.js";
 
 function reg(cls, name) { cls.typeName = name; registerScript(cls); }
 const advancePressed = () => !G.paused && Input.hit("Enter", "NumpadEnter", "Space", "Tap");
@@ -113,21 +116,7 @@ export class LevelTwoSchoolBus extends Component {
 }
 reg(LevelTwoSchoolBus, "HypoFangs.Prologue.LevelTwoSchoolBus");
 
-// Akari: idle animation (Animator "Idle" state) + bus drop-in
-export class GirlActor extends Component {
-  init(d) { this.artwork = d.artwork; }
-  awake() {
-    this.idle = [...Array(9).keys()].map((i) => Assets.sprite("Girl1_Idle_0" + i)).filter(Boolean);
-    this.listen = ["06", "07", "08", "09", "10"].map((i) => Assets.sprite("Girl1_Dialogue_" + i)).filter(Boolean);
-    this.t = 0; this.animatorEnabled = true;
-  }
-  update() {
-    if (!this.animatorEnabled || G.paused) return;
-    this.t += Time.deltaTime;
-    if (this.idle.length) this.artwork.sprite = this.idle[Math.floor(this.t * 8) % this.idle.length];
-  }
-}
-reg(GirlActor, "HypoFangs.Prologue.GirlWalkToTruck");
+// Akari: bus drop-in (her Animator and walk live in abduction.js, GirlWalkToTruck)
 
 export class GirlBusDropIn extends Component {
   init(d) { Object.assign(this, d); this.Phase = "None"; }
@@ -174,6 +163,7 @@ export class GirlSchoolDialogue extends Component {
   get CurrentMessage() { return this.pages.length ? this.pages[this.pageIndex] : ""; }
   get Visible() { return this.presenting && this.alpha > 0; }
   get Done() { return this.HasShown && !this.presenting; }
+  get FullyRevealed() { return this.pages.length > 0 && this.pageIndex === this.pages.length - 1 && this.RevealedLetters >= this.CurrentMessage.length; }
   onEnable() { Speech.boxes.add(this); }
   onDisable() { Speech.boxes.delete(this); }
   busTailHasPassed() { return this.bus && this.girl && (this.bus.Phase === "Departing" || this.bus.Disappeared) && this.bus.tailX < this.girl.position.x; }
@@ -237,7 +227,7 @@ export class GirlSchoolDialogue extends Component {
   speech() {
     if (!this.Visible) return null;
     const p = this.girl.position;
-    return { text: this.CurrentMessage, revealed: this.RevealedLetters, color: (i) => this.letterColor(i), at: { x: p.x + this.speakerOffset.x, y: p.y + this.speakerOffset.y }, alpha: this.alpha, anchorY: 0.72 };
+    return placeSpeech({ text: this.CurrentMessage, revealed: this.RevealedLetters, color: (i) => this.letterColor(i), at: { x: p.x + this.speakerOffset.x, y: p.y + this.speakerOffset.y }, alpha: this.alpha, anchorY: 0.72 });
   }
 }
 reg(GirlSchoolDialogue, "HypoFangs.Prologue.GirlSchoolDialogue");
@@ -324,37 +314,130 @@ export class LevelTwoGirlCameraAnchor extends Component {
 LevelTwoGirlCameraAnchor.order = 30;
 reg(LevelTwoGirlCameraAnchor, "HypoFangs.Prologue.LevelTwoGirlCameraAnchor");
 
-// PrologueSequence: in this build the bridge abduction scene is not ported yet; after Akari's school dialogue the
-// story continues with Gaku's phone call card and the title card, then the Neon District.
+// PrologueSequence: after the truck has left and the phone lies on the bridge, Gaku's phone call card, "A few hours later.",
+// StrawHat (Zenji) finds Akari's phone on Maboroshi Bridge and runs off, then the title card and the Neon District.
+const VOICE = { r: 224 / 255, g: 239 / 255, b: 1, a: 1 };
+const CYAN = { r: 117 / 255, g: 231 / 255, b: 1, a: 1 };
+const PINK = { r: 1, g: 143 / 255, b: 174 / 255, a: 1 };
+const HIDE = (s) => s.split(" ").map((w) => (w ? `<color=#FFFFFF00>${w}</color>` : w)).join(" ");
+
+// the original builds its ring / hang-up tones in code (MakePhoneTone); same waveform here
+function phoneTone(seconds, disconnect) {
+  const ctx = Audio.ctx;
+  if (!ctx) return null;
+  const rate = 22050, n = Math.ceil(seconds * rate), buf = ctx.createBuffer(1, n, rate), a = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) {
+    const t = i / rate, c = t % 1.5;
+    if (disconnect || c < 0.48 || (c >= 0.65 && c < 1.13)) {
+      const env = Mathf.clamp01((disconnect ? Math.min(t, seconds - t) : Math.min(c % 0.65, 0.48 - (c % 0.65))) / 0.012);
+      a[i] = env * 0.22 * (Math.sin(2 * Math.PI * (disconnect ? 480 : 440) * t) + Math.sin(2 * Math.PI * (disconnect ? 620 : 480) * t));
+    }
+  }
+  return buf;
+}
+
 export class PrologueSequence extends Component {
-  init(d) { this.phoneConversation = d.phoneConversation; this.d = d; this.Phase = "Bus arrival"; this.PhoneLineIndex = -1; this.card = null; this.leaving = false; }
+  init(d) {
+    Object.assign(this, d);
+    this.Phase = "Bus arrival"; this.PhoneLineIndex = -1; this.card = null; this.leaving = false; this.inspecting = false; this.NarrativeFinished = false;
+  }
   awake() {
     G.prologue = this;
     Music.playPeaceful();
     G.paused = G.frozen = G.previewing = false;
     G.inputLocked = true;
-    // actors of the later abduction scene stay off stage
-    for (const n of G.sceneNodes || []) if (["Takeru - Prologue Actor", "Dodge Ram Rebel TRX - Level 2", "Phone - Dropped Behind Car"].includes(n.name)) n.setActive(false);
+    Time.timeScale = 1;
+    if (this.hero) this.hero.node.setActive(false);
     this.school = (G.sceneNodes || []).map((n) => n.getComponent(GirlSchoolDialogue)).find(Boolean);
+    this.presenters = (G.sceneNodes || []).map((n) => n.getComponent(CarDialoguePresenter)).filter(Boolean);
+    // LevelTwoDialogueClearance.protectedActors
+    const actors = ["Akari - Prologue", "Takeru - Prologue Actor", "Dodge Ram Rebel TRX - Level 2", "School Bus - Level 2 Entrance"];
+    protectSpeechActors((G.sceneNodes || []).filter((n) => actors.includes(n.name)).flatMap((n) => n.getComponentsInChildren(SpriteRenderer, true)));
   }
-  onDestroy() { if (G.prologue === this) G.prologue = null; }
+  onDestroy() {
+    if (G.prologue === this) G.prologue = null;
+    protectSpeechActors(null);
+    this.stopTone();
+  }
   start() { this.startCoroutine(this.run()); }
   *run() {
-    while (!this.school || !this.school.Done) yield;
+    while (!(this.departure && this.departure.Phase === "Gone" && this.phoneDrop && this.phoneDrop.Phase === "Resting")) yield;
     yield { seconds: 1 };
     this.card = { alpha: 1, text: "", size: 48 };
     yield* this.phoneCall();
+    this.Phase = "A few hours later";
+    const later = "A few hours later.";
+    for (let t = 0; t < later.length / 20; t += Time.deltaTime) {
+      const n = Math.min(later.length, Math.floor(t * 20));
+      this.card.text = later.slice(0, n) + HIDE(later.slice(n));
+      yield;
+    }
+    this.card.text = later;
+    yield { seconds: 3 };
+    const cam = Camera.main, hero = this.hero, anim = this.heroAnimation;
+    hero.node.setPosition(cam.node.position.x - cam.orthographicSize * cam.aspect - 1.5, this.phoneDrop.GroundY + 0.04);
+    hero.node.setActive(true);
+    hero.flipX = false;
+    anim.play(GA.playerRun, 12, true);
+    for (let t = 0; t < 0.5; t += Time.deltaTime) { this.card.alpha = 1 - t / 0.5; yield; }
+    this.card = null;
+    this.Phase = "StrawHat approaches the phone";
+    const walking = this.startCoroutine(this.walkTo(this.phoneDrop.phone.node.position.x - 0.55));
+    yield* this.speak("Her signal stopped here… Maboroshi Bridge?");
+    yield walking;
+    this.Phase = "Phone discovery";
+    yield* this.speak("Wait… that’s Akari’s phone.");
+    this.inspecting = true;
+    anim.enabled = false;
+    const land = GA.playerLand || [];
+    for (let j = land.length - 1; j >= 0; j--) { hero.sprite = land[j]; yield { seconds: 0.1 }; }
+    yield* this.speak("These tire marks… they’re still fresh.");
+    if (this.inspectionDust && this.inspectionDust.length) {
+      const p = hero.node.position;
+      const sr = FX.anim(this.inspectionDust, p.x, p.y, 12, 22, 1, 0, false, { r: 1, g: 1, b: 1, a: 0.65 });
+      if (sr) { sr.layerRank = 2; sr.node.lsx = 0.8; sr.node.lsy = 0.4; }
+    }
+    for (let j = 0; j < land.length; j++) { hero.sprite = land[j]; yield { seconds: 0.1 }; }
+    this.inspecting = false;
+    anim.enabled = true;
+    anim.play(GA.playerIdle, 8, true);
+    yield* this.speak("AKARI!", PINK);
+    yield* this.speak("Been a while since I had to get serious.");
+    this.Phase = "StrawHat runs offscreen";
+    if (this.follow) this.follow.enabled = false;
+    hero.flipX = false;
+    anim.play(GA.playerRun, 16, true);
+    while (hero.bounds.minX <= cam.node.position.x + cam.orthographicSize * cam.aspect + 0.5) {
+      const p = hero.node.position;
+      hero.node.setPosition(p.x + this.exitRunSpeed * Time.deltaTime, p.y);
+      yield;
+    }
+    yield { seconds: 0.25 };
+    this.NarrativeFinished = true;
     this.Phase = "The hunt begins";
-    this.card.text = "";
+    this.card = { alpha: 1, text: "", size: 48 };
     yield { seconds: 0.5 };
     this.card.text = "HYPOFANGS\n\nTHE HUNT BEGINS";
     yield { seconds: 2.5 };
     this.beginGameplay();
   }
+  playTone(seconds, disconnect) {
+    this.stopTone();
+    const ctx = Audio.ctx, buf = phoneTone(seconds, disconnect);
+    if (!buf) return;
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = buf; g.gain.value = 0.4;
+    src.connect(g); g.connect(Audio.sfxGain);
+    src.start();
+    const tone = (this.tone = { src, g });
+    stopWithScene(() => { try { tone.src.stop(); } catch (e) { } });
+  }
+  stopTone() { if (this.tone) { try { this.tone.src.stop(); } catch (e) { } this.tone = null; } }
   *phoneCall() {
     this.card.size = 56;
     this.Phase = "Phone ringing";
-    yield { seconds: 0.35 };
+    this.playTone(2.6, false);
+    yield { seconds: 2.6 + 0.35 };
     this.Phase = "Gaku's phone call";
     for (let line = 0; line < this.phoneConversation.length; line++) {
       this.PhoneLineIndex = line; this.phoneAdvance = false;
@@ -367,17 +450,44 @@ export class PrologueSequence extends Component {
         const n = Math.min(e.text.length, Math.floor(t * 32));
         DialogueAudio.printed(e.text, prev, n); prev = n;
         Music.dialogue();
-        this.card.text = head + e.text.slice(0, n); this.card.hidden = e.text.slice(n);
+        this.card.text = head + e.text.slice(0, n) + HIDE(e.text.slice(n));
         yield;
       }
       if (!instant) DialogueAudio.printed(e.text, prev, e.text.length);
-      this.card.text = head + e.text; this.card.hidden = "";
+      this.card.text = head + e.text;
       for (let t = 0; t < 2.8; t += Time.deltaTime) { if (this.phoneAdvance) break; Music.dialogue(); yield; }
       this.phoneAdvance = false;
     }
     this.PhoneLineIndex = -1;
-    this.card.text = ""; this.card.size = 48;
+    this.Phase = "Call disconnected";
+    this.card.text = "";
+    this.playTone(0.28, true);
     yield { seconds: 1.75 };
+    this.card.size = 48;
+  }
+  *walkTo(x) {
+    const hero = this.hero;
+    while (hero.node.position.x < x) {
+      const p = hero.node.position;
+      hero.node.setPosition(Mathf.moveTowards(p.x, x, this.walkSpeed * Time.deltaTime), p.y);
+      yield;
+    }
+    this.heroAnimation.play(GA.playerIdle, 8, true);
+  }
+  *speak(text, color = null) {
+    const colors = Array.from({ length: text.length }, () => color || VOICE);
+    for (const w of ["Rensei", "Akari", "Maboroshi Bridge", "phone", "tire marks", "still fresh"]) {
+      const i = text.indexOf(w);
+      if (i >= 0) for (let k = i; k < i + w.length; k++) colors[k] = CYAN;
+    }
+    const d = this.dialogue;
+    d.showLine(text, this.hero.node, { x: 0, y: this.inspecting ? 0.8 : 1.6 }, { x: 0.5, y: 0.7 }, colors);
+    d.revealFirstLetter();
+    while (!(d.FullyRevealed && !d.Visible)) yield;
+    yield;
+  }
+  lateUpdate() {
+    if (!G.paused && this.hero && this.hero.node.activeInHierarchy && this.phoneDrop) SpriteSurfaces.ground(this.hero, this.phoneDrop.GroundY, 0.005);
   }
   update() {
     if (this.leaving || G.menuOpen) return;
@@ -385,23 +495,39 @@ export class PrologueSequence extends Component {
     if (!G.paused && Input.hit("Tab")) this.beginGameplay();
     else if (Input.hit("Escape", "KeyP")) this.togglePause();
   }
+  // on-screen "next line" button (DialogueNavigation.AdvancePresenters)
   advanceDialogue() {
     if (G.paused) return;
-    if (this.PhoneLineIndex >= 0) this.phoneAdvance = true;
-    else if (this.school && this.school.presenting) this.school.advance();
+    if (this.PhoneLineIndex >= 0) { this.phoneAdvance = true; return; }
+    if (this.school && this.school.presenting) this.school.advance();
+    for (const p of this.presenters) if (p.presenting) p.advance();
   }
   togglePause() { if (G.paused) { if (G.pauseMenu) G.pauseMenu.backOrResume(); else this.setPaused(false); } else this.setPaused(true); }
-  setPaused(p) { if (G.paused === p) return; G.paused = p; Time.timeScale = p ? 0 : 1; if (G.pauseMenu) { if (p) G.pauseMenu.open(); else G.pauseMenu.hide(); } }
+  setPaused(p) {
+    if (G.paused === p) return;
+    G.paused = p; Time.timeScale = p ? 0 : 1;
+    if (Audio.ctx && this.tone) { if (p) this.tone.g.gain.value = 0; else this.tone.g.gain.value = 0.4; }
+    if (G.pauseMenu) { if (p) G.pauseMenu.open(); else G.pauseMenu.hide(); }
+  }
   restartPrologue() { this.setPaused(false); G.loadScene("level0"); }
   beginGameplay() {
     if (this.leaving || G.paused) return;
     this.leaving = true;
+    this.stopTone();
     G.inputLocked = false;
     G.roomIndex = 0;
     Prefs.setInt("hypofangs_room", 0);
     Prefs.setInt("hypofangs_prologue_complete", 1);
     Time.timeScale = 1;
     G.loadScene("level1");
+  }
+  // test hook: a one-line summary of the scene state
+  dbg() {
+    const n = (name) => (G.sceneNodes || []).find((x) => x.name === name);
+    const truck = n("Dodge Ram Rebel TRX - Level 2"), girl = n("Akari - Prologue"), biker = n("Takeru - Prologue Actor");
+    const f = (v) => v.toFixed(2);
+    const box = this.presenters.find((p) => p.Visible);
+    return `truck ${truck ? f(truck.position.x) : "-"} girl ${girl ? f(girl.position.x) : "-"} biker ${biker ? f(biker.position.x) : "-"} t=${f(Time.time)}${box ? " | " + box.CurrentMessage.slice(0, 40) : ""}`;
   }
 }
 reg(PrologueSequence, "HypoFangs.Prologue.PrologueSequence");

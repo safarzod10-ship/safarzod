@@ -121,8 +121,8 @@ function drawTiled(R, sr, s, m, fx, fy, u0, v0, u1, v1, vx0, vx1, vy0, vy1) {
     nineSlice(R, s, rx0, ry0, W, H, X, Y, c, sr.lit);
     return;
   }
-  // tiles laid out from the centre of the rect
-  const cx = rx0 + W / 2, cy = ry0 + H / 2;
+  // tiles laid out from the centre of the rect: one tile is centred on it (Unity SpriteDrawMode.Tiled)
+  const cx = rx0 + W / 2 - tw / 2, cy = ry0 + H / 2 - th / 2;
   const nx0 = Math.floor((rx0 - cx) / tw), nx1 = Math.ceil((rx0 + W - cx) / tw);
   const ny0 = Math.floor((ry0 - cy) / th), ny1 = Math.ceil((ry0 + H - cy) / th);
   const sx = Math.abs(m[0]) || 1;
