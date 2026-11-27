@@ -41,7 +41,7 @@ const LAND_THRESHOLD = 0.3;
 /** Land cannot exist beyond this normalised radius of the ellipse. */
 export const LAND_LIMIT = 1.08;
 /** Islands are pushed to this e (a shoal), enclosed water is raised to land. */
-const ISLAND_SINK = -0.07;
+const ISLAND_SINK = -0.03;
 const LAKE_FILL = 0.035;
 
 function buildLobes(params: WorldParams): Lobe[] {
