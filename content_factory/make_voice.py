@@ -44,7 +44,10 @@ def clean_for_tts(t):
 tts = F5TTS(model="F5TTS_v1_Base", ckpt_file=f"{VOICE}/models/f5ru/model_last_inference.safetensors",
             vocab_file=f"{VOICE}/models/f5ru/vocab.txt", device="cpu")
 asr = WhisperModel("small", device="cpu", compute_type="int8")
-norm = lambda s: re.sub(r"[^а-яa-z0-9 ]", "", s.lower().replace("ё", "е").replace("+", "").replace("-", " ")).split()
+from num2words import num2words
+def _digits_to_words(s):  # Whisper writes numbers as digits; the script has them in words
+    return re.sub(r"\d+", lambda m: " " + num2words(int(m.group()), lang="ru") + " ", s.replace("\u00a0", ""))
+norm = lambda s: re.sub(r"[^а-яa-z0-9 ]", "", _digits_to_words(s).lower().replace("ё", "е").replace("+", "").replace("-", " ")).split()
 refcache = {}
 def ref(em):
     if em not in REFS: em = "calm"

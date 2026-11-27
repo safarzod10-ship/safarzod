@@ -43,6 +43,8 @@ Record the format in episodes.log as the 2nd field: `epNN | format | title | hoo
   Mark ambiguous stresses with "+": вс+е (everyone) vs всё, з+амок/зам+ок, пл+ачу/плач+у, etc.
 - make_voice.py now prepends "... " to every line (fixes swallowed first syllables). If a line still loses its
   first word, rephrase it.
+- Even a stressed short NAME as the very first word ("Макс …") can get blurred — prefer "Первым закричал Макс",
+  "Смеялся Макс…". Whisper check converts digits to words (num2words), so numbers in words are fine.
 - Never start a line with a word whose FIRST SYLLABLE IS UNSTRESSED (Артём, Учительница, Однажды, Наконец,
   Сегодня, Папина is OK because ПА is stressed): the first syllable gets lost. Best first words have the stress
   on the first syllable (Папа, Утром, Вечером, Ровно, Тогда is NOT ok → use "Ровно тогда"…). Put a fuller word before it ("Тогда Артём…").

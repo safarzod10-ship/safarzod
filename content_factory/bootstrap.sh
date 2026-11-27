@@ -14,7 +14,7 @@ if [ $ok = 0 ]; then
   uv python install 3.11 >/dev/null
   [ -x "$V/venv_f5/bin/python" ] || uv venv -q -p 3.11 "$V/venv_f5"
   VIRTUAL_ENV="$V/venv_f5" uv pip install -q --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu \
-    f5-tts ruaccent faster-whisper "numpy>=2.0.2,<2.3" "setuptools<81"
+    f5-tts ruaccent faster-whisper num2words "numpy>=2.0.2,<2.3" "setuptools<81"
   mkdir -p "$V/models/f5ru"
   for f in F5TTS_v1_Base_v2/model_last_inference.safetensors F5TTS_v1_Base/vocab.txt; do
     [ -s "$V/models/f5ru/$(basename $f)" ] || curl -sSL -o "$V/models/f5ru/$(basename $f)" "https://huggingface.co/Misha24-10/F5-TTS_RUSSIAN/resolve/main/$f"

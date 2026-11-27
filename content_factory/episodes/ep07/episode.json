@@ -1,0 +1,36 @@
+{
+ "title": "Миллион или рубль?",
+ "format": "choice",
+ "hook": "ЧТО БЫ ТЫ ВЫБРАЛ? 🤔",
+ "outro": "А ТЫ ЧТО ВЫБЕРЕШЬ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": ["МИЛЛИОН", "РУБЛЬ", "УДВАИВАЕТСЯ", "БОГАЧ", "ПЯТЬСОТ", "МИЛЛИОНОВ", "ЖДАТЬ", "ВЫБРАЛ"],
+ "cast": {
+  "max":   {"preset": "max", "pos": [-2.6, 1.2], "label": {"text": "1 000 000 ₽", "color": "#ffd84a"}},
+  "timur": {"preset": "timur", "pos": [2.4, 1], "label": {"text": "1 ₽ × 2", "color": "#ffffff"}}
+ },
+ "lines": [
+  {"text": "Выбор простой. Миллион рублей сразу, или один рубль, который удваивается каждый день. Тридцать дней.", "emotion": "mystery", "cam": "wide:timur,max", "whoosh": true,
+   "acts": {"max": {"faceTo": "cam", "face": "smug"}, "timur": {"faceTo": "cam", "face": "think", "pose": "think"}}},
+  {"text": "Первым закричал Макс: конечно, миллион! Кто вообще выберет один рубль?", "emotion": "excited", "cam": "close:max",
+   "acts": {"max": {"faceTo": "timur", "pose": "point", "face": "laugh"}, "timur": {"pose": "idle", "face": "neutral", "faceTo": "max"}}},
+  {"text": "Рубль, спокойно ответил Тимур. Я выбираю рубль.", "emotion": "calm", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "smile"}, "max": {"pose": "laugh", "face": "laugh"}}},
+  {"text": "Целая неделя прошла, а у Тимура всего шестьдесят четыре рубля.", "emotion": "calm", "cam": "wide:timur,max",
+   "acts": {"timur": {"faceTo": "cam", "face": "neutral", "label": {"from": 1, "to": 64, "suffix": " ₽", "color": "#ffffff", "dur": 2.5, "delay": 0.4}}, "max": {"faceTo": "timur", "pose": "point", "face": "laugh"}}},
+  {"text": "Смеялся Макс до слёз. Ха-ха, богач!", "emotion": "excited", "cam": "medium:max",
+   "acts": {"max": {"faceTo": "timur", "pose": "laugh", "face": "laugh"}}},
+  {"text": "День двадцатый. У Тимура уже пятьсот тысяч.", "emotion": "mystery", "cam": "medium:timur", "boom": true,
+   "acts": {"timur": {"faceTo": "cam", "face": "smile", "label": {"from": 64, "to": 524288, "suffix": " ₽", "color": "#7dff8a", "dur": 2.4, "delay": 0.3}}, "max": {"pose": "idle", "face": "neutral"}}},
+  {"text": "Макс перестал смеяться.", "emotion": "surprise", "cam": "close:max",
+   "acts": {"max": {"faceTo": "timur", "pose": "shock", "face": "shock"}}},
+  {"text": "День тридцатый. Больше пятисот миллионов!", "emotion": "surprise", "cam": "low:timur", "flash": true, "chime": true, "shake": true,
+   "acts": {"timur": {"faceTo": "cam", "pose": "cheer", "face": "joy", "label": {"from": 524288, "to": 536870912, "suffix": " ₽", "color": "#ffe14a", "dur": 2.2, "delay": 0.2}}}},
+  {"text": "Макс спросил: как ты догадался? Тимур улыбнулся. Я просто умею ждать.", "emotion": "warm", "cam": "two:timur:max",
+   "acts": {"max": {"faceTo": "timur", "pose": "shrug", "face": "shock", "faceAfter": [2.6, "smile"]}, "timur": {"faceTo": "max", "pose": "idle", "face": "smile"}}},
+  {"text": "Рубль или миллион? Что бы выбрал ты? Пиши в комментариях.", "emotion": "outro", "cam": "wide:timur,max",
+   "acts": {"max": {"faceTo": "cam", "pose": "wave", "face": "joy"}, "timur": {"faceTo": "cam", "pose": "cheer", "face": "joy"}}}
+ ]
+}
