@@ -2,159 +2,24 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>TERRIA</title>
-<link rel="preload" href="terria-logo.webp" as="image">
-<style>
-/* ===== TERRIA loader — copy this <style>, the #terria-loader markup and the <script> into your page ===== */
-html,body{margin:0;height:100%;background:#000}
-#terria-loader{
-  --logo:url("terria-logo.webp");
-  position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  transition:opacity .9s ease .35s, visibility 0s linear 1.25s;
-}
-#terria-loader.tl-done{opacity:0;visibility:hidden}
-#terria-loader canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-
-/* warm light pool behind the logo */
-.tl-glow{position:absolute;width:90vmin;height:60vmin;border-radius:50%;
-  background:radial-gradient(closest-side,rgba(150,190,60,.13),rgba(120,80,30,.06) 55%,transparent);
-  opacity:0;animation:tl-fade 2.4s ease .6s forwards, tl-breath 5s ease-in-out 3s infinite;}
-
-.tl-stage{position:relative;perspective:1100px;width:min(78vw,640px);aspect-ratio:1000/666}
-.tl-logo{position:absolute;inset:0;transform-style:preserve-3d;
-  animation:tl-rise 1.8s cubic-bezier(.2,.8,.2,1) both, tl-float 7s ease-in-out 1.8s infinite;}
-.tl-logo > *{position:absolute;inset:0;width:100%;height:100%}
-.tl-img{background:var(--logo) center/contain no-repeat;
-  filter:drop-shadow(0 18px 22px rgba(0,0,0,.9));}
-/* fake thickness: darker copies pushed back in Z */
-.tl-depth{background:var(--logo) center/contain no-repeat;filter:brightness(.18) sepia(.6);}
-.tl-depth.d1{transform:translateZ(-6px)} .tl-depth.d2{transform:translateZ(-12px)} .tl-depth.d3{transform:translateZ(-18px);filter:brightness(.08)}
-/* sunlight sweep clipped to the logo shape */
-.tl-shine{-webkit-mask:var(--logo) center/contain no-repeat;mask:var(--logo) center/contain no-repeat;
-  background:linear-gradient(105deg,transparent 35%,rgba(255,236,170,.0) 40%,rgba(255,236,170,.55) 50%,rgba(255,236,170,0) 60%,transparent 65%) 0 0/300% 100% no-repeat;
-  mix-blend-mode:screen;animation:tl-sweep 4.5s ease-in-out 1.4s infinite;}
-/* grass "comes alive": greens pulse a bit brighter */
-.tl-grass{background:var(--logo) center/contain no-repeat;mix-blend-mode:screen;
-  filter:saturate(2.2) brightness(.55) hue-rotate(-8deg);opacity:0;animation:tl-grass 3.2s ease-in-out 2s infinite;}
-
-/* ground shadow */
-.tl-shadow{position:absolute;left:12%;right:12%;bottom:-7%;height:12%;border-radius:50%;
-  background:radial-gradient(closest-side,rgba(0,0,0,.95),transparent);
-  box-shadow:0 0 60px 10px rgba(80,110,30,.07);animation:tl-shadow 7s ease-in-out 1.8s infinite}
-
-/* progress */
-.tl-bar{position:relative;margin-top:clamp(36px,7vh,64px);width:min(62vw,360px);height:8px;border-radius:6px;
-  background:linear-gradient(#1a120b,#2a1c10);box-shadow:inset 0 1px 3px #000,0 0 0 1px rgba(150,110,60,.18);
-  opacity:0;animation:tl-fade .8s ease 1.2s forwards}
-.tl-fill{position:absolute;inset:0;width:0;border-radius:inherit;transition:width .45s cubic-bezier(.3,.7,.3,1);
-  background:linear-gradient(180deg,#b6e34a 0 30%,#6d8f22 31% 45%,#8a5a2b 46% 100%);
-  box-shadow:0 0 12px rgba(160,220,70,.45)}
-.tl-fill::after{content:"";position:absolute;right:-3px;top:-4px;width:6px;height:16px;border-radius:3px;
-  background:radial-gradient(#fff6c8,rgba(200,240,120,0) 70%);filter:blur(1px)}
-.tl-text{margin-top:14px;color:#a48b68;font-size:12px;letter-spacing:.35em;text-transform:uppercase;
-  opacity:0;animation:tl-fade .8s ease 1.4s forwards;font-variant-numeric:tabular-nums}
-
-/* exit */
-#terria-loader.tl-done .tl-logo{animation:tl-out .9s cubic-bezier(.5,0,.75,0) forwards}
-#terria-loader.tl-done .tl-bar,#terria-loader.tl-done .tl-text{transition:opacity .3s;opacity:0;animation:none}
-
-@keyframes tl-rise{
-  0%{opacity:0;transform:translateY(40px) scale(.86) rotateX(28deg);filter:blur(16px) brightness(0)}
-  55%{opacity:1;filter:blur(0) brightness(.7)}
-  78%{transform:translateY(-6px) scale(1.01) rotateX(-3deg)}
-  100%{opacity:1;transform:none;filter:none}}
-@keyframes tl-float{0%,100%{transform:rotateX(4deg) rotateY(-7deg) translateY(0)}50%{transform:rotateX(-2deg) rotateY(7deg) translateY(-10px)}}
-@keyframes tl-shadow{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(.9);opacity:.65}}
-@keyframes tl-sweep{0%{background-position:100% 0}60%,100%{background-position:-50% 0}}
-@keyframes tl-grass{0%,100%{opacity:0}50%{opacity:.28}}
-@keyframes tl-fade{to{opacity:1}}
-@keyframes tl-breath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-@keyframes tl-out{to{opacity:0;transform:scale(1.18) translateY(-10px);filter:blur(10px) brightness(1.6)}}
-@media (prefers-reduced-motion:reduce){.tl-logo,.tl-shine,.tl-grass,.tl-shadow,.tl-glow{animation-duration:.01s!important;animation-iteration-count:1!important}}
-</style>
+<link rel="preload" href="terria-logo.webp" as="image" crossorigin="anonymous">
+<style>html,body{margin:0;height:100%;background:#000}</style>
 </head>
 <body>
-
-<div id="terria-loader" role="progressbar" aria-label="Загрузка TERRIA" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-  <canvas></canvas>
-  <div class="tl-glow"></div>
-  <div class="tl-stage">
-    <div class="tl-shadow"></div>
-    <div class="tl-logo">
-      <div class="tl-depth d3"></div><div class="tl-depth d2"></div><div class="tl-depth d1"></div>
-      <div class="tl-img"></div><div class="tl-grass"></div><div class="tl-shine"></div>
-    </div>
-  </div>
-  <div class="tl-bar"><div class="tl-fill"></div></div>
-  <div class="tl-text">Загрузка <span>0</span>%</div>
-</div>
+<!-- Put this as early in <body> as possible so the loader shows on the first paint. -->
+<script src="terria-loader.js" data-logo="terria-logo.webp"></script>
 
 <script>
-/* TerriaLoader API:
-     TerriaLoader.set(0..1)  — update progress
-     TerriaLoader.done()     — finish (fills to 100%, plays exit, removes itself)
-   With ?demo in the URL it fakes progress for preview. */
-(()=>{
-  const root=document.getElementById('terria-loader');
-  const fill=root.querySelector('.tl-fill'), num=root.querySelector('.tl-text span');
-  const cv=root.querySelector('canvas'), ctx=cv.getContext('2d');
-  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let W,H,dpr, shown=0, target=0, finished=false;
-
-  function size(){dpr=Math.min(devicePixelRatio||1,2);W=cv.width=innerWidth*dpr;H=cv.height=innerHeight*dpr}
-  size(); addEventListener('resize',size);
-
-  // dust motes (float up) + pebbles (fall from the logo and fade)
-  const R=Math.random, motes=[], pebbles=[];
-  for(let i=0;i<70;i++) motes.push({x:R(),y:R(),r:.4+R()*1.6,s:.004+R()*.012,ph:R()*6.3,a:.15+R()*.45});
-  const t0=performance.now();
-  function spawnPebble(){
-    const stage=root.querySelector('.tl-stage').getBoundingClientRect();
-    pebbles.push({x:(stage.left+stage.width*(.15+R()*.7))*dpr,y:(stage.top+stage.height*(.55+R()*.4))*dpr,
-      vx:(R()-.5)*.4*dpr,vy:0,r:(1+R()*2.2)*dpr,life:1,c:R()<.5?'#6b4a2c':'#7d776c'});
-  }
-  function frame(now){
-    const t=(now-t0)/1000;
-    ctx.clearRect(0,0,W,H);
-    const fadeIn=Math.min(1,t/2);
-    for(const m of motes){
-      m.y-=m.s/60*3; if(m.y<-.02){m.y=1.02;m.x=R()}
-      const x=(m.x+Math.sin(t*.4+m.ph)*.01)*W, y=m.y*H;
-      ctx.fillStyle=`rgba(225,200,150,${m.a*fadeIn*(.55+.45*Math.sin(t*1.7+m.ph))})`;
-      ctx.beginPath();ctx.arc(x,y,m.r*dpr,0,7);ctx.fill();
-    }
-    if(t>1.6 && R()<.06 && !finished) spawnPebble();
-    for(let i=pebbles.length-1;i>=0;i--){const p=pebbles[i];
-      p.vy+=.12*dpr;p.x+=p.vx;p.y+=p.vy;p.life-=.012;
-      if(p.life<=0){pebbles.splice(i,1);continue}
-      ctx.globalAlpha=p.life;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();ctx.globalAlpha=1;}
-    // smooth progress
-    shown+=(target-shown)*.08; if(Math.abs(target-shown)<.001)shown=target;
-    const pct=Math.round(shown*100); num.textContent=pct; fill.style.width=(shown*100)+'%';
-    root.setAttribute('aria-valuenow',pct);
-    if(root.isConnected) requestAnimationFrame(frame);
-  }
-  if(!reduce) requestAnimationFrame(frame); else setInterval(()=>frame(performance.now()),200);
-
-  window.TerriaLoader={
-    set(p){target=Math.max(target,Math.min(1,+p||0))},
-    done(){ if(finished)return; finished=true; target=1;
-      // let the bar visibly reach 100%, then exit
-      setTimeout(()=>{root.classList.add('tl-done');
-        // burst of pebbles as the logo releases
-        if(!reduce) for(let i=0;i<40;i++) spawnPebble();
-        setTimeout(()=>root.remove(),1400)},600);
-    }
-  };
-
-  if(/[?&]demo/.test(location.search)){
-    let p=0; const step=()=>{p+=.04+Math.random()*.09; TerriaLoader.set(p);
-      if(p<1) setTimeout(step,250+Math.random()*450); else setTimeout(()=>TerriaLoader.done(),500)};
-    setTimeout(step,1500);
-  }
+// Demo: fake progress. In the real page call TerriaLoader.set(p) / TerriaLoader.done() from your loading code.
+(function(){
+  var p = 0;
+  (function step(){
+    p += .03 + Math.random() * .08; TerriaLoader.set(p);
+    if (p < 1) setTimeout(step, 250 + Math.random() * 500); else TerriaLoader.done();
+  })();
+  addEventListener('terria-loader-done', function(){ console.log('loader finished'); });
 })();
 </script>
 </body>
