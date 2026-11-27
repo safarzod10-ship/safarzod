@@ -1,0 +1,42 @@
+{
+ "title": "Число падает",
+ "format": "series",
+ "hook": "ЕГО ЧИСЛО ПАДАЕТ 😱",
+ "outro": "А ТЫ ХВАСТАЕШЬСЯ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": ["ХВАСТАТЬСЯ", "ДОБРЫЙ", "НАПОМИНАЛ", "МЕНЬШЕ", "ПАДАЛО", "ДОБРОМ", "МОЛЧА", "РАСТИ"],
+ "cast": {
+  "timur":  {"preset": "timur", "pos": [0, 1], "label": {"text": "5 000", "heart": true, "color": "#7dff8a"}},
+  "artem":  {"preset": "artem", "pos": [3.8, 1.2], "label": {"text": "1 400", "heart": true, "color": "#7dff8a"}},
+  "liza":   {"preset": "liza", "pos": [-4.2, 1.4], "hidden": true, "label": {"text": "999 999 999", "heart": true, "color": "#ffe14a"}},
+  "granny": {"preset": "granny", "pos": [-3.6, 2], "hidden": true, "label": {"text": "9 800", "heart": true, "color": "#7dff8a"}},
+  "kid":    {"preset": "kid", "pos": [3.2, 2.4], "hidden": true, "label": {"text": "300", "heart": true, "color": "#7dff8a"}}
+ },
+ "lines": [
+  {"text": "Пять тысяч горело над моей головой. И я начал этим хвастаться.", "emotion": "mystery", "cam": "medium:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "smug", "pose": "idle"}}},
+  {"text": "Хвастался я всем подряд: я самый добрый в школе!", "emotion": "excited", "cam": "wide:timur,artem",
+   "acts": {"timur": {"faceTo": "artem", "face": "laugh", "pose": "point"}, "artem": {"faceTo": "timur", "face": "neutral"}}},
+  {"text": "Другу Артёму я помог с задачей, но потом три дня ему напоминал.", "emotion": "calm", "cam": "two:timur:artem",
+   "acts": {"timur": {"faceTo": "artem", "face": "smug", "pose": "give"}, "artem": {"faceTo": "timur", "face": "angry", "pose": "facepalm"}}},
+  {"text": "Утром я посмотрел наверх. Число стало меньше!", "emotion": "surprise", "cam": "close:timur", "boom": true,
+   "acts": {"timur": {"faceTo": "cam", "face": "shock", "pose": "shock", "label": {"from": 5000, "to": 4200, "heart": true, "color": "#ffe14a", "dur": 1.2, "delay": 2.0}}}},
+  {"text": "Чем больше я хвастался, тем быстрее оно падало.", "emotion": "excited", "cam": "medium:timur", "shake": true,
+   "acts": {"timur": {"faceTo": "cam", "face": "shock", "pose": "shock", "label": {"from": 4200, "to": 1500, "heart": true, "color": "#ff5a5a", "dur": 2.4, "delay": 0.3}}}},
+  {"text": "Даже бабушка Зина спросила: сынок, что с тобой?", "emotion": "sad", "cam": "two:granny:timur",
+   "acts": {"artem": {"hide": true}, "granny": {"show": true, "faceTo": "timur", "face": "sad"}, "timur": {"faceTo": "granny", "face": "sad", "pose": "sad"}}},
+  {"text": "Тихо Лиза отвела меня в сторону и сказала:", "emotion": "mystery", "cam": "two:liza:timur",
+   "acts": {"granny": {"hide": true}, "liza": {"show": true, "pos": [-3.4, 1.8], "faceTo": "timur", "face": "neutral"}, "timur": {"faceTo": "liza", "face": "sad", "pose": "idle"}}},
+  {"text": "Помни: добро, которым хвастаются, перестаёт быть добром.", "emotion": "warm", "cam": "close:liza", "chime": true,
+   "acts": {"liza": {"faceTo": "cam", "face": "smile"}}},
+  {"text": "Весь следующий день я помогал молча. Никому ничего не говорил.", "emotion": "calm", "cam": "wide:timur,kid,granny",
+   "acts": {"liza": {"hide": true}, "granny": {"show": true, "pos": [-3.4, 2], "faceTo": "timur", "face": "smile"}, "kid": {"show": true, "faceTo": "timur", "face": "joy"},
+            "timur": {"pos": [0, 1.6], "faceTo": "granny", "face": "smile", "pose": "carry"}}},
+  {"text": "Вечером число снова начало расти. Тихо-тихо, но расти.", "emotion": "warm", "cam": "low:timur", "time": "evening", "flash": true, "chime": true,
+   "acts": {"granny": {"hide": true}, "kid": {"hide": true}, "timur": {"faceTo": "cam", "face": "joy", "pose": "idle", "label": {"from": 1500, "to": 5100, "heart": true, "color": "#7dff8a", "dur": 3.0, "delay": 0.4}}}},
+  {"text": "Хвастался ты когда-нибудь своими добрыми делами? Напиши в комментариях.", "emotion": "outro", "cam": "medium:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "joy", "pose": "wave"}}}
+ ]
+}
