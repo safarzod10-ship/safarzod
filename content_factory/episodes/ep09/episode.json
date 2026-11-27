@@ -1,0 +1,48 @@
+{
+ "title": "Добро напоказ",
+ "format": "series",
+ "hook": "ДОБРОТА НАПОКАЗ? 🤨",
+ "outro": "А ТЫ ДЕЛАЛ ДОБРО ТАЙНО?",
+ "music": "warm",
+ "location": "school",
+ "time": "day",
+ "highlight": ["ДВОЙКА", "ДОБРЫЙ", "НИЧЕГО", "ЕДИНИЦУ", "МЯЧ", "ВИДЕЛ", "СТО", "НАСТОЯЩАЯ"],
+ "cast": {
+  "max":    {"preset": "max", "pos": [-2, 1.5], "label": {"text": "2", "heart": true, "color": "#ff5a5a"}},
+  "timur":  {"preset": "timur", "pos": [3, 1], "label": {"text": "5 000", "heart": true, "color": "#7dff8a"}},
+  "artem":  {"preset": "artem", "pos": [6.2, 0.4], "label": {"text": "1 400", "heart": true, "color": "#7dff8a"}},
+  "granny": {"preset": "granny", "pos": [-5.6, -0.6], "label": {"text": "9 800", "heart": true, "color": "#7dff8a"}},
+  "kid":    {"preset": "kid", "pos": [2, 1], "hidden": true, "label": {"text": "300", "heart": true, "color": "#7dff8a"}}
+ },
+ "props": [
+  {"shape": "ball", "pos": [6, 0.5, -13.5], "from": 6, "to": 6, "location": "park"},
+  {"shape": "ball", "holder": "max", "from": 7, "to": 7},
+  {"shape": "ball", "holder": "kid", "from": 8, "to": 11}
+ ],
+ "lines": [
+  {"text": "Помните Макса? Над его головой всё ещё горела двойка.", "emotion": "mystery", "cam": "wide:max,timur,artem",
+   "acts": {"max": {"faceTo": "cam", "face": "neutral", "pose": "sad"}, "timur": {"faceTo": "cam", "face": "smile"}, "artem": {"faceTo": "cam", "face": "smile"}}},
+  {"text": "Хитрый план придумал Макс: делать добро у всех на виду, чтобы число выросло.", "emotion": "excited", "cam": "medium:max",
+   "acts": {"max": {"faceTo": "cam", "face": "smug", "pose": "think"}}},
+  {"text": "Бабушке он помог с сумкой, громко крича: смотрите все, какой я добрый!", "emotion": "excited", "cam": "two:max:granny",
+   "acts": {"max": {"faceTo": "cam", "pose": "carry", "face": "laugh"}, "granny": {"faceTo": "max", "face": "shock"}, "timur": {"faceTo": "max"}, "artem": {"faceTo": "max"}}},
+  {"text": "Цифра над ним не изменилась. Ни на единицу.", "emotion": "surprise", "cam": "close:max", "boom": true,
+   "acts": {"max": {"faceTo": "cam", "pose": "shock", "face": "shock"}}},
+  {"text": "Целый день Макс старался при всех. Снова ничего.", "emotion": "calm", "cam": "wide:max,timur,artem",
+   "acts": {"granny": {"hide": true}, "max": {"faceTo": "cam", "pose": "wave", "face": "smile", "faceAfter": [2.4, "sad"]}, "timur": {"faceTo": "max", "pose": "shrug", "face": "neutral"}, "artem": {"faceTo": "max", "face": "neutral"}}},
+  {"text": "Злой как туча, Макс ушёл в парк один.", "emotion": "angry", "cam": "medium:max", "location": "park", "time": "evening",
+   "acts": {"timur": {"hide": true}, "artem": {"hide": true}, "max": {"pos": [-10, 2], "moveTo": [-4, 1.6], "faceTo": "cam", "face": "angry"}}},
+  {"text": "Плакал там малыш. Его мяч укатился прямо в пруд.", "emotion": "sad", "cam": "two:kid:max",
+   "acts": {"kid": {"show": true, "pos": [1.6, -1], "faceTo": [6, -14], "pose": "cry", "face": "cry"}, "max": {"faceTo": "kid", "face": "neutral"}}},
+  {"text": "Рядом не было ни души. Макс вздохнул, залез в холодную воду и достал мяч.", "emotion": "calm", "cam": "wide:max,kid",
+   "acts": {"max": {"moveTo": [5, -10.4], "faceTo": [6, -14], "face": "neutral", "pose": "give", "delay": 1.2}, "kid": {"faceTo": "max", "pose": "idle", "face": "sad"}}},
+  {"text": "Крепко обнял его малыш и убежал. Никто этого не видел.", "emotion": "warm", "cam": "two:max:kid",
+   "acts": {"max": {"pos": [0.2, 0.4], "faceTo": "kid", "pose": "idle", "face": "smile"}, "kid": {"pos": [2, 0.6], "faceTo": "max", "pose": "hug", "face": "joy", "moveTo": [16, 4], "run": true, "delay": 2.6}}},
+  {"text": "Кроме числа. Двойка вспыхнула и превратилась в сто!", "emotion": "surprise", "cam": "low:max", "flash": true, "chime": true, "shake": true,
+   "acts": {"kid": {"hide": true}, "max": {"faceTo": "cam", "pose": "shock", "face": "shock", "faceAfter": [2.0, "joy"], "label": {"from": 2, "to": 100, "heart": true, "color": "#7dff8a", "dur": 1.6, "delay": 0.6}}}},
+  {"text": "Понял Макс тогда: доброта считается, только когда она настоящая.", "emotion": "warm", "cam": "close:max",
+   "acts": {"max": {"faceTo": "cam", "pose": "idle", "face": "smile"}}},
+  {"text": "Делал ты добро, когда никто не видел? Напиши в комментариях.", "emotion": "outro", "cam": "medium:max",
+   "acts": {"max": {"faceTo": "cam", "pose": "cheer", "face": "joy"}}}
+ ]
+}
