@@ -1,0 +1,350 @@
+{
+ "title": "Ночные шаги",
+ "format": "mystery-night",
+ "hook": "КТО ХОДИТ НОЧЬЮ ПО ДОМУ? 😨",
+ "outro": "А ТЫ ЧТО ДАРИЛ МАМЕ?",
+ "music": "mystery",
+ "location": "home",
+ "time": "night",
+ "labels": false,
+ "highlight": [
+  "НОЧЬ",
+  "ПРИВИДЕНИЕ",
+  "ФОНАРИК",
+  "СПИНОЙ",
+  "БАБУШКА",
+  "ТОРТ",
+  "ПОЛУЧИЛОСЬ",
+  "СЧАСТЬЯ"
+ ],
+ "cast": {
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    -11,
+    4
+   ],
+   "label": null
+  },
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    -13.4,
+    4.6
+   ],
+   "label": null
+  },
+  "granny": {
+   "preset": "granny",
+   "pos": [
+    4,
+    -3.4
+   ],
+   "hidden": true,
+   "label": null
+  },
+  "mom": {
+   "preset": "mom",
+   "pos": [
+    9,
+    2
+   ],
+   "hidden": true,
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "phone",
+   "size": [
+    0.5,
+    0.5,
+    0.9
+   ],
+   "color": "#fff3a0",
+   "holder": "timur",
+   "from": 3,
+   "to": 4
+  },
+  {
+   "shape": "cake",
+   "pos": [
+    4,
+    2.85,
+    -6
+   ],
+   "from": 7,
+   "to": 8
+  },
+  {
+   "shape": "cake",
+   "holder": "granny",
+   "from": 9,
+   "to": 10
+  }
+ ],
+ "lines": [
+  {
+   "text": "Каждую ночь в нашем доме кто-то ходил на кухне.",
+   "emotion": "mystery",
+   "cam": "wide:timur,liza",
+   "boom": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "neutral"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Тихо скрипели половицы. Звенела посуда.",
+   "emotion": "mystery",
+   "cam": "medium:timur",
+   "whoosh": true,
+   "acts": {
+    "timur": {
+     "faceTo": [
+      4,
+      -6
+     ],
+     "face": "shock"
+    },
+    "liza": {
+     "faceTo": [
+      4,
+      -6
+     ],
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Шёпотом Лиза сказала: это привидение!",
+   "emotion": "excited",
+   "cam": "two:liza:timur",
+   "acts": {
+    "liza": {
+     "faceTo": "timur",
+     "face": "shock",
+     "pose": "shock"
+    },
+    "timur": {
+     "faceTo": "liza",
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Взяли мы фонарик и на цыпочках пошли на кухню.",
+   "emotion": "calm",
+   "cam": "wide:timur,liza",
+   "acts": {
+    "timur": {
+     "moveTo": [
+      -3,
+      1.4
+     ],
+     "walkTime": 3.4,
+     "face": "neutral",
+     "pose": "give"
+    },
+    "liza": {
+     "moveTo": [
+      -5.6,
+      2.2
+     ],
+     "walkTime": 3.4,
+     "delay": 0.3,
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Свет на кухне горел. И кто-то стоял к нам спиной!",
+   "emotion": "surprise",
+   "cam": "over:timur:granny",
+   "boom": true,
+   "shake": true,
+   "acts": {
+    "granny": {
+     "show": true,
+     "faceTo": [
+      4,
+      -9
+     ],
+     "pose": "give",
+     "face": "neutral"
+    },
+    "timur": {
+     "faceTo": "granny",
+     "face": "shock",
+     "pose": "shock"
+    },
+    "liza": {
+     "faceTo": "granny",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Громко закричала Лиза и уронила фонарик.",
+   "emotion": "excited",
+   "cam": "close:liza",
+   "shake": true,
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "cheer"
+    },
+    "timur": {
+     "pose": "shock"
+    }
+   }
+  },
+  {
+   "text": "Бабушка это была! В муке с головы до ног.",
+   "emotion": "surprise",
+   "cam": "medium:granny",
+   "flash": true,
+   "acts": {
+    "granny": {
+     "faceTo": "timur",
+     "face": "shock",
+     "faceAfter": [
+      1.8,
+      "smile"
+     ],
+     "pose": "shrug",
+     "look": null
+    },
+    "liza": {
+     "pose": "idle",
+     "face": "shock"
+    },
+    "timur": {
+     "pose": "idle",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Тише, сказала она. Я каждую ночь учусь печь торт. Завтра у мамы день рождения.",
+   "emotion": "warm",
+   "cam": "close:granny",
+   "acts": {
+    "granny": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "idle"
+    },
+    "timur": {
+     "face": "smile",
+     "faceTo": "granny"
+    },
+    "liza": {
+     "face": "smile",
+     "faceTo": "granny"
+    }
+   }
+  },
+  {
+   "text": "Пять ночей не получалось. А сегодня получилось!",
+   "emotion": "excited",
+   "cam": "wide:granny,timur,liza",
+   "chime": true,
+   "acts": {
+    "granny": {
+     "faceTo": "timur",
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "timur": {
+     "faceTo": "granny",
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "liza": {
+     "face": "joy",
+     "pose": "cheer"
+    }
+   }
+  },
+  {
+   "text": "Утром мама увидела торт и заплакала от счастья.",
+   "emotion": "warm",
+   "cam": "two:mom:granny",
+   "time": "day",
+   "chime": true,
+   "acts": {
+    "mom": {
+     "show": true,
+     "pos": [
+      7.4,
+      1.6
+     ],
+     "faceTo": "granny",
+     "face": "joy",
+     "pose": "hug"
+    },
+    "granny": {
+     "pos": [
+      3.6,
+      1.2
+     ],
+     "faceTo": "mom",
+     "face": "joy",
+     "pose": "give"
+    },
+    "timur": {
+     "pos": [
+      -1.2,
+      2.6
+     ],
+     "faceTo": "mom",
+     "face": "joy",
+     "pose": "idle"
+    },
+    "liza": {
+     "pos": [
+      -4,
+      2.4
+     ],
+     "faceTo": "mom",
+     "face": "joy",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Маме на праздник что ты дарил? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "mom": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    },
+    "granny": {
+     "faceTo": "cam",
+     "face": "joy"
+    },
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    }
+   }
+  }
+ ]
+}
