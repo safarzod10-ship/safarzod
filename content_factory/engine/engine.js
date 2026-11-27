@@ -303,7 +303,8 @@ function makeChar(id, o) {
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('0', false, '#fff'), depthTest: false, transparent: true }));
   label.renderOrder = 10; root.add(label);
   const bags = arms.map(a => box(0.8, 1, 0.6, mat(0xa8743f), 0, -2.6, 0.1, a));
-  return { id, root, legs, arms, torso, headG, faceM, label, bags, o, phase: Object.keys(PRESETS).indexOf(o.preset) + rnd() * 3 };
+  const mats = new Set(); root.traverse(m => { if (m.isMesh) [].concat(m.material).forEach(x => mats.add(x)); });
+  return { id, root, legs, arms, torso, headG, faceM, label, bags, o, mats: [...mats], phase: Object.keys(PRESETS).indexOf(o.preset) + rnd() * 3 };
 }
 function pose(c, p, t) {
   const [lL, lR] = c.legs, [aL, aR] = c.arms;
@@ -341,6 +342,10 @@ function pose(c, p, t) {
     c.root.position.y = -0.8; lL.rotation.x = -1.5; lR.rotation.x = -1.5; c.torso.position.y = 2;
   }
   else if (p === 'facepalm') { aR.rotation.x = -2.4; aR.rotation.z = -0.3; c.headG.rotation.x = 0.25; }
+  else if (p === 'fly') {
+    c.root.position.y += 3.6 + Math.sin(t * 2.4) * 0.35; aL.rotation.z = -1.45; aR.rotation.z = 1.45;
+    lL.rotation.x = 0.35; lR.rotation.x = 0.25; c.torso.rotation.x = 0.25; c.headG.rotation.x = -0.2;
+  }
   else if (p === 'shrug') { aL.rotation.z = -0.9; aR.rotation.z = 0.9; aL.rotation.x = -0.6; aR.rotation.x = -0.6; c.headG.rotation.z = 0.12; }
 }
 
@@ -365,7 +370,7 @@ function shotLoc(i) { for (let j = i; j >= 0; j--) if (SH[j].location) return SH
 function shotTime(i) { for (let j = i; j >= 0; j--) if (SH[j].time) return SH[j].time; return E.time || 'day'; }
 function stateAt(t, s) {
   const st = {};
-  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].root.scale.y };
+  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].root.scale.y, ghost: false };
   for (let j = 0; j <= s; j++) {
     const acts = SH[j].acts || {}, t0 = shotStart[j], isCur = j === s;
     // location change resets everyone to explicit positions given in that shot
@@ -375,6 +380,7 @@ function stateAt(t, s) {
       if (a.hide !== undefined) x.hidden = a.hide;
       if (a.show) x.hidden = false;
       if (a.faceTo !== undefined) x.face = a.faceTo;
+      if (a.ghost !== undefined) x.ghost = a.ghost;
       if (a.moveTo) {
         const to = v3(a.moveTo[0], 0, a.moveTo[1]);
         const dist = x.pos.distanceTo(to), dur = a.walkTime || Math.max(0.6, dist / (a.run ? 6 : 3.4));
@@ -396,6 +402,7 @@ function stateAt(t, s) {
       }
     }
   }
+  for (const [id, a] of Object.entries(SH[s].acts || {})) if (st[id] && a.pose === 'fly') st[id].fly = true;
   return st;
 }
 function labelText(L) {
@@ -405,7 +412,7 @@ function labelText(L) {
 }
 
 // ---------- camera ----------
-const headPos = (x, y = 4.9) => v3(x.pos.x, y * (x.sc || 1), x.pos.z);
+const headPos = (x, y = 4.9) => v3(x.pos.x, y * (x.sc || 1) + (x.fly ? 3.6 : 0), x.pos.z);
 function frontDir(x, others) {
   // direction the character "faces" for framing; 'cam' => world +z
   const f = x.face;
@@ -508,6 +515,8 @@ window.renderAt = function (t) {
     if (a.faceAfter && t - t0 > a.faceAfter[0]) fe = a.faceAfter[1];
     c.faceM.map = faceTex(c.o.skin, fe, c.o.glasses && !['laugh', 'joy', 'shock', 'cry'].includes(fe));
     c.bags.forEach(b => b.visible = p === 'carry' || p === 'carrywalk');
+    const op = x.ghost ? 0.3 + 0.08 * Math.sin(t * 4) : 1; // 'ghost' = invisible-ish
+    for (const m of c.mats) { const tr = op < 1; if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; } m.opacity = op; m.depthWrite = !tr; }
     const txt = labelText(x.label);
     c.label.visible = !!txt && !x.hidden && E.labels !== false;
     if (txt) {

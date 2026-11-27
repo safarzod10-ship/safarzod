@@ -1,0 +1,385 @@
+{
+ "title": "Летать или невидимость",
+ "format": "choice",
+ "hook": "ЛЕТАТЬ ИЛИ НЕВИДИМКА? 🤔",
+ "outro": "А ТЫ ЧТО ВЫБЕРЕШЬ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": [
+  "НЕВИДИМОСТЬ",
+  "НЕБО",
+  "СЧАСТЬЯ",
+  "ПИРОЖКА",
+  "ЗАМЕЧАТЬ",
+  "ОДИН",
+  "МЯЧ",
+  "ОДИНОКО",
+  "ВИДИМЫЙ"
+ ],
+ "cast": {
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    -2.6,
+    1
+   ],
+   "label": {
+    "text": "ЛЕТАТЬ",
+    "color": "#9fd8ff"
+   }
+  },
+  "max": {
+   "preset": "max",
+   "pos": [
+    2.6,
+    1.2
+   ],
+   "label": {
+    "text": "НЕВИДИМКА",
+    "color": "#c8a0ff"
+   }
+  },
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    -7,
+    2
+   ],
+   "hidden": true,
+   "label": null
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    -9.4,
+    1.2
+   ],
+   "hidden": true,
+   "label": null
+  },
+  "kid": {
+   "preset": "kid",
+   "pos": [
+    5,
+    3
+   ],
+   "hidden": true,
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "cake",
+   "size": [
+    0.9,
+    0.6,
+    0.9
+   ],
+   "color": "#e0a050",
+   "holder": "max",
+   "from": 3,
+   "to": 3
+  },
+  {
+   "shape": "ball",
+   "holder": "liza",
+   "from": 7,
+   "to": 7
+  }
+ ],
+ "lines": [
+  {
+   "text": "Выбор такой: умение летать или невидимость. Навсегда.",
+   "emotion": "mystery",
+   "cam": "wide:liza,max",
+   "whoosh": true,
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "think",
+     "pose": "think"
+    },
+    "max": {
+     "faceTo": "cam",
+     "face": "smug"
+    }
+   }
+  },
+  {
+   "text": "Небо выбрала Лиза. А Макс выбрал невидимость.",
+   "emotion": "excited",
+   "cam": "wide:liza,max",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "max": {
+     "faceTo": "cam",
+     "face": "laugh",
+     "pose": "point",
+     "ghost": true
+    }
+   }
+  },
+  {
+   "text": "Первый день Лиза летала над школой и кричала от счастья!",
+   "emotion": "excited",
+   "cam": "wide:liza",
+   "chime": true,
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "fly",
+     "label": null
+    },
+    "max": {
+     "label": null
+    }
+   }
+  },
+  {
+   "text": "Хитрый Макс пробрался в столовую и съел три пирожка. Никто не заметил!",
+   "emotion": "excited",
+   "cam": "medium:max",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "laugh",
+     "pose": "give"
+    }
+   }
+  },
+  {
+   "text": "Целая неделя прошла.",
+   "emotion": "mystery",
+   "cam": "wide",
+   "whoosh": true,
+   "acts": {
+    "timur": {
+     "show": true
+    },
+    "artem": {
+     "show": true
+    },
+    "liza": {
+     "pose": "idle",
+     "face": "smile"
+    },
+    "max": {
+     "pose": "idle",
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Даже друзья проходили мимо Макса. Его просто перестали замечать.",
+   "emotion": "sad",
+   "cam": "wide",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "wave"
+    },
+    "timur": {
+     "moveTo": [
+      9,
+      2.4
+     ],
+     "walkTime": 4.5,
+     "face": "smile"
+    },
+    "artem": {
+     "moveTo": [
+      7,
+      3.4
+     ],
+     "walkTime": 4.5,
+     "delay": 0.4,
+     "face": "smile"
+    }
+   }
+  },
+  {
+   "text": "Свой день рождения он встретил один. Никто не поздравил.",
+   "emotion": "sad",
+   "cam": "medium:max",
+   "location": "park",
+   "time": "evening",
+   "acts": {
+    "liza": {
+     "hide": true
+    },
+    "timur": {
+     "hide": true
+    },
+    "artem": {
+     "hide": true
+    },
+    "max": {
+     "pos": [
+      -6,
+      -3.1
+     ],
+     "faceTo": [
+      -6,
+      10
+     ],
+     "pose": "sit",
+     "face": "cry"
+    }
+   }
+  },
+  {
+   "text": "Ловко Лиза достала с крыши мяч малыша, и вся школа ей хлопала.",
+   "emotion": "warm",
+   "cam": "wide:liza,kid,timur",
+   "location": "school",
+   "time": "day",
+   "acts": {
+    "max": {
+     "hide": true
+    },
+    "liza": {
+     "show": true,
+     "pos": [
+      0,
+      1
+     ],
+     "faceTo": "kid",
+     "pose": "fly",
+     "face": "joy"
+    },
+    "kid": {
+     "show": true,
+     "pos": [
+      3.4,
+      2.4
+     ],
+     "faceTo": "liza",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "timur": {
+     "show": true,
+     "pos": [
+      -3.6,
+      2.8
+     ],
+     "faceTo": "liza",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "artem": {
+     "show": true,
+     "pos": [
+      6.4,
+      1.6
+     ],
+     "faceTo": "liza",
+     "pose": "cheer",
+     "face": "joy"
+    }
+   }
+  },
+  {
+   "text": "Понял Макс тогда: быть невидимым очень одиноко.",
+   "emotion": "sad",
+   "cam": "medium:max",
+   "acts": {
+    "max": {
+     "show": true,
+     "pos": [
+      -11.5,
+      -2.2
+     ],
+     "faceTo": "cam",
+     "pose": "sad",
+     "face": "sad"
+    },
+    "liza": {
+     "pose": "idle"
+    },
+    "kid": {
+     "pose": "idle"
+    },
+    "timur": {
+     "pose": "idle"
+    },
+    "artem": {
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Счастье, что это была только игра! Макс снова видимый и сразу обнимает друзей.",
+   "emotion": "warm",
+   "cam": "two:max:timur",
+   "flash": true,
+   "chime": true,
+   "acts": {
+    "max": {
+     "ghost": false,
+     "pos": [
+      -5.8,
+      1.6
+     ],
+     "faceTo": "timur",
+     "pose": "hug",
+     "face": "joy"
+    },
+    "timur": {
+     "pos": [
+      -2.6,
+      2
+     ],
+     "faceTo": "max",
+     "pose": "hug",
+     "face": "joy"
+    },
+    "kid": {
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Небо или невидимость? Что выберешь ты? Пиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy",
+     "label": {
+      "text": "НЕВИДИМКА",
+      "color": "#c8a0ff"
+     }
+    },
+    "liza": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy",
+     "label": {
+      "text": "ЛЕТАТЬ",
+      "color": "#9fd8ff"
+     }
+    },
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    }
+   }
+  }
+ ]
+}
