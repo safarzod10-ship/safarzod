@@ -53,14 +53,16 @@ const SKY = {
   night: grad([[0, '#060a24'], [0.6, '#14205a'], [1, '#2b3f7a']]),
 };
 const hemi = new THREE.HemisphereLight(0xdff2ff, 0x5a7a3a, 1.25); scene.add(hemi);
+// soft key light that travels with the camera (keeps faces readable at night)
+const camFill = new THREE.PointLight(0xdfe6ff, 0, 40, 1.2); camera.add(camFill); camFill.position.set(1.5, 1.5, 0); scene.add(camera);
 const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
 sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 120 });
 sun.shadow.bias = -0.0005; scene.add(sun); scene.add(sun.target);
 const LIGHT = {
   day: { sky: SKY.day, fog: 0xcfeaff, hemi: [0xdff2ff, 0x5a7a3a, 1.25], sun: [0xfff1d6, 2.4, [18, 30, 16]], exp: 1.05, lamp: 0.4 },
-  evening: { sky: SKY.evening, fog: 0xe8a080, hemi: [0xffc8a8, 0x4a3a5a, 0.9], sun: [0xffa060, 2.0, [-30, 12, 10]], exp: 1.0, lamp: 1.2 },
-  night: { sky: SKY.night, fog: 0x1a2550, hemi: [0x5a70c0, 0x101830, 0.75], sun: [0x9ab8ff, 0.9, [-12, 30, 18]], exp: 1.15, lamp: 2.2 },
+  evening: { sky: SKY.evening, fog: 0xe8a080, hemi: [0xffc8a8, 0x4a3a5a, 0.95], sun: [0xffa060, 2.0, [-30, 12, 10]], exp: 1.0, lamp: 1.2, fill: 0.8 },
+  night: { sky: SKY.night, fog: 0x1a2550, hemi: [0x7a90d8, 0x202848, 1.25], sun: [0xb0c8ff, 1.5, [-12, 30, 18]], exp: 1.3, lamp: 2.6, fill: 2.2 },
 };
 scene.fog = new THREE.Fog(0xcfeaff, 60, 170);
 const lampMats = [];
@@ -75,7 +77,7 @@ function setTime(name, loc) {
     scene.background = SKY[name] || SKY.day; scene.fog.color.setHex(0x2a2a2a);
     hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
     sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sun.position.set(...L.sun[2]);
-    renderer.toneMappingExposure = L.exp; lampMats.forEach(m => m.emissiveIntensity = L.lamp);
+    renderer.toneMappingExposure = L.exp; lampMats.forEach(m => m.emissiveIntensity = L.lamp); camFill.intensity = 0;
     homeWin.color.setHex(L.win[0]); homeWin.emissive.setHex(L.win[1]); homeWin.emissiveIntensity = L.win[2];
     return;
   }
@@ -85,6 +87,7 @@ function setTime(name, loc) {
   sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sun.position.set(...L.sun[2]);
   renderer.toneMappingExposure = L.exp;
   lampMats.forEach(m => m.emissiveIntensity = L.lamp);
+  camFill.intensity = L.fill || 0;
 }
 
 // ---------- world ----------

@@ -1,0 +1,50 @@
+{
+ "title": "Ночной гость",
+ "format": "mystery-night",
+ "hook": "КТО ЭТО В ПАРКЕ НОЧЬЮ? 😨",
+ "outro": "А ТЫ БЫ ПОШЁЛ?",
+ "music": "mystery",
+ "location": "park",
+ "time": "night",
+ "labels": false,
+ "highlight": ["НОЧЬ", "ПОЛНОЧЬ", "ШУР", "ОГОНЁК", "БЕЖИМ", "СТОРОЖ", "ЦВЕТЫ", "ЦВЕТАХ", "МОЛЧАТЬ"],
+ "cast": {
+  "timur": {"preset": "timur", "pos": [-7, 1], "label": null},
+  "artem": {"preset": "artem", "pos": [-4.2, 1.2], "label": null},
+  "guard": {"preset": "guard", "pos": [14, -9], "hidden": true, "label": null}
+ },
+ "props": [
+  {"shape": "phone", "size": [0.5, 0.5, 0.9], "color": "#fff3a0", "holder": "guard", "from": 3, "to": 7},
+  {"shape": "box", "size": [0.7, 0.7, 0.7], "color": "#ff5a7a", "pos": [-3, 0.35, -2.4], "from": 8, "to": 10},
+  {"shape": "box", "size": [0.7, 0.7, 0.7], "color": "#ffd23f", "pos": [-0.5, 0.35, -2.6], "from": 8, "to": 10},
+  {"shape": "box", "size": [0.7, 0.7, 0.7], "color": "#b07aff", "pos": [2, 0.35, -2.4], "from": 8, "to": 10},
+  {"shape": "box", "size": [0.7, 0.7, 0.7], "color": "#ff7a1a", "pos": [4.5, 0.35, -2.6], "from": 8, "to": 10},
+  {"shape": "box", "size": [0.7, 0.7, 0.7], "color": "#ff5a7a", "pos": [7, 0.35, -2.4], "from": 8, "to": 10},
+  {"shape": "box", "size": [0.7, 0.7, 0.7], "color": "#ffd23f", "pos": [-5.5, 0.35, -2.6], "from": 8, "to": 10}
+ ],
+ "lines": [
+  {"text": "Каждую ночь в нашем парке кто-то появлялся. И никто не знал, кто это.", "emotion": "mystery", "cam": "wide:timur,artem", "boom": true,
+   "acts": {"timur": {"face": "neutral", "faceTo": "cam"}, "artem": {"face": "neutral", "faceTo": "cam"}}},
+  {"text": "Мы с Артёмом решили проверить. Ровно в полночь мы спрятались за скамейкой.", "emotion": "mystery", "cam": "two:timur:artem",
+   "acts": {"timur": {"moveTo": [-7, -2.2], "faceTo": "artem", "face": "neutral"}, "artem": {"moveTo": [-4.6, -2.2], "faceTo": "timur", "face": "neutral"}}},
+  {"text": "Вдруг раздался странный звук. Шур-шур... шур-шур...", "emotion": "excited", "cam": "close:artem", "whoosh": true, "shake": true,
+   "acts": {"artem": {"faceTo": "cam", "face": "shock", "pose": "shock"}, "timur": {"face": "shock", "faceTo": [14, -9]}}},
+  {"text": "У пруда мелькнул огонёк. Кто-то медленно шёл прямо к нам!", "emotion": "excited", "cam": "over:timur:guard",
+   "acts": {"guard": {"show": true, "pos": [14, -9], "moveTo": [4, -5.5], "walkTime": 4.2, "face": "neutral", "pose": "give"},
+            "timur": {"faceTo": "guard", "face": "shock"}, "artem": {"faceTo": "guard", "face": "shock", "pose": "shock"}}},
+  {"text": "Тогда Артём прошептал: бежим! А я почему-то остался.", "emotion": "excited", "cam": "medium:timur",
+   "acts": {"artem": {"moveTo": [-24, 3], "run": true, "delay": 0.6}, "timur": {"faceTo": "guard", "face": "shock"}}},
+  {"text": "Тень остановилась у клумбы, достала лопатку и начала копать.", "emotion": "mystery", "cam": "medium:guard",
+   "acts": {"artem": {"hide": true}, "guard": {"faceTo": [4, -9], "pose": "give", "face": "neutral"}}},
+  {"text": "Тогда я подошёл ближе и узнал его. Это был наш школьный сторож, дядя Петя!", "emotion": "surprise", "cam": "two:timur:guard", "flash": true,
+   "acts": {"timur": {"moveTo": [0.6, -3.6], "faceTo": "guard", "face": "shock", "faceAfter": [3.0, "smile"]}, "guard": {"faceTo": "timur", "face": "shock", "faceAfter": [3.0, "smile"], "pose": "idle"}}},
+  {"text": "Он улыбнулся и сказал: я каждую ночь сажаю здесь цветы. Пусть утром людям будет радостно.", "emotion": "warm", "cam": "close:guard", "pitch": -2,
+   "acts": {"guard": {"faceTo": "timur", "face": "smile", "pose": "shrug"}, "timur": {"face": "smile"}}},
+  {"text": "Утром весь парк был в цветах. И никто так и не узнал, кто их посадил.", "emotion": "warm", "cam": "wide:timur,artem", "time": "day", "chime": true,
+   "acts": {"guard": {"hide": true}, "timur": {"pos": [-2, 1.2], "faceTo": "cam", "face": "joy", "pose": "cheer"}, "artem": {"show": true, "pos": [2, 1.2], "faceTo": "cam", "face": "shock", "faceAfter": [2.5, "joy"]}}},
+  {"text": "Кроме меня. Но я обещал молчать. Ну, почти.", "emotion": "calm", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "smug", "faceAfter": [2.4, "joy"], "pose": "shrug"}}},
+  {"text": "А ты бы пошёл ночью в парк проверять? Напиши в комментариях.", "emotion": "outro", "cam": "wide:timur,artem",
+   "acts": {"timur": {"faceTo": "cam", "pose": "wave", "face": "joy"}, "artem": {"faceTo": "cam", "pose": "cheer", "face": "joy"}}}
+ ]
+}
