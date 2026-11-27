@@ -1,0 +1,330 @@
+{
+ "title": "Поменялись местами",
+ "format": "what-if",
+ "hook": "ДЕТИ СТАЛИ ВЗРОСЛЫМИ 😳",
+ "outro": "КЕМ БЫ ТЫ СТАЛ?",
+ "music": "happy",
+ "location": "school",
+ "time": "day",
+ "highlight": [
+  "ПОМЕНЯЛИСЬ",
+  "ДОМАШКУ",
+  "УЧЕНИЦЕЙ",
+  "ПЕРЕМЕНА",
+  "ОБЕДА",
+  "ВОПРОСЫ",
+  "ТРУДНО",
+  "СПАСИБО"
+ ],
+ "cast": {
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    0,
+    1.2
+   ],
+   "label": null
+  },
+  "teacher": {
+   "preset": "teacher",
+   "pos": [
+    -3.6,
+    2.6
+   ],
+   "label": null
+  },
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    3.4,
+    2.6
+   ],
+   "label": null
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    6.4,
+    1.6
+   ],
+   "label": null
+  },
+  "max": {
+   "preset": "max",
+   "pos": [
+    -7,
+    1.2
+   ],
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "book",
+   "size": [
+    1.4,
+    1.1,
+    0.12
+   ],
+   "color": "#3a7ad0",
+   "holder": "timur",
+   "from": 1,
+   "to": 5
+  }
+ ],
+ "lines": [
+  {
+   "text": "Представь: однажды утром дети и взрослые поменялись местами.",
+   "emotion": "mystery",
+   "cam": "wide",
+   "whoosh": true,
+   "flash": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock"
+    },
+    "teacher": {
+     "faceTo": "cam",
+     "face": "shock"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "face": "shock"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "shock"
+    },
+    "max": {
+     "faceTo": "cam",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Первым делом Тимур, новый учитель, отменил домашку!",
+   "emotion": "excited",
+   "cam": "medium:timur",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "smug",
+     "pose": "give",
+     "label": {
+      "text": "УЧИТЕЛЬ",
+      "color": "#ffe14a",
+      "pop": true
+     }
+    }
+   }
+  },
+  {
+   "text": "Наша учительница стала ученицей и весь урок тянула руку.",
+   "emotion": "calm",
+   "cam": "medium:teacher",
+   "acts": {
+    "teacher": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "wave",
+     "label": {
+      "text": "УЧЕНИЦА",
+      "color": "#ff9fd8",
+      "pop": true
+     }
+    }
+   }
+  },
+  {
+   "text": "Самым главным стал Макс. Он объявил: перемена весь день!",
+   "emotion": "excited",
+   "cam": "wide:max,teacher,timur",
+   "boom": true,
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "laugh",
+     "pose": "cheer",
+     "label": {
+      "text": "ДИРЕКТОР",
+      "color": "#ffd84a",
+      "pop": true
+     }
+    },
+    "liza": {
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "artem": {
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "timur": {
+     "face": "joy"
+    },
+    "teacher": {
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Весело было только до обеда.",
+   "emotion": "mystery",
+   "cam": "wide",
+   "acts": {
+    "max": {
+     "pose": "idle",
+     "face": "neutral"
+    },
+    "liza": {
+     "pose": "idle",
+     "face": "neutral"
+    },
+    "artem": {
+     "pose": "idle",
+     "face": "neutral"
+    },
+    "timur": {
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Тридцать учеников задавали Тимуру вопросы одновременно.",
+   "emotion": "excited",
+   "cam": "close:timur",
+   "shake": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock"
+    },
+    "liza": {
+     "faceTo": "timur",
+     "pose": "point"
+    },
+    "artem": {
+     "faceTo": "timur",
+     "pose": "point"
+    }
+   }
+  },
+  {
+   "text": "Целый час Макс искал, кто вымоет полы и накормит всех обедом.",
+   "emotion": "sad",
+   "cam": "medium:max",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "shrug"
+    }
+   }
+  },
+  {
+   "text": "Наша учительница впервые поняла, как трудно сидеть шесть уроков подряд.",
+   "emotion": "warm",
+   "cam": "close:teacher",
+   "acts": {
+    "teacher": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "sad"
+    }
+   }
+  },
+  {
+   "text": "Вечером все с облегчением поменялись обратно.",
+   "emotion": "warm",
+   "cam": "wide",
+   "time": "evening",
+   "whoosh": true,
+   "flash": true,
+   "acts": {
+    "timur": {
+     "label": null,
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "teacher": {
+     "label": null,
+     "face": "joy",
+     "pose": "idle"
+    },
+    "max": {
+     "label": null,
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "liza": {
+     "face": "joy"
+    },
+    "artem": {
+     "face": "joy"
+    }
+   }
+  },
+  {
+   "text": "Утром учительница задала домашку поменьше. А мы впервые сказали ей спасибо.",
+   "emotion": "warm",
+   "cam": "two:teacher:timur",
+   "time": "day",
+   "chime": true,
+   "acts": {
+    "teacher": {
+     "faceTo": "timur",
+     "face": "smile",
+     "pose": "idle"
+    },
+    "timur": {
+     "faceTo": "teacher",
+     "face": "joy",
+     "pose": "wave"
+    },
+    "liza": {
+     "hide": true
+    },
+    "artem": {
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Взрослым на один день кем бы ты стал? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "teacher": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    },
+    "max": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy",
+     "show": true
+    },
+    "artem": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy",
+     "show": true
+    }
+   }
+  }
+ ]
+}
