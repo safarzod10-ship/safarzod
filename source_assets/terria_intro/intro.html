@@ -1,0 +1,145 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TERRIA Intro</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:100vw;height:100vh;object-fit:contain}</style>
+</head><body><canvas id="c" width="1920" height="1080"></canvas>
+<script>
+// TERRIA logo assembly intro. Deterministic: renderAt(t) draws time t (seconds).
+// Playback: open normally. Frame export: window.renderAt(t) from Playwright.
+const DUR = 10;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+let rng = 12345; const rnd = () => (rng = (rng * 16807) % 2147483647) / 2147483647;
+const ease = x => x<=0?0:x>=1?1:1-Math.pow(1-x,3);
+const easeBack = x => { if(x<=0)return 0; if(x>=1)return 1; const c=1.4; return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2); };
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+const img = new Image(); img.src = 'logo.png';
+let full, stone, mask, tiles = [], dust = [], IW, IH, ready = false;
+
+img.onload = () => {
+  IW = img.width; IH = img.height;
+  const mk = () => { const c=document.createElement('canvas'); c.width=IW; c.height=IH; return c; };
+  full = mk(); stone = mk();
+  const fc = full.getContext('2d'); fc.drawImage(img,0,0);
+  const d = fc.getImageData(0,0,IW,IH), p = d.data;
+  const sd = new ImageData(IW,IH), s = sd.data;
+  const alpha = new Uint8Array(IW*IH);
+  const grass = new Float32Array(IW*IH);
+  for (let i=0;i<IW*IH;i++){
+    const r=p[i*4],g=p[i*4+1],b=p[i*4+2], mx=Math.max(r,g,b);
+    // background removal: soft key on brightness
+    const a = clamp((mx-14)/30,0,1);
+    alpha[i]=a*255;
+    // grass factor: green dominant
+    const gr = clamp(Math.min((g - r*0.85)/25, (g - b - 20)/30),0,1);
+    grass[i]=gr;
+    p[i*4+3]=a*255;
+    // stone/dirt version: replace green with earthy brown of similar luminance
+    const L=(r*0.3+g*0.59+b*0.11);
+    s[i*4]  = r*(1-gr)+ L*0.85*gr;
+    s[i*4+1]= g*(1-gr)+ L*0.55*gr;
+    s[i*4+2]= b*(1-gr)+ L*0.35*gr;
+    s[i*4+3]= a*255;
+  }
+  fc.putImageData(d,0,0);
+  stone.getContext('2d').putImageData(sd,0,0);
+  // grass-only layer for growth reveal
+  mask = mk(); const md = new ImageData(new Uint8ClampedArray(p), IW, IH);
+  for (let i=0;i<IW*IH;i++) md.data[i*4+3] = alpha[i]*clamp(grass[i]*1.6,0,1);
+  mask.getContext('2d').putImageData(md,0,0);
+
+  // tiles: irregular-ish chunks on a grid; skip empty ones
+  const T = 22;
+  for (let y=0;y<IH;y+=T) for (let x=0;x<IW;x+=T){
+    let cnt=0; for(let yy=y;yy<Math.min(y+T,IH);yy+=3)for(let xx=x;xx<Math.min(x+T,IW);xx+=3) if(alpha[yy*IW+xx]>60)cnt++;
+    if (cnt<3) continue;
+    const isText = y > 715;
+    const isArc = !isText && (x > 880 || (x < 560 && y > 330));
+    let start;
+    if (isText) start = 3.6 + (x-140)/1180*1.6 + rnd()*0.35;        // letters left→right
+    else if (isArc) start = 2.0 + rnd()*1.0 + (x>880 ? (x-880)/400*0.4 : (560-x)/300*0.4);
+    else start = 0.5 + rnd()*1.6 + (1-y/720)*0.4;                     // main stone body
+    const ang = rnd()*Math.PI*2, dist = 500 + rnd()*700;
+    tiles.push({x,y,w:Math.min(T,IW-x),h:Math.min(T,IH-y),start,dur:isText?0.75:1.1+rnd()*0.5,
+      ox:Math.cos(ang)*dist, oy:Math.sin(ang)*dist*0.6 + (isText?300:150),
+      rot:(rnd()-0.5)*6, isText, isArc});
+  }
+  for (let i=0;i<260;i++) dust.push({x:rnd()*IW,y:rnd()*IH,vx:(rnd()-0.5)*14,vy:-4-rnd()*10,r:0.6+rnd()*2.2,ph:rnd()*6.28,a:0.15+rnd()*0.5});
+  ready = true;
+  if (!window.__export) { const t0=performance.now(); const loop=()=>{renderAt(((performance.now()-t0)/1000)%(DUR+2)); requestAnimationFrame(loop);}; loop(); }
+  window.__ready = true;
+};
+
+function renderAt(t){
+  if(!ready) return;
+  t = Math.min(t, DUR);
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  // camera: slow pull-back 1.18 → 1.0 between 1s and 8.5s
+  const cam = 1.18 - 0.18*ease(clamp((t-1)/7.5,0,1));
+  const base = H/IH*0.98;
+  const sc = base*cam;
+  ctx.setTransform(sc,0,0,sc, W/2 - IW*sc/2, H/2 - IH*sc/2 + (cam-1)*80);
+
+  // assembling fragments (stone/dirt material)
+  let allDone = true;
+  for (const k of tiles){
+    const p = clamp((t-k.start)/k.dur,0,1);
+    if (p<1) allDone=false;
+    if (p<=0) continue;
+    const e = k.isText ? easeBack(p) : ease(p);
+    const cx = k.x + k.w/2 + k.ox*(1-e), cy = k.y + k.h/2 + k.oy*(1-e) + (k.isText? -Math.sin(p*Math.PI)*0 : 0);
+    ctx.save(); ctx.globalAlpha = clamp(p*3,0,1);
+    ctx.translate(cx,cy); ctx.rotate(k.rot*(1-e)); const s = 0.6+0.4*e; ctx.scale(s,s);
+    ctx.drawImage(stone, k.x,k.y,k.w,k.h, -k.w/2-0.5,-k.h/2-0.5,k.w+1,k.h+1);
+    ctx.restore();
+    // dust trail from arc pieces / landing puff
+    if (p>0 && p<1 && (k.isArc || k.isText) && ((k.x+k.y)/22)%3===0){
+      ctx.fillStyle=`rgba(160,120,80,${0.25*(1-p)})`;
+      for(let j=1;j<4;j++){ const q=e-j*0.05; if(q<0)break;
+        ctx.beginPath(); ctx.arc(k.x+k.w/2+k.ox*(1-q), k.y+k.h/2+k.oy*(1-q), 3+j*2,0,7); ctx.fill(); }
+    }
+  }
+
+  // once settled: crisp full-res stone, then grass grows (bottom-up per row) + cracks glow
+  const settle = clamp((t-5.9)/0.4,0,1);
+  if (settle>0){ ctx.globalAlpha=settle; ctx.drawImage(stone,0,0); ctx.globalAlpha=1; }
+  const g1 = clamp((t-4.2)/2.0,0,1);   // symbol grass
+  const g2 = clamp((t-6.0)/1.2,0,1);   // letters grass
+  drawGrass(0,0,IW,715,g1); drawGrass(0,715,IW,IH-715,g2);
+  // final: full original image for exact fidelity
+  const fin = clamp((t-7.4)/0.8,0,1);
+  if (fin>0){ ctx.globalAlpha=fin; ctx.drawImage(full,0,0); ctx.globalAlpha=1; }
+
+  // sunlight sweep across logo
+  const sw = clamp((t-7.0)/2.2,0,1);
+  if (sw>0 && sw<1){
+    const lc = document.createElement('canvas'); lc.width=IW/2; lc.height=IH/2; const l=lc.getContext('2d');
+    l.drawImage(full,0,0,IW/2,IH/2); l.globalCompositeOperation='source-in';
+    const gx = -400 + sw*(IW/2+800);
+    const gr = l.createLinearGradient(gx-160,0,gx+160,IH/2);
+    gr.addColorStop(0,'rgba(255,230,160,0)'); gr.addColorStop(0.5,'rgba(255,235,170,0.55)'); gr.addColorStop(1,'rgba(255,230,160,0)');
+    l.fillStyle=gr; l.fillRect(0,0,IW/2,IH/2);
+    ctx.globalCompositeOperation='lighter'; ctx.drawImage(lc,0,0,IW,IH); ctx.globalCompositeOperation='source-over';
+  }
+
+  // floating dust motes
+  const dA = clamp((t-0.3)/1.5,0,1) * (1 - 0.6*clamp((t-8)/2,0,1));
+  for (const d of dust){
+    const x = (d.x + d.vx*t + Math.sin(t*0.8+d.ph)*12), y = ((d.y + d.vy*t) % IH + IH) % IH;
+    ctx.fillStyle=`rgba(220,200,160,${d.a*dA*(0.6+0.4*Math.sin(t*2+d.ph))})`;
+    ctx.beginPath(); ctx.arc(x,y,d.r,0,7); ctx.fill();
+  }
+}
+
+function drawGrass(x,y,w,h,g){
+  if (g<=0) return;
+  // reveal grass from top edge of each region downward with slight wave = "growing"
+  ctx.save(); ctx.beginPath();
+  const front = y + h*g;
+  ctx.moveTo(x,y); for(let xx=x;xx<=x+w;xx+=30) ctx.lineTo(xx, front + Math.sin(xx*0.05)*12*(1-g));
+  ctx.lineTo(x+w,y); ctx.closePath(); ctx.clip();
+  ctx.globalAlpha = clamp(g*1.5,0,1);
+  ctx.drawImage(mask,0,0); ctx.restore();
+}
+window.renderAt = renderAt; window.DUR = DUR;
+</script></body></html>
