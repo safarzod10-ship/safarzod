@@ -391,7 +391,7 @@ function stateAt(t, s) {
           const dur = L.dur || 1.6, k = isCur ? easeOut((t - t0 - (L.delay ?? 0.3)) / dur) : 1;
           x.label = { ...L, value: lerp(L.from ?? 0, L.to, k) };
           if (isCur && k > 0 && k < 1) x.labelPop = 1 + 0.08 * Math.abs(Math.sin(t * 20));
-        } else x.label = L;
+        } else if (!(isCur && L && L.delay && t - t0 < L.delay)) x.label = L; // reveal at its delay, keep the previous label until then
         if (isCur && L && L.pop) { const pk = (t - t0 - (L.delay ?? 0)) ; if (pk > 0 && pk < 0.35) x.labelPop = 1 + 0.35 * (1 - pk / 0.35); }
       }
     }

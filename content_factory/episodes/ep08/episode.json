@@ -1,0 +1,47 @@
+{
+ "title": "Почему новенький молчит",
+ "format": "life-lesson",
+ "hook": "ПОЧЕМУ ОН МОЛЧИТ? 🤐",
+ "outro": "А У ТЕБЯ БЫЛ НОВЕНЬКИЙ?",
+ "music": "sad",
+ "location": "school",
+ "time": "day",
+ "highlight": ["МОЛЧАЛ", "ЗАЗНАЁТСЯ", "ОДИН", "СЛОВАРЁМ", "ЯЗЫК", "ДРУГ", "АНГЛИЙСКИЙ", "ПЕРВЫМ"],
+ "cast": {
+  "timur": {"preset": "timur", "pos": [2.6, 2.8], "label": null},
+  "max":   {"preset": "max", "pos": [-4, 1.5], "label": null},
+  "artem": {"preset": "artem", "pos": [-1.4, 0.6], "label": null},
+  "liza":  {"preset": "liza", "pos": [-6.8, 0.4], "label": null},
+  "sam":   {"preset": "artem", "look": {"skin": "#f6d2b0", "shirt": "#ff8c1a", "hair": 14196800, "pants": 3355494}, "pos": [6, -0.5], "label": null}
+ },
+ "props": [
+  {"shape": "book", "size": [1.0, 1.2, 0.2], "color": "#2a7ad0", "holder": "sam", "from": 3, "to": 5}
+ ],
+ "lines": [
+  {"text": "Новенький в нашем классе молчал. Целую неделю ни одного слова.", "emotion": "mystery", "cam": "wide",
+   "acts": {"sam": {"faceTo": "cam", "face": "neutral", "pose": "sad"}, "max": {"faceTo": "sam"}, "artem": {"faceTo": "sam"}, "liza": {"faceTo": "sam"}, "timur": {"faceTo": "sam"}}},
+  {"text": "Слышал я, как Макс сказал: он просто зазнаётся. Давайте с ним не дружить.", "emotion": "calm", "cam": "two:max:artem",
+   "acts": {"max": {"faceTo": "artem", "pose": "point", "face": "smug"}, "artem": {"faceTo": "max", "face": "neutral"}}},
+  {"text": "Каждый от него отвернулся. А новенький сидел один и смотрел в окно.", "emotion": "sad", "cam": "close:sam",
+   "acts": {"max": {"faceTo": [-30, 6]}, "artem": {"faceTo": [-30, 6]}, "liza": {"faceTo": [-30, 6]}, "timur": {"faceTo": [-30, 6]}, "sam": {"faceTo": "cam", "pose": "sad", "face": "sad"}}},
+  {"text": "Вечером я увидел его во дворе. Он что-то читал в маленькой книжке.", "emotion": "mystery", "cam": "wide:timur,sam", "location": "park", "time": "evening",
+   "acts": {"max": {"hide": true}, "artem": {"hide": true}, "liza": {"hide": true},
+            "sam": {"pos": [2, 1], "faceTo": "cam", "pose": "give", "face": "think"}, "timur": {"pos": [-8, 2], "moveTo": [-2.6, 1.8], "faceTo": "sam", "face": "neutral"}}},
+  {"text": "Книжка была словарём! Английский и русский.", "emotion": "surprise", "cam": "medium:sam", "boom": true,
+   "acts": {"timur": {"faceTo": "sam", "face": "shock", "pose": "shock"}, "sam": {"label": {"text": "EN → RU", "color": "#9fd8ff", "pop": true, "delay": 0.6}}}},
+  {"text": "Понял я тогда: он не зазнайка. Он просто ещё не знает наш язык.", "emotion": "warm", "cam": "two:timur:sam",
+   "acts": {"timur": {"faceTo": "sam", "face": "smile", "pose": "idle"}, "sam": {"faceTo": "timur", "face": "neutral", "pose": "give"}}},
+  {"text": "Привет, сказал я медленно и протянул ему руку.", "emotion": "warm", "cam": "medium:timur",
+   "acts": {"timur": {"faceTo": "sam", "face": "smile", "pose": "give"}, "sam": {"label": null, "faceTo": "timur", "face": "shock", "pose": "idle"}}},
+  {"text": "Новенький улыбнулся и тихо сказал своё первое русское слово: друг.", "emotion": "warm", "cam": "close:sam", "chime": true,
+   "acts": {"sam": {"faceTo": "timur", "face": "smile", "faceAfter": [3.2, "joy"], "pose": "give", "label": {"text": "ДРУГ", "color": "#7dff8a", "pop": true, "delay": 3.4}}, "timur": {"face": "joy"}}},
+  {"text": "Месяц прошёл. Новенький Сэм уже говорит по-русски, а Макс учит у него английский.", "emotion": "warm", "cam": "wide", "location": "school", "time": "day",
+   "acts": {"sam": {"pos": [0.5, 1.4], "faceTo": "cam", "face": "joy", "pose": "wave", "label": null},
+            "max": {"show": true, "pos": [-2.6, 1.6], "faceTo": "sam", "face": "smile", "pose": "idle", "label": {"text": "HELLO!", "color": "#ffe14a", "pop": true, "delay": 3.2}},
+            "timur": {"pos": [3.4, 1.8], "faceTo": "cam", "face": "joy"}, "artem": {"show": true, "pos": [6.2, 1], "faceTo": "cam", "face": "smile"}, "liza": {"show": true, "pos": [-5.6, 1], "faceTo": "cam", "face": "smile"}}},
+  {"text": "Помни: тот, кто молчит, иногда просто ждёт, что с ним заговорят первым.", "emotion": "calm", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "smile"}, "max": {"label": null}}},
+  {"text": "Новенькие в классе у тебя были? Расскажи в комментариях.", "emotion": "outro", "cam": "wide",
+   "acts": {"sam": {"pose": "cheer", "face": "joy", "faceTo": "cam"}, "max": {"pose": "wave", "face": "joy", "faceTo": "cam"}, "timur": {"pose": "cheer", "face": "joy", "faceTo": "cam"}, "artem": {"pose": "wave", "face": "joy"}, "liza": {"pose": "cheer", "face": "joy"}}}
+ ]
+}
