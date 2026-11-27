@@ -10,6 +10,7 @@ import { PerfMonitor } from '../core/perf.ts';
 import type { WorldBackend } from '../world/generation/WorldBackend.ts';
 import type { WorldFields } from '../world/generation/WorldFields.ts';
 import type { DetailTextures } from '../world/terrain/detailTextures.ts';
+import type { RegionInfo } from '../world/regions/regions.ts';
 import { createWorldQuery, type WorldQuery } from '../world/WorldQuery.ts';
 import { pickResolution, type RendererInfo } from './createRenderer.ts';
 import { QualityController } from './QualityController.ts';
@@ -53,6 +54,7 @@ export class MapApp {
   private timeSec = 0;
   private pointerDown = false;
   private throttled = false;
+  private wokenAt = 0;
   private resizeObserver: ResizeObserver | null = null;
   private readonly info: RendererInfo;
   private readonly backend: WorldBackend;
@@ -66,7 +68,7 @@ export class MapApp {
     this.host = host;
     this.app = info.app;
     this.query = createWorldQuery(world);
-    this.scene = new WorldScene(world, backend, textures, { lowMemory: info.lowMemory });
+    this.scene = new WorldScene(world, backend, textures, this.query.regions, { lowMemory: info.lowMemory });
     this.camera = new CameraController(this.app, world.meta.cameraBounds);
     this.camera.viewport.addChild(this.scene.root);
     this.app.stage.addChild(this.camera.viewport);
@@ -109,6 +111,30 @@ export class MapApp {
   enableDrawCallCounter(): void {
     const gl = (this.app.renderer as unknown as { gl: WebGLRenderingContext }).gl;
     this.perf.hookDrawCalls(gl);
+  }
+
+  /**
+   * Highlight a region (and its starter plot); null clears the selection.
+   * @returns the region's facts, or null
+   */
+  selectRegion(id: number | null): RegionInfo | null {
+    this.scene.regions.select(id ?? -1);
+    this.wake();
+    return id === null ? null : this.query.regions.info(id);
+  }
+
+  /** Fly to a region so that it fills most of the screen. */
+  showRegion(id: number): RegionInfo {
+    const info = this.query.regions.info(id);
+    const r = this.app.renderer.screen;
+    const scale = (0.55 * Math.min(r.width, r.height)) / Math.sqrt(info.area);
+    this.camera.flyTo(info.x, info.y, scale, true);
+    return info;
+  }
+
+  /** Keep rendering at full rate for a moment (after a programmatic change). */
+  wake(): void {
+    this.wokenAt = performance.now();
   }
 
   /** Re-read the host size (also called by Telegram viewport events). */
@@ -162,7 +188,11 @@ export class MapApp {
     this.scene.update(view, this.quality.resolution, this.timeSec);
 
     // Full frame rate while something moves; a calmer one when only the sea does.
-    const active = this.pointerDown || this.camera.idleMs < RENDER.idleAfterMs || this.scene.busy;
+    const active =
+      this.pointerDown ||
+      this.camera.idleMs < RENDER.idleAfterMs ||
+      now - this.wokenAt < RENDER.idleAfterMs ||
+      this.scene.busy;
     const throttle = !active && RENDER.idleFps > 0;
     if (throttle !== this.throttled) {
       this.throttled = throttle;

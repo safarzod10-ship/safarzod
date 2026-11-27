@@ -8,8 +8,8 @@ import { mulberry32 } from '../../core/rng.ts';
 import { TREE_VARIANTS } from './treePlacement.ts';
 
 export interface TreeAtlas {
+  /** One sprite per variant: canopy with its soft ground shadow. */
   readonly canopies: Texture[];
-  readonly shadow: Texture;
   /** Canopy diameter in atlas pixels (to convert world size -> sprite scale). */
   readonly canopyPx: number;
   /** Anchor of the trunk base inside a canopy cell (0..1). */
@@ -19,7 +19,10 @@ export interface TreeAtlas {
 }
 
 const CELL = 128;
-const CANOPY_PX = 100;
+const CANOPY_PX = 84;
+/** Canopy centre inside a cell (the shadow needs room to the lower right). */
+const CENTER_X = 0.42;
+const CENTER_Y = 0.4;
 
 interface Hue {
   dark: [number, number, number];
@@ -37,14 +40,14 @@ const HUES: Hue[] = [
 export function createTreeAtlas(seed: number): TreeAtlas {
   const canvas = document.createElement('canvas');
   canvas.width = CELL * TREE_VARIANTS;
-  canvas.height = CELL * 2;
+  canvas.height = CELL;
   const ctx = canvas.getContext('2d')!;
   const rnd = mulberry32(seed ^ 0x3c6ef372);
 
   for (let v = 0; v < TREE_VARIANTS; v++) {
+    paintShadow(ctx, v * CELL, 0);
     paintCanopy(ctx, v * CELL, 0, HUES[v % HUES.length], rnd, v);
   }
-  paintShadow(ctx, 0, CELL);
 
   const source = new CanvasSource({
     resource: canvas,
@@ -56,16 +59,13 @@ export function createTreeAtlas(seed: number): TreeAtlas {
   for (let v = 0; v < TREE_VARIANTS; v++) {
     canopies.push(new Texture({ source, frame: new Rectangle(v * CELL + 1, 1, CELL - 2, CELL - 2) }));
   }
-  const shadow = new Texture({ source, frame: new Rectangle(1, CELL + 1, CELL - 2, CELL - 2) });
   return {
     canopies,
-    shadow,
     canopyPx: CANOPY_PX,
-    anchorX: 0.5,
-    anchorY: 0.66,
+    anchorX: CENTER_X + 0.02,
+    anchorY: CENTER_Y + 0.2,
     destroy() {
       for (const t of canopies) t.destroy();
-      shadow.destroy();
       source.destroy();
     },
   };
@@ -83,8 +83,8 @@ function paintCanopy(
   rnd: () => number,
   variant: number,
 ): void {
-  const cx = ox + CELL / 2;
-  const cy = oy + CELL * 0.47;
+  const cx = ox + CELL * CENTER_X;
+  const cy = oy + CELL * CENTER_Y;
   const R = CANOPY_PX / 2;
   ctx.save();
   ctx.beginPath();
@@ -148,15 +148,24 @@ function paintCanopy(
 }
 
 function paintShadow(ctx: CanvasRenderingContext2D, ox: number, oy: number): void {
-  const cx = ox + CELL / 2;
-  const cy = oy + CELL / 2;
-  const r = CELL / 2 - 4;
-  const g = ctx.createRadialGradient(cx, cy, r * 0.15, cx, cy, r);
-  g.addColorStop(0, 'rgba(22,48,34,0.5)');
-  g.addColorStop(0.55, 'rgba(22,48,34,0.3)');
+  // soft ellipse on the ground, cast to the lower right of the crown
+  const cx = ox + CELL * (CENTER_X + 0.17);
+  const cy = oy + CELL * (CENTER_Y + 0.2);
+  const rx = CANOPY_PX * 0.56;
+  const ry = CANOPY_PX * 0.38;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ox, oy, CELL, CELL);
+  ctx.clip();
+  ctx.translate(cx, cy);
+  ctx.scale(1, ry / rx);
+  const g = ctx.createRadialGradient(0, 0, rx * 0.15, 0, 0, rx);
+  g.addColorStop(0, 'rgba(22,48,34,0.46)');
+  g.addColorStop(0.55, 'rgba(22,48,34,0.28)');
   g.addColorStop(1, 'rgba(22,48,34,0)');
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.arc(0, 0, rx, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 }

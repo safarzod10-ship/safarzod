@@ -9,8 +9,8 @@
 import { DEFAULT_WORLD_PARAMS, normalizeWorldParams, type WorldParams } from '../world/generation/WorldParams.ts';
 import { seedFromString } from './rng.ts';
 
-const WORLD_KEY = 'vcm.world.v1';
-const CAMERA_KEY = 'vcm.camera.v1';
+const WORLD_KEY = 'vcm.world.v2';
+const CAMERA_KEY = 'vcm.camera.v2';
 
 function read<T>(key: string): T | null {
   try {

@@ -8,6 +8,7 @@
  * Both return identical data; callers only see the WorldBackend interface.
  */
 import { bakeChunkSteps } from '../terrain/chunkBaker.ts';
+import { placeTrees } from '../trees/treePlacement.ts';
 import { generateWorldSteps } from './generateWorld.ts';
 import { WorldFields } from './WorldFields.ts';
 import type { WorldParams } from './WorldParams.ts';
@@ -25,6 +26,8 @@ export interface WorldBackend {
   init(params: WorldParams, onProgress: (p: number) => void): Promise<WorldFields>;
   /** Bake one terrain chunk. Calls are queued and served one at a time. */
   bake(level: number, cx: number, cy: number): Promise<BakeResult>;
+  /** Tree positions of one tree chunk (see trees/treePlacement.ts). */
+  trees(cx: number, cy: number): Promise<Float32Array>;
   destroy(): void;
 }
 
@@ -101,6 +104,17 @@ export class MainThreadBackend implements WorldBackend {
     return { pixels, ms: performance.now() - t0 };
   }
 
+  async trees(cx: number, cy: number): Promise<Float32Array> {
+    if (!this.world) throw new Error('trees before init');
+    const world = this.world;
+    // queued behind running bakes; small enough to do in one slice
+    return this.slicer.run(
+      (function* (): Generator<void, Float32Array, void> {
+        return placeTrees(world, cx, cy);
+      })(),
+    );
+  }
+
   destroy(): void {
     this.world = null;
   }
@@ -111,6 +125,7 @@ export class WorkerBackend implements WorldBackend {
   private worker: Worker;
   private nextId = 1;
   private pending = new Map<number, { resolve: (r: BakeResult) => void; reject: (e: Error) => void }>();
+  private pendingTrees = new Map<number, { resolve: (r: Float32Array) => void; reject: (e: Error) => void }>();
   private initHandlers: { resolve: (w: WorldFields) => void; reject: (e: Error) => void; progress: (p: number) => void } | null =
     null;
 
@@ -136,6 +151,14 @@ export class WorkerBackend implements WorldBackend {
       const id = this.nextId++;
       this.pending.set(id, { resolve, reject });
       this.post({ type: 'bake', id, level, cx, cy });
+    });
+  }
+
+  trees(cx: number, cy: number): Promise<Float32Array> {
+    return new Promise<Float32Array>((resolve, reject) => {
+      const id = this.nextId++;
+      this.pendingTrees.set(id, { resolve, reject });
+      this.post({ type: 'trees', id, cx, cy });
     });
   }
 
@@ -165,6 +188,12 @@ export class WorkerBackend implements WorldBackend {
         p?.resolve({ pixels: msg.pixels, ms: msg.ms });
         break;
       }
+      case 'trees': {
+        const p = this.pendingTrees.get(msg.id);
+        this.pendingTrees.delete(msg.id);
+        p?.resolve(msg.trees);
+        break;
+      }
       case 'error':
         this.failAll(new Error(msg.message));
         break;
@@ -176,6 +205,8 @@ export class WorkerBackend implements WorldBackend {
     this.initHandlers = null;
     for (const p of this.pending.values()) p.reject(err);
     this.pending.clear();
+    for (const p of this.pendingTrees.values()) p.reject(err);
+    this.pendingTrees.clear();
   }
 }
 

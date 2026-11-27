@@ -12,11 +12,11 @@ export const TREE_VARIANTS = 4;
 /** Floats per tree in the packed result: x, y, size, variant, shade. */
 export const TREE_STRIDE = 5;
 
-/** Probability of a lone tree per placement cell: anywhere / near a grove. */
-const SOLITARY = 0.0009;
-const OUTLIER = 0.03;
-/** Trees keep off the beach. */
-const MIN_E = 0.028;
+/** Probability of a lone tree per placement cell: anywhere / near woods. */
+const SOLITARY = 0.0012;
+const OUTLIER = 0.035;
+/** Trees keep off beaches and river banks. */
+const MIN_E = 0.006;
 
 /**
  * @returns packed Float32Array [x, y, size(wu, canopy diameter), variant, shade]*
@@ -43,16 +43,16 @@ export function placeTrees(world: WorldFields, cx: number, cy: number): Float32A
 
       const h2 = hash2(gx, gy, seed ^ 0x7ed55d16);
       const roll = (h2 & 0xffff) / 65536;
-      const density = world.forest.sample(x, y);
+      const density = world.forestAt(x, y);
       const lone = SOLITARY + OUTLIER * smoothstep(0.24, 0.44, density);
       const p = smoothstep(0.44, 0.74, density) * 0.92 + lone;
       if (roll >= p) continue;
-      if (world.e.sample(x, y) < MIN_E) continue;
+      if (world.coastValue(x, y) < MIN_E) continue;
 
       const h3 = hash2(gx, gy, seed ^ 0x2545f491);
       const grove = roll >= lone ? 1 : 0;
       // lone trees are a little larger and rounder
-      const diameter = (grove ? 13 : 16) + 8 * ((h3 & 0xff) / 255);
+      const diameter = (grove ? 12.5 : 16) + 8.5 * ((h3 & 0xff) / 255);
       const variant = (h3 >>> 8) % TREE_VARIANTS;
       const shade = 0.86 + 0.14 * (((h3 >>> 16) & 0xff) / 255);
       out.push(x, y, diameter, variant, shade);

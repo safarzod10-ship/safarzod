@@ -4,6 +4,7 @@ import { initTelegram } from './core/telegram.ts';
 import { createRenderer } from './rendering/createRenderer.ts';
 import { MapApp } from './rendering/MapApp.ts';
 import { createHud } from './ui/hud.ts';
+import type { RegionInfo } from './world/regions/regions.ts';
 import { startWorld } from './world/generation/WorldBackend.ts';
 import { createDetailTextures } from './world/terrain/detailTextures.ts';
 
@@ -52,15 +53,35 @@ async function boot(): Promise<void> {
     const km = (v: number): string => (v / 1000).toFixed(1);
     hud.setInfo(
       'Континент',
-      `seed ${params.seed}${preview ? ' · предпросмотр' : ''} · ${km(m.landBounds.width)}×${km(m.landBounds.height)} км`,
+      `${km(m.landBounds.width)}×${km(m.landBounds.height)} км · ${m.regionCount} участков · seed ${params.seed}` +
+        (preview ? ' · предпросмотр' : ''),
     );
+    const showRegion = (info: RegionInfo | null): void => {
+      hud.setRegion(
+        info
+          ? { number: info.id + 1, total: m.regionCount, areaM2: info.area, plotSideM: info.starterPlot.width }
+          : null,
+      );
+    };
     hud.setActions({
-      zoomIn: () => map!.camera.zoomBy(1.8),
-      zoomOut: () => map!.camera.zoomBy(1 / 1.8),
+      zoomIn: () => map!.camera.zoomBy(2.2),
+      zoomOut: () => map!.camera.zoomBy(1 / 2.2),
       fit: () => map!.camera.fitWorld(),
       togglePerf: (on) => {
         if (on) map!.enableDrawCallCounter();
       },
+      // Which region a player gets is game logic for a later module; this
+      // button only demonstrates what "one place out of a thousand" looks like.
+      randomRegion: () => {
+        const id = Math.floor(Math.random() * m.regionCount);
+        showRegion(map!.selectRegion(id));
+        map!.showRegion(id);
+      },
+    });
+    // tap / click on the map selects the region under the pointer
+    map.camera.viewport.on('clicked', (ev) => {
+      const region = map!.query.regionAt(ev.world.x, ev.world.y);
+      showRegion(map!.selectRegion(region ? region.id : null));
     });
 
     let saveTimer = 0;
@@ -97,7 +118,8 @@ async function boot(): Promise<void> {
     hud.finishLoading();
     console.info(
       `[vcm] world ready: seed ${params.seed}, generated in ${m.generationMs.toFixed(0)} ms (${backend.mode}), ` +
-        `${info.api}, land ${(m.landArea / 1e6).toFixed(1)} km², buildable ${(m.buildableFraction * 100).toFixed(0)}%`,
+        `${info.api}, land ${(m.landArea / 1e6).toFixed(0)} km², ${m.regionCount} regions of ~${(m.regionAreaAvg / 1e6).toFixed(2)} km², ` +
+        `${m.lakeCount} lakes, ${(m.riverLength / 1000).toFixed(0)} km of rivers, forest ${(m.forestFraction * 100).toFixed(0)}%`,
     );
   } catch (err) {
     console.error(err);

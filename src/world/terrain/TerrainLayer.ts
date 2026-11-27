@@ -7,7 +7,7 @@
  *    and faded in. While a fine chunk is missing, its coarser parent shows.
  *  - One draw call per visible chunk; nothing is generated per frame.
  */
-import { BufferImageSource, Container, Mesh, MeshGeometry } from 'pixi.js';
+import { BufferImageSource, Container, Mesh, MeshGeometry, type TextureSource } from 'pixi.js';
 import { CHUNK_NODES, LODS, TERRAIN, WORLD_SIZE } from '../../core/config.ts';
 import { chunkKey, chunksPerSide } from '../../core/coords.ts';
 import type { Rect } from '../../core/math.ts';
@@ -83,10 +83,17 @@ export class TerrainLayer {
   private readonly hiddenCache = new Map<number, boolean>();
   private readonly backend: WorldBackend;
   private readonly textures: DetailTextures;
+  private readonly coast: TextureSource;
 
-  constructor(backend: WorldBackend, textures: DetailTextures, options: { lowMemory?: boolean } = {}) {
+  constructor(
+    backend: WorldBackend,
+    textures: DetailTextures,
+    coast: TextureSource,
+    options: { lowMemory?: boolean } = {},
+  ) {
     this.backend = backend;
     this.textures = textures;
+    this.coast = coast;
     this.maxCached = options.lowMemory ? TERRAIN.cacheChunksLowMemory : TERRAIN.cacheChunks;
     this.globals = createTerrainGlobals();
     this.geometry = new MeshGeometry({
@@ -134,6 +141,7 @@ export class TerrainLayer {
         source,
         this.textures.grass,
         this.textures.noise,
+        this.coast,
         this.globals,
         { x: 0, y: 0, size: 1, band: 1 },
         kind,
@@ -327,6 +335,7 @@ export class TerrainLayer {
       source,
       this.textures.grass,
       this.textures.noise,
+      this.coast,
       this.globals,
       { x: cx * lod.chunkSize, y: cy * lod.chunkSize, size: lod.chunkSize, band: lod.band },
       classifyChunk(pixels),

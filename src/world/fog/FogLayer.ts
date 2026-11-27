@@ -8,10 +8,10 @@
  * One large quad, one draw call. Skipped entirely when the camera is close
  * enough to the land that no fog is in view.
  */
-import { BufferImageSource, GlProgram, Mesh, MeshGeometry, Shader, UniformGroup, type TextureSource } from 'pixi.js';
+import { GlProgram, Mesh, MeshGeometry, Shader, UniformGroup, type TextureSource } from 'pixi.js';
 import { FOG, WORLD_SIZE } from '../../core/config.ts';
 import type { Rect } from '../../core/math.ts';
-import { COARSE_NODES, COARSE_SPACING, fogDistanceByte, type WorldFields } from '../generation/WorldFields.ts';
+import { COARSE_NODES, COARSE_SPACING, type WorldFields } from '../generation/WorldFields.ts';
 
 /** The quad extends this many world sizes beyond the world on every side. */
 const EXTENT = 6;
@@ -47,13 +47,14 @@ void main() {
   float n1 = texture(uNoise, vPos * 2.3 + t * vec2(0.002, 0.001)).r;
   float n2 = texture(uNoise, vPos * 5.9 + t * vec2(-0.003, 0.002)).g;
   float n3 = texture(uNoise, vPos * 17.0 + t * vec2(0.005, -0.004)).b;
-  float n = n1 * 0.55 + n2 * 0.3 + n3 * 0.15;
+  float n4 = texture(uNoise, vPos * 61.0 + t * vec2(-0.011, 0.007)).r;
+  float n = n1 * 0.5 + n2 * 0.27 + n3 * 0.15 + n4 * 0.08;
 
   float a = smoothstep(uFog.y, uFog.z, dist + (n - 0.5) * uFog.w);
   a = a * a * (3.0 - 2.0 * a);
 
   // slow billows inside the bank so it reads as volume, not as a flat fill
-  float billow = (n2 * 0.6 + n3 * 0.4 - 0.5);
+  float billow = (n2 * 0.45 + n3 * 0.35 + n4 * 0.2 - 0.5);
   vec3 col = vec3(${FOG.color[0].toFixed(4)}, ${FOG.color[1].toFixed(4)}, ${FOG.color[2].toFixed(4)});
   col *= 1.0 + billow * 0.07 * (1.0 - a * 0.6);
   // thin fog picks up a little of the sea's blue
@@ -65,7 +66,6 @@ void main() {
 
 export class FogLayer {
   readonly mesh: Mesh<MeshGeometry, Shader>;
-  private readonly source: BufferImageSource;
   private readonly uniforms: Float32Array;
   private readonly group: UniformGroup;
   private readonly world: WorldFields;
@@ -74,30 +74,10 @@ export class FogLayer {
   /** Beyond this distance from land the fog is certainly opaque (wu). */
   private readonly opaqueDistance: number;
 
-  constructor(world: WorldFields, noise: TextureSource) {
+  /** @param coast shared coast texture (R = distance from the continent) */
+  constructor(world: WorldFields, coast: TextureSource, noise: TextureSource) {
     this.world = world;
-    const n = COARSE_NODES;
-    const pixels = new Uint8Array(n * n * 4);
-    const dist = world.coastDist.data;
-    for (let k = 0; k < n * n; k++) {
-      const v = fogDistanceByte(dist[k]);
-      pixels[k * 4] = v;
-      pixels[k * 4 + 1] = v;
-      pixels[k * 4 + 2] = v;
-      pixels[k * 4 + 3] = 255;
-    }
-    this.source = new BufferImageSource({
-      resource: pixels,
-      width: n,
-      height: n,
-      format: 'rgba8unorm',
-      alphaMode: 'no-premultiply-alpha',
-      addressMode: 'clamp-to-edge',
-      scaleMode: 'linear',
-      autoGenerateMipmaps: false,
-    });
-
-    const wisp = 620;
+    const wisp = FOG.wisp;
     this.uniforms = new Float32Array([0, FOG.start / FOG.range, FOG.end / FOG.range, wisp / FOG.range]);
     this.group = new UniformGroup({ uFog: { value: this.uniforms, type: 'vec4<f32>' } });
 
@@ -110,7 +90,7 @@ export class FogLayer {
     });
     const shader = new Shader({
       glProgram: new GlProgram({ vertex, fragment, name: 'vcm-fog', preferredFragmentPrecision: 'highp' }),
-      resources: { uDist: this.source, uNoise: noise, fog: this.group },
+      resources: { uDist: coast, uNoise: noise, fog: this.group },
     });
     this.mesh = new Mesh({ geometry, shader });
     this.mesh.label = 'fog';
@@ -167,6 +147,5 @@ export class FogLayer {
 
   destroy(): void {
     this.mesh.destroy();
-    this.source.destroy();
   }
 }

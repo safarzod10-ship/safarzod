@@ -1,5 +1,5 @@
 import { GlProgram, Shader, UniformGroup, type TextureSource } from 'pixi.js';
-import { CHUNK_NODES, TERRAIN } from '../../core/config.ts';
+import { CHUNK_NODES, TERRAIN, WORLD_SIZE } from '../../core/config.ts';
 import { OCEAN_GLSL } from '../ocean/oceanGlsl.ts';
 
 /**
@@ -47,6 +47,7 @@ out vec4 finalColor;
 uniform sampler2D uData;
 uniform sampler2D uGrass;
 uniform sampler2D uNoise;
+uniform sampler2D uCoast; // G: 0 at sea, 1 inland (fresh water)
 uniform vec4 uChunk;  // x: shoreline band (wu), y: fade 0..1
 uniform vec4 uGlobal; // x: time (s), y: wu per device px, z: detail strength
 
@@ -55,7 +56,7 @@ ${OCEAN_GLSL}
 #endif
 
 #ifndef SEA_ONLY
-vec3 shadeLand(vec3 base, vec4 nz, float sd, float t, float aa, float close) {
+vec3 shadeLand(vec3 base, vec4 nz, float sd, float t, float aa, float close, float fresh) {
   vec3 g1 = texture(uGrass, vWorld * ${(1 / TERRAIN.grassTile).toFixed(8)}).rgb * 2.0;
   vec2 rw = vec2(vWorld.x * 0.8387 - vWorld.y * 0.5446, vWorld.x * 0.5446 + vWorld.y * 0.8387);
   vec3 g2 = texture(uGrass, rw * ${(1 / TERRAIN.grassTileFar).toFixed(8)}).rgb * 2.0;
@@ -68,7 +69,7 @@ vec3 shadeLand(vec3 base, vec4 nz, float sd, float t, float aa, float close) {
   // sand darkened by the last wave
   float reach = 2.2 + 1.4 * sin(6.2831853 * (t * 0.13) + nz.r * 6.2831853);
   float wet = (1.0 - smoothstep(0.0, max(reach, aa), sd)) * close;
-  col *= 1.0 - 0.17 * wet;
+  col *= 1.0 - 0.17 * wet * (1.0 - 0.6 * fresh);
 #endif
   return col;
 }
@@ -81,11 +82,11 @@ void main() {
 
 #ifdef SEA_ONLY
   // open water: further from any coast than the shoreline band
-  vec3 col = shadeOcean(d.rgb, uChunk.x, vWorld, t, px, uNoise);
+  vec3 col = shadeOcean(d.rgb, uChunk.x, vWorld, t, px, uNoise, 0.0);
 #else
   vec4 nz = texture(uNoise, vWorld * ${(1 / TERRAIN.noiseTile).toFixed(8)});
 #ifdef LAND_ONLY
-  vec3 col = shadeLand(d.rgb, nz, uChunk.x, t, 1.0, 0.0);
+  vec3 col = shadeLand(d.rgb, nz, uChunk.x, t, 1.0, 0.0, 0.0);
 #else
   // signed distance to the waterline in world units, + is land
   float sd = (d.a - 0.5) * 2.0 * uChunk.x;
@@ -93,8 +94,9 @@ void main() {
   sd += (nz.g - 0.5) * 2.6 * close;
   float aa = max(px * 0.75, 0.06);
   float land = smoothstep(-aa, aa, sd);
-  vec3 landCol = shadeLand(d.rgb, nz, sd, t, aa, close);
-  vec3 seaCol = shadeOcean(d.rgb, -sd, vWorld, t, px, uNoise);
+  float fresh = smoothstep(0.25, 0.75, texture(uCoast, vWorld * ${(1 / WORLD_SIZE).toExponential(8)}).g);
+  vec3 landCol = shadeLand(d.rgb, nz, sd, t, aa, close, fresh);
+  vec3 seaCol = shadeOcean(d.rgb, -sd, vWorld, t, px, uNoise, fresh);
   vec3 col = mix(seaCol, landCol, land);
 #endif
 #endif
@@ -161,6 +163,7 @@ export function createChunkShader(
   data: TextureSource,
   grass: TextureSource,
   noise: TextureSource,
+  coast: TextureSource,
   globals: TerrainGlobals,
   rect: { x: number; y: number; size: number; band: number },
   kind: ChunkKind = 'mixed',
@@ -176,6 +179,7 @@ export function createChunkShader(
       uData: data,
       uGrass: grass,
       uNoise: noise,
+      ...(kind === 'mixed' ? { uCoast: coast } : {}),
       chunk,
       globals: globals.group,
     },

@@ -4,7 +4,7 @@ import { cellToWorld, chunkKey, snapToGrid, worldToCell, worldToChunk } from '..
 import { hash2, mulberry32, seedFromString, subSeed } from '../src/core/rng.ts';
 import { TerrainLayer } from '../src/world/terrain/TerrainLayer.ts';
 
-const bounds = { x: 2000, y: 1000, width: 10000, height: 13000 };
+const bounds = { x: 20000, y: 10000, width: 77000, height: 94000 };
 
 describe('camera constraints', () => {
   it('minimum zoom fits the whole camera area on any screen shape', () => {
@@ -31,8 +31,8 @@ describe('camera constraints', () => {
     for (const [x, y] of [
       [-1e6, -1e6],
       [1e6, 1e6],
-      [0, 20000],
-      [7000, 7000],
+      [0, 200000],
+      [60000, 60000],
     ]) {
       const p = clampCenter(x, y, scale, w, h, bounds);
       expect(p.x - w / scale / 2).toBeGreaterThanOrEqual(bounds.x - 1e-6);
@@ -59,17 +59,17 @@ describe('coordinates', () => {
   });
 
   it('maps positions to chunks per LOD', () => {
-    expect(worldToChunk(5000, 9000, 0)).toEqual({ cx: 1, cy: 2 });
-    expect(worldToChunk(5000, 9000, 3)).toEqual({ cx: 9, cy: 17 });
+    expect(worldToChunk(40000, 70000, 0)).toEqual({ cx: 1, cy: 2 });
+    expect(worldToChunk(5000, 9000, 6)).toEqual({ cx: 9, cy: 17 });
     expect(chunkKey(1, 2, 3)).not.toBe(chunkKey(2, 2, 3));
     expect(chunkKey(1, 2, 3)).not.toBe(chunkKey(1, 3, 2));
   });
 
   it('picks finer terrain as the camera zooms in', () => {
-    expect(TerrainLayer.levelFor(0.05)).toBe(0);
-    expect(TerrainLayer.levelFor(0.3)).toBe(1);
-    expect(TerrainLayer.levelFor(0.8)).toBe(2);
-    expect(TerrainLayer.levelFor(3)).toBe(3);
+    expect(TerrainLayer.levelFor(0.01)).toBe(0);
+    expect(TerrainLayer.levelFor(0.04)).toBe(1);
+    expect(TerrainLayer.levelFor(0.3)).toBe(4);
+    expect(TerrainLayer.levelFor(3)).toBe(6);
   });
 });
 

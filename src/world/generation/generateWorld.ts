@@ -1,13 +1,20 @@
-import { CAMERA, FOG, GRID_CELL, GRID_NODES, WORLD_CENTER } from '../../core/config.ts';
+import { BASE_SPACING, CAMERA, FOG, GRID_NODES, REGION_COUNT, WORLD_CENTER } from '../../core/config.ts';
 import { clamp01, smoothstep } from '../../core/math.ts';
 import { mulberry32, subSeed } from '../../core/rng.ts';
+import { buildRegions, type RegionsRaw } from '../regions/regions.ts';
+import { buildHydrology } from './hydrology.ts';
 import { fbm, makeNoise } from './noise.ts';
+import { forestValue, reliefValue } from './procedural.ts';
+import { RiverNetwork } from './rivers.ts';
+import { ScalarGrid } from './ScalarGrid.ts';
 import {
   BUILDABLE_E,
   COARSE_NODES,
   COARSE_SPACING,
-  RELIEF_NODES,
-  RELIEF_SPACING,
+  COAST_BASE_OCTAVES,
+  COAST_FREQUENCY,
+  COAST_GAIN,
+  NOISE_SCALE,
   WOODED_DENSITY,
   WorldFields,
   type WorldMeta,
@@ -19,12 +26,14 @@ import type { WorldParams } from './WorldParams.ts';
  *
  * Shape = mathematical mask (a handful of smooth lobes inside an ellipse,
  * twisted by a domain warp) + fractal simplex noise for bays and peninsulas.
+ * On top of that: lakes and rivers (hydrology.ts) and the division of the land
+ * into player regions (regions.ts).
  * Only IEEE-exact operations (+ - * / sqrt) and integer hashing are used, so a
  * seed yields the same map on every device.
  *
  * Implemented as a generator so the caller can spread the work over frames
  * (main-thread fallback) or run it straight through (worker). Yields progress
- * in [0, 1] and returns the finished fields.
+ * in [0, 1] and returns the finished world.
  */
 
 interface Lobe {
@@ -35,14 +44,13 @@ interface Lobe {
   w: number;
 }
 
-/** Noise coordinates are world units divided by this (keeps features round). */
-const NOISE_SCALE = 5000;
 const LAND_THRESHOLD = 0.3;
 /** Land cannot exist beyond this normalised radius of the ellipse. */
 export const LAND_LIMIT = 1.08;
-/** Islands are pushed to this e (a shoal), enclosed water is raised to land. */
+/** Islands are pushed to this e (a shoal); puddles too small to draw are filled. */
 const ISLAND_SINK = -0.03;
-const LAKE_FILL = 0.035;
+const POND_FILL = 0.035;
+const MIN_POND_NODES = 6;
 
 function buildLobes(params: WorldParams): Lobe[] {
   const rng = mulberry32(subSeed(params.seed, 'lobes'));
@@ -108,21 +116,23 @@ export function* generateWorldSteps(params: WorldParams): Generator<number, Worl
   const warpB = makeNoise(seed, 'warp-b');
   const coast = makeNoise(seed, 'coast');
   const reliefNoise = makeNoise(seed, 'relief');
-  const forestNoise = makeNoise(seed, 'forest');
+  const groveNoise = makeNoise(seed, 'forest-groves');
   const regionNoise = makeNoise(seed, 'forest-region');
   const moistNoise = makeNoise(seed, 'moisture');
   const meadowNoise = makeNoise(seed, 'meadow');
+  const lakeNoise = makeNoise(seed, 'lakes');
 
   const n = GRID_NODES;
+  const S = BASE_SPACING;
   const e = new Float32Array(n * n);
   const sx = NOISE_SCALE / params.radiusX;
   const sy = NOISE_SCALE / params.radiusY;
 
   // ---- 1. coast function on the base grid -------------------------------
   for (let j = 0; j < n; j++) {
-    const ny = (j * GRID_CELL - WORLD_CENTER) / NOISE_SCALE;
+    const ny = (j * S - WORLD_CENTER) / NOISE_SCALE;
     for (let i = 0; i < n; i++) {
-      const nx = (i * GRID_CELL - WORLD_CENTER) / NOISE_SCALE;
+      const nx = (i * S - WORLD_CENTER) / NOISE_SCALE;
       const px = nx + params.warp * fbm(warpA, nx * 1.25, ny * 1.25, 2);
       const py = ny + params.warp * fbm(warpB, nx * 1.25, ny * 1.25, 2);
       const qx = px * sx;
@@ -138,7 +148,7 @@ export function* generateWorldSteps(params: WorldParams): Generator<number, Worl
           shape += l.w * u * u * u;
         }
       }
-      const rough = fbm(coast, px * 1.35, py * 1.35, 6, 2, 0.54);
+      const rough = fbm(coast, px * COAST_FREQUENCY, py * COAST_FREQUENCY, COAST_BASE_OCTAVES, 2, COAST_GAIN);
       let v = shape - LAND_THRESHOLD + params.coastRoughness * rough;
       // Keep land away from the edge of the world: a soft push-down towards
       // the rim of the ellipse plus a hard cap that crosses zero at r = 1.08.
@@ -150,48 +160,93 @@ export function* generateWorldSteps(params: WorldParams): Generator<number, Worl
       if (v > cap) v = cap;
       e[j * n + i] = v;
     }
-    if ((j & 31) === 31) yield 0.62 * (j / n);
+    if ((j & 31) === 31) yield 0.5 * (j / n);
   }
 
-  // ---- 2. one continent: sink islands, fill enclosed water ---------------
-  enforceSingleContinent(e, n);
-  yield 0.68;
+  // ---- 2. one continent: sink islands, fill puddles ----------------------
+  const ocean = enforceSingleContinent(e, n);
+  yield 0.54;
 
-  // ---- 3. secondary fields ----------------------------------------------
-  const relief = new Float32Array(RELIEF_NODES * RELIEF_NODES);
-  const forest = new Float32Array(RELIEF_NODES * RELIEF_NODES);
-  const forestBias = (params.forest - 0.5) * 0.5;
-  for (let j = 0; j < RELIEF_NODES; j++) {
-    const y = j * RELIEF_SPACING;
-    for (let i = 0; i < RELIEF_NODES; i++) {
-      const x = i * RELIEF_SPACING;
-      relief[j * RELIEF_NODES + i] = fbm(reliefNoise, x / 2100, y / 2100, 4);
-      const groves = fbm(forestNoise, x / 620, y / 620, 3);
-      const region = fbm(regionNoise, x / 3200, y / 3200, 2);
-      const lowRegion = region + 0.05 < 0 ? region + 0.05 : 0;
-      forest[j * RELIEF_NODES + i] = clamp01(0.5 + (groves - 0.47) * 2.6 + lowRegion * 2.2 + forestBias);
+  // ---- 3. things that describe the continent as seen from the sea --------
+  // (taken before lakes are carved: a lake is not "the sea")
+  const coastDist = distanceFromLand(ocean, n);
+  const inland = new Float32Array(COARSE_NODES * COARSE_NODES);
+  {
+    const ratio = (n - 1) / (COARSE_NODES - 1);
+    for (let j = 0; j < COARSE_NODES; j++) {
+      for (let i = 0; i < COARSE_NODES; i++) {
+        const k = j * ratio * n + i * ratio;
+        // natural lakes are fresh water too
+        inland[j * COARSE_NODES + i] = ocean[k] ? e[k] : Math.max(e[k], 0.12);
+      }
     }
-    if ((j & 63) === 63) yield 0.68 + 0.2 * (j / RELIEF_NODES);
   }
 
+  // ---- 4. rivers and lakes ----------------------------------------------
+  const hill = (x: number, y: number): number => clamp01(0.5 + 1.5 * reliefValue(reliefNoise, x, y, 2000));
+  const hydro = buildHydrology(params, e, n, ocean, hill, lakeNoise);
+  const rivers = new RiverNetwork(hydro.rivers);
+  // a wobbly lake shore can pinch off a scrap of land: it becomes lake bed
+  sinkStrayLand(e, n);
+  yield 0.66;
+
+  // ---- 5. slow fields on the coarse grid ---------------------------------
+  const forest = new Float32Array(COARSE_NODES * COARSE_NODES);
   const moist = new Float32Array(COARSE_NODES * COARSE_NODES);
   const meadow = new Float32Array(COARSE_NODES * COARSE_NODES);
+  const forestBias = (params.forest - 0.5) * 0.8;
   for (let j = 0; j < COARSE_NODES; j++) {
     const y = j * COARSE_SPACING;
     for (let i = 0; i < COARSE_NODES; i++) {
       const x = i * COARSE_SPACING;
-      moist[j * COARSE_NODES + i] = clamp01(0.5 + 0.85 * fbm(moistNoise, x / 4200, y / 4200, 3));
-      meadow[j * COARSE_NODES + i] = clamp01(0.5 + 0.9 * fbm(meadowNoise, x / 1300, y / 1300, 2));
+      const k = j * COARSE_NODES + i;
+      // where the big forests are, and where the open plains
+      forest[k] = 0.5 + 1.9 * (fbm(regionNoise, x / 26000, y / 26000, 3) - 0.2) + forestBias;
+      moist[k] = clamp01(0.5 + 0.85 * fbm(moistNoise, x / 34000, y / 34000, 3));
+      meadow[k] = clamp01(0.5 + 0.9 * fbm(meadowNoise, x / 10400, y / 10400, 2));
     }
   }
-  yield 0.92;
+  yield 0.72;
 
-  // ---- 4. distance from land (for the fog) and summary -------------------
-  const coastDist = distanceFromLand(e, n);
-  const meta = summarize(params, e, forest, n, now() - t0);
+  // ---- 6. player regions -------------------------------------------------
+  const land = landBounds(e, n);
+  const waterDist = distanceToWater(e, n);
+  const eGrid = new ScalarGrid(n, S, e);
+  const sampleE = (x: number, y: number): number => eGrid.sample(x, y);
+  const regionBounds = { x: land.x - 2000, y: land.y - 2000, width: land.width + 4000, height: land.height + 4000 };
+  const regions = buildRegions(
+    seed,
+    REGION_COUNT,
+    e,
+    n,
+    regionBounds,
+    (x, y) => waterDist[Math.round(y / S) * n + Math.round(x / S)] >= 4 && rivers.sdAt(x, y, 220) === Infinity,
+    (x, y) => {
+      const v = sampleE(x, y);
+      if (v <= 0) return v;
+      const sd = rivers.sdAt(x, y, 8);
+      return sd < 0 ? -1 : v;
+    },
+  );
+  yield 0.95;
+
+  // ---- 7. summary --------------------------------------------------------
+  const meta = summarize(params, e, n, forest, groveNoise, rivers, hydro.lakes, regions, land, now() - t0);
   yield 1;
 
-  return new WorldFields({ params, meta, e, relief, forest, moist, meadow, coastDist });
+  return new WorldFields({
+    params,
+    meta,
+    e,
+    forest,
+    moist,
+    meadow,
+    coastDist,
+    inland,
+    rivers: hydro.rivers,
+    lakes: hydro.lakes,
+    regions,
+  });
 }
 
 /** Run the generator to completion (worker / tests / tools). */
@@ -210,10 +265,11 @@ function now(): number {
 
 /**
  * Flood fill on the base grid (4-connectivity):
- *  - water not connected to the world border is a lake -> raised to land;
- *  - every land component except the largest is an island -> sunk to a shoal.
+ *  - every land component except the largest is an island -> sunk to a shoal;
+ *  - enclosed water too small to draw is filled; larger natural lakes stay.
+ * @returns mask of the nodes that belong to the ocean
  */
-function enforceSingleContinent(e: Float32Array, n: number): void {
+function enforceSingleContinent(e: Float32Array, n: number): Uint8Array {
   const total = n * n;
   const label = new Int32Array(total);
   const queue = new Int32Array(total);
@@ -262,12 +318,22 @@ function enforceSingleContinent(e: Float32Array, n: number): void {
   // Ocean: the world border is always water (guaranteed by the edge falloff).
   const OCEAN = 1;
   flood(0, OCEAN, false);
-  // Lakes -> land.
+  let nextId = 2;
+  // Enclosed water: keep real lakes, fill puddles.
   for (let k = 0; k < total; k++) {
-    if (label[k] === 0 && !(e[k] > 0)) e[k] = LAKE_FILL;
+    if (label[k] === 0 && !(e[k] > 0)) {
+      const size = flood(k, nextId, false);
+      if (size < MIN_POND_NODES) {
+        for (let q = 0; q < size; q++) {
+          e[queue[q]] = POND_FILL;
+          label[queue[q]] = 0;
+        }
+      }
+      nextId++;
+    }
   }
   // Land components.
-  let nextId = 2;
+  const firstLand = nextId;
   let bestId = -1;
   let bestSize = 0;
   for (let k = 0; k < total; k++) {
@@ -280,13 +346,129 @@ function enforceSingleContinent(e: Float32Array, n: number): void {
       nextId++;
     }
   }
+  const ocean = new Uint8Array(total);
   for (let k = 0; k < total; k++) {
-    if (label[k] !== OCEAN && label[k] !== bestId) e[k] = ISLAND_SINK;
+    if (label[k] >= firstLand && label[k] !== bestId) {
+      e[k] = ISLAND_SINK;
+      label[k] = OCEAN; // a sunk island is part of the sea
+    }
+  }
+  // Water bodies that only touched a sunk island are sea as well.
+  for (let k = 0; k < total; k++) ocean[k] = e[k] > 0 ? 0 : label[k] === OCEAN ? 1 : 0;
+  // Re-flood so anything now connected to the ocean is labelled ocean.
+  {
+    let head = 0;
+    let tail = 0;
+    for (let k = 0; k < total; k++) if (ocean[k]) queue[tail++] = k;
+    while (head < tail) {
+      const c = queue[head++];
+      const cx = c % n;
+      const cy = (c - cx) / n;
+      const visit = (k: number): void => {
+        if (!ocean[k] && !(e[k] > 0)) {
+          ocean[k] = 1;
+          queue[tail++] = k;
+        }
+      };
+      if (cx > 0) visit(c - 1);
+      if (cx < n - 1) visit(c + 1);
+      if (cy > 0) visit(c - n);
+      if (cy < n - 1) visit(c + n);
+    }
+  }
+  return ocean;
+}
+
+/** Turn every land component except the largest into shallow water. */
+function sinkStrayLand(e: Float32Array, n: number): void {
+  const total = n * n;
+  const label = new Int32Array(total);
+  const queue = new Int32Array(total);
+  let next = 1;
+  let bestId = 0;
+  let bestSize = 0;
+  for (let start = 0; start < total; start++) {
+    if (label[start] !== 0 || !(e[start] > 0)) continue;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = start;
+    label[start] = next;
+    while (head < tail) {
+      const c = queue[head++];
+      const cx = c % n;
+      const cy = (c - cx) / n;
+      if (cx > 0 && label[c - 1] === 0 && e[c - 1] > 0) (label[c - 1] = next), (queue[tail++] = c - 1);
+      if (cx < n - 1 && label[c + 1] === 0 && e[c + 1] > 0) (label[c + 1] = next), (queue[tail++] = c + 1);
+      if (cy > 0 && label[c - n] === 0 && e[c - n] > 0) (label[c - n] = next), (queue[tail++] = c - n);
+      if (cy < n - 1 && label[c + n] === 0 && e[c + n] > 0) (label[c + n] = next), (queue[tail++] = c + n);
+    }
+    if (tail > bestSize) {
+      bestSize = tail;
+      bestId = next;
+    }
+    next++;
+  }
+  if (next <= 2) return;
+  for (let k = 0; k < total; k++) {
+    if (label[k] !== 0 && label[k] !== bestId) e[k] = -0.012;
   }
 }
 
-/** Two-pass chamfer distance transform on a coarse grid; result in wu. */
-function distanceFromLand(e: Float32Array, n: number): Float32Array {
+/** Distance (in grid steps, capped) from each land node to the nearest water. */
+function distanceToWater(e: Float32Array, n: number): Uint8Array {
+  const total = n * n;
+  const dist = new Uint8Array(total).fill(255);
+  const queue = new Int32Array(total);
+  let head = 0;
+  let tail = 0;
+  for (let k = 0; k < total; k++) {
+    if (!(e[k] > 0)) {
+      dist[k] = 0;
+      queue[tail++] = k;
+    }
+  }
+  while (head < tail) {
+    const c = queue[head++];
+    const d = dist[c] + 1;
+    if (d > 32) continue;
+    const cx = c % n;
+    const cy = (c - cx) / n;
+    if (cx > 0 && dist[c - 1] === 255) (dist[c - 1] = d), (queue[tail++] = c - 1);
+    if (cx < n - 1 && dist[c + 1] === 255) (dist[c + 1] = d), (queue[tail++] = c + 1);
+    if (cy > 0 && dist[c - n] === 255) (dist[c - n] = d), (queue[tail++] = c - n);
+    if (cy < n - 1 && dist[c + n] === 255) (dist[c + n] = d), (queue[tail++] = c + n);
+  }
+  return dist;
+}
+
+function landBounds(e: Float32Array, n: number): { x: number; y: number; width: number; height: number } {
+  let minX = n;
+  let minY = n;
+  let maxX = -1;
+  let maxY = -1;
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      if (e[j * n + i] > 0) {
+        if (i < minX) minX = i;
+        if (i > maxX) maxX = i;
+        if (j < minY) minY = j;
+        if (j > maxY) maxY = j;
+      }
+    }
+  }
+  return {
+    x: minX * BASE_SPACING,
+    y: minY * BASE_SPACING,
+    width: (maxX - minX) * BASE_SPACING,
+    height: (maxY - minY) * BASE_SPACING,
+  };
+}
+
+/**
+ * Distance (wu) from the continent - anything that is not ocean - on a coarse
+ * grid, by a two-pass chamfer transform.
+ */
+function distanceFromLand(ocean: Uint8Array, n: number): Float32Array {
   const m = COARSE_NODES;
   const ratio = (n - 1) / (m - 1);
   const dist = new Float32Array(m * m);
@@ -303,7 +485,7 @@ function distanceFromLand(e: Float32Array, n: number): Float32Array {
         for (let di = -2; di <= 2; di++) {
           const ii = bi + di;
           if (ii < 0 || ii >= n) continue;
-          if (e[jj * n + ii] > 0) {
+          if (!ocean[jj * n + ii]) {
             land = true;
             break;
           }
@@ -341,7 +523,7 @@ function distanceFromLand(e: Float32Array, n: number): Float32Array {
     }
   }
   // Whatever the land looks like, the rim of the world is always deep in fog.
-  const rim = 800;
+  const rim = 6400;
   for (let j = 0; j < m; j++) {
     for (let i = 0; i < m; i++) {
       const border = Math.min(i, j, m - 1 - i, m - 1 - j) * COARSE_SPACING;
@@ -357,54 +539,59 @@ function distanceFromLand(e: Float32Array, n: number): Float32Array {
 function summarize(
   params: WorldParams,
   e: Float32Array,
-  forest: Float32Array,
   n: number,
+  forest: Float32Array,
+  groveNoise: ReturnType<typeof makeNoise>,
+  rivers: RiverNetwork,
+  lakes: Float32Array,
+  regions: RegionsRaw,
+  land: { x: number; y: number; width: number; height: number },
   generationMs: number,
 ): WorldMeta {
-  let minX = n;
-  let minY = n;
-  let maxX = -1;
-  let maxY = -1;
-  let land = 0;
+  let landNodes = 0;
   let buildable = 0;
+  let sampled = 0;
   let wooded = 0;
-  const fr = (RELIEF_NODES - 1) / (n - 1);
+  const S = BASE_SPACING;
+  const ratio = (COARSE_NODES - 1) / (n - 1);
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const v = e[j * n + i];
-      if (v > 0) {
-        land++;
-        if (i < minX) minX = i;
-        if (i > maxX) maxX = i;
-        if (j < minY) minY = j;
-        if (j > maxY) maxY = j;
-        const f = forest[Math.round(j * fr) * RELIEF_NODES + Math.round(i * fr)];
-        if (f > WOODED_DENSITY) wooded++;
-        else if (v > BUILDABLE_E) buildable++;
+      if (!(v > 0)) continue;
+      landNodes++;
+      if (v > BUILDABLE_E) buildable++;
+      if ((i & 3) === 0 && (j & 3) === 0) {
+        // regional value at the matching coarse node, plus local detail
+        const regional = forest[Math.round(j * ratio) * COARSE_NODES + Math.round(i * ratio)];
+        sampled++;
+        if (forestValue(regional, groveNoise, i * S, j * S, 2) > WOODED_DENSITY) wooded++;
       }
     }
   }
-  const landBounds = {
-    x: minX * GRID_CELL,
-    y: minY * GRID_CELL,
-    width: (maxX - minX) * GRID_CELL,
-    height: (maxY - minY) * GRID_CELL,
-  };
   const m = CAMERA.fitMargin;
-  const cameraBounds = {
-    x: landBounds.x - m,
-    y: landBounds.y - m,
-    width: landBounds.width + 2 * m,
-    height: landBounds.height + 2 * m,
-  };
+  let aMin = Infinity;
+  let aMax = 0;
+  let aSum = 0;
+  for (const a of regions.areas) {
+    if (a < aMin) aMin = a;
+    if (a > aMax) aMax = a;
+    aSum += a;
+  }
+  const count = regions.areas.length;
   return {
     params,
-    landBounds,
-    cameraBounds,
-    landArea: land * GRID_CELL * GRID_CELL,
-    landFraction: land / (n * n),
-    buildableFraction: land > 0 ? buildable / land : 0,
-    forestFraction: land > 0 ? wooded / land : 0,
+    landBounds: land,
+    cameraBounds: { x: land.x - m, y: land.y - m, width: land.width + 2 * m, height: land.height + 2 * m },
+    landArea: landNodes * S * S,
+    landFraction: landNodes / (n * n),
+    buildableFraction: landNodes > 0 ? buildable / landNodes : 0,
+    forestFraction: sampled > 0 ? wooded / sampled : 0,
+    lakeCount: lakes.length / 3,
+    riverLength: rivers.totalLength(),
+    regionCount: count,
+    regionAreaMin: count ? aMin : 0,
+    regionAreaAvg: count ? aSum / count : 0,
+    regionAreaMax: aMax,
     generationMs,
   };
 }

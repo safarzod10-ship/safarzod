@@ -125,6 +125,9 @@ body {
 .vcm-btn + .vcm-btn {
   border-top: 1px solid var(--panel-line);
 }
+.vcm-btn svg circle {
+  fill: currentColor;
+}
 .vcm-btn svg {
   width: 20px;
   height: 20px;
@@ -177,6 +180,35 @@ body {
   border-top: 0;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
   box-sizing: border-box;
+}
+
+.vcm-region {
+  position: absolute;
+  left: calc(12px + var(--safe-left));
+  bottom: calc(66px + var(--safe-bottom));
+  max-width: calc(100% - 96px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 13px 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-left: 3px solid #e9c64a;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.vcm-region[hidden] {
+  display: none;
+}
+.vcm-region__title {
+  font-weight: 650;
+  font-size: 14px;
+}
+.vcm-region__meta {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
 }
 
 .vcm-perf {

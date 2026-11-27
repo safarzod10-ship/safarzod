@@ -19,9 +19,12 @@ export const LAND = {
 
 /** Elevation model used for hill shading (world units). */
 export const RELIEF = {
-  height: 34,
+  height: 200,
   /** Extra rise right behind the beach so the land reads as raised. */
   bank: 2.5,
+  /** e range over which land rises from the waterline to full height. */
+  riseE: 0.03,
+  bankE: 0.008,
   /** Light direction (pointing from the surface to the light), normalised. */
   light: [-0.52, -0.62, 0.59] as readonly [number, number, number],
   strength: 1,

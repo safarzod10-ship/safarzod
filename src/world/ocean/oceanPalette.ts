@@ -13,6 +13,8 @@ export const OCEAN = {
   mid: [44, 150, 186] as RGB,
   deep: [27, 104, 162] as RGB,
   abyss: [21, 82, 140] as RGB,
+  /** Rivers: one calm colour regardless of depth. */
+  river: [66, 168, 190] as RGB,
 } as const;
 
 const tmp: [number, number, number] = [0, 0, 0];

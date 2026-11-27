@@ -2,14 +2,18 @@
 
 exports[`world generation > matches the pinned fingerprint of the canonical world 1`] = `
 {
-  "e": "de3f3063",
-  "forest": "2b1555a2",
+  "e": "d5ce8885",
+  "forest": "cecfc795",
+  "lakes": "43253841",
   "landBounds": {
-    "height": 8944,
-    "width": 6848,
-    "x": 4320,
-    "y": 4656,
+    "height": 71552,
+    "width": 54784,
+    "x": 34560,
+    "y": 37248,
   },
-  "relief": "a37ec2a4",
+  "regionBorders": "52d5ff82",
+  "regionHomes": "c4fab3e1",
+  "regionSites": "4fa075be",
+  "rivers": "2db506b9",
 }
 `;

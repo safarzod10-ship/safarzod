@@ -9,17 +9,24 @@
  *  - The continent is centred on (WORLD_CENTER, WORLD_CENTER).
  */
 
-/** World square side, in world units. */
-export const WORLD_SIZE = 16384;
+/** World square side, in world units (131 km). */
+export const WORLD_SIZE = 131072;
 export const WORLD_CENTER = WORLD_SIZE / 2;
 
 /**
- * Spacing of the base generation grid and the recommended base cell for
- * anything placed on land (plots, buildings). Chunk sizes are multiples of it.
+ * Recommended base cell for anything placed on land (plots, buildings).
+ * Chunk sizes are multiples of it.
  */
 export const GRID_CELL = 16;
+/** Spacing (wu) of the base generation grid; finer detail is procedural. */
+export const BASE_SPACING = 128;
 /** Nodes per side of the base generation grid (shared-edge samples). */
-export const GRID_NODES = WORLD_SIZE / GRID_CELL + 1;
+export const GRID_NODES = WORLD_SIZE / BASE_SPACING + 1;
+
+/** The continent is divided into this many player regions. */
+export const REGION_COUNT = 1000;
+/** Share of a region handed out as the starting plot. */
+export const STARTER_PLOT_SHARE = 0.01;
 
 /** Samples per side of one baked terrain chunk texture (shared edges). */
 export const CHUNK_NODES = 257;
@@ -36,15 +43,21 @@ export interface LodSpec {
 
 /** Level 0 is the coarsest (always resident), the last one the finest. */
 export const LODS: readonly LodSpec[] = [
-  { level: 0, chunkSize: 4096, texel: 16, band: 128 },
-  { level: 1, chunkSize: 2048, texel: 8, band: 64 },
-  { level: 2, chunkSize: 1024, texel: 4, band: 40 },
-  { level: 3, chunkSize: 512, texel: 2, band: 28 },
+  { level: 0, chunkSize: 32768, texel: 128, band: 1024 },
+  { level: 1, chunkSize: 16384, texel: 64, band: 512 },
+  { level: 2, chunkSize: 8192, texel: 32, band: 256 },
+  { level: 3, chunkSize: 4096, texel: 16, band: 128 },
+  { level: 4, chunkSize: 2048, texel: 8, band: 64 },
+  { level: 5, chunkSize: 1024, texel: 4, band: 40 },
+  { level: 6, chunkSize: 512, texel: 2, band: 28 },
 ];
+export const FINEST_LEVEL = LODS.length - 1;
+/** Up to this level groves are painted into the terrain; finer levels use sprites. */
+export const CANOPY_MAX_LEVEL = 4;
 
 export const TERRAIN = {
   /** A finer LOD is requested once one texel would cover more device px. */
-  maxTexelPx: 4,
+  maxTexelPx: 3,
   /** Non-base chunks kept in memory (LRU). */
   cacheChunks: 56,
   cacheChunksLowMemory: 36,
@@ -60,7 +73,7 @@ export const CAMERA = {
   /** Max zoom: CSS px per world unit. */
   maxScale: 1.6,
   /** Ocean + fog ring kept around the land bounding box, world units. */
-  fitMargin: 1700,
+  fitMargin: 11000,
   /** Extra zoom-out allowed beyond "continent fits the screen" (1 = none). */
   minScaleSlack: 1,
   wheelSmooth: 6,
@@ -70,10 +83,12 @@ export const CAMERA = {
 
 export const FOG = {
   /** Distance from the coast where fog starts / is fully opaque (wu). */
-  start: 520,
-  end: 2100,
+  start: 3500,
+  end: 15000,
+  /** Amplitude (wu) of the noise that breaks the fog edge into wisps. */
+  wisp: 5000,
   /** Distance encoded as 255 in the fog distance texture (wu). */
-  range: 4096,
+  range: 32768,
   /** Fog colour, linear-ish sRGB 0..1. Also the renderer clear colour. */
   color: [0.925, 0.949, 0.965] as readonly [number, number, number],
   colorHex: 0xecf2f6,
@@ -83,11 +98,11 @@ export const TREES = {
   /** Tree chunk side (wu). */
   chunkSize: 1024,
   /** Jittered placement grid spacing (wu). */
-  spacing: 12,
+  spacing: 13,
   /** Device px per wu where tree sprites start to fade in / are opaque. */
-  showFrom: 0.36,
-  fullAt: 0.5,
-  cacheChunks: 72,
+  showFrom: 0.42,
+  fullAt: 0.56,
+  cacheChunks: 28,
 } as const;
 
 export const RENDER = {

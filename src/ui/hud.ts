@@ -9,6 +9,8 @@ export interface HudActions {
   zoomOut(): void;
   fit(): void;
   togglePerf(on: boolean): void;
+  /** Jump to a random region (demo of "you were given one of 1000 places"). */
+  randomRegion(): void;
 }
 
 export interface Hud {
@@ -18,6 +20,8 @@ export interface Hud {
   fail(message: string): void;
   setActions(actions: HudActions): void;
   setInfo(title: string, meta: string): void;
+  /** Show the facts of the selected region, or hide the card with null. */
+  setRegion(region: { number: number; total: number; areaM2: number; plotSideM: number } | null): void;
   /** @param scale CSS px per world unit */
   setView(scale: number, minScale: number, maxScale: number): void;
   setPerf(stats: MapStats): void;
@@ -29,9 +33,12 @@ const ICONS = {
   minus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>',
   fit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   perf: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L19 8"/></svg>',
+  dice:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"/>' +
+    '<circle cx="9" cy="9" r="0.6"/><circle cx="15" cy="15" r="0.6"/><circle cx="15" cy="9" r="0.6"/><circle cx="9" cy="15" r="0.6"/></svg>',
 };
 
-const SCALE_STEPS = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+const SCALE_STEPS = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, parent: HTMLElement): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -64,6 +71,7 @@ export function createHud(root: HTMLElement): Hud {
   const controls = el('div', 'vcm-controls', hud);
   const tools = el('div', 'vcm-group', controls);
   const perfBtn = button(tools, ICONS.perf, 'Показатели производительности');
+  const diceBtn = button(tools, ICONS.dice, 'Случайный участок');
   const zoom = el('div', 'vcm-group', controls);
   const inBtn = button(zoom, ICONS.plus, 'Приблизить');
   const outBtn = button(zoom, ICONS.minus, 'Отдалить');
@@ -71,6 +79,12 @@ export function createHud(root: HTMLElement): Hud {
 
   const perf = el('div', 'vcm-perf', hud);
   perf.hidden = true;
+
+  const regionCard = el('div', 'vcm-region', hud);
+  regionCard.hidden = true;
+  regionCard.setAttribute('role', 'status');
+  const regionTitle = el('div', 'vcm-region__title', regionCard);
+  const regionMeta = el('div', 'vcm-region__meta', regionCard);
 
   const loading = el('div', 'vcm-loading', root);
   const box = el('div', 'vcm-loading__box', loading);
@@ -88,6 +102,7 @@ export function createHud(root: HTMLElement): Hud {
   inBtn.addEventListener('click', () => actions?.zoomIn());
   outBtn.addEventListener('click', () => actions?.zoomOut());
   fitBtn.addEventListener('click', () => actions?.fit());
+  diceBtn.addEventListener('click', () => actions?.randomRegion());
   perfBtn.addEventListener('click', () => {
     perfOn = !perfOn;
     perf.hidden = !perfOn;
@@ -120,6 +135,13 @@ export function createHud(root: HTMLElement): Hud {
     setInfo(titleText, meta) {
       chipTitle.textContent = titleText;
       chipMeta.textContent = meta;
+    },
+    setRegion(region) {
+      regionCard.hidden = !region;
+      if (!region) return;
+      regionTitle.textContent = `Участок ${region.number} из ${region.total}`;
+      const km2 = (region.areaM2 / 1e6).toFixed(2).replace('.', ',');
+      regionMeta.textContent = `${km2} км² · стартовая зона ${region.plotSideM}×${region.plotSideM} м`;
     },
     setView(scale, minScale, maxScale) {
       // scale bar: the longest "round" distance that fits in ~120 px
