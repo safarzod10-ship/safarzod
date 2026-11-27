@@ -513,7 +513,8 @@ window.renderAt = function (t) {
     if (txt) {
       c.label.material.map = labelTex(txt, !!x.label.heart, x.label.color || '#ffffff');
       const camD = camera.position.distanceTo(v3(x.pos.x, 6, x.pos.z));
-      const sc = x.labelPop / (c.o.small ? 0.72 : 1) * clamp(camD / 14, 0.42, 1); // smaller in close-ups so it fits the frame
+      const short = txt.length <= 3;
+      const sc = x.labelPop / (c.o.small ? 0.72 : 1) * (short ? 1.6 * clamp(camD / 14, 0.6, 1) : clamp(camD / 14, 0.42, 1)); // long labels shrink in close-ups; short ones (scores) stay big
       c.label.position.set(0, 7.1, 0); c.label.scale.set(3.6 * sc, 0.9 * sc, 1);
     }
   }

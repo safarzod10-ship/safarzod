@@ -1,0 +1,45 @@
+{
+ "title": "Папа сделал домашку",
+ "format": "comedy",
+ "hook": "ПАПА СДЕЛАЛ МОЮ ДОМАШКУ 😂",
+ "outro": "КТО ТЕБЕ ПОМОГАЕТ?",
+ "music": "happy",
+ "location": "home",
+ "time": "evening",
+ "highlight": ["ПАПА", "ЛЕГКО", "ПОЛУНОЧИ", "ГОТОВО", "ДВОЙКУ", "УМНОЖЕНИЯ", "НАУЧИ", "УЧЕНИК", "ПЯТЁРКА"],
+ "cast": {
+  "timur":   {"preset": "timur", "pos": [6.5, -1.5], "label": null},
+  "dad":     {"preset": "dad", "pos": [1.5, -2.5], "label": null},
+  "teacher": {"preset": "teacher", "pos": [-2, 1], "hidden": true, "label": null}
+ },
+ "props": [
+  {"shape": "book", "pos": [4, 2.5, -6], "from": 0, "to": 2},
+  {"shape": "book", "size": [1.4, 1.1, 0.12], "color": "#3a7ad0", "holder": "teacher", "from": 3, "to": 4},
+  {"shape": "book", "size": [1.4, 1.1, 0.12], "color": "#d03a3a", "holder": "dad", "from": 7, "to": 7}
+ ],
+ "lines": [
+  {"text": "Вчера папа сказал: я сам сделаю твою математику. Это же легко!", "emotion": "excited", "cam": "wide:timur,dad",
+   "acts": {"dad": {"faceTo": "timur", "pose": "point", "face": "smug"}, "timur": {"faceTo": "dad", "face": "neutral"}}},
+  {"text": "Папа сидел до полуночи. Думал, считал, стирал и снова считал.", "emotion": "calm", "cam": "medium:dad", "time": "night",
+   "acts": {"dad": {"faceTo": [4, -6], "pose": "think", "face": "think"}, "timur": {"hide": true}}},
+  {"text": "Ровно в полночь папа гордо сказал: готово! Задача решена!", "emotion": "excited", "cam": "close:dad",
+   "acts": {"dad": {"faceTo": "cam", "pose": "cheer", "face": "joy"}}},
+  {"text": "Утром учительница взяла мою тетрадь и долго её разглядывала.", "emotion": "mystery", "cam": "two:teacher:timur", "location": "school", "time": "day",
+   "acts": {"dad": {"hide": true}, "teacher": {"show": true, "pos": [-2, 1], "faceTo": "timur", "pose": "give", "face": "think"}, "timur": {"show": true, "pos": [2.2, 1.6], "faceTo": "teacher", "face": "smile"}}},
+  {"text": "Потом поставила жирную двойку!", "emotion": "surprise", "cam": "close:teacher", "boom": true, "shake": true,
+   "acts": {"teacher": {"faceTo": "cam", "face": "angry", "pose": "point", "label": {"text": "2", "color": "#ff5a5a", "pop": true, "delay": 0.6}}}},
+  {"text": "Внизу было написано: передай папе, пусть повторит таблицу умножения.", "emotion": "calm", "cam": "medium:timur",
+   "acts": {"teacher": {"label": null, "face": "smug"}, "timur": {"faceTo": "cam", "pose": "facepalm", "face": "sad"}}},
+  {"text": "Вечером папа долго молчал.", "emotion": "sad", "cam": "medium:dad", "location": "home", "time": "evening",
+   "acts": {"teacher": {"hide": true}, "dad": {"show": true, "pos": [1.5, -2.5], "faceTo": "cam", "pose": "sad", "face": "sad"}, "timur": {"pos": [6.5, -1.5], "faceTo": "dad", "face": "neutral"}}},
+  {"text": "Потом он достал мой старый учебник и сказал: сын, научи меня.", "emotion": "warm", "cam": "two:dad:timur",
+   "acts": {"dad": {"faceTo": "timur", "pose": "give", "face": "smile"}, "timur": {"faceTo": "dad", "face": "shock", "faceAfter": [3.0, "joy"]}}},
+  {"text": "Теперь каждый вечер я учитель. А папа мой самый старательный ученик!", "emotion": "warm", "cam": "wide:timur,dad",
+   "acts": {"timur": {"faceTo": "dad", "pose": "point", "face": "smug", "label": {"text": "УЧИТЕЛЬ", "color": "#ffe14a", "pop": true}},
+            "dad": {"faceTo": "timur", "pose": "idle", "face": "smile", "label": {"text": "УЧЕНИК", "color": "#ffffff", "pop": true, "delay": 1.6}}}},
+  {"text": "Папа получил пятёрку! Я сам её поставил!", "emotion": "excited", "cam": "medium:dad", "chime": true,
+   "acts": {"dad": {"faceTo": "cam", "pose": "cheer", "face": "joy", "label": {"text": "5", "color": "#7dff8a", "pop": true, "delay": 1.3}}}},
+  {"text": "Кто дома помогает тебе с уроками? Напиши в комментариях.", "emotion": "outro", "cam": "wide:timur,dad",
+   "acts": {"dad": {"faceTo": "cam", "pose": "wave", "face": "joy"}, "timur": {"faceTo": "cam", "pose": "cheer", "face": "joy", "label": null}}}
+ ]
+}

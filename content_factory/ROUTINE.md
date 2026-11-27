@@ -43,8 +43,9 @@ Record the format in episodes.log as the 2nd field: `epNN | format | title | hoo
   Mark ambiguous stresses with "+": вс+е (everyone) vs всё, з+амок/зам+ок, пл+ачу/плач+у, etc.
 - make_voice.py now prepends "... " to every line (fixes swallowed first syllables). If a line still loses its
   first word, rephrase it.
-- Never start a line with a word that begins with an UNSTRESSED vowel (Артём, Учительница, Однажды, Американец):
-  the first syllable gets lost. Put a fuller word before it ("Тогда Артём…").
+- Never start a line with a word whose FIRST SYLLABLE IS UNSTRESSED (Артём, Учительница, Однажды, Наконец,
+  Сегодня, Папина is OK because ПА is stressed): the first syllable gets lost. Best first words have the stress
+  on the first syllable (Папа, Утром, Вечером, Ровно, Тогда is NOT ok → use "Ровно тогда"…). Put a fuller word before it ("Тогда Артём…").
 - Do NOT start a line with a short word like "Я", "И", "А", "Но" followed by a pause-free verb, or with a word whose
   first syllable is unstressed and short ("Наверное") — the model tends to swallow it. Start with a fuller word
   ("Тогда я…", "Она, наверное…").
