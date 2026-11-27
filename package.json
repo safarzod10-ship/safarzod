@@ -1,0 +1,26 @@
+{
+  "name": "virtual-country-map",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interactive procedural continent map for a Telegram Mini App city-building game (map layer only).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "map:preview": "node tools/render-preview.ts"
+  },
+  "dependencies": {
+    "pixi-viewport": "^7.0.3",
+    "pixi.js": "^8.23.0",
+    "simplex-noise": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.7",
+    "typescript": "^5.9.3",
+    "vite": "^8.4.0",
+    "vitest": "^5.1.2"
+  }
+}
