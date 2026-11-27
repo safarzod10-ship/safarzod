@@ -1,0 +1,302 @@
+{
+ "title": "Тайный подарок",
+ "format": "detective",
+ "hook": "КТО ОСТАВИЛ ПОДАРОК? 🕵️",
+ "outro": "С КАКОЙ СЕКУНДЫ ПОНЯЛ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": [
+  "ПОДАРОК",
+  "СПАСИБО",
+  "ПОСЛЕДНИМ",
+  "РАНЬШЕ",
+  "ТРЕНИРОВКЕ",
+  "ФОРМЕ",
+  "ПЯТЬ",
+  "СТЕСНЯЛСЯ"
+ ],
+ "cast": {
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    -4.6,
+    -1.2
+   ],
+   "label": null
+  },
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    -2,
+    1.6
+   ],
+   "label": null,
+   "hidden": true
+  },
+  "max": {
+   "preset": "max",
+   "pos": [
+    1.6,
+    1
+   ],
+   "label": null,
+   "hidden": true
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    5.2,
+    1.6
+   ],
+   "label": null,
+   "hidden": true
+  },
+  "guard": {
+   "preset": "guard",
+   "pos": [
+    9,
+    -2
+   ],
+   "hidden": true,
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "gift",
+   "holder": "liza",
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "gift",
+   "holder": "liza",
+   "from": 9,
+   "to": 10
+  }
+ ],
+ "lines": [
+  {
+   "text": "Утром Лиза нашла на скамейке подарок и записку: спасибо за помощь.",
+   "emotion": "mystery",
+   "cam": "medium:liza",
+   "boom": true,
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "pose": "give",
+     "face": "shock",
+     "faceAfter": [
+      3.0,
+      "smile"
+     ]
+    }
+   }
+  },
+  {
+   "text": "Имени там не было. А помогала Лиза с уроками троим мальчишкам.",
+   "emotion": "mystery",
+   "cam": "close:liza",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "pose": "give",
+     "face": "think"
+    }
+   }
+  },
+  {
+   "text": "Первым ответил Тимур: я пришёл в школу последним, перед самым звонком.",
+   "emotion": "calm",
+   "cam": "close:timur",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "neutral",
+     "pose": "shrug",
+     "label": {
+      "text": "ТИМУР",
+      "color": "#ffe14a"
+     },
+     "show": true
+    }
+   }
+  },
+  {
+   "text": "Следом Макс: вчера я ушёл домой раньше всех.",
+   "emotion": "calm",
+   "cam": "close:max",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "smug",
+     "label": {
+      "text": "МАКС",
+      "color": "#ffe14a"
+     },
+     "show": true
+    }
+   }
+  },
+  {
+   "text": "Третьим был Артём: я весь вечер был на тренировке и в школу не заходил.",
+   "emotion": "calm",
+   "cam": "close:artem",
+   "acts": {
+    "artem": {
+     "faceTo": "cam",
+     "face": "neutral",
+     "pose": "shrug",
+     "label": {
+      "text": "АРТЁМ",
+      "color": "#ffe14a"
+     },
+     "show": true
+    }
+   }
+  },
+  {
+   "text": "Вспомнил сторож: вечером приходил только один мальчик. В спортивной форме.",
+   "emotion": "mystery",
+   "cam": "medium:guard",
+   "whoosh": true,
+   "acts": {
+    "guard": {
+     "show": true,
+     "faceTo": "cam",
+     "face": "think",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Кто оставил подарок? Подумай пять секунд.",
+   "emotion": "excited",
+   "cam": "wide:timur,max,artem",
+   "gap": 3.2,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "label": {
+      "text": "1",
+      "color": "#ffffff",
+      "pop": true
+     }
+    },
+    "max": {
+     "faceTo": "cam",
+     "label": {
+      "text": "2",
+      "color": "#ffffff",
+      "pop": true
+     }
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "neutral",
+     "label": {
+      "text": "3",
+      "color": "#ffffff",
+      "pop": true
+     }
+    },
+    "guard": {
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Правильно! Это Артём. Он пришёл прямо с тренировки, в форме.",
+   "emotion": "surprise",
+   "cam": "close:artem",
+   "flash": true,
+   "boom": true,
+   "shake": true,
+   "acts": {
+    "artem": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock",
+     "label": {
+      "text": "ЭТО ОН!",
+      "color": "#7dff8a",
+      "pop": true
+     }
+    }
+   }
+  },
+  {
+   "text": "Красный как помидор, Артём признался: просто стеснялся сказать спасибо.",
+   "emotion": "warm",
+   "cam": "medium:artem",
+   "acts": {
+    "artem": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "facepalm",
+     "label": null
+    },
+    "timur": {
+     "label": null
+    },
+    "max": {
+     "label": null
+    }
+   }
+  },
+  {
+   "text": "Весело Лиза ответила: завтра помогу тебе ещё!",
+   "emotion": "warm",
+   "cam": "two:liza:artem",
+   "chime": true,
+   "acts": {
+    "liza": {
+     "pos": [
+      1.0,
+      3.4
+     ],
+     "faceTo": "artem",
+     "face": "joy",
+     "pose": "give"
+    },
+    "artem": {
+     "pos": [
+      4.4,
+      3.0
+     ],
+     "faceTo": "liza",
+     "face": "joy",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Сразу угадал? Пиши в комментариях, с какой секунды понял.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "max": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "smile"
+    }
+   }
+  }
+ ]
+}
