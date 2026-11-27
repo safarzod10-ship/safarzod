@@ -1,6 +1,7 @@
 /**
- * DOM overlay: loading screen, zoom controls, scale bar, optional perf panel.
+ * DOM overlay: zoom controls, scale bar, region card, optional perf panel.
  * Plain DOM on purpose - it is tiny and does not cost draw calls.
+ * (The loading screen is its own module: src/splash.)
  */
 import type { MapStats } from '../rendering/MapApp.ts';
 
@@ -15,9 +16,8 @@ export interface HudActions {
 
 export interface Hud {
   readonly stage: HTMLElement;
-  setLoading(progress: number, label: string): void;
-  finishLoading(): void;
-  fail(message: string): void;
+  /** Fade the controls in (they start hidden while the game loads). */
+  show(): void;
   setActions(actions: HudActions): void;
   setInfo(title: string, meta: string): void;
   /** Show the facts of the selected region, or hide the card with null. */
@@ -86,15 +86,6 @@ export function createHud(root: HTMLElement): Hud {
   const regionTitle = el('div', 'vcm-region__title', regionCard);
   const regionMeta = el('div', 'vcm-region__meta', regionCard);
 
-  const loading = el('div', 'vcm-loading', root);
-  const box = el('div', 'vcm-loading__box', loading);
-  const title = el('h1', 'vcm-loading__title', box);
-  title.textContent = 'Virtual Country';
-  const track = el('div', 'vcm-loading__track', box);
-  const fill = el('div', 'vcm-loading__fill', track);
-  const stageLabel = el('p', 'vcm-loading__stage', box);
-  loading.setAttribute('role', 'status');
-
   let actions: HudActions | null = null;
   let perfOn = false;
   let lastScaleKey = '';
@@ -115,19 +106,8 @@ export function createHud(root: HTMLElement): Hud {
     get perfVisible() {
       return perfOn;
     },
-    setLoading(progress, label) {
-      fill.style.transform = `scaleX(${Math.max(0, Math.min(1, progress)).toFixed(3)})`;
-      stageLabel.textContent = label;
-    },
-    finishLoading() {
-      fill.style.transform = 'scaleX(1)';
-      loading.classList.add('is-done');
+    show() {
       hud.classList.add('is-ready');
-      window.setTimeout(() => loading.remove(), 900);
-    },
-    fail(message) {
-      loading.classList.add('is-error');
-      stageLabel.textContent = message;
     },
     setActions(a) {
       actions = a;

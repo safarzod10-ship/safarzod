@@ -232,63 +232,6 @@ body {
   display: none;
 }
 
-/* ---------- loading / error ---------- */
-.vcm-loading {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(120% 90% at 50% 38%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 60%),
-    linear-gradient(180deg, #f3f7fa 0%, #e3ecf2 100%);
-  transition: opacity 0.6s ease;
-  z-index: 5;
-}
-.vcm-loading.is-done {
-  opacity: 0;
-  pointer-events: none;
-}
-.vcm-loading__box {
-  width: min(320px, 78vw);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  text-align: center;
-}
-.vcm-loading__title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-}
-.vcm-loading__stage {
-  margin: 0;
-  min-height: 1.3em;
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-.vcm-loading__track {
-  height: 6px;
-  border-radius: 6px;
-  background: rgba(16, 52, 74, 0.12);
-  overflow: hidden;
-}
-.vcm-loading__fill {
-  height: 100%;
-  width: 100%;
-  border-radius: 6px;
-  background: linear-gradient(90deg, #2b9fb3, #58c4c0);
-  transform-origin: 0 50%;
-  transform: scaleX(0);
-  transition: transform 0.25s ease-out;
-}
-.vcm-loading.is-error .vcm-loading__track {
-  display: none;
-}
-.vcm-loading.is-error .vcm-loading__stage {
-  color: var(--danger);
-}
-
 @media (max-width: 420px) {
   .vcm-chip {
     padding: 6px 10px 7px;
@@ -296,9 +239,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vcm-hud,
-  .vcm-loading,
-  .vcm-loading__fill {
+  .vcm-hud {
     transition: none;
   }
 }

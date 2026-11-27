@@ -173,7 +173,9 @@ class Heap {
  * walking only through set pixels. Unreachable pixels get Infinity.
  */
 export function geodesicDistance(mask: Uint8Array, w: number, h: number, seed: number): Float32Array {
-  const dist = new Float32Array(w * h).fill(Infinity);
+  // float64 on purpose: with float32 the stored distance can round above the
+  // candidate, which then "improves" it forever
+  const dist = new Float64Array(w * h).fill(Infinity);
   const heap = new Heap();
   dist[seed] = 0;
   heap.push(0, seed);
@@ -202,7 +204,7 @@ export function geodesicDistance(mask: Uint8Array, w: number, h: number, seed: n
       }
     }
   }
-  return dist;
+  return Float32Array.from(dist);
 }
 
 /**
@@ -211,7 +213,7 @@ export function geodesicDistance(mask: Uint8Array, w: number, h: number, seed: n
  */
 export function spreadOutwards(values: Float32Array, mask: Uint8Array, w: number, h: number): Float32Array {
   const out = Float32Array.from(values);
-  const dist = new Float32Array(w * h).fill(Infinity);
+  const dist = new Float64Array(w * h).fill(Infinity);
   const heap = new Heap();
   for (let i = 0; i < w * h; i++) {
     if (mask[i]) {

@@ -118,15 +118,19 @@ export class TerrainLayer {
         onProgress?.(++done / (n * n));
       }
     }
-    this.warmUpShaders();
   }
 
   /**
    * Compile all three shader variants during loading. Otherwise the first
    * inland / open-sea chunk met while zooming would compile its program in
    * the middle of a gesture and drop a frame.
+   *
+   * The programs link when the layer is next drawn, so call this when the map
+   * is (about to be) rendered: `MapApp.warmUp()` does, right before the
+   * loading splash opens.
    */
-  private warmUpShaders(): void {
+  warmUpShaders(): void {
+    if (this.destroyed) return;
     const pixels = new Uint8Array(CHUNK_NODES * CHUNK_NODES * 4);
     const meshes: { mesh: Chunk['mesh']; shader: ChunkShader; source: BufferImageSource }[] = [];
     for (const kind of ['mixed', 'land', 'sea'] as const) {

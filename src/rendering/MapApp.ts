@@ -93,6 +93,14 @@ export class MapApp {
     return this.scene.terrain.preloadBase(onProgress);
   }
 
+  /**
+   * Compile the terrain shader variants on the next rendered frames. Call
+   * together with start(), while the loading splash still covers the map.
+   */
+  warmUp(): void {
+    this.scene.terrain.warmUpShaders();
+  }
+
   start(): void {
     // Bracket the whole tick (camera plugins, scene update, render) to know
     // how much main-thread time a frame really costs.

@@ -1,17 +1,34 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="splash-active">
   <head>
     <meta charset="utf-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#ecf2f6" />
+    <meta name="theme-color" content="#06120f" />
     <meta name="color-scheme" content="light" />
-    <title>Virtual Country — карта континента</title>
+    <title>TERRIA</title>
+    <style>
+      /* Before any script or stylesheet: the page opens in the splash's own
+         night colour, so there is no white frame. main.ts removes the class
+         when the map shows. */
+      .splash-active,
+      .splash-active body {
+        background: #06120f;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
+    <!-- Pictures of the loading splash (src/splash). Listed here so that they
+         download together with the script instead of after it; the browser
+         picks AVIF or WebP by itself. Never shown as elements. -->
+    <picture id="splash-world" hidden>
+      <source srcset="/src/splash/assets/world.avif" type="image/avif" />
+      <img src="/src/splash/assets/world.webp" alt="" decoding="async" />
+    </picture>
+    <img id="splash-data" src="/src/splash/assets/splash-data.png" alt="" decoding="async" hidden />
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

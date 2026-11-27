@@ -39,12 +39,36 @@ function loadSdk(): Promise<TelegramWebApp | null> {
   });
 }
 
+/** Colour Telegram's header and backdrop currently should have (the SDK may still be loading). */
+let chromeColor = '';
+
+function applyChromeColor(app: TelegramWebApp | null | undefined): void {
+  if (!app || !chromeColor) return;
+  try {
+    app.setHeaderColor?.(chromeColor);
+    app.setBackgroundColor?.(chromeColor);
+  } catch (err) {
+    console.warn('[telegram] colours rejected', err);
+  }
+}
+
 /**
+ * Recolour Telegram's header and backdrop, e.g. when the dark loading splash
+ * gives way to the map. Safe to call at any time, inside or outside Telegram.
+ */
+export function setTelegramColors(color: string): void {
+  chromeColor = color;
+  applyChromeColor(window.Telegram?.WebApp);
+}
+
+/**
+ * @param color header / backdrop colour to start with (see setTelegramColors)
  * @param onViewportChange called when Telegram resizes the Mini App
  * @returns true when running inside Telegram and the SDK was initialised
  */
 export async function initTelegram(color: string, onViewportChange: () => void): Promise<boolean> {
   if (!isTelegram()) return false;
+  if (!chromeColor) chromeColor = color;
   const app = await loadSdk();
   if (!app) return false;
   try {
@@ -52,8 +76,7 @@ export async function initTelegram(color: string, onViewportChange: () => void):
     app.expand();
     // Dragging the map down must not collapse / close the Mini App.
     app.disableVerticalSwipes?.();
-    app.setHeaderColor?.(color);
-    app.setBackgroundColor?.(color);
+    applyChromeColor(app); // whatever was asked for last, also while the SDK was loading
     app.onEvent?.('viewportChanged', onViewportChange);
   } catch (err) {
     console.warn('[telegram] init failed', err);
