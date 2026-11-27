@@ -1,0 +1,284 @@
+{
+ "title": "Бабушка и телефон",
+ "format": "comedy",
+ "hook": "БАБУШКА И ТЕЛЕФОН 😂",
+ "outro": "А ТЫ УЧИЛ БАБУШКУ?",
+ "music": "happy",
+ "location": "home",
+ "time": "day",
+ "highlight": [
+  "СМАРТФОН",
+  "ПРОСТО",
+  "ВСЕМ",
+  "СТИКЕРОВ",
+  "ПЯТЬ",
+  "ВАГОН",
+  "КАНАЛ",
+  "ТЫСЯЧ",
+  "ДВЕНАДЦАТЬ",
+  "БЕСПЛАТНО"
+ ],
+ "cast": {
+  "granny": {
+   "preset": "granny",
+   "pos": [
+    -2,
+    -1
+   ],
+   "label": null
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    2.2,
+    -0.4
+   ],
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "phone",
+   "holder": "granny",
+   "from": 0,
+   "to": 8
+  }
+ ],
+ "lines": [
+  {
+   "text": "Бабушке подарили первый в жизни смартфон.",
+   "emotion": "excited",
+   "cam": "two:granny:artem",
+   "acts": {
+    "granny": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "phone"
+    },
+    "artem": {
+     "faceTo": "granny",
+     "face": "smile"
+    }
+   }
+  },
+  {
+   "text": "Взялся Артём её научить. Это же просто!",
+   "emotion": "excited",
+   "cam": "medium:artem",
+   "acts": {
+    "artem": {
+     "faceTo": "cam",
+     "face": "smug",
+     "pose": "point"
+    }
+   }
+  },
+  {
+   "text": "Первым делом бабушка случайно позвонила всем сразу. По видео.",
+   "emotion": "surprise",
+   "cam": "close:granny",
+   "boom": true,
+   "acts": {
+    "granny": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "phone",
+     "label": {
+      "text": "ЗВОНОК ×50",
+      "color": "#ff9fd8",
+      "pop": true,
+      "delay": 1.6
+     }
+    }
+   }
+  },
+  {
+   "text": "Следом в семейный чат полетели сто стикеров с котиками.",
+   "emotion": "excited",
+   "cam": "medium:artem",
+   "acts": {
+    "artem": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "facepalm"
+    },
+    "granny": {
+     "label": {
+      "text": "СТИКЕРЫ ×100",
+      "color": "#ffe14a",
+      "pop": true,
+      "delay": 1.0
+     }
+    }
+   }
+  },
+  {
+   "text": "Папа написал: мама, всё в порядке? А бабушка ответила голосовым на пять минут.",
+   "emotion": "calm",
+   "cam": "two:granny:artem",
+   "acts": {
+    "granny": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "phone",
+     "label": {
+      "text": "🎤 5:00",
+      "color": "#9fd8ff",
+      "pop": true,
+      "delay": 3.0
+     }
+    },
+    "artem": {
+     "faceTo": "granny",
+     "face": "shock",
+     "pose": "shock"
+    }
+   }
+  },
+  {
+   "text": "Вечером Артём устал так, будто разгрузил вагон.",
+   "emotion": "sad",
+   "cam": "close:artem",
+   "time": "evening",
+   "acts": {
+    "granny": {
+     "label": null
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "shrug"
+    }
+   }
+  },
+  {
+   "text": "Бабушка тихо сидела в углу и что-то снимала.",
+   "emotion": "mystery",
+   "cam": "wide:granny",
+   "whoosh": true,
+   "acts": {
+    "granny": {
+     "pos": [
+      -9,
+      -8
+     ],
+     "faceTo": [
+      4,
+      -6
+     ],
+     "face": "think",
+     "pose": "phone"
+    },
+    "artem": {
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Утром оказалось: она завела свой канал о пирогах!",
+   "emotion": "surprise",
+   "cam": "close:granny",
+   "flash": true,
+   "boom": true,
+   "time": "day",
+   "acts": {
+    "granny": {
+     "pos": [
+      -2,
+      -1
+     ],
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "phone",
+     "label": {
+      "text": "ПИРОГИ С БАБУШКОЙ",
+      "color": "#ffe14a",
+      "pop": true,
+      "delay": 1.4
+     }
+    }
+   }
+  },
+  {
+   "text": "Десять тысяч подписчиков за одну ночь!",
+   "emotion": "excited",
+   "cam": "low:granny",
+   "chime": true,
+   "shake": true,
+   "acts": {
+    "granny": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer",
+     "label": {
+      "from": 0,
+      "to": 10000,
+      "color": "#7dff8a",
+      "dur": 1.8,
+      "delay": 0.2
+     }
+    }
+   }
+  },
+  {
+   "text": "Целых двенадцать набрал Артём за год.",
+   "emotion": "sad",
+   "cam": "medium:artem",
+   "acts": {
+    "artem": {
+     "show": true,
+     "pos": [
+      2.2,
+      -0.4
+     ],
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "facepalm",
+     "label": {
+      "text": "12",
+      "color": "#ff5a5a",
+      "pop": true,
+      "delay": 0.6
+     }
+    }
+   }
+  },
+  {
+   "text": "Бабушка теперь учит Артёма снимать видео. Бесплатно!",
+   "emotion": "warm",
+   "cam": "two:granny:artem",
+   "chime": true,
+   "acts": {
+    "granny": {
+     "faceTo": "artem",
+     "face": "smile",
+     "pose": "point",
+     "label": null
+    },
+    "artem": {
+     "faceTo": "granny",
+     "face": "joy",
+     "pose": "idle",
+     "label": null
+    }
+   }
+  },
+  {
+   "text": "Бабушку свою ты учил пользоваться телефоном? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide:granny,artem",
+   "acts": {
+    "granny": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "wave"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer"
+    }
+   }
+  }
+ ]
+}
