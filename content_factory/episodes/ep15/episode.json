@@ -1,0 +1,335 @@
+{
+ "title": "Не бойся ошибиться",
+ "format": "life-lesson",
+ "hook": "ОНА БОЯЛАСЬ ОШИБИТЬСЯ 😰",
+ "outro": "А ТЕБЕ СТРАШНО ОШИБАТЬСЯ?",
+ "music": "sad",
+ "location": "school",
+ "time": "day",
+ "highlight": [
+  "ОТВЕТЫ",
+  "СТРАШНО",
+  "ВОСЕМЬ",
+  "ЧЕТЫРЕ",
+  "ЗАСМЕЯЛСЯ",
+  "УЛЫБНУЛСЯ",
+  "ОШИБАЕТСЯ",
+  "ВПЕРВЫЕ",
+  "ШЕСТЬ"
+ ],
+ "cast": {
+  "teacher": {
+   "preset": "teacher",
+   "pos": [
+    0,
+    -3
+   ],
+   "label": null
+  },
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    -4.6,
+    3
+   ],
+   "label": null
+  },
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    -1.5,
+    3.4
+   ],
+   "label": null
+  },
+  "max": {
+   "preset": "max",
+   "pos": [
+    1.6,
+    3.2
+   ],
+   "label": null
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    4.6,
+    3
+   ],
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "book",
+   "size": [
+    1.4,
+    1.1,
+    0.12
+   ],
+   "color": "#3a7ad0",
+   "holder": "teacher",
+   "from": 2,
+   "to": 6
+  }
+ ],
+ "lines": [
+  {
+   "text": "Знала Лиза все ответы, но никогда не поднимала руку.",
+   "emotion": "sad",
+   "cam": "wide",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "sad"
+    },
+    "timur": {
+     "faceTo": "cam"
+    },
+    "max": {
+     "faceTo": "cam"
+    },
+    "artem": {
+     "faceTo": "cam"
+    },
+    "teacher": {
+     "faceTo": "cam"
+    }
+   }
+  },
+  {
+   "text": "Страшно было ошибиться. Вдруг все засмеются?",
+   "emotion": "sad",
+   "cam": "close:liza",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "sad"
+    }
+   }
+  },
+  {
+   "text": "Строгий вопрос от учительницы: сколько будет семь умножить на восемь?",
+   "emotion": "calm",
+   "cam": "medium:teacher",
+   "acts": {
+    "teacher": {
+     "faceTo": "cam",
+     "face": "think",
+     "pose": "give"
+    },
+    "liza": {
+     "faceTo": "teacher",
+     "pose": "idle",
+     "hide": true
+    },
+    "timur": {
+     "faceTo": "teacher",
+     "hide": true
+    },
+    "max": {
+     "faceTo": "teacher",
+     "hide": true
+    },
+    "artem": {
+     "faceTo": "teacher",
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Первым руку поднял Тимур. Пятьдесят четыре!",
+   "emotion": "excited",
+   "cam": "close:timur",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "wave",
+     "label": {
+      "text": "54 ❌",
+      "color": "#ff5a5a",
+      "pop": true,
+      "delay": 2.0
+     },
+     "show": true
+    },
+    "liza": {
+     "show": true
+    },
+    "max": {
+     "show": true
+    },
+    "artem": {
+     "show": true
+    }
+   }
+  },
+  {
+   "text": "Мимо! Весь класс засмеялся.",
+   "emotion": "surprise",
+   "cam": "wide:timur,max,artem",
+   "boom": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock"
+    },
+    "max": {
+     "faceTo": "timur",
+     "face": "laugh",
+     "pose": "laugh"
+    },
+    "artem": {
+     "faceTo": "timur",
+     "face": "laugh",
+     "pose": "laugh"
+    }
+   }
+  },
+  {
+   "text": "Только Тимур не расстроился. Он улыбнулся вместе со всеми.",
+   "emotion": "calm",
+   "cam": "close:timur",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "shrug"
+    },
+    "max": {
+     "pose": "idle",
+     "face": "smile"
+    },
+    "artem": {
+     "pose": "idle",
+     "face": "smile"
+    }
+   }
+  },
+  {
+   "text": "Мудро сказала учительница: кто не ошибается, тот ничему не учится.",
+   "emotion": "warm",
+   "cam": "medium:teacher",
+   "acts": {
+    "teacher": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "idle"
+    },
+    "timur": {
+     "label": null,
+     "hide": true
+    },
+    "liza": {
+     "hide": true
+    },
+    "max": {
+     "hide": true
+    },
+    "artem": {
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Долго смотрела Лиза на Тимура... и впервые подняла руку.",
+   "emotion": "mystery",
+   "cam": "close:liza",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "think",
+     "faceAfter": [
+      2.8,
+      "smile"
+     ],
+     "pose": "idle",
+     "show": true
+    },
+    "timur": {
+     "show": true
+    },
+    "max": {
+     "show": true
+    },
+    "artem": {
+     "show": true
+    }
+   }
+  },
+  {
+   "text": "Правильный ответ: пятьдесят шесть!",
+   "emotion": "excited",
+   "cam": "medium:liza",
+   "chime": true,
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "wave",
+     "label": {
+      "text": "56 ✅",
+      "color": "#7dff8a",
+      "pop": true,
+      "delay": 1.2
+     }
+    }
+   }
+  },
+  {
+   "text": "Каждый урок теперь Лиза тянет руку. Иногда ошибается. И ей больше не страшно.",
+   "emotion": "warm",
+   "cam": "wide",
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer",
+     "label": null
+    },
+    "timur": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "wave"
+    },
+    "max": {
+     "faceTo": "cam",
+     "face": "smile"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "smile"
+    },
+    "teacher": {
+     "faceTo": "cam",
+     "face": "smile"
+    }
+   }
+  },
+  {
+   "text": "Страшно тебе бывает ошибиться? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "liza": {
+     "pose": "wave"
+    },
+    "timur": {
+     "pose": "cheer"
+    },
+    "max": {
+     "pose": "wave",
+     "face": "joy"
+    },
+    "artem": {
+     "pose": "cheer",
+     "face": "joy"
+    }
+   }
+  }
+ ]
+}
