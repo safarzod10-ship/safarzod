@@ -1,0 +1,188 @@
+/*
+ * TERRIA loading splash: the DOM around the WebGL scene.
+ *   veil   dark cover until the scene has drawn its first (equally dark) frame
+ *   lite   the DOM-only splash: reduced motion, and the fallback when the scene cannot run
+ *   foot   real loading state: one line of text, one hairline
+ *   error  the game cannot start
+ * Only opacity and transform change, so every transition stays on the compositor.
+ */
+.tsp {
+  --tsp-dark: #06120f;
+  --tsp-ivory: #fff6dc;
+  --tsp-gold: #ffe9a8;
+  --tsp-mark: min(68vw, 430px, 59vh);
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  color: var(--tsp-ivory);
+  font-family: var(--font, system-ui, sans-serif);
+}
+/* leaving without a scene: the whole layer cross-fades onto the map */
+.tsp.is-fading {
+  opacity: 0;
+  transition: opacity 0.38s ease;
+}
+
+.tsp__veil {
+  position: absolute;
+  inset: 0;
+  background: var(--tsp-dark);
+  transition: opacity 0.5s ease;
+}
+/* the scene's first frame is the same colour: swap without a transition */
+.tsp.is-live .tsp__veil {
+  visibility: hidden;
+  transition: none;
+}
+.tsp.is-lite .tsp__veil {
+  opacity: 0;
+}
+.tsp.is-instant .tsp__veil {
+  transition: none;
+}
+
+/* ---------- lite: the illustration and the logo, still ---------- */
+.tsp__lite {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background: var(--tsp-dark) center / cover no-repeat;
+}
+.tsp.is-lite .tsp__lite {
+  display: block;
+}
+.tsp__lite::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 78% at 50% 48%, rgba(6, 18, 15, 0.46) 0%, rgba(6, 18, 15, 0.88) 100%);
+}
+/* The traced outline as a mask over the logo's colours: gold, bronze and green
+   down the mark (its lower 27 % is the wordmark: ivory to pale gold). */
+.tsp__mark {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: var(--tsp-mark);
+  height: calc(var(--tsp-mark) * 0.6079);
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #ffd66b 0%, #cb8a43 41%, #53b765 72%, #53b765 76%, #fff6dc 76.4%, #f4cf78 100%);
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.5));
+}
+
+/* ---------- loading state ---------- */
+.tsp__foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(max(28px, 6vh) + var(--safe-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+  pointer-events: none;
+}
+.tsp.is-loading .tsp__foot {
+  opacity: 1;
+  transform: none;
+}
+.tsp.is-leaving .tsp__foot,
+.tsp.is-error .tsp__foot {
+  opacity: 0;
+  transition-duration: 0.22s;
+}
+.tsp__label {
+  min-height: 1.3em;
+  font-size: 12.5px;
+  line-height: 1.3;
+  letter-spacing: 0.015em;
+  color: rgba(255, 246, 220, 0.92);
+  text-shadow:
+    0 1px 8px rgba(3, 10, 8, 0.75),
+    0 0 2px rgba(3, 10, 8, 0.55);
+}
+.tsp__track {
+  width: min(44vw, 200px);
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 246, 220, 0.24);
+  box-shadow: 0 0 6px rgba(3, 10, 8, 0.35);
+  overflow: hidden;
+}
+.tsp__fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e2ad4d, var(--tsp-gold));
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  transition: transform 0.4s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+
+/* ---------- error ---------- */
+.tsp__error {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(36px, 8vh) + var(--safe-bottom, 0px));
+  width: min(84vw, 340px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.tsp__error[hidden] {
+  display: none;
+}
+.tsp__error-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  text-shadow: 0 1px 8px rgba(3, 10, 8, 0.8);
+}
+.tsp__retry {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 10px 24px;
+  border: 1px solid rgba(255, 233, 168, 0.6);
+  border-radius: 999px;
+  background: rgba(6, 18, 15, 0.6);
+  color: var(--tsp-gold);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tsp__retry:active {
+  background: rgba(255, 233, 168, 0.16);
+}
+.tsp__retry:focus-visible {
+  outline: 2px solid var(--tsp-gold);
+  outline-offset: 3px;
+}
+/* error with the splash switched off: nothing but the message */
+.tsp--plain {
+  background: var(--tsp-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tsp__foot,
+  .tsp__fill,
+  .tsp__veil {
+    transition-duration: 0.01s;
+  }
+}

@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`world generation > matches the pinned fingerprint of the canonical world 1`] = `
+{
+  "e": "d5ce8885",
+  "forest": "cecfc795",
+  "lakes": "43253841",
+  "landBounds": {
+    "height": 71552,
+    "width": 54784,
+    "x": 34560,
+    "y": 37248,
+  },
+  "regionBorders": "52d5ff82",
+  "regionHomes": "c4fab3e1",
+  "regionSites": "4fa075be",
+  "rivers": "2db506b9",
+}
+`;
