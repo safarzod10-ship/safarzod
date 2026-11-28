@@ -15,7 +15,7 @@
     "server:dev": "wrangler dev --local --var DEV_AUTH:1 --test-scheduled",
     "server:typecheck": "tsc --noEmit -p server/tsconfig.json",
     "server:schema:local": "wrangler d1 execute terria --local --file server/schema.sql",
-    "art": "node tools/art/pack.mjs public/models art/set65 art/cut"
+    "art": "node tools/art/pack.mjs public/models art/set65"
   },
   "dependencies": {
     "d3-delaunay": "^6.0.6",

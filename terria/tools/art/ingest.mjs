@@ -17,6 +17,11 @@ const [, , src, outDir, ...rest] = process.argv;
 const skip = rest.includes('--skip') ? rest[rest.indexOf('--skip') + 1].split(',') : [];
 // a set made in one go shares one projection: --aspect 0.5 forces it
 const forceAspect = rest.includes('--aspect') ? Number(rest[rest.indexOf('--aspect') + 1]) : 0;
+// By default pictures are kept exactly as drawn (only trimmed). --clip cuts the
+// soil block off, --clean removes leftovers of neighbouring pictures; both can
+// eat real parts of a building, so they are off unless asked for.
+const CLIP = rest.includes('--clip');
+const CLEAN = rest.includes('--clean');
 mkdirSync(outDir, { recursive: true });
 const TARGET_ASPECT = 0.5;
 const STRONG = 100; // alpha that counts as solid when telling pictures apart
@@ -85,7 +90,8 @@ async function load(path) {
   const big = comps.reduce((a, b) => (b.n > a.n ? b : a), comps[0]);
   const m = 0.12;
   const keepMask = new Uint8Array(W * H);
-  for (const c of comps) {
+  if (!CLEAN) keepMask.fill(1);
+  for (const c of CLEAN ? comps : []) {
     const cx = c.sx / c.n;
     const cy = c.sy / c.n;
     const disjoint = c.x1 < big.x0 + 2 || c.x0 > big.x1 - 2 || c.y1 < big.y0 + 2;
@@ -98,7 +104,7 @@ async function load(path) {
     if (c === big || !(disjoint || rim || tiny || caption)) for (const p of c.px) keepMask[p] = 1;
   }
   // soft edge pixels stay only next to kept solid pixels
-  for (let y = 0; y < H; y++)
+  for (let y = 0; CLEAN && y < H; y++)
     for (let x = 0; x < W; x++) {
       const p = y * W + x;
       if (keepMask[p] || data[p * 4 + 3] === 0) continue;
@@ -179,7 +185,7 @@ const items = [];
 for (const j of jobs) {
   const img = await load(j.path);
   // the crane picture of this set carries part of a caption ("ки") in its corner
-  if (j.name === 'site:4')
+  if (CLEAN && j.name === 'site:4')
     for (let y = 0; y < img.h * 0.09; y++) for (let x = 0; x < img.w * 0.16; x++) img.out[(y * img.w + x) * 4 + 3] = 0;
   if (j.name.startsWith('tree:')) {
     items.push({ ...j, ...img, tree: true });
@@ -217,14 +223,14 @@ for (const it of items) {
   const soil = soilRel * 2 * g.half;
   const yc = g.yb - soil - g.half * g.aspect;
   const out = it.out;
-  for (let y = 0; y < it.h; y++)
+  for (let y = 0; CLIP && y < it.h; y++)
     for (let x = 0; x < it.w; x++) {
       const limit = yc + (g.half - Math.abs(x - g.cx)) * g.aspect + 1;
       const o = (y * it.w + x) * 4 + 3;
       if (y > limit) out[o] = 0;
       else if (y > limit - 1) out[o] = Math.round(out[o] * (limit - y));
     }
-  const hKeep = Math.min(it.h, Math.ceil(yc + g.half * g.aspect + 2));
+  const hKeep = CLIP ? Math.min(it.h, Math.ceil(yc + g.half * g.aspect + 2)) : it.h;
   const sy = TARGET_ASPECT / g.aspect;
   const outH = Math.max(1, Math.round(hKeep * sy));
   await sharp(out, { raw: { width: it.w, height: it.h, channels: 4 } })
