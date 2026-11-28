@@ -1,0 +1,451 @@
+{
+ "title": "Убрался за 5 минут",
+ "format": "comedy",
+ "hook": "УБРАЛСЯ ЗА 5 МИНУТ 😂",
+ "outro": "А ТЫ ПРЯТАЛ В ШКАФ?",
+ "music": "happy",
+ "location": "home",
+ "time": "day",
+ "labels": false,
+ "highlight": [
+  "ГУЛЯТЬ",
+  "ШКАФ",
+  "БУТЕРБРОД",
+  "СИЯЕТ",
+  "СВИТЕР",
+  "ОБРАТНО",
+  "ГОЛОВЕ",
+  "ВМЕСТЕ"
+ ],
+ "cast": {
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    1.6,
+    0.6
+   ],
+   "label": null
+  },
+  "mom": {
+   "preset": "mom",
+   "pos": [
+    6.4,
+    1.6
+   ],
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "ball",
+   "pos": [
+    3.2,
+    0.4,
+    -2.2
+   ],
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "book",
+   "pos": [
+    -1.2,
+    0.25,
+    -0.8
+   ],
+   "ry": 0.5,
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.8,
+    0.3,
+    0.5
+   ],
+   "color": "#ff7ab6",
+   "pos": [
+    4.4,
+    0.25,
+    0.8
+   ],
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "box",
+   "size": [
+    1.0,
+    0.6,
+    1.0
+   ],
+   "color": "#37b34a",
+   "pos": [
+    -3.2,
+    0.4,
+    2.2
+   ],
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "book",
+   "color": "#3a7ad0",
+   "pos": [
+    -4.6,
+    0.25,
+    -2.4
+   ],
+   "ry": -0.4,
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.9,
+    0.4,
+    0.6
+   ],
+   "color": "#ffd23f",
+   "pos": [
+    6.2,
+    0.3,
+    -2.6
+   ],
+   "from": 0,
+   "to": 1
+  },
+  {
+   "shape": "ball",
+   "pos": [
+    -9.2,
+    0.4,
+    -4.2
+   ],
+   "from": 6,
+   "to": 6
+  },
+  {
+   "shape": "book",
+   "pos": [
+    -10.6,
+    0.25,
+    -3.2
+   ],
+   "ry": 0.9,
+   "from": 6,
+   "to": 8
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.8,
+    0.3,
+    0.5
+   ],
+   "color": "#ff7ab6",
+   "pos": [
+    -8.2,
+    0.25,
+    -2.6
+   ],
+   "from": 6,
+   "to": 8
+  },
+  {
+   "shape": "box",
+   "size": [
+    1.0,
+    0.6,
+    1.0
+   ],
+   "color": "#37b34a",
+   "pos": [
+    -11.8,
+    0.4,
+    -5.2
+   ],
+   "from": 6,
+   "to": 8
+  },
+  {
+   "shape": "book",
+   "color": "#3a7ad0",
+   "pos": [
+    -7.4,
+    0.25,
+    -4.6
+   ],
+   "ry": -0.7,
+   "from": 6,
+   "to": 8
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.9,
+    0.4,
+    0.6
+   ],
+   "color": "#ffd23f",
+   "pos": [
+    -9.8,
+    0.3,
+    -1.8
+   ],
+   "from": 6,
+   "to": 8
+  },
+  {
+   "shape": "ball",
+   "pos": [
+    -9.4,
+    6.9,
+    -3.4
+   ],
+   "from": 7,
+   "to": 7
+  },
+  {
+   "shape": "ball",
+   "pos": [
+    -8.6,
+    0.4,
+    -1.2
+   ],
+   "from": 8,
+   "to": 8
+  }
+ ],
+ "lines": [
+  {
+   "text": "Мама сказала: пока не уберёшься в комнате, гулять не пойдёшь.",
+   "emotion": "calm",
+   "cam": "wide",
+   "acts": {
+    "mom": {
+     "faceTo": "timur",
+     "pose": "point",
+     "face": "angry"
+    },
+    "timur": {
+     "faceTo": "mom",
+     "face": "sad",
+     "pose": "sad"
+    }
+   }
+  },
+  {
+   "text": "Хитрый план появился сразу: всё запихнуть в шкаф!",
+   "emotion": "excited",
+   "cam": "medium:timur",
+   "acts": {
+    "mom": {
+     "hide": true
+    },
+    "timur": {
+     "faceTo": "cam",
+     "face": "smug",
+     "pose": "think"
+    }
+   }
+  },
+  {
+   "text": "Мячик, носки, игрушки, тетрадки и даже бутерброд. Всё полетело в шкаф.",
+   "emotion": "excited",
+   "cam": "wide:timur",
+   "whoosh": true,
+   "acts": {
+    "timur": {
+     "moveTo": [
+      -10.4,
+      -4.6
+     ],
+     "run": true,
+     "walkTime": 2.2,
+     "face": "laugh",
+     "pose": "carry"
+    }
+   }
+  },
+  {
+   "text": "Ровно пять минут, и комната сияет! Мама, я готов!",
+   "emotion": "excited",
+   "cam": "medium:timur",
+   "chime": true,
+   "acts": {
+    "timur": {
+     "pos": [
+      0.6,
+      0.6
+     ],
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer"
+    }
+   }
+  },
+  {
+   "text": "Мама зашла, всё осмотрела и улыбнулась.",
+   "emotion": "mystery",
+   "cam": "medium:mom",
+   "acts": {
+    "mom": {
+     "show": true,
+     "pos": [
+      5.6,
+      1.4
+     ],
+     "faceTo": "cam",
+     "face": "think",
+     "faceAfter": [
+      2.4,
+      "smile"
+     ],
+     "pose": "idle"
+    },
+    "timur": {
+     "faceTo": "mom",
+     "face": "smile",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Умница, сказала она. Достань-ка мне из шкафа свитер.",
+   "emotion": "calm",
+   "cam": "two:mom:timur",
+   "acts": {
+    "mom": {
+     "faceTo": "timur",
+     "face": "smug",
+     "pose": "point"
+    },
+    "timur": {
+     "faceTo": "mom",
+     "face": "shock",
+     "pose": "shock"
+    }
+   }
+  },
+  {
+   "text": "Дверца открылась... и всё вылетело обратно!",
+   "emotion": "surprise",
+   "cam": "wide:timur",
+   "flash": true,
+   "boom": true,
+   "shake": true,
+   "acts": {
+    "timur": {
+     "pos": [
+      -10.2,
+      -3.6
+     ],
+     "faceTo": [
+      -13.5,
+      -8
+     ],
+     "face": "shock",
+     "pose": "shock"
+    },
+    "mom": {
+     "pos": [
+      -5.4,
+      -1.2
+     ],
+     "faceTo": "timur",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Мячик стукнул меня по голове, а носок приземлился маме на плечо.",
+   "emotion": "excited",
+   "cam": "medium:timur",
+   "boom": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "facepalm"
+    },
+    "mom": {
+     "faceTo": "timur",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Мама долго смеялась. А потом мы убирались вместе.",
+   "emotion": "warm",
+   "cam": "wide:mom,timur",
+   "acts": {
+    "mom": {
+     "faceTo": "timur",
+     "face": "laugh",
+     "pose": "laugh"
+    },
+    "timur": {
+     "faceTo": "mom",
+     "face": "joy",
+     "pose": "shrug"
+    }
+   }
+  },
+  {
+   "text": "Целый час убирались. Зато гулять я пошёл вместе с мамой!",
+   "emotion": "warm",
+   "cam": "wide:timur,mom",
+   "location": "park",
+   "time": "day",
+   "chime": true,
+   "acts": {
+    "timur": {
+     "pos": [
+      -1.6,
+      1.4
+     ],
+     "moveTo": [
+      2.6,
+      1.2
+     ],
+     "walkTime": 4,
+     "faceTo": "cam",
+     "face": "joy"
+    },
+    "mom": {
+     "pos": [
+      -4.2,
+      1.6
+     ],
+     "moveTo": [
+      0,
+      1.4
+     ],
+     "walkTime": 4,
+     "faceTo": "cam",
+     "face": "joy"
+    }
+   }
+  },
+  {
+   "text": "Прятал ты вещи в шкаф? Признавайся в комментариях.",
+   "emotion": "outro",
+   "cam": "wide:timur,mom",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "mom": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    }
+   }
+  }
+ ]
+}
