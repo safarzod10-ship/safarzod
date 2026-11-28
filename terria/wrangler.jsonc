@@ -14,7 +14,7 @@
     "run_worker_first": ["/api/*", "/tg/*"]
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "terria", "database_id": "TBD" }
+    { "binding": "DB", "database_name": "terria", "database_id": "ff026245-c9b7-4852-a68a-ebfcdd134721" }
   ],
   "triggers": { "crons": ["*/30 * * * *"] },
   "vars": {

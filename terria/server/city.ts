@@ -27,6 +27,8 @@ export async function getMe(env: Env, tg: TgUser, now: number): Promise<MeRespon
 
 async function freeRegionCount(env: Env): Promise<number> {
   const total = await regionCount(env);
+  const world = await readWorldMeta(env);
+  if (world) return Math.max(0, total - world.cities.length);
   const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM cities').first<{ n: number }>();
   return Math.max(0, total - (row?.n ?? 0));
 }
@@ -115,10 +117,29 @@ export async function cityActions(env: Env, req: Request, tg: TgUser, now: numbe
   return { city: r.city, serverTime: now, results: r.result };
 }
 
+/**
+ * The world summary is rebuilt by the cron (every 30 min, ~1000 rows read)
+ * and stored in `meta`, so a request reads one row instead of every city.
+ */
+export async function rebuildWorldSummary(env: Env, now: number): Promise<number> {
+  const rows = await env.DB.prepare('SELECT region_id AS r, name AS n, th, pop, status AS s FROM cities').all<WorldCitySummary>();
+  await env.DB.prepare("INSERT INTO meta (key, value) VALUES ('world', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .bind(JSON.stringify({ at: now, cities: rows.results }))
+    .run();
+  return rows.results.length;
+}
+
+async function readWorldMeta(env: Env): Promise<{ cities: WorldCitySummary[] } | null> {
+  const row = await env.DB.prepare("SELECT value FROM meta WHERE key = 'world'").first<{ value: string }>();
+  return row ? (JSON.parse(row.value) as { cities: WorldCitySummary[] }) : null;
+}
+
 export async function worldSummary(env: Env, now: number): Promise<{ cities: WorldCitySummary[] }> {
   return cached('world', 60_000, now, async () => {
-    const rows = await env.DB.prepare('SELECT region_id AS r, name AS n, th, pop, status AS s FROM cities').all<WorldCitySummary>();
-    return { cities: rows.results };
+    const world = await readWorldMeta(env);
+    if (world) return { cities: world.cities };
+    await rebuildWorldSummary(env, now);
+    return (await readWorldMeta(env)) ?? { cities: [] };
   });
 }
 

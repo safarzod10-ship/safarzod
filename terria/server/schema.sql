@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS orders_book ON orders (res, side, status);
+-- unit price in the index so the order book reads only the 50 rows it returns
+CREATE INDEX IF NOT EXISTS orders_book ON orders (res, side, status, total / qty);
 CREATE INDEX IF NOT EXISTS orders_owner ON orders (region_id, status);
 CREATE INDEX IF NOT EXISTS orders_expiry ON orders (status, expires_at);
 

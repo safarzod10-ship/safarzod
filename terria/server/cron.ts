@@ -1,5 +1,6 @@
 /** Cron (every 30 min): expire orders, mark inactive cities, remind, bot setup, cleanup. */
 import { INACTIVITY } from '../src/game/config.ts';
+import { rebuildWorldSummary } from './city.ts';
 import type { Env } from './env.ts';
 import { expireOrders } from './market.ts';
 import { ensureBotSetup, sendText, TEXTS } from './telegram.ts';
@@ -67,6 +68,7 @@ export async function runCron(env: Env, now: number): Promise<Record<string, num
   out.bot = await ensureBotSetup(env)
     .then((ok) => (ok ? 'ok' : 'no token'))
     .catch((e) => `error: ${String(e)}`);
+  out.worldCities = await rebuildWorldSummary(env, now);
   // keep a week of trade history
   const del = await env.DB.prepare('DELETE FROM trades WHERE at < ?1').bind(now - 7 * DAY).run();
   out.tradesDeleted = del.meta.changes ?? 0;

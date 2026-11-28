@@ -74,9 +74,9 @@ export async function listOrders(env: Env, url: URL, now: number): Promise<{ ord
   // buyers want to sell to the best (highest) bid, buyers of sell orders want the lowest ask
   const order = side === 'buy' ? 'DESC' : 'ASC';
   const rows = await env.DB.prepare(
-    `SELECT o.*, c.name AS city_name FROM orders o JOIN cities c ON c.region_id = o.region_id
+    `SELECT o.*, c.name AS city_name FROM orders o INDEXED BY orders_book JOIN cities c ON c.region_id = o.region_id
      WHERE o.res = ?1 AND o.side = ?2 AND o.status = 'open' AND o.expires_at > ?3
-     ORDER BY o.total / o.qty ${order}, o.created_at ASC LIMIT 50`,
+     ORDER BY o.total / o.qty ${order} LIMIT 50`,
   )
     .bind(res, side, now)
     .all<OrderRow>();
