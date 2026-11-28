@@ -1,0 +1,45 @@
+{
+ "title": "Сердце на стене",
+ "format": "detective",
+ "hook": "КТО РИСОВАЛ НА СТЕНЕ? 🕵️",
+ "outro": "КТО ХУДОЖНИК, ПОНЯЛ?",
+ "music": "mystery",
+ "location": "home",
+ "time": "day",
+ "highlight": ["СЕРДЦЕ", "СПАЛ", "КАРАНДАША", "ГАЗЕТУ", "ПОТОЛКОМ", "ПЯТЬ", "ВЫСОКО", "РОЖДЕНИЯ", "КОНЧИЛАСЬ"],
+ "cast": {
+  "mom":  {"preset": "mom", "pos": [6.4, 1.2], "label": null},
+  "dad":  {"preset": "dad", "pos": [-4.4, 0.8], "label": null},
+  "liza": {"preset": "liza", "pos": [-1, 1.2], "label": null},
+  "kid":  {"preset": "kid", "pos": [2.2, 1.6], "label": null}
+ },
+ "props": [
+  {"shape": "box", "size": [1.7, 1.7, 0.1], "color": "#e0303a", "pos": [1.15, 10.7, -15.6], "from": 0, "to": 9},
+  {"shape": "box", "size": [1.7, 1.7, 0.1], "color": "#e0303a", "pos": [2.85, 10.7, -15.6], "from": 0, "to": 9},
+  {"shape": "box", "size": [3.4, 1.3, 0.1], "color": "#e0303a", "pos": [2, 9.6, -15.6], "from": 0, "to": 9},
+  {"shape": "box", "size": [2.2, 1.0, 0.1], "color": "#e0303a", "pos": [2, 8.5, -15.6], "from": 0, "to": 9},
+  {"shape": "box", "size": [1.0, 0.8, 0.1], "color": "#e0303a", "pos": [2, 7.7, -15.6], "from": 0, "to": 9}
+ ],
+ "lines": [
+  {"text": "Утром на стене появилось огромное красное сердце. Мама была в шоке.", "emotion": "mystery", "cam": "wide", "boom": true,
+   "acts": {"mom": {"faceTo": [2, -15], "face": "shock", "pose": "shock"}, "dad": {"faceTo": "cam", "face": "neutral"}, "liza": {"faceTo": "cam", "face": "neutral"}, "kid": {"faceTo": "cam", "face": "neutral"}}},
+  {"text": "Первым малыш Даня: я не рисовал, я спал!", "emotion": "calm", "cam": "close:kid",
+   "acts": {"kid": {"faceTo": "cam", "face": "shock", "pose": "shrug", "label": {"text": "ДАНЯ", "color": "#ffe14a"}}}},
+  {"text": "Следом Лиза: у меня даже нет красного карандаша.", "emotion": "calm", "cam": "close:liza",
+   "acts": {"liza": {"faceTo": "cam", "face": "neutral", "pose": "shrug", "label": {"text": "ЛИЗА", "color": "#ffe14a"}}}},
+  {"text": "Третьим папа: я весь вечер читал газету.", "emotion": "calm", "cam": "close:dad",
+   "acts": {"dad": {"faceTo": "cam", "face": "smile", "pose": "idle", "label": {"text": "ПАПА", "color": "#ffe14a"}}}},
+  {"text": "Важная деталь: сердце нарисовано почти под самым потолком.", "emotion": "mystery", "cam": "wide", "whoosh": true,
+   "acts": {"mom": {"faceTo": [2, -15], "pose": "point", "face": "think"}, "liza": {"faceTo": [2, -15]}, "kid": {"faceTo": [2, -15]}, "dad": {"faceTo": [2, -15]}}},
+  {"text": "Кто нарисовал сердце? Подумай пять секунд.", "emotion": "excited", "cam": "wide:dad,liza,kid", "gap": 3.2,
+   "acts": {"mom": {"pose": "idle"}, "dad": {"faceTo": "cam", "label": {"text": "1", "color": "#ffffff", "pop": true}}, "liza": {"faceTo": "cam", "label": {"text": "2", "color": "#ffffff", "pop": true}}, "kid": {"faceTo": "cam", "label": {"text": "3", "color": "#ffffff", "pop": true}}}},
+  {"text": "Правильно! Это папа. Только он достанет так высоко.", "emotion": "surprise", "cam": "close:dad", "flash": true, "boom": true, "shake": true,
+   "acts": {"dad": {"faceTo": "cam", "face": "shock", "pose": "shock", "label": {"text": "ЭТО ОН!", "color": "#ff5a5a", "pop": true}}}},
+  {"text": "Красный от смущения, папа признался: у мамы сегодня день рождения. А бумага кончилась.", "emotion": "warm", "cam": "medium:dad",
+   "acts": {"dad": {"faceTo": "cam", "face": "smile", "pose": "facepalm", "label": null}, "liza": {"label": null}, "kid": {"label": null}}},
+  {"text": "Мама засмеялась и обняла его. Сердце так и осталось на стене.", "emotion": "warm", "cam": "two:mom:dad", "chime": true,
+   "acts": {"mom": {"pos": [0, 2.2], "faceTo": "dad", "face": "joy", "pose": "hug"}, "dad": {"pos": [-3, 2], "faceTo": "mom", "face": "joy", "pose": "hug"}, "liza": {"pos": [-6.2, 0.6], "faceTo": "mom", "face": "joy", "pose": "cheer"}, "kid": {"pos": [3.6, 1], "faceTo": "mom", "face": "joy", "pose": "cheer"}}},
+  {"text": "Сразу понял, кто художник? Пиши в комментариях.", "emotion": "outro", "cam": "wide",
+   "acts": {"mom": {"faceTo": "cam", "pose": "wave"}, "dad": {"faceTo": "cam", "pose": "wave"}, "liza": {"faceTo": "cam"}, "kid": {"faceTo": "cam"}}}
+ ]
+}
