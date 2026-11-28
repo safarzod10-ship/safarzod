@@ -1,0 +1,48 @@
+{
+ "title": "У него минус",
+ "format": "series",
+ "hook": "У НЕГО МИНУС 😱",
+ "outro": "МОЖНО ЛИ ИСПРАВИТЬСЯ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": ["МИНУС", "ПЯТЬДЕСЯТ", "СТОРОНОЙ", "МОЛЧА", "СЛУЧИЛОСЬ", "СТЫДНО", "ИСПРАВИТЬ", "НОЛЬ", "ЕДИНИЦА", "ДРУГОМ"],
+ "cast": {
+  "gosha": {"preset": "artem", "look": {"skin": "#f0c8a0", "shirt": "#6a6a7a", "hair": 1710618, "pants": 2236962, "hairStyle": "spiky"}, "pos": [5.2, 0], "label": {"text": "-50", "heart": true, "color": "#ff5a5a"}},
+  "timur": {"preset": "timur", "pos": [-1, 1.4], "label": {"text": "5 100", "heart": true, "color": "#7dff8a"}},
+  "liza":  {"preset": "liza", "pos": [-4.2, 1.2], "label": {"text": "999 999 999", "heart": true, "color": "#ffe14a"}},
+  "max":   {"preset": "max", "pos": [-7.4, 1.6], "label": {"text": "100", "heart": true, "color": "#7dff8a"}},
+  "kid":   {"preset": "kid", "pos": [3, 1.4], "hidden": true, "label": {"text": "300", "heart": true, "color": "#7dff8a"}}
+ },
+ "props": [
+  {"shape": "ball", "holder": "kid", "from": 7, "to": 8},
+  {"shape": "ball", "holder": "max", "from": 9, "to": 10}
+ ],
+ "lines": [
+  {"text": "Новенький Гоша пришёл в школу, и все ахнули. Над ним горело минус пятьдесят.", "emotion": "mystery", "cam": "medium:gosha", "boom": true,
+   "acts": {"gosha": {"faceTo": "cam", "face": "neutral", "pose": "idle"}}},
+  {"text": "Минус! Такого ещё никто не видел.", "emotion": "excited", "cam": "wide", "shake": true,
+   "acts": {"timur": {"faceTo": "gosha", "face": "shock", "pose": "shock"}, "liza": {"faceTo": "gosha", "face": "shock"}, "max": {"faceTo": "gosha", "face": "shock", "pose": "shock"}, "gosha": {"faceTo": "cam", "face": "sad"}}},
+  {"text": "Каждый обходил его стороной. Даже Макс.", "emotion": "sad", "cam": "wide",
+   "acts": {"timur": {"faceTo": [-30, 6], "pose": "idle", "face": "neutral"}, "liza": {"faceTo": [-30, 6]}, "max": {"faceTo": [-30, 6], "pose": "idle", "face": "neutral"}, "gosha": {"pose": "sad", "face": "sad"}}},
+  {"text": "Молча сидел Гоша один.", "emotion": "sad", "cam": "close:gosha",
+   "acts": {"gosha": {"faceTo": "cam", "face": "sad", "pose": "sad"}}},
+  {"text": "Смелости я набрался и спросил: что случилось?", "emotion": "calm", "cam": "two:timur:gosha",
+   "acts": {"timur": {"moveTo": [2.4, 0.8], "faceTo": "gosha", "face": "neutral", "pose": "idle"}, "gosha": {"faceTo": "timur", "face": "sad", "pose": "idle"}}},
+  {"text": "Раньше, в старой школе, я обижал малышей, признался он. Теперь мне стыдно.", "emotion": "sad", "cam": "close:gosha",
+   "acts": {"gosha": {"faceTo": "cam", "face": "cry", "pose": "sad"}}},
+  {"text": "Значит, можно всё исправить, сказал я. Пойдём.", "emotion": "warm", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "smile", "pose": "give"}}},
+  {"text": "Целую неделю Гоша помогал малышам: чинил велосипеды, искал потерянные мячи.", "emotion": "calm", "cam": "two:gosha:kid", "location": "park", "time": "day",
+   "acts": {"liza": {"hide": true}, "max": {"hide": true}, "timur": {"pos": [-4, 2], "faceTo": "gosha", "face": "smile"},
+            "gosha": {"pos": [0, 1], "faceTo": "kid", "face": "smile", "pose": "give", "label": {"from": -50, "to": 0, "heart": true, "color": "#ffe14a", "dur": 4.5, "delay": 0.5}},
+            "kid": {"show": true, "pos": [2.8, 1.4], "faceTo": "gosha", "face": "joy", "pose": "cheer"}}},
+  {"text": "Минус исчез! Над Гошей загорелся ноль. А потом единица!", "emotion": "surprise", "cam": "low:gosha", "flash": true, "chime": true, "shake": true,
+   "acts": {"gosha": {"faceTo": "cam", "face": "joy", "pose": "cheer", "label": {"text": "1", "heart": true, "color": "#7dff8a", "pop": true, "delay": 2.6}}}},
+  {"text": "Другом моим стал Гоша. А Макс первым позвал его играть в футбол.", "emotion": "warm", "cam": "wide", "location": "school", "time": "day",
+   "acts": {"kid": {"hide": true}, "gosha": {"pos": [0, 1.4], "faceTo": "cam", "face": "joy", "pose": "wave"}, "timur": {"pos": [3, 1.6], "faceTo": "cam", "face": "joy"},
+            "max": {"show": true, "pos": [-3, 1.8], "faceTo": "gosha", "face": "smile", "pose": "give"}, "liza": {"show": true, "pos": [6, 1.2], "faceTo": "cam", "face": "smile"}}},
+  {"text": "Можно ли исправить плохой поступок? Напиши в комментариях.", "emotion": "outro", "cam": "wide",
+   "acts": {"gosha": {"pose": "cheer"}, "timur": {"pose": "cheer"}, "max": {"faceTo": "cam", "pose": "wave", "face": "joy"}, "liza": {"pose": "wave", "face": "joy"}}}
+ ]
+}
