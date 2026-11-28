@@ -1,34 +1,28 @@
 <!doctype html>
-<html lang="ru" class="splash-active">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#06120f" />
+    <meta name="theme-color" content="#3f6b34" />
     <meta name="color-scheme" content="light" />
     <title>TERRIA</title>
+    <!-- Loading screen (public/loader): the picture behind it and the logo it assembles. -->
+    <link rel="preload" href="/loader/bg.webp" as="image" fetchpriority="high" />
+    <link rel="preload" href="/loader/terria-logo.webp" as="image" crossorigin="anonymous" />
     <style>
-      /* Before any script or stylesheet: the page opens in the splash's own
-         night colour, so there is no white frame. main.ts removes the class
-         when the map shows. */
-      .splash-active,
-      .splash-active body {
-        background: #06120f;
+      html,
+      body {
+        background: #3f6b34;
       }
     </style>
   </head>
   <body>
+    <!-- First in <body> so the loading screen is there on the first paint. -->
+    <script src="/loader/terria-loader.js" data-logo="/loader/terria-logo.webp" data-bg="/loader/bg.webp"></script>
     <div id="app"></div>
-    <!-- Pictures of the loading splash (src/splash). Listed here so that they
-         download together with the script instead of after it; the browser
-         picks AVIF or WebP by itself. Never shown as elements. -->
-    <picture id="splash-world" hidden>
-      <source srcset="/src/splash/assets/world.avif" type="image/avif" />
-      <img src="/src/splash/assets/world.webp" alt="" decoding="async" />
-    </picture>
-    <img id="splash-data" src="/src/splash/assets/splash-data.png" alt="" decoding="async" hidden />
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

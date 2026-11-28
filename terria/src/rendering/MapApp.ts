@@ -100,7 +100,7 @@ export class MapApp {
 
   /**
    * Compile the terrain shader variants on the next rendered frames. Call
-   * together with start(), while the loading splash still covers the map.
+   * together with start(), while the loading screen still covers the map.
    */
   warmUp(): void {
     this.scene.terrain.warmUpShaders();

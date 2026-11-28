@@ -1,7 +1,7 @@
 /**
  * Map-level DOM overlay: the scale bar and the optional perf panel.
  * The game UI (src/app) owns everything else: resources, navigation, zoom
- * buttons. (The loading screen is its own module: src/splash.)
+ * buttons. (The loading screen is public/loader, driven by src/ui/loader.ts.)
  */
 import type { MapStats } from '../rendering/MapApp.ts';
 

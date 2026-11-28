@@ -82,7 +82,7 @@ export class TerriaGame implements Game {
     watchSafeArea();
   }
 
-  /** Called once the splash has revealed the map. */
+  /** Called once the loading screen has revealed the map. */
   async start(me: Promise<MeResponse>): Promise<void> {
     await this.atlas.ready.catch((e) => console.error('building models failed to load', e));
     this.shell.show();

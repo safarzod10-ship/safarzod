@@ -127,7 +127,7 @@ export class TerrainLayer {
    *
    * The programs link when the layer is next drawn, so call this when the map
    * is (about to be) rendered: `MapApp.warmUp()` does, right before the
-   * loading splash opens.
+   * loading screen opens.
    */
   warmUpShaders(): void {
     if (this.destroyed) return;

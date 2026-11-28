@@ -3,8 +3,8 @@ import { loadCameraState, resolveWorldParams, saveCameraState } from './core/sto
 import { initTelegram, setTelegramColors } from './core/telegram.ts';
 import { createRenderer } from './rendering/createRenderer.ts';
 import { MapApp } from './rendering/MapApp.ts';
-import { createSplash, type SplashMode, type SplashQuality } from './splash/index.ts';
 import { createHud } from './ui/hud.ts';
+import { loader } from './ui/loader.ts';
 import { createApi } from './app/api.ts';
 import { startWorld } from './world/generation/WorldBackend.ts';
 import { createDetailTextures } from './world/terrain/detailTextures.ts';
@@ -16,24 +16,11 @@ declare global {
   }
 }
 
-/** Page / Telegram chrome colour under the loading splash and under the map (the fog). */
-const SPLASH_COLOR = '#06120f';
+/** Page / Telegram chrome colour under the loading screen (public/loader) and under the map (the fog). */
+const LOADER_COLOR = '#3f6b34';
 const MAP_COLOR = '#ecf2f6';
 
 const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
-
-/**
- * `?splash=lite|off` (or `?nosplash`) and `?splash=full|high|low` override the
- * automatic choice of mode and of detail level (for testing).
- */
-function splashChoice(query: URLSearchParams): { mode: SplashMode; quality: SplashQuality } {
-  const value = query.get('splash');
-  if (query.has('nosplash') || value === 'off') return { mode: 'off', quality: 'auto' };
-  if (value === 'lite') return { mode: 'lite', quality: 'auto' };
-  if (value === 'high' || value === 'low') return { mode: 'cinematic', quality: value };
-  if (value === 'full') return { mode: 'cinematic', quality: 'auto' };
-  return { mode: 'auto', quality: 'auto' };
-}
 
 async function boot(): Promise<void> {
   const root = document.getElementById('app');
@@ -41,28 +28,18 @@ async function boot(): Promise<void> {
   const query = new URLSearchParams(location.search);
 
   const hud = createHud(root);
-  // The splash is on screen before anything heavy is created and never blocks
-  // the steps below: they only tell it how far they are.
-  const splash = createSplash(root, {
-    ...splashChoice(query),
-    onReveal: () => {
-      // the map starts to show: the page and Telegram's chrome turn from night to fog
-      document.documentElement.classList.remove('splash-active');
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', MAP_COLOR);
-      setTelegramColors(MAP_COLOR);
-      window.setTimeout(() => hud.show(), 450);
-    },
-  });
-  splash.setProgress(0.03, 'Запуск…');
+  // The loading screen is already on (index.html); the steps below only tell
+  // it how far they are.
+  loader.set(0.03);
 
   const { params, preview } = resolveWorldParams();
-  // The account and the city load while the splash plays.
+  // The account and the city load while the loading screen plays.
   const apiReady = createApi();
   const me = apiReady.then((api) => api.me());
   me.catch(() => undefined); // reported later by the game
 
   let map: MapApp | null = null;
-  void initTelegram(SPLASH_COLOR, () => map?.resize());
+  void initTelegram(LOADER_COLOR, () => map?.resize());
 
   try {
     const info = await createRenderer(hud.stage);
@@ -75,27 +52,24 @@ async function boot(): Promise<void> {
       if (w !== r.screen.width || h !== r.screen.height) r.resize(w, h);
     });
     earlyResize.observe(hud.stage);
-    splash.attach(info.app, { lowPower: info.lowMemory });
-    splash.setProgress(0.08, 'Создаём континент…');
+    loader.set(0.08);
 
-    const { backend, world } = await startWorld(
-      params,
-      (p) => splash.setProgress(0.08 + 0.5 * p, 'Создаём континент…'),
-      { forceMainThread: query.has('noworker') },
-    );
+    const { backend, world } = await startWorld(params, (p) => loader.set(0.08 + 0.5 * p), {
+      forceMainThread: query.has('noworker'),
+    });
 
     // The next steps run on the main thread; a frame between them keeps the
-    // splash moving.
-    splash.setProgress(0.6, 'Готовим текстуры…');
+    // loading animation moving.
+    loader.set(0.6);
     await nextFrame();
     const textures = createDetailTextures(params.seed);
     await nextFrame();
 
     earlyResize.disconnect();
     map = new MapApp(info, world, backend, textures, hud.stage);
-    // Nothing of the map is drawn while the splash covers it (see below).
+    // Nothing of the map is drawn while the loading screen covers it (see below).
     map.camera.viewport.visible = false;
-    await map.preload((p) => splash.setProgress(0.64 + 0.34 * p, 'Рисуем берега…'));
+    await map.preload((p) => loader.set(0.64 + 0.34 * p));
 
     const saved = preview ? null : loadCameraState(params.seed);
     if (saved) map.camera.flyTo(saved.x, saved.y, saved.scale, false);
@@ -133,13 +107,12 @@ async function boot(): Promise<void> {
       else if (e.key === '0') map!.camera.fitWorld();
     });
 
-    // The game is ready. The splash wraps its intro up (sped up, never waited
-    // for in full) and holds on the finished logo. Only then is the map
-    // drawn for the first time, still under the splash: its shaders compile
-    // and its textures upload while nothing on screen moves much. After that
-    // the splash opens onto a map that is already running smoothly.
-    splash.setProgress(1, 'Готово');
-    await splash.settle();
+    // The game is ready. The loading screen finishes its logo first; only then
+    // is the map drawn for the first time, still under the screen: its shaders
+    // compile and its textures upload while the logo just idles. After that
+    // the screen opens onto a map that is already running smoothly.
+    loader.set(1);
+    await loader.intro();
     map.camera.viewport.visible = true;
     map.warmUp();
     map.start();
@@ -149,8 +122,15 @@ async function boot(): Promise<void> {
     map.wake(); // full frame rate for the transition
     game.bind();
     (window as unknown as { __terria?: unknown }).__terria = game; // debug / automation only
-    await splash.reveal();
+    const exit = loader.finish();
+    await exit.revealed;
+    // the map starts to show: the page and Telegram's chrome turn to the fog colour
+    document.documentElement.style.background = MAP_COLOR;
+    document.body.style.background = MAP_COLOR;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', MAP_COLOR);
+    setTelegramColors(MAP_COLOR);
     hud.show();
+    await exit.gone;
     void game.start(me);
     console.info(
       `[vcm] world ready: seed ${params.seed}, generated in ${m.generationMs.toFixed(0)} ms (${backend.mode}), ` +
@@ -160,7 +140,7 @@ async function boot(): Promise<void> {
   } catch (err) {
     console.error(err);
     const noGl = err instanceof Error && /webgl|renderer|context/i.test(err.message);
-    splash.fail(noGl ? 'Не удалось запустить WebGL на этом устройстве.' : 'Не удалось загрузить карту. Обновите страницу.');
+    loader.fail(noGl ? 'Не удалось запустить WebGL на этом устройстве.' : 'Не удалось загрузить карту. Обновите страницу.');
   }
 }
 

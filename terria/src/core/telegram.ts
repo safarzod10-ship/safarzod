@@ -53,7 +53,7 @@ function applyChromeColor(app: TelegramWebApp | null | undefined): void {
 }
 
 /**
- * Recolour Telegram's header and backdrop, e.g. when the dark loading splash
+ * Recolour Telegram's header and backdrop, e.g. when the loading screen
  * gives way to the map. Safe to call at any time, inside or outside Telegram.
  */
 export function setTelegramColors(color: string): void {
