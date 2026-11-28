@@ -1,0 +1,43 @@
+{
+ "title": "Кто разбил окно",
+ "format": "detective",
+ "hook": "ТОЛЬКО ОДИН ГОВОРИТ ПРАВДУ 🕵️",
+ "outro": "А ТЫ ПОНЯЛ СРАЗУ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": ["ОКНО", "ШАХМАТЫ", "ТИМУР", "ВРЁТ", "ПРАВДУ", "ОДИН", "ПЯТЬ", "СЛУЧАЙНО", "ЧЕСТНОСТЬ", "СТЕКЛО"],
+ "cast": {
+  "max":   {"preset": "max", "pos": [-3.2, 1], "label": null},
+  "artem": {"preset": "artem", "pos": [0.4, 1.4], "label": null},
+  "timur": {"preset": "timur", "pos": [4, 1], "label": null},
+  "guard": {"preset": "guard", "pos": [8.4, -0.6], "hidden": true, "label": null}
+ },
+ "props": [
+  {"shape": "ball", "pos": [-1.5, 0.4, -10.5], "from": 0, "to": 7}
+ ],
+ "lines": [
+  {"text": "Звонко разбилось окно школы. А на площадке было трое.", "emotion": "mystery", "cam": "wide", "boom": true, "shake": true,
+   "acts": {"max": {"faceTo": [-1.5, -12], "face": "shock", "pose": "shock"}, "artem": {"faceTo": [-1.5, -12], "face": "shock"}, "timur": {"faceTo": [-1.5, -12], "face": "shock"}}},
+  {"text": "Первым Макс: это не я, я играл в шахматы.", "emotion": "calm", "cam": "close:max",
+   "acts": {"max": {"faceTo": "cam", "face": "smug", "pose": "shrug", "label": {"text": "МАКС", "color": "#ffe14a"}}, "artem": {"faceTo": "cam"}, "timur": {"faceTo": "cam"}}},
+  {"text": "Следом Артём: это Тимур!", "emotion": "excited", "cam": "close:artem",
+   "acts": {"artem": {"faceTo": "timur", "face": "angry", "pose": "point", "label": {"text": "АРТЁМ", "color": "#ffe14a"}}}},
+  {"text": "Третьим Тимур: Артём врёт!", "emotion": "angry", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "artem", "face": "angry", "pose": "point", "label": {"text": "ТИМУР", "color": "#ffe14a"}}, "artem": {"pose": "idle"}}},
+  {"text": "Знал сторож точно: правду сказал только один из них.", "emotion": "mystery", "cam": "medium:guard", "whoosh": true,
+   "acts": {"guard": {"show": true, "faceTo": "cam", "face": "think", "pose": "idle"}, "timur": {"pose": "idle", "faceTo": "cam", "face": "neutral"}, "artem": {"faceTo": "cam", "face": "neutral"}}},
+  {"text": "Кто разбил окно? Подумай пять секунд.", "emotion": "excited", "cam": "wide:max,artem,timur", "gap": 3.2,
+   "acts": {"guard": {"hide": true}, "max": {"faceTo": "cam", "face": "neutral", "label": {"text": "1", "color": "#ffffff", "pop": true}}, "artem": {"faceTo": "cam", "label": {"text": "2", "color": "#ffffff", "pop": true}}, "timur": {"faceTo": "cam", "label": {"text": "3", "color": "#ffffff", "pop": true}}}},
+  {"text": "Правильно! Это Макс. Только тогда правду говорит один Тимур.", "emotion": "surprise", "cam": "close:max", "flash": true, "boom": true, "shake": true,
+   "acts": {"max": {"faceTo": "cam", "face": "shock", "pose": "shock", "label": {"text": "ЭТО ОН!", "color": "#ff5a5a", "pop": true}}}},
+  {"text": "Тихо признался Макс: я случайно. Простите.", "emotion": "sad", "cam": "medium:max",
+   "acts": {"max": {"faceTo": "cam", "face": "sad", "pose": "sad", "label": null}, "artem": {"label": null}, "timur": {"label": null}}},
+  {"text": "Строгий сторож улыбнулся: за честность прощаю. Но окно чиним вместе!", "emotion": "warm", "cam": "two:guard:max", "chime": true,
+   "acts": {"guard": {"show": true, "pos": [0.6, 3.2], "faceTo": "max", "face": "smile", "pose": "point"}, "max": {"pos": [-3.2, 2.4], "faceTo": "guard", "face": "smile", "pose": "idle"}, "artem": {"hide": true}, "timur": {"hide": true}}},
+  {"text": "Вечером Макс и сторож вставили новое стекло. А Макс впервые не соврал.", "emotion": "warm", "cam": "wide:max,guard", "time": "evening",
+   "acts": {"max": {"pos": [-2.4, -9.6], "faceTo": [-2.4, -13], "pose": "give", "face": "joy"}, "guard": {"pos": [0.4, -9.6], "faceTo": [0.4, -13], "pose": "give", "face": "smile"}}},
+  {"text": "Сразу понял, кто врёт? Пиши в комментариях.", "emotion": "outro", "cam": "wide:max,guard", "time": "day",
+   "acts": {"max": {"pos": [-1.6, 1.4], "faceTo": "cam", "pose": "wave", "face": "joy"}, "guard": {"pos": [1.6, 1.4], "faceTo": "cam", "pose": "idle", "face": "smile"}}}
+ ]
+}
