@@ -370,7 +370,7 @@ function shotLoc(i) { for (let j = i; j >= 0; j--) if (SH[j].location) return SH
 function shotTime(i) { for (let j = i; j >= 0; j--) if (SH[j].time) return SH[j].time; return E.time || 'day'; }
 function stateAt(t, s) {
   const st = {};
-  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].root.scale.y, ghost: false };
+  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].root.scale.y, ghost: false, freeze: false };
   for (let j = 0; j <= s; j++) {
     const acts = SH[j].acts || {}, t0 = shotStart[j], isCur = j === s;
     // location change resets everyone to explicit positions given in that shot
@@ -381,6 +381,7 @@ function stateAt(t, s) {
       if (a.show) x.hidden = false;
       if (a.faceTo !== undefined) x.face = a.faceTo;
       if (a.ghost !== undefined) x.ghost = a.ghost;
+      if (a.freeze !== undefined) x.freeze = a.freeze;
       if (a.moveTo) {
         const to = v3(a.moveTo[0], 0, a.moveTo[1]);
         const dist = x.pos.distanceTo(to), dur = a.walkTime || Math.max(0.6, dist / (a.run ? 6 : 3.4));
@@ -510,7 +511,7 @@ window.renderAt = function (t) {
     else if (st[x.face]) look = st[x.face].pos;
     if (look) c.root.rotation.y = Math.atan2(look.x - x.pos.x, look.z - x.pos.z);
     const p = x.moving ? (a.pose === 'carry' ? 'carrywalk' : x.moving) : (a.pose || 'idle');
-    pose(c, p, t);
+    pose(c, p, x.freeze ? 1.3 + c.phase : t); // frozen in time = static pose
     let fe = a.face || 'neutral';
     if (a.faceAfter && t - t0 > a.faceAfter[0]) fe = a.faceAfter[1];
     c.faceM.map = faceTex(c.o.skin, fe, c.o.glasses && !['laugh', 'joy', 'shock', 'cry'].includes(fe));
@@ -552,6 +553,7 @@ window.renderAt = function (t) {
   hook.innerHTML = s === 0 && E.hook ? `<span class="bg">${E.hook}</span>` : '';
   hook.style.transform = `scale(${1 + 0.04 * Math.sin(t * 5)})`;
   flash.style.opacity = shot.flash ? Math.max(0, 0.85 - (t - t0) * 3) : 0;
+  renderer.domElement.style.filter = shot.tint === 'freeze' ? 'grayscale(0.65) sepia(0.25) hue-rotate(170deg) brightness(1.05)' : shot.tint === 'sepia' ? 'sepia(0.6)' : '';
   renderer.render(scene, camera);
 };
 window.DURATION = TL.duration;

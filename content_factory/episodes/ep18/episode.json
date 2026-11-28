@@ -1,0 +1,314 @@
+{
+ "title": "Остановить время",
+ "format": "what-if",
+ "hook": "ОН ОСТАНОВИЛ ВРЕМЯ ⏸️",
+ "outro": "А ЧТО СДЕЛАЛ БЫ ТЫ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "labels": false,
+ "highlight": [
+  "ВРЕМЯ",
+  "ЗАМЕРЛИ",
+  "ВОЗДУХЕ",
+  "ПОСПАЛ",
+  "БАНТИКОМ",
+  "СКУЧНО",
+  "ПУСТО",
+  "ПАДАЕТ",
+  "ПОЙМАЛ",
+  "ДРУГИХ"
+ ],
+ "cast": {
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    0,
+    1.6
+   ],
+   "label": null
+  },
+  "max": {
+   "preset": "max",
+   "pos": [
+    -3.8,
+    1.4
+   ],
+   "label": null
+  },
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    3.6,
+    1.2
+   ],
+   "label": null
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    6.8,
+    2
+   ],
+   "label": null
+  },
+  "kid": {
+   "preset": "kid",
+   "pos": [
+    12.5,
+    -4
+   ],
+   "hidden": true,
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "ball",
+   "pos": [
+    1.8,
+    4.6,
+    -1.2
+   ],
+   "from": 1,
+   "to": 8
+  }
+ ],
+ "lines": [
+  {
+   "text": "Представь: ты щёлкаешь пальцами, и время останавливается.",
+   "emotion": "mystery",
+   "cam": "wide",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "smug",
+     "pose": "point"
+    },
+    "max": {
+     "pose": "laugh",
+     "face": "laugh",
+     "faceTo": "liza"
+    },
+    "liza": {
+     "pose": "wave",
+     "face": "joy"
+    },
+    "artem": {
+     "pose": "cheer",
+     "face": "joy"
+    }
+   }
+  },
+  {
+   "text": "Щёлк! Все в школе замерли. Даже мяч завис в воздухе.",
+   "emotion": "excited",
+   "cam": "orbit",
+   "tint": "freeze",
+   "flash": true,
+   "whoosh": true,
+   "acts": {
+    "max": {
+     "freeze": true
+    },
+    "liza": {
+     "freeze": true
+    },
+    "artem": {
+     "freeze": true
+    },
+    "timur": {
+     "face": "shock",
+     "pose": "shock"
+    }
+   }
+  },
+  {
+   "text": "Первым делом я поспал ещё часик. Прямо на скамейке!",
+   "emotion": "excited",
+   "cam": "wide:timur",
+   "tint": "freeze",
+   "acts": {
+    "timur": {
+     "pos": [
+      19,
+      -5.1
+     ],
+     "faceTo": [
+      19,
+      10
+     ],
+     "pose": "sit",
+     "face": "joy"
+    }
+   }
+  },
+  {
+   "text": "Дальше я завязал Максу шнурки бантиком.",
+   "emotion": "excited",
+   "cam": "two:timur:max",
+   "tint": "freeze",
+   "acts": {
+    "timur": {
+     "pos": [
+      -2.2,
+      3.4
+     ],
+     "faceTo": "max",
+     "pose": "give",
+     "face": "laugh"
+    }
+   }
+  },
+  {
+   "text": "Скоро стало скучно. Никто не смеялся, никто не говорил.",
+   "emotion": "mystery",
+   "cam": "wide",
+   "tint": "freeze",
+   "acts": {
+    "timur": {
+     "pos": [
+      0,
+      4
+     ],
+     "faceTo": "cam",
+     "pose": "shrug",
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Даже лучший друг стоял как статуя. Без друзей было пусто.",
+   "emotion": "sad",
+   "cam": "two:timur:artem",
+   "tint": "freeze",
+   "acts": {
+    "timur": {
+     "pos": [
+      4.2,
+      3.8
+     ],
+     "faceTo": "artem",
+     "pose": "sad",
+     "face": "sad"
+    }
+   }
+  },
+  {
+   "text": "Вдруг я заметил: малыш падает с горки. Он застыл прямо в воздухе!",
+   "emotion": "surprise",
+   "cam": "wide:kid,timur",
+   "tint": "freeze",
+   "boom": true,
+   "acts": {
+    "kid": {
+     "show": true,
+     "freeze": true,
+     "pose": "fly",
+     "face": "shock",
+     "faceTo": "cam"
+    },
+    "timur": {
+     "faceTo": "kid",
+     "pose": "shock",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Быстро я подбежал, поймал его и аккуратно поставил на землю.",
+   "emotion": "excited",
+   "cam": "two:timur:kid",
+   "tint": "freeze",
+   "acts": {
+    "timur": {
+     "moveTo": [
+      10.2,
+      -3.2
+     ],
+     "run": true,
+     "faceTo": "kid",
+     "face": "smile"
+    },
+    "kid": {
+     "pose": "idle",
+     "face": "shock",
+     "delay": 1.5
+    }
+   }
+  },
+  {
+   "text": "Щёлк! Время пошло. Малыш даже не понял, что случилось.",
+   "emotion": "surprise",
+   "cam": "wide:kid,timur",
+   "flash": true,
+   "whoosh": true,
+   "acts": {
+    "max": {
+     "freeze": false
+    },
+    "liza": {
+     "freeze": false
+    },
+    "artem": {
+     "freeze": false
+    },
+    "kid": {
+     "freeze": false,
+     "pose": "shrug",
+     "face": "joy",
+     "faceTo": "timur"
+    },
+    "timur": {
+     "pose": "idle",
+     "face": "joy"
+    }
+   }
+  },
+  {
+   "text": "Главное я понял: лучшая секунда та, которую тратишь на других.",
+   "emotion": "warm",
+   "cam": "close:timur",
+   "chime": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Время остановишь, что сделаешь первым? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "kid": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "max": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    }
+   }
+  }
+ ]
+}

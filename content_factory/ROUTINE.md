@@ -62,11 +62,12 @@ Record the format in episodes.log as the 2nd field: `epNN | format | title | hoo
 - cast.<id>: preset (timur|max|liza|artem|granny|mom|teacher|dad|guard|kid), pos [x,z], hidden, label
   ({text, heart, color} or null), look overrides ({shirt:"#hex", ...}).
 - props: {shape: wallet|phone|box|bag|book|ball|letter|cake|gift|money, pos [x,y,z] or holder: id, from, to (shot indices, 0-based), size, color}.
-- lines[i]: text, emotion, cam, acts, optional location/time (persist), flash, chime, whoosh, boom, shake, pitch, speed, gap.
+- lines[i]: text, emotion, cam, acts, optional location/time (persist), flash, chime, whoosh, boom, shake, pitch, speed, gap,
+  tint ("freeze" = cold stopped-time look, "sepia" = memory/flashback; per line).
 - cam: wide | wide:id1,id2 | orbit | top | close:id | medium:id | low:id | two:a:b | over:a:b
 - acts.<id>: pos, moveTo [x,z] (walks), run, delay, walkTime, show, hide, faceTo (id | "cam" | [x,z]),
   pose (idle walk run carry laugh point sad cry shock angry cheer wave think hug give phone sit facepalm shrug fly),
-  ghost (true/false, persists: semi-transparent "invisible" character),
+  ghost (true/false, persists: semi-transparent "invisible" character), freeze (true/false, persists: frozen in time),
   face (neutral smile sad cry shock angry smug laugh joy think), faceAfter [sec, face],
   label ({text, heart, color, pop} or {from, to, heart, color, dur, delay} for counting).
 - Positions: school yard plaza x∈[-15,22], z∈[-8,8] (building at z=-12); park path z≈1 (x∈[-30,30]);
