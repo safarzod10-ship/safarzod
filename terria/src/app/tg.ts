@@ -33,13 +33,37 @@ export function tg(): TgApp | null {
   return (window as unknown as { Telegram?: { WebApp?: TgApp } }).Telegram?.WebApp ?? null;
 }
 
+/**
+ * Telegram puts the signed launch data into the page URL
+ * (#tgWebAppData=...). It is there from the first moment, while
+ * Telegram.WebApp only exists once telegram-web-app.js has loaded, which
+ * happens asynchronously - the first API call must not wait for it.
+ * Read once, at start-up, before anything can touch the hash.
+ */
+const LAUNCH_DATA = ((): string => {
+  try {
+    const fromHash = new URLSearchParams(location.hash.slice(1)).get('tgWebAppData');
+    if (fromHash) return fromHash;
+    return new URLSearchParams(location.search).get('tgWebAppData') ?? '';
+  } catch {
+    return '';
+  }
+})();
+
 export function initData(): string {
-  return tg()?.initData ?? '';
+  return tg()?.initData || LAUNCH_DATA;
 }
 
 export function tgUserName(): string {
   const u = tg()?.initDataUnsafe?.user;
-  return u?.first_name ?? u?.username ?? '';
+  if (u) return u.first_name ?? u.username ?? '';
+  try {
+    const raw = new URLSearchParams(LAUNCH_DATA).get('user');
+    const user = raw ? (JSON.parse(raw) as { first_name?: string; username?: string }) : null;
+    return user?.first_name ?? user?.username ?? '';
+  } catch {
+    return '';
+  }
 }
 
 export const haptic = {
