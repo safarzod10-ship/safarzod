@@ -198,7 +198,8 @@ const trees = bottom.filter((b) => b.x0 > 1262);
 school.forEach((b, i) => names.set(b, `school:${i + 1}`));
 ['park:1', 'fountain:1', 'statue:1'].forEach((n, i) => decor[i] && names.set(decor[i], n));
 ['site:2', 'site:3', 'site:4'].forEach((n, i) => sites[i] && names.set(sites[i], n));
-['tree:0', 'tree:1', 'tree:2', 'tree:3'].forEach((n, i) => trees[i] && names.set(trees[i], n));
+// the catalogue's trees are not used: the map paints its own trees
+void trees;
 console.log(`buildings found: ${names.size} (school ${school.length}, decor ${decor.length}, sites ${sites.length}, trees ${trees.length})`);
 
 // small pieces (smoke, flags, separate tree tops) join the building above

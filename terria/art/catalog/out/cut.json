@@ -644,42 +644,6 @@
    "check": 1.09
   },
   {
-   "name": "tree:0",
-   "file": "tree_0.png",
-   "w": 65,
-   "h": 84,
-   "dw": 60,
-   "ax": 32.5,
-   "ay": 81
-  },
-  {
-   "name": "tree:1",
-   "file": "tree_1.png",
-   "w": 63,
-   "h": 83,
-   "dw": 59,
-   "ax": 30,
-   "ay": 80
-  },
-  {
-   "name": "tree:2",
-   "file": "tree_2.png",
-   "w": 48,
-   "h": 86,
-   "dw": 44,
-   "ax": 24,
-   "ay": 83
-  },
-  {
-   "name": "tree:3",
-   "file": "tree_3.png",
-   "w": 37,
-   "h": 99,
-   "dw": 34,
-   "ax": 19,
-   "ay": 96
-  },
-  {
    "name": "warehouse:1",
    "file": "warehouse_1.png",
    "w": 100,

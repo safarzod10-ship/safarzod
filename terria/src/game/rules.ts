@@ -479,15 +479,6 @@ export function applyAction(c: CityState, a: Action, m: RegionMask, now: number)
         return fail('no_money');
       }
       pay(c, cost);
-      // clearing forest gives some timber
-      const s = d.size;
-      let wooded = 0;
-      for (let y = a.y; y < a.y + s; y++)
-        for (let x = a.x; x < a.x + s; x++) {
-          const i = cellIndex(m, x, y);
-          if (i >= 0 && getBit(m.wood, i)) wooded++;
-        }
-      c.res.wood += wooded * 3;
       const ms = buildHours(a.t, 1) * HOUR;
       c.buildings.push({ id: c.nextId++, t: a.t, x: a.x, y: a.y, lvl: 0, until: now + ms });
       break;

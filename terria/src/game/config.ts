@@ -100,8 +100,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     category: 'production', description: 'Поля и амбар. Кормят город: 1 продукт в час на 6 жителей.',
   },
   sawmill: {
-    name: 'Лесопилка', size: 3, cost: { coins: 50 }, th: 1, jobs: 8, out: { wood: 20 }, upkeep: 0.35, maxLevel: 5, forestBonus: 1.6,
-    category: 'production', description: 'Древесина. В лесу работает в 1,6 раза быстрее.',
+    name: 'Лесопилка', size: 3, cost: { coins: 50 }, th: 1, jobs: 8, out: { wood: 20 }, upkeep: 0.35, maxLevel: 5,
+    category: 'production', description: 'Древесина для строительства.',
   },
   quarry: {
     name: 'Карьер', size: 3, cost: { coins: 55 }, th: 1, jobs: 8, out: { stone: 16 }, upkeep: 0.35, maxLevel: 5,

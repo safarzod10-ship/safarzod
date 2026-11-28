@@ -5,8 +5,6 @@ import { createRenderer } from './rendering/createRenderer.ts';
 import { MapApp } from './rendering/MapApp.ts';
 import { createSplash, type SplashMode, type SplashQuality } from './splash/index.ts';
 import { createHud } from './ui/hud.ts';
-import { models } from './app/city/atlas.ts';
-import { useTreeAtlas } from './world/trees/treeAtlas.ts';
 import { createApi } from './app/api.ts';
 import { startWorld } from './world/generation/WorldBackend.ts';
 import { createDetailTextures } from './world/terrain/detailTextures.ts';
@@ -94,21 +92,6 @@ async function boot(): Promise<void> {
     await nextFrame();
 
     earlyResize.disconnect();
-    // hand-drawn trees replace the painted ones ("dw" of a tree = crown width)
-    await models.ready.then(
-      () => {
-        const f = models.frame('tree:0');
-        if (!f) return;
-        useTreeAtlas({
-          canopies: [0, 1, 2, 3].map((v) => models.texture(`tree:${v}`)),
-          canopyPx: f.dw,
-          anchorX: f.ax / f.w,
-          anchorY: f.ay / f.h,
-          destroy: () => {},
-        });
-      },
-      () => {},
-    );
     map = new MapApp(info, world, backend, textures, hud.stage);
     // Nothing of the map is drawn while the splash covers it (see below).
     map.camera.viewport.visible = false;
