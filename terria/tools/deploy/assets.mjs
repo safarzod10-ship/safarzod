@@ -28,7 +28,7 @@ function walk(dir, out = []) {
   return out;
 }
 
-function files(dir) {
+let files = function (dir) {
   return walk(dir).map((p) => {
     const buf = readFileSync(p);
     const b64 = buf.toString('base64');
@@ -39,7 +39,26 @@ function files(dir) {
 }
 
 const [, , cmd, dir, accountId, sessionFile] = process.argv;
-if (cmd === 'manifest') {
+// With BUILD_ID set, asset hashes are sha256(buildId + path): a fresh id per
+// deploy uploads every file again, and the manifest can be rebuilt from the
+// list of paths and sizes alone (compact form for the "compact" command).
+const BUILD_ID = process.env.BUILD_ID;
+if (BUILD_ID) {
+  const orig = files;
+  files = (d) => orig(d).map((f) => ({ ...f, hash: createHash('sha256').update(BUILD_ID + f.path).digest('hex').slice(0, 32) }));
+}
+if (cmd === 'compact') {
+  // { other: [[path, size]...], regions: [size of /regions/0.json ...], index: size of /regions/index.json }
+  const all = files(dir);
+  const regions = [];
+  const other = [];
+  for (const f of all) {
+    const m = /^\/regions\/(\d+)\.json$/.exec(f.path);
+    if (m) regions[Number(m[1])] = f.size;
+    else other.push([f.path, f.size]);
+  }
+  process.stdout.write(JSON.stringify({ other, regions }));
+} else if (cmd === 'manifest') {
   const m = {};
   for (const f of files(dir)) m[f.path] = { hash: f.hash, size: f.size };
   process.stdout.write(JSON.stringify(m));

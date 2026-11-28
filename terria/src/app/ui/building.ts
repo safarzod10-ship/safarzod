@@ -2,7 +2,7 @@
 import { BUILDINGS, LEVEL_JOBS, LEVEL_OUT, type BuildingDef } from '../../game/config.ts';
 import { buildHours, buildingCost, builderCount, busyBuilders, canAfford, ERRORS, maxBuildingLevel, woodedShare } from '../../game/rules.ts';
 import type { Building } from '../../game/types.ts';
-import { thumbnail } from '../city/buildingArt.ts';
+import { thumbnail } from '../city/atlas.ts';
 import type { Game } from '../context.ts';
 import { btn, dec1, duration, h, num } from '../dom.ts';
 import { UI_SVG } from '../icons.ts';

@@ -49,6 +49,17 @@ body {
   outline: none;
 }
 
+/* 2.5D: a light haze toward the top of the screen, where the ground is
+   furthest from the camera, so the tilted view reads as depth */
+.vcm-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 34%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(226, 236, 240, 0.62), rgba(226, 236, 240, 0.22) 45%, rgba(226, 236, 240, 0));
+}
+
 /* ---------- HUD ---------- */
 .vcm-hud {
   position: absolute;

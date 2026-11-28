@@ -8,7 +8,6 @@ import { getBit } from '../../game/bits.ts';
 import { BUILDINGS, CELL_M, type BuildingType } from '../../game/config.ts';
 import type { RegionMask } from '../../game/rules.ts';
 import type { BuildingAtlas } from './atlas.ts';
-import { PAD_M, PX_PER_M } from './buildingArt.ts';
 
 export class Ghost {
   readonly container = new Container({ label: 'ghost' });
@@ -20,8 +19,7 @@ export class Ghost {
   constructor(atlas: BuildingAtlas, overlay: Container) {
     this.atlas = atlas;
     this.container.eventMode = 'none';
-    this.sprite.scale.set(1 / PX_PER_M);
-    this.sprite.alpha = 0.82;
+    this.sprite.alpha = 0.85;
     this.container.addChild(this.frame, this.sprite);
     this.container.visible = false;
     overlay.addChild(this.container);
@@ -29,8 +27,6 @@ export class Ghost {
 
   show(t: BuildingType): void {
     this.type = t;
-    this.sprite.texture = this.atlas.get(t, 1, 1);
-    this.atlas.flush();
     this.container.visible = true;
   }
 
@@ -45,7 +41,8 @@ export class Ghost {
     const s = BUILDINGS[this.type].size * CELL_M;
     const x = cx * CELL_M;
     const y = cy * CELL_M;
-    this.sprite.position.set(x - PAD_M, y - PAD_M);
+    this.atlas.apply(this.sprite, this.atlas.key(this.type, 1), x + s / 2, y + s / 2);
+    this.sprite.tint = valid ? 0xffffff : 0xffb4a8;
     const lw = 2 / scale;
     const col = valid ? 0x2f9a77 : 0xc0442e;
     this.frame

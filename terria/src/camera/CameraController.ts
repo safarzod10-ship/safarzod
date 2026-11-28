@@ -36,9 +36,13 @@ export class CameraController {
   private readonly view: CameraView = { x: 0, y: 0, scale: 1, bounds: { x: 0, y: 0, width: 0, height: 0 } };
   private readonly bounds: Rect;
 
+  /** Vertical squash of the ground plane (2.5D tilt). Viewport y = world y * tilt. */
+  readonly tilt = CAMERA.tilt;
+
   /** @param bounds world rectangle the camera may show (WorldMeta.cameraBounds) */
   constructor(app: Application, bounds: Rect) {
-    this.bounds = bounds;
+    // the viewport works in "screen plane" units: x as in the world, y squashed
+    this.bounds = { x: bounds.x, y: bounds.y * CAMERA.tilt, width: bounds.width, height: bounds.height * CAMERA.tilt };
     this.screenW = app.screen.width;
     this.screenH = app.screen.height;
     this.limits = computeZoomLimits(this.screenW, this.screenH, bounds, CAMERA.maxScale, CAMERA.minScaleSlack);
@@ -69,9 +73,9 @@ export class CameraController {
     const v = this.view;
     v.scale = scale;
     v.bounds.width = this.screenW / scale;
-    v.bounds.height = this.screenH / scale;
+    v.bounds.height = this.screenH / scale / this.tilt;
     v.bounds.x = -vp.x / scale;
-    v.bounds.y = -vp.y / scale;
+    v.bounds.y = -vp.y / scale / this.tilt;
     v.x = v.bounds.x + v.bounds.width / 2;
     v.y = v.bounds.y + v.bounds.height / 2;
     return v;
@@ -138,13 +142,14 @@ export class CameraController {
     this.viewport.resize(screenW, screenH);
     this.viewport.clampZoom({ minScale: this.limits.minScale, maxScale: this.limits.maxScale });
     if (wasAtMin) this.viewport.scale.set(this.limits.minScale);
-    this.viewport.moveCenter(cx, cy);
+    this.viewport.moveCenter(cx, cy * this.tilt);
     this.update();
   }
 
   /** Show the whole continent with its ocean and fog ring. */
   fitWorld(animate = true): void {
-    this.flyTo(this.bounds.x + this.bounds.width / 2, this.bounds.y + this.bounds.height / 2, this.limits.minScale, animate);
+    const b = this.bounds;
+    this.flyTo(b.x + b.width / 2, (b.y + b.height / 2) / this.tilt, this.limits.minScale, animate);
   }
 
   zoomBy(factor: number, animate = true): void {
@@ -155,7 +160,7 @@ export class CameraController {
   flyTo(x: number, y: number, scale?: number, animate = true): void {
     const vp = this.viewport;
     const s = Math.min(this.limits.maxScale, Math.max(this.limits.minScale, scale ?? vp.scale.x));
-    const p = clampCenter(x, y, s, this.screenW, this.screenH, this.bounds);
+    const p = clampCenter(x, y * this.tilt, s, this.screenW, this.screenH, this.bounds);
     if (!animate) {
       vp.plugins.remove('animate');
       vp.scale.set(s);
@@ -167,11 +172,11 @@ export class CameraController {
 
   screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
     const vp = this.viewport;
-    return { x: (screenX - vp.x) / vp.scale.x, y: (screenY - vp.y) / vp.scale.y };
+    return { x: (screenX - vp.x) / vp.scale.x, y: (screenY - vp.y) / vp.scale.y / this.tilt };
   }
 
   worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
     const vp = this.viewport;
-    return { x: worldX * vp.scale.x + vp.x, y: worldY * vp.scale.y + vp.y };
+    return { x: worldX * vp.scale.x + vp.x, y: worldY * this.tilt * vp.scale.y + vp.y };
   }
 }

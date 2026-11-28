@@ -1,88 +1,144 @@
 /**
- * Lazily painted texture atlas for buildings: every (type, level, variant)
- * is painted once into a shared 2048 px canvas page, so all buildings of all
- * visible cities batch into very few draw calls. Pages are uploaded to the
- * GPU only when something new was painted (flush()).
+ * Pre-rendered 3D building sprites (tools/models: three.js models rendered
+ * from the game's 40 degree camera angle into a WebP atlas).
+ *
+ * A sprite is drawn inside the tilted world container, so its vertical
+ * scale undoes the tilt: the picture already contains the foreshortening.
+ * (ax, ay) is the pixel of the lot centre; it becomes the sprite anchor.
  */
-import { CanvasSource, Rectangle, Texture } from 'pixi.js';
-import type { BuildingType } from '../../game/config.ts';
-import { paintBuilding, tilePx } from './buildingArt.ts';
+import { ImageSource, Rectangle, Sprite, Texture } from 'pixi.js';
+import { BUILDINGS, type BuildingType } from '../../game/config.ts';
 
-const PAGE = 2048;
-
-interface Page {
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-  source: CanvasSource;
+interface Frame {
+  p: number;
   x: number;
   y: number;
-  rowH: number;
-  dirty: boolean;
+  w: number;
+  h: number;
+  ax: number;
+  ay: number;
+}
+interface AtlasJson {
+  pxPerM: number;
+  tilt: number;
+  pages: string[];
+  sprites: Record<string, Frame>;
 }
 
 export class BuildingAtlas {
-  private readonly pages: Page[] = [];
-  private readonly cache = new Map<string, Texture>();
+  private json: AtlasJson | null = null;
+  private bitmaps: ImageBitmap[] = [];
+  private sources: ImageSource[] = [];
+  private readonly textures = new Map<string, Texture>();
+  readonly ready: Promise<void>;
 
-  get(t: BuildingType, lvl: number, variant: number): Texture {
-    const key = `${t}:${lvl}:${variant}`;
-    const hit = this.cache.get(key);
-    if (hit) return hit;
-    const px = tilePx(t);
-    let page = this.pages[this.pages.length - 1];
-    if (!page || !this.fits(page, px)) {
-      if (page && page.x + px > PAGE) {
-        page.x = 0;
-        page.y += page.rowH + 2;
-        page.rowH = 0;
-      }
-      if (!page || page.y + px > PAGE) page = this.newPage();
+  constructor(base = './models/') {
+    this.ready = this.load(base);
+  }
+
+  private async load(base: string): Promise<void> {
+    const json = (await (await fetch(base + 'atlas.json')).json()) as AtlasJson;
+    const bitmaps = await Promise.all(
+      json.pages.map(async (f) => createImageBitmap(await (await fetch(base + f)).blob(), { premultiplyAlpha: 'none' })),
+    );
+    this.bitmaps = bitmaps;
+    this.sources = bitmaps.map((b) => new ImageSource({ resource: b, autoGenerateMipmaps: true, scaleMode: 'linear' }));
+    this.json = json;
+  }
+
+  get loaded(): boolean {
+    return this.json !== null;
+  }
+
+  /** Sprite key of a building at a level (0 = construction site). */
+  key(t: BuildingType, lvl: number): string {
+    const d = BUILDINGS[t];
+    if (lvl < 1) return `site:${d.size}`;
+    return `${t}:${Math.min(Math.max(1, lvl), d.maxLevel)}`;
+  }
+
+  frame(key: string): Frame | null {
+    return this.json?.sprites[key] ?? null;
+  }
+
+  texture(key: string): Texture {
+    let t = this.textures.get(key);
+    if (t) return t;
+    const f = this.frame(key);
+    if (!f) return Texture.EMPTY;
+    t = new Texture({ source: this.sources[f.p], frame: new Rectangle(f.x, f.y, f.w, f.h) });
+    this.textures.set(key, t);
+    return t;
+  }
+
+  /** Metres per sprite pixel, horizontally. */
+  get mPerPx(): number {
+    return 1 / (this.json?.pxPerM ?? 3);
+  }
+
+  /**
+   * Show sprite `key` with the lot centre at world (wx, wy). The sprite must
+   * live inside the tilted world container.
+   */
+  apply(s: Sprite, key: string, wx: number, wy: number): void {
+    const f = this.frame(key);
+    if (!f || !this.json) {
+      s.visible = false;
+      return;
     }
-    if (page.x + px > PAGE) {
-      page.x = 0;
-      page.y += page.rowH + 2;
-      page.rowH = 0;
-    }
-    const x = page.x;
-    const y = page.y;
-    page.ctx.clearRect(x, y, px, px);
-    paintBuilding(page.ctx, x, y, t, lvl, variant);
-    page.x += px + 2;
-    page.rowH = Math.max(page.rowH, px);
-    page.dirty = true;
-    const tex = new Texture({ source: page.source, frame: new Rectangle(x, y, px, px) });
-    this.cache.set(key, tex);
-    return tex;
+    s.visible = true;
+    s.texture = this.texture(key);
+    s.anchor.set(f.ax / f.w, f.ay / f.h);
+    const k = 1 / this.json.pxPerM;
+    s.scale.set(k, k / this.json.tilt);
+    s.position.set(wx, wy);
   }
 
-  private fits(p: Page, px: number): boolean {
-    if (p.x + px <= PAGE && p.y + px <= PAGE) return true;
-    return p.y + p.rowH + 2 + px <= PAGE;
-  }
-
-  private newPage(): Page {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = PAGE;
-    const ctx = canvas.getContext('2d')!;
-    const source = new CanvasSource({ resource: canvas, autoGenerateMipmaps: true, scaleMode: 'linear' });
-    const page: Page = { canvas, ctx, source, x: 0, y: 0, rowH: 0, dirty: false };
-    this.pages.push(page);
-    return page;
-  }
-
-  /** Upload pages that changed. Call after a batch of get()s. */
-  flush(): void {
-    for (const p of this.pages)
-      if (p.dirty) {
-        p.dirty = false;
-        p.source.update();
-      }
+  /** A picture of the building for the UI (data URL), fitted into a square. */
+  thumbnail(key: string, cssPx: number): string | null {
+    const f = this.frame(key);
+    if (!f) return null;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const px = Math.round(cssPx * dpr);
+    const c = document.createElement('canvas');
+    c.width = c.height = px;
+    const ctx = c.getContext('2d')!;
+    const k = Math.min(px / f.w, px / f.h);
+    const w = f.w * k;
+    const h = f.h * k;
+    ctx.drawImage(this.bitmaps[f.p], f.x, f.y, f.w, f.h, (px - w) / 2, (px - h) / 2, w, h);
+    return c.toDataURL('image/png');
   }
 
   destroy(): void {
-    for (const t of this.cache.values()) t.destroy(false);
-    for (const p of this.pages) p.source.destroy();
-    this.cache.clear();
-    this.pages.length = 0;
+    for (const t of this.textures.values()) t.destroy(false);
+    for (const s of this.sources) s.destroy();
+    for (const b of this.bitmaps) b.close();
+    this.textures.clear();
   }
+}
+
+/** One shared atlas for the whole app (the UI thumbnails use it too). */
+export const models = new BuildingAtlas();
+
+const thumbs = new Map<string, string>();
+/** <img> of a building for panels; fills in once the atlas has loaded. */
+export function thumbnail(t: BuildingType, lvl: number, cssPx: number): HTMLImageElement {
+  const img = document.createElement('img');
+  img.width = img.height = cssPx;
+  img.alt = BUILDINGS[t].name;
+  img.className = 't-thumb';
+  const key = models.key(t, lvl);
+  const fill = (): void => {
+    const id = `${key}:${cssPx}`;
+    let url = thumbs.get(id);
+    if (!url) {
+      url = models.thumbnail(key, cssPx) ?? '';
+      if (url) thumbs.set(id, url);
+    }
+    if (url) img.src = url;
+  };
+  if (models.loaded) fill();
+  else void models.ready.then(fill);
+  return img;
 }

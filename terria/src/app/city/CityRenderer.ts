@@ -11,7 +11,6 @@ import { BUILDINGS, CELL_M } from '../../game/config.ts';
 import { buildHours, type RegionMask } from '../../game/rules.ts';
 import type { Building } from '../../game/types.ts';
 import type { BuildingAtlas } from './atlas.ts';
-import { PAD_M, PX_PER_M } from './buildingArt.ts';
 
 export interface CityLayers {
   ground: Container;
@@ -52,22 +51,27 @@ export class CityRenderer {
   set(owned: Uint8Array, buildings: Building[], now: number): void {
     this.drawLand(owned);
     this.buildingsList = buildings;
-    const list = buildings.slice().sort((a, b) => a.y + BUILDINGS[a.t].size - (b.y + BUILDINGS[b.t].size) || a.x - b.x);
-    // reuse sprites
+    // back to front: lots further north are drawn first
+    const list = buildings.slice().sort((a, b) => a.y + BUILDINGS[a.t].size / 2 - (b.y + BUILDINGS[b.t].size / 2) || a.x - b.x);
+    // one sprite per building plus a crane on top of buildings being upgraded
+    const want: { key: string; x: number; y: number }[] = [];
+    for (const b of list) {
+      const half = (BUILDINGS[b.t].size * CELL_M) / 2;
+      const cx = b.x * CELL_M + half;
+      const cy = b.y * CELL_M + half;
+      want.push({ key: this.atlas.key(b.t, b.lvl), x: cx, y: cy });
+      if (b.until > now && b.lvl >= 1) want.push({ key: 'crane', x: cx + half * 0.55, y: cy + half * 0.2 });
+    }
     const kids = this.sprites.children as Sprite[];
-    while (kids.length > list.length) kids[kids.length - 1].destroy();
-    for (let i = 0; i < list.length; i++) {
-      const b = list[i];
+    while (kids.length > want.length) kids[kids.length - 1].destroy();
+    for (let i = 0; i < want.length; i++) {
       let s = kids[i];
       if (!s) {
         s = new Sprite();
-        s.scale.set(1 / PX_PER_M);
         this.sprites.addChild(s);
       }
-      s.texture = this.atlas.get(b.t, b.lvl, variantOf(b));
-      s.position.set(b.x * CELL_M - PAD_M, b.y * CELL_M - PAD_M);
+      this.atlas.apply(s, want[i].key, want[i].x, want[i].y);
     }
-    this.atlas.flush();
     this.drawBars(now);
   }
 

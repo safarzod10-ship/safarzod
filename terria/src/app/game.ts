@@ -22,7 +22,7 @@ import {
 import type { CityState, MeResponse, WorldCitySummary } from '../game/types.ts';
 import type { MapApp } from '../rendering/MapApp.ts';
 import { ApiError, type Api } from './api.ts';
-import { BuildingAtlas } from './city/atlas.ts';
+import { models } from './city/atlas.ts';
 import { CityRenderer } from './city/CityRenderer.ts';
 import { OthersLayer, type RegionIndexEntry } from './city/OthersLayer.ts';
 import { ExpandOverlay, Ghost } from './city/tools.ts';
@@ -52,7 +52,7 @@ export class TerriaGame implements Game {
   readonly store: Store;
   readonly shell: Shell;
   readonly map: MapApp;
-  private readonly atlas = new BuildingAtlas();
+  private readonly atlas = models;
   private city: CityRenderer | null = null;
   private readonly ghost: Ghost;
   private readonly expand: ExpandOverlay;
@@ -84,6 +84,7 @@ export class TerriaGame implements Game {
 
   /** Called once the splash has revealed the map. */
   async start(me: Promise<MeResponse>): Promise<void> {
+    await this.atlas.ready.catch((e) => console.error('building models failed to load', e));
     this.shell.show();
     void this.loadWorld();
     let res: MeResponse;
@@ -183,17 +184,20 @@ export class TerriaGame implements Game {
     this.secondTimer = window.setInterval(() => this.second(), 1000);
     this.worldTimer = window.setInterval(() => void this.loadWorld(), 120_000);
     const vp = this.map.camera.viewport;
-    vp.on('clicked', (ev) => this.onTap(ev.world.x, ev.world.y));
+    vp.on('clicked', (ev) => {
+      const w = this.map.camera.screenToWorld(ev.screen.x, ev.screen.y);
+      this.onTap(w.x, w.y);
+    });
     // brush painting in expand mode
     vp.on('pointerdown', (e) => {
       if (this.mode.kind !== 'expand' || !this.mode.brush) return;
       this.painting = true;
-      const p = vp.toWorld(e.global);
+      const p = this.map.camera.screenToWorld(e.global.x, e.global.y);
       this.paintAt(p.x, p.y);
     });
     vp.on('pointermove', (e) => {
       if (!this.painting) return;
-      const p = vp.toWorld(e.global);
+      const p = this.map.camera.screenToWorld(e.global.x, e.global.y);
       this.paintAt(p.x, p.y);
     });
     const stop = (): void => void (this.painting = false);

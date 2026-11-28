@@ -9,7 +9,7 @@
  * how many trees it holds.
  */
 import { Container, Particle, ParticleContainer, Rectangle } from 'pixi.js';
-import { BASE_SPACING, TREES, WORLD_SIZE } from '../../core/config.ts';
+import { BASE_SPACING, CAMERA, TREES, WORLD_SIZE } from '../../core/config.ts';
 import type { Rect } from '../../core/math.ts';
 import { smoothstep } from '../../core/math.ts';
 import type { WorldBackend } from '../generation/WorldBackend.ts';
@@ -212,7 +212,7 @@ export class TreeLayer {
           x: trees[o],
           y: trees[o + 1],
           scaleX: k,
-          scaleY: k,
+          scaleY: k / CAMERA.tilt, // trees stand upright in the tilted view
           anchorX: atlas.anchorX,
           anchorY: atlas.anchorY,
           tint: (tint << 16) | (tint << 8) | tint,

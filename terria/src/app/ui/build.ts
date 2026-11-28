@@ -6,7 +6,7 @@ const OUT_LABEL: Record<string, string> = { food: 'продуктов', wood: '�
 import { duration, h, int, num } from '../dom.ts';
 import { UI_SVG } from '../icons.ts';
 import { haptic } from '../tg.ts';
-import { thumbnail } from '../city/buildingArt.ts';
+import { thumbnail } from '../city/atlas.ts';
 import type { Game } from '../context.ts';
 import { costLine } from './bits.ts';
 import type { Screen } from './shell.ts';

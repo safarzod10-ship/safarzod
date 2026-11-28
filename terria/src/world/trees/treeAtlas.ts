@@ -37,7 +37,17 @@ const HUES: Hue[] = [
   { dark: [58, 106, 42], mid: [104, 156, 56], light: [190, 216, 100] },
 ];
 
+let external: TreeAtlas | null = null;
+/**
+ * Use externally made tree sprites (e.g. pre-rendered 3D trees) instead of
+ * the painted ones. Call before the map is created.
+ */
+export function useTreeAtlas(atlas: TreeAtlas | null): void {
+  external = atlas;
+}
+
 export function createTreeAtlas(seed: number): TreeAtlas {
+  if (external) return external;
   const canvas = document.createElement('canvas');
   canvas.width = CELL * TREE_VARIANTS;
   canvas.height = CELL;

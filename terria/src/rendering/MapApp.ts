@@ -71,6 +71,8 @@ export class MapApp {
     this.scene = new WorldScene(world, backend, textures, this.query.regions, { lowMemory: info.lowMemory });
     this.camera = new CameraController(this.app, world.meta.cameraBounds);
     this.camera.viewport.addChild(this.scene.root);
+    // 2.5D: the ground plane is seen at an angle
+    this.scene.root.scale.y = this.camera.tilt;
     this.app.stage.addChild(this.camera.viewport);
     this.quality = new QualityController(this.app);
 
