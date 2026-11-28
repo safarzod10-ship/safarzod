@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "map:preview": "node tools/render-preview.ts",
-    "regions": "node tools/build-regions.ts"
+    "regions": "node tools/build-regions.ts",
+    "server:dev": "wrangler dev --local --var DEV_AUTH:1 --test-scheduled",
+    "server:typecheck": "tsc --noEmit -p server/tsconfig.json",
+    "server:schema:local": "wrangler d1 execute terria --local --file server/schema.sql"
   },
   "dependencies": {
     "d3-delaunay": "^6.0.6",

@@ -1,15 +1,15 @@
 /**
- * Draws the borders of the player regions as dashed lines of constant
- * on-screen width (one mesh, one draw call for all ~3000 border pieces), and
- * the outline + starter plot of the selected region.
+ * Draws the outline of ONE region (the player's own) as a line of constant
+ * on-screen width. The 1000 borders are deliberately not drawn: the continent
+ * reads as one country, and a city's edge is shown by its own land instead.
  *
- * Lines are expanded to their pixel width in the vertex shader, so they stay
- * crisp at every zoom. From far away the dashes merge into a faint solid net.
+ * The outline is faint by default and stronger while the player expands the
+ * city (setEmphasis). Lines are expanded in the vertex shader, so they stay
+ * crisp at every zoom.
  */
 import { Container, GlProgram, Mesh, MeshGeometry, Shader, UniformGroup } from 'pixi.js';
-import type { Rect } from '../../core/math.ts';
 import { smoothstep } from '../../core/math.ts';
-import { BORDER_STRIDE, type RegionIndex } from './regions.ts';
+import type { RegionIndex } from './regions.ts';
 
 const vertex = /* glsl */ `
 in vec2 aPosition;
@@ -97,69 +97,54 @@ function createLineMesh(pieces: number[] | Float32Array, stride: number, tint: [
 
 export class RegionLayer {
   readonly container = new Container({ label: 'regions' });
-  private readonly borders: LineMesh;
   private outline: LineMesh | null = null;
-  private plot: LineMesh | null = null;
   private selectedId = -1;
+  private emphasis = 0;
   private readonly index: RegionIndex;
 
   constructor(index: RegionIndex) {
     this.index = index;
-    this.borders = createLineMesh(index.raw.borders, BORDER_STRIDE, [1, 1, 1, 1]);
-    this.container.addChild(this.borders.mesh);
     this.container.eventMode = 'none';
+  }
+
+  /** 0 = faint (always on), 1 = strong (expand mode). */
+  setEmphasis(value: number): void {
+    this.emphasis = value;
   }
 
   get selected(): number {
     return this.selectedId;
   }
 
-  /** Highlight one region and its starter plot; pass -1 to clear. */
+  /** Outline one region; pass -1 to clear. */
   select(id: number): void {
     if (id === this.selectedId) return;
     this.selectedId = id;
-    for (const m of [this.outline, this.plot]) {
-      if (m) {
-        m.mesh.removeFromParent();
-        m.mesh.geometry.destroy();
-        m.mesh.shader?.destroy();
-        m.mesh.destroy();
-      }
+    const m = this.outline;
+    if (m) {
+      m.mesh.removeFromParent();
+      m.mesh.geometry.destroy();
+      m.mesh.shader?.destroy();
+      m.mesh.destroy();
     }
     this.outline = null;
-    this.plot = null;
     if (id < 0) return;
-    this.outline = createLineMesh(ringPieces(this.index.polygon(id)), 5, [1.0, 0.93, 0.55, 1]);
-    const p = this.index.info(id).starterPlot;
-    this.plot = createLineMesh(ringPieces(rectRing(p)), 5, [1, 1, 1, 1]);
-    this.container.addChild(this.outline.mesh, this.plot.mesh);
+    this.outline = createLineMesh(ringPieces(this.index.polygon(id)), 5, [1.0, 0.95, 0.78, 1]);
+    this.container.addChild(this.outline.mesh);
   }
 
   /** @param scale CSS px per world unit */
   update(scale: number): void {
     // dash length snaps to powers of two so dashes do not crawl while zooming
     const period = 2 ** Math.round(Math.log2(26 / scale));
-    const far = 1 - smoothstep(0.014, 0.05, scale);
-    const b = this.borders;
-    b.line[0] = (0.85 + 0.85 * (1 - far)) / scale;
-    b.line[1] = period;
-    b.line[2] = 0.3 + 0.55 * (1 - far);
-    b.line[3] = 1 - far;
-    b.group.update();
+    const near = smoothstep(0.05, 0.25, scale);
     if (this.outline) {
-      this.outline.line[0] = 2.6 / scale;
+      const e = this.emphasis;
+      this.outline.line[0] = (1.2 + 1.4 * e) / scale;
       this.outline.line[1] = period;
-      this.outline.line[2] = 0.95;
-      this.outline.line[3] = 0;
+      this.outline.line[2] = (0.35 + 0.6 * e) * (0.5 + 0.5 * near);
+      this.outline.line[3] = e > 0.5 ? 1 : 0;
       this.outline.group.update();
-    }
-    if (this.plot) {
-      // the starter plot is tiny from far away: keep it at least a few px wide
-      this.plot.line[0] = 1.8 / scale;
-      this.plot.line[1] = period / 2;
-      this.plot.line[2] = 0.95;
-      this.plot.line[3] = 0;
-      this.plot.group.update();
     }
   }
 
@@ -167,10 +152,6 @@ export class RegionLayer {
     this.select(-1);
     this.container.destroy({ children: true });
   }
-}
-
-function rectRing(r: Rect): number[] {
-  return [r.x, r.y, r.x + r.width, r.y, r.x + r.width, r.y + r.height, r.x, r.y + r.height, r.x, r.y];
 }
 
 /** Closed polygon [x0, y0, x1, y1, ...] -> pieces [x0, y0, x1, y1, along]. */

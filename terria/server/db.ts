@@ -163,6 +163,8 @@ export interface Mutated<T> {
   city: CityState;
   result: T | undefined;
   repeated: boolean;
+  /** D1 results of the saved batch (empty when nothing was written) */
+  batch: D1Result[];
 }
 
 const OPS_KEPT = 32;
@@ -186,13 +188,13 @@ export async function mutateCity<T>(
     if (!loaded) throw new ApiFail(404, 'no_city');
     const { row, city, mask } = loaded;
     advance(city, now, mask);
-    if (city.ops.includes(op)) return { city, result: undefined, repeated: true };
+    if (city.ops.includes(op)) return { city, result: undefined, repeated: true, batch: [] };
     const m = await fn(city, { env, now, row, mask });
-    if (m.save === false) return { city, result: m.result, repeated: false };
+    if (m.save === false) return { city, result: m.result, repeated: false, batch: [] };
     city.ops = [...city.ops, op].slice(-OPS_KEPT);
     try {
-      await env.DB.batch([...(m.before ?? []), ...cityUpdate(env, row, city, now), ...(m.extra ?? [])]);
-      return { city, result: m.result, repeated: false };
+      const batch = await env.DB.batch([...(m.before ?? []), ...cityUpdate(env, row, city, now), ...(m.extra ?? [])]);
+      return { city, result: m.result, repeated: false, batch };
     } catch (e) {
       if (isGuardConflict(e)) continue;
       if (isCheckFail(e)) throw new ApiFail(409, checkCode);

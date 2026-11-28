@@ -39,6 +39,8 @@ export class TreeLayer {
   private visibleTrees = 0;
   private visibleChunks = 0;
   private destroyed = false;
+  /** Rectangles (world units) where trees were cleared for buildings. */
+  private clearings: Rect[] = [];
 
   constructor(world: WorldFields, backend: WorldBackend) {
     this.world = world;
@@ -106,6 +108,30 @@ export class TreeLayer {
     return missing;
   }
 
+  /**
+   * Remove trees inside these rectangles (buildings, cleared lots). Only the
+   * tree chunks touched by the old or the new rectangles are rebuilt.
+   */
+  setClearings(rects: Rect[]): void {
+    const size = TREES.chunkSize;
+    const per = WORLD_SIZE / size;
+    const touched = new Set<number>();
+    for (const r of [...this.clearings, ...rects]) {
+      const x0 = Math.max(0, Math.floor((r.x - 24) / size));
+      const x1 = Math.min(per - 1, Math.floor((r.x + r.width + 24) / size));
+      const y0 = Math.max(0, Math.floor((r.y - 24) / size));
+      const y1 = Math.min(per - 1, Math.floor((r.y + r.height + 24) / size));
+      for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) touched.add(cy * per + cx);
+    }
+    this.clearings = rects.slice();
+    for (const key of touched) {
+      const c = this.chunks.get(key);
+      if (!c) continue;
+      c.particles?.destroy();
+      this.chunks.delete(key);
+    }
+  }
+
   stats(): { chunks: number; visibleChunks: number; visibleTrees: number } {
     return { chunks: this.chunks.size, visibleChunks: this.visibleChunks, visibleTrees: this.visibleTrees };
   }
@@ -164,8 +190,20 @@ export class TreeLayer {
       boundsArea: new Rectangle(cx * size - 48, cy * size - 48, size + 96, size + 96),
     });
     const list: Particle[] = [];
+    const bx0 = cx * size - 24;
+    const by0 = cy * size - 24;
+    const clear = this.clearings.filter(
+      (r) => r.x < bx0 + size + 48 && r.x + r.width > bx0 && r.y < by0 + size + 48 && r.y + r.height > by0,
+    );
     for (let i = 0; i < count; i++) {
       const o = i * TREE_STRIDE;
+      if (clear.length) {
+        const tx = trees[o];
+        const ty = trees[o + 1];
+        let hit = false;
+        for (const r of clear) if (tx >= r.x && tx <= r.x + r.width && ty >= r.y && ty <= r.y + r.height) hit = true;
+        if (hit) continue;
+      }
       const k = trees[o + 2] / atlas.canopyPx;
       const tint = Math.round(255 * trees[o + 4]);
       list.push(

@@ -5,7 +5,7 @@ import { createRenderer } from './rendering/createRenderer.ts';
 import { MapApp } from './rendering/MapApp.ts';
 import { createSplash, type SplashMode, type SplashQuality } from './splash/index.ts';
 import { createHud } from './ui/hud.ts';
-import type { RegionInfo } from './world/regions/regions.ts';
+import { createApi } from './app/api.ts';
 import { startWorld } from './world/generation/WorldBackend.ts';
 import { createDetailTextures } from './world/terrain/detailTextures.ts';
 
@@ -56,6 +56,10 @@ async function boot(): Promise<void> {
   splash.setProgress(0.03, 'Запуск…');
 
   const { params, preview } = resolveWorldParams();
+  // The account and the city load while the splash plays.
+  const apiReady = createApi();
+  const me = apiReady.then((api) => api.me());
+  me.catch(() => undefined); // reported later by the game
 
   let map: MapApp | null = null;
   void initTelegram(SPLASH_COLOR, () => map?.resize());
@@ -97,38 +101,9 @@ async function boot(): Promise<void> {
     if (saved) map.camera.flyTo(saved.x, saved.y, saved.scale, false);
 
     const m = world.meta;
-    const km = (v: number): string => (v / 1000).toFixed(1);
-    hud.setInfo(
-      'Континент',
-      `${km(m.landBounds.width)}×${km(m.landBounds.height)} км · ${m.regionCount} участков · seed ${params.seed}` +
-        (preview ? ' · предпросмотр' : ''),
-    );
-    const showRegion = (info: RegionInfo | null): void => {
-      hud.setRegion(
-        info
-          ? { number: info.id + 1, total: m.regionCount, areaM2: info.area, plotSideM: info.starterPlot.width }
-          : null,
-      );
-    };
-    hud.setActions({
-      zoomIn: () => map!.camera.zoomBy(2.2),
-      zoomOut: () => map!.camera.zoomBy(1 / 2.2),
-      fit: () => map!.camera.fitWorld(),
-      togglePerf: (on) => {
-        if (on) map!.enableDrawCallCounter();
-      },
-      // Which region a player gets is game logic for a later module; this
-      // button only demonstrates what "one place out of a thousand" looks like.
-      randomRegion: () => {
-        const id = Math.floor(Math.random() * m.regionCount);
-        showRegion(map!.selectRegion(id));
-        map!.showRegion(id);
-      },
-    });
-    // tap / click on the map selects the region under the pointer
-    map.camera.viewport.on('clicked', (ev) => {
-      const region = map!.query.regionAt(ev.world.x, ev.world.y);
-      showRegion(map!.selectRegion(region ? region.id : null));
+    const { TerriaGame } = await import('./app/game.ts');
+    const game = new TerriaGame(map, root, await apiReady, () => {
+      if (hud.togglePerf()) map!.enableDrawCallCounter();
     });
 
     let saveTimer = 0;
@@ -172,8 +147,11 @@ async function boot(): Promise<void> {
     const warmUntil = performance.now() + 1200;
     for (let frames = 0; frames < 3 || (map.scene.busy && performance.now() < warmUntil); frames++) await nextFrame();
     map.wake(); // full frame rate for the transition
+    game.bind();
+    (window as unknown as { __terria?: unknown }).__terria = game; // debug / automation only
     await splash.reveal();
     hud.show();
+    void game.start(me);
     console.info(
       `[vcm] world ready: seed ${params.seed}, generated in ${m.generationMs.toFixed(0)} ms (${backend.mode}), ` +
         `${info.api}, land ${(m.landArea / 1e6).toFixed(0)} km², ${m.regionCount} regions of ~${(m.regionAreaAvg / 1e6).toFixed(2)} km², ` +

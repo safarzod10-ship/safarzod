@@ -1,0 +1,26 @@
+{
+  // TERRIA: Telegram Mini App (static assets) + API Worker + D1, free plan.
+  // Secrets (not in this file): BOT_TOKEN (required in production),
+  // WEBHOOK_SECRET (optional, derived from BOT_TOKEN when absent).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "terria",
+  "main": "server/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // only API and webhook calls run the Worker; page loads are free
+    "run_worker_first": ["/api/*", "/tg/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "terria", "database_id": "TBD" }
+  ],
+  "triggers": { "crons": ["*/30 * * * *"] },
+  "vars": {
+    "PUBLIC_URL": "https://terria.dvor-game.workers.dev",
+    "BOT_USERNAME": "terriagame",
+    "BOT_SETUP_VERSION": "1"
+  },
+  "observability": { "enabled": true }
+}

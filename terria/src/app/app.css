@@ -1,0 +1,1197 @@
+/*
+ * TERRIA game UI — "the surveyor's atlas".
+ * Cool map paper, ocean ink, lagoon teal for actions, field gold for money.
+ * Golos Text for the interface, Alegreya italic for place names (as on old maps).
+ * No backdrop-filter (mobile WebView performance rule).
+ */
+@font-face {
+  font-family: 'Golos Text';
+  src: url('./fonts/golos-text-cyrillic-wght-normal.woff2') format('woff2-variations');
+  font-weight: 400 800;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  src: url('./fonts/golos-text-latin-wght-normal.woff2') format('woff2-variations');
+  font-weight: 400 800;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 600;
+  src: url('./fonts/alegreya-cyrillic-600-italic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 600;
+  src: url('./fonts/alegreya-latin-600-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+@font-face {
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 700;
+  src: url('./fonts/alegreya-cyrillic-700-italic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 700;
+  src: url('./fonts/alegreya-latin-700-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+
+:root {
+  --paper: #f4f7f3;
+  --paper-2: #e8eee9;
+  --paper-3: #dbe4df;
+  --ink: #0f3245;
+  --ink-2: rgba(15, 50, 69, 0.66);
+  --ink-3: rgba(15, 50, 69, 0.42);
+  --line: rgba(15, 50, 69, 0.12);
+  --lagoon: #137c88;
+  --lagoon-deep: #0c5f69;
+  --lagoon-wash: #dbeeee;
+  --gold: #b9861c;
+  --gold-wash: #f6ead0;
+  --meadow: #3f7f43;
+  --brick: #b0472f;
+  --crystal: #5a5fd6;
+  --ui: 'Golos Text', 'Segoe UI', Roboto, system-ui, sans-serif;
+  --place: 'Alegreya', Georgia, 'Times New Roman', serif;
+  --top: max(var(--tg-top, 0px), env(safe-area-inset-top, 0px));
+  --bottom: max(var(--tg-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  --nav-h: 62px;
+  --sheet-shadow: 0 -10px 30px rgba(10, 40, 55, 0.16);
+  --float-shadow: 0 6px 18px rgba(10, 40, 55, 0.18), 0 1px 2px rgba(10, 40, 55, 0.14);
+}
+
+.t-app {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--ui);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.t-app.is-on {
+  opacity: 1;
+}
+:where(.t-app) button {
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.t-app.no-city .t-top,
+.t-app.no-city .t-side,
+.t-app.no-city .t-nav,
+.t-app.no-city .t-guide {
+  visibility: hidden;
+}
+.t-app .ic {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* ---------------------------------------------------------------- top: the treasury strip */
+.t-top {
+  position: absolute;
+  top: calc(var(--top) + 8px);
+  left: 8px;
+  right: 8px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.t-purse {
+  display: flex;
+  align-items: stretch;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--float-shadow);
+  overflow: hidden;
+}
+.t-purse button {
+  border: 0;
+  background: none;
+  padding: 7px 10px 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  cursor: pointer;
+}
+.t-purse button + button {
+  border-left: 1px solid var(--line);
+}
+.t-purse .t-coins {
+  flex: 1.35;
+}
+.t-purse .t-coins .ic {
+  color: var(--gold);
+}
+.t-purse .t-cry .ic {
+  color: var(--crystal);
+}
+.t-purse .t-pop .ic {
+  color: var(--lagoon);
+}
+.t-val {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.t-val b {
+  font-weight: 650;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.t-val small {
+  font-size: 11px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.t-val small.up {
+  color: var(--meadow);
+}
+.t-val small.down {
+  color: var(--brick);
+}
+.t-stock {
+  align-self: flex-start;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(244, 247, 243, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(10, 40, 55, 0.1);
+}
+.t-stock button {
+  border: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px 3px 5px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 560;
+  cursor: pointer;
+}
+.t-stock .ic {
+  width: 16px;
+  height: 16px;
+  color: var(--ink-2);
+}
+.t-stock button.is-full {
+  background: var(--gold-wash);
+}
+.t-stock button.is-low {
+  color: var(--brick);
+}
+
+/* ---------------------------------------------------------------- tutorial */
+.t-guide {
+  position: absolute;
+  top: calc(var(--top) + 104px);
+  left: 8px;
+  width: min(250px, calc(100% - 80px));
+  pointer-events: auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--float-shadow);
+  padding: 9px 11px 8px;
+}
+.t-guide h4 {
+  margin: 0 0 4px;
+  font-family: var(--place);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 16px;
+}
+.t-guide ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+.t-guide li {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.t-guide li::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-3);
+  flex: none;
+}
+.t-guide li.done {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+.t-guide li.done::before {
+  background: var(--meadow);
+  border-color: var(--meadow);
+}
+.t-guide li.next {
+  color: var(--ink);
+  font-weight: 600;
+}
+.t-guide li.next::before {
+  border-color: var(--lagoon);
+  box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 6px var(--lagoon);
+}
+
+/* ---------------------------------------------------------------- map buttons */
+.t-side {
+  position: absolute;
+  right: 8px;
+  bottom: calc(var(--bottom) + var(--nav-h) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+  transition: transform 0.25s ease, opacity 0.2s;
+}
+.t-app.has-sheet .t-side,
+.t-app.has-mode .t-side {
+  opacity: 0;
+  pointer-events: none;
+}
+.t-round {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: var(--float-shadow);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.t-round:active {
+  transform: scale(0.94);
+}
+.t-round.home {
+  background: var(--ink);
+  color: #f4f7f3;
+  border-color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- bottom navigation */
+.t-nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--nav-h) + var(--bottom));
+  padding-bottom: var(--bottom);
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  pointer-events: auto;
+  z-index: 3;
+}
+.t-nav button {
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 560;
+  color: var(--ink-2);
+  cursor: pointer;
+  position: relative;
+}
+.t-nav button .ic {
+  width: 24px;
+  height: 24px;
+}
+.t-nav button.is-on {
+  color: var(--lagoon-deep);
+}
+.t-nav button.is-on::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 28%;
+  right: 28%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--lagoon);
+}
+.t-nav .badge {
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 6px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--brick);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- sheets */
+.t-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-h) + var(--bottom));
+  max-height: calc(100% - var(--nav-h) - var(--bottom) - var(--top) - 104px);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--sheet-shadow);
+  pointer-events: auto;
+  transform: translateY(calc(100% + 80px));
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 2;
+}
+.t-sheet.is-open {
+  transform: none;
+}
+.t-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px 8px 18px;
+}
+.t-sheet__head::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--paper-3);
+}
+.t-sheet__title {
+  flex: 1;
+  margin: 0;
+  font-family: var(--place);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+}
+.t-sheet__sub {
+  margin: 2px 0 0;
+  font-family: var(--ui);
+  font-style: normal;
+  font-weight: 450;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+.t-x {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--paper-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.t-sheet__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 16px 18px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* tabs: a segmented strip, like map layer switches */
+.t-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  margin: 2px 0 12px;
+  background: var(--paper-2);
+  border-radius: 12px;
+}
+.t-tabs button {
+  flex: 1;
+  border: 0;
+  background: none;
+  padding: 8px 6px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.t-tabs button.is-on {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(10, 40, 55, 0.14);
+}
+
+/* resource picker: icon row */
+.t-respick {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+.t-respick button {
+  flex: 1;
+  min-width: 58px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 7px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.t-respick button.is-on {
+  border-color: var(--lagoon);
+  background: var(--lagoon-wash);
+  color: var(--lagoon-deep);
+}
+
+/* plain rows with hairlines: the ledger */
+.t-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.t-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.t-row:last-child {
+  border-bottom: 0;
+}
+.t-row__main {
+  flex: 1;
+  min-width: 0;
+}
+.t-row__main b {
+  display: block;
+  font-weight: 600;
+}
+.t-row__main small {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.t-row__end {
+  text-align: right;
+  white-space: nowrap;
+}
+.t-row__end small {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.t-h {
+  margin: 18px 0 4px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.t-h:first-child {
+  margin-top: 4px;
+}
+.t-note {
+  margin: 8px 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.t-callout {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--paper-2);
+  font-size: 13px;
+}
+.t-callout.warn {
+  background: var(--gold-wash);
+}
+
+/* buttons */
+.t-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 650;
+  font-size: 14px;
+  cursor: pointer;
+  background: var(--lagoon);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.t-btn:active {
+  transform: translateY(1px);
+}
+.t-btn[disabled] {
+  background: var(--paper-3);
+  color: var(--ink-3);
+  cursor: default;
+}
+.t-btn.ghost {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.t-btn.gold {
+  background: var(--ink);
+  color: #f9edd0;
+}
+.t-btn.danger {
+  background: none;
+  color: var(--brick);
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.t-btn.sm {
+  padding: 7px 11px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+.t-btn.wide {
+  width: 100%;
+}
+.t-btnrow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.t-btnrow > * {
+  flex: 1;
+}
+
+/* cost line: icons with numbers, missing in brick */
+.t-cost {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  font-size: 12.5px;
+  font-weight: 560;
+}
+.t-cost span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.t-cost .ic {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-2);
+}
+.t-cost .miss {
+  color: var(--brick);
+}
+.t-cost .miss .ic {
+  color: var(--brick);
+}
+
+/* build catalogue: illustrated plates */
+.t-cats {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+.t-cats button {
+  border: 1px solid var(--line);
+  background: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t-cats button.is-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.t-plates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.t-plate {
+  position: relative;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+.t-plate canvas {
+  align-self: center;
+  margin: -2px 0 2px;
+}
+.t-plate b {
+  font-weight: 650;
+  font-size: 14px;
+}
+.t-plate small {
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.t-plate.is-locked {
+  cursor: default;
+}
+.t-plate.is-locked canvas {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.t-plate .lock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--ink-2);
+  background: var(--paper-2);
+  border-radius: 8px;
+  padding: 2px 7px;
+}
+.t-plate.expand {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  background: var(--lagoon-wash);
+  border-color: transparent;
+}
+.t-plate.expand b,
+.t-plate.expand small {
+  display: block;
+}
+.t-plate.expand .ic {
+  width: 30px;
+  height: 30px;
+  color: var(--lagoon-deep);
+}
+
+/* mode bar (placing / expanding): floats above the nav */
+.t-mode {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--nav-h) + var(--bottom) + 8px);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--float-shadow);
+  padding: 10px 12px 12px;
+  pointer-events: auto;
+  transform: translateY(140%);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 2;
+}
+.t-mode.is-open {
+  transform: none;
+}
+.t-mode__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.t-mode__top b {
+  font-size: 15px;
+  font-weight: 650;
+}
+.t-mode__msg {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  min-height: 17px;
+}
+.t-mode__msg.bad {
+  color: var(--brick);
+}
+.t-mode__tools {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.t-mode__tools .t-btn {
+  flex: 1;
+}
+.t-toggle.is-on {
+  background: var(--ink);
+  color: var(--paper);
+}
+.t-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  pointer-events: none;
+  opacity: 0;
+}
+.t-app.is-placing .t-crosshair {
+  opacity: 0.7;
+}
+.t-crosshair::before,
+.t-crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--ink);
+}
+.t-crosshair::before {
+  left: 10px;
+  top: 0;
+  width: 2px;
+  height: 22px;
+}
+.t-crosshair::after {
+  top: 10px;
+  left: 0;
+  height: 2px;
+  width: 22px;
+}
+
+/* building sheet */
+.t-bhead {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.t-levels {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.t-levels i {
+  width: 16px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--paper-3);
+}
+.t-levels i.on {
+  background: var(--lagoon);
+}
+.t-levels i.next {
+  background: repeating-linear-gradient(135deg, var(--lagoon) 0 3px, var(--lagoon-wash) 3px 6px);
+}
+.t-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--paper-2);
+  overflow: hidden;
+  margin: 6px 0 2px;
+}
+.t-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #e0a83c, #f2c14e);
+  border-radius: 4px;
+}
+.t-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.t-stats div {
+  background: var(--paper);
+  padding: 9px 11px;
+}
+.t-stats div:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.t-stats small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.t-stats b {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+/* market */
+.t-quote {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.t-quote > div {
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: var(--paper-2);
+}
+.t-quote small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.t-quote b {
+  font-size: 20px;
+  font-weight: 650;
+}
+.t-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.t-qty input[type='range'] {
+  flex: 1;
+  accent-color: var(--lagoon);
+}
+.t-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.t-input:focus {
+  border-color: var(--lagoon);
+  box-shadow: 0 0 0 3px var(--lagoon-wash);
+}
+.t-input.num {
+  width: 110px;
+  text-align: right;
+}
+.t-field {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+}
+.t-field > span {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.t-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.t-book {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.t-book h5 {
+  margin: 4px 0 2px;
+  font-size: 12px;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.t-order {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  padding: 7px 2px;
+  cursor: pointer;
+}
+.t-order b {
+  font-weight: 650;
+}
+.t-order small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-order.buy b {
+  color: var(--meadow);
+}
+.t-order.sell b {
+  color: var(--brick);
+}
+.t-order.is-mine {
+  background: var(--lagoon-wash);
+}
+.t-locked {
+  padding: 22px 12px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.t-locked b {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+/* city */
+.t-cityname {
+  font-family: var(--place);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  margin: 0;
+}
+.t-req {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.t-req.ok {
+  color: var(--meadow);
+}
+.t-req.no {
+  color: var(--ink-2);
+}
+.t-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--paper-2);
+  margin: 6px 0;
+}
+
+/* profile / shop */
+.t-packs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.t-pack {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.t-pack b {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.t-pack b .ic {
+  color: var(--crystal);
+}
+.t-pack small {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.t-pack .stars {
+  margin-top: 6px;
+  align-self: flex-start;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #f9edd0;
+  font-weight: 650;
+  font-size: 13px;
+}
+.t-pack.best {
+  border-color: var(--crystal);
+  box-shadow: inset 0 0 0 1px var(--crystal);
+}
+
+/* ---------------------------------------------------------------- toast */
+.t-toast {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--top) + 108px);
+  transform: translate(-50%, -12px);
+  max-width: calc(100% - 40px);
+  background: var(--ink);
+  color: #f4f7f3;
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 550;
+  box-shadow: var(--float-shadow);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 5;
+}
+.t-toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.t-toast.bad {
+  background: var(--brick);
+}
+
+/* ---------------------------------------------------------------- onboarding */
+.t-onb {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: linear-gradient(180deg, rgba(244, 247, 243, 0) 30%, rgba(244, 247, 243, 0.88) 62%, var(--paper) 80%);
+  padding: 0 22px calc(var(--bottom) + 26px);
+  z-index: 6;
+  transition: opacity 0.4s;
+}
+.t-onb.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.t-onb__mark.is-name {
+  letter-spacing: 0.06em;
+  font-size: 19px;
+}
+.t-onb__mark {
+  font-family: var(--place);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.32em;
+  color: var(--lagoon-deep);
+  margin: 0 0 6px;
+}
+.t-onb h1 {
+  font-family: var(--place);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.05;
+  margin: 0 0 10px;
+  letter-spacing: 0.005em;
+}
+.t-onb p {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: var(--ink-2);
+  max-width: 34em;
+}
+.t-onb .t-btn {
+  padding: 14px 18px;
+  font-size: 15px;
+}
+.t-onb__facts {
+  display: flex;
+  gap: 18px;
+  margin: 0 0 18px;
+}
+.t-onb__facts div b {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+.t-onb__facts div small {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* the region number written on the map like a surveyor's label */
+.t-plotlabel {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.t-plotlabel.is-on {
+  opacity: 1;
+}
+.t-plotlabel b {
+  display: block;
+  font-family: var(--place);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--ink);
+  text-shadow: 0 0 6px var(--paper), 0 0 12px var(--paper);
+  letter-spacing: 0.06em;
+}
+.t-plotlabel small {
+  font-size: 12px;
+  color: var(--ink-2);
+  text-shadow: 0 0 6px var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-sheet,
+  .t-mode,
+  .t-toast,
+  .t-app {
+    transition: none;
+  }
+}
