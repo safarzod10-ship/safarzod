@@ -1,0 +1,587 @@
+[
+  {
+    "name": "townhall",
+    "level": 1,
+    "filename": "townhall/townhall_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "townhall",
+    "level": 2,
+    "filename": "townhall/townhall_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "townhall",
+    "level": 3,
+    "filename": "townhall/townhall_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "townhall",
+    "level": 4,
+    "filename": "townhall/townhall_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "townhall",
+    "level": 5,
+    "filename": "townhall/townhall_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "house",
+    "level": 1,
+    "filename": "house/house_1.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "house",
+    "level": 2,
+    "filename": "house/house_2.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "house",
+    "level": 3,
+    "filename": "house/house_3.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "house",
+    "level": 4,
+    "filename": "house/house_4.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "house",
+    "level": 5,
+    "filename": "house/house_5.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "farm",
+    "level": 1,
+    "filename": "farm/farm_1.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "farm",
+    "level": 2,
+    "filename": "farm/farm_2.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "farm",
+    "level": 3,
+    "filename": "farm/farm_3.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "farm",
+    "level": 4,
+    "filename": "farm/farm_4.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "farm",
+    "level": 5,
+    "filename": "farm/farm_5.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "sawmill",
+    "level": 1,
+    "filename": "sawmill/sawmill_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "sawmill",
+    "level": 2,
+    "filename": "sawmill/sawmill_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "sawmill",
+    "level": 3,
+    "filename": "sawmill/sawmill_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "sawmill",
+    "level": 4,
+    "filename": "sawmill/sawmill_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "sawmill",
+    "level": 5,
+    "filename": "sawmill/sawmill_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "quarry",
+    "level": 1,
+    "filename": "quarry/quarry_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "quarry",
+    "level": 2,
+    "filename": "quarry/quarry_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "quarry",
+    "level": 3,
+    "filename": "quarry/quarry_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "quarry",
+    "level": 4,
+    "filename": "quarry/quarry_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "quarry",
+    "level": 5,
+    "filename": "quarry/quarry_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "mine",
+    "level": 1,
+    "filename": "mine/mine_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "mine",
+    "level": 2,
+    "filename": "mine/mine_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "mine",
+    "level": 3,
+    "filename": "mine/mine_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "mine",
+    "level": 4,
+    "filename": "mine/mine_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "mine",
+    "level": 5,
+    "filename": "mine/mine_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "market",
+    "level": 1,
+    "filename": "market/market_1.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "market",
+    "level": 2,
+    "filename": "market/market_2.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "market",
+    "level": 3,
+    "filename": "market/market_3.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "market",
+    "level": 4,
+    "filename": "market/market_4.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "market",
+    "level": 5,
+    "filename": "market/market_5.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "warehouse",
+    "level": 1,
+    "filename": "warehouse/warehouse_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "warehouse",
+    "level": 2,
+    "filename": "warehouse/warehouse_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "warehouse",
+    "level": 3,
+    "filename": "warehouse/warehouse_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "warehouse",
+    "level": 4,
+    "filename": "warehouse/warehouse_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "warehouse",
+    "level": 5,
+    "filename": "warehouse/warehouse_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "hospital",
+    "level": 1,
+    "filename": "hospital/hospital_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "hospital",
+    "level": 2,
+    "filename": "hospital/hospital_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "hospital",
+    "level": 3,
+    "filename": "hospital/hospital_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "hospital",
+    "level": 4,
+    "filename": "hospital/hospital_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "hospital",
+    "level": 5,
+    "filename": "hospital/hospital_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "factory",
+    "level": 1,
+    "filename": "factory/factory_1.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "factory",
+    "level": 2,
+    "filename": "factory/factory_2.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "factory",
+    "level": 3,
+    "filename": "factory/factory_3.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "factory",
+    "level": 4,
+    "filename": "factory/factory_4.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "factory",
+    "level": 5,
+    "filename": "factory/factory_5.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "school",
+    "level": 1,
+    "filename": "school/school_1.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "school",
+    "level": 2,
+    "filename": "school/school_2.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "school",
+    "level": 3,
+    "filename": "school/school_3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "school",
+    "level": 4,
+    "filename": "school/school_4.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "school",
+    "level": 5,
+    "filename": "school/school_5.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "park",
+    "level": 1,
+    "filename": "extras/park.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "fountain",
+    "level": 1,
+    "filename": "extras/fountain.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "monument",
+    "level": 1,
+    "filename": "extras/monument.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "construction_2x2",
+    "level": 1,
+    "filename": "extras/construction_2x2.png",
+    "tiles": [
+      2,
+      2
+    ]
+  },
+  {
+    "name": "construction_3x3",
+    "level": 1,
+    "filename": "extras/construction_3x3.png",
+    "tiles": [
+      3,
+      3
+    ]
+  },
+  {
+    "name": "construction_4x4",
+    "level": 1,
+    "filename": "extras/construction_4x4.png",
+    "tiles": [
+      4,
+      4
+    ]
+  },
+  {
+    "name": "tree_deciduous",
+    "level": 1,
+    "filename": "extras/tree_deciduous.png",
+    "tiles": [
+      1,
+      1
+    ]
+  },
+  {
+    "name": "tree_flowering",
+    "level": 1,
+    "filename": "extras/tree_flowering.png",
+    "tiles": [
+      1,
+      1
+    ]
+  },
+  {
+    "name": "tree_pine",
+    "level": 1,
+    "filename": "extras/tree_pine.png",
+    "tiles": [
+      1,
+      1
+    ]
+  },
+  {
+    "name": "tree_poplar",
+    "level": 1,
+    "filename": "extras/tree_poplar.png",
+    "tiles": [
+      1,
+      1
+    ]
+  }
+]

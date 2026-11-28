@@ -45,6 +45,7 @@ export type BuildingType =
   | 'warehouse'
   | 'hospital'
   | 'factory'
+  | 'school'
   | 'park'
   | 'fountain'
   | 'statue';
@@ -71,6 +72,8 @@ export interface BuildingDef {
   care?: number;
   /** Shop income cap, coins per hour at level 1. */
   shop?: number;
+  /** Pupils taught at level 1 (schools): educated workers pay more tax. */
+  edu?: number;
   /** Happiness points (parks, decor), at level 1. */
   joy?: number;
   /** Upkeep, coins per hour at level 1. */
@@ -85,45 +88,49 @@ export interface BuildingDef {
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   townhall: {
-    name: 'Ратуша', size: 4, cost: {}, th: 1, housing: 20, upkeep: 0, maxLevel: 6, category: 'core',
+    name: 'Ратуша', size: 3, cost: {}, th: 1, housing: 20, upkeep: 0, maxLevel: 6, category: 'core',
     description: 'Сердце города. Её уровень открывает новые здания и максимальный уровень построек.',
   },
   house: {
-    name: 'Жилой квартал', size: 4, cost: { coins: 35, wood: 25, stone: 10 }, th: 1, housing: 30, upkeep: 0.3, maxLevel: 5,
+    name: 'Жилой дом', size: 2, cost: { coins: 35, wood: 25, stone: 10 }, th: 1, housing: 30, upkeep: 0.3, maxLevel: 5,
     category: 'living', description: 'Дома для жителей. Жители работают на предприятиях и платят налоги.',
   },
   farm: {
-    name: 'Ферма', size: 6, cost: { coins: 40, wood: 5 }, th: 1, jobs: 8, out: { food: 18 }, upkeep: 0.35, maxLevel: 5,
+    name: 'Ферма', size: 4, cost: { coins: 40, wood: 5 }, th: 1, jobs: 8, out: { food: 18 }, upkeep: 0.35, maxLevel: 5,
     category: 'production', description: 'Поля и амбар. Кормят город: 1 продукт в час на 6 жителей.',
   },
   sawmill: {
-    name: 'Лесопилка', size: 4, cost: { coins: 50 }, th: 1, jobs: 8, out: { wood: 20 }, upkeep: 0.35, maxLevel: 5, forestBonus: 1.6,
+    name: 'Лесопилка', size: 3, cost: { coins: 50 }, th: 1, jobs: 8, out: { wood: 20 }, upkeep: 0.35, maxLevel: 5, forestBonus: 1.6,
     category: 'production', description: 'Древесина. В лесу работает в 1,6 раза быстрее.',
   },
   quarry: {
-    name: 'Карьер', size: 4, cost: { coins: 55 }, th: 1, jobs: 8, out: { stone: 16 }, upkeep: 0.35, maxLevel: 5,
+    name: 'Карьер', size: 3, cost: { coins: 55 }, th: 1, jobs: 8, out: { stone: 16 }, upkeep: 0.35, maxLevel: 5,
     category: 'production', description: 'Камень для строительства.',
   },
   shop: {
-    name: 'Рынок квартала', size: 3, cost: { coins: 90, wood: 30, stone: 25 }, th: 2, jobs: 6, shop: 28, upkeep: 0.6, maxLevel: 5,
+    name: 'Рынок квартала', size: 2, cost: { coins: 90, wood: 30, stone: 25 }, th: 2, jobs: 6, shop: 28, upkeep: 0.6, maxLevel: 5,
     category: 'service', description: 'Доход от покупок жителей. Ограничен числом жителей.',
   },
   warehouse: {
-    name: 'Склад', size: 4, cost: { coins: 70, wood: 35, stone: 35 }, th: 2, storage: 3000, upkeep: 0.3, maxLevel: 5,
+    name: 'Склад', size: 3, cost: { coins: 70, wood: 35, stone: 35 }, th: 2, storage: 3000, upkeep: 0.3, maxLevel: 5,
     category: 'service', description: 'Увеличивает вместимость каждого ресурса.',
   },
   mine: {
-    name: 'Шахта', size: 4, cost: { coins: 180, wood: 70, stone: 70 }, th: 3, jobs: 10, out: { iron: 12 }, upkeep: 0.7, maxLevel: 5,
+    name: 'Шахта', size: 3, cost: { coins: 180, wood: 70, stone: 70 }, th: 3, jobs: 10, out: { iron: 12 }, upkeep: 0.7, maxLevel: 5,
     category: 'production', description: 'Железо для улучшений и завода.',
   },
   hospital: {
-    name: 'Больница', size: 4, cost: { coins: 300, wood: 90, stone: 120, iron: 25 }, th: 3, jobs: 12, care: 300, upkeep: 1.2, maxLevel: 5,
+    name: 'Больница', size: 3, cost: { coins: 300, wood: 90, stone: 120, iron: 25 }, th: 3, jobs: 12, care: 300, upkeep: 1.2, maxLevel: 5,
     category: 'service', description: 'Здоровье жителей. Без больниц большой город грустнеет.',
   },
   factory: {
-    name: 'Завод', size: 6, cost: { coins: 550, wood: 180, stone: 180, iron: 90 }, th: 4, jobs: 16,
+    name: 'Завод', size: 4, cost: { coins: 550, wood: 180, stone: 180, iron: 90 }, th: 4, jobs: 16,
     inp: { wood: 12, iron: 6 }, out: { goods: 6 }, upkeep: 1.8, maxLevel: 5,
     category: 'production', description: 'Перерабатывает древесину и железо в товары для старших уровней.',
+  },
+  school: {
+    name: 'Школа', size: 3, cost: { coins: 260, wood: 100, stone: 120 }, th: 3, jobs: 8, edu: 250, upkeep: 1, maxLevel: 5,
+    category: 'service', description: 'Учит детей. Образованные жители платят до 25 % больше налогов.',
   },
   park: {
     name: 'Сквер', size: 2, cost: { coins: 25 }, th: 1, joy: 4, upkeep: 0.05, maxLevel: 1,
@@ -134,7 +141,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     category: 'decor', description: 'Украшение за кристаллы. Заметно радует жителей.',
   },
   statue: {
-    name: 'Памятник основателю', size: 3, cost: {}, crystals: 150, th: 3, joy: 60, upkeep: 0, maxLevel: 1,
+    name: 'Памятник основателю', size: 2, cost: {}, crystals: 150, th: 3, joy: 60, upkeep: 0, maxLevel: 1,
     category: 'decor', description: 'Украшение за кристаллы с вашим именем на табличке.',
   },
 };
@@ -166,6 +173,8 @@ export const TOWNHALL = {
 };
 
 export const ECONOMY = {
+  /** Tax bonus when every citizen is covered by schools. */
+  educationBonus: 0.25,
   taxPerWorker: 0.5,
   shopDemandPerCitizen: 0.3,
   foodPerCitizen: 1 / 6,

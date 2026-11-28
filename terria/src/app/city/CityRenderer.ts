@@ -51,16 +51,16 @@ export class CityRenderer {
   set(owned: Uint8Array, buildings: Building[], now: number): void {
     this.drawLand(owned);
     this.buildingsList = buildings;
-    // back to front: lots further north are drawn first
-    const list = buildings.slice().sort((a, b) => a.y + BUILDINGS[a.t].size / 2 - (b.y + BUILDINGS[b.t].size / 2) || a.x - b.x);
-    // one sprite per building plus a crane on top of buildings being upgraded
+    // back to front: in the isometric view depth grows with x + y of the lot centre
+    const depth = (b: Building): number => b.x + b.y + BUILDINGS[b.t].size;
+    const list = buildings.slice().sort((a, b) => depth(a) - depth(b) || a.x - b.x);
+    // one sprite per building (upgrades show a progress bar)
     const want: { key: string; x: number; y: number }[] = [];
     for (const b of list) {
       const half = (BUILDINGS[b.t].size * CELL_M) / 2;
       const cx = b.x * CELL_M + half;
       const cy = b.y * CELL_M + half;
       want.push({ key: this.atlas.key(b.t, b.lvl), x: cx, y: cy });
-      if (b.until > now && b.lvl >= 1) want.push({ key: 'crane', x: cx + half * 0.55, y: cy + half * 0.2 });
     }
     const kids = this.sprites.children as Sprite[];
     while (kids.length > want.length) kids[kids.length - 1].destroy();
@@ -124,32 +124,45 @@ export class CityRenderer {
 
   private drawLand(owned: Uint8Array): void {
     const m = this.mask;
+    // 4 px per cell: a light wash over owned land and a crisp gold border line
+    // on the outer edge (in the isometric view cells are diamonds)
+    const P = 4;
     const canvas = document.createElement('canvas');
-    // one pixel per cell + a 1 px frame so the soft edge fades to nothing
-    canvas.width = m.w + 2;
-    canvas.height = m.h + 2;
+    canvas.width = (m.w + 2) * P;
+    canvas.height = (m.h + 2) * P;
     const ctx = canvas.getContext('2d')!;
     const img = ctx.createImageData(canvas.width, canvas.height);
     const own = this.own;
+    const has = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < m.w && y < m.h && getBit(owned, y * m.w + x);
+    const put = (px: number, py: number, r: number, g: number, b: number, a: number): void => {
+      const o = (py * canvas.width + px) * 4;
+      img.data[o] = r;
+      img.data[o + 1] = g;
+      img.data[o + 2] = b;
+      img.data[o + 3] = a;
+    };
     for (let y = 0; y < m.h; y++)
       for (let x = 0; x < m.w; x++) {
-        const i = y * m.w + x;
-        if (!getBit(owned, i)) continue;
-        const edge =
-          x === 0 || y === 0 || x === m.w - 1 || y === m.h - 1 ||
-          !getBit(owned, i - 1) || !getBit(owned, i + 1) || !getBit(owned, i - m.w) || !getBit(owned, i + m.w);
-        const o = ((y + 1) * canvas.width + (x + 1)) * 4;
-        img.data[o] = own ? 252 : 240;
-        img.data[o + 1] = own ? 238 : 236;
-        img.data[o + 2] = own ? 196 : 220;
-        img.data[o + 3] = edge ? (own ? 150 : 90) : own ? 105 : 60;
+        if (!has(x, y)) continue;
+        const l = !has(x - 1, y);
+        const r = !has(x + 1, y);
+        const t = !has(x, y - 1);
+        const bo = !has(x, y + 1);
+        for (let j = 0; j < P; j++)
+          for (let i = 0; i < P; i++) {
+            const px = (x + 1) * P + i;
+            const py = (y + 1) * P + j;
+            const border = (l && i === 0) || (r && i === P - 1) || (t && j === 0) || (bo && j === P - 1);
+            if (border) put(px, py, own ? 232 : 220, own ? 190 : 214, own ? 92 : 196, own ? 235 : 120);
+            else put(px, py, own ? 236 : 228, own ? 232 : 232, own ? 190 : 214, own ? 70 : 40);
+          }
       }
     ctx.putImageData(img, 0, 0);
     this.landSource?.destroy();
-    this.landSource = new CanvasSource({ resource: canvas, scaleMode: 'linear' });
+    this.landSource = new CanvasSource({ resource: canvas, scaleMode: 'nearest' });
     this.land.texture = new Texture({ source: this.landSource });
     this.land.position.set((m.x0 - 1) * CELL_M, (m.y0 - 1) * CELL_M);
-    this.land.scale.set(CELL_M);
+    this.land.scale.set(CELL_M / P);
   }
 
   destroy(): void {

@@ -3,7 +3,7 @@
  * This is the object future systems receive (`map.scene.layers`, `map.query`,
  * `map.camera`); see CLAUDE.md for the contract.
  */
-import { UPDATE_PRIORITY, type Application } from 'pixi.js';
+import { Container, UPDATE_PRIORITY, type Application } from 'pixi.js';
 import { CameraController, type CameraView } from '../camera/CameraController.ts';
 import { RENDER } from '../core/config.ts';
 import { PerfMonitor } from '../core/perf.ts';
@@ -70,9 +70,12 @@ export class MapApp {
     this.query = createWorldQuery(world);
     this.scene = new WorldScene(world, backend, textures, this.query.regions, { lowMemory: info.lowMemory });
     this.camera = new CameraController(this.app, world.meta.cameraBounds);
-    this.camera.viewport.addChild(this.scene.root);
-    // 2.5D: the ground plane is seen at an angle
-    this.scene.root.scale.y = this.camera.tilt;
+    // isometric view: the world is turned inside, then squashed outside
+    const plane = new Container({ label: 'iso-plane' });
+    plane.scale.y = this.camera.tilt;
+    this.scene.root.rotation = this.camera.rotation;
+    plane.addChild(this.scene.root);
+    this.camera.viewport.addChild(plane);
     this.app.stage.addChild(this.camera.viewport);
     this.quality = new QualityController(this.app);
 

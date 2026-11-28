@@ -71,11 +71,13 @@ export const TERRAIN = {
 
 export const CAMERA = {
   /**
-   * The camera looks at the ground from 40 degrees above the horizon (2.5D):
-   * the world is drawn squashed vertically by sin(40 deg). Buildings and trees
-   * are drawn upright (counter-scaled), pre-rendered from the same angle.
+   * Isometric (2:1 dimetric) view: the world is turned by 45 degrees and
+   * squashed vertically by 0.5, so a cell is a diamond twice as wide as it is
+   * high - the projection the building art is drawn in. Sprites (buildings,
+   * trees, labels) are drawn upright: counter-rotated and counter-scaled.
    */
-  tilt: 0.6428,
+  tilt: 0.5,
+  rotation: Math.PI / 4,
   /** Max zoom: CSS px per world unit. */
   maxScale: 1.6,
   /** Ocean + fog ring kept around the land bounding box, world units. */

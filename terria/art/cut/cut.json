@@ -1,0 +1,129 @@
+{
+ "background": [
+  21,
+  21,
+  23
+ ],
+ "sprites": [
+  {
+   "name": "house:1",
+   "file": "house_1.png",
+   "w": 328,
+   "h": 263,
+   "dw": 323,
+   "ax": 165.5,
+   "ay": 180,
+   "aspect": 0.5,
+   "measured": 0.501,
+   "soil": 12.25
+  },
+  {
+   "name": "house:2",
+   "file": "house_2.png",
+   "w": 330,
+   "h": 285,
+   "dw": 325,
+   "ax": 165.5,
+   "ay": 201,
+   "aspect": 0.5,
+   "measured": 0.491,
+   "soil": 10.75
+  },
+  {
+   "name": "house:3",
+   "file": "house_3.png",
+   "w": 330,
+   "h": 276,
+   "dw": 325,
+   "ax": 165.5,
+   "ay": 192,
+   "aspect": 0.5,
+   "measured": 0.495,
+   "soil": 11.75
+  },
+  {
+   "name": "house:4",
+   "file": "house_4.png",
+   "w": 331,
+   "h": 293,
+   "dw": 326,
+   "ax": 164.5,
+   "ay": 209,
+   "aspect": 0.5,
+   "measured": 0.502,
+   "soil": 9.5
+  },
+  {
+   "name": "house:5",
+   "file": "house_5.png",
+   "w": 342,
+   "h": 331,
+   "dw": 330,
+   "ax": 176,
+   "ay": 245.75,
+   "aspect": 0.5,
+   "measured": 0.493,
+   "soil": 11.75
+  },
+  {
+   "name": "farm:1",
+   "file": "farm_1.png",
+   "w": 347,
+   "h": 188,
+   "dw": 341,
+   "ax": 176.5,
+   "ay": 100.45029442327677,
+   "aspect": 0.5774,
+   "measured": 0.581,
+   "soil": 17.553299999999993
+  },
+  {
+   "name": "farm:2",
+   "file": "farm_2.png",
+   "w": 349,
+   "h": 191,
+   "dw": 341,
+   "ax": 178,
+   "ay": 103.91409767925184,
+   "aspect": 0.5774,
+   "measured": 0.573,
+   "soil": 16.553299999999993
+  },
+  {
+   "name": "farm:3",
+   "file": "farm_3.png",
+   "w": 346,
+   "h": 206,
+   "dw": 339,
+   "ax": 179,
+   "ay": 119.5012123311396,
+   "aspect": 0.5774,
+   "measured": 0.592,
+   "soil": 18.13069999999999
+  },
+  {
+   "name": "farm:4",
+   "file": "farm_4.png",
+   "w": 348,
+   "h": 211,
+   "dw": 342,
+   "ax": 177.5,
+   "ay": 123.83096640110841,
+   "aspect": 0.5774,
+   "measured": 0.601,
+   "soil": 16.2646
+  },
+  {
+   "name": "farm:5",
+   "file": "farm_5.png",
+   "w": 353,
+   "h": 243,
+   "dw": 346,
+   "ax": 178.5,
+   "ay": 155.00519570488396,
+   "aspect": 0.5774,
+   "measured": 0.585,
+   "soil": 17.109799999999993
+  }
+ ]
+}

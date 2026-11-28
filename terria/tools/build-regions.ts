@@ -12,6 +12,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { GRID_CELL } from '../src/core/config.ts';
 import { getBit, newBits, setBit, toB64 } from '../src/game/bits.ts';
 import type { RegionMaskDTO } from '../src/game/types.ts';
+import { BUILDINGS } from '../src/game/config.ts';
+
+const HALL = BUILDINGS.townhall.size;
 import { generateWorld } from '../src/world/generation/generateWorld.ts';
 import { DEFAULT_WORLD_PARAMS, GENERATOR_VERSION } from '../src/world/generation/WorldParams.ts';
 import { createWorldQuery } from '../src/world/WorldQuery.ts';
@@ -80,8 +83,8 @@ for (let r = 0; r < count; r++) {
   };
   const local = (x: number, y: number): number => (x - cx0 - bx) + (y - cy0 - by) * w;
   const ok4 = (hx: number, hy: number): boolean => {
-    for (let y = hy; y < hy + 4; y++)
-      for (let x = hx; x < hx + 4; x++) {
+    for (let y = hy; y < hy + HALL; y++)
+      for (let x = hx; x < hx + HALL; x++) {
         const lx = x - cx0 - bx;
         const ly = y - cy0 - by;
         if (lx < 0 || ly < 0 || lx >= w || ly >= h || !getBit(build, local(x, y))) return false;
@@ -106,8 +109,8 @@ for (let r = 0; r < count; r++) {
   // keep the starter plot around the hall
   start.x = Math.min(start.x, hall.x);
   start.y = Math.min(start.y, hall.y);
-  if (hall.x + 4 > start.x + start.w) start.x = hall.x + 4 - start.w;
-  if (hall.y + 4 > start.y + start.h) start.y = hall.y + 4 - start.h;
+  if (hall.x + HALL > start.x + start.w) start.x = hall.x + HALL - start.w;
+  if (hall.y + HALL > start.y + start.h) start.y = hall.y + HALL - start.h;
   const dto: RegionMaskDTO = {
     id: r,
     x0: cx0 + bx,

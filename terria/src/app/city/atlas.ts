@@ -1,13 +1,14 @@
 /**
- * Pre-rendered 3D building sprites (tools/models: three.js models rendered
- * from the game's 40 degree camera angle into a WebP atlas).
+ * Building and tree pictures (hand-made 2:1 isometric art, packed by
+ * tools/art/pack.mjs into a WebP atlas).
  *
- * A sprite is drawn inside the tilted world container, so its vertical
- * scale undoes the tilt: the picture already contains the foreshortening.
+ * A sprite is drawn inside the turned, squashed world container, so it is
+ * turned and stretched back: the picture already is the isometric view.
  * (ax, ay) is the pixel of the lot centre; it becomes the sprite anchor.
  */
 import { ImageSource, Rectangle, Sprite, Texture } from 'pixi.js';
-import { BUILDINGS, type BuildingType } from '../../game/config.ts';
+import { CAMERA } from '../../core/config.ts';
+import { BUILDINGS, CELL_M, type BuildingType } from '../../game/config.ts';
 
 interface Frame {
   p: number;
@@ -17,10 +18,10 @@ interface Frame {
   h: number;
   ax: number;
   ay: number;
+  /** width of the lot diamond in the picture, px */
+  dw: number;
 }
 interface AtlasJson {
-  pxPerM: number;
-  tilt: number;
   pages: string[];
   sprites: Record<string, Frame>;
 }
@@ -58,7 +59,15 @@ export class BuildingAtlas {
   }
 
   frame(key: string): Frame | null {
-    return this.json?.sprites[key] ?? null;
+    if (!this.json) return null;
+    let f = this.json.sprites[key];
+    // a level without its own picture uses the highest one that exists
+    for (let [t, l] = key.split(':'); !f && Number(l) > 1; ) {
+      l = String(Number(l) - 1);
+      f = this.json.sprites[`${t}:${l}`];
+      if (f) break;
+    }
+    return f ?? null;
   }
 
   texture(key: string): Texture {
@@ -71,14 +80,17 @@ export class BuildingAtlas {
     return t;
   }
 
-  /** Metres per sprite pixel, horizontally. */
-  get mPerPx(): number {
-    return 1 / (this.json?.pxPerM ?? 3);
+  /** Lot side in cells that a sprite stands for. */
+  cells(key: string): number {
+    const [t, a] = key.split(':');
+    if (t === 'site') return Number(a);
+    return BUILDINGS[t as BuildingType]?.size ?? 1;
   }
 
   /**
-   * Show sprite `key` with the lot centre at world (wx, wy). The sprite must
-   * live inside the tilted world container.
+   * Show sprite `key` with the lot centre at world (wx, wy). The sprite lives
+   * in the turned, squashed world: it is turned back and stretched back, and
+   * scaled so the lot diamond of the picture covers the lot on the map.
    */
   apply(s: Sprite, key: string, wx: number, wy: number): void {
     const f = this.frame(key);
@@ -89,8 +101,9 @@ export class BuildingAtlas {
     s.visible = true;
     s.texture = this.texture(key);
     s.anchor.set(f.ax / f.w, f.ay / f.h);
-    const k = 1 / this.json.pxPerM;
-    s.scale.set(k, k / this.json.tilt);
+    const k = (this.cells(key) * CELL_M * Math.SQRT2) / f.dw;
+    s.scale.set(k, k / CAMERA.tilt);
+    s.rotation = -CAMERA.rotation;
     s.position.set(wx, wy);
   }
 

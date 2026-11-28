@@ -212,7 +212,8 @@ export class TreeLayer {
           x: trees[o],
           y: trees[o + 1],
           scaleX: k,
-          scaleY: k / CAMERA.tilt, // trees stand upright in the tilted view
+          scaleY: k / CAMERA.tilt, // trees stand upright in the isometric view
+          rotation: -CAMERA.rotation,
           anchorX: atlas.anchorX,
           anchorY: atlas.anchorY,
           tint: (tint << 16) | (tint << 8) | tint,

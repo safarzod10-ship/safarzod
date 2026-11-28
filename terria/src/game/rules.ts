@@ -96,8 +96,9 @@ export function newCity(regionId: number, name: string, m: RegionMask, now: numb
       }
     }
   // the town hall footprint is always owned, even if the plot clipped water
-  for (let y = m.hall.y; y < m.hall.y + 4; y++)
-    for (let x = m.hall.x; x < m.hall.x + 4; x++) {
+  const hs = BUILDINGS.townhall.size;
+  for (let y = m.hall.y; y < m.hall.y + hs; y++)
+    for (let x = m.hall.x; x < m.hall.x + hs; x++) {
       const i = cellIndex(m, x, y);
       if (i >= 0 && !getBit(owned, i)) {
         setBit(owned, i);
@@ -261,6 +262,7 @@ export function cityStats(c: CityState, m: RegionMask | null): CityStats {
   let care = 0;
   let joy = 0;
   let shopCap = 0;
+  let edu = 0;
   let upkeep = 0;
   let storage = TOWNHALL.storagePerLevel * c.th;
   const raw: Stock = { coins: 0, wood: 0, stone: 0, iron: 0, food: 0, goods: 0 };
@@ -276,6 +278,7 @@ export function cityStats(c: CityState, m: RegionMask | null): CityStats {
     care += (d.care ?? 0) * k;
     joy += d.joy ?? 0;
     shopCap += (d.shop ?? 0) * k;
+    edu += (d.edu ?? 0) * k;
     storage += (d.storage ?? 0) * k;
     const bonus = d.forestBonus && m && woodedShare(b, m) >= 0.5 ? d.forestBonus : 1;
     if (d.out) for (const r of RESOURCES) raw[r] += (d.out[r] ?? 0) * k * bonus;
@@ -299,7 +302,8 @@ export function cityStats(c: CityState, m: RegionMask | null): CityStats {
   const hf = 0.5 + happiness / 100;
 
   const townhall = TOWNHALL.incomePerLevel * c.th;
-  const taxes = workers * ECONOMY.taxPerWorker * hf;
+  const educated = Math.min(1, edu / Math.max(1, c.pop));
+  const taxes = workers * ECONOMY.taxPerWorker * hf * (1 + ECONOMY.educationBonus * educated);
   const shops = Math.min(shopCap, c.pop * ECONOMY.shopDemandPerCitizen) * hf;
   const net = townhall + taxes + shops - upkeep;
   return {

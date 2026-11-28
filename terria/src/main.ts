@@ -94,14 +94,14 @@ async function boot(): Promise<void> {
     await nextFrame();
 
     earlyResize.disconnect();
-    // pre-rendered 3D trees replace the painted ones (crown of a 2x model = 16 m)
+    // hand-drawn trees replace the painted ones ("dw" of a tree = crown width)
     await models.ready.then(
       () => {
         const f = models.frame('tree:0');
         if (!f) return;
         useTreeAtlas({
           canopies: [0, 1, 2, 3].map((v) => models.texture(`tree:${v}`)),
-          canopyPx: 16 * (1 / models.mPerPx),
+          canopyPx: f.dw,
           anchorX: f.ax / f.w,
           anchorY: f.ay / f.h,
           destroy: () => {},
