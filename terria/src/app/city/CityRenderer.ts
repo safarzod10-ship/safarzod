@@ -5,6 +5,7 @@
  * Rebuilt only when the city's layout changes, never per frame.
  */
 import { CanvasSource, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { CAMERA } from '../../core/config.ts';
 import type { Rect } from '../../core/math.ts';
 import { getBit } from '../../game/bits.ts';
 import { BUILDINGS, CELL_M } from '../../game/config.ts';
@@ -42,6 +43,9 @@ export class CityRenderer {
     this.sprites.eventMode = 'none';
     this.sprites.sortableChildren = false;
     this.bars.eventMode = 'none';
+    // bars are drawn in screen-plane units: undo the world's turn and squash
+    this.bars.rotation = -CAMERA.rotation;
+    this.bars.scale.y = 1 / CAMERA.tilt;
     layers.ground.addChild(this.land);
     layers.objects.addChild(this.sprites);
     layers.overlay.addChild(this.bars);
@@ -85,9 +89,14 @@ export class CityRenderer {
       const total = buildHours(b.t, b.lvl + 1) * HOUR;
       const p = Math.max(0, Math.min(1, 1 - (b.until - now) / total));
       const size = BUILDINGS[b.t].size * CELL_M;
-      const w = Math.min(40, size * 0.7);
-      const x = b.x * CELL_M + (size - w) / 2;
-      const y = b.y * CELL_M + size - 7;
+      const w = Math.min(44, size * 0.9);
+      // the lot's front corner, in screen-plane units, a little above it
+      const fx = (b.x + BUILDINGS[b.t].size) * CELL_M;
+      const fy = (b.y + BUILDINGS[b.t].size) * CELL_M;
+      const c = Math.cos(CAMERA.rotation);
+      const sn = Math.sin(CAMERA.rotation);
+      const x = fx * c - fy * sn - w / 2;
+      const y = (fx * sn + fy * c) * CAMERA.tilt - 10;
       g.roundRect(x - 0.8, y - 0.8, w + 1.6, 4.6, 2.3).fill({ color: 0x0f3245, alpha: 0.78 });
       g.roundRect(x, y, Math.max(1.5, w * p), 3, 1.5).fill({ color: 0xf2c14e });
     }

@@ -22,6 +22,8 @@ const outDir = resolve(ROOT, outArg ?? 'public/models');
 const ART_PX_PER_CELL = 96;
 const TREE_CROWN_PX = 90;
 const PAGE = 2048;
+/** Small pictures are enlarged up to 2x with lanczos (sharper than the GPU's bilinear zoom). */
+const MAX_UPSCALE = 2;
 
 const byName = new Map();
 for (const d of dirs) {
@@ -35,7 +37,7 @@ for (const [name, a] of byName) {
   const [t, arg] = name.split(':');
   const isTree = t === 'tree';
   const cells = t === 'site' ? Number(arg) : (BUILDINGS[t]?.size ?? 1);
-  const k = Math.min(1, isTree ? TREE_CROWN_PX / a.dw : (cells * ART_PX_PER_CELL) / a.dw);
+  const k = Math.min(MAX_UPSCALE, isTree ? TREE_CROWN_PX / a.dw : (cells * ART_PX_PER_CELL) / a.dw);
   const w = Math.max(1, Math.round(a.w * k));
   const h = Math.max(1, Math.round(a.h * k));
   const png = await sharp(a.path).resize(w, h, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer();
