@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>TERRIA — поле</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #3d7a2a; overflow: hidden; font: 13px system-ui, sans-serif; }
+      #field { position: fixed; inset: 0; }
+      #panel { position: fixed; left: 8px; bottom: 8px; background: rgba(10, 30, 10, .72); color: #fff; padding: 8px 10px;
+        border-radius: 10px; display: flex; flex-direction: column; gap: 6px; }
+      #panel label { display: flex; gap: 8px; align-items: center; }
+      #panel input[type=range] { width: 140px; }
+    </style>
+  </head>
+  <body>
+    <div id="field"></div>
+    <div id="panel">
+      <label>Наклон <input id="pitch" type="range" min="28" max="70" value="42" /> <span id="pv">42°</span></label>
+      <label><input id="grid" type="checkbox" /> Сетка</label>
+    </div>
+    <script type="module" src="/src/city3d/field-main.ts"></script>
+  </body>
+</html>
