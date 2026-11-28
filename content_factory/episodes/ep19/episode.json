@@ -1,0 +1,334 @@
+{
+ "title": "Свет в окне",
+ "format": "mystery-night",
+ "hook": "КТО В ШКОЛЕ НОЧЬЮ? 😨",
+ "outro": "ГДЕ ТЫ ДЕЛАЕШЬ УРОКИ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "night",
+ "highlight": [
+  "СВЕТ",
+  "ЗАКРЫТА",
+  "ХОДИТ",
+  "СИДЕЛ",
+  "МАКСОМ",
+  "БРАТЬЕВ",
+  "ТАЙКОМ",
+  "ВМЕСТЕ",
+  "ПЯТЁРКА"
+ ],
+ "cast": {
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    -1.2,
+    2.2
+   ],
+   "label": null
+  },
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    1.8,
+    2.4
+   ],
+   "label": null
+  },
+  "guard": {
+   "preset": "guard",
+   "pos": [
+    5,
+    1.6
+   ],
+   "hidden": true,
+   "label": null
+  },
+  "max": {
+   "preset": "max",
+   "pos": [
+    4,
+    -3.4
+   ],
+   "hidden": true,
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "box",
+   "size": [
+    3.2,
+    2.8,
+    0.2
+   ],
+   "color": "#ffe680",
+   "pos": [
+    5,
+    4.4,
+    -12.3
+   ],
+   "from": 0,
+   "to": 2,
+   "location": "school"
+  },
+  {
+   "shape": "book",
+   "pos": [
+    4,
+    2.5,
+    -6
+   ],
+   "from": 3,
+   "to": 9,
+   "location": "home"
+  },
+  {
+   "shape": "book",
+   "size": [
+    1.4,
+    1.1,
+    0.12
+   ],
+   "color": "#3a7ad0",
+   "holder": "max",
+   "from": 5,
+   "to": 6
+  }
+ ],
+ "lines": [
+  {
+   "text": "Поздно вечером в окне школы горел свет. А школа давно закрыта.",
+   "emotion": "mystery",
+   "cam": "wide:timur,liza",
+   "boom": true,
+   "acts": {
+    "timur": {
+     "faceTo": [
+      6.4,
+      -12
+     ],
+     "face": "shock"
+    },
+    "liza": {
+     "faceTo": [
+      6.4,
+      -12
+     ],
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Тихо Лиза прошептала: там кто-то ходит!",
+   "emotion": "excited",
+   "cam": "two:liza:timur",
+   "whoosh": true,
+   "acts": {
+    "liza": {
+     "faceTo": "timur",
+     "face": "shock",
+     "pose": "point"
+    },
+    "timur": {
+     "faceTo": "liza",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Дядю Петю, сторожа, мы позвали с собой.",
+   "emotion": "calm",
+   "cam": "wide:timur,liza,guard",
+   "acts": {
+    "guard": {
+     "show": true,
+     "faceTo": "timur",
+     "face": "neutral",
+     "pose": "give"
+    },
+    "liza": {
+     "pose": "idle",
+     "faceTo": "guard"
+    },
+    "timur": {
+     "faceTo": "guard",
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Свет горел в нашем классе. За партой кто-то сидел!",
+   "emotion": "surprise",
+   "cam": "wide:max,timur,liza",
+   "location": "home",
+   "time": "night",
+   "boom": true,
+   "acts": {
+    "max": {
+     "show": true,
+     "faceTo": [
+      4,
+      -9
+     ],
+     "pose": "give",
+     "face": "think"
+    },
+    "timur": {
+     "pos": [
+      -3,
+      1.4
+     ],
+     "faceTo": "max",
+     "face": "shock"
+    },
+    "liza": {
+     "pos": [
+      -5.6,
+      2.2
+     ],
+     "faceTo": "max",
+     "face": "shock"
+    },
+    "guard": {
+     "pos": [
+      -0.4,
+      2.8
+     ],
+     "faceTo": "max",
+     "face": "neutral"
+    }
+   }
+  },
+  {
+   "text": "Громко ахнула Лиза. Фигура обернулась!",
+   "emotion": "excited",
+   "cam": "close:liza",
+   "shake": true,
+   "acts": {
+    "liza": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock"
+    }
+   }
+  },
+  {
+   "text": "Максом оказался ночной гость! С тетрадками и учебником.",
+   "emotion": "surprise",
+   "cam": "medium:max",
+   "flash": true,
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "give"
+    }
+   }
+  },
+  {
+   "text": "Дома у меня пятеро младших братьев, сказал он. Там невозможно делать уроки.",
+   "emotion": "sad",
+   "cam": "close:max",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "face": "sad",
+     "pose": "sad"
+    }
+   }
+  },
+  {
+   "text": "Каждый вечер дядя Петя пускал его сюда. Тайком.",
+   "emotion": "warm",
+   "cam": "medium:guard",
+   "acts": {
+    "guard": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "shrug"
+    }
+   }
+  },
+  {
+   "text": "Знаешь что, сказал я. Давай делать уроки вместе. У меня дома тихо.",
+   "emotion": "warm",
+   "cam": "two:timur:max",
+   "acts": {
+    "timur": {
+     "moveTo": [
+      0.8,
+      -1.6
+     ],
+     "faceTo": "max",
+     "face": "smile",
+     "pose": "give"
+    },
+    "max": {
+     "faceTo": "timur",
+     "face": "shock",
+     "faceAfter": [
+      3.0,
+      "joy"
+     ],
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Каждый день теперь Макс приходит ко мне. И у него уже пятёрка по математике!",
+   "emotion": "warm",
+   "cam": "two:max:timur",
+   "time": "day",
+   "chime": true,
+   "acts": {
+    "guard": {
+     "hide": true
+    },
+    "liza": {
+     "hide": true
+    },
+    "max": {
+     "pos": [
+      2.2,
+      -2.6
+     ],
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer",
+     "label": {
+      "text": "5",
+      "color": "#7dff8a",
+      "pop": true,
+      "delay": 3.0
+     }
+    },
+    "timur": {
+     "pos": [
+      5.6,
+      -2.4
+     ],
+     "faceTo": "max",
+     "face": "joy",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Тихое место для уроков у тебя есть? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide:max,timur",
+   "acts": {
+    "max": {
+     "faceTo": "cam",
+     "pose": "wave",
+     "face": "joy"
+    },
+    "timur": {
+     "faceTo": "cam",
+     "pose": "cheer",
+     "face": "joy"
+    }
+   }
+  }
+ ]
+}
