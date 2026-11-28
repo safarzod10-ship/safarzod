@@ -68,6 +68,7 @@ Record the format in episodes.log as the 2nd field: `epNN | format | title | hoo
 - acts.<id>: pos, moveTo [x,z] (walks), run, delay, walkTime, show, hide, faceTo (id | "cam" | [x,z]),
   pose (idle walk run carry laugh point sad cry shock angry cheer wave think hug give phone sit facepalm shrug fly),
   ghost (true/false, persists: semi-transparent "invisible" character), freeze (true/false, persists: frozen in time),
+  scale (number, persists: 0.15 = ant-sized, null = back to normal),
   face (neutral smile sad cry shock angry smug laugh joy think), faceAfter [sec, face],
   label ({text, heart, color, pop} or {from, to, heart, color, dur, delay} for counting).
 - Positions: school yard plaza x∈[-15,22], z∈[-8,8] (building at z=-12); park path z≈1 (x∈[-30,30]);

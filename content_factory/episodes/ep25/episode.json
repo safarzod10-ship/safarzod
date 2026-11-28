@@ -1,0 +1,396 @@
+{
+ "title": "Размером с муравья",
+ "format": "what-if",
+ "hook": "ОН СТАЛ РАЗМЕРОМ С МУРАВЬЯ 🐜",
+ "outro": "А ТЫ ХОТЕЛ БЫ?",
+ "music": "mystery",
+ "location": "park",
+ "time": "day",
+ "labels": false,
+ "highlight": [
+  "МУРАВЬЯ",
+  "СТО",
+  "ГОРЫ",
+  "ДЕРЕВЬЯ",
+  "ДОМ",
+  "ЗАМЕЧАЛИ",
+  "МАЛЫШ",
+  "ЛАДОШКУ",
+  "БОЛЬШИМ",
+  "МАЛЕНЬКИХ"
+ ],
+ "cast": {
+  "timur": {
+   "preset": "timur",
+   "pos": [
+    0,
+    1.6
+   ],
+   "label": null
+  },
+  "liza": {
+   "preset": "liza",
+   "pos": [
+    -3.4,
+    1
+   ],
+   "label": null
+  },
+  "artem": {
+   "preset": "artem",
+   "pos": [
+    3.4,
+    1.2
+   ],
+   "label": null
+  },
+  "kid": {
+   "preset": "kid",
+   "pos": [
+    6,
+    2.6
+   ],
+   "hidden": true,
+   "label": null
+  }
+ },
+ "props": [
+  {
+   "shape": "box",
+   "size": [
+    0.35,
+    0.25,
+    0.3
+   ],
+   "color": "#9a9a9a",
+   "pos": [
+    0.9,
+    0.12,
+    1.3
+   ],
+   "from": 1,
+   "to": 8
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.5,
+    0.35,
+    0.4
+   ],
+   "color": "#8a8a8a",
+   "pos": [
+    -0.8,
+    0.17,
+    1.9
+   ],
+   "from": 1,
+   "to": 8
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.06,
+    0.6,
+    0.06
+   ],
+   "color": "#3f9a35",
+   "pos": [
+    0.4,
+    0.3,
+    2.3
+   ],
+   "from": 1,
+   "to": 8
+  },
+  {
+   "shape": "box",
+   "size": [
+    0.06,
+    0.8,
+    0.06
+   ],
+   "color": "#4cb040",
+   "pos": [
+    -0.3,
+    0.4,
+    2.1
+   ],
+   "from": 1,
+   "to": 8
+  },
+  {
+   "shape": "ball",
+   "size": [
+    3.6,
+    3.6,
+    3.6
+   ],
+   "pos": [
+    -1.8,
+    1.8,
+    -3.2
+   ],
+   "from": 3,
+   "to": 3
+  }
+ ],
+ "lines": [
+  {
+   "text": "Представь: ты чихнул и стал размером с муравья.",
+   "emotion": "mystery",
+   "cam": "wide",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "neutral",
+     "pose": "shrug"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "face": "smile"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "smile"
+    }
+   }
+  },
+  {
+   "text": "Чих! И Тимур уменьшился в сто раз.",
+   "emotion": "surprise",
+   "cam": "low:timur",
+   "flash": true,
+   "whoosh": true,
+   "acts": {
+    "timur": {
+     "scale": 0.15,
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock"
+    },
+    "liza": {
+     "hide": true
+    },
+    "artem": {
+     "hide": true
+    }
+   }
+  },
+  {
+   "text": "Камешки стали как горы, а травинки как деревья.",
+   "emotion": "excited",
+   "cam": "low:timur",
+   "acts": {
+    "timur": {
+     "faceTo": [
+      0,
+      30
+     ],
+     "face": "shock",
+     "pose": "point"
+    }
+   }
+  },
+  {
+   "text": "Мимо прокатился мяч. Огромный, как дом!",
+   "emotion": "excited",
+   "cam": "medium:timur",
+   "boom": true,
+   "shake": true,
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "shock",
+     "pose": "shock"
+    }
+   }
+  },
+  {
+   "text": "Рядом шагали друзья, но его не замечали. Никто не слышал крика.",
+   "emotion": "sad",
+   "cam": "wide:timur,liza,artem",
+   "acts": {
+    "liza": {
+     "show": true,
+     "pos": [
+      -8,
+      3.4
+     ],
+     "moveTo": [
+      8,
+      3.4
+     ],
+     "walkTime": 5,
+     "faceTo": [
+      20,
+      3
+     ],
+     "face": "smile"
+    },
+    "artem": {
+     "show": true,
+     "pos": [
+      -10.5,
+      4.6
+     ],
+     "moveTo": [
+      6,
+      4.6
+     ],
+     "walkTime": 5,
+     "face": "smile"
+    },
+    "timur": {
+     "faceTo": "cam",
+     "face": "cry",
+     "pose": "wave"
+    }
+   }
+  },
+  {
+   "text": "Только малыш Даня присел и заметил крошечного Тимура.",
+   "emotion": "mystery",
+   "cam": "two:kid:timur",
+   "acts": {
+    "liza": {
+     "hide": true
+    },
+    "artem": {
+     "hide": true
+    },
+    "kid": {
+     "show": true,
+     "pos": [
+      1.6,
+      2.4
+     ],
+     "faceTo": "timur",
+     "face": "shock",
+     "pose": "sit"
+    },
+    "timur": {
+     "faceTo": "kid",
+     "face": "joy",
+     "pose": "wave"
+    }
+   }
+  },
+  {
+   "text": "Бережно Даня поднял его на ладошку и отнёс к друзьям.",
+   "emotion": "warm",
+   "cam": "medium:kid",
+   "acts": {
+    "timur": {
+     "hide": true
+    },
+    "kid": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "give"
+    }
+   }
+  },
+  {
+   "text": "Чих! И Тимур снова стал большим.",
+   "emotion": "surprise",
+   "cam": "wide",
+   "flash": true,
+   "whoosh": true,
+   "acts": {
+    "timur": {
+     "show": true,
+     "scale": null,
+     "pos": [
+      0,
+      1.6
+     ],
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "kid": {
+     "pos": [
+      3,
+      2.4
+     ],
+     "faceTo": "timur",
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "liza": {
+     "show": true,
+     "pos": [
+      -3.4,
+      1
+     ],
+     "faceTo": "timur",
+     "face": "shock"
+    },
+    "artem": {
+     "show": true,
+     "pos": [
+      6.2,
+      1.2
+     ],
+     "faceTo": "timur",
+     "face": "shock"
+    }
+   }
+  },
+  {
+   "text": "Понял я тогда: маленьких очень легко не заметить. А они видят то, чего не видим мы.",
+   "emotion": "warm",
+   "cam": "close:timur",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "face": "smile",
+     "pose": "idle"
+    }
+   }
+  },
+  {
+   "text": "Лучший мой помощник теперь малыш Даня.",
+   "emotion": "warm",
+   "cam": "two:timur:kid",
+   "chime": true,
+   "acts": {
+    "timur": {
+     "faceTo": "kid",
+     "face": "joy",
+     "pose": "give"
+    },
+    "kid": {
+     "faceTo": "timur",
+     "face": "joy",
+     "pose": "cheer"
+    }
+   }
+  },
+  {
+   "text": "Маленьким на один день хотел бы стать? Напиши в комментариях.",
+   "emotion": "outro",
+   "cam": "wide",
+   "acts": {
+    "timur": {
+     "faceTo": "cam",
+     "pose": "wave"
+    },
+    "kid": {
+     "faceTo": "cam"
+    },
+    "liza": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "cheer"
+    },
+    "artem": {
+     "faceTo": "cam",
+     "face": "joy",
+     "pose": "wave"
+    }
+   }
+  }
+ ]
+}

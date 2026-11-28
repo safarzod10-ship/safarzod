@@ -354,6 +354,7 @@ for (const [id, c] of Object.entries(E.cast)) {
   const look = { ...(PRESETS[c.preset] || {}), ...(c.look || {}), preset: c.preset };
   if (typeof look.shirt === 'string') look.shirt = parseInt(look.shirt.replace('#', ''), 16);
   CAST[id] = makeChar(id, look);
+  CAST[id].baseScale = look.small ? 0.72 : 1;
 }
 
 // props
@@ -370,7 +371,7 @@ function shotLoc(i) { for (let j = i; j >= 0; j--) if (SH[j].location) return SH
 function shotTime(i) { for (let j = i; j >= 0; j--) if (SH[j].time) return SH[j].time; return E.time || 'day'; }
 function stateAt(t, s) {
   const st = {};
-  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].root.scale.y, ghost: false, freeze: false };
+  for (const [id, c] of Object.entries(E.cast)) st[id] = { pos: v3(c.pos[0], 0, c.pos[1]), face: c.faceTo ?? 'cam', label: c.label ?? null, hidden: !!c.hidden, moving: false, dir: null, labelPop: 1, sc: CAST[id].baseScale, base: CAST[id].baseScale, ghost: false, freeze: false };
   for (let j = 0; j <= s; j++) {
     const acts = SH[j].acts || {}, t0 = shotStart[j], isCur = j === s;
     // location change resets everyone to explicit positions given in that shot
@@ -382,6 +383,7 @@ function stateAt(t, s) {
       if (a.faceTo !== undefined) x.face = a.faceTo;
       if (a.ghost !== undefined) x.ghost = a.ghost;
       if (a.freeze !== undefined) x.freeze = a.freeze;
+      if (a.scale !== undefined) x.sc = a.scale === null ? x.base : a.scale;
       if (a.moveTo) {
         const to = v3(a.moveTo[0], 0, a.moveTo[1]);
         const dist = x.pos.distanceTo(to), dur = a.walkTime || Math.max(0.6, dist / (a.run ? 6 : 3.4));
@@ -435,10 +437,11 @@ function placeCam(spec, st, k, t) {
       d = r1.z >= r2.z ? r1 : r2;
     }
     const side = v3(d.z, 0, -d.x);
-    const dist = (type === 'close' ? 6.4 : type === 'low' ? 7.5 : 10.5) * push;
+    const tiny = x.sc < 0.5 ? Math.max(x.sc * 1.6, 0.25) : 1; // tiny characters: bring the camera down and closer
+    const dist = (type === 'close' ? 6.4 : type === 'low' ? 7.5 : 10.5) * push * tiny;
     fov = type === 'close' ? 40 : 46;
     const y = type === 'close' ? 5.6 : type === 'low' ? 2.2 : 5.4;
-    pos = headPos(x, y).add(d.clone().multiplyScalar(dist)).add(side.multiplyScalar(type === 'close' ? 0.8 : 1.6));
+    pos = headPos(x, y).add(d.clone().multiplyScalar(dist)).add(side.multiplyScalar((type === 'close' ? 0.8 : 1.6) * tiny));
     tgt = headPos(x, type === 'close' ? 5.6 : type === 'low' ? 5.6 : 4.9);
   } else if (type === 'over') {
     const A = st[a], B = st[b];
@@ -502,6 +505,7 @@ window.renderAt = function (t) {
   for (const [id, c] of Object.entries(CAST)) {
     const x = st[id], a = acts[id] || {};
     c.root.visible = !x.hidden;
+    c.root.scale.setScalar(x.sc);
     c.root.position.copy(x.pos);
     // facing
     let look = null;
