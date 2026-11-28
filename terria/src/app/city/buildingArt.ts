@@ -747,14 +747,30 @@ export function paintBuilding(ctx: Ctx, ox: number, oy: number, t: BuildingType,
   ctx.restore();
 }
 
-/** Stand-alone thumbnail for UI cards (CSS px square). */
-export function thumbnail(t: BuildingType, lvl: number, cssPx: number): HTMLCanvasElement {
+const thumbs = new Map<string, string>();
+
+/**
+ * Stand-alone thumbnail for UI cards (CSS px square). Returned as an <img>
+ * (painted once, cached as a data URL) so a list of cards does not keep a
+ * live canvas, and a GPU layer, per card.
+ */
+export function thumbnail(t: BuildingType, lvl: number, cssPx: number): HTMLImageElement {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const c = document.createElement('canvas');
-  c.width = c.height = Math.round(cssPx * dpr);
-  c.style.width = c.style.height = `${cssPx}px`;
-  const ctx = c.getContext('2d')!;
-  const sizeM = BUILDINGS[t].size * CELL_M + PAD_M * 2 + SHADOW_M;
-  paintBuilding(ctx, 0, 0, t, lvl, 1, c.width / sizeM);
-  return c;
+  const px = Math.round(cssPx * dpr);
+  const key = `${t}:${lvl}:${px}`;
+  let url = thumbs.get(key);
+  if (!url) {
+    const c = document.createElement('canvas');
+    c.width = c.height = px;
+    const ctx = c.getContext('2d')!;
+    const sizeM = BUILDINGS[t].size * CELL_M + PAD_M * 2 + SHADOW_M;
+    paintBuilding(ctx, 0, 0, t, lvl, 1, px / sizeM);
+    url = c.toDataURL('image/png');
+    thumbs.set(key, url);
+  }
+  const img = new Image(cssPx, cssPx);
+  img.src = url;
+  img.alt = '';
+  img.decoding = 'async';
+  return img;
 }

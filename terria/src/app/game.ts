@@ -16,8 +16,10 @@ import {
   landCrystals,
   ownedBits,
   placementError,
+  occupancy,
+  type RegionMask,
 } from '../game/rules.ts';
-import type { MeResponse, WorldCitySummary } from '../game/types.ts';
+import type { CityState, MeResponse, WorldCitySummary } from '../game/types.ts';
 import type { MapApp } from '../rendering/MapApp.ts';
 import { ApiError, type Api } from './api.ts';
 import { BuildingAtlas } from './city/atlas.ts';
@@ -348,6 +350,17 @@ export class TerriaGame implements Game {
     const v = this.map.camera.getView();
     if (v.scale < 0.7) this.flyToCity(false, 1);
     this.placeGhost();
+    // start on the nearest free spot instead of on top of another building
+    const m = this.store.mask;
+    if (m && placementError(c, m, t, this.mode.cx, this.mode.cy)) {
+      const spot = nearestFreeSpot(c, m, t, this.mode.cx, this.mode.cy);
+      if (spot) {
+        this.mode.cx = spot.x;
+        this.mode.cy = spot.y;
+        this.mode.pinned = true;
+        this.placeGhost(false);
+      }
+    }
   }
   private confirmBtn: HTMLButtonElement | null = null;
 
@@ -684,4 +697,17 @@ export class TerriaGame implements Game {
     window.clearInterval(this.secondTimer);
     window.clearInterval(this.worldTimer);
   }
+}
+
+/** The free, owned spot for a building of type t closest to (cx, cy), searched in rings. */
+function nearestFreeSpot(c: CityState, m: RegionMask, t: BuildingType, cx: number, cy: number): { x: number; y: number } | null {
+  const owned = ownedBits(c, m);
+  const occ = occupancy(c, m);
+  for (let r = 1; r < 80; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        if (!placementError(c, m, t, cx + dx, cy + dy, owned, occ)) return { x: cx + dx, y: cy + dy };
+      }
+  return null;
 }

@@ -131,4 +131,9 @@ export const SERVER_ERRORS: Record<string, string> = {
   no_goods: 'Не хватает товара',
   quota: 'Дневной лимит продажи системе исчерпан',
   too_many_orders: 'Не больше 10 заявок одновременно',
+  no_money: 'Не хватает монет',
+  not_found: 'Не найдено',
+  bad_name: 'Название: от 2 до 24 символов',
+  bot_not_configured: 'Оплата ещё не подключена, загляните позже',
+  internal: 'Ошибка сервера, попробуйте ещё раз',
 };
