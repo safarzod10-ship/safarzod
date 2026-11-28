@@ -1,0 +1,37 @@
+{
+ "title": "Прошлое или будущее",
+ "format": "choice",
+ "hook": "ПРОШЛОЕ ИЛИ БУДУЩЕЕ? 🤔",
+ "outro": "А ТЫ ЧТО ВЫБЕРЕШЬ?",
+ "music": "mystery",
+ "location": "school",
+ "time": "day",
+ "highlight": ["ПРОШЛОЕ", "БУДУЩЕЕ", "НОВЕНЬКИМ", "ДРУЖИТЬ", "СВЕТЛЕЕ", "ОТВЕТЫ", "СКУЧНО", "СЕЙЧАС"],
+ "cast": {
+  "artem": {"preset": "artem", "pos": [-2.4, 1], "label": {"text": "ПРОШЛОЕ", "color": "#e0b070"}},
+  "liza":  {"preset": "liza", "pos": [2.4, 1], "label": {"text": "БУДУЩЕЕ", "color": "#9fd8ff"}},
+  "sam":   {"preset": "artem", "look": {"skin": "#f6d2b0", "shirt": "#ff8c1a", "hair": 14196800, "pants": 3355494}, "pos": [1.8, 0.6], "hidden": true, "label": null}
+ },
+ "lines": [
+  {"text": "Выбор такой: вернуться в прошлое или заглянуть в будущее. Только один раз.", "emotion": "mystery", "cam": "wide:artem,liza", "whoosh": true,
+   "acts": {"artem": {"faceTo": "cam", "face": "think", "pose": "think"}, "liza": {"faceTo": "cam", "face": "think"}}},
+  {"text": "Прошлое выбрал Артём. А Лиза выбрала будущее.", "emotion": "calm", "cam": "wide:artem,liza",
+   "acts": {"artem": {"faceTo": "cam", "face": "smile", "pose": "point"}, "liza": {"faceTo": "cam", "face": "joy", "pose": "cheer"}}},
+  {"text": "Вжух! Артём оказался в том дне, когда смеялся над новеньким.", "emotion": "mystery", "cam": "two:artem:sam", "tint": "sepia", "flash": true, "whoosh": true,
+   "acts": {"liza": {"hide": true}, "artem": {"label": null, "faceTo": "sam", "face": "laugh", "pose": "point"}, "sam": {"show": true, "faceTo": "artem", "face": "sad", "pose": "sad"}}},
+  {"text": "Только теперь он поступил иначе. Подошёл и сказал: привет, давай дружить.", "emotion": "warm", "cam": "two:artem:sam", "tint": "sepia",
+   "acts": {"artem": {"moveTo": [-0.6, 0.9], "faceTo": "sam", "face": "smile", "pose": "give"}, "sam": {"faceTo": "artem", "face": "shock", "pose": "idle"}}},
+  {"text": "Новенький улыбнулся так, что вокруг стало светлее.", "emotion": "warm", "cam": "close:sam", "tint": "sepia", "chime": true,
+   "acts": {"sam": {"faceTo": "cam", "face": "joy", "pose": "wave"}}},
+  {"text": "Будущее Лиза увидела в ту же секунду.", "emotion": "mystery", "cam": "medium:liza", "tint": "freeze", "flash": true, "whoosh": true,
+   "acts": {"artem": {"hide": true}, "sam": {"hide": true}, "liza": {"show": true, "label": null, "faceTo": "cam", "face": "shock", "pose": "shock"}}},
+  {"text": "Знала она теперь все ответы на контрольной и что подарят на день рождения.", "emotion": "excited", "cam": "close:liza", "tint": "freeze",
+   "acts": {"liza": {"faceTo": "cam", "face": "joy", "pose": "cheer"}}},
+  {"text": "Только сюрпризов больше не осталось. Стало скучно.", "emotion": "sad", "cam": "close:liza",
+   "acts": {"liza": {"faceTo": "cam", "face": "sad", "pose": "sad"}}},
+  {"text": "Вывод простой: прошлое не изменить, будущее не нужно знать заранее. Главное то, что сейчас.", "emotion": "warm", "cam": "wide", "chime": true,
+   "acts": {"artem": {"show": true, "pos": [-3.4, 1], "faceTo": "cam", "face": "smile", "pose": "idle"}, "sam": {"show": true, "pos": [0, 1.4], "faceTo": "cam", "face": "joy", "pose": "idle"}, "liza": {"pos": [3.4, 1], "faceTo": "cam", "face": "smile", "pose": "idle"}}},
+  {"text": "Прошлое или будущее? Что выберешь ты? Пиши в комментариях.", "emotion": "outro", "cam": "wide",
+   "acts": {"artem": {"pose": "cheer", "face": "joy", "label": {"text": "ПРОШЛОЕ", "color": "#e0b070"}}, "liza": {"pose": "wave", "face": "joy", "label": {"text": "БУДУЩЕЕ", "color": "#9fd8ff"}}, "sam": {"pose": "cheer"}}}
+ ]
+}
