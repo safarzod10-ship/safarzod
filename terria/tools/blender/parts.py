@@ -22,7 +22,7 @@ G = 0.4  # top of the lot paving
 # --------------------------------------------------------------------------
 # materials
 # --------------------------------------------------------------------------
-def brick_material(name, brick=('#a8452e', '#8e3a27'), mortar='#d8cbb4', scale=1.6):
+def brick_material(name, brick=('#a63a24', '#86301e'), mortar='#a89a84', scale=1.0):
     """Bricks laid along both visible faces: the texture runs on (X + Y, Z)."""
     m = bpy.data.materials.new(name)
     m.use_nodes = True
@@ -44,7 +44,7 @@ def brick_material(name, brick=('#a8452e', '#8e3a27'), mortar='#d8cbb4', scale=1
     br.inputs['Color1'].default_value = (*hexc(brick[0]), 1)
     br.inputs['Color2'].default_value = (*hexc(brick[1]), 1)
     br.inputs['Mortar'].default_value = (*hexc(mortar), 1)
-    br.inputs['Mortar Size'].default_value = 0.03
+    br.inputs['Mortar Size'].default_value = 0.018
     br.inputs['Brick Width'].default_value = 0.5
     br.inputs['Row Height'].default_value = 0.25
     nt.links.new(comb.outputs[0], br.inputs['Vector'])
@@ -137,6 +137,33 @@ def palette():
         'flag': material('flag', hexc('#c8161f'), rough=0.85, var=0.0, noise_amt=0.0),
         'water': water_material(),
         'hay': material('hay', hexc('#d6b25a'), rough=0.95, var=0.1),
+        'shutter_green': material('shutter_green', hexc('#3e7a4c'), rough=0.7, var=0.08),
+        'slate_grey': material('slate_grey', hexc('#5b6670'), rough=0.5, var=0.08, noise_amt=0.06),
+        'slate_grey_dark': material('slate_grey_dark', hexc('#373e46'), rough=0.6, var=0.0),
+        'roof_brown': material('roof_brown', hexc('#8f4a2b'), rough=0.6, var=0.08, hue_var=0.008),
+        'thatch': material('thatch', hexc('#c7a253'), rough=0.95, var=0.12, noise_amt=0.25, noise_scale=6, bump=0.6, bump_scale=18),
+        'yellow': material('yellow', hexc('#f4c430'), rough=0.45, var=0.0, noise_amt=0.0),
+        'orange': material('orange', hexc('#ea7a24'), rough=0.6, var=0.0, noise_amt=0.0),
+        'skin': material('skin', hexc('#eab38a'), rough=0.6, var=0.0, noise_amt=0.0),
+        'cloth': material('cloth', hexc('#3e5a8c'), rough=0.85, var=0.0, noise_amt=0.05),
+        'white': material('white', hexc('#f3efe6'), rough=0.6, var=0.02, noise_amt=0.04),
+        'red': material('red', hexc('#c9302c'), rough=0.55, var=0.0, noise_amt=0.0),
+        'wheat': material('wheat', hexc('#ecc65a'), rough=0.9, var=0.12, noise_amt=0.35, noise_scale=5, bump=0.8, bump_scale=26),
+        'sprout': material('sprout', hexc('#6fae3a'), rough=0.9, var=0.12, noise_amt=0.2, noise_scale=5, bump=0.4, bump_scale=20),
+        'soil': ground_material('soil', '#6a4a2c', '#4a321d', scale=0.9, bump=0.5),
+        'rock': material('rock', hexc('#8f8473'), rough=0.9, var=0.14, hue_var=0.01, bump=0.5, bump_scale=2.5),
+        'barn_red': material('barn_red', hexc('#a53b2a'), rough=0.7, var=0.06, bump=0.15, bump_scale=10),
+        'canvas': material('canvas', hexc('#ece1c6'), rough=0.9, var=0.04, noise_amt=0.08),
+        'ochre': material('ochre', hexc('#e6bf6c'), rough=0.85, var=0.03, noise_amt=0.08, bump=0.06, bump_scale=8),
+        'leaf': material('leaf', hexc('#4f8f34'), rough=0.85, var=0.15, hue_var=0.02, noise_amt=0.25, noise_scale=3, bump=0.5, bump_scale=6),
+        'flower_red': material('flower_red', hexc('#e0384a'), rough=0.6, var=0.1),
+        'flower_yellow': material('flower_yellow', hexc('#f5d33c'), rough=0.6, var=0.1),
+        'flower_white': material('flower_white', hexc('#f7f3ea'), rough=0.6, var=0.05),
+        'bronze': material('bronze', hexc('#9a6a3a'), rough=0.35, var=0.0, metallic=0.9, noise_amt=0.1),
+        'lawn': material('lawn', hexc('#6aa83c'), rough=0.95, var=0.08, noise_amt=0.3, noise_scale=3, bump=0.3, bump_scale=30),
+        'sand': material('sand', hexc('#e6d3a0'), rough=0.95, var=0.05, noise_amt=0.2, bump=0.2, bump_scale=20),
+        'post_red': material('post_red', hexc('#b8282a'), rough=0.5, var=0.0, noise_amt=0.0),
+        'green_paint': material('green_paint', hexc('#2f6b45'), rough=0.6, var=0.04),
     }
 
 
@@ -149,6 +176,10 @@ BEVEL = {
     'slate': 0.05, 'slate_dark': 0.06, 'copper': 0.05, 'gold': 0.03, 'iron': 0.02, 'door': 0.04, 'banner': 0.02,
     'banner_blue': 0.02, 'clock': 0.0, 'shutter': 0.04, 'brick': 0.04, 'glass': 0.0, 'lamp': 0.02, 'bell': 0.0,
     'flag': 0.0, 'water': 0.0, 'cobble': 0.25, 'earth': 0.2, 'gravel': 0.2, 'roof_under': 0.0, 'stone_core': 0.0, 'hay': 0.15,
+    'shutter_green': 0.04, 'slate_grey': 0.05, 'slate_grey_dark': 0.06, 'roof_brown': 0.07, 'thatch': 0.12, 'yellow': 0.03,
+    'orange': 0.03, 'skin': 0.0, 'cloth': 0.03, 'white': 0.05, 'red': 0.03, 'wheat': 0.1, 'sprout': 0.08, 'soil': 0.25,
+    'rock': 0.0, 'barn_red': 0.05, 'canvas': 0.03, 'ochre': 0.05, 'leaf': 0.0, 'flower_red': 0.02, 'flower_yellow': 0.02,
+    'flower_white': 0.02, 'bronze': 0.0, 'lawn': 0.3, 'sand': 0.3, 'post_red': 0.04, 'green_paint': 0.04,
 }
 
 
@@ -754,31 +785,219 @@ def crates(B, spots):
 # --------------------------------------------------------------------------
 # the lot
 # --------------------------------------------------------------------------
-def plot(B, kind):
-    """Paving of the 48 m lot and its kerb."""
+def plot(B, kind, cells=3, margin=1.5):
+    """Paving of a lot of `cells` x `cells` cells (16 m each) and its kerb."""
+    half = cells * 8.0 - margin
+    size = half * 2
+    kh = half + 0.1
     if kind in ('earth', 'gravel', 'cobble'):
-        B.p(kind).box((45.0, 45.0, 0.4), (0, 0, 0.2))
+        B.p(kind).box((size, size, 0.4), (0, 0, 0.2))
     elif kind in ('paved', 'marble'):
-        B.p('stone_core', bevel=0.0).box((45.0, 45.0, 0.3), (0, 0, 0.15))
+        B.p('stone_core', bevel=0.0).box((size, size, 0.3), (0, 0, 0.15))
         a, b = ('lime', 'stone') if kind == 'paved' else ('marble', 'marble_dark')
-        n = 15
-        s = 45.0 / n
+        n = max(3, int(round(size / 3.0)) | 1)
+        st = size / n
         for i in range(n):
             for j in range(n):
-                x = -22.5 + s * (i + 0.5)
-                y = -22.5 + s * (j + 0.5)
+                x = -half + st * (i + 0.5)
+                y = -half + st * (j + 0.5)
                 ring = max(abs(i - n // 2), abs(j - n // 2))
                 key = b if (kind == 'marble' and (i + j) % 2) or (kind == 'paved' and ring == n // 2) else a
-                B.p(key, bevel=0.06).box((s - 0.12, s - 0.12, 0.12), (x, y, 0.34))
+                B.p(key, bevel=0.06).box((st - 0.12, st - 0.12, 0.12), (x, y, 0.34))
     kp = B.p('logs' if kind == 'earth' else 'marble' if kind == 'marble' else 'kerb')
+    kw = 1.1 if cells >= 3 else 0.8
     for side in range(4):
-        x = -22.6
-        while x < 22.6:
-            l = kp.rng.uniform(1.6, 2.6) if kind != 'earth' else 45.2
-            x1 = min(22.6, x + l)
+        x = -kh
+        while x < kh:
+            l = kp.rng.uniform(1.6, 2.6) if kind != 'earth' else kh * 2 + 0.1
+            x1 = min(kh, x + l)
             cx = (x + x1) / 2
             hgt = 0.62 if kind != 'earth' else 0.6
-            sz = (x1 - x - 0.1, 1.1, hgt) if side < 2 else (1.1, x1 - x - 0.1, hgt)
-            pos = (cx, -22.6 if side == 0 else 22.6, hgt / 2) if side < 2 else (-22.6 if side == 2 else 22.6, cx, hgt / 2)
+            sz = (x1 - x - 0.1, kw, hgt) if side < 2 else (kw, x1 - x - 0.1, hgt)
+            pos = (cx, -kh if side == 0 else kh, hgt / 2) if side < 2 else (-kh if side == 2 else kh, cx, hgt / 2)
             kp.box(sz, pos)
             x = x1
+
+
+def yard(B, kind, x0, x1, y0, y1, r=1.6):
+    """A yard around a building that stands on the grass: a rounded pad of earth,
+    gravel or cobbles, or a paved terrace; its top is the ground level G."""
+    if kind == 'paved':
+        B.p('stone_core', bevel=0.0).box((x1 - x0, y1 - y0, G), ((x0 + x1) / 2, (y0 + y1) / 2, G / 2))
+        st = 2.4
+        nx = max(1, int(round((x1 - x0) / st)))
+        ny = max(1, int(round((y1 - y0) / st)))
+        for i in range(nx):
+            for j in range(ny):
+                key = 'stone' if (i in (0, nx - 1) or j in (0, ny - 1)) else 'lime'
+                B.p(key, bevel=0.05).box(((x1 - x0) / nx - 0.1, (y1 - y0) / ny - 0.1, 0.1),
+                                         (x0 + (x1 - x0) / nx * (i + 0.5), y0 + (y1 - y0) / ny * (j + 0.5), G - 0.02))
+    else:
+        B.p(kind, bevel=min(r, (x1 - x0) / 2 - 0.1, (y1 - y0) / 2 - 0.1), segments=4).box((x1 - x0, y1 - y0, G + 0.02), ((x0 + x1) / 2, (y0 + y1) / 2, (G + 0.02) / 2))
+
+
+# --------------------------------------------------------------------------
+# props for the village
+# --------------------------------------------------------------------------
+def blob(p, c, r, sx=1.0, sy=1.0, sz=0.7, rough=0.22, subdiv=2, seed=1):
+    """A rough rock or mound: an icosphere pushed in and out at random."""
+    import bmesh
+    import random
+    rng = random.Random(seed)
+    res = bmesh.ops.create_icosphere(p.bm, subdivisions=subdiv, radius=r)
+    for v in res['verts']:
+        k = 1 + rng.uniform(-rough, rough)
+        v.co = Vector((v.co.x * sx * k + c[0], v.co.y * sy * k + c[1], max(0.0, v.co.z) * sz * k + c[2]))
+    faces = {f for v in res['verts'] for f in v.link_faces}
+    val = rng.random()
+    for f in faces:
+        f[p.rnd_layer] = val
+
+
+def figure(B, x, y, z=G, h=2.0, face=(1, -1), body='cloth', helmet='yellow', vest='orange', tool=True):
+    """A little worker: legs, body, vest, arms, head and a hard hat, facing `face` (x, y)."""
+    fx, fy = face
+    ang = math.atan2(fy, fx)
+    s = h / 2.0
+    for side in (-1, 1):
+        ox = -math.sin(ang) * side * 0.16 * s
+        oy = math.cos(ang) * side * 0.16 * s
+        B.p(body, smooth=True, bevel=0.0).lathe([(0.11 * s, 0), (0.12 * s, 0.75 * s), (0.0, 0.76 * s)], (x + ox, y + oy, z), segments=10)
+    B.p(vest, smooth=True, bevel=0.0).lathe([(0.0, 0.7 * s), (0.3 * s, 0.72 * s), (0.33 * s, 1.0 * s), (0.3 * s, 1.35 * s), (0.18 * s, 1.45 * s), (0.0, 1.46 * s)], (x, y, z), segments=16)
+    for side in (-1, 1):
+        ox = -math.sin(ang) * side * 0.36 * s
+        oy = math.cos(ang) * side * 0.36 * s
+        bar(B.p(body), (x + ox, y + oy, z + 1.38 * s), (x + ox + fx * 0.25 * s, y + oy + fy * 0.25 * s, z + 0.95 * s), 0.13 * s, 0.13 * s)
+    B.p('skin', smooth=True, bevel=0.0).lathe([(0.0, 1.45 * s), (0.2 * s, 1.52 * s), (0.25 * s, 1.68 * s), (0.2 * s, 1.84 * s), (0.0, 1.9 * s)], (x, y, z), segments=16)
+    B.p(helmet, smooth=True, bevel=0.0).lathe([(0.34 * s, 1.78 * s), (0.27 * s, 1.84 * s), (0.25 * s, 1.95 * s), (0.15 * s, 2.03 * s), (0.0, 2.05 * s)], (x, y, z), segments=18)
+    if tool:
+        hx = x - math.sin(ang) * 0.42 * s + fx * 0.3 * s
+        hy = y + math.cos(ang) * 0.42 * s + fy * 0.3 * s
+        bar(B.p('timber'), (hx, hy, z + 0.75 * s), (hx, hy, z + 1.3 * s), 0.07 * s)
+        B.p('iron').box((0.28 * s, 0.12 * s, 0.12 * s), (hx, hy, z + 1.33 * s), (0, 0, ang))
+
+
+def shed_roof(B, x0, x1, y0, y1, z_low, z_high, tile='shingle', over=0.6, tw=1.0, tl=1.3, rise_to='N'):
+    """Single-slope roof, rising towards `rise_to` (N or E)."""
+    tiles = B.p(tile)
+    if rise_to == 'N':
+        a, b = (x0 - over, y0 - over, z_low), (x1 + over, y0 - over, z_low)
+        c, d = (x1 + over, y1 + over, z_high), (x0 - over, y1 + over, z_high)
+    else:
+        a, b = (x0 - over, y1 + over, z_low), (x0 - over, y0 - over, z_low)
+        c, d = (x1 + over, y0 - over, z_high), (x1 + over, y1 + over, z_high)
+    tile_face(tiles, a, b, c, d, tw=tw, tl=tl)
+    lift = Vector((0, 0, -0.12))
+    va = [Vector(v) + lift for v in (a, b, c, d)]
+    solid(B.p('roof_under', bevel=0.0), va + [v + Vector((0, 0, -0.25)) for v in va], [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)])
+
+
+def wheel(B, c, r, axis='x', key='timber', rim='iron', spokes=8, w=0.3):
+    """A spoked wheel standing upright, its axle along `axis`."""
+    c = Vector(c)
+    if axis == 'x':
+        u, v = Vector((0, 1, 0)), Vector((0, 0, 1))
+    else:
+        u, v = Vector((1, 0, 0)), Vector((0, 0, 1))
+    n = 24
+    pts = [c + u * math.cos(2 * math.pi * k / n) * r + v * math.sin(2 * math.pi * k / n) * r for k in range(n)]
+    for p0, p1 in zip(pts, pts[1:] + pts[:1]):
+        bar(B.p(rim), p0, p1, w, w * 0.8, z_hint=(Vector((1, 0, 0)) if axis == 'x' else Vector((0, 1, 0))))
+    for k in range(spokes):
+        a = 2 * math.pi * k / spokes
+        bar(B.p(key), c, c + u * math.cos(a) * r + v * math.sin(a) * r, w * 0.6, w * 0.6, z_hint=(Vector((1, 0, 0)) if axis == 'x' else Vector((0, 1, 0))))
+    B.p(rim).box((w * 2.2, w * 2.2, w * 2.2), c)
+
+
+def rails(B, a, b, gauge=1.2):
+    a = Vector((*a, G))
+    b = Vector((*b, G))
+    d = (b - a)
+    L = d.length
+    t = d.normalized()
+    n = Vector((-t.y, t.x, 0))
+    for k in range(int(L / 0.9) + 1):
+        p = a + t * (k * 0.9)
+        bar(B.p('timber'), p - n * (gauge * 0.85) + Vector((0, 0, 0.08)), p + n * (gauge * 0.85) + Vector((0, 0, 0.08)), 0.32, 0.16)
+    for s in (-1, 1):
+        bar(B.p('iron'), a + n * s * gauge / 2 + Vector((0, 0, 0.24)), b + n * s * gauge / 2 + Vector((0, 0, 0.24)), 0.14, 0.16)
+
+
+def cart(B, x, y, along='x', load='gold'):
+    """A mine cart on rails, heaped with gold."""
+    L, W, H = 2.4, 1.6, 1.1
+    if along == 'y':
+        L, W = W, L
+    p = B.p('iron')
+    z = G + 0.75
+    v = [(x - L / 2, y - W / 2, z + H), (x + L / 2, y - W / 2, z + H), (x + L / 2, y + W / 2, z + H), (x - L / 2, y + W / 2, z + H),
+         (x - L / 2 + 0.3, y - W / 2 + 0.3, z), (x + L / 2 - 0.3, y - W / 2 + 0.3, z), (x + L / 2 - 0.3, y + W / 2 - 0.3, z), (x - L / 2 + 0.3, y + W / 2 - 0.3, z)]
+    solid(p, v, [(0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7), (4, 5, 6, 7)])
+    B.p('timber').box((L + 0.15, W + 0.15, 0.2), (x, y, z + H))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cx = x + sx * (L / 2 - 0.45 if along == 'x' else W / 2 - 0.1)
+            cy = y + sy * (W / 2 - 0.1 if along == 'x' else L / 2 - 0.45)
+            B.p('iron').box((0.25 if along == 'y' else 0.7, 0.7 if along == 'y' else 0.25, 0.7), (cx, cy, G + 0.45))
+    if load == 'gold':
+        coins(B, x, y, z + H - 0.1, r=min(L, W) / 2 - 0.1, h=0.7, n=14)
+
+
+def coins(B, x, y, z, r=1.5, h=1.0, n=30, seed=3):
+    """A heap of gold: a lumpy golden mound with loose coins all over it."""
+    import random
+    rng = random.Random(seed + int(x * 7 + y * 13))
+    blob(B.p('gold', bevel=0.0), (x, y, z), r, 1.0, 1.0, h / r, rough=0.18, subdiv=2, seed=seed + int(x * 3))
+    for _ in range(n):
+        a = rng.uniform(0, 2 * math.pi)
+        d = math.sqrt(rng.uniform(0.0, 1.0)) * r * 1.05
+        zz = z + h * max(0.0, 1 - (d / r) ** 2) * 0.92 + 0.04
+        cr = rng.uniform(0.3, 0.42)
+        B.p('gold', bevel=0.03).box((cr * 2, cr * 2, 0.12), (x + math.cos(a) * d, y + math.sin(a) * d, zz),
+                                    (rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5), rng.uniform(0, 3)))
+
+
+def chest(B, x, y, s=1.0, rot=0.0):
+    B.p('door').box((1.6 * s, 1.0 * s, 0.9 * s), (x, y, G + 0.45 * s), (0, 0, rot))
+    B.p('door').box((1.6 * s, 1.0 * s, 0.35 * s), (x, y, G + 1.05 * s), (0, 0, rot))
+    for k in (-0.5, 0.5):
+        B.p('gold').box((0.14 * s, 1.08 * s, 1.3 * s), (x + math.cos(rot) * k * s, y + math.sin(rot) * k * s, G + 0.62 * s), (0, 0, rot))
+
+
+def bench(B, x, y, along='x', key='planks'):
+    L = 2.6
+    sx, sy = (L, 0.55) if along == 'x' else (0.55, L)
+    B.p(key).box((sx, sy, 0.14), (x, y, G + 0.55))
+    bx, by = (0, 0.3) if along == 'x' else (0.3, 0)
+    B.p(key).box((sx, 0.12, 0.55) if along == 'x' else (0.12, sy, 0.55), (x + bx, y + by, G + 0.95))
+    for k in (-1, 1):
+        ox, oy = (k * (L / 2 - 0.3), 0) if along == 'x' else (0, k * (L / 2 - 0.3))
+        B.p('iron').box((0.12, 0.6, 0.55) if along == 'x' else (0.6, 0.12, 0.55), (x + ox, y + oy, G + 0.28))
+
+
+def shrub(B, x, y, r=1.0, seed=1):
+    blob(B.p('leaf', bevel=0.0), (x, y, G), r, 1.0, 1.0, 0.9, rough=0.25, subdiv=2, seed=seed)
+
+
+def flowerbed(B, x, y, sx=2.6, sy=1.6, seed=1):
+    import random
+    rng = random.Random(seed)
+    B.p('kerb').box((sx + 0.4, sy + 0.4, 0.45), (x, y, G + 0.22))
+    B.p('soil').box((sx, sy, 0.5), (x, y, G + 0.27))
+    keys = ['flower_red', 'flower_yellow', 'flower_white']
+    for i in range(int(sx * sy * 5)):
+        fx = x + rng.uniform(-sx / 2 + 0.2, sx / 2 - 0.2)
+        fy = y + rng.uniform(-sy / 2 + 0.2, sy / 2 - 0.2)
+        B.p('leaf', bevel=0.0).box((0.2, 0.2, 0.35), (fx, fy, G + 0.65))
+        B.p(keys[rng.randrange(3)], bevel=0.0).box((0.3, 0.3, 0.16), (fx, fy, G + 0.88), (0, 0, rng.uniform(0, 1.5)))
+
+
+def tree(B, x, y, h=7.0, seed=1):
+    """A decorative round-crowned tree (only for parks and decorations)."""
+    B.p('timber', smooth=True, bevel=0.0).lathe([(0.45, G), (0.3, G + h * 0.45), (0.0, G + h * 0.46)], (x, y, 0), segments=10)
+    import random
+    rng = random.Random(seed)
+    for k in range(5):
+        a = rng.uniform(0, 6.28)
+        d = rng.uniform(0.3, 1.2) if k else 0.0
+        blob(B.p('leaf', bevel=0.0), (x + math.cos(a) * d, y + math.sin(a) * d, G + h * 0.45 + rng.uniform(0, h * 0.2)), h * 0.26, 1.0, 1.0, 1.0, rough=0.18, subdiv=2, seed=seed * 7 + k)
