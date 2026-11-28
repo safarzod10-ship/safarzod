@@ -1,0 +1,50 @@
+{
+ "title": "Подарок без денег",
+ "format": "life-lesson",
+ "hook": "ПОДАРОК БЕЗ ДЕНЕГ 🎁",
+ "outro": "А ТЕБЕ ДАРИЛИ ТАКОЕ?",
+ "music": "sad",
+ "location": "home",
+ "time": "evening",
+ "labels": false,
+ "highlight": ["ДЕНЕГ", "ПУСТО", "КРАСКИ", "ОТКРЫТКУ", "ТЕЛЕФОН", "МАЛЕНЬКОЙ", "ЗАПЛАКАЛА", "КУПИТЬ", "ВИСИТ"],
+ "cast": {
+  "timur": {"preset": "timur", "pos": [1.6, -2.6], "label": null},
+  "liza":  {"preset": "liza", "pos": [0, 1], "hidden": true, "label": null},
+  "max":   {"preset": "max", "pos": [-3.6, 1.4], "hidden": true, "label": null},
+  "artem": {"preset": "artem", "pos": [-6.4, 1], "hidden": true, "label": null}
+ },
+ "props": [
+  {"shape": "box", "size": [0.9, 0.7, 0.6], "color": "#ff9fc0", "pos": [4, 2.7, -6], "from": 0, "to": 1, "location": "home"},
+  {"shape": "letter", "size": [1.4, 0.05, 1.0], "pos": [4, 2.42, -6], "from": 2, "to": 3, "location": "home"},
+  {"shape": "gift", "holder": "max", "from": 4, "to": 4},
+  {"shape": "letter", "size": [1.2, 0.9, 0.06], "color": "#fff6d0", "holder": "timur", "from": 5, "to": 6},
+  {"shape": "letter", "size": [1.2, 0.9, 0.06], "color": "#fff6d0", "holder": "liza", "from": 7, "to": 8},
+  {"shape": "letter", "size": [2.6, 1.8, 0.1], "color": "#fff6d0", "pos": [-4, 6.4, -15.6], "from": 9, "to": 10, "location": "home"}
+ ],
+ "lines": [
+  {"text": "Завтра у Лизы день рождения. А денег на подарок у меня не было.", "emotion": "sad", "cam": "medium:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "sad", "pose": "sad"}}},
+  {"text": "Пусто было в копилке. Совсем.", "emotion": "sad", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "cry", "pose": "shrug"}}},
+  {"text": "Целый вечер я думал. А потом взял бумагу и краски.", "emotion": "mystery", "cam": "medium:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "think", "faceAfter": [2.6, "smile"], "pose": "think"}}},
+  {"text": "Долго, до полуночи, рисовал открытку: нашу школу, двор и нас с Лизой.", "emotion": "calm", "cam": "wide:timur", "time": "night",
+   "acts": {"timur": {"pos": [4, -3.4], "faceTo": [4, -6], "face": "smile", "pose": "give"}}},
+  {"text": "Утром Макс подарил Лизе новый телефон. Все ахнули.", "emotion": "excited", "cam": "two:max:liza", "location": "school", "time": "day", "boom": true,
+   "acts": {"liza": {"show": true, "faceTo": "max", "face": "shock", "pose": "shock"}, "max": {"show": true, "faceTo": "liza", "face": "smug", "pose": "give"}, "artem": {"show": true, "faceTo": "liza", "face": "shock"},
+            "timur": {"pos": [4.4, 2.4], "faceTo": "liza", "face": "neutral", "pose": "idle"}}},
+  {"text": "Своя открытка показалась мне такой маленькой.", "emotion": "sad", "cam": "close:timur",
+   "acts": {"timur": {"faceTo": "cam", "face": "sad", "pose": "give"}, "liza": {"pose": "idle", "face": "smile"}}},
+  {"text": "Тихо я протянул её Лизе и уже хотел уйти.", "emotion": "sad", "cam": "two:timur:liza",
+   "acts": {"timur": {"moveTo": [2.4, 1.6], "faceTo": "liza", "face": "sad", "pose": "give"}, "liza": {"faceTo": "timur", "face": "neutral"}}},
+  {"text": "Долго смотрела Лиза на рисунок. И вдруг заплакала.", "emotion": "mystery", "cam": "close:liza",
+   "acts": {"liza": {"faceTo": "cam", "face": "think", "faceAfter": [2.8, "cry"], "pose": "give"}, "timur": {"pose": "idle", "face": "shock"}}},
+  {"text": "Это самый лучший подарок, сказала она. Его нельзя купить.", "emotion": "warm", "cam": "two:liza:timur", "chime": true,
+   "acts": {"liza": {"faceTo": "timur", "face": "joy", "pose": "hug"}, "timur": {"faceTo": "liza", "face": "joy", "pose": "hug"}, "max": {"face": "smile"}, "artem": {"face": "joy"}}},
+  {"text": "Рядом с кроватью у Лизы до сих пор висит та открытка.", "emotion": "warm", "cam": "wide:liza,timur", "location": "home", "time": "day",
+   "acts": {"max": {"hide": true}, "artem": {"hide": true}, "liza": {"pos": [-1.6, -11], "faceTo": "cam", "face": "joy", "pose": "point"}, "timur": {"pos": [2, -10.6], "faceTo": "cam", "face": "smile", "pose": "idle"}}},
+  {"text": "Самый дорогой подарок, который тебе сделали руками? Напиши в комментариях.", "emotion": "outro", "cam": "wide:liza,timur",
+   "acts": {"liza": {"pose": "wave", "face": "joy"}, "timur": {"pose": "cheer", "face": "joy"}}}
+ ]
+}
