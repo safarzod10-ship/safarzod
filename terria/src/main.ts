@@ -17,7 +17,7 @@ declare global {
 }
 
 /** Page / Telegram chrome colour under the loading screen (public/loader) and under the map (the fog). */
-const LOADER_COLOR = '#3f6b34';
+const LOADER_COLOR = '#07110c';
 const MAP_COLOR = '#ecf2f6';
 
 const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));

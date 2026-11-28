@@ -6,22 +6,21 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#3f6b34" />
+    <meta name="theme-color" content="#07110c" />
     <meta name="color-scheme" content="light" />
     <title>TERRIA</title>
-    <!-- Loading screen (public/loader): the picture behind it and the logo it assembles. -->
+    <!-- Loading screen (public/loader): the picture of the land behind the logo. -->
     <link rel="preload" href="/loader/bg.webp" as="image" fetchpriority="high" />
-    <link rel="preload" href="/loader/terria-logo.webp" as="image" crossorigin="anonymous" />
     <style>
       html,
       body {
-        background: #3f6b34;
+        background: #07110c;
       }
     </style>
   </head>
   <body>
     <!-- First in <body> so the loading screen is there on the first paint. -->
-    <script src="/loader/terria-loader.js" data-logo="/loader/terria-logo.webp" data-bg="/loader/bg.webp"></script>
+    <script src="/loader/terria-loader.js" data-bg="/loader/bg.webp"></script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

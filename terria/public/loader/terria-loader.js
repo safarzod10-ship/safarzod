@@ -1,553 +1,279 @@
 /*!
- * TERRIA — cinematic WebGL2 loading screen.
+ * TERRIA loading screen, "Dawn over the land".
  *
- * Usage:
- *   <script src="terria-loader.js" data-logo="terria-logo.webp" data-bg="bg.webp"></script>
- *   TerriaLoader.set(0.42);   // progress 0..1
- *   TerriaLoader.done();      // finish: waits for the intro, plays the exit, removes itself
- *   TerriaLoader.fail(text);  // show an error instead of the progress bar
- *   TerriaLoader.introDone    // true once the logo has finished assembling
- * Events on window: terria-loader-intro (logo assembled), terria-loader-reveal (the
- * screen starts to fade out), terria-loader-done (removed).
+ *   <script src="terria-loader.js" data-bg="bg.webp"></script>
+ *   TerriaLoader.set(0.42) · TerriaLoader.done() · TerriaLoader.fail(text) · TerriaLoader.introDone
+ *   events: terria-loader-intro, terria-loader-reveal, terria-loader-done · ?nosplash skips it
  *
- * TERRIA game: the scene is rendered with a transparent background over the picture
- * given in data-bg (shown as it is, cover-fitted). ?nosplash skips the loader.
- *
- * Pipeline: logo texture → CPU-derived height/normal + grass mask → ~1500 instanced
- * 3D fragments that fly in and lock together (with extruded thickness), lit by a moving
- * sun with normal mapping, grass that grows and sways in the wind, depth-of-field dust and
- * falling crumbs → post pass (god rays, bloom, ACES tone map, vignette, grain).
- * Falls back to a CSS version without WebGL2; honours prefers-reduced-motion.
+ * The white TERRIA logo (vector) is drawn in light over the dark land: a pen of
+ * light traces the arc, the stem of the T drops in and dawn breaks with the
+ * impact, the letters rise, a shine runs across. While the game loads the logo
+ * breathes and a slanted bar fills; at the end the land comes forward and the
+ * screen dissolves into the game. Plain SVG + one small canvas, no libraries.
  */
 (() => {
 'use strict';
 const SCRIPT = document.currentScript;
-const LOGO_URL = (SCRIPT && SCRIPT.dataset.logo) || 'terria-logo.webp';
 const BG_URL = (SCRIPT && SCRIPT.dataset.bg) || '';
-const emit = (name) => dispatchEvent(new Event(name));
+const emit = (n) => dispatchEvent(new Event(n));
 if (/[?&]nosplash(=|&|$)/.test(location.search)) {
-  window.TerriaLoader = { set() {}, done() { emit('terria-loader-reveal'); emit('terria-loader-done'); }, fail(m) { console.error(m); },
-    introDone: true, progress: 1 };
+  window.TerriaLoader = { set() {}, done() { emit('terria-loader-reveal'); emit('terria-loader-done'); }, fail(m) { console.error(m); }, introDone: true, progress: 1 };
   return;
 }
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const P = {"arc":"M155.5 0.5L156.5 0.2L197.5 0.2L201.5 -0.1L556.5 -0L561.5 0L573.5 1L581.5 2.2L583.5 2.7L586.5 3L588.5 3.7L590.5 4L592.5 4.7L594.5 5.1L596.5 5.8L598.5 6.2L599.5 6.7L601.5 7.2L602.5 7.6L604.5 8.2L605.5 8.8L606.5 9L611.5 11.3L615.5 13.6L616.5 14.1L617.5 14.8L618.5 15.2L621.5 17.2L626.5 21.3L628.7 23.5L631.9 27.5L633.8 30.5L634.9 32.5L636.1 35.5L637 38.5L637.4 41.5L637.8 43.5L637.8 47.5L637.4 49.5L637.1 52.5L636.9 53.5L635.9 57.5L634.9 60.5L633 64.5L630.9 68.5L627.8 73.5L620.8 82.5L618.1 85.5L612.5 91.2L604.5 98.7L593.5 107.7L578.5 118.8L568.5 125.1L564.5 127.9L561.5 129.7L560.5 130.1L556.5 132.8L552.5 135L551.5 135.8L550.5 136.2L546.5 138.7L545.5 139.1L541.5 141.6L534.5 145.4L530.5 147.8L529.5 148.2L528.5 148.9L527.5 149.2L523.5 151.5L518.5 154L515.5 155.8L514.5 156.1L513.5 156.8L512.5 157.2L511.5 157.8L510.5 158.2L509.5 158.9L508.5 159.2L507.5 159.9L506.5 160.2L505.5 160.9L504.5 161.2L503.5 161.9L502.5 162.2L501.5 162.9L500.5 163.2L499.5 163.9L498.5 164.1L497.5 164.8L496.5 165.1L495.5 165.8L494.5 166.1L493.5 166.7L489.5 168.3L488.5 168.9L487.5 169.2L486.5 169.9L485.5 170.2L484.5 170.9L483.5 171.2L482.5 171.8L481.5 172.1L480.5 172.7L479.5 172.9L478.5 172.7L478.5 172.4L479.5 172L480.5 171.2L481.5 170.8L485.5 168.2L486.5 167.9L487.5 167.1L488.5 166.8L492.5 164.2L493.5 163.8L497.5 161.2L498.5 160.8L502.5 158.2L503.5 157.7L505.5 156.3L506.5 155.9L507.5 155.1L511.5 152.8L517.5 148.9L519.5 147.4L520.5 146.8L522.5 145.3L523.5 144.8L537.5 134.7L547.5 126.8L551.5 123.1L556.5 118.9L564.5 111.1L568.7 106.5L572.5 102.1L576.8 96.5L578.8 93.5L579.2 92.5L579.9 91.5L580.2 90.5L580.9 89.5L581.1 88.5L581.9 87.5L582.1 86.5L582.7 85.5L583.2 83.5L583.7 82.5L584.3 79.5L584.8 78.5L584.9 77.5L584.9 74.5L584.7 73.5L584.3 72.5L584 70.5L583.1 68.5L582.8 67.5L580.9 64.5L579.1 62.5L576.5 60.2L573.5 58.2L572.5 57.8L571.5 57.1L569.5 56.3L567.5 55.7L566.5 55.1L564.5 54.7L563.5 54.3L560.5 53.6L559.5 53.2L556.5 52.8L553.5 52.2L549.5 51.9L546.5 51.5L544.5 51.1L542.5 51.1L526.5 51.2L523.5 51.8L514.5 52.3L512.5 52.8L506.5 53.3L504.5 53.8L500.5 54.2L497.5 55L494.5 55.2L492.5 55.9L489.5 56.2L487.5 56.8L484.5 57.2L483.5 57.7L480.5 58.2L479.5 58.6L472.5 60.3L467.5 62L466.5 62.1L464.5 62.9L462.5 63.4L461.5 63.9L460.5 64.1L458.5 64.8L456.5 65.3L455.5 65.8L450.6 67.5L445.5 69.4L444.5 70L440.5 71.3L436.5 73L432.5 74.3L431.5 74.9L427.5 76.4L415.6 81.5L408.5 84.9L400.5 88.3L387.5 94.7L381.5 97.4L377.5 99.5L365.5 105.1L353.3 111.5L349.5 113.2L345.2 115.5L343.5 116.2L338.5 118.9L331.5 122.2L319.5 128.6L310.5 132.9L305.5 135.7L304.5 136L299.5 138.4L295.5 140.6L294.5 141L293.5 141.8L292.5 142.1L291.5 142.9L290.5 143.2L289.5 143.9L288.5 144.3L287.5 144.9L286.5 145.2L285.5 145.9L284.5 146.2L283.5 146.9L282.5 147.3L274.5 151.7L273.5 152L267.5 155L266.5 155.7L265.5 156.1L264.5 156.8L263.5 157.2L262.5 157.9L261.5 158.3L259.5 159.4L257.5 160.6L254.5 162.1L253.5 162.8L252.5 163.2L251.5 163.9L250.5 164.3L249.5 165L244.5 167.7L243.5 168.1L242.5 168.8L241.5 169.2L240.5 169.9L239.5 170.2L238.5 170.9L237.5 171.3L233.5 173.8L232.5 174.1L231.5 174.8L230.5 175.2L226.5 177.8L225.5 178.2L224.5 178.9L220.5 181.1L219.5 181.8L218.5 182.3L214.5 184.8L213.5 185.2L209.5 187.8L202.5 192.1L201.5 192.9L200.5 193.3L197.5 195.2L192.5 198.8L188.5 201.3L181.5 206.3L173.5 212.3L169.5 215.8L166 218.5L158.5 225.3L155.4 228.5L148.2 236.5L144.2 242.5L141.3 247.5L140.4 249.5L139.4 252.5L138.3 256.5L137.8 259.5L137.8 261.5L137.9 263.5L138.4 265.5L139.3 268.5L140.2 270.5L141.4 272.5L143 274.5L144.9 276.5L147.5 278.8L150.5 280.5L155.5 282.9L156.5 283.2L157.5 283.8L160.5 284.9L161.5 285.1L163.5 285.8L165.5 286.2L167.5 286.9L169.5 287.2L170.5 287.6L173.5 288.1L176.5 288.9L179.5 289.2L181.5 289.7L184.5 290.1L188.5 290.2L190.5 290.6L192.5 290.9L207.5 291.3L212.5 291.7L219.5 291.7L227.5 291.3L229.5 291.4L230.5 291.2L231.1 291.5L231.3 292.5L230.5 293L227.5 293.3L223.5 294L220.5 294.1L217.5 294.9L212.5 295.3L211.5 295.7L210.5 295.9L204.5 296.4L203.5 296.7L201.5 297L196.5 297.2L191.5 297.9L183.5 298.3L180.5 298.8L169.5 299.1L165.5 299.6L149.5 299.7L145.5 299.7L142.5 299.2L135.5 299.1L129.5 298.7L127.5 298.3L121.5 297.8L118.5 297.1L115.5 296.8L113.5 296.3L110.5 295.8L108.5 295.2L106.5 294.8L105.5 294.4L103.5 293.9L101.5 293.1L100.5 292.9L99.5 292.4L97.5 291.8L96.5 291.2L95.5 290.9L89.5 287.8L85.5 284.9L83 282.5L81.1 280.5L79.2 277.5L78.9 276.5L78.3 275.5L77.6 272.5L77.1 271.5L77 267.5L77.1 265.5L77.9 262.5L78.1 261.5L78.9 259.5L79.1 258.5L79.8 257.5L80 256.5L80.7 255.5L81.1 254.5L81.9 253.5L82.2 252.5L84.2 249.5L89.1 243.5L91.5 240.9L99.5 233.3L107.5 226.4L115.5 220.4L121.5 216.2L133.5 208.4L136.5 206.7L138.5 205.3L143.5 202.3L151.5 197.9L157.5 194.2L160.5 192.8L166.5 189.3L167.5 189L168.5 188.3L169.5 187.9L170.5 187.2L171.5 186.9L174.5 185.2L175.5 184.9L176.5 184.2L179.5 182.8L180.5 182.2L181.5 181.8L182.5 181.1L183.5 180.7L189.5 177.5L197.5 173.8L198.5 173.1L199.5 172.8L200.5 172.1L201.5 171.8L202.5 171.1L205.5 169.8L206.5 169.2L207.5 168.9L208.5 168.3L212.5 166.7L215.5 165.1L216.5 164.8L217.5 164.1L218.5 163.8L219.5 163.1L220.5 162.8L221.5 162.2L222.5 161.8L223.5 161.2L224.5 160.9L225.5 160.2L226.5 159.9L227.5 159.3L232.5 157.1L233.5 156.8L234.5 156.1L235.5 155.8L238.5 154.3L240.5 153.6L241.5 153L242.5 152.7L243.5 152.1L244.5 151.9L245.5 151.3L249.5 149.8L252.5 148.2L253.5 147.9L254.5 147.3L259.5 145L260.5 144.7L261.5 144.1L262.5 143.8L263.5 143.2L264.5 142.9L268.5 141L269.5 140.7L270.5 140.1L271.5 139.8L274.5 138.3L276.5 137.6L279.5 136.2L280.5 135.9L284.5 134L285.5 133.7L286.5 133.1L289.5 131.8L290.5 131.2L295.5 129L296.5 128.7L297.5 128.1L298.5 127.8L304.5 125.1L305.5 124.8L308.5 123.3L310.5 122.5L311.5 121.9L311.9 121.5L312.6 119.5L313.1 117.5L313.9 115.5L314 114.5L315.9 109.5L316 108.5L316.9 106.5L317 105.5L317.9 103.5L318.1 102.5L318.6 101.5L319.2 99.5L319.7 98.5L320.1 96.5L320.6 95.5L321.1 93.5L321.7 92.5L322.2 90.5L322.7 89.5L323.2 87.5L323.6 86.5L324.1 84.5L324.9 82.5L325 81.5L325.9 79.5L326.3 77.5L326.8 76.5L328.2 71.5L329 69.5L328.7 68.5L328.5 68.3L327.5 68.3L201.5 68.3L197.5 68.2L196.5 68.1L196 67.5L195.6 66.5L194.2 64.5L193.8 63.5L193.1 62.5L190.8 58.5L188.1 54.5L184.6 48.5L181.2 43.5L180.8 42.5L180 41.5L176.7 35.5L175.9 34.5L174.8 32.5L174 31.5L172.1 28.5L171.6 27.5L164.1 15.5L160.6 9.5L157.3 4.5L156.8 3.5L155.3 1.5Z","stem":"M446.5 84.5L447.5 84L448.3 84.5L447.7 86.5L447.1 87.5L446 90.5L445.8 91.5L445.2 92.5L444.6 94.5L444.1 95.5L443.8 96.5L443.1 97.5L442.9 98.5L442 100.5L441.7 101.5L441.1 102.5L440.8 103.5L440.2 104.5L439 107.5L438.8 108.5L438.1 109.5L437.9 110.5L437 112.5L436.7 113.5L436.1 114.5L435.9 115.5L435 117.5L434.8 118.5L434.1 119.5L433.9 120.5L433.2 121.5L432 124.5L431.7 125.5L431.2 126.5L429.7 130.5L429.1 131.5L428.8 132.5L427.9 134.5L425.6 140.5L425 141.5L424.8 142.5L422.1 148.5L420.6 152.5L418.6 157.5L406.4 186.5L401.7 198.5L399.4 203.5L395 214.5L389.3 227.5L384.8 238.5L383.4 241.5L381 247.5L380.4 248.5L379.8 250.5L379.3 251.5L379 252.5L377.8 255.5L377.2 256.5L376.9 257.5L376.3 258.5L376 259.5L374.2 263.5L373.9 264.5L373.3 265.5L373.1 266.5L372.2 268.5L372 269.5L371.4 270.5L370.8 272.5L370.2 273.5L370 274.5L369.4 275.5L368.8 277.5L368.2 278.5L367.9 279.5L367.3 280.5L365.8 284.5L365.3 285.5L365 286.5L364.1 288.5L363.8 289.5L363.2 290.5L363 291.5L362.4 292.5L361.8 294.5L361.2 295.5L360.9 296.5L359.4 299.5L358.8 301.5L358.2 302.5L357.5 304.5L356.5 305.3L305.5 305.4L251.5 305.3L250.5 304.6L250.4 304.5L251 303.5L251.4 301.5L252.4 298.5L252.9 297.5L253.5 295.6L254 294.5L254.2 293.5L256.1 288.5L256.2 287.5L257.1 285.5L258.3 281.5L260.1 276.5L260.3 275.5L260.8 274.5L262.4 269.5L265 262.5L269.3 249.5L271.2 244.5L279.8 218.5L281.7 213.5L286 200.5L287.6 196.5L289.8 189.5L290.9 185.5L291.8 183.5L291.9 182.5L292.7 180.5L295.2 172.5L295.7 171.5L296.2 169.5L299.1 161.5L299.5 161.1L302.5 159.4L305.5 157.9L306.5 157.2L307.5 156.8L313.5 153.2L314.5 152.8L315.5 152.1L316.5 151.8L317.5 151.1L318.5 150.8L319.5 150.1L320.5 149.8L326.5 146.3L327.5 145.9L328.5 145.2L329.5 144.8L330.5 144.1L331.5 143.7L332.5 143L338.5 139.9L339.5 139.2L340.5 138.8L343.5 137L344.5 136.7L348.5 134.4L353.5 131.8L354.5 131.1L355.5 130.7L359.5 128.3L364.5 125.8L367.5 124.1L368.5 123.8L373.5 121L385.5 114.8L390.5 112L393.5 110.7L403.5 105.3L417.5 98.7L431.5 91.4Z","letters":["M13.9 336.5L14.5 336.1L22.5 336L89.5 336L120.5 336.1L121.5 336L122.3 336.5L121.9 337.5L105.5 355.5L104.5 355.9L74.5 355.9L71.5 356.1L71.2 356.5L70.6 358.5L70.1 359.5L69.9 360.5L69 362.5L68.7 363.5L68.1 364.5L67.9 365.5L67 367.5L66.8 368.5L66 370.5L65.8 371.5L65.2 372.5L64.8 374.5L64.2 375.5L63.6 377.5L63.1 378.5L62.9 379.5L62 381.5L61.8 382.5L61.2 383.5L60.6 385.5L60.1 386.5L59.9 387.5L59 389.5L58.8 390.5L58 392.5L57.7 393.5L57.2 394.5L55.9 398.5L55 400.5L54.8 401.5L54.2 402.5L53.6 404.5L53.1 405.5L51.7 409.5L51.1 410.5L50.9 411.5L49 416.5L48.5 417.1L47.5 417.3L26.5 417.4L20.5 417.3L19.5 416.9L19.2 416.5L22.6 407.5L26.8 395.5L31.5 383.5L33.9 376.5L34.7 374.5L38.9 362.5L41 357.5L41.1 356.5L40.5 356L39.5 355.9L1.5 356L0.5 355.6L0.4 355.5L0.8 354.5L4.1 349.5L6.3 346.5L8.7 343.5L11.4 339.5L13.5 336.8Z","M138.8 336.5L139.5 336.1L150.5 336L196.5 336L246.5 336L247.3 336.5L246.9 337.5L244.2 340.5L241.8 343.5L231.6 354.5L230.5 355.5L229.5 355.7L225.5 355.7L161.5 355.8L160.7 356.5L160.2 357.5L157 365.5L156.9 366.5L157.5 367.1L216.5 367.1L220.5 367.1L221.5 367.3L221.7 367.5L221.6 368.5L220.3 370.5L219.9 371.5L219.3 372.5L218.9 373.5L218.2 374.5L217.9 375.5L214.3 381.5L213.9 382.5L213.2 383.5L212.9 384.5L212.5 384.9L211.5 385.2L196.5 385.4L150.5 385.5L149.5 386.5L145.7 396.5L145.7 397.5L146.5 397.9L218.5 398L221.5 398L222.5 398.2L222.8 398.5L222.3 399.5L221.7 401.5L221.2 402.5L220.9 403.5L220.1 405.5L219.9 406.5L219.3 407.5L218.8 409.5L218.2 410.5L217.7 412.5L217.1 413.5L216.9 414.5L216.1 416.5L215.5 417.2L115.5 417.3L110.5 417.2L109.5 416.6L109.4 416.5L110.7 413.5L111.2 411.5L111.8 410.5L112.3 408.5L112.9 407.5L113.4 405.5L115 401.5L115.1 400.5L116 398.5L116.2 397.5L117 395.5L117.3 394.5L117.9 393.5L119.2 389.5L120 387.5L120.2 386.5L120.8 385.5L121.3 383.5L121.8 382.5L122.3 380.5L122.8 379.5L124.2 375.5L125.1 373.5L125.3 372.5L125.8 371.5L127.2 367.5L128.1 365.5L128.3 364.5L131 357.5L133.3 350.5L133.8 349.5L134.4 347.5L136.1 343.5L138.2 337.5Z","M270.7 336.5L271.5 336.1L350.5 336.1L354.5 336.4L356.5 336.7L360.3 337.5L363.5 338.4L365.5 339.2L367.5 340.2L370.5 342.5L372.7 345.5L374 348.5L374.5 351.5L374.5 354.5L373.9 358.5L373.1 360.5L373.1 361.5L372.2 363.5L372.1 364.5L370 369.5L367.9 373.5L365.7 376.5L362.5 379.8L357.5 383.7L355.5 384.9L351.5 386.8L350.5 387L348.5 387.9L347.5 388.1L345.5 388.8L342.5 389.3L340.5 389.8L338.5 390L337.3 390.5L339.2 393.5L340.9 395.5L341.4 396.5L343.6 399.5L344.2 400.5L346.7 403.5L347.2 404.5L348.9 406.5L350.2 408.5L351.9 410.5L353.2 412.5L354.8 414.5L355.3 415.5L356.2 416.5L355.5 417.2L327.5 417.3L321.5 417.2L320.5 416.3L319.2 414.5L317.9 412.5L314.2 407.5L311.6 403.5L309.3 400.5L308.8 399.5L307.3 397.5L306.8 396.5L304.7 393.5L303.5 391.9L302.5 391.2L275.5 391.2L274.5 391.7L273.1 394.5L265.4 415.5L265.1 416.5L264.5 417.1L263.5 417.4L240.5 417.3L236.5 417.3L235.5 417.1L235.1 416.5L236.1 414.5L236.3 413.5L236.8 412.5L237.4 410.5L237.9 409.5L238.2 408.5L238.8 407.5L242.4 396.5L243 395.5L243.2 394.5L244 392.5L244.2 391.5L244.8 390.5L245.3 388.5L245.8 387.5L246.9 384.5L247.1 383.5L248 381.5L248.2 380.5L250 376.5L252.5 369.5L253.5 367.4L254.5 367.1L281.5 366.9L282.5 367.1L282.8 367.5L282.6 368.5L281.2 371.5L281.5 372.2L282.5 372.6L303.5 372.5L331.5 372.6L336.5 371.7L338.5 370.7L340 369.5L341 368.5L341.8 367.5L342.2 366.5L342.9 365.5L343.2 364.5L343.7 363.5L343.9 362.5L344 359.5L343.6 358.5L342.5 357.1L341.5 356.5L339.5 355.9L337.5 355.7L328.5 355.6L264.5 355.7L258.5 355.6L258.1 354.5L258.8 353.5L259.2 352.5L260.4 350.5L263.2 346.5L267 341.5L269 338.5Z","M402.6 336.5L403.5 336.1L421.5 336L469.5 336L485.5 336.2L488.5 336.6L491.5 337.2L495.5 338.4L497.5 339.1L499.5 340.2L501.5 341.5L502.5 342.4L504.9 345.5L506 347.5L506.8 350.5L506.9 354.5L506 358.5L505.2 360.5L505.1 361.5L504.2 363.5L504 364.5L503.2 366.5L503 367.5L502.3 368.5L502.1 369.5L501.1 371.5L498.6 375.5L495.9 378.5L492.5 381.7L489.5 383.8L486.4 385.5L483.5 386.9L482.5 387.1L481.5 387.6L479.5 388.1L477.5 388.8L475.5 389.2L473.5 389.8L470.5 390.1L469.9 390.5L470.1 391.5L471.7 393.5L472.2 394.5L473.9 396.5L474.4 397.5L475.9 399.5L477.1 401.5L478.9 403.5L480.1 405.5L481.8 407.5L482.3 408.5L483.9 410.5L485.1 412.5L485.9 413.5L486.4 414.5L488 416.5L487.5 417.1L469.5 417.3L453.5 417.2L452.5 416.2L451.3 414.5L450.8 413.5L447.1 408.5L443.9 403.5L442.3 401.5L441.8 400.5L440.3 398.5L437.8 394.5L435.6 391.5L434.5 391.1L431.5 391.1L407.5 391.1L406.7 391.5L406 392.5L405.5 393.7L400.5 407.5L399.2 410.5L397.1 416.5L396.5 417.1L395.5 417.3L368.5 417.2L367.8 416.5L368.1 415.5L369 413.5L369.2 412.5L370 410.5L370.2 409.5L371.1 407.5L371.2 406.5L371.8 405.5L372.3 403.5L372.8 402.5L373.3 400.5L373.9 399.5L375.2 395.5L376.1 393.5L376.3 392.5L378 388.5L378.2 387.5L379 385.5L379.2 384.5L380 382.5L380.2 381.5L383.1 374.5L384.4 370.5L384.9 369.5L385.2 368.5L385.5 367.8L386.5 367.1L392.5 367L414.5 367.1L414.9 367.5L414.8 368.5L413.4 371.5L414.5 372.6L463.5 372.6L464.5 372.6L468.5 371.7L470.5 370.7L472.1 369.5L473.5 368.1L474.6 366.5L475 365.5L475.3 364.5L475.8 363.5L476 362.5L476 359.5L475.7 358.5L474.5 357L473.5 356.4L470.5 355.7L459.5 355.5L390.5 355.7L390.1 355.5L390 354.5L390.9 353.5L395.8 346.5L401 338.5Z","M532.1 336.5L532.5 336.1L533.5 335.9L560.5 335.9L561.5 336.5L560 340.5L559.8 341.5L559.2 342.5L558 345.5L555.7 352.5L554 356.5L553.8 357.5L551.1 364.5L550.6 366.5L548 373.5L547.7 374.5L547.2 375.5L541.6 391.5L540 395.5L537.7 402.5L535.3 408.5L533.7 413.5L532.9 415.5L532.6 416.5L531.5 417.3L511.5 417.3L503.5 417.2L502.9 416.5L503.2 415.5L503.7 414.5L504.2 412.5L504.8 411.5L506.5 406.5L506.9 405.5L507.2 404.5L509.1 399.5L509.3 398.5L509.9 397.5L510.4 395.5L510.9 394.5L512.3 390.5L512.9 389.5L513.5 387.5L513.9 386.5L519.5 370.5L519.9 369.5L522.4 362.5L524 358.5L528.3 346.5Z","M634 335.5L634.5 335.3L637.5 335L640.5 334.9L644.5 334.9L646.5 335.2L650.5 336.2L652.5 337.1L654.5 338.3L656 339.5L656.8 340.5L659.5 346.6L663.4 357.5L665.6 362.5L670.9 376.5L672.7 380.5L675.2 387.5L675.7 388.5L676 389.5L676.5 390.6L677.1 392.5L677.7 393.5L677.9 394.5L678.8 396.5L679 397.5L680.6 401.5L681.3 403.5L681.8 404.5L682 405.5L683.1 408.5L683.7 409.5L683.9 410.5L684.8 412.5L685 413.5L686.1 416.5L685.5 417.2L653.5 417.3L652.5 417.2L651.6 416.5L644.8 395.5L644.3 394.5L643.8 392.5L642.1 387.5L641.2 385.5L639 378.5L637.2 373.5L635 366.5L634.2 364.5L634.1 363.5L633.2 361.5L632.5 360.3L630.5 362L621.5 371.5L615.4 377.5L610.8 382.5L598.5 395L587.7 406.5L577.5 417L576.5 417.3L572.5 417.3L550.5 417.3L545.5 417.1L545 416.5L562.2 399.5L567 394.5L590.5 371.2L596.5 365.6L611.5 350.8L616.7 345.5L620.5 341.9L622.5 340.2L625.5 338.4L630.5 336.4L632.5 336Z"]};
 
-// ---------- timeline (seconds) ----------
-const T_ASSEMBLED = 4.6;   // last fragment lands
-const T_INTRO_END = 6.6;   // grass grown, camera settled; done() can exit after this
-const EXIT_DUR = 1.7;
-// Regions in logo UV space (v down)
-const LETTERS_V = 0.762;
-const region = (u, v) => v > LETTERS_V ? 2 : ((u > 0.636) || (u < 0.36 && v > 0.257)) ? 1 : 0; // 0 body,1 arc,2 letters
+// ---------------------------------------------------------------- timeline (s)
+const T_ARC = [0.35, 1.45];      // the pen of light traces the arc
+const T_ARC_FILL = [1.15, 1.6];  // the arc fills in
+const T_STEM = [1.25, 1.75];     // the stem drops in
+const T_IMPACT = 1.62;           // stem lands: ring, shake, dawn
+const T_LETTERS = [1.7, 2.55];   // letters rise one by one
+const T_SHINE = [2.45, 3.25];    // first shine
+const T_INTRO_END = 3.0;
+const EXIT = 0.9;
 
-// ---------- DOM ----------
+// ---------------------------------------------------------------- DOM
 const css = `
-#terria-loader{position:fixed;inset:0;z-index:2147483000;background:#5b8c40 center/cover no-repeat;overflow:hidden;
-  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:opacity .8s ease}
-#terria-loader.tl-gone{opacity:0;pointer-events:none}
-#terria-loader canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-#terria-loader .tl-ui{position:absolute;left:50%;bottom:clamp(40px,11vh,110px);transform:translateX(-50%);
-  width:min(64vw,380px);opacity:0;transition:opacity 1s ease}
-#terria-loader.tl-ui-on .tl-ui{opacity:1}
-#terria-loader.tl-exit .tl-ui{opacity:0;transition-duration:.35s}
-#terria-loader .tl-track{position:relative;height:3px;background:rgba(30,20,8,.45);border-radius:3px;overflow:visible;box-shadow:0 1px 3px rgba(0,0,0,.35)}
-#terria-loader .tl-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:3px;
-  background:linear-gradient(90deg,#5b3b1e,#9b6a35 40%,#a7d443 85%,#e4ff9a);box-shadow:0 0 10px rgba(170,230,80,.55),0 0 2px rgba(255,240,180,.8)}
-#terria-loader .tl-fill::after{content:"";position:absolute;right:-8px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;
-  background:radial-gradient(rgba(255,250,210,.95),rgba(200,255,120,.35) 35%,transparent 70%)}
-#terria-loader .tl-row{display:flex;justify-content:space-between;margin-top:12px;color:#fbf1d8;font-size:10.5px;
-  letter-spacing:.42em;text-transform:uppercase;font-variant-numeric:tabular-nums;
-  text-shadow:0 1px 2px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.55)}
-#terria-loader .tl-row b{font-weight:600;color:#fff;letter-spacing:.18em}
+#terria-loader{position:fixed;inset:0;z-index:2147483000;overflow:hidden;background:#07110c;
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+#terria-loader .tl-bg{position:absolute;inset:-4%;background:#25451f center/cover no-repeat;will-change:transform,filter}
+#terria-loader .tl-vig{position:absolute;inset:0;background:radial-gradient(ellipse 75% 55% at 50% 44%,rgba(4,12,8,.0) 0%,rgba(4,12,8,.35) 55%,rgba(2,8,5,.8) 100%)}
+#terria-loader canvas{position:absolute;inset:0;width:100%;height:100%}
+#terria-loader .tl-stage{position:absolute;left:50%;top:42%;width:min(78vw,520px);transform:translate(-50%,-50%);will-change:transform}
+#terria-loader svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+#terria-loader .tl-ui{position:absolute;left:50%;top:calc(42% + min(78vw,520px)*0.39 + 34px);transform:translateX(-50%);width:min(52vw,300px);opacity:0}
+#terria-loader .tl-track{height:5px;border-radius:2px;background:rgba(255,255,255,.16);transform:skewX(-20deg);overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.35)}
+#terria-loader .tl-fill{height:100%;width:0;background:linear-gradient(90deg,#fff6dc,#ffffff 60%,#ffe9a8);box-shadow:0 0 12px rgba(255,236,170,.9)}
+#terria-loader .tl-row{display:flex;justify-content:space-between;margin-top:10px;color:rgba(255,255,255,.82);font-size:11px;
+  letter-spacing:.38em;text-transform:uppercase;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+#terria-loader .tl-row b{font-weight:600;letter-spacing:.14em;color:#fff}
 #terria-loader.tl-failed .tl-track,#terria-loader.tl-failed .tl-row b{display:none}
-#terria-loader.tl-failed .tl-row{justify-content:center;text-align:center;letter-spacing:.04em;text-transform:none;font-size:14px;line-height:1.4}
-#terria-loader .tl-fallback{position:absolute;left:50%;top:44%;width:min(76vw,620px);transform:translate(-50%,-50%);
-  animation:tl-fb 7s ease-in-out infinite;filter:drop-shadow(0 20px 30px #000)}
-@keyframes tl-fb{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-10px)}}`;
-const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
+#terria-loader.tl-failed .tl-row{justify-content:center;letter-spacing:.03em;text-transform:none;font-size:14px}`;
+const style = document.createElement('style');
+style.textContent = css;
+document.head.appendChild(style);
+
+const NS = 'http://www.w3.org/2000/svg';
 const root = document.createElement('div');
 root.id = 'terria-loader';
-root.setAttribute('role', 'progressbar'); root.setAttribute('aria-label', 'Загрузка TERRIA');
-root.setAttribute('aria-valuemin', '0'); root.setAttribute('aria-valuemax', '100');
-root.innerHTML = `<canvas></canvas><div class="tl-ui"><div class="tl-track"><div class="tl-fill"></div></div>
-  <div class="tl-row"><span>Загрузка</span><b>0%</b></div></div>`;
-if (BG_URL) root.style.backgroundImage = `url("${BG_URL}")`;
+root.setAttribute('role', 'progressbar');
+root.setAttribute('aria-label', 'Загрузка TERRIA');
+root.innerHTML = `<div class="tl-bg"></div><div class="tl-vig"></div><canvas></canvas>
+<div class="tl-stage"><svg viewBox="-20 -30 726 480" aria-hidden="true">
+<defs>
+ <linearGradient id="tl-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e9e2d0"/></linearGradient>
+ <linearGradient id="tl-shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fffbe8" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+ <radialGradient id="tl-pen"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#fff6d0" stop-opacity=".9"/><stop offset="1" stop-color="#ffd977" stop-opacity="0"/></radialGradient>
+ <filter id="tl-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>
+ <clipPath id="tl-base"><rect x="-40" y="318" width="780" height="110"/></clipPath>
+ <mask id="tl-mask"><g fill="#fff" class="tl-maskparts"></g></mask>
+</defs>
+<g class="tl-logo">
+ <g class="tl-glowlayer" filter="url(#tl-glow)" opacity="0"></g>
+ <g class="tl-glowletters" filter="url(#tl-glow)" opacity="0"></g>
+ <path class="tl-arc-fill" fill="url(#tl-g)" opacity="0"/>
+ <path class="tl-arc-line" fill="none" stroke="#fff8e2" stroke-width="2.6" stroke-linejoin="round"/>
+ <g class="tl-stem-g"><path class="tl-stem" fill="url(#tl-g)"/></g>
+ <g clip-path="url(#tl-base)" class="tl-letters"></g>
+ <g mask="url(#tl-mask)"><rect class="tl-shine" x="-300" y="-40" width="260" height="500" fill="url(#tl-shine)" transform="skewX(-20)" opacity="0"/></g>
+ <circle class="tl-ring" cx="345" cy="300" r="10" fill="none" stroke="#fff6d6" stroke-width="5" opacity="0"/>
+ <circle class="tl-pen" r="22" fill="url(#tl-pen)" opacity="0"/>
+</g></svg></div>
+<div class="tl-ui"><div class="tl-track"><div class="tl-fill"></div></div><div class="tl-row"><span>Загрузка</span><b>0%</b></div></div>`;
 (document.body || document.documentElement).appendChild(root);
-const canvas = root.querySelector('canvas');
-const fillEl = root.querySelector('.tl-fill'), pctEl = root.querySelector('.tl-row b');
 
-// ---------- public API (works even before WebGL is up) ----------
-let target = 0, shown = 0, doneRequested = false, exitStart = -1, removed = false, introDone = false, failed = false;
+const $ = (s) => root.querySelector(s);
+const bg = $('.tl-bg');
+if (BG_URL) bg.style.backgroundImage = `url("${BG_URL}")`;
+const stage = $('.tl-stage');
+const arcFill = $('.tl-arc-fill');
+const arcLine = $('.tl-arc-line');
+const stemG = $('.tl-stem-g');
+const stem = $('.tl-stem');
+const lettersG = $('.tl-letters');
+const shine = $('.tl-shine');
+const ring = $('.tl-ring');
+const pen = $('.tl-pen');
+const glowLayer = $('.tl-glowlayer');
+const glowLetters = $('.tl-glowletters');
+const ui = $('.tl-ui');
+const fillEl = $('.tl-fill');
+const pctEl = $('.tl-row b');
+arcFill.setAttribute('d', P.arc);
+arcLine.setAttribute('d', P.arc);
+stem.setAttribute('d', P.stem);
+const maskParts = $('.tl-maskparts');
+[P.arc, P.stem, ...P.letters].forEach((d, i) => {
+  const m = document.createElementNS(NS, 'path');
+  m.setAttribute('d', d);
+  maskParts.appendChild(m);
+  const g = document.createElementNS(NS, 'path');
+  g.setAttribute('d', d);
+  g.setAttribute('fill', '#fff4cc');
+  (i < 2 ? glowLayer : glowLetters).appendChild(g);
+});
+const letters = P.letters.map((d) => {
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', d);
+  p.setAttribute('fill', 'url(#tl-g)');
+  lettersG.appendChild(p);
+  return p;
+});
+const arcLen = arcLine.getTotalLength();
+arcLine.style.strokeDasharray = `${arcLen} ${arcLen}`;
+
+// ---------------------------------------------------------------- public API
+let target = 0, shown = 0, doneRequested = false, failed = false, introDone = false, exitStart = -1, removed = false;
 window.TerriaLoader = {
   set(p) { target = Math.max(target, Math.min(1, +p || 0)); },
   done() { if (!failed) { doneRequested = true; target = 1; } },
-  fail(msg) {
-    failed = true; doneRequested = false;
-    root.classList.add('tl-ui-on', 'tl-failed'); root.querySelector('.tl-row span').textContent = msg;
-  },
+  fail(msg) { failed = true; doneRequested = false; root.classList.add('tl-failed'); ui.style.opacity = 1; root.querySelector('.tl-row span').textContent = msg; },
   get progress() { return shown; },
-  get introDone() { return introDone; }
+  get introDone() { return introDone; },
 };
-const markIntro = () => { if (!introDone) { introDone = true; emit('terria-loader-intro'); } };
-// The animation starts once the logo and the background picture are both there
-// (the picture never holds it up for more than 3 s).
 let bgReady = !BG_URL;
 if (BG_URL) {
-  const bg = new Image(); bg.decoding = 'async';
-  bg.onload = bg.onerror = () => { bgReady = true; }; bg.src = BG_URL;
-  setTimeout(() => { bgReady = true; }, 3000);
+  const im = new Image();
+  im.onload = im.onerror = () => { bgReady = true; };
+  im.src = BG_URL;
+  setTimeout(() => { bgReady = true; }, 2500);
 }
 
-const gl = canvas.getContext('webgl2', { antialias: false, alpha: true, premultipliedAlpha: true, powerPreference: 'high-performance' });
-if (!gl) return fallback();
-
-// ---------- helpers ----------
-function sh(type, src) {
-  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) + '\n' + src);
-  return s;
+// ---------------------------------------------------------------- motes
+const cv = root.querySelector('canvas');
+const cx = cv.getContext('2d');
+let cw = 0, ch = 0, dpr = 1;
+const motes = [];
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+for (let i = 0; i < 70; i++) motes.push({ x: rnd(), y: rnd(), z: 0.3 + rnd() * 0.7, s: rnd() * 6.28, v: 0.01 + rnd() * 0.025 });
+function sizeCanvas() {
+  dpr = Math.min(2, devicePixelRatio || 1);
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (w !== cw || h !== ch) { cv.width = cw = w; cv.height = ch = h; }
 }
-function prog(vs, fs) {
-  const p = gl.createProgram();
-  gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
-  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
-  return { p, u };
-}
-function tex(w, h, data, linear = true, fmt = gl.RGBA8, srcFmt = gl.RGBA, type = gl.UNSIGNED_BYTE) {
-  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-  gl.texImage2D(gl.TEXTURE_2D, 0, fmt, w, h, 0, srcFmt, type, data);
-  const f = linear ? gl.LINEAR : gl.NEAREST;
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  return t;
-}
-let seed = 1337; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-
-// ---------- shaders ----------
-const COMMON = `#version 300 es
-precision highp float;
-uniform mat4 uVP; uniform float uTime, uExit;`;
-
-const FRAG_VS = COMMON + `
-layout(location=0) in vec2 aCorner;
-layout(location=1) in vec4 aUV;      // u0 v0 u1 v1
-layout(location=2) in vec4 aHome;    // x y w h (world)
-layout(location=3) in vec4 aStart;   // xyz, spin amount
-layout(location=4) in vec4 aAxis;    // xyz axis, delay
-layout(location=5) in vec4 aMisc;    // duration, seed, region, -
-uniform float uLayer;                // 0 = face, >0 = extrusion layers behind
-out vec2 vUV; out vec3 vN0; out float vAlpha, vLayer, vLand; out mat3 vRot;
-mat3 rotAxis(vec3 a, float ang){ a=normalize(a); float s=sin(ang),c=cos(ang),oc=1.-c;
-  return mat3(oc*a.x*a.x+c, oc*a.x*a.y+a.z*s, oc*a.z*a.x-a.y*s,
-              oc*a.x*a.y-a.z*s, oc*a.y*a.y+c, oc*a.y*a.z+a.x*s,
-              oc*a.z*a.x+a.y*s, oc*a.y*a.z-a.x*s, oc*a.z*a.z+c); }
-float easeOutBack(float x){ float c1=1.25, c3=c1+1.; return 1.+c3*pow(x-1.,3.)+c1*pow(x-1.,2.); }
-void main(){
-  float delay=aAxis.w, dur=aMisc.x, sd=aMisc.y;
-  float p=clamp((uTime-delay)/dur,0.,1.);
-  float e = aMisc.z>1.5 ? easeOutBack(p) : 1.-pow(1.-p,4.);
-  // path: start → arc over a curved trajectory → home
-  vec3 home=vec3(aHome.xy, 0.);
-  vec3 mid = mix(aStart.xyz, home, .5) + vec3(0., .35, .6)*(1.-abs(aStart.y)*.2);
-  float q=1.-pow(1.-p,2.2);
-  vec3 pos = mix(mix(aStart.xyz,mid,q), mix(mid,home,q), q);
-  pos = mix(pos, home, smoothstep(.75,1.,p));
-  mat3 R = rotAxis(aAxis.xyz, aStart.w*(1.-e));
-  float scl = mix(.35,1.,smoothstep(0.,.6,p));
-  // exit: fragments blast away from the camera-facing plane
-  float x=clamp(uExit*1.5 - sd*.5, 0., 1.);
-  vec3 dir=normalize(vec3(aHome.xy*1.3 + (vec2(sd,fract(sd*7.3))-.5)*.9, .9+sd));
-  pos += dir*x*x*4.5 + vec3(0.,-1.,0.)*x*x*x*1.2;
-  R = rotAxis(aAxis.zxy, x*x*9.*(sd+.3)) * R;
-  scl *= 1.-x*.4;
-  vec3 local = vec3(aCorner*aHome.zw*1.012*scl, -uLayer);
-  vec3 wp = pos + R*local;
-  gl_Position = uVP*vec4(wp,1.);
-  vUV = mix(aUV.xy, aUV.zw, vec2(aCorner.x+.5, .5-aCorner.y));
-  vRot = R; vAlpha = smoothstep(0.,.18,p)*(1.-smoothstep(.55,1.,x)); vLayer=uLayer; vLand=p;
-}`;
-
-const FRAG_FS = COMMON + `
-uniform sampler2D uAlb, uNrm; uniform vec3 uSun; uniform vec2 uGrow; uniform float uLit;
-in vec2 vUV; in float vAlpha, vLayer, vLand; in mat3 vRot;
-out vec4 o;
-float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
-float noise(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);
-  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
-void main(){
-  vec4 nm = texture(uNrm, vUV);
-  float grassM = nm.a;
-  // grass growth: front sweeps top→bottom inside each region (symbol / letters)
-  bool letters = vUV.y > ${LETTERS_V.toFixed(3)};
-  float lv = letters ? (vUV.y-${LETTERS_V.toFixed(3)})/(1.-${LETTERS_V.toFixed(3)}) : vUV.y/${LETTERS_V.toFixed(3)};
-  float g = letters ? uGrow.y : uGrow.x;
-  float front = g*1.25 - .12 + (noise(vUV*vec2(60.,25.))-.5)*.18;
-  float grown = smoothstep(lv-.06, lv+.02, front);
-  // wind: only grass pixels sway, more at blade tips (high-frequency gust field)
-  float gust = noise(vec2(vUV.x*6. - uTime*.55, uTime*.2))*.8+.2;
-  vec2 uv = vUV + vec2(sin(uTime*2.3 + vUV.x*55. + vUV.y*30.)*.0012, 0.)*grassM*grown*gust;
-  vec4 alb = texture(uAlb, uv);
-  if (alb.a < .04) discard;
-  vec3 col = alb.rgb;
-  float L = dot(col, vec3(.3,.59,.11));
-  vec3 dirt = vec3(L*.95, L*.66, L*.42) * (.85 + .3*noise(vUV*180.));
-  float gm = grassM * (1.-grown*.999);
-  col = mix(col, dirt, gm);
-  // blades appear with a fresh bright tint at the growth front
-  col += vec3(.18,.32,.02)*grassM*smoothstep(.12,0.,abs(front-lv))*g*(1.-g)*4.;
-  // lighting
-  vec3 n = normalize(vRot*(nm.xyz*2.-1.));
-  vec3 Ld = normalize(uSun);
-  float dif = max(dot(n,Ld),0.);
-  vec3 H = normalize(Ld+vec3(0,0,1));
-  float rock = (1.-grassM)*smoothstep(.15,.5,L);
-  float spec = pow(max(dot(n,H),0.), 28.)*rock*.55 + pow(max(dot(n,H),0.),6.)*grassM*grown*.12;
-  float rim = pow(1.-max(n.z,0.),2.)*.35;
-  vec3 sunC = vec3(1.,.86,.62);
-  vec3 lit = col*(vec3(.34,.36,.42) + sunC*dif*.8) + sunC*spec + vec3(.55,.75,.35)*rim*grassM;
-  // extrusion layers: dark soil sides with gentle falloff
-  if (vLayer > 0.) lit = col*vec3(.16,.12,.09)*(1.-vLayer*3.) ;
-  lit *= uLit;
-  // freshly landing fragments flash slightly (impact)
-  lit += vec3(.5,.42,.3)*smoothstep(.85,1.,vLand)*(1.-smoothstep(1.,1.,vLand))*.0;
-  o = vec4(lit, alb.a*vAlpha);
-}`;
-
-const DUST_VS = COMMON + `
-layout(location=0) in vec4 aP;   // seed xyz, kind
-uniform vec2 uRes; uniform float uFocus;
-out float vA, vBlur; out vec3 vC;
-float h(float n){ return fract(sin(n)*43758.5453); }
-void main(){
-  vec3 s=aP.xyz; float kind=aP.w; vec3 p; float a; float size;
-  if (kind < .5) {           // floating dust in a volume
-    p = vec3((s.x-.5)*5.5, mod(s.y*3.2 + uTime*(.03+.05*s.z), 3.2)-1.6, (s.z-.5)*3.2);
-    p.x += sin(uTime*.35 + s.y*20.)*.08; p.z += cos(uTime*.3 + s.x*17.)*.06;
-    a = (.35+.65*h(s.x*91.))*smoothstep(0.,1.5,uTime)*(.6+.4*sin(uTime*1.3+s.z*30.));
-    size = .010 + .016*h(s.y*13.);
-  } else if (kind < 1.5) {   // crumbs falling from the logo's lower edges (looping)
-    float per = 2.4 + s.z*2.5, t = mod(uTime + s.y*per, per), on = step(${T_ASSEMBLED.toFixed(1)}, uTime - t);
-    p = vec3((s.x-.5)*1.9, -.25 - s.z*.35 - 1.6*t*t, .02);
-    a = on*(1.-t/per)*.9; size = .008 + .01*s.y;
-  } else {                   // assembly dust swirl converging to the logo
-    float t = clamp(uTime/${T_ASSEMBLED.toFixed(1)},0.,1.);
-    float ang = s.x*6.283 + t*3.5*(s.z+.5), r = mix(2.4+s.y*1.4, .25+s.y*.6, pow(t,.7));
-    p = vec3(cos(ang)*r*1.2, sin(ang)*r*.55, (s.z-.5)*1.2*(1.-t));
-    a = smoothstep(0.,.15,t)*(1.-smoothstep(.75,1.,t))*.8; size=.012+.01*s.z;
+function drawMotes(t, dt, light) {
+  sizeCanvas();
+  cx.clearRect(0, 0, cw, ch);
+  cx.globalCompositeOperation = 'lighter';
+  for (const m of motes) {
+    m.y -= m.v * dt * m.z;
+    m.x += Math.sin(t * 0.6 + m.s) * 0.0006 * m.z;
+    if (m.y < -0.05) { m.y = 1.05; m.x = rnd(); }
+    const a = (0.25 + 0.75 * Math.max(0, Math.sin(t * 1.7 + m.s * 3))) * light * m.z;
+    const r = (1.2 + 2.6 * m.z) * dpr;
+    const g = cx.createRadialGradient(m.x * cw, m.y * ch, 0, m.x * cw, m.y * ch, r * 3);
+    g.addColorStop(0, `rgba(255,244,200,${0.75 * a})`);
+    g.addColorStop(1, 'rgba(255,230,160,0)');
+    cx.fillStyle = g;
+    cx.beginPath();
+    cx.arc(m.x * cw, m.y * ch, r * 3, 0, 6.283);
+    cx.fill();
   }
-  vec4 c = uVP*vec4(p,1.);
-  gl_Position = c;
-  float depth = c.w;
-  vBlur = clamp(abs(depth-uFocus)*.55, 0., 1.);
-  gl_PointSize = clamp(size*uRes.y/depth*(1.+vBlur*4.), 1., 64.);
-  vA = a*(1.-uExit)*mix(1.,.25,vBlur);
-  vC = kind<.5 ? vec3(1.,.88,.66) : kind<1.5 ? vec3(.42,.30,.18) : vec3(.75,.6,.42);
-}`;
-const DUST_FS = `#version 300 es
-precision highp float; in float vA, vBlur; in vec3 vC; out vec4 o;
-void main(){ vec2 d=gl_PointCoord-.5; float r=length(d)*2.;
-  float m = mix(1.-smoothstep(.55,1.,r), (1.-smoothstep(.75,1.,r))*(.55+.45*smoothstep(.5,.95,r)), vBlur);
-  o = vec4(vC*m*vA, m*vA); }`;
-
-const SHADOW_FS = `#version 300 es
-precision highp float; in vec2 vUV; uniform float uA; out vec4 o;
-void main(){ vec2 d=(vUV-.5)*vec2(2.,2.); float m=exp(-dot(d,d)*3.2); o=vec4(0.,0.,0.,m*uA); }`;
-const QUAD_VS = `#version 300 es
-layout(location=0) in vec2 aCorner; uniform mat4 uVP; uniform vec4 uRect; out vec2 vUV;
-void main(){ vUV=aCorner+.5; vec3 p=vec3(uRect.x+aCorner.x*uRect.z, uRect.y, aCorner.y*uRect.w); gl_Position=uVP*vec4(p,1.); }`;
-
-const POST_VS = `#version 300 es
-layout(location=0) in vec2 aCorner; out vec2 vUV; void main(){ vUV=aCorner+.5; gl_Position=vec4(aCorner*2.,0.,1.); }`;
-const BRIGHT_FS = `#version 300 es
-precision highp float; uniform sampler2D uSrc; in vec2 vUV; out vec4 o;
-void main(){ vec3 c=texture(uSrc,vUV).rgb; float l=dot(c,vec3(.3,.59,.11)); o=vec4(c*smoothstep(.62,1.,l),1.); }`;
-const BLUR_FS = `#version 300 es
-precision highp float; uniform sampler2D uSrc; uniform vec2 uDir; in vec2 vUV; out vec4 o;
-void main(){ vec3 c=texture(uSrc,vUV).rgb*.227;
-  c+=(texture(uSrc,vUV+uDir*1.385).rgb+texture(uSrc,vUV-uDir*1.385).rgb)*.316;
-  c+=(texture(uSrc,vUV+uDir*3.231).rgb+texture(uSrc,vUV-uDir*3.231).rgb)*.070; o=vec4(c,1.); }`;
-const FINAL_FS = `#version 300 es
-precision highp float;
-uniform sampler2D uScene, uBloom; uniform vec2 uLightPos, uRes; uniform float uTime, uRays, uFade;
-in vec2 vUV; out vec4 o;
-float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
-vec3 aces(vec3 x){ return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.); }
-void main(){
-  // chromatic fringe towards the edges
-  vec2 dc = vUV-.5; float ca = dot(dc,dc)*.006;
-  vec4 sc = texture(uScene,vUV);
-  vec3 c = vec3(texture(uScene,vUV+dc*ca).r, sc.g, texture(uScene,vUV-dc*ca).b);
-  vec3 b = texture(uBloom,vUV).rgb;
-  // volumetric light shafts: march from pixel towards the sun, sampling the bright buffer
-  vec2 st = (vUV-uLightPos)/48.*.9; vec2 uv=vUV; float dec=1.; vec3 rays=vec3(0.);
-  float j = hash(vUV*uRes+uTime);
-  uv -= st*j;
-  for(int i=0;i<48;i++){ uv-=st; rays+=texture(uBloom,uv).rgb*dec; dec*=.955; }
-  rays *= .03*uRays;
-  // soft sky glow around light source
-  float lg = exp(-length((vUV-uLightPos)*vec2(uRes.x/uRes.y,1.))*3.2)*.10*uRays;
-  vec3 col = c + b*.45 + rays*vec3(1.,.85,.6) + lg*vec3(1.,.8,.55);
-  col = aces(col*1.25);
-  float vig = smoothstep(1.15,.35,length(dc*vec2(uRes.x/uRes.y*.75,1.)));
-  col *= mix(.25,1.,vig);
-  // transparent background: alpha = logo coverage, light (rays, bloom) shows as a haze
-  float a = clamp(max(sc.a, max(col.r, max(col.g, col.b))), 0., 1.);
-  col += (hash(vUV*uRes + fract(uTime)*91.)-.5)*.022*sc.a;
-  col = pow(max(col, vec3(0.)), vec3(.97,1.,1.03));      // slight warm grade
-  col = min(col, vec3(a));
-  o = vec4(col, a)*uFade;
-}`;
-
-// ---------- programs & geometry ----------
-let P;
-try {
-  P = {
-    frag: prog(FRAG_VS, FRAG_FS), dust: prog(DUST_VS, DUST_FS), shadow: prog(QUAD_VS, SHADOW_FS),
-    bright: prog(POST_VS, BRIGHT_FS), blur: prog(POST_VS, BLUR_FS), final: prog(POST_VS, FINAL_FS)
-  };
-} catch (e) { console.error('[TerriaLoader]', e); return fallback(); }
-
-const quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.5,-.5, .5,-.5, -.5,.5, .5,.5]), gl.STATIC_DRAW);
-const quadVAO = gl.createVertexArray(); gl.bindVertexArray(quadVAO);
-gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-
-let fragVAO, fragCount = 0, dustVAO, dustCount = 0, albTex, nrmTex, logoAspect = 1.5, ready = false;
-
-// dust particles: 0 = ambient dust, 1 = falling crumbs, 2 = assembly swirl
-(() => {
-  const N0 = 420, N1 = 70, N2 = 520, a = [];
-  for (let i = 0; i < N0; i++) a.push(rnd(), rnd(), rnd(), 0);
-  for (let i = 0; i < N1; i++) a.push(rnd(), rnd(), rnd(), 1);
-  for (let i = 0; i < N2; i++) a.push(rnd(), rnd(), rnd(), 2);
-  dustCount = N0 + N1 + N2;
-  dustVAO = gl.createVertexArray(); gl.bindVertexArray(dustVAO);
-  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
-})();
-
-// ---------- logo analysis ----------
-const img = new Image(); img.crossOrigin = 'anonymous'; img.decoding = 'async'; img.src = LOGO_URL;
-img.onerror = () => fallback();
-img.onload = () => {
-  const W = img.naturalWidth, H = img.naturalHeight; logoAspect = W / H;
-  const c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0);
-  let data; try { data = x.getImageData(0, 0, W, H).data; } catch (e) { return fallback(); } // file:// taint
-  const N = W * H, hgt = new Float32Array(N), grass = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const r = data[i*4], g = data[i*4+1], b = data[i*4+2], a = data[i*4+3] / 255;
-    const L = (r*.3 + g*.59 + b*.11) / 255;
-    hgt[i] = a * (.55 + .45*L);                          // silhouette + luminance relief
-    grass[i] = Math.max(0, Math.min(1, Math.min((g - r*.85) / 25, (g - b - 20) / 30)));
-  }
-  const blur = (src, rad) => {                          // separable box blur
-    const tmp = new Float32Array(N), out = new Float32Array(N), k = 1 / (2*rad + 1);
-    for (let y = 0; y < H; y++) { let s = 0; for (let i = -rad; i <= rad; i++) s += src[y*W + Math.min(W-1, Math.max(0, i))];
-      for (let xx = 0; xx < W; xx++) { tmp[y*W+xx] = s*k; s += src[y*W + Math.min(W-1, xx+rad+1)] - src[y*W + Math.max(0, xx-rad)]; } }
-    for (let xx = 0; xx < W; xx++) { let s = 0; for (let i = -rad; i <= rad; i++) s += tmp[Math.min(H-1, Math.max(0, i))*W + xx];
-      for (let y = 0; y < H; y++) { out[y*W+xx] = s*k; s += tmp[Math.min(H-1, y+rad+1)*W + xx] - tmp[Math.max(0, y-rad)*W + xx]; } }
-    return out;
-  };
-  const hb = blur(blur(hgt, 3), 2), hf = blur(hgt, 1), gb = blur(grass, 1);
-  const nrm = new Uint8Array(N * 4);
-  for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
-    const i = y*W + xx, l = Math.max(0, xx-1), r = Math.min(W-1, xx+1), u = Math.max(0, y-1), d = Math.min(H-1, y+1);
-    // two-scale relief: big bevel from soft height + fine detail from sharp height
-    const dx = (hb[y*W+r] - hb[y*W+l]) * 9 + (hf[y*W+r] - hf[y*W+l]) * 5;
-    const dy = (hb[d*W+xx] - hb[u*W+xx]) * 9 + (hf[d*W+xx] - hf[u*W+xx]) * 5;
-    let nx = -dx, ny = dy, nz = 1; const len = Math.hypot(nx, ny, nz); nx /= len; ny /= len; nz /= len;
-    nrm[i*4] = (nx*.5+.5)*255; nrm[i*4+1] = (ny*.5+.5)*255; nrm[i*4+2] = (nz*.5+.5)*255;
-    nrm[i*4+3] = Math.min(1, gb[i]*1.5) * 255;
-  }
-  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-  albTex = tex(W, H, null); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
-  gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  nrmTex = tex(W, H, nrm);
-
-  // ---------- fragments ----------
-  const T = Math.round(W / 52), WW = 2.0, HH = WW / logoAspect, inst = [];
-  for (let ty = 0; ty < H; ty += T) for (let tx = 0; tx < W; tx += T) {
-    const tw = Math.min(T, W - tx), th = Math.min(T, H - ty);
-    let cnt = 0; for (let yy = ty; yy < ty+th; yy += 2) for (let xx = tx; xx < tx+tw; xx += 2) if (data[(yy*W+xx)*4+3] > 40) cnt++;
-    if (cnt < 2) continue;
-    const u0 = tx/W, v0 = ty/H, u1 = (tx+tw)/W, v1 = (ty+th)/H, uc = (u0+u1)/2, vc = (v0+v1)/2;
-    const reg = region(uc, vc);
-    const hx = (uc - .5) * WW, hy = (.5 - vc) * HH, w = tw/W*WW, h = th/H*HH;
-    let delay, dur, sx, sy, sz;
-    const ang = rnd() * Math.PI * 2, dist = 2.2 + rnd() * 2.6;
-    if (reg === 0) {          // body rises from below/depth, top first
-      delay = .25 + rnd()*1.3 + vc*1.1; dur = 1.25 + rnd()*.6;
-      sx = hx*1.6 + Math.cos(ang)*dist*.8; sy = -2.4 - rnd()*1.6; sz = -2.5 + rnd()*3.4;
-    } else if (reg === 1) {   // arc sweeps in along its curve direction
-      const right = uc > .5, along = right ? (uc - .636)/.364 : (.36 - uc)/.36;
-      delay = 1.7 + along*.9 + rnd()*.35; dur = .95 + rnd()*.35;
-      sx = hx + (right ? 2.8 : -2.8) + rnd()*.6; sy = hy + (right ? 1.6 : -.6) + (rnd()-.5)*.8; sz = 1.2 + rnd()*1.4;
-    } else {                  // letters drop from above, left→right, with bounce
-      delay = 2.7 + uc*1.25 + rnd()*.18; dur = .75 + rnd()*.2;
-      sx = hx + (rnd()-.5)*.6; sy = hy + 2.6 + rnd()*1.2; sz = .4 + rnd()*1.2;
-    }
-    const spin = (2.5 + rnd()*5) * (rnd() < .5 ? -1 : 1);
-    inst.push(u0, v0, u1, v1,  hx, hy, w, h,  sx, sy, sz, spin,
-              rnd()-.5, rnd()-.5, rnd()-.5, delay,  dur, rnd(), reg, 0);
-  }
-  fragCount = inst.length / 20;
-  fragVAO = gl.createVertexArray(); gl.bindVertexArray(fragVAO);
-  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-  const ib = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(inst), gl.STATIC_DRAW);
-  for (let k = 0; k < 5; k++) { gl.enableVertexAttribArray(1+k); gl.vertexAttribPointer(1+k, 4, gl.FLOAT, false, 80, k*16); gl.vertexAttribDivisor(1+k, 1); }
-  ready = true; tStart = -1;
-};
-
-// ---------- render targets ----------
-let fbScene, fbA, fbB, rtW = 0, rtH = 0;
-function makeRT(w, h) {
-  const t = tex(w, h, null), f = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
-  return { t, f, w, h };
-}
-function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = Math.max(2, Math.round(canvas.clientWidth * dpr)), h = Math.max(2, Math.round(canvas.clientHeight * dpr));
-  if (w === rtW && h === rtH) return;
-  canvas.width = rtW = w; canvas.height = rtH = h;
-  [fbScene, fbA, fbB].forEach(r => r && (gl.deleteTexture(r.t), gl.deleteFramebuffer(r.f)));
-  fbScene = makeRT(w, h);
-  const bw = Math.max(2, w >> 2), bh = Math.max(2, h >> 2);
-  fbA = makeRT(bw, bh); fbB = makeRT(bw, bh);
+  cx.globalCompositeOperation = 'source-over';
 }
 
-// ---------- math ----------
-function persp(fov, asp, n, f) { const t = 1/Math.tan(fov/2), nf = 1/(n-f);
-  return [t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)*nf,-1, 0,0,2*f*n*nf,0]; }
-function lookAt(e, c, up) {
-  const z = norm(sub(e, c)), x = norm(cross(up, z)), y = cross(z, x);
-  return [x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -dot(x,e),-dot(y,e),-dot(z,e),1]; }
-function mul(a, b) { const o = new Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-  let s = 0; for (let k = 0; k < 4; k++) s += a[k*4+j] * b[i*4+k]; o[i*4+j] = s; } return o; }
-const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]], dot = (a, b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
-const norm = a => { const l = Math.hypot(...a) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
-const clamp = (x, a, b) => Math.max(a, Math.min(b, x)), sstep = (a, b, x) => { const t = clamp((x-a)/(b-a), 0, 1); return t*t*(3-2*t); };
-function project(m, p) { const x = m[0]*p[0]+m[4]*p[1]+m[8]*p[2]+m[12], y = m[1]*p[0]+m[5]*p[1]+m[9]*p[2]+m[13], w = m[3]*p[0]+m[7]*p[1]+m[11]*p[2]+m[15];
-  return [(x/w)*.5+.5, (y/w)*.5+.5]; }
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const prog = (t, [a, b]) => clamp((t - a) / (b - a));
+const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeOutBack = (x) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
 
-// pointer / device-tilt parallax
-let px = 0, py = 0, spx = 0, spy = 0;
-addEventListener('pointermove', e => { px = e.clientX/innerWidth*2-1; py = e.clientY/innerHeight*2-1; }, { passive: true });
-addEventListener('deviceorientation', e => { if (e.gamma != null) { px = clamp(e.gamma/30, -1, 1); py = clamp((e.beta-45)/30, -1, 1); } }, { passive: true });
-
-// ---------- frame ----------
-let tStart = -1, last = 0;
+// ---------------------------------------------------------------- frame
+let t0 = -1, last = 0, lastShine = T_SHINE[0];
 function frame(now) {
   if (removed) return;
   requestAnimationFrame(frame);
-  if (window.__TL_CLOCK) now = window.__TL_CLOCK();   // deterministic capture hook
-  // progress UI (smoothed)
-  shown += (target - shown) * Math.min(1, (now - last) / 1000 * 4); last = now;
-  if (target - shown < .002) shown = target;
-  const pct = Math.round(shown * 100);
-  fillEl.style.width = (shown * 100) + '%'; pctEl.textContent = pct + '%'; root.setAttribute('aria-valuenow', pct);
+  if (window.__TL_CLOCK) now = window.__TL_CLOCK();
+  const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+  last = now;
+  shown += (target - shown) * Math.min(1, dt * 4);
+  if (target - shown < 0.002) shown = target;
+  fillEl.style.width = (shown * 100).toFixed(1) + '%';
+  pctEl.textContent = Math.round(shown * 100) + '%';
+  root.setAttribute('aria-valuenow', Math.round(shown * 100));
+  if (!bgReady) { drawMotes(0, dt, 0.3); return; }
+  if (t0 < 0) t0 = now;
+  let t = (now - t0) / 1000;
+  if (REDUCED) t = Math.max(t, T_INTRO_END + 0.5);
+  if (t >= T_INTRO_END && !introDone) { introDone = true; emit('terria-loader-intro'); }
 
-  if (!ready || !bgReady) { gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); return; }
-  if (tStart < 0) tStart = now;
-  let t = (now - tStart) / 1000;
-  if (REDUCED) t = Math.max(t, T_INTRO_END + 1);
-  if (t > 1.2) root.classList.add('tl-ui-on');
-  if (t > T_INTRO_END) markIntro();
+  // exit
+  if (doneRequested && exitStart < 0 && introDone && shown > 0.995) { exitStart = t; emit('terria-loader-reveal'); }
+  const ex = exitStart < 0 ? 0 : clamp((t - exitStart) / EXIT);
 
-  if (doneRequested && exitStart < 0 && t > T_INTRO_END && shown > .995) { exitStart = t; root.classList.add('tl-exit'); }
-  const ex = exitStart < 0 ? 0 : clamp((t - exitStart) / EXIT_DUR, 0, 1);
-  if (ex >= 1 && !removed) { finish(); return; }
+  // dawn: the land brightens when the stem lands
+  const dawn = easeOut(clamp((t - T_IMPACT + 0.15) / 1.4));
+  const night = 0.16 + 0.1 * clamp(t / T_IMPACT);
+  const bright = night + (0.66 - night) * dawn + 0.34 * easeInOut(ex);
+  const flash = Math.max(0, 1 - Math.abs(t - T_IMPACT - 0.05) / 0.25) * 0.25;
+  bg.style.filter = `brightness(${(bright + flash).toFixed(3)}) saturate(${(0.7 + 0.4 * dawn).toFixed(2)})`;
+  const push = 1.06 - 0.06 * easeOut(clamp(t / 3.5)) + 0.1 * easeInOut(ex);
+  bg.style.transform = `scale(${push.toFixed(4)})`;
+  drawMotes(t, dt, 0.5 + 0.5 * dawn * (1 - ex));
 
-  resize();
-  const asp = rtW / rtH;
-  // camera: dolly-out from a low, close angle to a calm hero shot; then idle drift + parallax
-  spx += (px - spx) * .04; spy += (py - spy) * .04;
-  const intro = sstep(0, T_INTRO_END + .4, t), idle = sstep(T_INTRO_END - 1, T_INTRO_END + 1, t);
-  const fitDist = Math.max(3.0, (1.25 / Math.tan(20 * Math.PI/180)) / Math.min(asp, 1.9));
-  const dist = fitDist * (0.78 + 0.22*intro) * (1 + ex*.15);
-  const yaw = (1-intro)*-.38 + idle*(Math.sin(t*.23)*.10 + spx*.16);
-  const pitch = (1-intro)*-.22 + idle*(Math.sin(t*.31)*.05 - spy*.09);
-  const eye = [Math.sin(yaw)*Math.cos(pitch)*dist, Math.sin(pitch)*dist + .08, Math.cos(yaw)*Math.cos(pitch)*dist];
-  const view = lookAt(eye, [0, .02 + (1-intro)*-.1, 0], [Math.sin(t*.17)*.012*idle, 1, 0]);
-  const VP = mul(persp(40 * Math.PI/180, asp, .05, 50), view);
+  // the pen of light traces the arc, then it fills
+  const a = easeInOut(prog(t, T_ARC));
+  arcLine.style.strokeDashoffset = String(arcLen * (1 - a));
+  const af = easeOut(prog(t, T_ARC_FILL));
+  arcFill.setAttribute('opacity', af.toFixed(3));
+  arcLine.setAttribute('opacity', (a > 0 ? 1 - af : 0).toFixed(3));
+  if (a > 0 && a < 1) {
+    const pt = arcLine.getPointAtLength(arcLen * a);
+    pen.setAttribute('cx', pt.x);
+    pen.setAttribute('cy', pt.y);
+    pen.setAttribute('opacity', String(Math.min(1, a * 8, (1 - a) * 8)));
+  } else pen.setAttribute('opacity', '0');
 
-  // sun: sweeps across, then settles into a slow arc
-  const sa = -1.1 + 1.6*sstep(.5, T_INTRO_END + 1, t) + Math.sin(t*.25)*.35*idle;
-  const sun = [Math.sin(sa)*.9, .75 + Math.cos(t*.2)*.1, .85];
-  const lit = sstep(.0, 1.6, t);
+  // the stem drops in and lands
+  const s = prog(t, T_STEM);
+  const sy = (1 - easeOutBack(s)) * -150;
+  stemG.setAttribute('transform', `translate(0 ${sy.toFixed(2)})`);
+  stemG.setAttribute('opacity', clamp(s * 4).toFixed(3));
+  const ri = clamp((t - T_IMPACT) / 0.7);
+  ring.setAttribute('r', (10 + 150 * easeOut(ri)).toFixed(1));
+  ring.setAttribute('opacity', (ri > 0 && ri < 1 ? 0.8 * (1 - ri) : 0).toFixed(3));
+  ring.setAttribute('stroke-width', (6 * (1 - ri) + 0.5).toFixed(2));
+  const shake = t > T_IMPACT && t < T_IMPACT + 0.35 ? Math.sin((t - T_IMPACT) * 70) * 5 * (1 - (t - T_IMPACT) / 0.35) : 0;
 
-  // ---- scene pass ----
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbScene.f); gl.viewport(0, 0, rtW, rtH);
-  gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  // the letters rise from below the line, one by one
+  letters.forEach((p, i) => {
+    const k = clamp((t - T_LETTERS[0] - i * 0.09) / 0.5);
+    p.setAttribute('transform', `translate(0 ${((1 - easeOut(k)) * 95).toFixed(2)})`);
+    p.setAttribute('opacity', clamp(k * 3).toFixed(3));
+  });
 
-  // contact shadow on an invisible ground under the logo
-  gl.useProgram(P.shadow.p); gl.uniformMatrix4fv(P.shadow.u.uVP, false, VP);
-  gl.uniform4f(P.shadow.u.uRect, 0, -2/logoAspect*.5 - .08, 2.6, 1.1);
-  gl.uniform1f(P.shadow.u.uA, .85 * sstep(1.5, T_ASSEMBLED, t) * (1-ex));
-  gl.bindVertexArray(quadVAO); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-  // fragments: extrusion layers back→front, then the lit face
-  gl.useProgram(P.frag.p); const u = P.frag.u;
-  gl.uniformMatrix4fv(u.uVP, false, VP); gl.uniform1f(u.uTime, t); gl.uniform1f(u.uExit, ex);
-  gl.uniform3f(u.uSun, ...sun); gl.uniform1f(u.uLit, lit);
-  gl.uniform2f(u.uGrow, sstep(T_ASSEMBLED - 1.6, T_ASSEMBLED + 1.0, t), sstep(T_ASSEMBLED - .2, T_INTRO_END - .1, t));
-  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, albTex); gl.uniform1i(u.uAlb, 0);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nrmTex); gl.uniform1i(u.uNrm, 1);
-  gl.bindVertexArray(fragVAO);
-  for (const L of [.09, .07, .05, .035, .02, .01]) { gl.uniform1f(u.uLayer, L); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, fragCount); }
-  gl.uniform1f(u.uLayer, 0); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, fragCount);
-
-  // dust (additive, premultiplied)
-  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-  gl.useProgram(P.dust.p); gl.uniformMatrix4fv(P.dust.u.uVP, false, VP);
-  gl.uniform1f(P.dust.u.uTime, t); gl.uniform1f(P.dust.u.uExit, ex); gl.uniform2f(P.dust.u.uRes, rtW, rtH); gl.uniform1f(P.dust.u.uFocus, dist);
-  gl.bindVertexArray(dustVAO); gl.drawArrays(gl.POINTS, 0, dustCount);
-  gl.disable(gl.BLEND);
-
-  // ---- post ----
-  gl.bindVertexArray(quadVAO);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbA.f); gl.viewport(0, 0, fbA.w, fbA.h);
-  gl.useProgram(P.bright.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScene.t); gl.uniform1i(P.bright.u.uSrc, 0);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  gl.useProgram(P.blur.p); gl.uniform1i(P.blur.u.uSrc, 0);
-  for (let i = 0; i < 2; i++) {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbB.f); gl.bindTexture(gl.TEXTURE_2D, fbA.t); gl.uniform2f(P.blur.u.uDir, (1+i)/fbA.w, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbA.f); gl.bindTexture(gl.TEXTURE_2D, fbB.t); gl.uniform2f(P.blur.u.uDir, 0, (1+i)/fbA.h); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  // shine: once at the end of the intro, then every few seconds
+  let sh = prog(t, T_SHINE);
+  if (t > T_SHINE[1] + 0.2) {
+    const period = 3.6;
+    const ph = ((t - T_SHINE[1]) % period) / 0.9;
+    sh = ph <= 1 ? ph : 0;
   }
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, rtW, rtH);
-  const f = P.final; gl.useProgram(f.p);
-  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fbScene.t); gl.uniform1i(f.u.uScene, 0);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fbA.t); gl.uniform1i(f.u.uBloom, 1);
-  const lp = project(VP, [sun[0]*2.2, 1.9, -1.5]);
-  gl.uniform2f(f.u.uLightPos, lp[0], lp[1]); gl.uniform2f(f.u.uRes, rtW, rtH); gl.uniform1f(f.u.uTime, t);
-  gl.uniform1f(f.u.uRays, sstep(T_ASSEMBLED - 1.5, T_INTRO_END, t) * (1 - ex*.6));
-  gl.uniform1f(f.u.uFade, sstep(0, .6, t) * (1 - sstep(.55, 1, ex)));
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  shine.setAttribute('x', (-320 + 1180 * easeInOut(sh)).toFixed(1));
+  shine.setAttribute('opacity', sh > 0 && sh < 1 ? '0.9' : '0');
+  const idle = clamp((t - T_LETTERS[1]) / 0.5) * (0.14 + 0.08 * Math.sin(t * 2.2));
+  const hit = Math.max(0, 1 - Math.abs(t - T_IMPACT) / 0.5) * 0.6;
+  glowLayer.setAttribute('opacity', (Math.max(hit, idle) * (1 - ex)).toFixed(3));
+  glowLetters.setAttribute('opacity', (idle * (1 - ex)).toFixed(3));
+
+  // breathing, impact shake and the exit
+  const breathe = t > T_INTRO_END ? Math.sin((t - T_INTRO_END) * 1.6) * 3 : 0;
+  const scale = 1 + 0.08 * easeInOut(ex);
+  stage.style.transform = `translate(calc(-50% + ${shake.toFixed(2)}px), calc(-50% + ${(breathe - 10 * ex).toFixed(2)}px)) scale(${scale.toFixed(4)})`;
+  stage.style.opacity = String(1 - easeInOut(clamp(ex * 1.4)));
+  ui.style.opacity = failed ? '1' : String(clamp((t - T_LETTERS[1]) / 0.4) * (1 - clamp(ex * 3)));
+  root.style.opacity = String(1 - easeInOut(clamp((ex - 0.35) / 0.65)));
+  if (ex >= 1) finish();
 }
 requestAnimationFrame(frame);
 
 function finish() {
-  removed = true; root.classList.add('tl-gone'); emit('terria-loader-reveal');
-  setTimeout(() => { root.remove(); style.remove(); const ext = gl.getExtension('WEBGL_lose_context'); ext && ext.loseContext();
-    emit('terria-loader-done'); }, 850);
-}
-
-// ---------- fallback (no WebGL2 / tainted image) ----------
-function fallback() {
-  if (root.querySelector('.tl-fallback')) return;
-  canvas.remove(); root.classList.add('tl-ui-on'); markIntro();
-  const im = document.createElement('img'); im.className = 'tl-fallback'; im.src = LOGO_URL; im.alt = 'TERRIA';
-  root.prepend(im);
-  const tick = () => { if (removed) return;
-    shown += (target - shown) * .08; if (target - shown < .002) shown = target;
-    fillEl.style.width = shown*100 + '%'; pctEl.textContent = Math.round(shown*100) + '%';
-    if (doneRequested && shown >= .995) { removed = true; root.classList.add('tl-gone'); emit('terria-loader-reveal'); setTimeout(() => { root.remove(); emit('terria-loader-done'); }, 850); return; }
-    requestAnimationFrame(tick); };
-  tick();
+  removed = true;
+  root.remove();
+  style.remove();
+  emit('terria-loader-done');
 }
 })();
