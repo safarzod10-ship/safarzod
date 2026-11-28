@@ -56,13 +56,100 @@ ${OCEAN_GLSL}
 #endif
 
 #ifndef SEA_ONLY
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+/**
+ * Wild flowers, drawn crisp at any zoom: one candidate per cell of
+ * FLOWER_CELL wu, kept where a drift of flowers grows. Far away the drifts
+ * only tint the grass a little.
+ */
+vec3 flowers(vec3 col, vec2 w, float open, float px, float drift, float kind) {
+  const float CELL = ${TERRAIN.flowerCell.toFixed(2)};
+  vec2 c = floor(w / CELL);
+  vec2 f = w / CELL - c;
+  float h = hash12(c);
+  float dens = smoothstep(0.52, 0.72, drift) * open;
+  // pick the colour of the drift (one colour dominates), sometimes another
+  float pick = hash12(c + 17.3) < 0.8 ? kind : hash12(c + 3.1);
+  vec3 fc = pick < 0.45 ? vec3(0.97, 0.96, 0.9) : pick < 0.8 ? vec3(0.98, 0.84, 0.3) : vec3(0.86, 0.66, 0.9);
+  vec2 at = vec2(hash12(c + 5.7), hash12(c + 9.1)) * 0.6 + 0.2;
+  float r = 0.26 + 0.16 * hash12(c + 1.9);
+  float d = length((f - at) * CELL);
+  float edge = max(px * 0.9, 0.02);
+  float m = (1.0 - smoothstep(r - edge, r + edge, d)) * step(h, dens * 0.7);
+  // the same flowers seen from afar: a faint tint of their colour
+  float far = smoothstep(0.35, 0.9, px);
+  vec3 tinted = mix(col, fc, dens * 0.05);
+  vec3 near = mix(col * (1.0 - 0.18 * (1.0 - smoothstep(r, r + 0.14, d)) * step(h, dens * 0.7)), fc, m * 0.95);
+  return mix(near, tinted, far);
+}
+
 vec3 shadeLand(vec3 base, vec4 nz, float sd, float t, float aa, float close, float fresh) {
-  vec3 g1 = texture(uGrass, vWorld * ${(1 / TERRAIN.grassTile).toFixed(8)}).rgb * 2.0;
-  vec2 rw = vec2(vWorld.x * 0.8387 - vWorld.y * 0.5446, vWorld.x * 0.5446 + vWorld.y * 0.8387);
-  vec3 g2 = texture(uGrass, rw * ${(1 / TERRAIN.grassTileFar).toFixed(8)}).rgb * 2.0;
-  vec3 detail = g1 * mix(vec3(1.0), g2, 0.55);
+  float px = uGlobal.y;
+  vec2 w = vWorld;
+  // The grass texture is sampled in screen-aligned coordinates (the map is
+  // turned 45 degrees and squashed 2:1), so its blades stand upright on screen
+  // like painted grass instead of lying in diagonal stripes. Each layer is
+  // turned a little and scaled differently to hide the repetition.
+  vec2 sc = vec2(w.x - w.y, (w.x + w.y) * 0.5) * 0.70710678;
+  vec2 s1 = vec2(sc.x * 0.9945 - sc.y * 0.1045, sc.x * 0.1045 + sc.y * 0.9945);
+  vec2 s2 = vec2(sc.x * 0.9848 + sc.y * 0.1736, -sc.x * 0.1736 + sc.y * 0.9848);
+  vec3 g1 = texture(uGrass, s1 * ${(1 / TERRAIN.grassTile).toFixed(8)}).rgb * 2.0;
+  vec3 g2 = texture(uGrass, s2 * ${(1 / TERRAIN.grassTileFar).toFixed(8)} + vec2(0.37, 0.61)).rgb * 2.0;
+  vec3 detail = g1 * mix(vec3(1.0), g2, 0.5);
+  // close up: a finer layer of the same blades keeps the turf sharp
+  float nearK = 1.0 - smoothstep(0.18, 0.4, px);
+  vec2 s0 = vec2(sc.x * 0.9962 + sc.y * 0.0872, -sc.x * 0.0872 + sc.y * 0.9962);
+  vec3 g0 = texture(uGrass, s0 * ${(1 / TERRAIN.grassTileNear).toFixed(8)} + vec2(0.13, 0.29)).rgb * 2.0;
+  detail *= mix(vec3(1.0), g0, 0.8 * nearK);
   float grassy = smoothstep(-0.03, 0.07, base.g - base.r);
+  // open grass (not the dark painted canopy of a forest)
+  float lum = dot(base, vec3(0.3, 0.59, 0.11));
+  float open = grassy * smoothstep(0.38, 0.5, lum);
   vec3 col = base * mix(vec3(1.0), detail, uGlobal.z * (0.3 + 0.7 * grassy));
+
+  // patches of lusher and drier turf (tens of metres), so a meadow is never one flat colour
+  float pA = texture(uNoise, w * ${(1 / 233).toFixed(8)} + vec2(0.31, 0.77)).g;
+  float pB = texture(uNoise, w * ${(1 / 61).toFixed(8)} + vec2(0.53, 0.11)).b;
+  float pVis = 1.0 - smoothstep(1.5, 6.0, px);
+  float patchV = ((pA - 0.5) * 1.0 + (pB - 0.5) * 0.6 * (1.0 - smoothstep(0.6, 2.0, px))) * pVis;
+  // lush: deeper, bluer green; dry: lighter, warmer
+  vec3 lushC = col * vec3(0.84, 0.95, 0.86);
+  vec3 dryC = col * vec3(1.1, 1.06, 0.9) + vec3(0.018, 0.012, 0.0);
+  col = mix(col, patchV < 0.0 ? lushC : dryC, min(1.0, abs(patchV) * 1.6) * open);
+
+  // wind: gusts roll over the grass, bent blades show their lighter side
+  float wK = open * (1.0 - smoothstep(3.0, 12.0, px));
+  if (wK > 0.0) {
+    vec2 wind = vec2(t * 4.2, t * 1.6);
+    float gust = texture(uNoise, (w - wind) * ${(1 / 170).toFixed(8)}).r;
+    float ripple = texture(uNoise, (w - wind * 1.7) * ${(1 / 41).toFixed(8)} + vec2(0.2, 0.6)).g;
+    float g = smoothstep(0.5, 0.85, gust) * (0.65 + 0.7 * ripple);
+    col = mix(col, col * vec3(1.06, 1.09, 1.02) + vec3(0.012, 0.016, 0.0), g * 0.4 * wK);
+  }
+
+  // wild flowers in drifts on the open meadows
+  float drift = texture(uNoise, w * ${(1 / 83).toFixed(8)} + vec2(0.71, 0.43)).r * 0.7
+              + texture(uNoise, w * ${(1 / 29).toFixed(8)} + vec2(0.13, 0.91)).b * 0.3;
+  float kind = texture(uNoise, w * ${(1 / 400).toFixed(8)} + vec2(0.37, 0.05)).g;
+  kind = smoothstep(0.35, 0.65, kind);
+  col = flowers(col, w, open * smoothstep(0.55, 0.62, lum), px, drift, kind * 0.95);
+
+  // painted forest seen from afar (no tree sprites there): clumps of crowns
+  // with lit tops and shaded gaps instead of a flat carpet
+  float canopy = grassy * (1.0 - smoothstep(0.34, 0.44, lum));
+  float cK = canopy * smoothstep(1.6, 2.6, px);
+  if (cK > 0.0) {
+    float c1 = texture(uNoise, w * ${(1 / 47).toFixed(8)} + vec2(0.61, 0.17)).b;
+    float c1l = texture(uNoise, (w + vec2(-5.8, -6.9)) * ${(1 / 47).toFixed(8)} + vec2(0.61, 0.17)).b;
+    float c2 = texture(uNoise, w * ${(1 / 163).toFixed(8)} + vec2(0.07, 0.53)).r;
+    col *= 1.0 + ((c1l - c1) * 1.1 + (c2 - 0.5) * 0.4) * cK;
+  }
+
   // sand grain
   col *= 1.0 + (nz.a - 0.5) * 0.14 * (1.0 - grassy);
 #ifndef LAND_ONLY

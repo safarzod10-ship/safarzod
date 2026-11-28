@@ -66,7 +66,11 @@ export const TERRAIN = {
   /** Tile sizes (world units) of the repeating detail textures. */
   grassTile: 128,
   grassTileFar: 733,
+  /** Finer layer of the grass texture, faded in close up. */
+  grassTileNear: 29,
   noiseTile: 97,
+  /** Wild flowers: one candidate per cell of this side (wu). */
+  flowerCell: 1.3,
 } as const;
 
 export const CAMERA = {
@@ -78,8 +82,8 @@ export const CAMERA = {
    */
   tilt: 0.5,
   rotation: Math.PI / 4,
-  /** Max zoom: CSS px per world unit. */
-  maxScale: 1.6,
+  /** Max zoom: CSS px per world unit (about 50 m on the scale bar). */
+  maxScale: 3.2,
   /** Ocean + fog ring kept around the land bounding box, world units. */
   fitMargin: 11000,
   /** Extra zoom-out allowed beyond "continent fits the screen" (1 = none). */

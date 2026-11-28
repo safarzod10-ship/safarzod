@@ -2,19 +2,14 @@
 import type { RGB } from '../ocean/oceanPalette.ts';
 
 export const LAND = {
-  grassDry: [160, 190, 98] as RGB,
-  grassMid: [114, 176, 82] as RGB,
-  grassLush: [74, 152, 74] as RGB,
-  meadow: [176, 200, 104] as RGB,
+  grassDry: [152, 182, 52] as RGB,
+  grassMid: [110, 166, 44] as RGB,
+  grassLush: [70, 140, 38] as RGB,
+  meadow: [154, 186, 52] as RGB,
   canopy: [62, 122, 62] as RGB,
-  forestFloor: [86, 138, 66] as RGB,
+  forestFloor: [82, 132, 50] as RGB,
   sandDry: [234, 218, 172] as RGB,
   sandWet: [205, 190, 146] as RGB,
-  flowers: [
-    [246, 244, 230],
-    [242, 216, 96],
-    [222, 176, 214],
-  ] as readonly RGB[],
 } as const;
 
 /** Elevation model used for hill shading (world units). */

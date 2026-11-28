@@ -11,7 +11,7 @@
  * Texels sit on chunk-shared edges (node i at origin + i * texel), which makes
  * neighbouring chunks agree exactly along their border.
  */
-import { CANOPY_MAX_LEVEL, CHUNK_NODES, FINEST_LEVEL, LODS } from '../../core/config.ts';
+import { CANOPY_MAX_LEVEL, CHUNK_NODES, LODS } from '../../core/config.ts';
 import { smoothstep } from '../../core/math.ts';
 import { hash2 } from '../../core/rng.ts';
 import { RIVER_GRADIENT } from '../generation/rivers.ts';
@@ -139,7 +139,6 @@ export function* bakeChunkSteps(
   const beachNoise = world.beachNoise;
   const groveNoise = world.groveNoise;
   const canopyMode = level <= CANOPY_MAX_LEVEL;
-  const flowers = level >= FINEST_LEVEL;
   const seed = world.decoSeed;
   const texelsPerWorld = 1 / step;
 
@@ -261,22 +260,7 @@ export function* bakeChunkSteps(
         }
       }
 
-      // ---- flowers (close-up only) -------------------------------------
-      if (flowers && meadowAmt > 0.05 && f < 0.4) {
-        // flowers gather in drifts; one colour dominates each drift
-        const drift = colorNoise(wx / 46 - 71.3, wy / 46 + 18.9);
-        if (drift > 0.3) {
-          const h = hash2(Math.round(wx * texelsPerWorld), Math.round(wy * texelsPerWorld), seed ^ 0x1234567);
-          if ((h & 0xffff) / 65535 < 0.16 * meadowAmt * smoothstep(0.3, 0.6, drift)) {
-            const kind = colorNoise(wx / 210 + 5.1, wy / 210 - 44.4);
-            const pick = ((h >>> 16) & 0xff) / 255 < 0.75 ? (kind > 0.15 ? 1 : kind < -0.2 ? 2 : 0) : (h >>> 24) % 3;
-            const fc = LAND.flowers[pick];
-            r += (fc[0] - r) * 0.5;
-            g += (fc[1] - g) * 0.5;
-            b += (fc[2] - b) * 0.5;
-          }
-        }
-      }
+      // (wild flowers are drawn by the terrain shader, crisp at any zoom)
 
       // ---- hill shading -------------------------------------------------
       const zx = (zBuf[k + 1] - zBuf[k - 1]) * inv2;
