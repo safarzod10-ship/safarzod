@@ -20,6 +20,8 @@ interface Frame {
   ay: number;
   /** width of the lot diamond in the picture, px */
   dw: number;
+  /** named points for effects (chimney tops, flag), sprite px */
+  pt?: Record<string, [number, number]>;
 }
 interface AtlasJson {
   pages: string[];
@@ -39,11 +41,16 @@ export class BuildingAtlas {
 
   private async load(base: string): Promise<void> {
     const json = (await (await fetch(base + 'atlas.json')).json()) as AtlasJson;
+    // Premultiplied when decoded: WebGL ignores its premultiply-on-upload flag
+    // for ImageBitmap, and straight alpha drawn as premultiplied gives every
+    // soft edge a light halo.
     const bitmaps = await Promise.all(
-      json.pages.map(async (f) => createImageBitmap(await (await fetch(base + f)).blob(), { premultiplyAlpha: 'none' })),
+      json.pages.map(async (f) => createImageBitmap(await (await fetch(base + f)).blob(), { premultiplyAlpha: 'premultiply' })),
     );
     this.bitmaps = bitmaps;
-    this.sources = bitmaps.map((b) => new ImageSource({ resource: b, autoGenerateMipmaps: true, scaleMode: 'linear' }));
+    this.sources = bitmaps.map(
+      (b) => new ImageSource({ resource: b, autoGenerateMipmaps: true, scaleMode: 'linear', alphaMode: 'premultiplied-alpha' }),
+    );
     this.json = json;
   }
 
@@ -105,6 +112,20 @@ export class BuildingAtlas {
     s.scale.set(k, k / CAMERA.tilt);
     s.rotation = -CAMERA.rotation;
     s.position.set(wx, wy);
+  }
+
+  /**
+   * Named effect points of a sprite as offsets from the lot centre, in metres
+   * on the screen plane (x right, y down), for layers that undo the world's
+   * isometric turn and squash (smoke, progress bars).
+   */
+  points(key: string): Record<string, { x: number; y: number }> {
+    const f = this.frame(key);
+    const out: Record<string, { x: number; y: number }> = {};
+    if (!f?.pt) return out;
+    const k = (this.cells(key) * CELL_M * Math.SQRT2) / f.dw;
+    for (const [name, [x, y]] of Object.entries(f.pt)) out[name] = { x: (x - f.ax) * k, y: (y - f.ay) * k };
+    return out;
   }
 
   /** A picture of the building for the UI (data URL), fitted into a square. */

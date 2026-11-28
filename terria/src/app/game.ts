@@ -24,6 +24,7 @@ import type { MapApp } from '../rendering/MapApp.ts';
 import { ApiError, type Api } from './api.ts';
 import { models } from './city/atlas.ts';
 import { CityRenderer } from './city/CityRenderer.ts';
+import { Clouds } from './clouds.ts';
 import { OthersLayer, type RegionIndexEntry } from './city/OthersLayer.ts';
 import { ExpandOverlay, Ghost } from './city/tools.ts';
 import type { Game } from './context.ts';
@@ -85,6 +86,7 @@ export class TerriaGame implements Game {
   /** Called once the loading screen has revealed the map. */
   async start(me: Promise<MeResponse>): Promise<void> {
     await this.atlas.ready.catch((e) => console.error('building models failed to load', e));
+    void Clouds.create(this.map);
     this.shell.show();
     void this.loadWorld();
     let res: MeResponse;
@@ -138,6 +140,15 @@ export class TerriaGame implements Game {
     if (!c || !m) return;
     if (!this.city) {
       this.city = new CityRenderer(this.atlas, this.map.scene.layers, m, true);
+      this.map.addFrameListener((view, dt, t) => {
+        const smoke = this.city?.smoke;
+        if (!smoke?.active) return;
+        // puffs are only worth drawing when the buildings are big enough to see
+        const near = view.scale > 0.35;
+        smoke.setVisible(near);
+        // (no wake(): when nothing else moves the map runs at its calm idle rate)
+        if (near) smoke.update(dt, t);
+      });
       this.map.scene.regions.select(m.id);
       this.others.setOwn(m.id, m.hall.x, m.hall.y);
       this.shell.root.classList.remove('no-city');

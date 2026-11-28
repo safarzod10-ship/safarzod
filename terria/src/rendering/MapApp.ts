@@ -50,6 +50,13 @@ export class MapApp {
   readonly quality: QualityController;
   /** Called every frame after the scene update (HUD, future systems). */
   onFrame: ((view: CameraView, deltaMs: number) => void) | null = null;
+  private readonly frameListeners = new Set<(view: CameraView, deltaMs: number, timeSec: number) => void>();
+
+  /** Run `cb` every frame after the scene update; returns the unsubscribe. */
+  addFrameListener(cb: (view: CameraView, deltaMs: number, timeSec: number) => void): () => void {
+    this.frameListeners.add(cb);
+    return () => this.frameListeners.delete(cb);
+  }
 
   private timeSec = 0;
   private pointerDown = false;
@@ -217,5 +224,6 @@ export class MapApp {
       this.quality.sample(deltaMs, now);
     }
     this.onFrame?.(view, deltaMs);
+    for (const cb of this.frameListeners) cb(view, deltaMs, this.timeSec);
   }
 }

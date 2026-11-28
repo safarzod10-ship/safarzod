@@ -12,6 +12,7 @@ import { BUILDINGS, CELL_M } from '../../game/config.ts';
 import { buildHours, type RegionMask } from '../../game/rules.ts';
 import type { Building } from '../../game/types.ts';
 import type { BuildingAtlas } from './atlas.ts';
+import { Smoke } from './Smoke.ts';
 
 export interface CityLayers {
   ground: Container;
@@ -34,6 +35,8 @@ export class CityRenderer {
   private readonly bars = new Graphics();
   private buildingsList: Building[] = [];
   private readonly own: boolean;
+  /** chimney smoke (own city only) */
+  readonly smoke: Smoke | null;
 
   constructor(atlas: BuildingAtlas, layers: CityLayers, mask: RegionMask, own: boolean) {
     this.atlas = atlas;
@@ -49,6 +52,7 @@ export class CityRenderer {
     layers.ground.addChild(this.land);
     layers.objects.addChild(this.sprites);
     layers.overlay.addChild(this.bars);
+    this.smoke = own ? new Smoke(layers.overlay) : null;
   }
 
   /** Rebuild land and buildings. */
@@ -76,7 +80,28 @@ export class CityRenderer {
       }
       this.atlas.apply(s, want[i].key, want[i].x, want[i].y);
     }
+    this.updateSmoke();
     this.drawBars(now);
+  }
+
+  /** Chimney tops of every finished building, on the screen plane. */
+  private updateSmoke(): void {
+    if (!this.smoke) return;
+    const c = Math.cos(CAMERA.rotation);
+    const sn = Math.sin(CAMERA.rotation);
+    const pts: { x: number; y: number }[] = [];
+    for (const b of this.buildingsList) {
+      if (b.lvl < 1) continue;
+      const half = (BUILDINGS[b.t].size * CELL_M) / 2;
+      const wx = b.x * CELL_M + half;
+      const wy = b.y * CELL_M + half;
+      const lx = wx * c - wy * sn;
+      const ly = (wx * sn + wy * c) * CAMERA.tilt;
+      for (const [name, o] of Object.entries(this.atlas.points(this.atlas.key(b.t, b.lvl)))) {
+        if (name.startsWith('smoke')) pts.push({ x: lx + o.x, y: ly + o.y });
+      }
+    }
+    this.smoke.setEmitters(pts);
   }
 
   /** Progress bars of running constructions (call about once a second). */
@@ -129,6 +154,7 @@ export class CityRenderer {
     this.land.visible = v;
     this.sprites.visible = v;
     this.bars.visible = v;
+    this.smoke?.setVisible(v);
   }
 
   private drawLand(owned: Uint8Array): void {
@@ -179,5 +205,6 @@ export class CityRenderer {
     this.landSource?.destroy();
     this.sprites.destroy({ children: true });
     this.bars.destroy();
+    this.smoke?.destroy();
   }
 }
